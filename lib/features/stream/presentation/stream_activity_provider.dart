@@ -2,19 +2,95 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// One playback plus which server is serving it.
 ///
 /// The pairing is the point: `/activity` merges sources, so a row has to be able
 /// to say where it came from — the same problem the Recently Added rail solves
-/// with an accent dot and a spoken `accentLabel`.
-typedef StreamActivityRow = ({ServiceKey service, StreamSession session});
+/// with an accent dot and a spoken `accentLabel`. [instanceId] is the connection
+/// serving it, which is where its Stop goes, and [connectionName] is how the
+/// row names it once its service has two (`SettingsModel.connectionName`).
+typedef StreamActivityRow = ({
+  ServiceKey service,
+  String instanceId,
+  String? connectionName,
+  StreamSession session,
+});
 
-/// Every live playback across both media servers, most expensive first.
+/// A media server connection that did not answer, as the note names it.
+typedef StreamOfflineSource = ({
+  ServiceKey service,
+  String instanceId,
+  String title,
+});
+
+/// One connection of a media server.
+typedef StreamConnection = ({ServiceKey service, String instanceId});
+
+/// What is playing on one named connection of a media server.
+///
+/// The lens's own connection collapses onto [jellyfinSessionsProvider] or
+/// [plexSessionsProvider], so the service's own Now playing page and Activity
+/// read one cache and an override of either still reaches both. Every other
+/// connection asks its own client. Read by both [streamActivityProvider] and
+/// [streamActivityOfflineProvider], so a second Jellyfin is asked once.
+final streamSessionsForProvider =
+    FutureProvider.family<List<StreamSession>, StreamConnection>((
+      ref,
+      key,
+    ) async {
+      final lens = ref.watch(activeInstanceProvider(key.service))?.id ?? '';
+      final isJellyfin = key.service == ServiceKey.jellyfin;
+      if (key.instanceId.isEmpty || key.instanceId == lens) {
+        return isJellyfin
+            ? ref.watch(jellyfinSessionsProvider.future)
+            : ref.watch(plexSessionsProvider.future);
+      }
+      final StreamServerClient client = isJellyfin
+          ? ref.watch(jellyfinClientForProvider(key.instanceId))
+          : ref.watch(plexClientForProvider(key.instanceId));
+      return client.getSessions();
+    }, retry: noProviderRetry);
+
+/// Whether one Plex connection may stop a playback, for the stop control.
+///
+/// The lens's is [plexCapabilitiesProvider]; another connection is asked on
+/// its own, because Plex Pass and the owner's scope are per server.
+final streamPlexCapabilitiesForProvider =
+    FutureProvider.family<PlexServerCapabilities?, String>((
+      ref,
+      instanceId,
+    ) async {
+      final lens = ref.watch(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(plexCapabilitiesProvider.future);
+      }
+      return ref.watch(plexClientForProvider(instanceId)).getCapabilities();
+    }, retry: noProviderRetry);
+
+/// Every configured connection of the media servers, in registry and then
+/// the user's order, with what a row calls it.
+List<({StreamConnection key, String? name})> _streamConnections(Ref ref) {
+  final settings = ref.watch(currentSettingsProvider);
+  return [
+    for (final service in ServiceDomain.stream.services)
+      for (final instance in settings.configuredInstancesOf(service))
+        (
+          key: (service: service, instanceId: instance.id),
+          name: settings.connectionName(instance.id),
+        ),
+  ];
+}
+
+/// Every live playback across every connection of both media servers, most
+/// expensive first.
 ///
 /// **Deliberately not a `GlobalActivityItem`, and this is the load-bearing
 /// decision on this surface.** Forcing a session into that model needs a
@@ -52,18 +128,24 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
   Object? failure;
   StackTrace? failureStack;
 
-  for (final service in ServiceDomain.stream.services) {
-    if (!ref.watch(currentSettingsProvider).isServiceConfigured(service)) {
-      continue;
-    }
+  // Every connection, not the lens: a second Jellyfin's viewers are as much
+  // the household's as the first one's, and Activity is where they are all
+  // counted.
+  for (final connection in _streamConnections(ref)) {
     try {
-      final sessions = await switch (service) {
-        ServiceKey.jellyfin => ref.watch(jellyfinSessionsProvider.future),
-        _ => ref.watch(plexSessionsProvider.future),
-      };
+      final sessions = await ref.watch(
+        streamSessionsForProvider(connection.key).future,
+      );
       answered++;
       rows.addAll(
-        sessions.map((session) => (service: service, session: session)),
+        sessions.map(
+          (session) => (
+            service: connection.key.service,
+            instanceId: connection.key.instanceId,
+            connectionName: connection.name,
+            session: session,
+          ),
+        ),
       );
     } catch (error, stack) {
       // Reported through streamActivityOfflineProvider rather than thrown: one
@@ -102,7 +184,8 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
   return ordered.map((entry) => entry.row).toList(growable: false);
 }, retry: noProviderRetry);
 
-/// Configured media servers that did not answer.
+/// Configured media server connections that did not answer, each named the
+/// way the rows name it.
 ///
 /// Separate from [streamActivityProvider] for the reason
 /// `servicesSectionOfflineMessage` documents: sources that degrade to `[]` make
@@ -112,27 +195,30 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
 ///
 /// Never throws, so its retry policy never engages; `noProviderRetry` anyway,
 /// because its sources carry it.
-final streamActivityOfflineProvider = FutureProvider<List<ServiceKey>>((
-  ref,
-) async {
-  final offline = <ServiceKey>[];
+final streamActivityOfflineProvider = FutureProvider<List<StreamOfflineSource>>(
+  (ref) async {
+    final offline = <StreamOfflineSource>[];
 
-  for (final service in ServiceDomain.stream.services) {
-    if (!ref.watch(currentSettingsProvider).isServiceConfigured(service)) {
-      continue;
+    for (final connection in _streamConnections(ref)) {
+      try {
+        await ref.watch(streamSessionsForProvider(connection.key).future);
+      } catch (_) {
+        offline.add((
+          service: connection.key.service,
+          instanceId: connection.key.instanceId,
+          title: serviceWithConnection(
+            connection.key.service,
+            connection.name,
+            joiner: ' ',
+          ),
+        ));
+      }
     }
-    try {
-      await switch (service) {
-        ServiceKey.jellyfin => ref.watch(jellyfinSessionsProvider.future),
-        _ => ref.watch(plexSessionsProvider.future),
-      };
-    } catch (_) {
-      offline.add(service);
-    }
-  }
 
-  return offline;
-}, retry: noProviderRetry);
+    return offline;
+  },
+  retry: noProviderRetry,
+);
 
 /// Whether any media server is configured at all.
 ///

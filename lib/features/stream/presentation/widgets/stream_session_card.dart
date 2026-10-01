@@ -42,6 +42,7 @@ class StreamSessionCard extends StatelessWidget {
     super.key,
     required this.session,
     required this.accent,
+    this.serverName,
     this.onStop,
     this.onTogglePause,
     this.onMessage,
@@ -49,6 +50,12 @@ class StreamSessionCard extends StatelessWidget {
 
   final StreamSession session;
   final Color accent;
+
+  /// Which server the session is playing from, for a list that merges two
+  /// connections of one media server (`Jellyfin Cabin`). Null prints nothing:
+  /// a page reading one server, or a household with one of each, has
+  /// nothing to tell apart.
+  final String? serverName;
 
   /// Stopping is optional because it is not always permitted: Plex gates
   /// termination behind Plex Pass. A null handler renders no control at all
@@ -104,6 +111,7 @@ class StreamSessionCard extends StatelessWidget {
               bitrateLabel: rate,
               bitrateIsNominal: session.bitrateIsNominal,
               isPaused: session.isPaused,
+              serverName: serverName,
             ),
             excludeSemantics: true,
             child: Column(
@@ -119,7 +127,11 @@ class StreamSessionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '${session.userName} · ${session.deviceLabel}',
+                  [
+                    session.userName,
+                    session.deviceLabel,
+                    ?serverName,
+                  ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(

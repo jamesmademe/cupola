@@ -166,10 +166,12 @@ void main() {
             .timeout(const Duration(milliseconds: 300)),
         throwsA(anything),
       );
-      expect(await container.read(streamActivityOfflineProvider.future), [
-        ServiceKey.jellyfin,
-        ServiceKey.plex,
-      ]);
+      expect(
+        (await container.read(
+          streamActivityOfflineProvider.future,
+        )).map((source) => source.service),
+        [ServiceKey.jellyfin, ServiceKey.plex],
+      );
     });
 
     test(
@@ -193,9 +195,12 @@ void main() {
 
         // Partial, and honest: Plex answered "nobody", Jellyfin is named dark.
         expect(await container.read(streamActivityProvider.future), isEmpty);
-        expect(await container.read(streamActivityOfflineProvider.future), [
-          ServiceKey.jellyfin,
-        ]);
+        expect(
+          (await container.read(
+            streamActivityOfflineProvider.future,
+          )).map((source) => source.service),
+          [ServiceKey.jellyfin],
+        );
       },
     );
   });

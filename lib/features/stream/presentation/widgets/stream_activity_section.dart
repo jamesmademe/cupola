@@ -13,7 +13,9 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
@@ -42,24 +44,23 @@ class StreamActivitySection extends ConsumerWidget {
     final rowsAsync = ref.watch(streamActivityProvider);
     final offline = ref.watch(streamActivityOfflineProvider).value ?? const [];
 
-    // Every configured server dark. With one server that is its own leaf —
+    // Every configured server dark. With one connection that is its own leaf —
     // the cause, its address, Settings; with several, the plain-words error
-    // state names them together.
+    // state names them together. Counted by connection: two Jellyfin both
+    // dark are two servers, not one.
     if (rowsAsync.hasError && !rowsAsync.hasValue) {
       final settings = ref.watch(currentSettingsProvider);
-      final configured = ServiceDomain.stream.services
-          .where(settings.isServiceConfigured)
-          .toList(growable: false);
-      void retry() {
-        ref.invalidate(jellyfinSessionsProvider);
-        ref.invalidate(plexSessionsProvider);
-      }
+      final configured = [
+        for (final service in ServiceDomain.stream.services)
+          ...settings.configuredInstancesOf(service),
+      ];
+      void retry() => _reread(ref);
 
       return Padding(
         padding: EdgeInsets.only(bottom: bottomPadding),
         child: configured.length == 1
             ? ServiceOfflineState.failure(
-                service: configured.single,
+                service: configured.single.service,
                 error: rowsAsync.error!,
                 onRetry: retry,
               )
@@ -72,17 +73,13 @@ class StreamActivitySection extends ConsumerWidget {
     }
 
     return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(jellyfinSessionsProvider);
-        ref.invalidate(plexSessionsProvider);
-      },
+      onRefresh: () async => _reread(ref),
       child: AsyncValueWidget<List<StreamActivityRow>>(
         value: rowsAsync,
         serviceName: 'your media servers',
         onRetry: () {
           ref.invalidate(streamActivityProvider);
-          ref.invalidate(jellyfinSessionsProvider);
-          ref.invalidate(plexSessionsProvider);
+          _reread(ref);
         },
         isEmpty: (rows) => rows.isEmpty,
         emptyBuilder: _IdleFeed(offline: offline, bottomPadding: bottomPadding),
@@ -111,6 +108,15 @@ class StreamActivitySection extends ConsumerWidget {
                 // row resolves to the room's ink: which server a session is on,
                 // the row says in words.
                 accent: row.service.accent,
+                // Which of two servers it is playing from, once a service has
+                // two: `Jellyfin Cabin`. Nothing with one.
+                serverName: row.connectionName == null
+                    ? null
+                    : serviceWithConnection(
+                        row.service,
+                        row.connectionName,
+                        joiner: ' ',
+                      ),
                 onStop: _stopHandler(context, ref, row),
               ),
             );
@@ -120,11 +126,21 @@ class StreamActivitySection extends ConsumerWidget {
     );
   }
 
+  /// Asks every media server connection again: the lens's providers, which
+  /// the service's own Now playing page shares, and the family the others are
+  /// read through.
+  static void _reread(WidgetRef ref) {
+    ref.invalidate(jellyfinSessionsProvider);
+    ref.invalidate(plexSessionsProvider);
+    ref.invalidate(streamSessionsForProvider);
+  }
+
   /// The stop control, or null where stopping is not permitted.
   ///
   /// Same gate as the board: Plex puts termination behind Plex Pass and admin
   /// scope, and answers a server without it with a 401 that has nothing to do with
-  /// the token — so the control is absent rather than present-and-failing.
+  /// the token — so the control is absent rather than present-and-failing. The
+  /// gate is the serving connection's own: Plex Pass is per server.
   VoidCallback? _stopHandler(
     BuildContext context,
     WidgetRef ref,
@@ -132,7 +148,9 @@ class StreamActivitySection extends ConsumerWidget {
   ) {
     if (row.session.id.isEmpty) return null;
     if (row.service == ServiceKey.plex) {
-      final capabilities = ref.watch(plexCapabilitiesProvider).value;
+      final capabilities = ref
+          .watch(streamPlexCapabilitiesForProvider(row.instanceId))
+          .value;
       if (capabilities?.myPlexSubscription != true) return null;
     }
     return () => _confirmStop(context, ref, row);
@@ -155,17 +173,16 @@ class StreamActivitySection extends ConsumerWidget {
     if (!result.confirmed || !context.mounted) return;
 
     try {
-      final client = row.service == ServiceKey.jellyfin
-          ? ref.read(jellyfinServerProvider)
-          : ref.read(plexServerProvider);
+      // The connection serving the session, never the lens: a session id is
+      // that server's, and a stop sent to the other one stops nothing, or
+      // someone else.
+      final StreamServerClient client = row.service == ServiceKey.jellyfin
+          ? ref.read(jellyfinClientForProvider(row.instanceId))
+          : ref.read(plexClientForProvider(row.instanceId));
       await client.stopSession(row.session.id);
       // Re-read rather than remove the row: both servers only dispatch a stop,
       // and the client is free to ignore it.
-      ref.invalidate(
-        row.service == ServiceKey.jellyfin
-            ? jellyfinSessionsProvider
-            : plexSessionsProvider,
-      );
+      _reread(ref);
     } catch (error) {
       if (!context.mounted) return;
       SnackBarHelper.error(
@@ -185,7 +202,7 @@ class StreamActivitySection extends ConsumerWidget {
 class _IdleFeed extends StatelessWidget {
   const _IdleFeed({required this.offline, required this.bottomPadding});
 
-  final List<ServiceKey> offline;
+  final List<StreamOfflineSource> offline;
   final double bottomPadding;
 
   @override
@@ -223,13 +240,15 @@ class _IdleFeed extends StatelessWidget {
 class _OfflineNote extends StatelessWidget {
   const _OfflineNote({required this.offline});
 
-  final List<ServiceKey> offline;
+  final List<StreamOfflineSource> offline;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // By connection, named the way the rows name it: with two Jellyfin,
+    // "Jellyfin did not answer" over the other one's sessions says nothing.
     final message = servicesAlertBandMessage([
-      for (final service in offline) service.title,
+      for (final source in offline) source.title,
     ]);
 
     return Semantics(

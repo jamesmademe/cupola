@@ -46,6 +46,7 @@ String streamSessionValue({
   required String? bitrateLabel,
   required bool bitrateIsNominal,
   required bool isPaused,
+  String? serverName,
 }) {
   final cost = transcodeReason == null
       ? playMethodLabel
@@ -62,6 +63,7 @@ String streamSessionValue({
     cost,
     rate,
     'on $deviceLabel',
+    serverName == null ? null : 'from $serverName',
     progressLabel,
   ]);
 }
