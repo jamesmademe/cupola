@@ -43,8 +43,11 @@ typedef SeerrRequestGate = ({
 /// seasons on disk and others not, a title whose files were deleted, and any
 /// title on a stack whose Radarr is known only through Seerr.
 ///
-/// Only the standard request: the sheet sends no 4K request, so `status4k`
-/// and the 4K requests are not this gate's to read.
+/// Only the standard copy. The sheet opens on the standard server and sends a
+/// 4K request only when a 4K server is picked, so `status4k` and the 4K
+/// requests are not this gate's to read. The cost is known: a title already
+/// on disk in HD closes Request even where Seerr has a 4K server that would
+/// take it.
 ///
 /// The codes are decoded with [numbering], the server's own
 /// ([SeerrMediaAvailability.fromCode]), as the badge decodes them, so the

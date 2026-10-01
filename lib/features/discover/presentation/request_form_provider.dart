@@ -15,11 +15,22 @@ class SeerrServer {
   final int? activeProfileId;
   final String? activeDirectory;
 
+  /// The server takes 4K requests. Seerr keeps a 4K copy of a title apart from
+  /// its standard one, and a request is one or the other: it is the server
+  /// that decides which, so a request sent here says `is4k`.
+  final bool is4k;
+
+  /// The server Seerr sends a request of its resolution to when the request
+  /// names none.
+  final bool isDefault;
+
   const SeerrServer({
     required this.id,
     required this.name,
     this.activeProfileId,
     this.activeDirectory,
+    this.is4k = false,
+    this.isDefault = false,
   });
 
   factory SeerrServer.fromJson(Map<String, dynamic> json) {
@@ -28,8 +39,34 @@ class SeerrServer {
       name: json['name'] as String? ?? 'Server',
       activeProfileId: json['activeProfileId'] as int?,
       activeDirectory: json['activeDirectory'] as String?,
+      is4k: json['is4k'] == true,
+      isDefault: json['isDefault'] == true,
     );
   }
+
+  /// The server's name as the sheet lists it: Seerr's own, with `· 4K` after
+  /// it when the server takes 4K requests and its name does not already say
+  /// so. Picking a 4K server makes the request a 4K one, and the list is the
+  /// only place that says which servers those are.
+  String get choiceLabel {
+    if (!is4k || name.toLowerCase().contains('4k')) return name;
+    return '$name · 4K';
+  }
+}
+
+/// The server a request goes to when the person asking chose none: the
+/// default standard server, as Seerr itself would pick it.
+///
+/// Seerr marks one default per resolution (`isDefault` with `is4k`), and the
+/// sheet used to take whichever server it listed first, which could be the 4K
+/// one, and then send the request without `is4k`: a standard request filed on
+/// a 4K server. A 4K copy is a choice the person makes by picking a 4K
+/// server, never the sheet's default while a standard server exists.
+SeerrServer? defaultRequestServer(List<SeerrServer> servers) {
+  return servers.where((s) => s.isDefault && !s.is4k).firstOrNull ??
+      servers.where((s) => !s.is4k).firstOrNull ??
+      servers.where((s) => s.isDefault).firstOrNull ??
+      servers.firstOrNull;
 }
 
 class QualityProfileOption {
@@ -92,6 +129,13 @@ class RequestFormState {
   bool get errorDidNotAnswer {
     final reason = errorReason;
     return reason != null && failureDidNotAnswer(reason);
+  }
+
+  /// The server the request will be sent to, when one is chosen.
+  SeerrServer? get selectedServer {
+    final id = selectedServerId;
+    if (id == null) return null;
+    return servers.where((server) => server.id == id).firstOrNull;
   }
 
   bool get canSubmit =>
@@ -180,12 +224,13 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
         return;
       }
 
+      final chosen = defaultRequestServer(servers)!;
       state = state.copyWith(
         servers: servers,
-        selectedServerId: servers.first.id,
+        selectedServerId: chosen.id,
         clearError: true,
       );
-      await _loadProfiles(servers.first.id);
+      await _loadProfiles(chosen.id);
     } catch (error) {
       // Classified, and never the exception: the sheet used to print
       // "Failed to load servers: DioException […]".
@@ -285,6 +330,9 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
         profileId: state.selectedProfileId,
         rootFolder: state.selectedRootFolder,
         serverId: state.selectedServerId,
+        // The chosen server decides the copy: without it a request filed on
+        // the 4K server was a standard request, tracked on the HD copy.
+        is4k: state.selectedServer?.is4k ?? false,
       );
       return null;
     } catch (error) {

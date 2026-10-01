@@ -60,7 +60,7 @@ class RequestBottomSheet extends ConsumerWidget {
                   .map(
                     (server) => DropdownMenuItem(
                       value: server.id,
-                      child: Text(server.name),
+                      child: Text(server.choiceLabel),
                     ),
                   )
                   .toList(),

@@ -27,6 +27,66 @@ void main() {
       expect(empty.name, 'Server');
       expect(empty.activeProfileId, isNull);
       expect(empty.activeDirectory, isNull);
+      expect(empty.is4k, isFalse);
+      expect(empty.isDefault, isFalse);
+    });
+
+    test('SeerrServer reads which copy the server takes', () {
+      final uhd = SeerrServer.fromJson({
+        'id': 1,
+        'name': 'Radarr 4K',
+        'is4k': true,
+        'isDefault': true,
+      });
+      expect(uhd.is4k, isTrue);
+      expect(uhd.isDefault, isTrue);
+    });
+
+    test('a 4K server is listed as one, once', () {
+      expect(
+        const SeerrServer(id: 1, name: 'Radarr 4K', is4k: true).choiceLabel,
+        'Radarr 4K',
+      );
+      expect(
+        const SeerrServer(id: 2, name: 'Cinema', is4k: true).choiceLabel,
+        'Cinema · 4K',
+      );
+      expect(const SeerrServer(id: 0, name: 'Radarr').choiceLabel, 'Radarr');
+    });
+  });
+
+  group('defaultRequestServer', () {
+    const uhdDefault = SeerrServer(
+      id: 1,
+      name: 'Radarr 4K',
+      is4k: true,
+      isDefault: true,
+    );
+    const hdSpare = SeerrServer(id: 2, name: 'Radarr spare');
+    const hdDefault = SeerrServer(id: 0, name: 'Radarr', isDefault: true);
+
+    test('is the default standard server, wherever Seerr lists it', () {
+      // It was `servers.first`: the 4K server, for a standard request.
+      expect(
+        defaultRequestServer(const [uhdDefault, hdSpare, hdDefault]),
+        same(hdDefault),
+      );
+    });
+
+    test('a standard server before a 4K one when none is default', () {
+      expect(
+        defaultRequestServer(const [
+          SeerrServer(id: 1, name: 'Radarr 4K', is4k: true),
+          hdSpare,
+        ]),
+        same(hdSpare),
+      );
+    });
+
+    test('the default 4K server when Seerr has only 4K ones', () {
+      const other = SeerrServer(id: 3, name: 'Radarr UHD', is4k: true);
+      expect(defaultRequestServer(const [other, uhdDefault]), same(uhdDefault));
+      expect(defaultRequestServer(const []), isNull);
     });
 
     test('QualityProfileOption parses fields and falls back to defaults', () {
@@ -304,6 +364,73 @@ void main() {
         'profileId': 3,
         'rootFolder': '/archive',
         'serverId': 9,
+        'is4k': false,
+      });
+    });
+
+    group('with a standard and a 4K server', () {
+      _FakeSeerr twoServers() => _FakeSeerr(
+        radarrServers: [
+          // Listed first, as a Seerr whose 4K server was added first does.
+          {
+            'id': 1,
+            'name': 'Radarr 4K',
+            'is4k': true,
+            'isDefault': true,
+            'activeProfileId': 7,
+          },
+          {'id': 0, 'name': 'Radarr', 'isDefault': true, 'activeProfileId': 4},
+        ],
+        radarrProfilesByServer: {
+          0: {
+            'profiles': [
+              {'id': 4, 'name': 'HD-1080p'},
+            ],
+            'rootFolders': const [],
+          },
+          1: {
+            'profiles': [
+              {'id': 7, 'name': 'Ultra-HD'},
+            ],
+            'rootFolders': const [],
+          },
+        },
+      );
+
+      test('the sheet opens on the default standard server', () async {
+        final service = twoServers();
+        final container = createContainer(service);
+        const args = (mediaId: 321, mediaType: 'movie');
+        keepAlive(container, args);
+
+        await _flushProviderTasks();
+        final state = container.read(requestFormProvider(args));
+
+        expect(state.selectedServerId, 0);
+        expect(state.selectedProfileId, 4);
+        expect(service.radarrProfilesCallCount, [0]);
+      });
+
+      test('a request sent to the 4K server is a 4K request', () async {
+        final service = twoServers();
+        final container = createContainer(service);
+        const args = (mediaId: 321, mediaType: 'movie');
+        keepAlive(container, args);
+
+        await _flushProviderTasks();
+        final notifier = container.read(requestFormProvider(args).notifier);
+        notifier.selectServer(1);
+        await _flushProviderTasks();
+
+        expect(await notifier.submitRequest(), isNull);
+        expect(service.lastCreateRequestCall, {
+          'mediaType': 'movie',
+          'mediaId': 321,
+          'profileId': 7,
+          'rootFolder': null,
+          'serverId': 1,
+          'is4k': true,
+        });
       });
     });
 
@@ -393,6 +520,7 @@ class _FakeSeerr extends shared.FakeSeerrService {
       'profileId': profileId,
       'rootFolder': rootFolder,
       'serverId': serverId,
+      'is4k': is4k,
     };
   }
 }
