@@ -655,7 +655,7 @@ class _FailedBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            failure?.headline ?? 'The search stopped.',
+            failure?.headline ?? kSearchStoppedHeadline,
             style: theme.textTheme.titleMedium,
           ),
           if (failure != null) ...[

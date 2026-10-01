@@ -135,8 +135,7 @@ class ReleaseSearchJobCard extends StatelessWidget {
         job.releaseCount == 0
             ? 'No releases found'
             : '${job.releaseCount} release${job.releaseCount == 1 ? '' : 's'}',
-      ReleaseSearchJobStatus.failed =>
-        job.failure?.headline ?? 'The search stopped',
+      ReleaseSearchJobStatus.failed => job.stoppedHeadline,
       ReleaseSearchJobStatus.expired =>
         '${job.releaseCount} release${job.releaseCount == 1 ? '' : 's'} · expired',
     };
@@ -224,8 +223,7 @@ class ReleaseSearchJobCard extends StatelessWidget {
                   '${formatWindowForSpeech(remaining ?? Duration.zero)}. '
                   'Double tap to pick one.',
       ReleaseSearchJobStatus.failed =>
-        '${job.target.label}$on. '
-            '${job.failure?.headline ?? 'Search stopped.'}',
+        '${job.target.label}$on. ${job.stoppedHeadline}',
       ReleaseSearchJobStatus.expired =>
         '${job.target.label}$on. ${job.releaseCount} releases, no longer '
             'grabbable. Search again to use them.',

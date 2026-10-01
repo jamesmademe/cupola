@@ -68,6 +68,29 @@ Widget _host(Widget child) {
 }
 
 void main() {
+  testWidgets('a search that stopped with no verdict says so in one shape '
+      'everywhere, the classifier\'s', (tester) async {
+    final job = _job(status: ReleaseSearchJobStatus.failed);
+    expect(job.stoppedHeadline, 'The search stopped.');
+    expect(kSearchStoppedHeadline, endsWith('.'));
+
+    await tester.pumpWidget(
+      _host(ReleaseSearchJobCard(job: job, now: DateTime.utc(2026, 8, 5, 9))),
+    );
+    expect(find.text('The search stopped.'), findsOneWidget);
+    expect(find.text('The search stopped'), findsNothing);
+
+    final judged = _job(
+      status: ReleaseSearchJobStatus.failed,
+      failure: const ReleaseSearchFailure(
+        kind: ReleaseSearchFailureKind.unknown,
+        headline: 'The search stopped unexpectedly.',
+        diagnosis: 'Searching again is safe, nothing was grabbed.',
+      ),
+    );
+    expect(judged.stoppedHeadline, 'The search stopped unexpectedly.');
+  });
+
   group('ReleaseSearchJobCard', () {
     testWidgets('a queued job says it has not started', (tester) async {
       await tester.pumpWidget(

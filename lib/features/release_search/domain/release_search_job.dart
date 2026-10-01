@@ -209,6 +209,11 @@ class ReleaseSearchJob {
 
   int get releaseCount => releases?.length ?? 0;
 
+  /// What a stopped search says first, on every surface that shows one: the
+  /// classifier's headline, or, for a job that stopped with no verdict, the
+  /// same words in the same shape (a sentence, with its full stop).
+  String get stoppedHeadline => failure?.headline ?? kSearchStoppedHeadline;
+
   ReleaseSearchJob copyWith({
     ReleaseSearchJobStatus? status,
     DateTime? runningSince,
@@ -276,6 +281,10 @@ StatusTone releaseSearchTone(ReleaseSearchJob job) {
 /// [subject] names the service the search asked (`Radarr`), which a gateway
 /// that answered in its place is named against: "Cloudflare Access answered
 /// instead of Radarr". Without one the words say "the service".
+/// The headline of a search that stopped with no verdict of its own, shaped
+/// like the classifier's headlines: a sentence, with its full stop.
+const kSearchStoppedHeadline = 'The search stopped.';
+
 ReleaseSearchFailure classifyReleaseSearchFailure(
   Object error, {
   required Duration elapsed,

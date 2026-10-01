@@ -65,7 +65,7 @@ class ReleaseSearchStatusCard extends ConsumerWidget {
                     'search needed.',
               ),
       ReleaseSearchJobStatus.failed => (
-        job.failure?.headline ?? 'The search stopped',
+        job.stoppedHeadline,
         job.failure?.diagnosis ?? 'Searching again is safe.',
       ),
       ReleaseSearchJobStatus.expired => (
