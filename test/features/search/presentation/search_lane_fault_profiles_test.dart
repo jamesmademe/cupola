@@ -67,6 +67,15 @@ void main() {
     );
     // The same request meets the same gateway: nothing to retry.
     expect(find.bySemanticsLabel('Retry Sonarr'), findsNothing);
+    // A remedy is a phrase: it takes the row under the sentence, so the
+    // sentence keeps the card's width instead of a third of it.
+    final sentence = find.text(
+      'No Sonarr results: Cloudflare Access answered instead of Sonarr.',
+    );
+    expect(
+      tester.getTopLeft(remedy).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(sentence).dy),
+    );
     // Seerr's token, sent and refused: the token is the fix, not a Retry.
     expect(find.bySemanticsLabel('Check the token for Seerr'), findsOneWidget);
     expect(find.bySemanticsLabel('Retry Seerr'), findsNothing);

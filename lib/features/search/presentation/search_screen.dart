@@ -762,7 +762,12 @@ class _SearchLaneFault extends StatelessWidget {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.xs,
         ),
-        child: verbs.length == 1
+        // A lone Retry is one short word and sits beside the sentence. A
+        // remedy is a phrase (`Add a service token`): beside the sentence it
+        // would squeeze it into a third of a phone's line, so it takes the row
+        // under it, at the trailing edge, as `InlineErrorRetry` sets it, and so
+        // does a remedy with Retry.
+        child: verbs.length == 1 && remedy == null
             ? Row(
                 children: [
                   glyph,
@@ -772,9 +777,6 @@ class _SearchLaneFault extends StatelessWidget {
                   verbs.single,
                 ],
               )
-            // A remedy and Retry beside the sentence would leave it a third of
-            // a phone's line, so they take the row under it, at the trailing
-            // edge, as `InlineErrorRetry` sets them.
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
