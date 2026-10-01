@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_capability.dart';
@@ -78,7 +79,10 @@ List<({StreamConnection key, String? name})> _streamConnections(Ref ref) {
 /// only the owner sees. Asks the probe.
 Future<bool> _ownerOnly(Ref ref, StreamConnection key, Object error) async =>
     key.service == ServiceKey.plex &&
-    await plexSessionsOwnerOnly(ref, key.instanceId, error);
+    await plexSessionsOwnerOnly(
+      () => ref.watch(connectionCapabilityProvider(key.instanceId).future),
+      error,
+    );
 
 /// Every live playback across every connection of both media servers, most
 /// expensive first.

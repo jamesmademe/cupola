@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/capability/capability_scope.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
@@ -21,7 +23,9 @@ import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
@@ -93,15 +97,28 @@ final serviceKpiProvider = FutureProvider.autoDispose
         // a failure that survives the fetch, and the provider layer is what
         // makes that shareable with the Overview, invalidatable with the rest
         // and overridable by name in a test.
+        //
+        // What a refusal means is asked through the container, captured now:
+        // the answer is needed after the reads, past an `await`, where this
+        // `autoDispose` provider's `ref` must not be used.
         case ServiceKey.jellyfin:
-          return _streamKpis(
+          final container = ref.container;
+          return _jellyfinKpis(
             ref.watch(jellyfinStrictSessionsProvider.future),
             ref.watch(jellyfinStrictLibrariesProvider.future),
+            kind: () => container.read(jellyfinCredentialKindProvider.future),
           );
         case ServiceKey.plex:
-          return _streamKpis(
+          final container = ref.container;
+          return _plexKpis(
             ref.watch(plexStrictSessionsProvider.future),
             ref.watch(plexStrictLibrariesProvider.future),
+            probe: () => container.read(
+              connectionCapabilityProvider(
+                container.read(activeInstanceProvider(ServiceKey.plex))?.id ??
+                    '',
+              ).future,
+            ),
           );
       }
     }, retry: noProviderRetry);
@@ -476,49 +493,140 @@ String _notAnswering(ServiceKey service, Object? error) =>
 /// would add two different units together and present the result as the box's
 /// egress — a fabricated number. Per-session bitrate is shown on the board, where
 /// `StreamSession.bitrateIsNominal` can say what it actually is.
+///
+/// **A null future is a read this token may not make**, and its figures read
+/// `—` with [sessionsNote] or [librariesNote] saying why: a shared account's
+/// Plex token is refused who is watching, a household member's Jellyfin token
+/// the library list. Both are configuration, not faults, so the rest of the
+/// rail still says what the token could read.
 Future<List<ServiceKpi>> _streamKpis(
-  Future<List<StreamSession>> sessionsFuture,
-  Future<List<StreamLibrary>> librariesFuture,
-) async {
+  Future<List<StreamSession>>? sessionsFuture,
+  Future<List<StreamLibrary>>? librariesFuture, {
+  String? sessionsNote,
+  String? librariesNote,
+}) async {
   // Both reads are started by the caller so the rail does not wait for one
   // endpoint before asking the other. `Future.wait` is important here rather
   // than two sequential awaits: when an unreachable server rejects both
   // requests, it observes both failures while still propagating the first one
   // to `serviceKpiProvider` and `serviceSignalProvider`.
-  final results = await Future.wait<Object>([sessionsFuture, librariesFuture]);
-  final sessions = results[0] as List<StreamSession>;
-  final libraries = results[1] as List<StreamLibrary>;
-  final transcodes = sessions.where((s) => s.playMethod.isTranscode).length;
+  final results = await Future.wait<Object?>([
+    sessionsFuture ?? Future<Object?>.value(),
+    librariesFuture ?? Future<Object?>.value(),
+  ]);
+  final sessions = results[0] as List<StreamSession>?;
+  final libraries = results[1] as List<StreamLibrary>?;
+  final transcodes = sessions?.where((s) => s.playMethod.isTranscode).length;
 
   return [
-    ServiceKpi(
+    _figure(
       label: 'Streams',
-      value: '${sessions.length}',
+      value: sessions == null ? null : '${sessions.length}',
       icon: Icons.play_circle_outline_rounded,
-      tone: _activityIf(sessions.isNotEmpty && transcodes == 0),
+      tone: sessions == null
+          ? null
+          : _activityIf(sessions.isNotEmpty && transcodes == 0),
+      note: sessionsNote,
     ),
-    ServiceKpi(
+    _figure(
       label: 'Transcodes',
-      value: '$transcodes',
+      value: transcodes == null ? null : '$transcodes',
       icon: Icons.memory_rounded,
-      tone: _faultIf(transcodes > 0),
+      tone: transcodes == null ? null : _faultIf(transcodes > 0),
+      // The reason rides on the first card of the two it empties, as every
+      // unanswered rail carries it: two identical notes side by side would
+      // hide which figure each one stands in for.
     ),
-    ServiceKpi(
+    _figure(
       label: 'Libraries',
-      value: '${libraries.length}',
+      value: libraries == null ? null : '${libraries.length}',
       icon: Icons.video_library_outlined,
+      note: librariesNote,
     ),
   ];
 }
 
+/// What a figure out of a shared account's Plex token's reach says.
+const _ownerOnlyNote = 'owner only';
+
+/// What a figure out of a household member's Jellyfin token's reach says.
+const _adminOnlyNote = 'admin only';
+
+/// What a failed read failed with, or null when it answered.
+Future<Object?> _failureOf(Future<Object?> read) =>
+    read.then<Object?>((_) => null, onError: (Object error) => error);
+
+/// Plex's figures.
+///
+/// A sessions read refused while the libraries still read is, when [probe]
+/// confirms it, a shared account's token: its streams and transcodes read `—`
+/// and its libraries still count. Any other failure takes the rail, as before.
+Future<List<ServiceKpi>> _plexKpis(
+  Future<List<StreamSession>> sessions,
+  Future<List<StreamLibrary>> libraries, {
+  required Future<CapabilityGrant> Function() probe,
+}) async {
+  try {
+    return await _streamKpis(sessions, libraries);
+  } catch (_) {
+    final refusal = await _failureOf(sessions);
+    if (refusal == null ||
+        await _failureOf(libraries) != null ||
+        !await plexSessionsOwnerOnly(probe, refusal)) {
+      rethrow;
+    }
+    return _streamKpis(null, libraries, sessionsNote: _ownerOnlyNote);
+  }
+}
+
+/// Jellyfin's figures.
+///
+/// A library list refused to a household member's token, which [kind] says
+/// it is, reads `—`; its own playback still counts, as its Now playing says.
+/// Any other failure takes the rail, as before.
+Future<List<ServiceKpi>> _jellyfinKpis(
+  Future<List<StreamSession>> sessions,
+  Future<List<StreamLibrary>> libraries, {
+  required Future<JellyfinCredentialKind> Function() kind,
+}) async {
+  try {
+    return await _streamKpis(sessions, libraries);
+  } catch (_) {
+    if (await _failureOf(libraries) == null ||
+        await _failureOf(sessions) != null) {
+      rethrow;
+    }
+    bool member;
+    try {
+      member = (await kind()).lacksAdministrator;
+    } catch (_) {
+      member = false;
+    }
+    if (!member) rethrow;
+    return _streamKpis(sessions, null, librariesNote: _adminOnlyNote);
+  }
+}
+
 Future<List<ServiceKpi>> _jellyfinKpisFor(Ref ref, String instanceId) {
   final client = ref.watch(jellyfinClientForProvider(instanceId));
-  return _streamKpis(client.getSessionsOrThrow(), client.getLibrariesOrThrow());
+  final container = ref.container;
+  return _jellyfinKpis(
+    client.getSessionsOrThrow(),
+    client.getLibrariesOrThrow(),
+    kind: () =>
+        container.read(jellyfinCredentialKindForProvider(instanceId).future),
+  );
 }
 
 Future<List<ServiceKpi>> _plexKpisFor(Ref ref, String instanceId) {
   final client = ref.watch(plexClientForProvider(instanceId));
-  return _streamKpis(client.getSessionsOrThrow(), client.getLibrariesOrThrow());
+  final container = ref.container;
+  return _plexKpis(
+    client.getSessionsOrThrow(),
+    client.getLibrariesOrThrow(),
+    probe: () =>
+        container.read(connectionCapabilityProvider(instanceId).future),
+  );
 }
 
 /// The Radarr library, read so that a failure survives the fetch.

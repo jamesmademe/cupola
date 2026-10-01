@@ -105,20 +105,25 @@ PlexSessionsRefusal plexSessionsRefusal(
       );
 }
 
-/// The same question from a provider: whether a failed sessions read of
-/// [connectionId] is a shared account's, asked of the probe.
+/// The same question from a provider: whether a failed sessions read is a
+/// shared account's, asked of [probe] (the connection's
+/// `connectionCapabilityProvider`) only when the read was refused.
+///
+/// The probe is handed in rather than read here because the caller may be
+/// past an `await` by now, where an `autoDispose` provider's `ref` must not be
+/// used: it passes a reader it captured before the gap.
 Future<bool> plexSessionsOwnerOnly(
-  Ref ref,
-  String connectionId,
+  Future<CapabilityGrant> Function() probe,
   Object? error,
 ) async {
   if (classifyConnectionFailure(error) != ServiceFailureReason.unauthorized) {
     return false;
   }
-  final grant = await ref.watch(
-    connectionCapabilityProvider(connectionId).future,
-  );
-  return plexIsSharedAccount(grant);
+  try {
+    return plexIsSharedAccount(await probe());
+  } catch (_) {
+    return false;
+  }
 }
 
 /// The sentence a shared account's Plex earns where Now playing would be.
