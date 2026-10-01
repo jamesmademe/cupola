@@ -20,7 +20,9 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -701,11 +703,19 @@ class _LaneStateReadout extends StatelessWidget {
   }
 }
 
-/// A lane that stopped: what happened, and the Retry that concerns only it.
+/// A lane that stopped: what happened, and the verbs its cause allows.
 ///
 /// Drawn as a dashed outline rather than a filled card because there is nothing
 /// inside it — the dash is what says "this slot is empty" at a glance, against
 /// the solid cards the answered lanes fill their slots with.
+///
+/// The verbs are a failure line's ([failureLineVerbs], the policy
+/// [InlineErrorRetry] draws): the remedy the cause names in the amber fill
+/// (`Add a service token`, `Paste the key again`), opening this lane's own
+/// connection form; `Retry` only where the same request can still succeed,
+/// in the amber fill when retrying is a fault's remedy (a search that timed
+/// out) and as text in ink beside a red lane. Each names its server for a
+/// screen reader, since up to seven of these share one screen.
 class _SearchLaneFault extends StatelessWidget {
   final GlobalSearchServiceResults lane;
   final VoidCallback onRetry;
@@ -716,13 +726,35 @@ class _SearchLaneFault extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final tone = statusToneColor(colorScheme, lane.state.tone);
+    final remedy = lane.reason == null
+        ? null
+        : FailureRemedy.forReason(
+            lane.service,
+            lane.reason!,
+            instanceId: lane.instanceId,
+            gateway: lane.gateway,
+          );
+    final verbs = failureLineVerbs(
+      context,
+      remedy: remedy,
+      fault: lane.state.tone == StatusTone.warning,
+      onRetry: onRetry,
+      subject: lane.laneTitle,
+    );
+    final glyph = Icon(_glyph, size: 18, color: tone);
+    final sentence = Text(
+      lane.faultSentence,
+      style: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+    );
     return CustomPaint(
       painter: _DashedBorderPainter(
         color: tone.withValues(alpha: 0.55),
         radius: AppRadius.lg,
       ),
       child: Padding(
-        // The drawn card is 46pt. The Retry inside it is a control, and a
+        // The drawn card is 46pt. The verbs inside it are controls, and a
         // control keeps its 44pt target whatever the card measures — so the
         // vertical inset is the smallest token rather than the card being
         // squeezed down onto the button.
@@ -730,33 +762,39 @@ class _SearchLaneFault extends StatelessWidget {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.xs,
         ),
-        child: Row(
-          children: [
-            Icon(_glyph, size: 18, color: tone),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                lane.faultSentence,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+        child: verbs.length == 1
+            ? Row(
+                children: [
+                  glyph,
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: sentence),
+                  const SizedBox(width: AppSpacing.sm),
+                  verbs.single,
+                ],
+              )
+            // A remedy and Retry beside the sentence would leave it a third of
+            // a phone's line, so they take the row under it, at the trailing
+            // edge, as `InlineErrorRetry` sets them.
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: Row(
+                      children: [
+                        glyph,
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(child: sentence),
+                      ],
+                    ),
+                  ),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: AppSpacing.xs,
+                    children: verbs,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            TextButton(
-              onPressed: onRetry,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(44, 44),
-                foregroundColor: tone,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              ),
-              // Named, because there are up to seven of these on one screen and
-              // a screen reader hearing "Retry" seven times cannot tell which
-              // server it is about to ask again.
-              child: Text('Retry', semanticsLabel: 'Retry ${lane.laneTitle}'),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -183,3 +184,67 @@ ButtonStyle remedyFillStyle(BuildContext context, {bool compact = false}) {
         : null,
   );
 }
+
+/// The verbs a failure **line** offers, in order: the remedy in the amber fill
+/// ([remedyFillStyle]) with `Retry` after it, text in ink, only where the same
+/// request can still succeed ([FailureRemedy.retryHelps]); with no remedy,
+/// `Retry` alone, in the amber fill for a fault ([fault]) because retrying is
+/// then the fix, and text in ink beside silence, never filled and never red.
+///
+/// The one policy [InlineErrorRetry] and the search lane's fault card both
+/// draw, so a line cannot offer a Retry the cause rules out, or leave out the
+/// remedy it names. Every verb keeps its 44pt target at standard density.
+///
+/// [subject] names the server the verbs act on, for a screen with several of
+/// these lines (`Retry Radarr`, `Add a service token for Radarr`): heard
+/// seven times, a bare `Retry` cannot say which server it will ask again.
+List<Widget> failureLineVerbs(
+  BuildContext context, {
+  required FailureRemedy? remedy,
+  required bool fault,
+  required VoidCallback onRetry,
+  String? subject,
+}) {
+  final retry = Text(
+    Lexicon.retry,
+    semanticsLabel: subject == null ? null : '${Lexicon.retry} $subject',
+  );
+  return [
+    if (remedy != null)
+      FilledButton(
+        onPressed: () => remedy.open(context),
+        style: remedyFillStyle(context, compact: true),
+        child: Text(
+          remedy.label,
+          semanticsLabel: subject == null
+              ? null
+              : '${remedy.label} for $subject',
+        ),
+      ),
+    if (remedy == null && fault)
+      FilledButton(
+        onPressed: onRetry,
+        style: remedyFillStyle(context, compact: true),
+        child: retry,
+      )
+    else if (remedy == null || remedy.retryHelps)
+      TextButton(
+        onPressed: onRetry,
+        style: retryInkStyle(Theme.of(context).colorScheme),
+        child: retry,
+      ),
+  ];
+}
+
+/// `Retry` as text in ink on a failure line: the primary ink, never a tone.
+ButtonStyle retryInkStyle(ColorScheme colorScheme) => TextButton.styleFrom(
+  // Brand primary, never the error tone: a red cure looks like the disease.
+  foregroundColor: colorScheme.primary,
+  // 44pt on iOS / 48dp on Android is the floor, and this button shares its
+  // row with body text that would otherwise size it. Standard density,
+  // pinned: compact silently takes 8 off `minimumSize`, and 44 declared
+  // measured 40.
+  visualDensity: VisualDensity.standard,
+  minimumSize: const Size(56, 44),
+  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+);

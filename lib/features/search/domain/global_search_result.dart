@@ -257,20 +257,23 @@ class GlobalSearchServiceResults {
     SearchLaneState.failed => _failureWord,
   };
 
-  /// The sentence the lane's fault card prints, in place of rows.
+  /// The sentence the lane's fault card prints, in place of rows: what is
+  /// missing, and why, in one shape for every way a lane stops.
   ///
-  /// It says what is missing *and* that Retry is per lane, because the whole
-  /// promise of the screen is that one dead server does not hold the other six:
-  /// a Retry the user reads as "start the search again" is a Retry they will
-  /// not press while the rest of the page is still useful.
+  /// It says nothing about Retry. Whether there is one is the cause's call
+  /// (`failureRetryHelps`), and where there is, the button itself names the
+  /// server it asks again (`Retry Radarr`), so the sentence is left to say
+  /// what happened.
   String get faultSentence => switch (state) {
-    SearchLaneState.timedOut =>
-      'No $laneTitle results, the query timed out. Retry is per lane.',
-    SearchLaneState.unreachable =>
-      'No $laneTitle results, that connection did not answer at all. '
-          'Retry is per lane.',
-    _ => 'No $laneTitle results: $_failureClause. Retry is per lane.',
+    // The lane's own deadline, on a server the rest of the app reaches: the
+    // search ran long, which is not the server going quiet.
+    SearchLaneState.timedOut => 'No $laneTitle results: the search timed out.',
+    _ => 'No $laneTitle results: $_failureClause.',
   };
+
+  /// The connection whose form holds the fix for this lane's failure, for its
+  /// remedy: the lane's own.
+  String get instanceId => leg.instance.id;
 
   /// What went wrong, as the clause after the colon: the classification's
   /// headline in sentence form, never a state label, whose capital would land
@@ -280,7 +283,9 @@ class GlobalSearchServiceResults {
   /// Radarr`); `A sign-in page`, `The request` and the like go lower case.
   String get _failureClause {
     final headline = failureHeadline(
-      reason ?? ServiceFailureReason.unknown,
+      state == SearchLaneState.unreachable
+          ? ServiceFailureReason.unreachable
+          : reason ?? ServiceFailureReason.unknown,
       subject: laneTitle,
       credential: refusedCredentialOf(service),
       gateway: gateway,

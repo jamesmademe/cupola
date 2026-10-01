@@ -73,7 +73,7 @@ void main() {
 
     expect(find.text('Did not answer in time'), findsOneWidget);
     expect(
-      find.text('No Radarr results, the query timed out. Retry is per lane.'),
+      find.text('No Radarr results: the search timed out.'),
       findsOneWidget,
     );
 

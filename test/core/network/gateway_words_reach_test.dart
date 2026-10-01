@@ -68,8 +68,7 @@ void main() {
     expect(lane.stateWord, 'Behind Cloudflare Access');
     expect(
       lane.faultSentence,
-      'No Radarr results: Cloudflare Access answered instead of Radarr. '
-      'Retry is per lane.',
+      'No Radarr results: Cloudflare Access answered instead of Radarr.',
     );
   });
 
@@ -97,8 +96,7 @@ void main() {
 
     expect(
       lane(status(401)).faultSentence,
-      'No Radarr results: Radarr answered but refused the key. Retry is per '
-      'lane.',
+      'No Radarr results: Radarr answered but refused the key.',
     );
     expect(
       lane(
@@ -112,13 +110,11 @@ void main() {
           ),
         ),
       ).faultSentence,
-      'No Radarr results: a sign-in page answered instead of Radarr. Retry is '
-      'per lane.',
+      'No Radarr results: a sign-in page answered instead of Radarr.',
     );
     expect(
       lane(StateError('nobody knows')).faultSentence,
-      'No Radarr results: the request to Radarr did not complete. Retry is '
-      'per lane.',
+      'No Radarr results: the request to Radarr did not complete.',
     );
   });
 
