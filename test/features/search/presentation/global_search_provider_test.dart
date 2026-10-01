@@ -179,7 +179,9 @@ void main() {
     // — which is what makes the missing external id on Lidarr and Bazarr stop
     // mattering.
     expect(radarrLanes, hasLength(2));
-    expect(radarrLanes.map((lane) => lane.instanceLabel), ['radarr', 'Away']);
+    // The first carries no label of its own, so it is called by its place
+    // among the Radarrs, never by its id.
+    expect(radarrLanes.map((lane) => lane.instanceLabel), ['Radarr 1', 'Away']);
     // And the row's route names the server that listed it.
     expect(
       radarrLanes

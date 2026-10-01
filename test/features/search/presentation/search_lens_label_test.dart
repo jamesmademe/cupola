@@ -40,7 +40,7 @@ GlobalSearchServiceResults _lane(
   SearchLaneState state = SearchLaneState.answered,
   List<GlobalSearchResult> results = const [],
 }) => GlobalSearchServiceResults(
-  leg: (instance: instance, named: named),
+  leg: (instance: instance, name: named ? instance.label : ''),
   state: state,
   results: results,
 );
@@ -60,16 +60,25 @@ void main() {
       expect(lane.laneTitle, 'Radarr · 4K');
     });
 
-    test('a named connection with no label falls back to its id', () {
+    test('a connection with no label is called by its place, never its id', () {
       // A second connection is required to have a label, but nothing in the
-      // model enforces it — and a nameless chip is worse than an opaque one.
+      // model enforces it. The name comes from the app's one rule, so the
+      // heading reads what every other surface reads.
       const nameless = ServiceInstance(
         id: 'radarr-hd11111',
         service: ServiceKey.radarr,
         url: 'https://hd.lan:7879',
         credential: 'k',
       );
-      expect(_lane(nameless, named: true).instanceLabel, 'radarr-hd11111');
+      const settings = SettingsModel(instances: [_fourK, nameless]);
+      final lane = GlobalSearchServiceResults(
+        leg: (
+          instance: nameless,
+          name: settings.connectionName(nameless.id) ?? '',
+        ),
+      );
+      expect(lane.instanceLabel, 'Radarr 2');
+      expect(lane.laneTitle, 'Radarr 2');
     });
 
     test('a lane that stopped is named too', () {
@@ -90,7 +99,7 @@ void main() {
     test('a lane that ran out of time is AMBER, and says so', () {
       final lane = GlobalSearchServiceResults.fault((
         instance: _fourK,
-        named: false,
+        name: '',
       ), TimeoutException('too slow'));
       expect(lane.state, SearchLaneState.timedOut);
       expect(lane.state.tone, StatusTone.warning);
@@ -101,7 +110,7 @@ void main() {
     test('red is a connection nothing answered at, and nothing else', () {
       final lane = GlobalSearchServiceResults.fault((
         instance: _fourK,
-        named: false,
+        name: '',
       ), const SocketException('no route to host'));
       expect(lane.state, SearchLaneState.unreachable);
       expect(lane.state.tone, StatusTone.error);
@@ -112,7 +121,7 @@ void main() {
       // The server answered — it just said no. Red here would send the user
       // auditing an address that is correct.
       final lane = GlobalSearchServiceResults.fault(
-        (instance: _fourK, named: false),
+        (instance: _fourK, name: ''),
         DioException(
           requestOptions: RequestOptions(path: '/api/v3/movie/lookup'),
           response: Response<void>(

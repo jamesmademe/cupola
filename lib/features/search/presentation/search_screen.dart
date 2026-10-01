@@ -572,6 +572,7 @@ class _SearchSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final service = lane.service;
+    final chipless = lane.laneTitle == lane.instanceLabel;
     // The mark and the connection badge are both the accent on its own 14%
     // wash over the page, so one walked ink serves both.
     final ink = ServiceTheme.onTint(
@@ -601,7 +602,10 @@ class _SearchSectionHeader extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Flexible(
             child: Text(
-              service.title,
+              // `Radarr 2` for a connection nobody named, whose name already
+              // says the service: the heading is the name, with no chip
+              // repeating it.
+              chipless ? lane.laneTitle : service.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
@@ -613,7 +617,7 @@ class _SearchSectionHeader extends StatelessWidget {
           // one leg queries one server, so every result below came from this
           // one and a chip repeated down forty rows would say it forty times.
           // Absent entirely while the service has a single connection.
-          if (lane.instanceLabel.isNotEmpty) ...[
+          if (lane.instanceLabel.isNotEmpty && !chipless) ...[
             const SizedBox(width: AppSpacing.xs),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),

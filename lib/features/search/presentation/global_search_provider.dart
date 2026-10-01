@@ -124,9 +124,11 @@ final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
       final parts = <String>[];
       for (final service in globalSearchServices) {
         for (final instance in s.configuredInstancesOf(service)) {
+          // The name too: it is on the lane's heading, and a heading that
+          // kept the old name after a rename would be naming nothing.
           parts.add(
             '${instance.id}|${instance.url}|${instance.credential}'
-            '|${s.pinForUrl(instance.url)}',
+            '|${s.pinForUrl(instance.url)}|${s.connectionName(instance.id)}',
           );
         }
       }
@@ -143,17 +145,23 @@ final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
             instance: instance,
             // Named only when there is something to tell apart: a stack with
             // one Radarr must not grow a label naming the only Radarr there is.
-            named: settings.configuredInstancesOf(service).length > 1,
+            name: settings.connectionName(instance.id) ?? '',
           )
       else
-        // One leg, on the lens, unlabelled. Seerr and Bazarr have no way to
-        // open a named connection from a row — see
+        // One leg, on the lens. Seerr, Bazarr, Jellyfin and Plex have no way
+        // to open a named connection from a row — see
         // `ServiceKeyExtension.searchesPerConnection` — and two sections with
         // identical contents under two different names is a worse answer than
-        // the one section they had before.
+        // the one section they had before. The section still says which of
+        // the user's connections it asked, once there are two: an unlabelled
+        // Jellyfin lane over the living room's server reads as the whole
+        // household's answer.
         for (final instance in [ref.watch(activeInstanceProvider(service))])
           if (instance != null && instance.isConfigured)
-            (instance: instance, named: false),
+            (
+              instance: instance,
+              name: settings.connectionName(instance.id) ?? '',
+            ),
   ];
 });
 

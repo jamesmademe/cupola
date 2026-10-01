@@ -138,6 +138,17 @@ abstract final class WorldConnections {
     WorldHosts.transmission,
   );
 
+  /// The cabin's Jellyfin, named by the user: in no profile, for a test that
+  /// adds it with `ConfigProfile.withConnection` beside the unnamed one at
+  /// home — two of a media server, one of them nobody named.
+  static final jellyfinCabin = _api(
+    WorldIds.jellyfinCabin,
+    ServiceKey.jellyfin,
+    WorldHosts.jellyfinCabin,
+    label: 'Cabin',
+    viewerId: JellyfinFake.operatorId,
+  );
+
   // World B, on `tower`: in no profile, for a test that adds one with
   // `ConfigProfile.withConnection` — the NPM and Unraid read-only cases.
   static final readarr = _api(

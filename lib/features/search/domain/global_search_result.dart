@@ -6,6 +6,7 @@ import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 class GlobalSearchResult {
   final ServiceKey service;
@@ -85,9 +86,12 @@ class GlobalSearchResult {
 /// and the round mints a new family member instead of quietly reusing the old
 /// server's answer.
 ///
-/// [named] is the "two Radarr" flag and not a label: a stack with one Radarr
-/// must not grow a chip naming the only Radarr there is.
-typedef SearchLeg = ({ServiceInstance instance, bool named});
+/// [name] is what the section calls the connection, resolved once by the
+/// provider through `SettingsModel.connectionName`, and empty whenever the
+/// service has a single connection: a stack with one Radarr must not grow a
+/// chip naming the only Radarr there is. It is part of the key on purpose, so
+/// a connection renamed mid-search redraws its heading.
+typedef SearchLeg = ({ServiceInstance instance, String name});
 
 /// Where one lane of the fan-out has got to.
 ///
@@ -220,20 +224,16 @@ class GlobalSearchServiceResults {
   /// the same server — one leg, one connection — so a chip repeated down forty
   /// rows would say the same thing forty times.
   ///
-  /// Derived rather than stored: it used to be a field the provider filled in
-  /// on the success path and again on the failure path, which is two chances to
-  /// spell one fact differently.
-  String get instanceLabel {
-    if (!leg.named) return '';
-    final label = leg.instance.label;
-    return label.isEmpty ? leg.instance.id : label;
-  }
+  /// Read off the leg rather than stored: it used to be a field the provider
+  /// filled in on the success path and again on the failure path, which is two
+  /// chances to spell one fact differently. A connection the user never named
+  /// reads `Radarr 2`, by the app's one rule, and never its id.
+  String get instanceLabel => leg.name;
 
-  /// How a sentence names this lane: `Radarr`, or `Radarr · 4K` once there are
-  /// two of them.
-  String get laneTitle => instanceLabel.isEmpty
-      ? service.title
-      : '${service.title} · $instanceLabel';
+  /// How a sentence names this lane: `Radarr`, `Radarr · 4K` once there are
+  /// two of them, or `Radarr 2` for one the user never named, whose name
+  /// already says the service.
+  String get laneTitle => serviceWithConnection(service, instanceLabel);
 
   /// Whether the lane stopped short of an answer. Not "is red" — three of the
   /// four stopped states are amber.

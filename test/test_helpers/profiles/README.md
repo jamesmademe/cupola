@@ -80,6 +80,11 @@ classifiers turn it into a verdict.
 | `p6` Two of a kind | Radarr ×2, Sonarr ×2, Seerr with default and 4K servers, Bazarr following Radarr only, Plex with a non-owner token, qBittorrent, SABnzbd | e, f, d | Actions that must name their instance. |
 | `p7` Degraded and away | P1, away from home. Jellyfin and Bazarr do not answer. Lidarr, Prowlarr, SABnzbd, TrueNAS and Dockge are home-only. qBittorrent refuses the sign-in. TrueNAS is read-only. | c, d | Red versus amber, and totals over the sources that answered. |
 
+`WorldConnections` also holds connections no profile configures, for a
+test that adds one with `withConnection`: World B's Readarr, NZBGet, Unraid
+and NPM, and a second Jellyfin at the cabin (`jellyfinCabin`, labelled
+`Cabin`) beside the unnamed one at home.
+
 Names, hosts (`nas.home.arpa`) and titles come from the design brief's
 world (`world.dart`). Rows are built in Dart because they join across
 services by download id and their times are relative to `network.now`.

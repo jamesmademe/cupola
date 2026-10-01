@@ -31,6 +31,10 @@ abstract final class WorldHosts {
   static const plex = 'http://nas.home.arpa:32400';
   static const transmission = 'http://nas.home.arpa:9091';
 
+  /// A second Jellyfin, at the cabin: in no profile, for a test that adds it
+  /// with `ConfigProfile.withConnection` — two of a media server.
+  static const jellyfinCabin = 'http://cabin.home.arpa:8096';
+
   // World B.
   static const readarr = 'http://tower.home.arpa:8787';
   static const nzbget = 'http://tower.home.arpa:6789';
@@ -57,6 +61,7 @@ abstract final class WorldIds {
   static const truenas = 'truenas';
   static const plex = 'plex';
   static const transmission = 'transmission';
+  static const jellyfinCabin = 'jellyfin-cabin01';
 }
 
 /// One film or series of the world, with the ids every service agrees on.
