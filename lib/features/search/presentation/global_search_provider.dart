@@ -440,8 +440,9 @@ Future<GlobalSearchServiceResults> _loadStreamLeg({
       // a working one uses for a query it does not hold — which is the exact
       // confusion the per-connection fan-out exists to end. The reason is
       // coarser than the arr legs' (`reportFailure: true` carries the real one
-      // up), so this lands on "Search failed" rather than on "Unreachable": a
-      // fault the user can retry, and not a claim about why.
+      // up), so this lands on a request that did not complete rather than on
+      // "did not answer": a fault the user can retry, and not a claim about
+      // why.
       if (groups.isEmpty) {
         throw const _StreamSearchUnanswered();
       }

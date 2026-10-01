@@ -103,8 +103,9 @@ void main() {
       ), TimeoutException('too slow'));
       expect(lane.state, SearchLaneState.timedOut);
       expect(lane.state.tone, StatusTone.warning);
-      expect(lane.stateWord, 'Did not answer in time');
       expect(lane.faultSentence, contains('timed out'));
+      // The card says it; the heading above it does not say it again.
+      expect(lane.stateWord, isNull);
     });
 
     test('red is a connection nothing answered at, and nothing else', () {
@@ -114,7 +115,7 @@ void main() {
       ), const SocketException('no route to host'));
       expect(lane.state, SearchLaneState.unreachable);
       expect(lane.state.tone, StatusTone.error);
-      expect(lane.stateWord, 'Did not answer');
+      expect(lane.faultSentence, contains('did not answer'));
     });
 
     test('a refusal is a fault, not an outage', () {
@@ -134,7 +135,7 @@ void main() {
       expect(lane.state, SearchLaneState.failed);
       expect(lane.state.tone, StatusTone.warning);
       expect(lane.reason, ServiceFailureReason.unauthorized);
-      expect(lane.stateWord, 'Refused the key');
+      expect(lane.faultSentence, contains('refused the key'));
     });
 
     test('an answered lane counts, wears no pip and offers no Retry', () {

@@ -83,6 +83,29 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('P8: a stopped lane states its cause once, in its card, and not '
+      'again on its heading', (tester) async {
+    // The heading said `Behind Cloudflare Access` one line above a card that
+    // said `Cloudflare Access answered instead of Sonarr`: the same cause,
+    // twice, with the remedy beside only one of them.
+    final harness = await _search(tester, Profiles.p8);
+
+    expect(
+      find.text(
+        'No Sonarr results: Cloudflare Access answered instead of Sonarr.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Behind Cloudflare Access'), findsNothing);
+    expect(find.text('Service token not accepted'), findsNothing);
+    // Each stopped lane's cause, on screen once: in its card's sentence.
+    expect(find.textContaining('Cloudflare Access'), findsNWidgets(2));
+    // A lane that answered keeps its count on the heading.
+    expect(find.bySemanticsLabel(RegExp(r'^\d+ results?$')), findsWidgets);
+
+    await harness.unmount(tester);
+  });
+
   testWidgets('P1, a Sonarr lane that timed out: Retry in the amber fill, no '
       'remedy', (tester) async {
     final harness = await _search(

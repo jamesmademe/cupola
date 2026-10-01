@@ -245,16 +245,21 @@ class GlobalSearchServiceResults {
   /// four stopped states are amber.
   bool get hasFault => state.canRetry;
 
-  /// The word beside the pip: what this lane is doing, or what went wrong.
-  String get stateWord => switch (state) {
+  /// The word on the lane's heading: what the lane is doing, while it is out
+  /// or once it has answered.
+  ///
+  /// Null once it stopped. The fault card under the heading says what went
+  /// wrong ([faultSentence]) beside the remedy that cause names, and a heading
+  /// that said it too stated the cause twice, one line apart (`Behind
+  /// Cloudflare Access` over `No Radarr results: Cloudflare Access answered
+  /// instead of Radarr.`). The heading keeps the lane's tone on its pip.
+  String? get stateWord => switch (state) {
     SearchLaneState.searching => 'Searching…',
     SearchLaneState.answered =>
       '${results.length} result${results.length == 1 ? '' : 's'}',
-    SearchLaneState.timedOut => 'Did not answer in time',
-    SearchLaneState.unreachable => failureLabel(
-      ServiceFailureReason.unreachable,
-    ),
-    SearchLaneState.failed => _failureWord,
+    SearchLaneState.timedOut ||
+    SearchLaneState.unreachable ||
+    SearchLaneState.failed => null,
   };
 
   /// The sentence the lane's fault card prints, in place of rows: what is
@@ -296,20 +301,6 @@ class GlobalSearchServiceResults {
         ? headline
         : '${headline[0].toLowerCase()}${headline.substring(1)}';
   }
-
-  /// The words this app already uses for each refusal, so the search screen and
-  /// the settings rows cannot describe one failure two different ways.
-  String get _failureWord => switch (reason) {
-    // Reached, failed, and nothing in the exception says why. Deliberately not
-    // "did not answer": claiming the box is off on the strength of an error
-    // nobody could read is the same lie one tone louder.
-    null || ServiceFailureReason.unknown => 'Search failed',
-    final reason => failureLabel(
-      reason,
-      credential: refusedCredentialOf(service),
-      gateway: gateway,
-    ),
-  };
 }
 
 /// "7 connections asked · 5 answered · 1 still searching · 1 timed out".

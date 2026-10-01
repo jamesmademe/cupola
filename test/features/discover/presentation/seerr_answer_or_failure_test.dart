@@ -143,7 +143,10 @@ void main() {
       );
       expect(lane.state, SearchLaneState.failed);
       expect(lane.reason, ServiceFailureReason.unauthorized);
-      expect(lane.stateWord, 'Refused the key');
+      expect(
+        lane.faultSentence,
+        'No Seerr results: Seerr answered but refused the key.',
+      );
     });
 
     test('a Seerr that did not answer is not counted as answered', () async {
@@ -154,7 +157,7 @@ void main() {
         ),
       );
       expect(lane.state, SearchLaneState.unreachable);
-      expect(lane.stateWord, 'Did not answer');
+      expect(lane.faultSentence, 'No Seerr results: Seerr did not answer.');
       expect(searchLaneCensus([lane]), contains('0 answered'));
     });
 

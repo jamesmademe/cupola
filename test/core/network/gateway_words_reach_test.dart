@@ -65,11 +65,12 @@ void main() {
       name: '',
     ), _behindAccess());
 
-    expect(lane.stateWord, 'Behind Cloudflare Access');
     expect(
       lane.faultSentence,
       'No Radarr results: Cloudflare Access answered instead of Radarr.',
     );
+    // Said once, in the card: the heading above it carries no word.
+    expect(lane.stateWord, isNull);
   });
 
   test('a lane\'s fault is one sentence, with no label capitalised in its '

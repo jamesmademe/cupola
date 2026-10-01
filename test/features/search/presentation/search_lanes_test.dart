@@ -62,35 +62,33 @@ void main() {
     await _release(tester, bazarr.release);
   });
 
-  testWidgets('a lane past its deadline is amber and says the word', (
+  testWidgets('a lane past its deadline is amber and says why once', (
     tester,
   ) async {
-    // TONE: a slow server is a fault, so the lane is amber with the word —
-    // never the red the old code painted every failure, which made a Bazarr
-    // taking nine seconds read exactly like a Bazarr that was unplugged.
+    // TONE: a slow server is a fault, so the lane is amber — never the red
+    // the old code painted every failure, which made a Bazarr taking nine
+    // seconds read exactly like a Bazarr that was unplugged. The card says
+    // why; the heading above it no longer says it again.
     await _pump(tester, radarr: _LaneRadarrService(parks: true));
     await _passTheDeadline(tester);
 
-    expect(find.text('Did not answer in time'), findsOneWidget);
     expect(
       find.text('No Radarr results: the search timed out.'),
       findsOneWidget,
     );
+    expect(find.text('Did not answer in time'), findsNothing);
 
     final context = tester.element(find.byType(SearchScreen));
     final colorScheme = Theme.of(context).colorScheme;
-    final word = tester.widget<Text>(find.text('Did not answer in time'));
+    final glyph = tester.widget<Icon>(find.byIcon(Icons.timer_off_rounded));
     expect(
-      word.style?.color,
+      glyph.color,
       statusToneColor(colorScheme, StatusTone.warning),
       reason: 'the tone comes from the vocabulary, never from a literal',
     );
     // And not the red arm, which is reserved for a connection nothing answered
     // at.
-    expect(
-      word.style?.color,
-      isNot(statusToneColor(colorScheme, StatusTone.error)),
-    );
+    expect(glyph.color, isNot(statusToneColor(colorScheme, StatusTone.error)));
   });
 
   testWidgets('Retry names the connection it will ask again', (tester) async {

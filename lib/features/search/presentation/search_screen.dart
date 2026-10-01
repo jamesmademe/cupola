@@ -644,7 +644,8 @@ class _SearchSectionHeader extends StatelessWidget {
   }
 }
 
-/// The lane's own word, and the pip that gives it a tone.
+/// The lane's own word, and the pip that gives it a tone. A lane that stopped
+/// keeps the pip and leaves the words to its fault card.
 ///
 /// The whole vocabulary this replaced was one string, `'offline'`, painted
 /// `colorScheme.error` for every kind of failure — so a Bazarr taking nine
@@ -663,14 +664,15 @@ class _LaneStateReadout extends StatelessWidget {
       context,
     ).textTheme.labelSmall?.tabular.copyWith(color: tone);
 
-    if (!lane.state.showsPip) {
+    final word = lane.stateWord;
+    if (!lane.state.showsPip && word != null) {
       // A global search fans out to every configured service and they answer at
       // their own pace, so this count genuinely arrives — it is not a number
       // that was always there. Rolling it is the section reporting in.
       // `.tabular` still does the anti-jitter work; the roll is what marks the
       // arrival.
       return ReelLine(
-        lane.stateWord,
+        word,
         options: ReelMotion.figure,
         style: style,
         fallbackMaxLines: 1,
@@ -680,8 +682,9 @@ class _LaneStateReadout extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Decorative: the word beside it says the same thing, and a screen
-        // reader announcing "circle" before every heading is noise.
+        // Decorative: the word beside it, or the fault card under a lane that
+        // stopped, says the same thing, and a screen reader announcing
+        // "circle" before every heading is noise.
         ExcludeSemantics(
           child: Container(
             width: 8,
@@ -689,15 +692,19 @@ class _LaneStateReadout extends StatelessWidget {
             decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
           ),
         ),
-        const SizedBox(width: AppSpacing.xs),
-        Flexible(
-          child: Text(
-            lane.stateWord,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: style,
+        // No word once the lane stopped: the card under the heading states
+        // the cause, once, beside its remedy.
+        if (word != null) ...[
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              word,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
