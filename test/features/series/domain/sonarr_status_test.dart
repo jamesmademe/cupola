@@ -82,6 +82,17 @@ void main() {
       );
     });
 
+    test('a missing episode count is unknown, not "Not released"', () {
+      // Read as `0`, a series with no files was "nothing aired yet" — a claim
+      // about the schedule from a figure Sonarr never sent.
+      expect(
+        sonarrSeriesAvailability(
+          buildSeries(statistics: const {'episodeFileCount': 0}),
+        ),
+        MediaAvailability.unknown,
+      );
+    });
+
     test('deleted outranks the counts', () {
       expect(
         sonarrSeriesAvailability(

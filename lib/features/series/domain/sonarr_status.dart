@@ -20,15 +20,17 @@ MediaAvailability sonarrSeriesAvailability(SonarrSeries series) {
     return MediaAvailability.deleted;
   }
 
+  // Both figures or neither: a missing `episodeCount` read as `0` made a series
+  // with no files "Not released", a claim about the schedule from no data.
   final files = series.episodeFileCount;
-  if (series.statistics == null || files == null) {
+  final aired = series.episodeCount;
+  if (series.statistics == null || files == null || aired == null) {
     return MediaAvailability.unknown;
   }
 
   // `episodeCount` counts aired, monitored episodes, so a continuing series
   // that holds everything broadcast so far is `available` rather than being
   // stuck at `partial` forever.
-  final aired = series.episodeCount ?? 0;
   if (aired <= 0) {
     return files > 0
         ? MediaAvailability.available

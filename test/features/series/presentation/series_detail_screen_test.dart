@@ -228,6 +228,25 @@ void main() {
       expect(find.text('1 season'), findsOneWidget);
     });
 
+    testWidgets('a figure Sonarr did not send is never printed as 0', (
+      tester,
+    ) async {
+      // `episodeFileCount` absent from the statistics: the hero chip, the
+      // deck's summary and the Seasons count each used to fill it with `0`.
+      await _pumpSeriesDetail(
+        tester,
+        detailBuilder: (ref, seriesId) async =>
+            _series(statistics: const {'seasonCount': 2, 'episodeCount': 8}),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('0/8 episodes'), findsNothing);
+      expect(find.textContaining('0 of 8'), findsNothing);
+      // The line that would need the missing figure is omitted; the expected
+      // one still stands where it is the whole statement.
+      expect(find.text('2 seasons'), findsOneWidget);
+    });
+
     testWidgets('uses initialSeries while provider is still loading', (
       tester,
     ) async {

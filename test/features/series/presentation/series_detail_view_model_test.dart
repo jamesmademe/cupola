@@ -106,7 +106,77 @@ void main() {
       });
     });
 
+    group('diskCounts', () {
+      SeriesDetailViewModel withStats(Map<String, dynamic> statistics) =>
+          SeriesDetailViewModel.fromSeries(
+            makeSeries(statistics: statistics),
+            baseUrl: 'http://localhost:8989',
+            apiKey: 'test-key',
+          );
+
+      test('carries both figures when Sonarr sent both', () {
+        final counts = withStats({
+          'episodeCount': 24,
+          'episodeFileCount': 18,
+        }).diskCounts;
+        expect(counts?.onDisk, 18);
+        expect(counts?.expected, 24);
+      });
+
+      test('is unknown, never zero, when a figure is missing', () {
+        // `?? 0` turned a file count Sonarr left out into "0 of 24 episodes on
+        // disk" — the worst gap a series can have, from no data at all.
+        expect(withStats({'episodeCount': 24}).diskCounts, isNull);
+        expect(withStats({'episodeFileCount': 18}).diskCounts, isNull);
+      });
+
+      test('states no gap while nothing is expected yet', () {
+        expect(
+          withStats({'episodeCount': 0, 'episodeFileCount': 0}).diskCounts,
+          isNull,
+        );
+      });
+    });
+
     group('buildInfoGroups', () {
+      testWidgets('the Episodes cell reads an em dash for a missing figure', (
+        tester,
+      ) async {
+        final vm = SeriesDetailViewModel.fromSeries(
+          makeSeries(statistics: {'episodeCount': 24}),
+          baseUrl: 'http://localhost:8989',
+          apiKey: 'test-key',
+        );
+        final episodes = vm
+            .buildInfoGroups('HD-1080p')
+            .firstWhere((group) => group.title == 'Episodes');
+
+        await tester.pumpWidget(
+          MaterialApp(home: Scaffold(body: episodes.child)),
+        );
+
+        expect(find.text('— / 24'), findsOneWidget);
+        expect(find.textContaining('0'), findsNothing);
+        // Spoken as what the dash means, never as "dash".
+        expect(
+          tester.getSemantics(find.text('— / 24')),
+          matchesSemantics(label: 'unknown of 24'),
+        );
+      });
+
+      test('the Episodes cell keeps both figures when Sonarr sent both', () {
+        final vm = SeriesDetailViewModel.fromSeries(
+          makeSeries(statistics: {'episodeCount': 24, 'episodeFileCount': 18}),
+          baseUrl: 'http://localhost:8989',
+          apiKey: 'test-key',
+        );
+        final episodes = vm
+            .buildInfoGroups('HD-1080p')
+            .firstWhere((group) => group.title == 'Episodes');
+
+        expect((episodes.child as Text).data, '18 / 24');
+      });
+
       test('returns empty when no data', () {
         final vm = SeriesDetailViewModel.fromSeries(
           makeSeries(),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -86,6 +87,21 @@ class SeriesDetailViewModel {
     return parts.join(' · ');
   }
 
+  /// How much of the manifest is on disk, or null when Sonarr did not send
+  /// both figures — or expects no episodes yet, so there is no gap to state.
+  ///
+  /// Every line that states the gap (the hero chip, the deck's summary, the
+  /// Seasons count) reads this one getter, so none can make a figure up. Each
+  /// used to fill a missing statistic with `?? 0`, and a series whose file
+  /// count Sonarr left out read "0 of 24 episodes on disk": the worst gap a
+  /// series can have, asserted from no data at all. Unknown omits the line.
+  ({int onDisk, int expected})? get diskCounts {
+    final onDisk = episodeFileCount;
+    final expected = episodeCount;
+    if (onDisk == null || expected == null || expected <= 0) return null;
+    return (onDisk: onDisk, expected: expected);
+  }
+
   List<String> get metadataItems => [
     year,
     ?episodeSummary,
@@ -111,10 +127,7 @@ class SeriesDetailViewModel {
       if (_hasText(status))
         MediaInfoGroup(title: 'Status', child: Text(capitalizeFirst(status))),
       if (episodeCount != null || episodeFileCount != null)
-        MediaInfoGroup(
-          title: 'Episodes',
-          child: Text('${episodeFileCount ?? 0} / ${episodeCount ?? 0}'),
-        ),
+        MediaInfoGroup(title: 'Episodes', child: _episodesFact()),
       if (_hasText(network))
         MediaInfoGroup(title: 'Network', child: Text(network!)),
       if (_hasText(qualityProfileName))
@@ -178,6 +191,21 @@ class SeriesDetailViewModel {
   ];
 
   bool _hasText(String? value) => value != null && value.isNotEmpty;
+
+  /// `28 / 30`, with the em dash for the half Sonarr did not send — never a
+  /// `0`, which would claim the episodes are not there. The dash is spoken as
+  /// what it means: a reader hears "unknown", not "dash".
+  Widget _episodesFact() {
+    final onDisk = episodeFileCount;
+    final expected = episodeCount;
+    final text =
+        '${onDisk ?? Lexicon.noFigure} / ${expected ?? Lexicon.noFigure}';
+    if (onDisk != null && expected != null) return Text(text);
+    return Text(
+      text,
+      semanticsLabel: '${onDisk ?? 'unknown'} of ${expected ?? 'unknown'}',
+    );
+  }
 
   factory SeriesDetailViewModel.fromSeries(
     SonarrSeries series, {

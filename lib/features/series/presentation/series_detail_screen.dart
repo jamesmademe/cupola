@@ -191,9 +191,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
 
   /// `41/48 episodes` — how much of the manifest exists, for the hero chip slot.
   String? _episodeCounter(SeriesDetailViewModel viewModel) {
-    final total = viewModel.episodeCount ?? 0;
-    if (total <= 0) return null;
-    return '${viewModel.episodeFileCount ?? 0}/$total episodes';
+    final counts = viewModel.diskCounts;
+    if (counts == null) return null;
+    return '${counts.onDisk}/${counts.expected} episodes';
   }
 
   String? _seasonCounter(SeriesDetailViewModel viewModel) {
@@ -278,8 +278,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
             hint: 'Changes it on Sonarr',
           )
         : null;
-    final total = viewModel.episodeCount ?? 0;
-    final onDisk = viewModel.episodeFileCount ?? 0;
+    final counts = viewModel.diskCounts;
 
     return MediaDetailBody(
       // Sonarr's column, and it is not Radarr's. The wide track is the season
@@ -295,9 +294,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
               status: status,
               mediaTitle: viewModel.title,
               isMonitored: viewModel.isMonitored,
-              partialSummary: total > 0
-                  ? '$onDisk of $total episodes on disk.'
-                  : null,
+              partialSummary: counts == null
+                  ? null
+                  : '${counts.onDisk} of ${counts.expected} episodes on disk.',
               isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
               isConfirmed: isAutoSearchConfirmed,
               onSearch: () => _triggerSearch(context),
@@ -336,7 +335,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         if (viewModel.isInLibrary) ...[
           MediaDetailSlot.lazy(
             label: 'Seasons',
-            count: total > 0 ? '$onDisk of $total on disk' : null,
+            count: counts == null
+                ? null
+                : '${counts.onDisk} of ${counts.expected} on disk',
             // `# · Episode · Aired · File` is read down its columns, so the
             // reading measure that keeps prose at 720 does not apply: capping it
             // there inside a 1000pt window is a table with a 155pt margin on
