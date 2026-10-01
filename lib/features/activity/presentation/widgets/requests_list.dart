@@ -348,6 +348,7 @@ class _RequestCard extends ConsumerWidget {
         SnackBarHelper.error(
           context,
           '$failureMessage. ${writeFailureReason(ServiceKey.seerr, error)}',
+          cause: error,
         );
       }
       return;

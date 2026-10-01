@@ -285,6 +285,7 @@ class ActivityActions {
         SnackBarHelper.error(
           context,
           '$failureMessage. ${writeFailureReason(service, error)}',
+          cause: error,
         );
       }
       return;
