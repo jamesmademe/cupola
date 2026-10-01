@@ -406,6 +406,22 @@ class _LibrariesSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // `/Library/VirtualFolders` is elevated on Jellyfin, so a household
+    // member's token is refused it: the Libraries tab says so calmly, and so
+    // does this region, rather than drawing the refusal as a fault.
+    if (service == ServiceKey.jellyfin &&
+        ref.watch(jellyfinLacksAdministratorProvider)) {
+      return ServiceOverviewSection(
+        service: service,
+        title: 'Libraries',
+        subtitle: '—',
+        destination: ServiceTab.libraries,
+        child: const ServiceOverviewEmpty(
+          icon: Icons.admin_panel_settings_outlined,
+          label: jellyfinNeedsAdministratorTitle,
+        ),
+      );
+    }
     final libraries = service == ServiceKey.jellyfin
         ? ref.watch(jellyfinLibrariesProvider)
         : ref.watch(plexLibrariesProvider);

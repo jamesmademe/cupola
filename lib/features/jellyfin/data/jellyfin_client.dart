@@ -60,7 +60,7 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 ///
 /// The one administrator-only write in this client, [refreshLibrary]
 /// (`RequiresElevation`), has no caller in the UI. What a non-administrator
-/// token *does* lose is reads: `/Devices`, `/ScheduledTasks` and
+/// token *does* lose is reads: `/Users`, `/Devices`, `/ScheduledTasks` and
 /// `/Library/VirtualFolders` are elevated. That is a read scope, answered by
 /// [getCredentialKind] from `GET /Users/Me`, and drawn as an "administrator
 /// only" placeholder rather than an error.
@@ -247,12 +247,20 @@ class JellyfinClient implements StreamServerClient {
   Future<bool> verifyCredential() async {
     try {
       // The authenticated twin of the public probe: 401 means the token is
-      // absent or wrong, 403 means it is valid but under-privileged. Both are
-      // "no" here, and a caller that wants to tell an unreachable host apart
-      // pairs this with [probeVersion].
+      // absent or wrong, and a caller that wants to tell an unreachable host
+      // apart pairs this with [probeVersion].
       final response = await _api.get('/System/Info');
       final code = response.statusCode ?? 0;
       return code >= 200 && code < 300;
+    } on DioException catch (error) {
+      // A 403 from Jellyfin itself is a household member's token: valid, and
+      // narrower than an administrator's. It plays, browses and controls its
+      // own sessions, so it is accepted, as [checkCredentialAndVersion]
+      // accepts it for the Dashboard; the reads it cannot make say so where
+      // they are drawn. A 403 from something in front of Jellyfin is not
+      // Jellyfin's answer.
+      return error.response?.statusCode == 403 &&
+          error.error is! AccessGatewayAnswer;
     } catch (_) {
       return false;
     }
@@ -838,6 +846,32 @@ class JellyfinClient implements StreamServerClient {
           .where((user) => !user.isDisabled && user.id.isNotEmpty)
           .map((user) => user.toStreamViewer())
           .toList(growable: false);
+    } on DioException catch (error) {
+      // `/Users` is elevated. A household member's token is refused it, and is
+      // itself the one person it can read as: listing nobody left that token
+      // with "This server reports no users" and no way to choose itself, so
+      // every per-viewer lens stayed asking for a viewer. A 403 from something
+      // in front of Jellyfin is not Jellyfin's answer and lists nobody.
+      if (error.response?.statusCode == 403 &&
+          error.error is! AccessGatewayAnswer) {
+        return _tokenUserAsViewer();
+      }
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// The user the token belongs to, as the one viewer it can read as. Empty
+  /// for an API key, which belongs to nobody, and on any failure.
+  Future<List<StreamViewer>> _tokenUserAsViewer() async {
+    try {
+      final response = await _api.get('/Users/Me');
+      final data = response.data;
+      if (data is! Map) return const [];
+      final user = JellyfinUserDto.fromJson(data.cast<String, dynamic>());
+      if (user.isDisabled || user.id.isEmpty) return const [];
+      return [user.toStreamViewer()];
     } catch (_) {
       return const [];
     }

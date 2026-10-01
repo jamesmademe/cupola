@@ -6,6 +6,11 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+/// What a Jellyfin read only an administrator may make says, reached with a
+/// household member's token: the placeholder's title, and the Overview's
+/// Libraries region on its own.
+const jellyfinNeedsAdministratorTitle = 'Needs a Jellyfin administrator';
+
 /// A Jellyfin tab whose read only an administrator may make, reached with a
 /// credential that is not one.
 ///
@@ -39,7 +44,7 @@ class JellyfinAdminPlaceholder extends StatelessWidget {
       child: AppEmptyStatePage(
         emptyState: AppEmptyState(
           icon: Icons.admin_panel_settings_outlined,
-          title: 'Needs a Jellyfin administrator',
+          title: jellyfinNeedsAdministratorTitle,
           message:
               'This Jellyfin account can play and browse. Only an '
               'administrator can list $what; use an API key or an '
@@ -63,16 +68,33 @@ class JellyfinAdminPlaceholder extends StatelessWidget {
 /// The line under Now playing on a non-administrator connection: its list is
 /// only this account's playback, which is true and worth saying once so an
 /// empty list is not read as an idle server.
+///
+/// Activity reads every connection and says it once per connection whose
+/// token is a non-administrator's, naming that one when there are two.
 class JellyfinOwnPlaybackNote extends StatelessWidget {
-  const JellyfinOwnPlaybackNote({super.key});
+  const JellyfinOwnPlaybackNote({
+    super.key,
+    this.server,
+    this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+  });
+
+  /// The connection's name when the household has two Jellyfin servers
+  /// (`Jellyfin Cabin`); null where there is no other to tell it from.
+  final String? server;
+
+  /// Around the note. Activity's list pads its rows itself.
+  final EdgeInsetsGeometry padding;
 
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+  Widget build(BuildContext context) => Padding(
+    padding: padding,
     child: AppEmptyState.inline(
       icon: Icons.person_outline_rounded,
       title: 'Showing only this account\'s playback',
-      message: 'Other people\'s sessions need an administrator to see.',
+      message: server == null
+          ? 'Other people\'s sessions need an administrator to see.'
+          : 'Other people\'s sessions on $server need an administrator to '
+                'see.',
     ),
   );
 }

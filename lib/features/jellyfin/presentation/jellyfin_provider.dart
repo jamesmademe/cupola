@@ -223,6 +223,32 @@ final jellyfinCredentialKindProvider = FutureProvider<JellyfinCredentialKind>(
   retry: noProviderRetry,
 );
 
+/// Which credential kind one named connection's slot holds.
+///
+/// A credential is a connection's, not the service's: the Jellyfin at home
+/// can hold an API key while the one at the cabin holds a household member's
+/// token, and the surfaces that read every connection (Activity, the
+/// figures) have to ask each one. The lens's own id, and the empty id,
+/// collapse onto [jellyfinCredentialKindProvider], so the lens's pages and
+/// those surfaces share one `/Users/Me`.
+///
+/// Not part of the capability layer, on purpose: that layer describes the
+/// writes a credential may make, and a non-administrator loses reads.
+final jellyfinCredentialKindForProvider =
+    FutureProvider.family<JellyfinCredentialKind, String>((
+      ref,
+      instanceId,
+    ) async {
+      final lens =
+          ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(jellyfinCredentialKindProvider.future);
+      }
+      return ref
+          .watch(jellyfinClientForProvider(instanceId))
+          .getCredentialKind();
+    }, retry: noProviderRetry);
+
 /// Whether the elevated reads are known to be out of reach for the lens
 /// connection. False while the probe is out and when it did not answer, so a
 /// healthy administrator never sees the placeholder flash.
@@ -230,6 +256,18 @@ final jellyfinLacksAdministratorProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(jellyfinCredentialKindProvider)
+          .asData
+          ?.value
+          .lacksAdministrator ??
+      false,
+);
+
+/// [jellyfinLacksAdministratorProvider], for one named connection. Same rule:
+/// false until `/Users/Me` has said the token is a non-administrator's.
+final jellyfinLacksAdministratorForProvider = Provider.family<bool, String>(
+  (ref, instanceId) =>
+      ref
+          .watch(jellyfinCredentialKindForProvider(instanceId))
           .asData
           ?.value
           .lacksAdministrator ??

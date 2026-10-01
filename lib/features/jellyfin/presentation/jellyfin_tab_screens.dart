@@ -18,6 +18,10 @@ import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_s
 /// The design also specifies enable, library-access and delete controls. Those
 /// are deliberately absent here: [JellyfinClient] exposes none of those writes,
 /// and a control that can only fail is a promise Cupola cannot keep.
+///
+/// `/Users` is elevated like `/Devices` and `/ScheduledTasks`, so a household
+/// member's token gets the same calm placeholder as those two tabs rather than
+/// a refusal drawn as a fault.
 class JellyfinUsersScreen extends ConsumerWidget {
   const JellyfinUsersScreen({super.key, this.topPadding = 0});
 
@@ -26,6 +30,9 @@ class JellyfinUsersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
+    if (ref.watch(jellyfinLacksAdministratorProvider)) {
+      return _needsAdministrator(ref, 'users', topPadding);
+    }
     return ServiceListPage<JellyfinUserDto>(
       service: ServiceKey.jellyfin,
       topPadding: topPadding,

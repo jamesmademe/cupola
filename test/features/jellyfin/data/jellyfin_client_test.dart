@@ -174,9 +174,12 @@ void main() {
       expect(await _client(adapter).verifyCredential(), isFalse);
     });
 
-    test('a valid but under-privileged key is also false', () async {
+    test('a household member\'s token is accepted: valid, and refused only '
+        'the administrator\'s reads', () async {
+      // The Dashboard's probe already reads Jellyfin's own 403 as a narrower
+      // credential that answers; the connection test said refused.
       final adapter = CapturingHttpAdapter(response: '', statusCode: 403);
-      expect(await _client(adapter).verifyCredential(), isFalse);
+      expect(await _client(adapter).verifyCredential(), isTrue);
     });
   });
 

@@ -7,6 +7,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_admin_placeholder.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
@@ -46,13 +47,30 @@ class StreamActivitySection extends ConsumerWidget {
     final offline = ref.watch(streamActivityOfflineProvider).value ?? const [];
     final ownerOnly =
         ref.watch(streamActivityOwnerOnlyProvider).value ?? const [];
+    final settings = ref.watch(currentSettingsProvider);
     // Above the rows, and above the idle room: the servers that did not
-    // answer, in red, then the shared Plex accounts, in blue.
+    // answer, in red; the shared Plex accounts, in blue; then each Jellyfin
+    // whose token is a household member's, which shows only that member's
+    // playback, as its own Now playing says.
     final notes = [
       if (offline.isNotEmpty) _OfflineNote(offline: offline),
       for (final source in ownerOnly) PlexOwnerOnlyNote(server: source.server),
+      for (final jellyfin in settings.configuredInstancesOf(
+        ServiceKey.jellyfin,
+      ))
+        if (ref.watch(jellyfinLacksAdministratorForProvider(jellyfin.id)))
+          JellyfinOwnPlaybackNote(
+            // Named by the app's one rule: only once there is another.
+            server: settings.connectionName(jellyfin.id) == null
+                ? null
+                : settings.connectionTitle(
+                    jellyfin.id,
+                    ServiceKey.jellyfin,
+                    joiner: ' ',
+                  ),
+            padding: EdgeInsets.zero,
+          ),
     ];
-    final settings = ref.watch(currentSettingsProvider);
     // The servers that could say who is watching: a shared Plex account's
     // cannot.
     final askable = [

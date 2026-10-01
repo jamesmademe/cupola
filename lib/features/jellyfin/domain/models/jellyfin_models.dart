@@ -18,8 +18,9 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
-/// Which of the two credential kinds the slot holds, as far as the reads
-/// behind the Devices, Tasks and Libraries tabs are concerned.
+/// Which of the two credential kinds the slot holds, as far as the elevated
+/// reads are concerned: the Users, Devices, Tasks and Libraries tabs, and
+/// the Overview's libraries.
 enum JellyfinCredentialKind {
   /// An API key: Administrator by construction, with no user behind it.
   apiKey,
