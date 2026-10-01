@@ -1,4 +1,5 @@
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/services/domain/request_ordering.dart';
 
 /// The buckets the All Requests screen filters by.
 ///
@@ -13,10 +14,19 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 ///
 /// So [approved] means "got past approval", which is what a user picking that
 /// chip is asking for.
+///
+/// [pending] reads the request's own status and nothing else
+/// ([isAwaitingApproval]), the same test every "N waiting" count makes. It
+/// used to read `displayStatus`, which is the trap seen from this side: a
+/// request still waiting for approval, for a series some of which is already
+/// on disk, reads "Partially available" and fell out of Pending into Approved,
+/// while a request already approved, for a title whose media Seerr still
+/// marks pending, was listed under Pending though nobody had to decide it.
+/// Neither agreed with the count the header showed.
 enum SeerrRequestFilter {
   all('All'),
-  // The label only: the filter still keys on Seerr's own request status,
-  // never on the display status the media's availability overrides.
+  // The label only: the filter keys on Seerr's own request status, never on
+  // the display status the media's availability overrides.
   pending('Waiting for approval'),
   approved('Approved'),
   declined('Declined');
@@ -26,10 +36,19 @@ enum SeerrRequestFilter {
   /// The chip text, and the word used in the empty state.
   final String label;
 
-  bool matches(SeerrRequestDisplayKind kind) {
+  /// Whether [request] belongs in this bucket.
+  ///
+  /// A request waiting for approval belongs in [pending] and no other bucket,
+  /// whatever its media says: the buckets do not overlap.
+  bool matches(SeerrRequest request) {
+    if (this == SeerrRequestFilter.all) return true;
+    final waiting = isAwaitingApproval(request);
+    if (this == SeerrRequestFilter.pending) return waiting;
+    if (waiting) return false;
+
+    final kind = _lifecycleKind(request);
     return switch (this) {
-      SeerrRequestFilter.all => true,
-      SeerrRequestFilter.pending => kind == SeerrRequestDisplayKind.pending,
+      SeerrRequestFilter.all || SeerrRequestFilter.pending => false,
       SeerrRequestFilter.approved =>
         kind == SeerrRequestDisplayKind.approved ||
             kind == SeerrRequestDisplayKind.processing ||
@@ -49,12 +68,27 @@ enum SeerrRequestFilter {
     };
   }
 
+  /// Where a request no longer waiting is in its life: its display status,
+  /// except where that only says the **media** is pending. The media can be
+  /// pending under another request while this one was already decided, and
+  /// then the request's own status is the answer.
+  static SeerrRequestDisplayKind _lifecycleKind(SeerrRequest request) {
+    final kind = request.displayStatus.kind;
+    if (kind != SeerrRequestDisplayKind.pending) return kind;
+    return switch (request.status) {
+      RequestStatus.approved => SeerrRequestDisplayKind.approved,
+      RequestStatus.completed => SeerrRequestDisplayKind.completed,
+      RequestStatus.declined => SeerrRequestDisplayKind.declined,
+      RequestStatus.failed => SeerrRequestDisplayKind.failed,
+      RequestStatus.pendingApproval => SeerrRequestDisplayKind.pending,
+      RequestStatus.unknown => SeerrRequestDisplayKind.unknown,
+    };
+  }
+
   /// The requests in [requests] that belong to this bucket, order preserved.
   List<SeerrRequest> apply(List<SeerrRequest> requests) {
     if (this == SeerrRequestFilter.all) return requests;
-    return requests
-        .where((request) => matches(request.displayStatus.kind))
-        .toList(growable: false);
+    return requests.where(matches).toList(growable: false);
   }
 
   /// The empty-state copy for this bucket.

@@ -41,21 +41,23 @@ void main() {
       await _pumpAllRequests(tester);
       await _pumpAsyncContent(tester);
 
-      // Both fixtures are past approval, so Approved keeps both...
+      // A Quiet Place still waits for approval though the film is on disk,
+      // so its pill reads "Available": the trap. Approved keeps only Shogun,
+      // which was approved and is partly on disk...
       await tester.tap(find.text('Approved'));
       await _settle(tester);
 
-      expect(find.text('A Quiet Place'), findsOneWidget);
+      expect(find.text('A Quiet Place'), findsNothing);
       expect(find.text('Shogun'), findsOneWidget);
 
-      // ...and Pending keeps neither, because media availability overrides the
-      // request status: the available one reports `available`, not `pending`.
+      // ...and Pending keeps A Quiet Place, by the request's own status, as
+      // the "N waiting" count does. It used to keep neither, and Approved
+      // both.
       await tester.tap(find.text('Waiting for approval'));
       await _settle(tester);
 
-      expect(find.text('A Quiet Place'), findsNothing);
+      expect(find.text('A Quiet Place'), findsOneWidget);
       expect(find.text('Shogun'), findsNothing);
-      expect(find.text('No requests waiting for approval'), findsOneWidget);
     });
 
     testWidgets('the selected chip reports its state to a screen reader', (

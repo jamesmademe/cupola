@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/services/domain/request_ordering.dart';
 import 'package:cupola/features/services/domain/seerr_request_filter.dart';
 
 /// [mediaStatus] defaults to `unknown`, which is what makes `displayStatus` fall
@@ -72,24 +73,101 @@ void main() {
     });
   });
 
-  group('pending', () {
-    test('catches a request whose media is itself still pending', () {
-      // Media availability wins here too: this reports `pending` even though the
-      // request was approved, and the pill the user sees says Pending.
-      final approvedButMediaPending = _request(
+  group('pending reads the request, never its media', () {
+    // The trap: `displayStatus` lets the media's availability stand in for
+    // the request's own status. A request still waiting for approval, for a
+    // series some of which is already on disk, reads "Partially available".
+    test('a waiting request whose media is partially available is pending', () {
+      final waiting = _request(
+        id: 1,
+        status: RequestStatus.pendingApproval,
+        mediaStatus: SeerrMediaAvailability.partiallyAvailable,
+      );
+
+      expect(
+        waiting.displayStatus.kind,
+        SeerrRequestDisplayKind.partiallyAvailable,
+      );
+      // It fell out of Pending, into Approved.
+      expect(SeerrRequestFilter.pending.apply([waiting]).map((r) => r.id), [1]);
+      expect(SeerrRequestFilter.approved.apply([waiting]), isEmpty);
+    });
+
+    test('a waiting request whose media is available is pending', () {
+      final waiting = _request(
+        id: 1,
+        status: RequestStatus.pendingApproval,
+        mediaStatus: SeerrMediaAvailability.available,
+      );
+
+      expect(SeerrRequestFilter.pending.apply([waiting]).length, 1);
+      expect(SeerrRequestFilter.approved.apply([waiting]), isEmpty);
+    });
+
+    test('a decided request whose media is still pending is not', () {
+      // Its pill says "Waiting for approval": the media's word, for a
+      // request nobody has to decide any more.
+      final approved = _request(
         id: 1,
         status: RequestStatus.approved,
         mediaStatus: SeerrMediaAvailability.pending,
       );
+      final declined = _request(
+        id: 2,
+        status: RequestStatus.declined,
+        mediaStatus: SeerrMediaAvailability.pending,
+      );
+
+      expect(approved.displayStatus.kind, SeerrRequestDisplayKind.pending);
+      expect(SeerrRequestFilter.pending.apply([approved, declined]), isEmpty);
+      expect(SeerrRequestFilter.approved.apply([approved]).length, 1);
+      expect(SeerrRequestFilter.declined.apply([declined]).length, 1);
+    });
+
+    test('lists exactly the requests the waiting count counts', () {
+      final requests = [
+        _request(id: 1, status: RequestStatus.pendingApproval),
+        _request(
+          id: 2,
+          status: RequestStatus.pendingApproval,
+          mediaStatus: SeerrMediaAvailability.partiallyAvailable,
+        ),
+        _request(
+          id: 3,
+          status: RequestStatus.approved,
+          mediaStatus: SeerrMediaAvailability.pending,
+        ),
+        _request(
+          id: 4,
+          status: RequestStatus.approved,
+          mediaStatus: SeerrMediaAvailability.processing,
+        ),
+      ];
 
       expect(
-        approvedButMediaPending.displayStatus.kind,
-        SeerrRequestDisplayKind.pending,
+        SeerrRequestFilter.pending.apply(requests).map((r) => r.id),
+        requests.where(isAwaitingApproval).map((r) => r.id),
       );
-      expect(
-        SeerrRequestFilter.pending.apply([approvedButMediaPending]).length,
-        1,
-      );
+    });
+
+    test('no request sits in two buckets', () {
+      final requests = [
+        for (final status in RequestStatus.values)
+          for (final media in SeerrMediaAvailability.values)
+            _request(id: 1, status: status, mediaStatus: media),
+      ];
+      for (final request in requests) {
+        final buckets = [
+          SeerrRequestFilter.pending,
+          SeerrRequestFilter.approved,
+          SeerrRequestFilter.declined,
+        ].where((filter) => filter.matches(request));
+        expect(
+          buckets.length,
+          lessThanOrEqualTo(1),
+          reason: '${request.status} over ${request.media?.status}',
+        );
+      }
     });
   });
 
