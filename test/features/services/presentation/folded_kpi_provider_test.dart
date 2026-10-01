@@ -124,19 +124,55 @@ ProviderContainer _container({
 
 void main() {
   group('foldedServiceKpisProvider', () {
-    test('a summed count is the sum of the connections', () async {
+    test(
+      'a count of distinct films is the films of every connection',
+      () async {
+        final container = _container(
+          lensMovies: [
+            buildMovie(id: 1, tmdbId: 101),
+            buildMovie(id: 2, tmdbId: 102),
+          ],
+          otherMovies: [
+            buildMovie(id: 3, tmdbId: 103),
+            buildMovie(id: 4, tmdbId: 104),
+            buildMovie(id: 5, tmdbId: 105),
+          ],
+        );
+
+        final folded = await container.read(
+          foldedServiceKpisProvider(ServiceKey.radarr).future,
+        );
+
+        expect(folded, isNotNull);
+        final movies = folded!.firstWhere((kpi) => kpi.label == 'Movies');
+        expect(movies.value, '5');
+      },
+    );
+
+    test('a film both libraries hold is one film, and its missing copies '
+        'are two files to fetch', () async {
+      // HD and 4K: the same two films in each, neither copy on disk. Added up
+      // as counts, the card read "4 movies" for two films.
       final container = _container(
-        lensMovies: [buildMovie(id: 1), buildMovie(id: 2)],
-        otherMovies: [buildMovie(id: 3), buildMovie(id: 4), buildMovie(id: 5)],
+        lensMovies: [
+          buildMovie(id: 1, tmdbId: 101, hasFile: false),
+          buildMovie(id: 2, tmdbId: 102, hasFile: false),
+        ],
+        otherMovies: [
+          buildMovie(id: 1, tmdbId: 102, hasFile: false),
+          buildMovie(id: 2, tmdbId: 101, hasFile: false),
+        ],
       );
 
       final folded = await container.read(
         foldedServiceKpisProvider(ServiceKey.radarr).future,
       );
 
-      expect(folded, isNotNull);
-      final movies = folded!.firstWhere((kpi) => kpi.label == 'Movies');
-      expect(movies.value, '5');
+      String figure(String label) =>
+          folded!.firstWhere((kpi) => kpi.label == label).value;
+      expect(figure('Movies'), '2');
+      expect(figure('Monitored'), '2');
+      expect(figure('Missing'), '4');
     });
 
     test('a dark connection shows no figure at all', () async {

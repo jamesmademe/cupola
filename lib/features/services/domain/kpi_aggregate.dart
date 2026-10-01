@@ -8,8 +8,14 @@
 /// **The rule is mostly a refusal to aggregate.** Three clauses, and the second
 /// two are the ones that matter:
 ///
-///  * **Counts and byte rates sum.** Two libraries of 900 and 1 138 films are
-///    2 038 films, and two clients pulling 2.0 MB/s and 512 KB/s are pulling
+///  * **A count of titles is a count of distinct titles.** An HD and a 4K
+///    Radarr usually hold the same films, and their two film counts added are
+///    a count of copies: 900 films in each, most of them both, are not 1 800
+///    films. A figure that names its titles ([ServiceKpi.members]) folds as
+///    the union of them.
+///  * **Other counts and byte rates sum.** Missing files and queued downloads
+///    are work, and the 4K's missing copy is a copy to fetch as much as the
+///    HD's is; two clients pulling 2.0 MB/s and 512 KB/s are pulling
 ///    2.5 MB/s. These are the only units where addition means anything.
 ///  * **Percentages, ratios and state words do not.** They keep the lens,
 ///    because the mean of two disk-usage percentages is a number describing no
@@ -85,6 +91,23 @@ ServiceKpi _foldOne(List<ServiceKpi> terms) {
       label: lens.label,
       icon: lens.icon,
       note: _sharedNote(terms),
+    );
+  }
+
+  // A count of titles counts each title once, however many libraries hold it.
+  // A floor in it is still a floor: the titles that did not arrive are not in
+  // the union either.
+  final members = [for (final term in terms) term.members];
+  if (!members.contains(null)) {
+    final union = <Object>{for (final titles in members) ...titles!};
+    final floor = terms.any((term) => _count(term.value)?.floor ?? false);
+    return ServiceKpi(
+      label: lens.label,
+      value: floor ? Lexicon.floor(union.length) : '${union.length}',
+      icon: lens.icon,
+      tone: _worstTone(terms),
+      note: _sharedNote(terms),
+      members: union,
     );
   }
 

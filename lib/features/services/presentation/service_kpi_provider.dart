@@ -41,6 +41,7 @@ import 'package:cupola/features/services/domain/kpi_aggregate.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
@@ -117,48 +118,46 @@ final serviceKpiProvider = FutureProvider.autoDispose
 ///
 /// The per-connection readers behind [serviceKpiForProvider] ask their client
 /// directly and hold nothing, so invalidating that family is already a re-ask.
-List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
-    switch (service) {
-      // The family behind the snapshot, not the lens wrapper alone: that one
-      // only resolves the lens and re-watches its family member, which keeps
-      // the answer it already had.
-      ServiceKey.radarr => [
-        radarrKpiLibraryProvider,
-        radarrQueueSnapshotProvider,
-        radarrQueueSnapshotForProvider,
-      ],
-      ServiceKey.sonarr => [sonarrKpiLibraryProvider],
-      ServiceKey.lidarr => [lidarrKpiLibraryProvider],
-      ServiceKey.readarr => [readarrKpiLibraryProvider, readarrQueueProvider],
-      ServiceKey.qbittorrent => [allTorrentsProvider],
-      ServiceKey.seerr => [requestsProvider],
-      ServiceKey.bazarr => [bazarrBadgesProvider],
-      ServiceKey.truenas => [truenasDashboardProvider],
-      ServiceKey.dockge => [dockgeStackListProvider],
-      ServiceKey.prowlarr => [
-        prowlarrIndexersProvider,
-        prowlarrIndexerStatsProvider,
-      ],
-      ServiceKey.sabnzbd => [sabnzbdQueueProvider, sabnzbdServerStatsProvider],
-      ServiceKey.nzbget => [nzbgetStatusProvider, nzbgetQueueProvider],
-      ServiceKey.unraid => [unraidArrayProvider, unraidDockerProvider],
-      ServiceKey.transmission => [
-        transmissionStatsProvider,
-        transmissionTorrentsProvider,
-      ],
-      ServiceKey.nginxProxyManager => [
-        npmProxyHostsProvider,
-        npmCertificatesProvider,
-      ],
-      ServiceKey.jellyfin => [
-        jellyfinStrictSessionsProvider,
-        jellyfinStrictLibrariesProvider,
-      ],
-      ServiceKey.plex => [
-        plexStrictSessionsProvider,
-        plexStrictLibrariesProvider,
-      ],
-    };
+List<ProviderOrFamily> serviceKpiSources(
+  ServiceKey service,
+) => switch (service) {
+  // The family behind the snapshot, not the lens wrapper alone: that one
+  // only resolves the lens and re-watches its family member, which keeps
+  // the answer it already had.
+  ServiceKey.radarr => [
+    radarrKpiLibraryProvider,
+    radarrQueueSnapshotProvider,
+    radarrQueueSnapshotForProvider,
+  ],
+  ServiceKey.sonarr => [sonarrKpiLibraryProvider],
+  ServiceKey.lidarr => [lidarrKpiLibraryProvider, lidarrAlbumKeysForProvider],
+  ServiceKey.readarr => [readarrKpiLibraryProvider, readarrQueueProvider],
+  ServiceKey.qbittorrent => [allTorrentsProvider],
+  ServiceKey.seerr => [requestsProvider],
+  ServiceKey.bazarr => [bazarrBadgesProvider],
+  ServiceKey.truenas => [truenasDashboardProvider],
+  ServiceKey.dockge => [dockgeStackListProvider],
+  ServiceKey.prowlarr => [
+    prowlarrIndexersProvider,
+    prowlarrIndexerStatsProvider,
+  ],
+  ServiceKey.sabnzbd => [sabnzbdQueueProvider, sabnzbdServerStatsProvider],
+  ServiceKey.nzbget => [nzbgetStatusProvider, nzbgetQueueProvider],
+  ServiceKey.unraid => [unraidArrayProvider, unraidDockerProvider],
+  ServiceKey.transmission => [
+    transmissionStatsProvider,
+    transmissionTorrentsProvider,
+  ],
+  ServiceKey.nginxProxyManager => [
+    npmProxyHostsProvider,
+    npmCertificatesProvider,
+  ],
+  ServiceKey.jellyfin => [
+    jellyfinStrictSessionsProvider,
+    jellyfinStrictLibrariesProvider,
+  ],
+  ServiceKey.plex => [plexStrictSessionsProvider, plexStrictLibrariesProvider],
+};
 
 /// What a service page's pull-to-refresh has to re-ask: its reachability probe
 /// and every source its KPI rail reads.
@@ -297,10 +296,68 @@ final foldedServiceKpisProvider = FutureProvider.autoDispose
             )).future,
           ),
       ]);
+      // Lidarr's albums are counted off its artists, which name none of
+      // them, so the albums each connection holds are read for the fold
+      // alone, and only when there is a second connection to fold.
+      if (service == ServiceKey.lidarr && ordered.length > 1) {
+        return aggregateServiceKpis(
+          await _withLidarrAlbums(ref, ordered, perConnection),
+        );
+      }
       return aggregateServiceKpis(perConnection);
       // Derived from [serviceKpiForProvider], so it carries the flag for the
       // reason that one does.
     }, retry: noProviderRetry);
+
+/// The albums one Lidarr connection holds, by MusicBrainz release group id
+/// (`foreignAlbumId`): what lets a fold across two Lidarr count an album
+/// both hold once. An album with no id stands for itself.
+final lidarrAlbumKeysForProvider = FutureProvider.autoDispose
+    .family<Set<Object>, String>((ref, instanceId) async {
+      final albums = await ref
+          .watch(lidarrServiceForProvider(instanceId))
+          .getAllAlbumsOrThrow();
+      return {
+        for (final album in albums) _titleKey(album, album.foreignAlbumId),
+      };
+    }, retry: noProviderRetry);
+
+/// Each connection's figures with its albums named, for the fold.
+///
+/// A connection whose albums could not be read takes the album figure to
+/// `—`, as any term that did not answer does: a sum standing in for the
+/// union would be a count of copies stated as a count of albums.
+Future<List<List<ServiceKpi>?>> _withLidarrAlbums(
+  Ref ref,
+  List<ServiceInstance> connections,
+  List<List<ServiceKpi>?> perConnection,
+) async {
+  final keys = await Future.wait([
+    for (final connection in connections)
+      ref
+          .watch(lidarrAlbumKeysForProvider(connection.id).future)
+          .then<Set<Object>?>((keys) => keys, onError: (_) => null),
+  ]);
+  return [
+    for (var i = 0; i < perConnection.length; i++)
+      perConnection[i]
+          ?.map((kpi) {
+            if (kpi.label != 'Albums' || kpi.isUnavailable) return kpi;
+            final albums = keys[i];
+            return albums == null
+                ? ServiceKpi.unavailable(label: kpi.label, icon: kpi.icon)
+                : ServiceKpi(
+                    label: kpi.label,
+                    value: kpi.value,
+                    icon: kpi.icon,
+                    tone: kpi.tone,
+                    note: kpi.note,
+                    members: albums,
+                  );
+          })
+          .toList(growable: false),
+  ];
+}
 
 /// Whether one connection answered, with a probe that threw counted as a no.
 ///
@@ -366,9 +423,21 @@ ServiceKpi _figure({
   required String? value,
   StatusTone? tone,
   String? note,
+  Set<Object>? members,
 }) => value == null
     ? ServiceKpi.unavailable(label: label, icon: icon, note: note)
-    : ServiceKpi(label: label, value: value, icon: icon, tone: tone);
+    : ServiceKpi(
+        label: label,
+        value: value,
+        icon: icon,
+        tone: tone,
+        members: members,
+      );
+
+/// The identity a title is counted by across connections: [key] when the
+/// service gave one, else the title itself, which merges with nothing.
+Object _titleKey(Object title, Object? key) =>
+    key == null || key == 0 || key == '' ? title : key;
 
 /// What an unanswered figure says instead of a number.
 ///
@@ -562,17 +631,27 @@ List<ServiceKpi> _radarrKpisFrom(
   final queued = queue.entriesById.length;
   final monitored = movies?.where((m) => m.monitored).length;
   final missing = movies?.where((m) => m.monitored && !m.hasFile).length;
+  // Films by TMDB id, so a fold across an HD and a 4K Radarr counts a film
+  // both hold once. Missing stays a count of files to fetch, which sums.
+  Set<Object>? films(bool Function(RadarrMovie movie) where) => movies == null
+      ? null
+      : {
+          for (final movie in movies)
+            if (where(movie)) _titleKey(movie, movie.tmdbId),
+        };
   return [
     _figure(
       label: 'Movies',
       value: movies == null ? null : '${movies.length}',
       icon: Icons.movie_rounded,
       note: note,
+      members: films((_) => true),
     ),
     _figure(
       label: 'Monitored',
       value: monitored == null ? null : '$monitored',
       icon: Icons.visibility_rounded,
+      members: films((movie) => movie.monitored),
     ),
     _figure(
       label: 'Missing',
@@ -635,12 +714,21 @@ List<ServiceKpi> _sonarrKpisFrom(List<SonarrSeries>? series, {String? note}) {
   }
   final missing = (epTotal - epHave).clamp(0, epTotal);
   final answered = series != null;
+  // Series by TVDB id, so two Sonarr holding one series count it once. The
+  // missing episodes are files to fetch on each, and sum.
+  Set<Object>? shows(bool Function(SonarrSeries show) where) => series == null
+      ? null
+      : {
+          for (final show in series)
+            if (where(show)) _titleKey(show, show.tvdbId),
+        };
   return [
     _figure(
       label: 'Series',
       value: answered ? '${series.length}' : null,
       icon: Icons.tv_rounded,
       note: note,
+      members: shows((_) => true),
     ),
     _figure(
       label: 'Episodes',
@@ -657,6 +745,7 @@ List<ServiceKpi> _sonarrKpisFrom(List<SonarrSeries>? series, {String? note}) {
       label: 'Monitored',
       value: answered ? '$monitored' : null,
       icon: Icons.visibility_rounded,
+      members: shows((show) => show.monitored),
     ),
   ];
 }
@@ -699,6 +788,13 @@ List<ServiceKpi> _lidarrKpisFrom(List<LidarrArtist>? artists, {String? note}) {
       value: answered ? '${artists.length}' : null,
       icon: Icons.person_rounded,
       note: note,
+      // By MusicBrainz id, so two Lidarr holding one artist count them once.
+      members: artists == null
+          ? null
+          : {
+              for (final artist in artists)
+                _titleKey(artist, artist.foreignArtistId),
+            },
     ),
     _figure(
       label: 'Albums',

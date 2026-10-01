@@ -28,6 +28,31 @@ void main() {
       expect(folded!.single.value, '2038');
     });
 
+    test('a count of titles counts each title once', () {
+      // An HD and a 4K Radarr holding the same films: the sum is a count of
+      // copies, and the card would have stated it as a count of films.
+      final folded = aggregateServiceKpis([
+        [
+          ServiceKpi(
+            label: 'Movies',
+            value: '3',
+            icon: Icons.circle,
+            members: const {101, 102, 103},
+          ),
+        ],
+        [
+          ServiceKpi(
+            label: 'Movies',
+            value: '2',
+            icon: Icons.circle,
+            members: const {102, 104},
+          ),
+        ],
+      ]);
+
+      expect(folded!.single.value, '4');
+    });
+
     test('a floor in the sum makes the sum a floor', () {
       // One Readarr's queue walk stopped on a full page with no total. Left
       // unparsed, the fold fell through to the lens and printed its "200+" as

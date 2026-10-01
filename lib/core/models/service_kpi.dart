@@ -47,6 +47,17 @@ class ServiceKpi {
   /// restatement of the label.
   final String? note;
 
+  /// The titles a library count counts, by an identity every connection of
+  /// the service agrees on: a film's TMDB id, a series' TVDB id, an artist's
+  /// MusicBrainz id. Null for a figure that is not a count of titles.
+  ///
+  /// What lets a fold across two libraries count once a film both hold: an
+  /// HD and a 4K Radarr usually hold the same films, and the sum of their two
+  /// film counts is a count of copies, stated as a count of films. A title
+  /// with no shared identity stands for itself, so it is never merged with
+  /// another.
+  final Set<Object>? members;
+
   /// Whether this figure is the reason you would look at the service.
   bool get isNoteworthy => tone != null;
 
@@ -56,6 +67,7 @@ class ServiceKpi {
     required this.icon,
     this.tone,
     this.note,
+    this.members,
   });
 
   /// A figure whose source did not answer.
@@ -80,7 +92,8 @@ class ServiceKpi {
     required this.icon,
     this.note,
   }) : value = unavailableValue,
-       tone = null;
+       tone = null,
+       members = null;
 
   /// What an unanswered figure prints. An em dash, never `0` and never blank —
   /// a blank cell reads as a layout bug.

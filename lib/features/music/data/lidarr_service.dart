@@ -197,15 +197,16 @@ class LidarrService with ArrActivityMixin {
   /// Artist-scoped, and that is the whole of what Lidarr answers here today.
   /// Decision 24 merges Artists and Albums into one segmented Library tab —
   /// which is what freed Lidarr's sixth tab for History — and the Albums
-  /// segment needs a library-wide list this client cannot ask for. What it
-  /// would take, precisely:
+  /// segment needs a library-wide list that carries each album's artist. What
+  /// it would take, precisely:
   ///
-  /// - `getAllAlbums()`: the same `GET /api/v1/album` with no `artistId` and
-  ///   `includeArtist=true`, so each record carries the artist it belongs to.
+  /// - the library-wide list with the artist on each record: what
+  ///   [getAllAlbumsOrThrow] asks for, plus `includeArtist=true`.
   /// - `LidarrAlbum` gains `artistName`, `albumType` and the quality profile.
-  ///   Its entire field list today is id, title, releaseDate, monitored,
-  ///   images and statistics, so the drawn album table has no column to fill
-  ///   beyond the title — the list arriving would not be enough on its own.
+  ///   Its entire field list today is id, foreignAlbumId, title,
+  ///   releaseDate, monitored, images and statistics, so the drawn album
+  ///   table has no column to fill beyond the title — the list arriving
+  ///   would not be enough on its own.
   /// - a segment slot on `MediaBrowseScaffold`, which has none: its only
   ///   injectable widget is `kpiPeek`. That is a shared change in
   ///   `lib/core/widgets/`, outside this feature.
@@ -216,6 +217,18 @@ class LidarrService with ArrActivityMixin {
     return fetchListItems('album', {
       'artistId': artistId,
     }, LidarrAlbum.fromJson);
+  }
+
+  /// Every album in the library: the same `GET /api/v1/album` with no
+  /// `artistId`, which Lidarr answers with the whole list. With a failed
+  /// fetch allowed to reach the caller, because what reads it counts.
+  ///
+  /// Read for one thing only, the stack card of a Lidarr with a second
+  /// connection: two Lidarr usually hold the same albums, and their album
+  /// counts added are a count of copies. Each album's `foreignAlbumId` is
+  /// what lets the card count one both hold once.
+  Future<List<LidarrAlbum>> getAllAlbumsOrThrow() async {
+    return fetchAllItemsOrThrow('album', LidarrAlbum.fromJson);
   }
 
   /// Fetches all tracks for an album.

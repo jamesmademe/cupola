@@ -1,5 +1,10 @@
 class LidarrAlbum {
   final int id;
+
+  /// MusicBrainz's release group id: the album's identity across every
+  /// Lidarr, where [id] is only this server's. Empty when Lidarr sent none.
+  final String foreignAlbumId;
+
   final String title;
   final String? releaseDate;
   final bool monitored;
@@ -8,6 +13,7 @@ class LidarrAlbum {
 
   const LidarrAlbum({
     required this.id,
+    this.foreignAlbumId = '',
     required this.title,
     this.releaseDate,
     required this.monitored,
@@ -36,6 +42,7 @@ class LidarrAlbum {
 
     return LidarrAlbum(
       id: (json['id'] as num?)?.toInt() ?? 0,
+      foreignAlbumId: (json['foreignAlbumId'] as String?)?.trim() ?? '',
       title: (json['title'] as String?)?.trim().isNotEmpty == true
           ? (json['title'] as String).trim()
           : 'Unknown album',
