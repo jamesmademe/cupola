@@ -31,8 +31,7 @@ void main() {
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('Declined'), findsOneWidget);
     expect(find.text('A Quiet Place'), findsOneWidget);
-    expect(find.text('sarah'), findsOneWidget);
-    expect(find.text('Movie'), findsOneWidget);
+    expect(find.text('sarah · Movie'), findsOneWidget);
     // Sentence case: a per-row pill is a dense label, not an eyebrow.
     expect(find.text('Partially available'), findsOneWidget);
     expect(_contentCardWithImage('/quiet-place.jpg'), findsOneWidget);

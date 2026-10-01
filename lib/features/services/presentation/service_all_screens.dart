@@ -213,6 +213,10 @@ class _RequestListRow extends ConsumerWidget {
   /// The delete button's painted plate.
   static const double _deletePlate = 28;
 
+  /// The widest the status pill may be: the cap a figure beside a row's title
+  /// takes on the Overviews.
+  static const double _pillMaxWidth = 132;
+
   /// The delete button's hit box: 44 anywhere a finger can reach the row, the
   /// plate itself on a desktop build, which a pointer drives. The switch is
   /// [AppBreakpoints.isDesktopPlatform], not a width, because a narrow desktop
@@ -330,31 +334,22 @@ class _RequestListRow extends ConsumerWidget {
                   ).textTheme.bodyMedium?.weight(FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
+                // One line, cut short at the end rather than pushed past the
+                // card: at 375pt beside a wide pill the requester, the dot and
+                // the kind overflowed the row by 68px. The row's sentence is
+                // its own label and value, so nothing spoken is cut.
                 Row(
                   children: [
                     _RequesterAvatar(name: requester),
                     const SizedBox(width: 5),
-                    Flexible(
+                    Expanded(
                       child: Text(
-                        requester,
+                        '$requester · $mediaType',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
-                      ),
-                    ),
-                    Text(
-                      '·',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      mediaType,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -374,11 +369,16 @@ class _RequestListRow extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             ExcludeSemantics(
-              child: _SmallPill(
-                label: displayStatus.label,
-                tone: statusTone,
-                // The row's own card, which is what the pill's wash sits on.
-                surface: colorScheme.surfaceContainer,
+              // Capped, so a long word at a large reading size wraps inside
+              // the pill instead of starving the title of its width.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _pillMaxWidth),
+                child: _SmallPill(
+                  label: displayStatus.label,
+                  tone: statusTone,
+                  // The row's own card, which is what the pill's wash sits on.
+                  surface: colorScheme.surfaceContainer,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -547,6 +547,9 @@ class _SmallPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       child: Text(
         label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.end,
         // Sentence case: this pill repeats once per request row, so it is a
         // dense label, not a kicker. The eyebrow is the one uppercase voice and
         // earns it by being the single kicker over a region; a pill that

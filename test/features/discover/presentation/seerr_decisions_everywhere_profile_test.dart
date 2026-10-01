@@ -95,6 +95,9 @@ void main() {
       tester,
       Profiles.p6,
       child: const ServiceAllRequestsScreen(),
+      // A phone. The requester line overflowed the row by 68px here, which
+      // fails the pump.
+      surfaceSize: const Size(375, 812),
     );
 
     testWidgets('P6: a waiting request has its two answers, an approved one '
