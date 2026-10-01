@@ -507,7 +507,11 @@ String? failureServiceMessage(Object? error) {
 /// instead, in the words `connectionFailureMessage` uses where it can name the
 /// service; a failure that carries its own verbatim sentence
 /// ([HasFailureDetail]) keeps it.
-String connectionFailureSentence(Object? error) {
+///
+/// [remedyBeside] is for a surface that draws the remedy as a button right
+/// under the sentence: there "Check them in Settings." would repeat the
+/// button in words, so the sentence stops at the fact.
+String connectionFailureSentence(Object? error, {bool remedyBeside = false}) {
   final detail = connectionFailureDetail(error);
   if (detail != null && detail.trim().isNotEmpty) return detail;
   return switch (classifyConnectionFailure(error)) {
@@ -520,8 +524,10 @@ String connectionFailureSentence(Object? error) {
     ServiceFailureReason.tls =>
       'If its certificate changed, trust it again in its settings.',
     ServiceFailureReason.unauthorized =>
-      'The server answered and refused the saved credentials. Check them in '
-          'Settings.',
+      remedyBeside
+          ? 'The server answered and refused the saved credentials.'
+          : 'The server answered and refused the saved credentials. Check '
+                'them in Settings.',
     ServiceFailureReason.notFound =>
       'Something answered, but the API is not at this address.',
     ServiceFailureReason.redirected =>

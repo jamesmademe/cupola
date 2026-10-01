@@ -111,11 +111,18 @@ class AppErrorState extends StatelessWidget {
   /// The sentence under the headline, or null when it would say the same
   /// thing again: a failure nobody can attribute has nothing to add to "The
   /// request to Radarr did not complete" unless it carries its own words.
-  static String? _detail(Object error, ServiceFailureReason reason) {
+  ///
+  /// Beside a remedy button the sentence stops at the fact: "Check them in
+  /// Settings." would say the button again in words.
+  static String? _detail(
+    Object error,
+    ServiceFailureReason reason, {
+    required bool remedyBeside,
+  }) {
     final own = connectionFailureDetail(error);
     if (own != null && own.trim().isNotEmpty) return own;
     if (reason == ServiceFailureReason.unknown) return null;
-    return connectionFailureSentence(error);
+    return connectionFailureSentence(error, remedyBeside: remedyBeside);
   }
 
   @override
@@ -123,6 +130,7 @@ class AppErrorState extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final reason = classifyConnectionFailure(error);
+    final remedy = FailureRemedy.of(_service, error);
     // Walked against the ground the glyph and the label actually sit on: the
     // page, with nothing behind them.
     final toneInk = statusToneColor(colorScheme, failureTone(reason));
@@ -150,7 +158,8 @@ class AppErrorState extends StatelessWidget {
             // dimmer. Plain words from the classification — see the class
             // comment — and left out when they would only restate the
             // headline.
-            if (_detail(error, reason) case final detail?) ...[
+            if (_detail(error, reason, remedyBeside: remedy != null)
+                case final detail?) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
                 detail,
@@ -164,8 +173,7 @@ class AppErrorState extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            if (_actions(context, reason, FailureRemedy.of(_service, error))
-                case final actions?) ...[
+            if (_actions(context, reason, remedy) case final actions?) ...[
               const SizedBox(height: AppSpacing.xl),
               actions,
             ],

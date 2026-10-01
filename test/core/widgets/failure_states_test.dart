@@ -371,6 +371,12 @@ void main() {
       expect(_filled('Paste the key again'), findsOneWidget);
       // The same key can only be refused again.
       expect(find.text('Retry'), findsNothing);
+      // The button is the remedy; the sentence does not say it again.
+      expect(
+        find.text('The server answered and refused the saved credentials.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Check them in Settings'), findsNothing);
 
       await tester.tap(find.text('Paste the key again'));
       await tester.pumpAndSettle();
