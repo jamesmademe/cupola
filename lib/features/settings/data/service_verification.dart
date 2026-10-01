@@ -708,6 +708,7 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
 /// is exactly how a permission the user has not granted looks from the socket.
 bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.sessionEnded ||
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
@@ -774,6 +775,7 @@ Future<ServiceDiagnosis> diagnoseThroughLocalNetworkGate(
 /// trip to learn nothing.
 bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.sessionEnded ||
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
@@ -870,6 +872,9 @@ String connectionFailureMessage(
                 "${service.title}'s own settings."
           : '${service.title} answered, and does not accept this username and '
                 'password.';
+    case ServiceFailureReason.sessionEnded:
+      return 'This account was signed out of ${service.title}. Sign in again '
+          'to keep asking for movies and series.';
     case ServiceFailureReason.csrfRefused:
       return '${service.title} refused the security token it had just handed '
           'out. Nothing changed. Retry in a moment.';

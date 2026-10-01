@@ -1228,7 +1228,11 @@ ProviderContainer _container({
       if (statusClient != null)
         seerrClientFactoryProvider.overrideWith(
           (ref) =>
-              (instance, {String? pinnedCertFingerprint}) => statusClient,
+              (
+                instance, {
+                String? pinnedCertFingerprint,
+                SeerrSessionEvents events = const SeerrSessionEvents(),
+              }) => statusClient,
         ),
       radarrServiceProvider.overrideWith(
         (ref) => radarrService ?? FakeRadarrService(),
@@ -1349,7 +1353,11 @@ ProviderContainer _mutableSettingsContainer({
       if (statusClient != null)
         seerrClientFactoryProvider.overrideWith(
           (ref) =>
-              (instance, {String? pinnedCertFingerprint}) => statusClient,
+              (
+                instance, {
+                String? pinnedCertFingerprint,
+                SeerrSessionEvents events = const SeerrSessionEvents(),
+              }) => statusClient,
         ),
       radarrServiceProvider.overrideWith(
         (ref) => radarrService ?? FakeRadarrService(),

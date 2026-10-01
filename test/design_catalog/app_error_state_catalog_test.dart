@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
@@ -125,6 +126,21 @@ void main() {
         width: 320,
       ),
       CatalogScene(
+        'AppErrorState(service:) · a Seerr account whose session ended: blue, '
+        'the person\'s own step and not a fault, Sign in again leads in the '
+        'ink fill, and no Retry: no request revives a session',
+        (_) => AppErrorState(
+          service: ServiceKey.seerr,
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v1/request'),
+            type: DioExceptionType.badResponse,
+            error: const SeerrSessionEnded(),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
         'AppErrorState.compact() · no serviceName, no onRetry, a failure '
         'nobody can attribute: amber, never read as silence',
         (_) => const AppErrorState.compact(error: 'Exception: parser'),
@@ -156,6 +172,17 @@ void main() {
               statusCode: 403,
             ),
           ),
+          onRetry: () {},
+        ),
+        width: 360,
+      ),
+      CatalogScene(
+        'InlineErrorRetry(service:) · signed out of Seerr: the glyph blue, '
+        'Sign in again in the compact ink fill, and no Retry',
+        (_) => InlineErrorRetry(
+          message: 'Signed out of Seerr, so this row is missing.',
+          error: const ClassifiedFailure(ServiceFailureReason.sessionEnded),
+          service: ServiceKey.seerr,
           onRetry: () {},
         ),
         width: 360,

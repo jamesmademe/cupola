@@ -20,9 +20,11 @@ import 'package:cupola/core/status/media_status.dart';
 /// red ([failureTone]). Every other reason is something that *answered* — a
 /// refusal, a 5xx, a reply nobody can read, a timeout after the connection was
 /// made — or a request the device itself would not send, and each of those is
-/// a **fault**: amber, with one concrete thing to go and fix. A surface decides
-/// nothing about tone or words on its own; it asks [failureTone],
-/// [failureLabel], [failureHeadline] and [failureRemedy].
+/// a **fault**: amber, with one concrete thing to go and fix. One is neither:
+/// [sessionEnded] is a step that falls to the person, blue like a certificate
+/// waiting to be trusted. A surface decides nothing about tone or words on its
+/// own; it asks [failureTone], [failureLabel], [failureHeadline] and
+/// [failureRemedy].
 enum ServiceFailureReason {
   /// Nothing replied at the address: DNS failure, connection refused, no
   /// route, a connection that never completed (Dio's connect timeout), or a
@@ -39,6 +41,16 @@ enum ServiceFailureReason {
 
   /// Reached the service, which rejected the credentials or the API key.
   unauthorized,
+
+  /// A Seerr account's session is over: it expired after 30 days unused, it
+  /// was signed out elsewhere, or the operator removed the account. The
+  /// server refused a request and then `/auth/me` itself
+  /// (`classifySeerrRefusal`).
+  ///
+  /// Blue, never amber: nothing in the stack is broken, and the one thing to
+  /// do is the person's own, signing in again. Never [unauthorized] either,
+  /// whose remedy is a key nobody pasted.
+  sessionEnded,
 
   /// Seerr's CSRF protection refused a write twice: once without a token,
   /// and again with the token the server had just handed out. A fault of the
@@ -536,13 +548,22 @@ bool failureDidNotAnswer(ServiceFailureReason reason) =>
 /// The complement of [failureDidNotAnswer]. `unknown` is a fault too: the
 /// request failed and nobody can say why, and claiming the host is silent on
 /// the strength of an error nobody could read is the same lie one tone louder.
+///
+/// [ServiceFailureReason.sessionEnded] is not one: it is the person's step,
+/// and its remedy is drawn in ink, never in the fault's amber fill.
 bool failureIsFault(ServiceFailureReason reason) =>
-    !failureDidNotAnswer(reason);
+    !failureDidNotAnswer(reason) && reason != ServiceFailureReason.sessionEnded;
 
 /// The tone a failure carries: red for [ServiceFailureReason.unreachable],
-/// amber for every fault. Resolve it to a colour through `statusToneColor`.
-StatusTone failureTone(ServiceFailureReason reason) =>
-    failureDidNotAnswer(reason) ? StatusTone.error : StatusTone.warning;
+/// blue for [ServiceFailureReason.sessionEnded], amber for every fault.
+/// Resolve it to a colour through `statusToneColor`.
+StatusTone failureTone(ServiceFailureReason reason) {
+  if (failureDidNotAnswer(reason)) return StatusTone.error;
+  if (reason == ServiceFailureReason.sessionEnded) {
+    return StateWord.signedOut.tone!;
+  }
+  return StatusTone.warning;
+}
 
 /// What a refusal names as the thing refused, when nothing more specific is
 /// known.
@@ -575,6 +596,7 @@ String failureLabel(
 }) => switch (reason) {
   ServiceFailureReason.unreachable => StateWord.didNotAnswer.label,
   ServiceFailureReason.unauthorized => 'Refused the $credential',
+  ServiceFailureReason.sessionEnded => StateWord.signedOut.label,
   ServiceFailureReason.csrfRefused => 'Security token refused',
   ServiceFailureReason.timeout => 'Timed out',
   ServiceFailureReason.tls => 'Certificate not trusted',
@@ -617,6 +639,7 @@ String failureHeadline(
   ServiceFailureReason.unreachable => '$subject did not answer',
   ServiceFailureReason.unauthorized =>
     '$subject answered but refused the $credential',
+  ServiceFailureReason.sessionEnded => 'Signed out of $subject',
   ServiceFailureReason.csrfRefused =>
     "$subject refused the request's security token",
   ServiceFailureReason.timeout =>
@@ -664,8 +687,9 @@ String? failureRemedy(
 }) => switch (reason) {
   ServiceFailureReason.unauthorized =>
     credential == kRefusedSignIn
-        ? 'Sign in again'
+        ? Lexicon.signInAgain
         : 'Paste the $credential again',
+  ServiceFailureReason.sessionEnded => Lexicon.signInAgain,
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected => 'Check the address',
   ServiceFailureReason.accessGateway => switch (gateway) {
@@ -692,8 +716,9 @@ String? failureRemedy(
 ///
 /// False for the causes the next request is bound to repeat: a refused key,
 /// which the same key gets again, an address the device will not dial, where
-/// nothing is sent at all, and a gateway in front of the service, which asks
-/// the same request for the same access again. Every other cause can clear while the
+/// nothing is sent at all, a gateway in front of the service, which asks
+/// the same request for the same access again, and a Seerr session that
+/// ended, which no request revives. Every other cause can clear while the
 /// page is open: a reverse proxy that comes back, a certificate renewed at the
 /// server, a service that finishes restarting. A refused **sign-in** is one of
 /// them ([credential] is [kRefusedSignIn]): a ban for too many attempts runs
@@ -705,7 +730,8 @@ bool failureRetryHelps(
 }) => switch (reason) {
   ServiceFailureReason.unauthorized => credential == kRefusedSignIn,
   ServiceFailureReason.insecureTransport ||
-  ServiceFailureReason.accessGateway => false,
+  ServiceFailureReason.accessGateway ||
+  ServiceFailureReason.sessionEnded => false,
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.unreachable ||
   ServiceFailureReason.timeout ||
@@ -845,6 +871,8 @@ String connectionFailureSentence(
           ? 'The server answered and refused the saved credentials.'
           : 'The server answered and refused the saved credentials. Check '
                 'them in Settings.',
+    ServiceFailureReason.sessionEnded =>
+      'Sign in again to keep asking for movies and series.',
     ServiceFailureReason.csrfRefused => 'Nothing changed. Retry in a moment.',
     ServiceFailureReason.notFound =>
       'Something answered, but the API is not at this address.',

@@ -229,7 +229,7 @@ class ServiceOfflineState extends StatelessWidget {
           primary: remedy == null
               ? _LeafAction.retry(onRetry)
               : _LeafAction(remedy.label, applyRemedy),
-          fault: !silent,
+          fault: failureIsFault(reason),
           secondary: remedy == null
               ? _LeafAction('Settings', openForm)
               : remedy.retryHelps
@@ -366,7 +366,9 @@ class _OfflineLeaf extends StatelessWidget {
                   else
                     FilledButton(
                       onPressed: primary.onPressed,
-                      style: remedyFillStyle(context),
+                      // In ink for a step that is not a fault: signing in
+                      // again after a session ended.
+                      style: remedyFillStyle(context, fault: fault),
                       child: Text(primary.label),
                     ),
                   if (secondary case final secondary?)

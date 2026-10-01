@@ -22,9 +22,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// and reload — not to report a transport failure for something that already
 /// succeeded, by someone else.
 ///
-/// It is not the only way a write fails: with Seerr's CSRF protection on, a
-/// write without the token is refused with a 403 the key did not earn. The
-/// transport answers it by itself (`SeerrCsrfInterceptor`).
+/// It is not the only way a write fails. A 403 is three different refusals:
+/// Seerr's CSRF guard, which the transport answers by itself; an account whose
+/// session ended; and an account without the permission. `seerr_session.dart`
+/// tells them apart (`SeerrSessionEnded`, `SeerrCsrfRefused`, `SeerrRefused`).
 class SeerrRequestConflict implements Exception {
   final String message;
 
@@ -133,7 +134,8 @@ final seerrServiceProvider = Provider<SeerrService>((ref) {
 /// would cut a request already in flight. The cost is that an entry minted
 /// before the lens landed on its id keeps a client of its own until disposal.
 ///
-/// The client is [watchSeerrClient]'s, which answers Seerr's CSRF guard.
+/// The client is [watchSeerrClient]'s: the key or the account's session, and
+/// the CSRF token either way.
 ///
 /// Not `autoDispose`: a caller reads this, awaits on it, and a disposal
 /// scheduled at the end of the read would close the `Dio` under the request.

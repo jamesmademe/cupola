@@ -5,16 +5,19 @@ import 'package:flutter_test/flutter_test.dart';
 /// A Seerr client is born in one place, `seerrClientFor`
 /// (`lib/features/discover/data/seerr_session.dart`).
 ///
-/// Seerr owes a CSRF token on every write when its protection is on. A
-/// client built anywhere else does not send one, and every write it makes is
-/// refused as if the key were wrong. A source scan, because that regression is one construction in
+/// Seerr is reached two ways, the API key and an account's session, and both
+/// owe it a CSRF token when its protection is on. A client built anywhere
+/// else knows only the key: an account reaches Seerr as nobody through it,
+/// and with the protection on every write it sends is refused as if the key
+/// were wrong. A source scan, because that regression is one construction in
 /// a diff that works on a server with neither.
 ///
 /// Read for each construction: every `ApiClient(` and
 /// `ApiClient.authenticatedBy(` in `lib/` is listed in [_apiClientSites]
 /// with the services it builds, and none is Seerr's outside the session
 /// file; every `SeerrService(` takes a client from the Seerr constructor;
-/// and `watchApiClient` is never asked for Seerr.
+/// `watchApiClient` is never asked for Seerr; and the session cookie's name
+/// is written in the session file alone.
 void main() {
   final libFiles = {
     for (final file in Directory(
@@ -89,13 +92,24 @@ void main() {
     ];
     expect(offenders, isEmpty);
   });
+
+  test('the session cookie is named in the session file alone', () {
+    final offenders = [
+      for (final MapEntry(key: path, value: code) in libFiles.entries)
+        if (path != _sessionFile && code.contains('connect.sid')) path,
+    ];
+    expect(offenders, isEmpty);
+    expect(libFiles[_sessionFile], contains("'connect.sid'"));
+  });
 }
 
 const _sessionFile = 'lib/features/discover/data/seerr_session.dart';
 
 /// Where an `ApiClient` is built, and whose it is.
 const _apiClientSites = <String, String>{
-  _sessionFile: 'Seerr, the only place, with the CSRF interceptor.',
+  _sessionFile:
+      'Seerr, the only place: the API key and an account, with the session '
+      'and CSRF interceptors.',
   'lib/features/settings/data/settings_provider.dart':
       'watchApiClient, for the X-Api-Key services, which asserts it is never '
       'Seerr.',

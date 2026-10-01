@@ -538,8 +538,8 @@ Future<String?> _loadVersion(
 
   final url = instance.url;
   if (service == ServiceKey.seerr) {
-    // Seerr's own client, which answers its CSRF guard: never the generic
-    // one below.
+    // Seerr's own client: the key or the account's session, never a client
+    // that knows only the key.
     final client = ref.watch(seerrClientFactoryProvider)(
       instance,
       pinnedCertFingerprint: settings.pinForUrl(url),

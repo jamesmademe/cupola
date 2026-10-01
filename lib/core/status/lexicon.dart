@@ -58,6 +58,13 @@ enum StateWord {
   /// A request nobody has approved yet.
   waitingForApproval('Waiting for approval', StatusTone.info),
 
+  /// A Seerr account's session ended: it went unused for 30 days, it was
+  /// signed out elsewhere, or the account was removed. A step that falls to
+  /// the person, never a fault, so blue. The operator reads `Signed out of
+  /// Seerr`; the requester reads `You were signed out` ([Lexicon.youWereSignedOut]).
+  /// The remedy is [Lexicon.signInAgain].
+  signedOut('Signed out', StatusTone.info),
+
   /// Away, with no away address: nothing was asked.
   homeOnly('Home only', StatusTone.neutral);
 
@@ -103,6 +110,13 @@ abstract final class Lexicon {
 
   /// An empty answer, and only after the source answered.
   static const noResults = 'No results';
+
+  /// [StateWord.signedOut] as the requester reads it, a sentence about
+  /// themselves.
+  static const youWereSignedOut = 'You were signed out';
+
+  /// The remedy of an ended session, and of a refused sign-in.
+  static const signInAgain = 'Sign in again';
 
   /// A film's three dated events, as every screen that dates one names them:
   /// the calendar's `Sprite Fright · on digital` and the Radarr home's Coming

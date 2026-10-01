@@ -209,8 +209,11 @@ Future<void> _pump(
         seerrServiceProvider.overrideWith((ref) => service),
         seerrClientFactoryProvider.overrideWith(
           (ref) =>
-              (instance, {String? pinnedCertFingerprint}) =>
-                  _StatusClient(version),
+              (
+                instance, {
+                String? pinnedCertFingerprint,
+                SeerrSessionEvents events = const SeerrSessionEvents(),
+              }) => _StatusClient(version),
         ),
       ],
       child: MaterialApp(

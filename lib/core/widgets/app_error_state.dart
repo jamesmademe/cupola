@@ -260,7 +260,7 @@ class AppErrorState extends StatelessWidget {
       children: [
         FilledButton(
           onPressed: () => remedy.open(context),
-          style: remedyFillStyle(context),
+          style: remedyFillStyle(context, fault: remedy.isFault),
           child: Text(remedy.label),
         ),
         // Text in ink: the fault has one fill, and it is on the remedy. The

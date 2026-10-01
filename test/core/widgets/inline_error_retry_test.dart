@@ -1,9 +1,13 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 
 /// The smallest of the failure surfaces, and it owes the same three rules as
@@ -153,5 +157,48 @@ void main() {
         );
       }
     });
+  });
+
+  testWidgets('an ended Seerr session is blue, and its remedy is in ink', (
+    tester,
+  ) async {
+    final theme = AppTheme.darkTheme();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: Scaffold(
+          body: InlineErrorRetry(
+            message: 'Signed out of Seerr.',
+            service: ServiceKey.seerr,
+            error: DioException(
+              requestOptions: RequestOptions(path: '/api/v1/request'),
+              type: DioExceptionType.badResponse,
+              error: const SeerrSessionEnded(),
+            ),
+            onRetry: () {},
+          ),
+        ),
+      ),
+    );
+
+    final colorScheme = theme.colorScheme;
+    expect(
+      tester.widget<Icon>(find.byType(Icon)).color,
+      statusToneColor(
+        colorScheme,
+        StatusTone.info,
+        surface: colorScheme.surface,
+      ),
+    );
+    final remedy = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Sign in again'),
+    );
+    final room = theme.extension<CupolaRoom>()!;
+    expect(
+      remedy.style!.backgroundColor?.resolve({}),
+      isNot(room.toneAmberFill),
+    );
+    // No request revives a session: Retry is not offered beside it.
+    expect(find.text('Retry'), findsNothing);
   });
 }

@@ -305,6 +305,8 @@ String? transportWarningFor(ServiceKey service, String rawUrl) {
 IconData failureIcon(ServiceFailureReason reason) => switch (reason) {
   ServiceFailureReason.unreachable => Icons.cloud_off_rounded,
   ServiceFailureReason.unauthorized => Icons.key_off_rounded,
+  // The account's own door, not a broken key: blue, the person's step.
+  ServiceFailureReason.sessionEnded => Icons.logout_rounded,
   ServiceFailureReason.csrfRefused => Icons.remove_moderator_rounded,
   ServiceFailureReason.notFound => Icons.wrong_location_rounded,
   // Kept apart from `notFound` because the thing to go and fix is the proxy in

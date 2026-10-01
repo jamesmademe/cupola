@@ -182,8 +182,10 @@ void main() {
       // form. A timeout is reached-then-silent and a 5xx is the service
       // talking — both used to be red, which put "your server is busy" beside
       // "no route to host". A failure nobody can attribute is amber too: it is
-      // no evidence that the host is silent.
+      // no evidence that the host is silent. A Seerr session that ended is
+      // neither: blue, the person's own step.
       const red = {ServiceFailureReason.unreachable};
+      const blue = {ServiceFailureReason.sessionEnded};
       for (final reason in ServiceFailureReason.values) {
         final presentation = describeConnection(
           ServiceKey.radarr,
@@ -192,7 +194,11 @@ void main() {
         );
         expect(
           presentation.tone,
-          red.contains(reason) ? StatusTone.error : StatusTone.warning,
+          red.contains(reason)
+              ? StatusTone.error
+              : blue.contains(reason)
+              ? StatusTone.info
+              : StatusTone.warning,
           reason: '$reason',
         );
       }

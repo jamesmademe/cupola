@@ -45,6 +45,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Stopped` | neutral | Someone stopped it on purpose. Not a fault, never "stuck". |
 | `Missing` · `Wanted` · `Cutoff unmet` · `Not aired` · `Not out yet` | neutral | The backlog: released and not on disk, still looked for, below its profile, not yet out. |
 | `Waiting for approval` | blue | A request nobody has approved yet. |
+| `Signed out` · `Signed out of Seerr` · `You were signed out` | blue | A Seerr account's session ended: unused for 30 days, signed out elsewhere, or the account removed. The person's own step, never a fault: the operator reads `Signed out of Seerr`, the requester `You were signed out` · `Sign in again to keep asking for movies and series.`, and the remedy is `Sign in again`, in ink rather than the fault's amber fill. No `Retry`: no request revives a session. Never `Refused the key`: no key was sent. |
 | `Seerr refused the request's security token` | amber | Seerr's CSRF protection refused a write twice, the second time with the token it had just handed out (the first refusal is answered by fetching a token and sending the write once more, unseen). `Nothing changed. Retry in a moment.` The state word is `Security token refused`. |
 | `Coming up` | — | The next dated things. Films carry a date only; episodes a date and a time. |
 | `in cinemas` · `on digital` · `on disc` | — | A film's three dated events, the same on the calendar and in Coming up: `Sprite Fright · on digital`. Not `digital release`, not `physical release`. |

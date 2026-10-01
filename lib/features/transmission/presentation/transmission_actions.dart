@@ -124,7 +124,9 @@ class TransmissionAddReport {
         ServiceFailureReason.tls ||
         ServiceFailureReason.localNetworkBlocked ||
         ServiceFailureReason.unauthorized ||
-        // Seerr's own: never Transmission's.
+        // Seerr's own two: never Transmission's, refused before anything
+        // reached the daemon if they ever were.
+        ServiceFailureReason.sessionEnded ||
         ServiceFailureReason.csrfRefused ||
         ServiceFailureReason.notFound ||
         ServiceFailureReason.redirected ||

@@ -371,7 +371,9 @@ void main() {
       expect(failureDidNotAnswer(ServiceFailureReason.unreachable), isTrue);
       expect(failureTone(ServiceFailureReason.unreachable), StatusTone.error);
       for (final reason in ServiceFailureReason.values.where(
-        (r) => r != ServiceFailureReason.unreachable,
+        (r) =>
+            r != ServiceFailureReason.unreachable &&
+            r != ServiceFailureReason.sessionEnded,
       )) {
         // `unknown` included: a failure nobody can attribute is no evidence
         // that the host is silent.
@@ -379,6 +381,28 @@ void main() {
         expect(failureDidNotAnswer(reason), isFalse, reason: reason.name);
         expect(failureTone(reason), StatusTone.warning, reason: reason.name);
       }
+    });
+  });
+
+  group('a Seerr session that ended', () {
+    test('is blue, the person\'s own step, and never a fault', () {
+      const reason = ServiceFailureReason.sessionEnded;
+      expect(failureTone(reason), StatusTone.info);
+      expect(failureIsFault(reason), isFalse);
+      expect(failureDidNotAnswer(reason), isFalse);
+    });
+
+    test('says signed out, and leads to signing in again', () {
+      const reason = ServiceFailureReason.sessionEnded;
+      expect(failureLabel(reason), 'Signed out');
+      expect(failureHeadline(reason, subject: 'Seerr'), 'Signed out of Seerr');
+      expect(failureRemedy(reason), 'Sign in again');
+      expect(
+        connectionFailureSentence(const ClassifiedFailure(reason)),
+        'Sign in again to keep asking for movies and series.',
+      );
+      // No request revives a session: no Retry beside the remedy.
+      expect(failureRetryHelps(reason), isFalse);
     });
   });
 

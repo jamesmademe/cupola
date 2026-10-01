@@ -23,8 +23,8 @@ bool isPermissionRefusal(Object error) => switch (error) {
   // A 403 from something in front of the service is not the service saying
   // anything about this credential: the request never reached it.
   DioException(error: AccessGatewayAnswer()) => false,
-  // A verdict the transport already reached on the answer: Seerr's CSRF
-  // guard is a 403 that says nothing about scope.
+  // A verdict the transport already reached on the answer: Seerr's ended
+  // session and its CSRF guard are 403s that say nothing about scope.
   DioException(error: final HasPermissionRefusal verdict) =>
     verdict.isPermissionRefusal,
   // Any `ApiClient` write rides a raw Dio and surfaces its exception as is.

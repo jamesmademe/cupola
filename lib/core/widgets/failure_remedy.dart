@@ -142,6 +142,11 @@ class FailureRemedy {
   bool get retryHelps =>
       failureRetryHelps(reason, credential: refusedCredentialOf(service));
 
+  /// Whether this fixes a **fault** ([failureIsFault]), and so wears the
+  /// fault's amber fill. Signing in again after a Seerr session ended is the
+  /// person's own step, blue: its remedy is the ink fill.
+  bool get isFault => failureIsFault(reason);
+
   /// Applies the remedy: opens the connection form where the fix lives, the
   /// named connection's when there is one and the lens's otherwise, on its
   /// Access row for a gateway.
@@ -170,11 +175,19 @@ class FailureRemedy {
 /// [compact] is the line's control (`InlineErrorRetry`, `FaultBand`): the
 /// same 44pt floor with the line's narrower padding, so it sits in a row of
 /// body text without crowding it.
-ButtonStyle remedyFillStyle(BuildContext context, {bool compact = false}) {
+///
+/// [fault] false is the remedy of a step that is not a fault (a Seerr session
+/// that ended, blue): the same control in the ink of an ordinary primary,
+/// because an amber fill beside a blue glyph says something is broken.
+ButtonStyle remedyFillStyle(
+  BuildContext context, {
+  bool compact = false,
+  bool fault = true,
+}) {
   final room = CupolaRoom.of(context);
   return FilledButton.styleFrom(
-    backgroundColor: room.toneAmberFill,
-    foregroundColor: room.toneAmberInk,
+    backgroundColor: fault ? room.toneAmberFill : null,
+    foregroundColor: fault ? room.toneAmberInk : null,
     // Pinned: the desktop's compact density silently takes 8 off
     // `minimumSize`, and 44 declared measured 40.
     visualDensity: VisualDensity.standard,
@@ -213,7 +226,7 @@ List<Widget> failureLineVerbs(
     if (remedy != null)
       FilledButton(
         onPressed: () => remedy.open(context),
-        style: remedyFillStyle(context, compact: true),
+        style: remedyFillStyle(context, compact: true, fault: remedy.isFault),
         child: Text(
           remedy.label,
           semanticsLabel: subject == null
