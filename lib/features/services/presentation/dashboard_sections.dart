@@ -1185,7 +1185,7 @@ class _InFlightRow extends StatelessWidget {
       icon: item.service.icon,
       title: item.title,
       subtitle: line,
-      monoSubtitle: true,
+      tabularSubtitle: true,
       trailing: percent == null
           // Nothing at all when the client reports no progress. It used to print
           // "DL", an abbreviation that says nothing, in the slot where every
@@ -1239,10 +1239,10 @@ class _CompactListRow extends StatelessWidget {
 
   /// Whether [subtitle] is a data line rather than prose.
   ///
-  /// The in-flight row's four fields are figures, and figures in a column have
-  /// to line up: mono with tabular digits is the Tabular Rule applied to a whole
-  /// line rather than to one number in it.
-  final bool monoSubtitle;
+  /// The in-flight row's fields are figures that update in place, so the line
+  /// takes tabular digits (the Tabular Rule). It stays in the text face:
+  /// figures are never mono, which is for machine strings only.
+  final bool tabularSubtitle;
   final String? imageUrl;
   final String? heroTag;
   final Widget trailing;
@@ -1265,7 +1265,7 @@ class _CompactListRow extends StatelessWidget {
     required this.trailing,
     required this.semanticValue,
     required this.onTap,
-    this.monoSubtitle = false,
+    this.tabularSubtitle = false,
     this.imageUrl,
     this.heroTag,
     this.progressValue,
@@ -1326,8 +1326,8 @@ class _CompactListRow extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: monoSubtitle
-                        ? subtitleStyle?.mono.tabular
+                    style: tabularSubtitle
+                        ? subtitleStyle?.tabular
                         : subtitleStyle,
                   ),
                   if (progressColor != null) ...[

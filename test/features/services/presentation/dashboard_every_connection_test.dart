@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
@@ -94,6 +95,18 @@ void main() {
         ),
       ),
       findsOne,
+    );
+    // The line is figures, so it is tabular in the text face: figures are
+    // never mono, which is for machine strings only.
+    final line = tester.widget<Text>(
+      find.text(
+        'Radarr 4K · Bluray-2160p · 2.9 of 9.4 GB · 6 min left · SABnzbd',
+      ),
+    );
+    expect(line.style?.fontFamily, isNot(DesignTokens.typeFamilyMono));
+    expect(
+      line.style?.fontFeatures,
+      contains(const FontFeature.tabularFigures()),
     );
     // The HD's own rows say which Radarr too, now that there are two.
     expect(
