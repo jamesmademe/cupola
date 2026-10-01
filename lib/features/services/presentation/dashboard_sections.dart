@@ -591,14 +591,13 @@ class _RecentTile extends StatelessWidget {
                         ),
                         if (item.connectionName != null)
                           Text(
-                            // The form the desktop row and the Home rows
-                            // use, `Radarr 4K`, so one rail never mixes a
-                            // bare label with a service and a place.
-                            serviceWithConnection(
-                              item.service,
-                              item.connectionName,
-                              joiner: ' ',
-                            ),
+                            // Only what tells the connections apart: the
+                            // tile already carries the service's mark. The
+                            // long form, `Radarr 4K`, does not fit 60 pt and
+                            // its ellipsis cut off exactly that part. A
+                            // connection nobody named keeps its place,
+                            // `Radarr 1`, which is the one the rule gives it.
+                            item.connectionName!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(

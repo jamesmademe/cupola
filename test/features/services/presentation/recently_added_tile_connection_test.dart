@@ -64,11 +64,11 @@ void main() {
 
     // Each Radarr tile says which Radarr: the 4K's, and the HD's, which
     // nobody named.
-    expect(_namesUnder('Spring'), ['Radarr 4K']);
+    expect(_namesUnder('Spring'), ['4K']);
     expect(_namesUnder('Coffee Run'), ['Radarr 1']);
-    expect(_namesUnder('Tears of Steel'), ['Radarr 4K']);
+    expect(_namesUnder('Tears of Steel'), ['4K']);
     // The name is one line, and the tile keeps its 60×90.
-    final name = tester.widget<Text>(_inRail(find.text('Radarr 4K')).first);
+    final name = tester.widget<Text>(_inRail(find.text('4K')).first);
     expect(name.maxLines, 1);
     expect(name.overflow, TextOverflow.ellipsis);
     expect(tester.getSize(_tileOf('Spring')), const Size(60, 90));
@@ -81,7 +81,7 @@ void main() {
         find.text('Tears of Steel'),
       ).evaluate().map((title) => _namesUnderElement(title)),
       unorderedEquals([
-        ['Radarr 4K'],
+        ['4K'],
         ['Radarr 1'],
       ]),
     );
