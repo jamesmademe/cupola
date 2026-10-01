@@ -71,8 +71,10 @@ enum StateWord {
 
 /// The verbs and fixed phrases that have one spelling.
 abstract final class Lexicon {
-  /// Send the same request again. `Run again` is a different action: it
-  /// re-runs a scheduled task.
+  /// Send the same request again, offered only where the same request can
+  /// still succeed (`failureRetryHelps`): never after a refused key, and never
+  /// beside an `http://` address nothing was sent to. `Run again` is a
+  /// different action: it re-runs a scheduled task.
   static const retry = 'Retry';
 
   /// A figure whose source did not answer. Never `0`.

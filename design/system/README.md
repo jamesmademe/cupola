@@ -33,8 +33,8 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Answering` | green | The service replied to the last check. |
 | `Did not answer` | red | Nothing replied at its address. **The only red words**, never contracted; say who and since when: `Radarr did not answer since 20:41`. |
 | `Not set up` · `Set up Plex` | — | No address or key yet. The control stays tappable and names the service. |
-| `Retry` | — | Send the same request again. `Run again` is a different action: it re-runs a scheduled task. |
-| `Radarr answered but refused the key` | amber | An answer that says no. A fault, with its remedy (`Paste the key again`). |
+| `Retry` | — | Send the same request again. Offered only where the same request can still succeed: never after a refused key, and never beside an `http://` address nothing was sent to. After a refused sign-in it stays, because a ban runs out. `Run again` is a different action: it re-runs a scheduled task. |
+| `Radarr answered but refused the key` | amber | An answer that says no. A fault, with its remedy (`Paste the key again`). A service that takes a sign-in or a token says so: `qBittorrent answered but refused the sign-in` (`Sign in again`), `Plex answered but refused the token` (`Paste the token again`). |
 | `—` | — | The source did not answer. A figure never reads `0` because a request failed. The dash is this placeholder and nothing else: copy never breaks a sentence with it (a full stop, a colon, a comma or ` · ` instead), and a range takes the en dash, `S2 E4–E5`. |
 | `Needs you` | amber | The group of faults and approvals waiting for the operator: `3 faults · 2 requests`. |
 | `Stuck` | amber | Nothing has arrived for a while: `Big Buck Bunny is stuck at 47 %` · `nothing for 3 h`. |
@@ -251,7 +251,11 @@ Did-not-answer and not-set-up are normal daily conditions. Four levels, one voca
 
 **The fault sentence** is three things in this order: *what happened*, a title in the tone of the state (`18 finished downloads need a manual import`); *why*, one plain sentence a person can act on, with the service's raw message under *Why?*; and *the remedy*, a verb within thumb reach (`Review`). Equal faults are grouped — one line with the count and one way in, never eighteen rows.
 
-**The Presence Rule.** A fault is a quiet line — glyph, sentence, remedy. The tone lives on the glyph and the title; no red fill, no red border. An amber fault's remedy is the one amber fill; `Retry` beside a red line is a ghost button in ink, never red, because a red cure looks like the disease. A download is `Stuck` only after 30 minutes with nothing arriving. A skeleton takes the shape of its content; there is never a full-page spinner.
+**The remedy leads.** When the fix lives in the connection's form (`Paste the key again`, `Sign in again`, `Paste the token again`, `Check the address`, `Check the certificate`, `Change the address`), it is the first action and opens that connection's form. `Retry` follows as text in ink only where the same request can still succeed. With no fix in the form, `Retry` is the remedy.
+
+**The Presence Rule.** A fault is a quiet line — glyph, sentence, remedy. The tone lives on the glyph and the title; no red fill, no red border. An amber fault's remedy is the one amber fill: the form's fix, or `Retry` when retrying is the fix, and on a line it is the compact control. `Retry` beside a red line is a ghost in ink, outlined in a centred state and text on a line, never filled and never red, because a red cure looks like the disease. A download is `Stuck` only after 30 minutes with nothing arriving. A skeleton takes the shape of its content; there is never a full-page spinner.
+
+**A failure toast** sits on the toast plate like every toast. The failure's glyph leads it in the failure's tone, walked against the plate: red only when nothing answered, amber for every fault and for a toast that carries no cause. The plate is never filled with a tone.
 
 **Dimming means a precondition is unmet** — the other service is not set up here, or the saved credential may not make this change — and never that a service did not answer. A dimmed control stays tappable, keeps its 44 pt target, names what it needs in its hint, and answers a tap with a toast whose one verb is the fix. It is dimmed to `opacity.dimmed` 0.5 (**today** `CrossServiceAction` still uses 0.38) and is never announced as disabled.
 
