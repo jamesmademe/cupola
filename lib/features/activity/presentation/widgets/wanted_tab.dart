@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
@@ -11,6 +12,7 @@ import 'package:cupola/features/activity/presentation/widgets/segment_selector.d
 import 'package:cupola/features/activity/presentation/widgets/sonarr_wanted_hierarchy.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 class WantedTab extends ConsumerStatefulWidget {
   final ServiceType serviceType;
@@ -36,15 +38,21 @@ class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
   /// rebuild — including the `TabBarView` swipe animation — started a fresh
   /// `getAllMissing()` and dropped the `FutureBuilder` back to its loading
   /// state. On a 500-item Wanted list that is an expensive way to redraw.
-  late Future<List<dynamic>> _items;
+  ///
+  /// Null until there is a service to ask; see [_configured].
+  Future<List<dynamic>>? _items;
 
   bool get _isCutoffSelected => _selectedSegment == WantedSegment.cutoffUnmet;
 
-  @override
-  void initState() {
-    super.initState();
-    _items = _load();
-  }
+  /// Whether the connection [_load] reads is set up, asked before the first
+  /// read. The service provider throws for a connection that is not set up,
+  /// and it used to be read in `initState`, so swiping to Wanted on a stack
+  /// with no Radarr was a build that failed. The lens, as `ActivityTab` asks.
+  bool _configured() => ref.watch(
+    activeInstanceProvider(
+      widget.serviceType.service,
+    ).select((instance) => instance?.isConfigured ?? false),
+  );
 
   Future<List<dynamic>> _load() {
     final service = ref.read(resolvedArrServiceProvider(widget.serviceType));
@@ -65,9 +73,10 @@ class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
     });
   }
 
-  Widget _buildContentSliver(ArrActivityMixin service) {
-    final future = _items;
-
+  Widget _buildContentSliver(
+    ArrActivityMixin service,
+    Future<List<dynamic>> future,
+  ) {
     if (widget.serviceType == ServiceType.series) {
       return buildAsyncGroupedContentSliver(
         future,
@@ -161,7 +170,13 @@ class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
 
   @override
   Widget build(BuildContext context) {
+    if (!_configured()) {
+      _items = null;
+      _movieQualityProfilesFuture = null;
+      return NotConfiguredPlaceholder.forService(widget.serviceType.service);
+    }
     final service = ref.read(resolvedArrServiceProvider(widget.serviceType));
+    final items = _items ??= _load();
 
     return buildRefreshableSegmentedView<WantedSegment>(
       refreshKey: _refreshKey,
@@ -170,7 +185,7 @@ class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
       selected: _selectedSegment,
       onSegmentChanged: (segment) => _refresh(nextSegment: segment),
       labelBuilder: (segment) => segment.label,
-      contentSliver: _buildContentSliver(service),
+      contentSliver: _buildContentSliver(service, items),
     );
   }
 }

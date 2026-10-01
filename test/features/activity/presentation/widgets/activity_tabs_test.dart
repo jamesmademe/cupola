@@ -202,7 +202,7 @@ Future<void> _pumpWithRadarrService(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        // ActivityTab asks whether there is a Radarr before it reads one.
+        // Both tabs ask whether there is a Radarr before they read one.
         currentSettingsProvider.overrideWith(
           (ref) => settingsWithServices([ServiceKey.radarr]),
         ),
@@ -221,7 +221,13 @@ Future<void> _pumpWithSonarrService(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [sonarrServiceProvider.overrideWith((ref) => service)],
+      overrides: [
+        // WantedTab asks whether there is a Sonarr before it reads one.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices([ServiceKey.sonarr]),
+        ),
+        sonarrServiceProvider.overrideWith((ref) => service),
+      ],
       child: MaterialApp(home: Scaffold(body: child)),
     ),
   );

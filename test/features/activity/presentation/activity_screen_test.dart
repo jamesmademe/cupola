@@ -29,6 +29,7 @@ import 'package:cupola/features/series/data/sonarr_service.dart';
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() {
@@ -36,7 +37,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+          // The list asks whether there is a Seerr before it asks Seerr.
+          currentSettingsProvider.overrideWith(
+            (ref) => settingsWithServices([ServiceKey.seerr]),
+          ),
           requestsProvider.overrideWith((ref) async => <SeerrRequest>[]),
         ],
         child: const MaterialApp(

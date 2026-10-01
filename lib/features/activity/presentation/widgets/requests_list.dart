@@ -9,12 +9,14 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -55,8 +57,29 @@ class RequestsList extends ConsumerWidget {
     ref.invalidate(requestsForProvider(instanceId));
   }
 
+  /// Whether the Seerr this list reads is set up: the lens for an empty id,
+  /// that connection otherwise.
+  bool _configured(WidgetRef ref) => instanceId.isEmpty
+      ? ref.watch(
+          activeInstanceProvider(
+            ServiceKey.seerr,
+          ).select((instance) => instance?.isConfigured ?? false),
+        )
+      : ref.watch(
+          currentSettingsProvider.select(
+            (s) => s
+                .configuredInstancesOf(ServiceKey.seerr)
+                .any((instance) => instance.id == instanceId),
+          ),
+        );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Before the list is asked for. With no Seerr the read can only throw,
+    // and its error state offered a Retry that could ask nobody.
+    if (!_configured(ref)) {
+      return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
+    }
     final requestsAsync = ref.watch(requestsForProvider(instanceId));
 
     return RefreshIndicator(
