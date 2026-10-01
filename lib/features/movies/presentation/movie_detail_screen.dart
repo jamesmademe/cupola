@@ -173,13 +173,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     final infoGroups = viewModel.buildInfoGroups('');
 
     // Without the queue the badge cannot tell "nothing on disk" from "being
-    // downloaded right now", and every in-flight movie reads as Missing.
-    //
-    // `value`, not `maybeWhen(data:)`: a queue that answered and then failed
-    // keeps its last entry, which is what it said last rather than nothing.
-    final queueAsync = ref.watch(radarrQueueSnapshotForProvider(instanceId));
-    final queueEntry = queueAsync.value?.entryFor(movie.id);
-    final status = radarrMovieStatus(movie, queueEntry: queueEntry);
+    // downloaded right now", and every in-flight movie reads as Missing. A
+    // queue that did not answer, or was not read to the end, cannot say the
+    // film is not in it: the badge reads unknown until it can.
+    final queue = queueSnapshotOf(
+      ref.watch(radarrQueueSnapshotForProvider(instanceId)),
+    );
+    final status = radarrMovieStatus(
+      movie,
+      queueEntry: queue.entryFor(movie.id),
+      queueUnknown: !queue.isWhole,
+    );
 
     return MediaDetailView(
       accent: ServiceKey.radarr.accent,
@@ -203,7 +207,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         fault: failure != null && retry != null
             ? _faultBand(failure, instanceId, onRetry: retry)
             : _queueUnknown(
-                queueAsync,
+                queue,
                 instanceId,
                 inLibrary: viewModel.isInLibrary,
                 status: status,
@@ -243,16 +247,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
   /// Radarr tracks, not already on disk, and not shown in flight by a last
   /// known entry.
   ///
-  /// Drawn when the queue read fails *as* a failure. The shared snapshot
-  /// folds a failed read into an empty queue today, so until it reports one
-  /// this stays silent; see the queue snapshot provider.
+  /// Drawn when the queue did not answer ([ArrQueueSnapshot.failed]), never
+  /// while it is still being read. A queue that answered but was not read to
+  /// the end ([ArrQueueSnapshot.cutShort]) leaves the badge unknown and draws
+  /// no line: nothing failed, and Retry would walk the same pages again.
   Widget? _queueUnknown(
-    AsyncValue<ArrQueueSnapshot> queue,
+    ArrQueueSnapshot queue,
     String instanceId, {
     required bool inLibrary,
     required MediaStatusInfo status,
   }) {
-    if (!queue.hasError || !inLibrary) return null;
+    if (queue.answered || queue.error == null || !inLibrary) return null;
     final onDisk = switch (status.availability) {
       MediaAvailability.available || MediaAvailability.upgradable => true,
       _ => false,

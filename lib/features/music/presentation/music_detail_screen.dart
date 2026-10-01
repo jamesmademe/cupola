@@ -122,13 +122,16 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     // read-only grid and onto an editable row above it.
     final infoGroups = viewModel.buildInfoGroups('');
 
-    // One fetch feeds both the artist badge and the per-album badges below.
-    final queues = ref
-        .watch(lidarrQueueSnapshotsProvider)
-        .maybeWhen(data: (snapshots) => snapshots, orElse: () => null);
+    // One fetch feeds both the artist badge and the per-album badges below,
+    // unknown until it answers: a queue nobody read cannot say an album with
+    // nothing on disk is not on its way.
+    final queues = lidarrQueueSnapshotsOf(
+      ref.watch(lidarrQueueSnapshotsProvider),
+    );
     final status = lidarrArtistStatus(
       artist,
-      queueEntry: queues?.byArtist.entryFor(artist.id),
+      queueEntry: queues.byArtist.entryFor(artist.id),
+      queueUnknown: !queues.byArtist.isWhole,
     );
 
     return MediaDetailView(
@@ -152,7 +155,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         infoGroups,
         connection,
         albumsAsync,
-        queues?.byAlbum ?? ArrQueueSnapshot.empty,
+        queues.byAlbum,
         artist.id > 0 ? artist.id : widget.artistId,
       ),
     );

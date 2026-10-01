@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
@@ -62,12 +63,31 @@ void main() {
           _album(id: 11, title: 'Half Album', fileCount: 6, trackCount: 12),
           _album(id: 12, title: 'Empty Album', fileCount: 0, trackCount: 12),
         ],
+        albumQueue: ArrQueueSnapshot.empty,
       );
 
       expect(find.byType(MediaChildTile), findsNWidgets(3));
       expect(find.text('1997 · 6 of 12 tracks · Partial'), findsOneWidget);
       expect(find.text('1997 · 0 of 12 tracks · Missing'), findsOneWidget);
       expect(find.text('1997 · 12 of 12 tracks'), findsOneWidget);
+    });
+
+    testWidgets('an empty album is not Missing over a queue nobody read', (
+      tester,
+    ) async {
+      await _pumpAlbumsList(
+        tester,
+        albums: [
+          _album(id: 11, title: 'Half Album', fileCount: 6, trackCount: 12),
+          _album(id: 12, title: 'Empty Album', fileCount: 0, trackCount: 12),
+        ],
+        albumQueue: ArrQueueSnapshot.failed(Exception('boom')),
+      );
+
+      // It may be downloading right now: the queue that would say so did not
+      // answer. What is on disk stands.
+      expect(find.text('1997 · 0 of 12 tracks · Unknown'), findsOneWidget);
+      expect(find.text('1997 · 6 of 12 tracks · Partial'), findsOneWidget);
     });
 
     testWidgets('tapping an album opens a sheet of sorted tracks', (
@@ -213,6 +233,7 @@ Future<void> _pumpAlbumsList(
   WidgetTester tester, {
   required List<LidarrAlbum> albums,
   LidarrService? lidarrService,
+  ArrQueueSnapshot albumQueue = ArrQueueSnapshot.unknown,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -227,6 +248,7 @@ Future<void> _pumpAlbumsList(
               onSearchAlbum: (_) {},
               onInteractiveSearchAlbum: (_) {},
               searchingAlbums: const {},
+              albumQueue: albumQueue,
             ),
           ],
         ),

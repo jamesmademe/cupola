@@ -36,6 +36,10 @@ class MusicAlbumsList extends StatelessWidget {
 
   /// The Lidarr queue indexed by album id, so an album being grabbed shows its
   /// download state instead of a bare "missing" dot.
+  ///
+  /// [ArrQueueSnapshot.unknown] when none is passed: a queue nobody read
+  /// cannot say an album is not on its way, so an album with nothing on disk
+  /// reads unknown rather than `Missing` until a queue read whole says so.
   final ArrQueueSnapshot albumQueue;
 
   const MusicAlbumsList({
@@ -47,7 +51,7 @@ class MusicAlbumsList extends StatelessWidget {
     required this.onSearchAlbum,
     required this.onInteractiveSearchAlbum,
     required this.searchingAlbums,
-    this.albumQueue = ArrQueueSnapshot.empty,
+    this.albumQueue = ArrQueueSnapshot.unknown,
   });
 
   @override
@@ -78,6 +82,7 @@ class MusicAlbumsList extends StatelessWidget {
     final status = lidarrAlbumStatus(
       album,
       queueEntry: albumQueue.entryFor(album.id),
+      queueUnknown: !albumQueue.isWhole,
     );
     final summary = lidarrAlbumSummary(album);
     final statusWord = mediaStatusWord(status);

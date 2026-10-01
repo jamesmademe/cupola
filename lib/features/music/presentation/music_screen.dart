@@ -75,9 +75,10 @@ class MusicScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final queue = ref
-        .watch(lidarrQueueSnapshotsProvider)
-        .maybeWhen(data: (snapshots) => snapshots.byArtist, orElse: () => null);
+    // Unknown until the queue answers: see `movies_screen.dart`.
+    final queue = lidarrQueueSnapshotsOf(
+      ref.watch(lidarrQueueSnapshotsProvider),
+    ).byArtist;
 
     return MediaBrowseScaffold<LidarrArtist>(
       title: 'Music',
@@ -97,8 +98,11 @@ class MusicScreen extends ConsumerWidget {
       sortTitleExtractor: (artist) => artist.artistName,
       imagesExtractor: (artist) => artist.images,
       idExtractor: (artist) => artist.id,
-      statusExtractor: (artist) =>
-          lidarrArtistStatus(artist, queueEntry: queue?.entryFor(artist.id)),
+      statusExtractor: (artist) => lidarrArtistStatus(
+        artist,
+        queueEntry: queue.entryFor(artist.id),
+        queueUnknown: !queue.isWhole,
+      ),
       onRefresh: (ref) {
         ref.invalidate(lidarrQueueSnapshotsProvider);
         // The rail's own non-swallowing read. See `movies_screen.dart`.

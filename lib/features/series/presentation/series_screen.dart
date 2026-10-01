@@ -43,9 +43,8 @@ class SeriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final queue = ref
-        .watch(sonarrQueueSnapshotProvider)
-        .maybeWhen(data: (snapshot) => snapshot, orElse: () => null);
+    // Unknown until the queue answers: see `movies_screen.dart`.
+    final queue = queueSnapshotOf(ref.watch(sonarrQueueSnapshotProvider));
 
     return MediaBrowseScaffold<SonarrSeries>(
       title: 'TV series',
@@ -65,8 +64,11 @@ class SeriesScreen extends ConsumerWidget {
       sortTitleExtractor: (series) => series.sortTitle,
       imagesExtractor: (series) => series.images,
       idExtractor: (series) => series.id,
-      statusExtractor: (series) =>
-          sonarrSeriesStatus(series, queueEntry: queue?.entryFor(series.id)),
+      statusExtractor: (series) => sonarrSeriesStatus(
+        series,
+        queueEntry: queue.entryFor(series.id),
+        queueUnknown: !queue.isWhole,
+      ),
       onRefresh: (ref) {
         ref.invalidate(sonarrQueueSnapshotProvider);
         // The rail's own non-swallowing read. See `movies_screen.dart`.

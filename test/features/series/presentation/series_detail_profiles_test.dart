@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -10,7 +8,6 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/presentation/series_detail_provider.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -285,29 +282,74 @@ void main() {
 
   group('a queue the page could not read', () {
     testWidgets('is said over a series not all on disk', (tester) async {
+      var failing = true;
       final harness = await _pump(
         tester,
         Profiles.p7,
         const SeriesDetailScreen(seriesId: 1, heroTag: 'series-1'),
-        overrides: [
-          sonarrQueueSnapshotForProvider.overrideWith(
-            (ref, id) => throw const SocketException('Connection refused'),
-          ),
-        ],
+        routes: (network) => network.on(
+          WorldIds.sonarr,
+          'GET',
+          '/api/v3/queue',
+          (_) => failing
+              ? NetworkReply.json({'message': 'boom'}, status: 500)
+              : null,
+        ),
       );
 
       expect(
         find.text(
-          "Sonarr's queue did not answer, so this page cannot tell whether "
-          'any of it is downloading.',
+          "Sonarr's queue answered with an error, so this page cannot tell "
+          'whether any of it is downloading.',
         ),
         findsOneWidget,
       );
+      // What is on disk stands: a queue nobody could read only takes away
+      // the claim that nothing is on its way.
+      expect(_badge(tester).label, 'Partial');
+
+      failing = false;
+      await tester.tap(
+        find.descendant(
+          of: find.byType(InlineErrorRetry),
+          matching: find.text('Retry'),
+        ),
+      );
+      await harness.settle(tester);
+      expect(find.byType(InlineErrorRetry), findsNothing);
+      // The 18 grabs Sonarr will not place on its own outrank the two still
+      // downloading.
+      expect(_badge(tester).label, 'Import blocked');
+
+      await harness.unmount(tester);
+    });
+  });
+
+  group('a queue that answered', () {
+    testWidgets('names the downloads it holds', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        const SeriesDetailScreen(seriesId: 1, heroTag: 'series-1'),
+      );
+
+      expect(_badge(tester).label, 'Import blocked');
+      expect(find.byType(InlineErrorRetry), findsNothing);
 
       await harness.unmount(tester);
     });
   });
 }
+
+/// The status the hero's badge reads.
+MediaStatusInfo _badge(WidgetTester tester) => tester
+    .widget<StatusBadge>(
+      find.descendant(
+        of: find.byType(MediaDetailPosterRow),
+        matching: find.byType(StatusBadge),
+      ),
+    )
+    .info;
 
 /// Pumps [child] under [profile] with [routes] answering ahead of the world
 /// from the first request on, which `pumpWithProfile` cannot do: its first

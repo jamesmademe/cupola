@@ -181,13 +181,17 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     );
 
     // Without the queue the badge cannot tell "nothing on disk" from "being
-    // downloaded right now", and every in-flight series reads as Missing.
-    //
-    // `value`, not `maybeWhen(data:)`: a queue that answered and then failed
-    // keeps its last entry, which is what it said last rather than nothing.
-    final queueAsync = ref.watch(sonarrQueueSnapshotForProvider(instanceId));
-    final queueEntry = queueAsync.value?.entryFor(series.id);
-    final status = sonarrSeriesStatus(series, queueEntry: queueEntry);
+    // downloaded right now", and every in-flight series reads as Missing. A
+    // queue that did not answer, or was not read to the end, cannot say the
+    // series is not in it: see the movie screen.
+    final queue = queueSnapshotOf(
+      ref.watch(sonarrQueueSnapshotForProvider(instanceId)),
+    );
+    final status = sonarrSeriesStatus(
+      series,
+      queueEntry: queue.entryFor(series.id),
+      queueUnknown: !queue.isWhole,
+    );
 
     return MediaDetailView(
       accent: ServiceKey.sonarr.accent,
@@ -214,7 +218,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         fault: failure != null && retry != null
             ? _faultBand(failure, instanceId, onRetry: retry)
             : _queueUnknown(
-                queueAsync,
+                queue,
                 instanceId,
                 inLibrary: viewModel.isInLibrary,
                 status: status,
@@ -249,16 +253,15 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
   /// Sonarr tracks, not already on disk, and not shown in flight by a last
   /// known entry.
   ///
-  /// Drawn when the queue read fails *as* a failure. The shared snapshot
-  /// folds a failed read into an empty queue today, so until it reports one
-  /// this stays silent; see the queue snapshot provider.
+  /// Drawn when the queue did not answer, never while it is still being read
+  /// and never over a walk that was only cut short: see the movie screen.
   Widget? _queueUnknown(
-    AsyncValue<ArrQueueSnapshot> queue,
+    ArrQueueSnapshot queue,
     String instanceId, {
     required bool inLibrary,
     required MediaStatusInfo status,
   }) {
-    if (!queue.hasError || !inLibrary) return null;
+    if (queue.answered || queue.error == null || !inLibrary) return null;
     final onDisk = switch (status.availability) {
       MediaAvailability.available || MediaAvailability.upgradable => true,
       _ => false,

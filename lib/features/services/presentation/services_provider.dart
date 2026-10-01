@@ -571,6 +571,30 @@ final radarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
   return ref.watch(radarrQueueSnapshotForProvider(lens).future);
 });
 
+/// A queue snapshot as a screen reads it off its provider: the snapshot last
+/// read, the failure when the read itself threw, and
+/// [ArrQueueSnapshot.unknown] while nothing has been read yet.
+///
+/// Never [ArrQueueSnapshot.empty] for a queue nobody read: a badge passes
+/// `queueUnknown: !snapshot.isWhole`, so a title with nothing on disk reads
+/// unknown until the queue answers, and `Missing` only once it answered whole
+/// without it.
+ArrQueueSnapshot queueSnapshotOf(AsyncValue<ArrQueueSnapshot> queue) =>
+    switch (queue) {
+      AsyncValue(:final value?) => value,
+      AsyncValue(:final error?) => ArrQueueSnapshot.failed(error),
+      _ => ArrQueueSnapshot.unknown,
+    };
+
+/// [queueSnapshotOf] for Lidarr's two indexes of one queue.
+LidarrQueueSnapshots lidarrQueueSnapshotsOf(
+  AsyncValue<LidarrQueueSnapshots> queue,
+) => switch (queue) {
+  AsyncValue(:final value?) => value,
+  AsyncValue(:final error?) => LidarrQueueSnapshots.failed(error),
+  _ => LidarrQueueSnapshots.unknown,
+};
+
 /// The Sonarr queue of one named connection. See
 /// [radarrQueueSnapshotForProvider].
 final sonarrQueueSnapshotForProvider =

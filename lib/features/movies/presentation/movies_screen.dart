@@ -46,9 +46,9 @@ class MoviesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final queue = ref
-        .watch(radarrQueueSnapshotProvider)
-        .maybeWhen(data: (snapshot) => snapshot, orElse: () => null);
+    // Unknown until the queue answers, never empty: a film with no file reads
+    // `Missing` only once a queue read whole has no entry for it.
+    final queue = queueSnapshotOf(ref.watch(radarrQueueSnapshotProvider));
 
     return MediaBrowseScaffold<RadarrMovie>(
       title: 'Movies',
@@ -68,8 +68,11 @@ class MoviesScreen extends ConsumerWidget {
       sortTitleExtractor: (movie) => movie.sortTitle,
       imagesExtractor: (movie) => movie.images,
       idExtractor: (movie) => movie.id,
-      statusExtractor: (movie) =>
-          radarrMovieStatus(movie, queueEntry: queue?.entryFor(movie.id)),
+      statusExtractor: (movie) => radarrMovieStatus(
+        movie,
+        queueEntry: queue.entryFor(movie.id),
+        queueUnknown: !queue.isWhole,
+      ),
       onRefresh: (ref) {
         ref.invalidate(radarrQueueSnapshotProvider);
         // The rail above this grid reads its own non-swallowing copy of the

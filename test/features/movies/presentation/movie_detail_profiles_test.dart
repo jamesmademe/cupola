@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -10,7 +8,6 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_provider.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -295,33 +292,37 @@ void main() {
     testWidgets('is said over a film not on disk, with its own Retry', (
       tester,
     ) async {
-      var queueReads = 0;
+      var failing = true;
       final harness = await _pump(
         tester,
         Profiles.p7,
         // Sprite Fright has no file on this Radarr, so the badge needs the
         // queue to know whether it is missing or on its way.
         const MovieDetailScreen(movieId: 1, heroTag: 'movie-1'),
-        // The contract the shared snapshot is moving to: a failed queue read
-        // reaches the page as a failure rather than as an empty queue.
-        overrides: [
-          radarrQueueSnapshotForProvider.overrideWith((ref, id) {
-            queueReads++;
-            throw const SocketException('Connection refused');
-          }),
-        ],
+        routes: (network) => network.on(
+          WorldIds.radarr,
+          'GET',
+          '/api/v3/queue',
+          (_) => failing
+              ? NetworkReply.json({'message': 'boom'}, status: 500)
+              : null,
+        ),
       );
 
       expect(find.byType(FaultBand), findsNothing);
       expect(
         find.text(
-          "Radarr's queue did not answer, so this page cannot tell whether "
-          'the movie is downloading.',
+          "Radarr's queue answered with an error, so this page cannot tell "
+          'whether the movie is downloading.',
         ),
         findsOneWidget,
       );
+      // It used to read "Missing": the failed queue reached the page as an
+      // empty one, and the promoted search offered to fetch a second copy.
+      expect(_badge(tester).label, 'Unknown');
 
-      final asked = queueReads;
+      failing = false;
+      final asked = _queueReads(harness);
       await tester.tap(
         find.descendant(
           of: find.byType(InlineErrorRetry),
@@ -329,7 +330,9 @@ void main() {
         ),
       );
       await harness.settle(tester);
-      expect(queueReads, greaterThan(asked));
+      expect(_queueReads(harness), greaterThan(asked));
+      expect(find.byType(InlineErrorRetry), findsNothing);
+      expect(_badge(tester).label, 'Downloading');
 
       await harness.unmount(tester);
     });
@@ -340,19 +343,98 @@ void main() {
         Profiles.p7,
         // Coffee Run is on disk: whatever the queue holds, the badge is right.
         const MovieDetailScreen(movieId: 3, heroTag: 'movie-3'),
-        overrides: [
-          radarrQueueSnapshotForProvider.overrideWith(
-            (ref, id) => throw const SocketException('Connection refused'),
-          ),
-        ],
+        routes: (network) => network.on(
+          WorldIds.radarr,
+          'GET',
+          '/api/v3/queue',
+          (_) => NetworkReply.json({'message': 'boom'}, status: 500),
+        ),
       );
 
+      expect(find.byType(InlineErrorRetry), findsNothing);
+      expect(_badge(tester).label, 'Available');
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a Radarr that did not answer leaves the film unknown under '
+        'its band, never Missing', (tester) async {
+      final harness = await _pump(
+        tester,
+        _radarrDown,
+        MovieDetailScreen(
+          movieId: 1,
+          heroTag: 'movie-1',
+          initialMovie: _preload,
+        ),
+      );
+
+      // The band says it once for the page; the queue line does not repeat it.
+      expect(find.byType(FaultBand), findsOneWidget);
+      expect(find.byType(InlineErrorRetry), findsNothing);
+      expect(_badge(tester).label, 'Unknown');
+
+      await harness.unmount(tester);
+    });
+  });
+
+  group('a queue that answered', () {
+    testWidgets('names the download it holds', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        const MovieDetailScreen(movieId: 1, heroTag: 'movie-1'),
+      );
+
+      expect(_badge(tester).label, 'Downloading');
+      expect(find.byType(InlineErrorRetry), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('with nothing in it, a film with no file reads Missing', (
+      tester,
+    ) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        const MovieDetailScreen(movieId: 1, heroTag: 'movie-1'),
+        routes: (network) => network.on(
+          WorldIds.radarr,
+          'GET',
+          '/api/v3/queue',
+          (_) => NetworkReply.json({
+            'page': 1,
+            'pageSize': 200,
+            'totalRecords': 0,
+            'records': const <Object?>[],
+          }),
+        ),
+      );
+
+      // An answer: the queue was read whole and the film is not in it.
+      expect(_badge(tester).label, 'Missing');
       expect(find.byType(InlineErrorRetry), findsNothing);
 
       await harness.unmount(tester);
     });
   });
 }
+
+/// The status the hero's badge reads.
+MediaStatusInfo _badge(WidgetTester tester) => tester
+    .widget<StatusBadge>(
+      find.descendant(
+        of: find.byType(MediaDetailPosterRow),
+        matching: find.byType(StatusBadge),
+      ),
+    )
+    .info;
+
+int _queueReads(ProfileHarness harness) => harness.network
+    .requestsTo(WorldIds.radarr)
+    .where((r) => r.uri.path == '/api/v3/queue')
+    .length;
 
 /// Pumps [child] under [profile] with [routes] answering ahead of the world
 /// from the first request on, which `pumpWithProfile` cannot do: its first
