@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The brand book's lexicon, held on the copy: **one word per state, the same
-/// on every screen**, and none of the words its *Never* list bans.
+/// on every screen**, none of the words its *Never* list bans, and no em dash
+/// as punctuation: the dash is the placeholder of a figure nobody could read,
+/// and only that.
 ///
 /// A source scan because the regression is one plausible string in a diff —
 /// "Offline" reads as a fine label until the next screen says "Did not
@@ -70,6 +72,72 @@ void main() {
           'Waiting for approval. A word that is not the banned state goes in '
           '_allowed with its reason.',
     );
+  });
+
+  test('no copy in lib/ uses an em dash as punctuation', () {
+    final offenders = [
+      for (final file in libFiles)
+        for (final literal in _copyOf(file.path, file.readAsStringSync()))
+          if (_emDashAsPunctuation(literal.prose) && !_isAllowed(literal))
+            '${literal.path}:${literal.line}  "${literal.prose}"',
+    ];
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'An em dash between words is punctuation, and the app has none: '
+          'rewrite with a full stop, a colon, a comma or " · ". The dash '
+          'stays only as the placeholder of a figure nobody could read '
+          '(Lexicon.noFigure), and a range takes the en dash: S2 E4–E5.',
+    );
+  });
+
+  group('the em dash matcher', () {
+    test('catches a dash between two words or two holes', () {
+      for (final prose in [
+        'Saved — Radarr',
+        '$_hole — $_hole',
+        'Radarr did not answer — Retry',
+        'Radarr—Sonarr',
+        '10—20',
+        '($_hole) — $_hole',
+      ]) {
+        expect(_emDashAsPunctuation(prose), isTrue, reason: prose);
+      }
+    });
+
+    test('lets the placeholder of a figure through', () {
+      for (final prose in [
+        '—',
+        '— in the queue',
+        '— / 24',
+        '—s',
+        'today · —',
+        'Queue: —',
+        '↓ — ↑ —',
+        '$_hole · — free',
+        // The en dash is the range's, and not this guard's business.
+        'S2 E4–E5',
+      ]) {
+        expect(_emDashAsPunctuation(prose), isFalse, reason: prose);
+      }
+    });
+
+    test('a planted literal fails through the same lexer, a comment does '
+        'not', () {
+      const planted =
+          "final a = 'Saved — Radarr';\n"
+          r"final b = '${first.title} — ${second.title}';"
+          '\n'
+          '// A comment — not copy.\n'
+          "final c = count == null ? '—' : '\$count in the queue';\n"
+          "final d = '— in the queue';\n";
+      final caught = [
+        for (final literal in _copyOf('lib/zz_planted.dart', planted))
+          if (_emDashAsPunctuation(literal.prose)) literal.prose,
+      ];
+      expect(caught, ['Saved — Radarr', '$_hole — $_hole']);
+    });
   });
 
   test('there is no uppercase voice', () {
@@ -238,6 +306,32 @@ bool _isNotConfiguredMarker(String prose) {
   return subject == _hole ||
       ServiceKey.values.any((service) => service.title == subject);
 }
+
+/// Whether [prose] uses the em dash as punctuation: a word, a figure or an
+/// interpolation on either side of it (`Saved — Radarr`, `∅ — ∅`, `10—20`).
+///
+/// The dash that stays is the placeholder of a figure nobody could read, and
+/// that one always has an edge or a separator beside it rather than a word on
+/// both sides: alone (`—`), opening the phrase it counts (`— in the queue`,
+/// `— / 24`, `—s`) or closing one (`today · —`, `Queue: —`).
+bool _emDashAsPunctuation(String prose) {
+  for (var i = prose.indexOf('—'); i >= 0; i = prose.indexOf('—', i + 1)) {
+    final before = prose.substring(0, i).trimRight();
+    final after = prose.substring(i + 1).trimLeft();
+    if (before.isEmpty || after.isEmpty) continue;
+    if (_closesWord.hasMatch(before[before.length - 1]) &&
+        _opensWord.hasMatch(after[0])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// The last character of a word, a figure or a hole, as the dash's left side.
+final _closesWord = RegExp('[\\p{L}\\p{N}$_hole)\\]"\'’]', unicode: true);
+
+/// The first character of a word, a figure or a hole, as the dash's right side.
+final _opensWord = RegExp('[\\p{L}\\p{N}$_hole(\\["\'‘]', unicode: true);
 
 /// An API path, an RPC method or a key: no space, and a `/`, `-` or `_`.
 bool _isMachineString(String prose) =>
