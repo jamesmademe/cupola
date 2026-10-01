@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
@@ -53,6 +55,13 @@ class SeriesSeasonsList extends StatelessWidget {
   /// failure it exists for was drawn with no way out of it.
   final VoidCallback onRetryEpisodes;
 
+  /// The page already says the read behind these episodes failed: its band
+  /// names the connection and offers Retry. With nothing to keep, the list then
+  /// names the gap in one quiet sentence rather than drawing a second failure
+  /// state for the same silence. A failure of the episodes alone, with the page
+  /// otherwise answered, is still drawn here with its own Retry.
+  final bool failureShownAbove;
+
   const SeriesSeasonsList({
     super.key,
     required this.seasons,
@@ -66,6 +75,7 @@ class SeriesSeasonsList extends StatelessWidget {
     required this.searchingSeasons,
     required this.searchingEpisodes,
     required this.onRetryEpisodes,
+    this.failureShownAbove = false,
   });
 
   @override
@@ -145,6 +155,10 @@ class SeriesSeasonsList extends StatelessWidget {
     final loaded = episodesAsync.hasValue;
     if (!loaded && episodesAsync.isLoading) {
       return const _EpisodesLoading();
+    }
+
+    if (!loaded && episodesAsync.hasError && failureShownAbove) {
+      return const _EpisodesAwaited();
     }
 
     if (!loaded && episodesAsync.hasError) {
@@ -227,6 +241,25 @@ class SeriesSeasonsList extends StatelessWidget {
     if (statusWord != null) facts.add(statusWord);
 
     return facts;
+  }
+}
+
+/// The episodes' place while the page's band says Sonarr did not answer: why
+/// the season is empty, without the alarm a second time.
+class _EpisodesAwaited extends StatelessWidget {
+  const _EpisodesAwaited();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Text(
+        'The episodes appear here once Sonarr sends them.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: CupolaThemeColors.of(context).dimText,
+        ),
+      ),
+    );
   }
 }
 

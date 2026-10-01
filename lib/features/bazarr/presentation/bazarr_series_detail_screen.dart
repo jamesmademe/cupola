@@ -163,13 +163,22 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
                   ),
                 ),
                 loading: () => ShimmerList(itemCount: 3, itemHeight: 56),
-                error: (error, _) => AppErrorState.compact(
-                  error: error,
-                  serviceName: 'Bazarr',
-                  onRetry: () => ref.invalidate(
-                    bazarrWantedEpisodesForSeriesProvider(sonarrSeriesId),
-                  ),
-                ),
+                // Under the page's line the silence is already said: see the
+                // movie screen. One wanted episode is not the series' list, so
+                // the section names the gap rather than drawing it.
+                error: (error, _) => lookupFailure != null
+                    ? const BazarrAwaitingNote(
+                        message:
+                            'The wanted episodes appear here once Bazarr '
+                            'sends them.',
+                      )
+                    : AppErrorState.compact(
+                        error: error,
+                        serviceName: 'Bazarr',
+                        onRetry: () => ref.invalidate(
+                          bazarrWantedEpisodesForSeriesProvider(sonarrSeriesId),
+                        ),
+                      ),
               ),
             )
           else

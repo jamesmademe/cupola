@@ -125,3 +125,29 @@ class BazarrWantedEpisodeTile extends StatelessWidget {
     );
   }
 }
+
+/// What a section draws in place of its own failure while the page's line
+/// already says Bazarr did not answer: the gap, named once, without the alarm
+/// a second time.
+///
+/// A second failure state for the same silence used to sit under the first,
+/// with its own headline and its own Retry. The page's line is the one place
+/// that says it; this only says why the section is empty.
+class BazarrAwaitingNote extends StatelessWidget {
+  const BazarrAwaitingNote({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: CupolaThemeColors.of(context).dimText,
+        ),
+      ),
+    );
+  }
+}

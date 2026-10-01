@@ -188,12 +188,18 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
                 );
               },
               loading: () => ShimmerList(itemCount: 2, itemHeight: 56),
-              error: (error, _) => AppErrorState.compact(
-                error: error,
-                serviceName: 'Bazarr',
-                onRetry: () =>
-                    ref.invalidate(bazarrWantedMovieByIdProvider(radarrId)),
-              ),
+              // Under the page's line the silence is already said, so this
+              // section shows what the wanted row it was opened from named,
+              // and says nothing again. Alone, its own failure is its own.
+              error: (error, _) => lookupFailure != null
+                  ? _wantedFallback(initialWanted)
+                  : AppErrorState.compact(
+                      error: error,
+                      serviceName: 'Bazarr',
+                      onRetry: () => ref.invalidate(
+                        bazarrWantedMovieByIdProvider(radarrId),
+                      ),
+                    ),
             ),
           ),
         ],
@@ -219,6 +225,17 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The missing languages the wanted row named, or a note when it named none.
+Widget _wantedFallback(BazarrWantedItem? wanted) {
+  final languages = wanted?.missingLanguages ?? const [];
+  if (languages.isEmpty) {
+    return const BazarrAwaitingNote(
+      message: 'The missing languages appear here once Bazarr sends them.',
+    );
+  }
+  return BazarrSubtitleLanguageWrap(languages: languages);
 }
 
 /// Error / not-configured state for the two Bazarr detail screens.

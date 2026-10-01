@@ -220,6 +220,50 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('the episodes do not say it a second time', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 3000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final harness = await _pump(
+        tester,
+        sonarrDown,
+        SeriesDetailScreen(
+          seriesId: 1,
+          heroTag: 'series-1',
+          initialSeries: SonarrSeries.fromJson(const {
+            'id': 1,
+            'title': 'Cosmos Laundromat',
+            'year': 2015,
+            'monitored': true,
+            'qualityProfileId': 1,
+            'path': '/mnt/tank/media/series/Cosmos Laundromat',
+            'seasons': [
+              {
+                'seasonNumber': 1,
+                'monitored': true,
+                'statistics': {
+                  'episodeFileCount': 10,
+                  'episodeCount': 10,
+                  'totalEpisodeCount': 10,
+                },
+              },
+            ],
+          }),
+        ),
+      );
+
+      // One statement of the silence, at the top of the page.
+      expect(find.byType(FaultBand), findsOneWidget);
+      expect(find.text('Sonarr did not answer'), findsNothing);
+      expect(find.byType(AppErrorState), findsNothing);
+      expect(find.byType(InlineErrorRetry), findsNothing);
+      expect(
+        find.text('The episodes appear here once Sonarr sends them.'),
+        findsOneWidget,
+      );
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('a cold open says it did not answer, at once', (tester) async {
       final harness = await _pump(
         tester,

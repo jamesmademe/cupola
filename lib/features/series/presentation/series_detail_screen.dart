@@ -210,6 +210,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         series.id > 0 ? series.id : widget.seriesId,
         series.tmdbId,
         series.tvdbId,
+        sonarrFaultShown: failure != null && retry != null,
         fault: failure != null && retry != null
             ? _faultBand(failure, instanceId, onRetry: retry)
             : _queueUnknown(
@@ -350,6 +351,11 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     int tmdbId,
     int tvdbId, {
     Widget? fault,
+
+    // The page's band already says Sonarr did not answer (or answered with a
+    // fault). The episodes come from the same connection, so their region
+    // says nothing again.
+    bool sonarrFaultShown = false,
   }) {
     final accent = ServiceKey.sonarr.accent;
 
@@ -471,7 +477,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                 // the list keeps them, and this says they are the last ones
                 // Sonarr gave. Here rather than inside the list because this
                 // box owns its gutter, so the line lands on the column edge.
-                if (episodesAsync.hasValue && episodesAsync.hasError)
+                if (episodesAsync.hasValue &&
+                    episodesAsync.hasError &&
+                    !sonarrFaultShown)
                   InlineErrorRetry(
                     message: sectionFailureMessage(
                       ServiceKey.sonarr,
@@ -535,6 +543,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
               searchingSeasons: _searchingSeasons,
               searchingEpisodes: _searchingEpisodes,
               onRetryEpisodes: retryEpisodes,
+              failureShownAbove: sonarrFaultShown,
             ),
           ),
           if (viewModel.hasFiles && viewModel.path != null)

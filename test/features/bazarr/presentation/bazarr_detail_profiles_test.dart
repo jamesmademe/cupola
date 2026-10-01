@@ -59,6 +59,11 @@ void main() {
         findsOneWidget,
       );
       _expectGlyphTone(tester, StatusTone.error);
+      // Said once. The wanted read failed for the same silence, so its
+      // section shows the languages the row named instead of a second
+      // failure state.
+      expect(find.byType(AppErrorState), findsNothing);
+      expect(find.text('German'), findsOneWidget);
 
       final asked = _reads(harness, '/api/movies');
       await tester.tap(
@@ -116,6 +121,30 @@ void main() {
     });
   });
 
+  testWidgets('a wanted read that fails alone keeps its own failure', (
+    tester,
+  ) async {
+    // Bazarr answers the record lookup (it has no such movie, which is an
+    // answer) and fails the wanted read: no page line, so the section says it.
+    final harness = await _pump(
+      tester,
+      Profiles.p1,
+      const BazarrMovieDetailScreen(radarrId: 5, initialWanted: _wantedMovie),
+      routes: (network) => network.on(
+        WorldIds.bazarr,
+        'GET',
+        '/api/movies/wanted',
+        (_) => NetworkReply.json({'message': 'boom'}, status: 500),
+      ),
+    );
+
+    expect(find.byType(InlineErrorRetry), findsNothing);
+    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.text('Bazarr answered with an error'), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
+
   group('a Bazarr series page opened from the wanted list', () {
     testWidgets('says the lookup did not answer, over what it was handed', (
       tester,
@@ -135,6 +164,11 @@ void main() {
           'Bazarr did not answer, so the series record is missing from this '
           'page.',
         ),
+        findsOneWidget,
+      );
+      expect(find.byType(AppErrorState), findsNothing);
+      expect(
+        find.text('The wanted episodes appear here once Bazarr sends them.'),
         findsOneWidget,
       );
 
