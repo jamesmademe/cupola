@@ -88,6 +88,16 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     final connection = ref.watch(
       currentSettingsProvider.select((s) => s.instanceById(instanceId)),
     );
+    // Asked before either provider is read: see the movie screen. The series
+    // and its episodes would both throw and both retry with backoff for a
+    // condition no waiting changes.
+    if (connection?.isConfigured != true) {
+      return MediaDetailPlaceholderView.error(
+        error: '${ServiceKey.sonarr.title} not configured',
+        serviceName: ServiceKey.sonarr.title,
+        accent: ServiceKey.sonarr.accent,
+      );
+    }
     final detailRef = (instanceId: instanceId, id: widget.seriesId);
     final seriesAsync = widget.seriesId > 0
         ? ref.watch(seriesDetailForProvider(detailRef))

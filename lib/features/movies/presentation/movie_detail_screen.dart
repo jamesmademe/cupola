@@ -88,6 +88,22 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     final connection = ref.watch(
       currentSettingsProvider.select((s) => s.instanceById(instanceId)),
     );
+    // Asked before any provider is read. A connection with no address or key
+    // makes the detail provider throw, and a provider that throws retries with
+    // backoff: the page sat on its skeleton for the better part of a minute
+    // before it said what one look at the settings already knew. The resolved
+    // connection rather than the service, because that is the one the page
+    // would read, and a `?i=` naming a connection since removed is not set up
+    // either.
+    if (connection?.isConfigured != true) {
+      return MediaDetailPlaceholderView.error(
+        // The missing-config marker the placeholder turns into "Radarr is not
+        // set up", with no Retry: the fix is in Settings.
+        error: '${ServiceKey.radarr.title} not configured',
+        serviceName: ServiceKey.radarr.title,
+        accent: ServiceKey.radarr.accent,
+      );
+    }
     final item = (instanceId: instanceId, id: widget.movieId);
     final movieAsync = widget.movieId > 0
         ? ref.watch(movieDetailForProvider(item))
