@@ -16,8 +16,8 @@ import 'package:cupola/features/discover/presentation/widgets/discover_collectio
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Region-6 slots for an *arr (Radarr/Sonarr) detail page — the `CAST` rail and
-/// the `COLLECTION` banner, fetched from TMDB via Seerr — or the "Connect Seerr"
-/// prompt when Seerr isn't configured.
+/// the `COLLECTION` banner, fetched from TMDB via Seerr — or the "Set up Seerr"
+/// card when Seerr isn't set up.
 ///
 /// Returns slots rather than one widget, and that is the whole point. As a single
 /// widget this had to draw its children's headings itself, which made
@@ -48,10 +48,10 @@ List<MediaDetailSlot> arrMediaExtrasSlots(
 
   return extrasAsync.maybeWhen(
     data: (extras) {
-      // Seerr not configured → prompt the user to connect it. Deliberately
+      // Seerr not set up → the card whose one action sets it up. Deliberately
       // unlabelled: it is a prompt about a missing integration, not a region of
       // this title's record, and an accent eyebrow reading `CAST` above a card
-      // that says "Connect Seerr" would name content that is not there.
+      // that says "Set up Seerr" would name content that is not there.
       if (extras == null) {
         return [MediaDetailSlot.box(child: _ConnectSeerrCta(accent: accent))];
       }

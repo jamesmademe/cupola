@@ -76,7 +76,7 @@ typedef SeerrOverviewSection = ({
   bool isFloor,
 });
 
-/// `Severance — Season 2`, `Dune: Part Three`, `The Bear — 3 seasons`.
+/// `Severance, Season 2`, `Dune: Part Three`, `The Bear, 3 seasons`.
 ///
 /// A TV request is a request for *seasons*, not for a show: two people asking
 /// for two different seasons of the same series are two rows that would
