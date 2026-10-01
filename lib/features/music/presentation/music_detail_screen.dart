@@ -10,6 +10,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/connection_badge.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -199,6 +200,14 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     ];
   }
 
+  /// The connection's name, as a badge, or null while [service] has one.
+  Widget? _connectionBadge(ServiceKey service) {
+    final name = ref.watch(connectionNameProvider(_instanceId));
+    return name == null
+        ? null
+        : ConnectionBadge(label: name, accent: service.accent);
+  }
+
   Widget _buildPosterRow(
     BuildContext context,
     MusicDetailViewModel viewModel,
@@ -210,7 +219,13 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       // The counts are the chip slot's one meaning, so they are stated there and
       // not also in the metadata line, which used to carry the identical pair.
       metadataItems: const [],
-      tags: _buildTags(viewModel),
+      tags: [
+        ..._buildTags(viewModel),
+        // Which connection this page reads, once there are two: a page opened
+        // from the 4K's row is the 4K's artist, and the tab bar that carries the
+        // lens is covered by the page.
+        ?_connectionBadge(ServiceKey.lidarr),
+      ],
       posterCard: MediaPosterCard.circular(
         heroTag: widget.heroTag,
         imageUrl: viewModel.posterUrl,

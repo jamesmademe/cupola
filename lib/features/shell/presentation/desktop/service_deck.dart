@@ -46,7 +46,8 @@ class ServiceDeck extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final location = GoRouterState.of(context).uri.path;
+    final uri = GoRouterState.of(context).uri;
+    final location = uri.path;
     final current = _serviceOf(location);
     // The deck names the room only when the page does not. On a service's tab
     // root the tab row is the header and already carries glyph, name and lens
@@ -84,7 +85,13 @@ class ServiceDeck extends ConsumerWidget {
               child: Row(
                 children: [
                   if (!namedByPage) ...[
-                    _ActiveChip(service: current, compact: compact),
+                    _ActiveChip(
+                      service: current,
+                      instanceId: current == null
+                          ? null
+                          : locationInstanceId(ref, current, uri),
+                      compact: compact,
+                    ),
                     SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
                   ],
                   _HealthReadout(narrow: narrow, compact: compact),
@@ -121,9 +128,16 @@ class ServiceDeck extends ConsumerWidget {
 
 /// Where you are: the service and, only if it has a name, the connection.
 class _ActiveChip extends ConsumerWidget {
-  const _ActiveChip({required this.service, required this.compact});
+  const _ActiveChip({
+    required this.service,
+    required this.instanceId,
+    required this.compact,
+  });
 
   final ServiceKey? service;
+
+  /// The connection the page reads: the one a `?i=` names, else the lens.
+  final String? instanceId;
   final bool compact;
 
   @override
@@ -131,15 +145,11 @@ class _ActiveChip extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final service = this.service;
     final accent = service?.accent ?? colorScheme.primary;
-    final instance = service == null
-        ? null
-        : ref.watch(activeInstanceProvider(service));
     // The app's one rule for naming a connection: nothing while the service
     // has one, whatever label it kept from a sibling since removed, and
     // `Radarr 2` for one nobody named.
-    final name = instance == null
-        ? null
-        : ref.watch(connectionNameProvider(instance.id));
+    final id = instanceId;
+    final name = id == null ? null : ref.watch(connectionNameProvider(id));
     // A derived name already says the service (`Radarr 2`): it is the title,
     // with no second label repeating it.
     final derived =

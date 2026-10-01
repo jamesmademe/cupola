@@ -330,6 +330,26 @@ void main() {
     },
   );
 
+  testWidgets('a page opened with ?i= names the connection it reads, not '
+      'the lens', (tester) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      final semantics = tester.ensureSemantics();
+      try {
+        // The lens rests on the first Radarr; the film is the 4K's.
+        await _pumpShell(
+          tester,
+          initialLocation: '/dashboard/radarr/library/item/42?i=radarr-4k00001',
+          overrides: await _world(instances: _twoRadarr),
+        );
+        expect(find.bySemanticsLabel('Viewing Radarr, 4K'), findsOneWidget);
+        expect(find.textContaining('Lens: 4K'), findsOneWidget);
+        expect(find.textContaining('Radarr 1'), findsNothing);
+      } finally {
+        semantics.dispose();
+      }
+    });
+  });
+
   group('the deck names the room only when the page does not', () {
     testWidgets('a service tab root: the tab row names it, the deck does not', (
       tester,

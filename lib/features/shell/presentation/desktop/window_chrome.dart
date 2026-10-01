@@ -52,9 +52,10 @@ class WindowChrome extends ConsumerWidget {
     // desktop window, so the platform half of the shell test adds nothing.
     final compact =
         MediaQuery.sizeOf(context).width < AppBreakpoints.desktopCompact;
-    final location = GoRouterState.of(context).uri.path;
+    final uri = GoRouterState.of(context).uri;
+    final location = uri.path;
     final crumbs = ShellBreadcrumb.of(location);
-    final lens = _lensFor(ref, location);
+    final lens = _lensFor(ref, uri);
 
     return Semantics(
       container: true,
@@ -129,22 +130,20 @@ class WindowChrome extends ConsumerWidget {
   /// label to print, and a chip reading `Lens: Radarr` while the breadcrumb
   /// already says Radarr is furniture. This is the same "you do not pay for the
   /// fold until you need it" rule the app bar badge follows.
-  ({ServiceKey service, String label})? _lensFor(
-    WidgetRef ref,
-    String location,
-  ) {
-    final crumbSegments = Uri.parse(location).pathSegments;
+  ({ServiceKey service, String label})? _lensFor(WidgetRef ref, Uri location) {
+    final crumbSegments = location.pathSegments;
     if (crumbSegments.length < 2) return null;
     final service = ServiceKey.values.firstWhere(
       (s) => s.routeParam == crumbSegments[1],
       orElse: () => ServiceKey.seerr,
     );
     if (service.routeParam != crumbSegments[1]) return null;
-    final instance = ref.watch(activeInstanceProvider(service));
-    if (instance == null) return null;
+    // The connection the page reads: a detail page opened with `?i=` reads
+    // that one, whatever the lens is on.
+    final instanceId = locationInstanceId(ref, service, location);
     // The app's one rule for naming a connection: no chip while the service
     // has one, whatever label it kept from a sibling since removed.
-    final label = ref.watch(connectionNameProvider(instance.id));
+    final label = ref.watch(connectionNameProvider(instanceId));
     if (label == null) return null;
     return (service: service, label: label);
   }

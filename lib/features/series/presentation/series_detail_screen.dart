@@ -11,6 +11,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/connection_badge.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/arr_media_extras_section.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
@@ -317,6 +318,14 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     );
   }
 
+  /// The connection's name, as a badge, or null while [service] has one.
+  Widget? _connectionBadge(ServiceKey service) {
+    final name = ref.watch(connectionNameProvider(_instanceId));
+    return name == null
+        ? null
+        : ConnectionBadge(label: name, accent: service.accent);
+  }
+
   Widget _buildPosterRow(
     BuildContext context,
     SeriesDetailViewModel viewModel,
@@ -341,6 +350,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           TagChip(text: episodeCounter, color: ServiceKey.sonarr.accent),
         if (seasonCounter != null)
           TagChip(text: seasonCounter, color: ServiceKey.sonarr.accent),
+        // Which connection this page reads, once there are two: a page opened
+        // from the 4K's row is the 4K's film, and the tab bar that carries the
+        // lens is covered by the page.
+        ?_connectionBadge(ServiceKey.sonarr),
       ],
       posterCard: MediaPosterCard(
         heroTag: widget.heroTag,

@@ -214,6 +214,27 @@ String effectiveInstanceId(WidgetRef ref, ServiceKey service, String? named) {
   return ref.watch(activeInstanceProvider(service))?.id ?? '';
 }
 
+/// The connection of [service] a page at [location] reads: the one its `?i=`
+/// names, when it names one of [service]'s, else the lens.
+///
+/// For the window's own furniture, which sits above the page and names what
+/// it shows: a detail page opened from the 4K's row reads the 4K, whatever
+/// the lens is on, and a readout naming the lens over it names the wrong
+/// server. An `i` that is another service's — a settings link, a requests
+/// list — says nothing about [service].
+String locationInstanceId(WidgetRef ref, ServiceKey service, Uri location) {
+  final named = location.queryParameters['i'];
+  final belongs =
+      named != null &&
+      named.isNotEmpty &&
+      ref.watch(
+        currentSettingsProvider.select(
+          (s) => s.instanceById(named)?.service == service,
+        ),
+      );
+  return effectiveInstanceId(ref, service, belongs ? named : null);
+}
+
 /// What the connection [id] is called beside its siblings, or null when its
 /// service has only the one: [SettingsModel.connectionName], watched narrowly.
 final connectionNameProvider = Provider.family<String?, String>((ref, id) {
