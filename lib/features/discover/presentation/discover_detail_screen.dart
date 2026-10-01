@@ -109,9 +109,10 @@ class DiscoverDetailScreen extends ConsumerWidget {
           if (!isMovie && viewModel.runtimeStr != null) viewModel.runtimeStr,
         ].whereType<String>().where((value) => value.isNotEmpty).toList();
 
-        final isInService = extras.libraryCheckDone
-            ? extras.isInLibrary ?? false
-            : false;
+        // Null when Cupola could not say: the service is not set up here, the
+        // check is still out, or it failed. The deck tells those apart from a
+        // no, which is the one answer that takes the Open jump away.
+        final isInService = extras.libraryCheckDone ? extras.isInLibrary : null;
 
         // The hero chip slot's one meaning, here as everywhere: how much of the
         // manifest exists. The episode/season summary moved out of the metadata

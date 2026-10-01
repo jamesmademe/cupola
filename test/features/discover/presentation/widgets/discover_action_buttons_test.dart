@@ -21,7 +21,8 @@ void main() {
     testWidgets('shows request plus captioned trailers and open actions', (
       tester,
     ) async {
-      await _pumpButtons(tester, hasManageableMedia: false, isInService: false);
+      // Still asking Radarr: the jump stays, and asks for itself when tapped.
+      await _pumpButtons(tester, hasManageableMedia: false, isInService: null);
 
       expect(find.text('Request'), findsOneWidget);
       expect(find.byIcon(Icons.add_circle_outline_rounded), findsOneWidget);
@@ -99,6 +100,86 @@ void main() {
       expect(find.text('Open'), findsOneWidget);
     });
 
+    testWidgets('a title Radarr says it does not hold offers no Open', (
+      tester,
+    ) async {
+      await _pumpButtons(tester, hasManageableMedia: false, isInService: false);
+
+      // The jump could only report that it found nothing.
+      expect(find.text('Open'), findsNothing);
+      expect(find.byIcon(Icons.open_in_new_rounded), findsNothing);
+      expect(find.text('Trailers'), findsOneWidget);
+    });
+
+    testWidgets('a series Seerr sent without a TVDB id offers no Open', (
+      tester,
+    ) async {
+      await _pumpButtons(
+        tester,
+        mediaType: 'tv',
+        hasManageableMedia: false,
+        isInService: null,
+        tvdbId: null,
+      );
+
+      expect(find.text('Open'), findsNothing);
+    });
+
+    testWidgets('with no Radarr set up, Open in Radarr is dimmed but tappable '
+        'and its toast leads to the setup', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pumpButtons(
+        tester,
+        hasManageableMedia: false,
+        // What the page passes when Radarr is not set up: nobody could say.
+        isInService: null,
+        configured: const [ServiceKey.seerr],
+      );
+
+      final open = find.ancestor(
+        of: find.byIcon(Icons.open_in_new_rounded),
+        matching: find.byType(OutlinedButton),
+      );
+      expect(open, findsOneWidget);
+      // Never `onPressed: null`: that is the node a screen reader skips.
+      expect(tester.widget<OutlinedButton>(open).onPressed, isNotNull);
+      // The glyph and its caption drain; the button's plate does not.
+      for (final content in [
+        find.byIcon(Icons.open_in_new_rounded),
+        find.text('Open'),
+      ]) {
+        final dim = tester.widget<Opacity>(
+          find.ancestor(of: content, matching: find.byType(Opacity)).first,
+        );
+        expect(dim.opacity, 0.38);
+      }
+      expect(
+        find.ancestor(of: open, matching: find.byType(Opacity)),
+        findsNothing,
+      );
+      expect(
+        tester.getSemantics(open),
+        containsSemantics(
+          label: 'Open in Radarr',
+          hint: 'requires Radarr',
+          isButton: true,
+          isEnabled: true,
+          hasTapAction: true,
+        ),
+      );
+      expect(tester.getSize(open).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(open).height, greaterThanOrEqualTo(44));
+
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+      expect(find.text('Set up Radarr to open this movie'), findsOneWidget);
+      expect(
+        find.widgetWithText(SnackBarAction, 'Set up Radarr'),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
+
     testWidgets('the request action is the ink button, not Seerr\'s colour', (
       tester,
     ) async {
@@ -118,7 +199,7 @@ void main() {
     });
 
     testWidgets('every control clears the 44pt touch minimum', (tester) async {
-      await _pumpButtons(tester, hasManageableMedia: false, isInService: false);
+      await _pumpButtons(tester, hasManageableMedia: false, isInService: true);
 
       expect(
         tester.getSize(_request).height,
@@ -171,8 +252,9 @@ Future<void> _pumpButtons(
   WidgetTester tester, {
   String mediaType = 'movie',
   required bool hasManageableMedia,
-  required bool isInService,
+  required bool? isInService,
   bool isAvailable = false,
+  int? tvdbId = 456,
   Map<String, dynamic>? mediaInfo,
   double textScale = 1.0,
   List<ServiceKey> configured = const [ServiceKey.radarr, ServiceKey.sonarr],
@@ -197,7 +279,7 @@ Future<void> _pumpButtons(
             hasManageableMedia: hasManageableMedia,
             isInService: isInService,
             isAvailable: isAvailable,
-            tvdbId: mediaType == 'tv' ? 456 : null,
+            tvdbId: mediaType == 'tv' ? tvdbId : null,
             mediaInfo: mediaInfo,
             title: 'Title',
             voteAverage: 7.5,

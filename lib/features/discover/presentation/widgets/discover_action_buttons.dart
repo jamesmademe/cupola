@@ -32,7 +32,11 @@ class DiscoverActionButtons extends ConsumerWidget {
   final int mediaId;
   final String mediaType;
   final bool hasManageableMedia;
-  final bool isInService;
+
+  /// What this stack's own Radarr (or Sonarr) said about the title: it holds
+  /// it, it does not, or null when Cupola could not say — that service is not
+  /// set up here, the lookup is still out, or it failed.
+  final bool? isInService;
   final bool isAvailable;
   final int? tvdbId;
   final Map<String, dynamic>? mediaInfo;
@@ -67,7 +71,7 @@ class DiscoverActionButtons extends ConsumerWidget {
     // request is not Seerr-coloured, it is the thing this page is for.
     final room = CupolaRoom.of(context);
 
-    final isRequested = isInService || hasManageableMedia;
+    final isRequested = (isInService ?? false) || hasManageableMedia;
     // "Requested" is the wrong word for a title that is already on disk, and a
     // disabled button with no explanation is a dead end. So the label states the
     // actual state and a single line underneath says why nothing is offered.
@@ -88,7 +92,7 @@ class DiscoverActionButtons extends ConsumerWidget {
       disabledReason = null;
     }
     final canRequest = disabledReason == null;
-    final hasManageAction = hasManageableMedia || isInService;
+    final openAction = _openAction(context, ref);
 
     return Row(
       // Tops align, so the two captions hang below their own buttons instead
@@ -151,44 +155,57 @@ class DiscoverActionButtons extends ConsumerWidget {
               ? null
               : () => DiscoverVideosButton.show(context, videos),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        if (hasManageableMedia)
+        if (hasManageableMedia) ...[
+          const SizedBox(width: AppSpacing.sm),
           HeaderActionButton(
             icon: Icons.settings_outlined,
             label: 'Manage',
             semanticLabel:
                 'Manage ${_normalizedMediaType == 'movie' ? 'movie' : 'series'}',
             onPressed: () => _showManageSheet(context, ref),
-          )
-        else if (hasManageAction)
-          // A jump into Radarr or Sonarr is a cross-service control: dimmed
-          // but tappable when that service is not set up, hinted with what it
-          // needs, and its toast leads to that service's own settings — not a
-          // modal that names the problem and offers no way to the fix.
-          CrossServiceAction.builder(
-            target: _normalizedMediaType == 'movie'
-                ? ServiceKey.radarr
-                : ServiceKey.sonarr,
-            blockedMessage:
-                '${Lexicon.setUp(serviceName)} to open this '
-                '${_normalizedMediaType == 'movie' ? 'movie' : 'series'}',
-            onTap: () => _openInService(context, ref),
-            builder: (context, onPressed, annotate) => HeaderActionButton(
-              icon: Icons.open_in_new_rounded,
-              label: 'Open',
-              semanticLabel: 'Open in $serviceName',
-              onPressed: onPressed,
-              annotate: annotate,
-            ),
-          )
-        else
-          // Not tracked by the arr: a withheld state of its own, not a gate.
-          HeaderActionButton(
-            icon: Icons.open_in_new_rounded,
-            label: 'Open',
-            semanticLabel: 'Open in $serviceName',
           ),
+        ] else if (openAction != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          openAction,
+        ],
       ],
+    );
+  }
+
+  /// The jump into the Radarr or Sonarr that holds this title, or null when
+  /// there is nothing to jump to.
+  ///
+  /// A cross-service control: dimmed but tappable when that service is not set
+  /// up here, hinted `requires Radarr`, and its toast's one action is that
+  /// service's setup. It used to be reached only once the library check had
+  /// answered yes, which needs the service set up, so the dimmed arm never
+  /// drew; a stack without Radarr got a bare disabled button, which a screen
+  /// reader skips.
+  ///
+  /// Not drawn when the service answered that it does not hold the title, or
+  /// for a series Seerr sent without a TVDB id: the jump could only report
+  /// that it found nothing, and a promise the page cannot keep is better left
+  /// out than drawn as a control that fails. While the check is still out, or
+  /// when it failed, the jump stays and asks for itself.
+  Widget? _openAction(BuildContext context, WidgetRef ref) {
+    final isMovie = _normalizedMediaType == 'movie';
+    if (isInService == false) return null;
+    if (!isMovie && tvdbId == null) return null;
+
+    final serviceName = isMovie ? 'Radarr' : 'Sonarr';
+    return CrossServiceAction.builder(
+      target: isMovie ? ServiceKey.radarr : ServiceKey.sonarr,
+      blockedMessage:
+          '${Lexicon.setUp(serviceName)} to open this '
+          '${isMovie ? 'movie' : 'series'}',
+      onTap: () => _openInService(context, ref),
+      builder: (context, onPressed, annotate) => HeaderActionButton(
+        icon: Icons.open_in_new_rounded,
+        label: 'Open',
+        semanticLabel: 'Open in $serviceName',
+        onPressed: onPressed,
+        annotate: annotate,
+      ),
     );
   }
 
