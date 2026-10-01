@@ -628,7 +628,11 @@ void main() {
       // and the desktop inspector both draw this band, and two hand-rolled
       // "is it today" comparisons are how two readouts of one day start
       // disagreeing at midnight.
-      final now = DateTime.now();
+      //
+      // 15:00 local, handed in rather than read off the wall clock: run a few
+      // minutes after midnight, "nine minutes ago" was yesterday for some of
+      // the nine and the count came out short.
+      final now = DateTime(2026, 10, 1, 15);
       final container = ProviderContainer(
         overrides: [
           globalHistoryFeedProvider.overrideWith(
@@ -642,7 +646,11 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final today = container.read(finishedTodayProvider);
+      // The provider's own reading with the clock it would have read.
+      final today = finishedTodayOf(
+        container.read(globalHistoryFeedProvider),
+        now: now,
+      );
 
       expect(today.rows, hasLength(finishedTodayLimit));
       expect(today.rows.map((i) => i.title), isNot(contains('Yesterday')));
