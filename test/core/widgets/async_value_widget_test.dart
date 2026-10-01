@@ -168,4 +168,108 @@ void main() {
 
     expect(find.byType(AppErrorState), findsOneWidget);
   });
+
+  // OPS-05, the widget's half. qBittorrent's own providers fail fast
+  // (`noProviderRetry`), but most reads in the app keep Riverpod's default
+  // retry, and while it runs the state is `AsyncLoading(value: last, error)`:
+  // `when` drew that as a reload, so the list became a spinner, and a poll that
+  // invalidates every three seconds cancels the retry timer before the tenth
+  // attempt could settle it. Driven here through a real provider under the
+  // default policy, with the list's own poll, rather than a hand-built state.
+  group('a failure over a retained value, while Riverpod retries', () {
+    late bool down;
+    late FutureProvider<List<String>> torrents;
+    late ProviderContainer container;
+
+    setUp(() {
+      down = false;
+      torrents = FutureProvider<List<String>>((ref) async {
+        if (down) throw const SocketException('Connection refused');
+        return const ['Ubuntu.ISO', 'Debian.ISO'];
+      });
+      // No `retry:` anywhere: the default policy is the condition under test.
+      container = ProviderContainer();
+    });
+
+    Future<void> pumpList(WidgetTester tester) => tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: Consumer(
+              builder: (context, ref, _) => AsyncValueWidget<List<String>>(
+                value: ref.watch(torrents),
+                serviceName: 'qBittorrent',
+                onRetry: () => ref.invalidate(torrents),
+                data: (list) =>
+                    Column(children: [for (final t in list) Text(t)]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    /// Unmounts the tree and disposes the container, which cancels the retry
+    /// timer Riverpod still has pending — or the test ends on a live timer.
+    Future<void> unmount(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+    }
+
+    testWidgets('keeps the last list under a band, tick after tick', (
+      tester,
+    ) async {
+      await pumpList(tester);
+      await tester.pump();
+      expect(find.text('Ubuntu.ISO'), findsOneWidget);
+
+      down = true;
+      for (var tick = 1; tick <= 5; tick++) {
+        container.invalidate(torrents);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 3));
+
+        final state = container.read(torrents);
+        expect(
+          state.isLoading && state.hasValue && state.hasError,
+          isTrue,
+          reason: 'tick $tick: the retry state this group is about',
+        );
+        expect(find.text('Ubuntu.ISO'), findsOneWidget, reason: 'tick $tick');
+        expect(find.byType(FaultBand), findsOneWidget, reason: 'tick $tick');
+        expect(find.textContaining('did not answer'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      }
+
+      // Back up: the next tick heals it, and the band goes with the fault.
+      down = false;
+      container.invalidate(torrents);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(container.read(torrents).hasError, isFalse);
+      expect(find.byType(FaultBand), findsNothing);
+      expect(find.text('Debian.ISO'), findsOneWidget);
+
+      await unmount(tester);
+    });
+
+    testWidgets('a cold failure still loads while the retry runs', (
+      tester,
+    ) async {
+      // Nothing retained, so nothing to keep: the loading state is the honest
+      // one while a blip may still heal itself, which is what the default
+      // retry is left on for.
+      down = true;
+      await pumpList(tester);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(container.read(torrents).hasError, isTrue);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(FaultBand), findsNothing);
+
+      await unmount(tester);
+    });
+  });
 }

@@ -10,7 +10,8 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// Shows loading, error, empty, or data states based on the [AsyncValue].
 /// - loading  → [skeleton] (or a centred spinner if none given)
 /// - error, with a retained previous value → the data it had, at full ink,
-///              under a [FaultBand.unreachable] (see below)
+///              under a [FaultBand.unreachable] (see below) — also while the
+///              provider is reloading or retrying over that error
 /// - error    → [AppErrorState] with a retry button when [onRetry] is set
 ///              (the "not configured" case still routes to [NotConfiguredPlaceholder])
 /// - data     → [emptyBuilder]/[AppEmptyState] when [isEmpty] returns true,
@@ -35,6 +36,25 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// The full-page [AppErrorState] survives for the case it is actually for —
 /// the cold open, where the service has never answered in this session and
 /// there is no readout behind the band to keep.
+///
+/// ## Why a reload over a failure does not draw the loading state
+///
+/// Moving off the plain `when` was half the fix. While Riverpod retries a
+/// failed build it holds `AsyncLoading(value: last, error: why)`, and `when`
+/// reads every `AsyncLoading` that already had a state as a dependency reload
+/// and calls `loading()` (`skipLoadingOnReload` is false by default). So for
+/// the whole retry sequence the retained readout was thrown away for a
+/// spinner, and under a poll it never came back: each tick invalidates, the
+/// provider's disposal cancels the pending retry timer, and the retry count
+/// never reaches the end that would settle into `AsyncError`. A Prowlarr or a
+/// TrueNAS that went down mid-session stayed a spinner for as long as the page
+/// was open, and the branch below was unreachable.
+///
+/// Whenever there is a value *and* an error, then, the reload's loading state
+/// is skipped and the error branch draws the readout under its band. The
+/// cold open keeps the spinner through a retry: with nothing retained, the
+/// loading state is the honest one while a blip heals itself, which is what
+/// Riverpod's default retry is left on for.
 class AsyncValueWidget<T> extends StatelessWidget {
   final AsyncValue<T> value;
   final Widget Function(T data) data;
@@ -79,6 +99,10 @@ class AsyncValueWidget<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return value.when(
+      // A refresh (an invalidate, a poll tick) already skips its loading state
+      // by default; this extends the same to a reload or a retry, but only over
+      // a failure that has a retained readout to show. See the class doc.
+      skipLoadingOnReload: value.hasValue && value.hasError,
       data: (value) {
         if (isEmpty != null && isEmpty!(value) && emptyBuilder != null) {
           return emptyBuilder!;
