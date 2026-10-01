@@ -1385,11 +1385,13 @@ class _DesktopActivityRow extends ConsumerStatefulWidget {
 
   /// A desktop window below 1100.
   ///
-  /// The row keeps its identity, its title, its status and its controls, and
-  /// sheds the three cells that only pay for themselves when there is room:
-  /// the figures, the connection badge and the relative time. Fewer parts, not
+  /// The row keeps its identity, its title, its status, its connection and
+  /// its controls, and sheds the two cells that only pay for themselves when
+  /// there is room: the figures and the relative time. Fewer parts, not
   /// smaller ones — and emphatically not the phone card, which is a different
-  /// shape for a different input device.
+  /// shape for a different input device. The connection badge is not one of
+  /// them: two connections of a service interleave in one group, and a row
+  /// that drops its name cannot say which server it is about.
   final bool compact;
 
   @override
@@ -1564,7 +1566,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
               // vertical rules on every row and under the header.
               const SizedBox(width: AppSpacing.md),
               StatusBadge(info: item.status),
-              if (!widget.compact && item.instanceLabel.isNotEmpty) ...[
+              if (item.instanceLabel.isNotEmpty) ...[
                 const SizedBox(width: AppSpacing.sm),
                 ConnectionBadge(
                   label: item.instanceLabel,

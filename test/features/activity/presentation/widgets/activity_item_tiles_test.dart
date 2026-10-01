@@ -707,7 +707,10 @@ void main() {
 
           // And the cells that only pay for themselves with room are gone.
           expect(find.text('7.45 GB · 12m left'), findsNothing);
-          expect(find.text('4K'), findsNothing);
+          // Never the connection: with two Radarr interleaved in one group,
+          // a row that drops its name is a row that cannot say which server
+          // it is about, to the eye or the ear.
+          expect(find.text('4K'), findsOneWidget);
         });
       });
     });

@@ -12,7 +12,7 @@ Rendered from `lib/core/widgets/connection_badge.dart` by `test/design_catalog/c
 
 ## Placement
 
-On the row, after the `StatusBadge`, `AppSpacing.sm` apart (hidden on the compact tile). On the Activity feed two connections of one service interleave inside a group, so the row has to say which; global search says it once per section heading instead.
+On the row, after the `StatusBadge`, `AppSpacing.sm` apart, at every width. On the Activity feed two connections of one service interleave inside a group, so the row has to say which; global search says it once per section heading instead. A compact desktop row (a window under 1100) sheds its figures and its time but keeps the badge: a row without its name cannot say which server it is about.
 
 ## The consumer provides
 
