@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -111,7 +112,18 @@ void main() {
     expect(find.text('— downloading'), findsOne);
     expect(find.text('— imported'), findsOne);
     // No total, so nothing to qualify.
-    expect(find.textContaining('not in the total'), findsNothing);
+    for (final region in const [
+      ServicesInFlightSection,
+      ServicesRecentlyAddedSection,
+    ]) {
+      expect(
+        find.descendant(
+          of: find.byType(region),
+          matching: find.textContaining('not in the total'),
+        ),
+        findsNothing,
+      );
+    }
 
     // One line each, in place of the rows: the sources that did not answer,
     // then the refusal in its own words.

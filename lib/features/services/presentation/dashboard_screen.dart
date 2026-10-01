@@ -11,10 +11,12 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/service_matrix.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
+import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
@@ -280,7 +282,8 @@ Future<void> _refreshServicesDashboard(WidgetRef ref) async {
     for (final service in ServiceKey.values)
       settle(ref.read(serviceSummaryProvider(service).future)),
     settle(ref.read(servicesQueueProvider.future)),
-    settle(ref.read(dashboardDecisionsProvider.future)),
+    for (final source in DecisionSource.values)
+      settle(ref.read(dashboardDecisionSourceProvider(source).future)),
     settle(ref.read(servicesRecentlyAddedProvider.future)),
   ]);
 }
@@ -318,7 +321,15 @@ void _invalidateServicesDashboard(WidgetRef ref) {
   // readers, so the two cannot end up disagreeing about the same page.
   ref.invalidate(servicesArrHistoryProvider);
   ref.invalidate(servicesRecentlyAddedProvider);
-  ref.invalidate(dashboardDecisionsProvider);
+  // Each decision source, and what they read that keeps an answer of its own
+  // — Prowlarr's indexer status among them, which nothing else here drops, so
+  // a pull left a fixed indexer on the list as failing.
+  ref.invalidate(dashboardDecisionSourceProvider);
+  for (final service in ServiceKey.values) {
+    for (final source in dashboardSourcesOf(service)) {
+      ref.invalidate(source);
+    }
+  }
   // The library providers the KPI builders read through — and therefore the two
   // figures on every stack card. Invalidating `serviceKpiProvider` alone would
   // recompute the same numbers from the same cached libraries, which is a pull

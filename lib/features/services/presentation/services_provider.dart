@@ -1817,7 +1817,13 @@ String? _queueQualityLabel(dynamic value) {
   return stringOrNull(value);
 }
 
-/// Everything waiting on a human, from every source, merged and ranked.
+/// Decisions, and which sources answered for them.
+typedef DashboardDecisions = ({
+  List<DashboardDecision> decisions,
+  SourceCoverage coverage,
+});
+
+/// One source's decisions — see [DecisionSource] for why each is read alone.
 ///
 /// Reads what the page has already loaded — the requests it was going to show,
 /// the queue the in-flight region reads, the history the recently-added rail
@@ -1825,55 +1831,125 @@ String? _queueQualityLabel(dynamic value) {
 /// watch. Nothing here is a new request; the region is a **view** of the page's
 /// own data, which is why it can afford to be first on the screen.
 ///
-/// Each source is gated on its service being configured and degrades to nothing
-/// on failure: a region that answers "what needs me" must not itself become the
-/// thing that needs you.
-final dashboardDecisionsProvider = FutureProvider<List<DashboardDecision>>((
-  ref,
-) async {
-  final settings = ref.watch(currentSettingsProvider);
-  final decisions = <DashboardDecision>[];
+/// Gated on its service being configured, and never throws: a failure is kept
+/// in the coverage, classified, so the region can tell "nothing is waiting"
+/// from "nobody could be asked". `retry: noProviderRetry` because the stack
+/// source derives from Dockge's list, which carries it.
+final dashboardDecisionSourceProvider =
+    FutureProvider.family<DashboardDecisions, DecisionSource>((
+      ref,
+      source,
+    ) async {
+      switch (source) {
+        case DecisionSource.requests:
+          return _decisionsFrom(
+            ref,
+            ServiceKey.seerr,
+            () => _pendingRequestDecisions(ref),
+          );
+        case DecisionSource.indexers:
+          return _decisionsFrom(
+            ref,
+            ServiceKey.prowlarr,
+            () => _failingIndexerDecisions(ref),
+          );
+        case DecisionSource.stacks:
+          return _decisionsFrom(
+            ref,
+            ServiceKey.dockge,
+            () => _stoppedStackDecisions(ref),
+          );
+        case DecisionSource.certificates:
+          return _decisionsFrom(
+            ref,
+            ServiceKey.nginxProxyManager,
+            () => _expiringCertificateDecisions(ref),
+          );
+        case DecisionSource.queue:
+          // Not gated on one service: the faults come from whichever of seven
+          // sources reported one, and the queue has already gated each of those
+          // and kept which of them answered.
+          final inFlight = await ref.watch(servicesInFlightProvider.future);
+          return (
+            decisions: inFlight.faults
+                .map(_queueFaultDecision)
+                .toList(growable: false),
+            coverage: inFlight.coverage,
+          );
+        case DecisionSource.history:
+          final history = await ref.watch(servicesArrHistoryProvider.future);
+          return (
+            decisions: history.entries
+                .where((entry) => entry.outcome == ArrImportOutcome.failed)
+                .map(_failedImportDecision)
+                .toList(growable: false),
+            coverage: history.coverage,
+          );
+      }
+    }, retry: noProviderRetry);
 
-  Future<void> collect(
-    ServiceKey service,
-    Future<List<DashboardDecision>> Function() load,
-  ) async {
-    if (!settings.isServiceConfigured(service)) return;
-    try {
-      decisions.addAll(await load());
-    } catch (_) {
-      // Degrades to nothing. See the doc above.
+Future<DashboardDecisions> _decisionsFrom(
+  Ref ref,
+  ServiceKey service,
+  Future<List<DashboardDecision>> Function() load,
+) async {
+  if (!_watchConnection(ref, service).configured) {
+    return (
+      decisions: const <DashboardDecision>[],
+      coverage: SourceCoverage.none,
+    );
+  }
+  try {
+    return (
+      decisions: await load(),
+      coverage: SourceCoverage.answeredBy(service),
+    );
+  } catch (error) {
+    // Degrades to no decisions — a region that answers "what needs me" must
+    // not itself become the thing that needs you — but says who failed.
+    return (
+      decisions: const <DashboardDecision>[],
+      coverage: SourceCoverage.failure(service, error),
+    );
+  }
+}
+
+/// Everything waiting on a human, from every source, merged and ranked as each
+/// source answers.
+///
+/// Synchronous over the sources' states rather than an `await` of all of them:
+/// the decisions of the sources that answered are here as soon as they are,
+/// and a source still out is [SourceCoverage.pending] rather than a wait. A
+/// source being read again keeps its last answer while it is — `value`, not
+/// `asData` — so a Dockge push does not blank the region between two lists.
+final dashboardDecisionsProvider = Provider<DashboardDecisions>((ref) {
+  final decisions = <DashboardDecision>[];
+  final parts = <SourceCoverage>[];
+  for (final source in DecisionSource.values) {
+    final read = ref.watch(dashboardDecisionSourceProvider(source));
+    final value = read.value;
+    if (value != null) {
+      decisions.addAll(value.decisions);
+      parts.add(value.coverage);
+    } else if (read.hasError) {
+      // The sources catch their own failures; this is one that escaped, and it
+      // is still a source that could not be read rather than an empty one.
+      parts.add(
+        SourceCoverage.merge([
+          for (final service in source.services)
+            SourceCoverage.failure(service, read.error),
+        ]),
+      );
+    } else {
+      parts.add(SourceCoverage.pendingOf(source.services));
     }
   }
 
-  await Future.wait([
-    collect(ServiceKey.seerr, () => _pendingRequestDecisions(ref)),
-    collect(ServiceKey.prowlarr, () => _failingIndexerDecisions(ref)),
-    collect(ServiceKey.dockge, () => _stoppedStackDecisions(ref)),
-    collect(
-      ServiceKey.nginxProxyManager,
-      () => _expiringCertificateDecisions(ref),
-    ),
-  ]);
-
-  // Not gated on one service: the faults come from whichever of seven sources
-  // reported one, and the queue provider has already gated each of those.
-  try {
-    final inFlight = await ref.watch(servicesInFlightProvider.future);
-    decisions.addAll(inFlight.faults.map(_queueFaultDecision));
-  } catch (_) {}
-
-  try {
-    final history = await ref.watch(servicesArrHistoryProvider.future);
-    decisions.addAll(
-      history.entries
-          .where((entry) => entry.outcome == ArrImportOutcome.failed)
-          .map(_failedImportDecision),
-    );
-  } catch (_) {}
-
   // Folded before ranking, so a group ranks where its oldest member would have.
-  return rankDecisions(groupDecisions(decisions));
+  return (
+    decisions: rankDecisions(groupDecisions(decisions)),
+    coverage: SourceCoverage.merge(parts),
+  );
 });
 
 Future<List<DashboardDecision>> _pendingRequestDecisions(Ref ref) async {

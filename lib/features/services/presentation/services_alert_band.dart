@@ -61,8 +61,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 
@@ -114,31 +113,10 @@ class ServicesAlertBand extends ConsumerWidget {
 
     return _AlertBandBody(
       services: unacknowledged,
-      onRetry: () {
-        // Only the offenders. Re-checking the whole stack would throw away
-        // twelve good summaries to re-fetch one bad one.
-        for (final service in unacknowledged) {
-          // The probe itself, one entry per connection. `serviceSummaryProvider`
-          // only *delegates* to these, so invalidating it alone rebuilt a
-          // wrapper that awaited the same cached answer — a Retry that re-read
-          // the old verdict and never went near the network.
-          for (final id in ref.read(serviceInstanceIdsProvider(service))) {
-            ref.invalidate(
-              instanceSummaryProvider((service: service, instanceId: id)),
-            );
-          }
-          ref.invalidate(serviceSummaryProvider(service));
-          ref.invalidate(serviceKpiProvider(service));
-          ref.invalidate(serviceSignalProvider(service));
-          ref.invalidate(serviceSignalPairProvider(service));
-          ref.invalidate(foldedServiceKpisProvider(service));
-          ref.invalidate(foldedServiceSignalPairProvider(service));
-        }
-        // Keyed on the connection, so it cannot be narrowed to the offenders
-        // by service key — and a retry that left the fleet's figures cached
-        // would redraw the recovered card with the numbers from the outage.
-        ref.invalidate(serviceKpiForProvider);
-      },
+      // Only the offenders, and everything on the page that reads them: the
+      // probe alone came back answering while every region kept the failure
+      // its sources were still holding.
+      onRetry: () => retryDashboardServices(ref, unacknowledged),
       onDismiss: () =>
           ref.read(dismissedOutagesProvider.notifier).dismiss(unacknowledged),
       onOpenSettings: () => context.go('/settings/connections'),

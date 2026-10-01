@@ -4,12 +4,70 @@
 /// a widget to be wrong.
 library;
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
+  group('decisionsRegion', () {
+    const silent = SocketException('Connection refused');
+    final stall = _decision(DecisionKind.stalledDownload, 'stall', at: null);
+
+    test('decisions are shown while another source is still out', () {
+      expect(
+        decisionsRegion([stall], SourceCoverage.pendingOf([ServiceKey.dockge])),
+        DecisionsRegion.shown,
+      );
+    });
+
+    test('nothing yet and a source still out is loading, not absent', () {
+      expect(
+        decisionsRegion(
+          const [],
+          SourceCoverage.merge([
+            SourceCoverage.answeredBy(ServiceKey.seerr),
+            SourceCoverage.pendingOf([ServiceKey.dockge]),
+          ]),
+        ),
+        DecisionsRegion.loading,
+      );
+    });
+
+    test('every source failed is a failure, not absent', () {
+      expect(
+        decisionsRegion(
+          const [],
+          SourceCoverage.merge([
+            SourceCoverage.failure(ServiceKey.seerr, silent),
+            SourceCoverage.failure(ServiceKey.dockge, silent),
+          ]),
+        ),
+        DecisionsRegion.failed,
+      );
+    });
+
+    test('absent only when what answered had nothing waiting', () {
+      expect(
+        decisionsRegion(
+          const [],
+          SourceCoverage.merge([
+            SourceCoverage.answeredBy(ServiceKey.seerr),
+            SourceCoverage.failure(ServiceKey.dockge, silent),
+          ]),
+        ),
+        DecisionsRegion.absent,
+      );
+      expect(
+        decisionsRegion(const [], SourceCoverage.none),
+        DecisionsRegion.absent,
+      );
+    });
+  });
+
   group('rankDecisions', () {
     test('faults come before backlog, however old the backlog is', () {
       final ranked = rankDecisions([

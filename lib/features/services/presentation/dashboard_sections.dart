@@ -53,6 +53,7 @@ import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -63,13 +64,78 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// when everything answers: **presence is the signal**. A permanent "nothing
 /// needs you" heading is a region that is empty on almost every open, which is a
 /// heading nobody reads on the day it fills.
+///
+/// Absent only then, though. While no source has said anything it is a
+/// skeleton, and when every source failed it is one fault line: both used to
+/// draw nothing, which told the user nothing needed them about a stack that
+/// had not been — or could not be — asked. See [DecisionsRegion].
 class DashboardDecisionsSection extends ConsumerWidget {
   const DashboardDecisionsSection({super.key});
 
+  static const _title = 'Needs a decision';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final decisions = ref.watch(dashboardDecisionsProvider).asData?.value;
-    if (decisions == null || decisions.isEmpty) return const SizedBox.shrink();
+    final read = ref.watch(dashboardDecisionsProvider);
+    final decisions = read.decisions;
+    final coverage = read.coverage;
+    final primary = Theme.of(context).colorScheme.primary;
+
+    // The ~30pt header InkWell the code already has. Raising it is a new rule
+    // for code and canvas both, and not this region's to make.
+    Widget header({String? eyebrow, String? note, String? seeAll}) =>
+        SectionHeader.action(
+          title: _title,
+          subtitle: eyebrow,
+          trailing: _SectionAction(
+            label: seeAll ?? 'Activity',
+            color: primary,
+            onTap: () => context.go('/activity'),
+          ),
+          semanticLabel: joinSpokenParts([
+            _title,
+            eyebrow,
+            if (note != null) spokenFromDotted(note),
+          ]),
+        );
+
+    switch (decisionsRegion(decisions, coverage)) {
+      case DecisionsRegion.absent:
+        return const SizedBox.shrink();
+      case DecisionsRegion.loading:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            header(),
+            const SizedBox(height: AppSpacing.sm),
+            Semantics(
+              container: true,
+              // The shimmer carries no text; this is what is said instead.
+              excludeSemantics: true,
+              label: 'Loading decisions',
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: DecisionRowSkeleton(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        );
+      case DecisionsRegion.failed:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            header(),
+            _SourcesFaultLine(
+              coverage: coverage,
+              onRetry: () => retryDashboardServices(ref, coverage.failed.keys),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        );
+      case DecisionsRegion.shown:
+        break;
+    }
 
     // Three on the phone, four on the desktop, two when the window is narrow.
     // The rule is `AppBreakpoints`', resolved here and passed pure — see
@@ -79,27 +145,20 @@ class DashboardDecisionsSection extends ConsumerWidget {
       compact: AppBreakpoints.isCompactDesktop(context),
     );
     final shown = rankDecisions(decisions, cap: cap);
+    final eyebrow = decisionsEyebrow(decisions);
+    final note = coverageNote(coverage);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader.action(
-          title: 'Needs a decision',
-          subtitle: decisionsEyebrow(decisions),
-          // The ~30pt header InkWell the code already has. Raising it is a new
-          // rule for code and canvas both, and not this region's to make.
-          trailing: _SectionAction(
-            // Items, not rows: a folded row of eighteen blocked imports is
-            // eighteen things to see, and the row count is a layout fact.
-            label: 'See all ${decisionItemCount(decisions)}',
-            color: Theme.of(context).colorScheme.primary,
-            onTap: () => context.go('/activity'),
-          ),
-          semanticLabel: joinSpokenParts([
-            'Needs a decision',
-            decisionsEyebrow(decisions),
-          ]),
+        header(
+          eyebrow: eyebrow,
+          note: note,
+          // Items, not rows: a folded row of eighteen blocked imports is
+          // eighteen things to see, and the row count is a layout fact.
+          seeAll: 'See all ${decisionItemCount(decisions)}',
         ),
+        if (note != null) _CoverageNote(note: note, coverage: coverage),
         const SizedBox(height: AppSpacing.sm),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -875,7 +934,8 @@ Future<void> _runDecision(
         (client) => client.startStack(decision.title),
         '${decision.title} started',
         'Could not start ${decision.title}',
-        invalidate: [dockgeStackListProvider, dashboardDecisionsProvider],
+        // The stack source reads the list, so dropping the list is enough.
+        invalidate: [dockgeStackListProvider],
       );
     case DecisionKind.expiringCertificate:
       context.go(ServiceRoutes.forService(ServiceKey.nginxProxyManager));

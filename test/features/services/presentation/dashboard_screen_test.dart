@@ -759,6 +759,7 @@ Future<void> _pumpDashboard(
   WidgetTester tester, {
   SettingsModel? settings,
   List<DashboardDecision>? decisions,
+  SourceCoverage decisionsCoverage = SourceCoverage.none,
   List<ServiceQueueItem>? queue,
   SourceCoverage queueCoverage = SourceCoverage.none,
   List<RecentlyAddedItem>? recentlyAdded,
@@ -814,9 +815,10 @@ Future<void> _pumpDashboard(
             _ => null,
           },
     ),
-    dashboardDecisionsProvider.overrideWith(
-      (ref) async => rankDecisions(decisions ?? const []),
-    ),
+    dashboardDecisionsProvider.overrideWithValue((
+      decisions: rankDecisions(decisions ?? const []),
+      coverage: decisionsCoverage,
+    )),
     servicesQueueProvider.overrideWith(
       (ref) async => (items: queue ?? const [], coverage: queueCoverage),
     ),

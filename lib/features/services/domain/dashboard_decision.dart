@@ -35,7 +35,84 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// Where decisions come from — each one read on its own.
+///
+/// One read per source rather than one read of all of them, because the region
+/// is only as fast as what it waits for: Dockge publishes its stack list over a
+/// socket with a ten-second deadline, and while the region was one `await` of
+/// every source a slow Dockge held back the pending requests and the stalled
+/// downloads that had answered in a few hundred milliseconds. Read apart, each
+/// source's decisions arrive when it does.
+enum DecisionSource {
+  /// Seerr's requests nobody has approved.
+  requests([ServiceKey.seerr]),
+
+  /// Prowlarr's failing indexers.
+  indexers([ServiceKey.prowlarr]),
+
+  /// Dockge's stacks that exited.
+  stacks([ServiceKey.dockge]),
+
+  /// Nginx Proxy Manager's certificates close to expiry.
+  certificates([ServiceKey.nginxProxyManager]),
+
+  /// The transfers that stopped being transfers. One source and not seven: a
+  /// stall is joined across an \*arr and the client moving its bytes, and read
+  /// apart the same stall would be two decisions until the second arrived.
+  queue([
+    ServiceKey.radarr,
+    ServiceKey.sonarr,
+    ServiceKey.lidarr,
+    ServiceKey.readarr,
+    ServiceKey.qbittorrent,
+    ServiceKey.sabnzbd,
+    ServiceKey.nzbget,
+  ]),
+
+  /// The imports the \*arrs' history says failed.
+  history([ServiceKey.radarr, ServiceKey.sonarr, ServiceKey.lidarr]);
+
+  const DecisionSource(this.services);
+
+  /// The services this source reads.
+  final List<ServiceKey> services;
+}
+
+/// What the region shows. Three different things used to read the same —
+/// nothing at all — and only one of them is "nothing needs you".
+enum DecisionsRegion {
+  /// Nothing to show yet and a source still out: a skeleton, because absence
+  /// would claim nothing is waiting before anyone has said so.
+  loading,
+
+  /// Every source failed: one fault line, because absence would say the same
+  /// "nothing needs you" over a stack that could not be asked.
+  failed,
+
+  /// Every source that answered had nothing waiting: no region. Presence is
+  /// the signal.
+  absent,
+
+  /// Something is waiting.
+  shown,
+}
+
+/// Which of the four [decisions] and [coverage] call for.
+///
+/// Decisions win over everything else: a source still out or a source that
+/// failed is no reason to hold back the requests that did arrive.
+DecisionsRegion decisionsRegion(
+  List<DashboardDecision> decisions,
+  SourceCoverage coverage,
+) {
+  if (decisions.isNotEmpty) return DecisionsRegion.shown;
+  if (coverage.pending.isNotEmpty) return DecisionsRegion.loading;
+  if (coverage.everySourceFailed) return DecisionsRegion.failed;
+  return DecisionsRegion.absent;
+}
 
 /// What kind of thing is waiting.
 ///

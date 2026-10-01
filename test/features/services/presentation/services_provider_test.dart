@@ -566,9 +566,7 @@ void main() {
         expect(items, hasLength(1));
         expect(items.single.fault, InFlightFault.stalled);
 
-        final decisions = await container.read(
-          dashboardDecisionsProvider.future,
-        );
+        final decisions = await _settledDecisions(container);
         expect(decisions, hasLength(1));
         expect(decisions.single.kind, DecisionKind.stalledDownload);
         expect(decisions.single.title, 'Furiosa');
@@ -720,7 +718,7 @@ void main() {
         isTrue,
       );
 
-      final decisions = await container.read(dashboardDecisionsProvider.future);
+      final decisions = await _settledDecisions(container);
       expect(decisions, hasLength(1));
       final row = decisions.single;
       expect(row.kind, DecisionKind.importBlocked);
@@ -749,9 +747,7 @@ void main() {
           sonarrService: _QueueSonarrService([blocked(7)]),
         );
 
-        final decisions = await container.read(
-          dashboardDecisionsProvider.future,
-        );
+        final decisions = await _settledDecisions(container);
         final row = decisions.single;
         expect(row.kind, DecisionKind.importBlocked);
         expect(row.count, 1);
@@ -1058,6 +1054,17 @@ void main() {
       },
     );
   });
+}
+
+/// The decisions once every source has answered. The region merges them as
+/// they arrive, so a read before then is a read of whichever came first.
+Future<List<DashboardDecision>> _settledDecisions(
+  ProviderContainer container,
+) async {
+  for (final source in DecisionSource.values) {
+    await container.read(dashboardDecisionSourceProvider(source).future);
+  }
+  return container.read(dashboardDecisionsProvider).decisions;
 }
 
 ProviderContainer _container({
