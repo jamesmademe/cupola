@@ -308,8 +308,8 @@ RadarrAttentionItem? radarrBelowCutoffItem(int? count) {
   return RadarrAttentionItem(
     kind: RadarrAttentionKind.belowCutoff,
     headline: count == 1
-        ? '1 film below your quality cutoff'
-        : '$count films below your quality cutoff',
+        ? '1 movie below your quality cutoff'
+        : '$count movies below your quality cutoff',
     // Names the mechanism rather than an instruction: nothing is wrong, Radarr
     // is simply still looking.
     detail: 'Radarr keeps searching for an upgrade',

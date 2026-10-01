@@ -343,7 +343,7 @@ class _RecentlyAddedSection extends ConsumerWidget {
       child: AsyncValueWidget<List<RadarrMovie>>(
         value: movies,
         serviceName: 'Radarr',
-        loadingLabel: 'Loading recently added films',
+        loadingLabel: 'Loading recently added movies',
         onRetry: () {
           ref.invalidate(radarrOverviewMoviesProvider);
           ref.invalidate(radarrRecentlyAddedProvider);

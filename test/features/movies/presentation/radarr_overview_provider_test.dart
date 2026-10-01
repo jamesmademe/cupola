@@ -414,7 +414,7 @@ void main() {
 
       expect(item.kind, RadarrAttentionKind.belowCutoff);
       expect(item.tone, StatusTone.neutral);
-      expect(item.headline, '34 films below your quality cutoff');
+      expect(item.headline, '34 movies below your quality cutoff');
     });
 
     test('no backlog, no row', () {

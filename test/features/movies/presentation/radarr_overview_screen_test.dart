@@ -140,7 +140,7 @@ void main() {
     );
     expect(
       find.semantics.byLabel(
-        '2 films below your quality cutoff, '
+        '2 movies below your quality cutoff, '
         'Radarr keeps searching for an upgrade',
       ),
       findsOneWidget,
