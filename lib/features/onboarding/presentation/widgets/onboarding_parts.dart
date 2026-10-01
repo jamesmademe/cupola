@@ -842,7 +842,7 @@ class OnboardingClose extends StatelessWidget {
     if (connected.isEmpty && silent.isEmpty) {
       // Dashboard, not Services: the home is `/dashboard` and the cards the
       // sentence points at are the ones on it.
-      return 'Cupola will stay empty until you add a service, you can do '
+      return 'Cupola will stay empty until you add a service. You can do '
           'that any time in Settings, or from any dark card on the Dashboard.';
     }
     if (silent.isEmpty) {

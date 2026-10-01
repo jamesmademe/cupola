@@ -556,7 +556,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
         const SizedBox(height: AppSpacing.md),
         Text(
           widget.affectedServices.length > 1
-              ? "You trusted this server's own certificate, it also covers "
+              ? "You trusted this server's own certificate. It also covers "
                     '${widget.affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
               : "You trusted this server's own certificate.",
           style: theme.textTheme.bodySmall!.copyWith(
