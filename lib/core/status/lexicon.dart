@@ -81,6 +81,14 @@ abstract final class Lexicon {
   /// An empty answer, and only after the source answered.
   static const noResults = 'No results';
 
+  /// A film's three dated events, as every screen that dates one names them:
+  /// the calendar's `Sprite Fright · on digital` and the Radarr home's Coming
+  /// up, `on digital · monitored`. Coming up used to say `digital release`
+  /// and `physical release` for the same two dates.
+  static const inCinemas = 'in cinemas';
+  static const onDigital = 'on digital';
+  static const onDisc = 'on disc';
+
   /// The way into a service's setup form — the one verb every "not set up"
   /// row, button and toast carries: `Set up Plex`.
   static String setUp(String service) => 'Set up $service';

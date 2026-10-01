@@ -340,9 +340,9 @@ class ArrCalendarEntry {
 
 /// A film's three dated events, in the order the board reads them.
 const _radarrEvents = [
-  ('inCinemas', 'in cinemas'),
-  ('digitalRelease', 'on digital'),
-  ('physicalRelease', 'on disc'),
+  ('inCinemas', Lexicon.inCinemas),
+  ('digitalRelease', Lexicon.onDigital),
+  ('physicalRelease', Lexicon.onDisc),
 ];
 
 /// The calendar's rows, in date order: one per dated event in the window.

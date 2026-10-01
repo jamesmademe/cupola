@@ -55,13 +55,14 @@ const int radarrHistoryTodayLimit = 3;
 /// appear twice in one week — a digital release on Tuesday and a physical one
 /// on Friday are two events, not one row that has to pick a winner.
 enum RadarrReleaseKind {
-  inCinemas('in cinemas'),
-  digital('digital release'),
-  physical('physical release');
+  inCinemas(Lexicon.inCinemas),
+  digital(Lexicon.onDigital),
+  physical(Lexicon.onDisc);
 
   const RadarrReleaseKind(this.label);
 
-  /// Sentence case, for the eye and for the ear alike.
+  /// Sentence case, for the eye and for the ear alike, and the calendar's own
+  /// words: one film on one date is named the same on both screens.
   final String label;
 }
 

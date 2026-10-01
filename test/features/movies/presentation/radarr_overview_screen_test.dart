@@ -109,6 +109,10 @@ void main() {
     // …and the other three still drew.
     expect(find.byType(SectionHeader), findsNWidgets(4));
     expect(find.text('Soon'), findsOneWidget);
+    // In the calendar's words, so one date has one name on both screens. It
+    // read "digital release" here and "on digital" on the calendar tab.
+    expect(find.textContaining('on digital'), findsOneWidget);
+    expect(find.textContaining('digital release'), findsNothing);
   });
 
   testWidgets('a fault row and a backlog row are spoken as sentences', (

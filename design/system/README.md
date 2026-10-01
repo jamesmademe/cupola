@@ -43,6 +43,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Missing` · `Wanted` · `Cutoff unmet` · `Not aired` · `Not out yet` | neutral | The backlog: released and not on disk, still looked for, below its profile, not yet out. |
 | `Waiting for approval` | blue | A request nobody has approved yet. |
 | `Coming up` | — | The next dated things. Films carry a date only; episodes a date and a time. |
+| `in cinemas` · `on digital` · `on disc` | — | A film's three dated events, the same on the calendar and in Coming up: `Sprite Fright · on digital`. Not `digital release`, not `physical release`. |
 | `Checked 2 h ago` · `Since you opened this` · `As of 20:53` | — | When a background check ran; a history that starts when the screen opened; a widget's snapshot. |
 | `Home only` | neutral | Away, with no away address: nothing was asked. |
 | `Config loaded` · `Spun down` | — / neutral | Nginx Proxy Manager has the host's configuration (it cannot see the service behind it); an Unraid disk asleep, which has no temperature. |
