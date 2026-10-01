@@ -103,6 +103,27 @@ bool _selected(WidgetTester tester, String choice) =>
     Tristate.isTrue;
 
 void main() {
+  testWidgets('on a phone, a test meeting Cloudflare Access brings its verdict '
+      'and its remedy into view above the pinned actions', (tester) async {
+    // An iPhone 17 Pro, 402 by 874: the hero and the fields fill the screen,
+    // and the verdict used to land under the pinned actions, found only by
+    // scrolling.
+    final (harness, _) = await _firstRunAtRadarr(
+      tester,
+      Profiles.p8,
+      viewport: const Size(402, 874),
+    );
+
+    await tester.tap(find.text('Test connection').first);
+    await harness.settle(tester);
+
+    final remedy = find.text('Add a service token');
+    expect(remedy, findsOneWidget);
+    final pinnedTop = tester.getTopLeft(find.text('Test connection').last).dy;
+    expect(tester.getBottomLeft(remedy).dy, lessThan(pinnedTop));
+    expect(tester.getTopLeft(remedy).dy, greaterThan(0));
+  });
+
   for (final width in [320.0, 390.0]) {
     testWidgets('at ${width.round()}pt the step\'s Access choices are whole on '
         'screen', (tester) async {

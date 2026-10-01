@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -318,6 +319,36 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   /// Where the Access row sits, so a remedy can bring it into view.
   final _accessRow = GlobalKey();
 
+  /// Where a test's outcome sits. A test is answered under the fields, and on
+  /// a phone the fields and the hero above them can leave it below the pinned
+  /// actions: the verdict, and the remedy it offers, scroll into view when they
+  /// arrive instead of waiting for the user to look for them.
+  final _outcome = GlobalKey();
+
+  @override
+  void didUpdateWidget(OnboardingWalk oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final arrived =
+        widget.status != null &&
+        !widget.verifying &&
+        (oldWidget.verifying ||
+            oldWidget.status != widget.status ||
+            oldWidget.reason != widget.reason ||
+            oldWidget.gateway != widget.gateway);
+    if (!arrived) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final outcome = _outcome.currentContext;
+      if (outcome == null || !outcome.mounted) return;
+      final still = MediaQuery.maybeDisableAnimationsOf(outcome) ?? false;
+      Scrollable.ensureVisible(
+        outcome,
+        duration: still ? Duration.zero : AppAnimation.standard,
+        curve: AppAnimation.standardCurve,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    });
+  }
+
   /// A gateway's remedy, answered here: the Access row, with the choice the
   /// gateway wants, scrolled into view under the outcome that asked for it.
   void _addAccess(AccessKind kind) {
@@ -540,6 +571,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
       if (widget.status case final status? when !widget.verifying) ...[
         const SizedBox(height: AppSpacing.xl),
         _Outcome(
+          key: _outcome,
           service: service,
           status: status,
           reason: widget.reason,
@@ -649,6 +681,7 @@ class _TestOrAdvance extends StatelessWidget {
 /// the user can act on; the resolved failure message names the cause.
 class _Outcome extends StatelessWidget {
   const _Outcome({
+    super.key,
     required this.service,
     required this.status,
     required this.reason,
