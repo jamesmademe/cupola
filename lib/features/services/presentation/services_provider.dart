@@ -824,6 +824,20 @@ const int servicesRecentlyAddedLimit = 6;
 /// imports. Twenty is still one request and still one page.
 const int servicesHistoryPageSize = 20;
 
+/// Whether one page of history is a window onto more of it.
+///
+/// Home reads one page per connection, the newest [pageSize] records. A page
+/// that came back short is every record there is. One that came back full is
+/// not, unless the server's own total says it is: the records past it are
+/// older imports and older failures nobody read, so what is counted over the
+/// page is the least there is (`20+`). A full page with no total at all is a
+/// window too, because nothing says otherwise.
+bool historyPageIsWindow(ArrRecordPage page, {required int pageSize}) {
+  if (page.records.length < pageSize) return false;
+  final total = page.total;
+  return total == null || total > page.records.length;
+}
+
 /// One \*arr history record, reduced to what the two regions that read it need.
 ///
 /// A projection rather than the raw map, for the reason `RecentlyAddedItem` is
@@ -905,15 +919,17 @@ final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
   // settings write, a theme toggle included.
   Future<ArrHistory> from(_MergeConnection source) async {
     try {
-      final records = await switch (source.service) {
+      // The page, not the bare records: whether the page holds the whole
+      // history is what decides if a count over it is a total or a floor.
+      final page = await switch (source.service) {
         ServiceKey.radarr =>
           ref
               .watch(radarrServiceForProvider(source.instanceId))
-              .getHistory(pageSize: servicesHistoryPageSize),
+              .getHistoryPage(pageSize: servicesHistoryPageSize),
         ServiceKey.sonarr =>
           ref
               .watch(sonarrServiceForProvider(source.instanceId))
-              .getHistory(pageSize: servicesHistoryPageSize),
+              .getHistoryPage(pageSize: servicesHistoryPageSize),
         // Lidarr's records DO arrive with their artist and their album:
         // `LidarrService` overrides `getHistoryPage`, which this `getHistory`
         // delegates through, and injects `includeArtist`/`includeAlbum` there.
@@ -924,10 +940,10 @@ final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
         _ =>
           ref
               .watch(lidarrServiceForProvider(source.instanceId))
-              .getHistory(pageSize: servicesHistoryPageSize),
+              .getHistoryPage(pageSize: servicesHistoryPageSize),
       };
       return (
-        entries: records
+        entries: page.records
             .whereType<Map>()
             .map(stringKeyMap)
             .map(
@@ -944,8 +960,14 @@ final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
               ),
             )
             .toList(growable: false),
+        // A page that came back full is a window onto more history, so what
+        // is counted over it is a floor (`20+`), never the total.
         coverage: SourceCoverage.answeredBy(
           source.service,
+          cutShort: historyPageIsWindow(
+            page,
+            pageSize: servicesHistoryPageSize,
+          ),
           instanceId: source.instanceId,
           name: source.name,
         ),

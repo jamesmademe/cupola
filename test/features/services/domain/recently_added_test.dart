@@ -228,6 +228,20 @@ void _theRegionsOwnStrings() {
       expect(counts.failed, isNull);
     });
 
+    test('a history page that came back full makes both halves floors', () {
+      // Past the page are older imports and older failures nobody read.
+      final counts = recentlyAddedEyebrow(
+        [
+          _imported('Poor Things', failed: false),
+          _imported('Past Lives', failed: false),
+          _imported('Nickel Boys', failed: true),
+        ],
+        coverage: SourceCoverage.answeredBy(ServiceKey.radarr, cutShort: true),
+      );
+      expect(counts.imported, '2+ imported');
+      expect(counts.failed, '1+ failed');
+    });
+
     test('says nothing about failures when there are none', () {
       // A permanent "0 failed" is a counter nobody reads on the day it moves.
       final counts = recentlyAddedEyebrow([

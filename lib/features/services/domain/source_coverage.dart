@@ -18,8 +18,9 @@
 ///  * some failed — the figure is the total over the rest, and the line under
 ///    it names what is not in it ([coverageNote]);
 ///  * one answered with only part of itself ([SourceCoverage.cutShort]: a
-///    queue walk that stopped on a full page with no total) — the figure is a
-///    floor, `200+`, and there is nobody to name;
+///    queue walk that stopped on a full page with no total, a history page
+///    that came back full) — the figure is a floor, `200+`, and there is
+///    nobody to name;
 ///  * none failed — the figure is the total.
 library;
 
@@ -159,7 +160,8 @@ class SourceCoverage {
 
   /// Sources that answered with only part of what they hold: a queue walk
   /// that stopped on a full page with no total to say whether another
-  /// followed. Always a subset of [answered]. Their share of a figure is what
+  /// followed, or a history page that came back full. Always a subset of
+  /// [answered]. Their share of a figure is what
   /// arrived, so the figure is a floor ([isFloor]); nothing is missing to name.
   final Set<CoverageSource> cutShort;
 

@@ -176,7 +176,10 @@ List<RecentlyAddedItem> groupRecentlyAdded(List<RecentlyAddedItem> items) {
 ///
 /// Counted over the libraries [coverage] says answered. With none of them
 /// answering the figure is `— imported` and there is no failed half: an empty
-/// rail over three libraries that did not answer is not "0 imported".
+/// rail over three libraries that did not answer is not "0 imported". A
+/// history page that came back full is a window onto more history
+/// ([SourceCoverage.isFloor]), so both halves are floors: `20+ imported`,
+/// `2+ failed`.
 ({String imported, String? failed}) recentlyAddedEyebrow(
   List<RecentlyAddedItem> items, {
   SourceCoverage coverage = SourceCoverage.none,
@@ -195,9 +198,11 @@ List<RecentlyAddedItem> groupRecentlyAdded(List<RecentlyAddedItem> items) {
       imported += item.count;
     }
   }
+  String figure(int count) =>
+      coverage.isFloor ? Lexicon.floor(count) : '$count';
   return (
-    imported: '$imported imported',
-    failed: failed == 0 ? null : '$failed failed',
+    imported: '${figure(imported)} imported',
+    failed: failed == 0 ? null : '${figure(failed)} failed',
   );
 }
 

@@ -371,7 +371,7 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
           semanticLabel: joinSpokenParts([
             'Recently added',
             if (counts != null) spokenCountPhrase(counts.imported),
-            counts?.failed,
+            if (counts?.failed case final failed?) spokenCountPhrase(failed),
             if (note != null) spokenFromDotted(note),
           ]),
         ),
