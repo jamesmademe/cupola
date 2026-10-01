@@ -1,4 +1,13 @@
 class UrlUtils {
+  /// [host] as it goes into a sentence: never broken after one of its
+  /// hyphens.
+  ///
+  /// A line that ends `sonarr-` reads as a word hyphenated to fit, and the
+  /// reader who types what they see types `sonarrtest`. A word joiner (U+2060,
+  /// invisible, silent to a screen reader) after each hyphen leaves the line
+  /// free to break before the host instead, which then moves down whole.
+  static String hostInProse(String host) => host.replaceAll('-', '-\u2060');
+
   /// Constructs a URL for accessing images or other resources.
   /// Handles correct slash joining. API key authentication is handled via
   /// HTTP headers, not query parameters.

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -179,7 +180,7 @@ String? cloudflareTokenTestOutcome(
       gateway.kind == AccessGatewayKind.cloudflareAccess &&
       gateway.credentialsSent) {
     return 'Access did not accept the token: add a Service Auth policy for '
-        'it on ${gateway.serviceHost}.';
+        'it on ${UrlUtils.hostInProse(gateway.serviceHost)}.';
   }
   if (reason == ServiceFailureReason.unreachable) {
     return 'Nothing reached Access.';

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 
@@ -814,7 +815,7 @@ String connectionFailureSentence(
   if (page != null) {
     final where = page.host == null || page.host!.isEmpty
         ? ''
-        : ' at ${page.host}';
+        : ' at ${UrlUtils.hostInProse(page.host!)}';
     return 'A web page answered$where instead of ${subject ?? 'the service'}.';
   }
   return switch (classifyConnectionFailure(error)) {
@@ -861,7 +862,7 @@ String connectionFailureSentence(
 /// service token wants a policy on is the configured one, never the Access
 /// team's.
 String accessGatewaySentence(AccessGatewayAnswer? gateway, {String? subject}) {
-  final host = gateway?.serviceHost ?? '';
+  final host = UrlUtils.hostInProse(gateway?.serviceHost ?? '');
   final who = subject ?? (host.isEmpty ? 'the service' : host);
   // A name or an address opens the sentence as it is spelled; only the
   // fallback takes a capital.

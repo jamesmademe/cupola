@@ -1,3 +1,4 @@
+import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 
@@ -462,6 +463,43 @@ void main() {
         // FormatException out of a tap handler, so null is its normal input.
         expect(UrlUtils.isLaunchableWebUri(null), isFalse);
       });
+    });
+  });
+
+  group('hostInProse', () {
+    test('joins each hyphen to what follows, and changes nothing else', () {
+      expect(
+        UrlUtils.hostInProse('sonarr-test.get-seekarr.org'),
+        'sonarr-\u2060test.get-\u2060seekarr.org',
+      );
+      expect(UrlUtils.hostInProse('nas.home.arpa'), 'nas.home.arpa');
+    });
+
+    test('a sentence wrapped on a narrow line never ends a line on a '
+        "host's hyphen", () {
+      // The live failure: "…policy for it on sonarr-" / "test.get-seekarr.org."
+      final sentence =
+          'Access did not accept the token: add a Service Auth policy for it '
+          'on ${UrlUtils.hostInProse('sonarr-test.get-seekarr.org')}.';
+      for (final width in [180.0, 220.0, 260.0, 300.0, 340.0]) {
+        final painter = TextPainter(
+          text: TextSpan(text: sentence, style: const TextStyle(fontSize: 14)),
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: width);
+        for (final line in painter.computeLineMetrics()) {
+          final position = painter.getPositionForOffset(
+            Offset(0, line.baseline),
+          );
+          final bounds = painter.getLineBoundary(position);
+          final text = sentence.substring(bounds.start, bounds.end).trimRight();
+          expect(
+            text.endsWith('-') || text.endsWith('-\u2060'),
+            isFalse,
+            reason: 'line "$text" at width $width',
+          );
+        }
+        painter.dispose();
+      }
     });
   });
 }
