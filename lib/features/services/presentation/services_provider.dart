@@ -771,12 +771,22 @@ class ArrHistoryEntry {
     required this.outcome,
     required this.at,
     required this.reason,
+    this.instanceId = '',
   });
 
   final ServiceKey service;
 
-  /// The history record's own id. Unique per service, and what the decision row
-  /// is keyed on — a media id is not, since one film can fail twice.
+  /// The connection this record came off.
+  ///
+  /// A history record id and the media id in it are that server's: each
+  /// Radarr numbers from one, so "film 3" names a different film on each. The
+  /// manual import a failed record becomes has to open on this connection,
+  /// never on whatever the lens is on when the user taps Fix. Empty only for a
+  /// record built without one, which falls back to the lens.
+  final String instanceId;
+
+  /// The history record's own id. Unique per connection, and what the decision
+  /// row is keyed on — a media id is not, since one film can fail twice.
   final int id;
 
   /// The library item this record is about, for the route. Zero when the record
@@ -838,6 +848,10 @@ final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
         coverage: SourceCoverage.none,
       );
     }
+    // The connection these records come off — the lens, which is what the
+    // service providers below resolve to — stamped on each, so a remedy bound
+    // to one connection opens on this one even after the lens has moved.
+    final instanceId = ref.read(activeInstanceProvider(service))?.id ?? '';
     try {
       final records = await load();
       return (
@@ -848,6 +862,7 @@ final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
               (record) => _historyEntryFrom(
                 service,
                 record,
+                instanceId: instanceId,
                 baseUrl: connection.url,
                 apiKey: connection.apiKey,
               ),
@@ -902,6 +917,7 @@ final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
 ArrHistoryEntry _historyEntryFrom(
   ServiceKey service,
   Map<String, dynamic> record, {
+  required String instanceId,
   required String baseUrl,
   required String apiKey,
 }) {
@@ -911,6 +927,7 @@ ArrHistoryEntry _historyEntryFrom(
 
   return ArrHistoryEntry(
     service: service,
+    instanceId: instanceId,
     id: intOrNull(record['id']) ?? 0,
     mediaId:
         intOrNull(record['movieId']) ??
@@ -2216,6 +2233,9 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
       // The library item a manual import would be filed under. Zero — a failed
       // grab of something the \*arr never added — leaves the wizard to ask.
       actionId: entry.mediaId <= 0 ? null : entry.mediaId,
+      // The connection the record came off: the wizard files into that
+      // server's library, under that server's id for the film.
+      instanceId: entry.instanceId,
       posterUrl: entry.posterUrl,
       route: entry.mediaId <= 0
           ? ServiceRoutes.forService(entry.service)
