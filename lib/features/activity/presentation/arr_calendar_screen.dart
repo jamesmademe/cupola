@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/theme.dart';
@@ -25,6 +26,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// episode, album or book depending on the service, while this surface only
 /// promises a dated release and a useful title. Missing fields stay absent
 /// rather than becoming a fabricated date or a zero count.
+///
+/// One record is not always one row: a Radarr film carries its cinema, digital
+/// and disc dates on the same record, and each one inside the window is a row
+/// of its own, named ([arrCalendarEntries]).
 ///
 /// The window is thirty days from local midnight, and the request sends that
 /// **local** date deliberately. A user asking for "the next thirty days"
@@ -137,7 +142,13 @@ class _ArrCalendarScreenState extends ConsumerState<ArrCalendarScreen> {
                 .whereType<Map>()
                 .map((record) => Map<String, dynamic>.from(record))
                 .toList(growable: false);
-            if (records.isEmpty) {
+            final entries = arrCalendarEntries(
+              records,
+              widget.service,
+              windowStart: _windowStart,
+              windowEnd: _windowEnd,
+            );
+            if (entries.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.only(top: widget.topPadding),
@@ -159,15 +170,11 @@ class _ArrCalendarScreenState extends ConsumerState<ArrCalendarScreen> {
                 AppSpacing.lg,
                 FloatingNavBarMetrics.getScrollViewBottomPadding(context),
               ),
-              itemCount: records.length,
+              itemCount: entries.length,
               separatorBuilder: (context, index) =>
                   const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, index) => _CalendarCard(
-                service: widget.service,
-                record: records[index],
-                windowStart: _windowStart,
-                windowEnd: _windowEnd,
-              ),
+              itemBuilder: (context, index) =>
+                  _CalendarCard(service: widget.service, entry: entries[index]),
             );
           },
         ),
@@ -177,22 +184,19 @@ class _ArrCalendarScreenState extends ConsumerState<ArrCalendarScreen> {
 }
 
 class _CalendarCard extends StatelessWidget {
-  const _CalendarCard({
-    required this.service,
-    required this.record,
-    required this.windowStart,
-    required this.windowEnd,
-  });
+  const _CalendarCard({required this.service, required this.entry});
 
   final ServiceKey service;
-  final Map<String, dynamic> record;
-  final DateTime windowStart;
-  final DateTime windowEnd;
+  final ArrCalendarEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    final date = _date(record, service, windowStart, windowEnd);
-    final title = _title(record, service);
+    final record = entry.record;
+    final day = entry.day;
+    final date = day == null
+        ? Lexicon.noFigure
+        : formatIsoDate(day.toIso8601String());
+    final title = arrCalendarTitle(entry, service);
     final subtitle = _subtitle(record, service);
     return AppCard.outlined(
       borderColor: Theme.of(context).colorScheme.outlineVariant,
@@ -316,42 +320,150 @@ String? _airTime(Map<String, dynamic> record) {
       '${parsed.minute.toString().padLeft(2, '0')}';
 }
 
-/// The date that put this record on this page.
+/// One row of the calendar: a record, and the dated event that put it here.
+@immutable
+class ArrCalendarEntry {
+  const ArrCalendarEntry({required this.record, this.day, this.event});
+
+  final Map<String, dynamic> record;
+
+  /// When, on the device's clock: a local calendar day for a release date, a
+  /// local instant for an episode's airing. Null when the record carries no
+  /// date this page can read; the row then says so with the em dash.
+  final DateTime? day;
+
+  /// Which of a film's dates this row is — `in cinemas`, `on digital`,
+  /// `on disc` — or null for a record that has one date.
+  final String? event;
+}
+
+/// A film's three dated events, in the order the board reads them.
+const _radarrEvents = [
+  ('inCinemas', 'in cinemas'),
+  ('digitalRelease', 'on digital'),
+  ('physicalRelease', 'on disc'),
+];
+
+/// The calendar's rows, in date order: one per dated event in the window.
 ///
-/// A film has up to four, and the *arr calendar returns it when **any** of
-/// them falls in the window — so preferring `inCinemas` unconditionally put a
-/// 2023 cinema date on a page titled "the next 30 days" for a film whose
-/// digital release is next week. The candidates are tried in the order the
-/// board reads them, but a candidate inside the window always wins over one
-/// outside it.
-String _date(
-  Map<String, dynamic> record,
-  ServiceKey service,
-  DateTime windowStart,
-  DateTime windowEnd,
-) {
-  final candidates = switch (service) {
-    ServiceKey.radarr => [
-      record['inCinemas'],
-      record['digitalRelease'],
-      record['physicalRelease'],
-      record['releaseDate'],
-    ],
-    ServiceKey.sonarr => [record['airDateUtc'], record['airDate']],
-    _ => [record['releaseDate'], record['airDate']],
-  };
-
-  final parsed = candidates
-      .map((raw) => DateTime.tryParse(raw?.toString() ?? '')?.toLocal())
-      .whereType<DateTime>()
-      .toList(growable: false);
-  if (parsed.isEmpty) return '—';
-
-  final inWindow = parsed.firstWhere(
-    (date) =>
-        !date.isBefore(windowStart) &&
-        date.isBefore(windowEnd.add(const Duration(days: 1))),
-    orElse: () => parsed.first,
+/// **A film is as many rows as it has dates in the window.** The *arr calendar
+/// returns a film when *any* of its dates falls in the window, and the page
+/// used to pick one — the first in the window — so a film out on digital today
+/// and on disc in twelve days showed today's row and never the second. Each
+/// date in the window is now its own row, named, and a film none of whose
+/// dates lands inside (a server reading the window in its own timezone) keeps
+/// one row on its first date rather than vanishing.
+///
+/// **A release date is a date, not an instant.** Radarr, Lidarr and Readarr
+/// send `2026-10-12T00:00:00Z` for "12 October", and `.toLocal()` moved it to
+/// the 11th anywhere west of Greenwich. Those are read as the calendar date
+/// they spell. Sonarr's `airDateUtc` is a real instant — the episode airs at a
+/// moment — and stays on the device's clock.
+///
+/// [windowStart] and [windowEnd] are local midnights, both days inclusive.
+List<ArrCalendarEntry> arrCalendarEntries(
+  List<Map<String, dynamic>> records,
+  ServiceKey service, {
+  required DateTime windowStart,
+  required DateTime windowEnd,
+}) {
+  // A calendar day past the end, not `add(Duration(days: 1))`: a Duration is
+  // absolute, and across a DST change it lands an hour off midnight.
+  final endExclusive = DateTime(
+    windowEnd.year,
+    windowEnd.month,
+    windowEnd.day + 1,
   );
-  return formatIsoDate(inWindow.toIso8601String());
+  bool inWindow(DateTime day) =>
+      !day.isBefore(windowStart) && day.isBefore(endExclusive);
+
+  final entries = <ArrCalendarEntry>[];
+  for (final record in records) {
+    switch (service) {
+      case ServiceKey.radarr:
+        final dated = [
+          for (final (field, event) in _radarrEvents)
+            if (_calendarDate(record[field]) case final day?)
+              ArrCalendarEntry(record: record, day: day, event: event),
+        ];
+        final shown = [
+          for (final entry in dated)
+            if (inWindow(entry.day!)) entry,
+        ];
+        if (shown.isNotEmpty) {
+          entries.addAll(shown);
+        } else if (dated.isNotEmpty) {
+          entries.add(dated.first);
+        } else {
+          entries.add(
+            ArrCalendarEntry(
+              record: record,
+              day: _calendarDate(record['releaseDate']),
+            ),
+          );
+        }
+      case ServiceKey.sonarr:
+        final aired = DateTime.tryParse(
+          record['airDateUtc']?.toString() ?? '',
+        )?.toLocal();
+        entries.add(
+          ArrCalendarEntry(
+            record: record,
+            day: aired ?? _calendarDate(record['airDate']),
+          ),
+        );
+      default:
+        entries.add(
+          ArrCalendarEntry(
+            record: record,
+            day:
+                _calendarDate(record['releaseDate']) ??
+                _calendarDate(record['airDate']),
+          ),
+        );
+    }
+  }
+
+  // Date order, undated last; a tie keeps the server's order, which is why the
+  // index is carried — `List.sort` is not stable.
+  final indexed = entries.indexed.toList()
+    ..sort((a, b) {
+      final (aIndex, aEntry) = a;
+      final (bIndex, bEntry) = b;
+      final aDay = aEntry.day;
+      final bDay = bEntry.day;
+      if (aDay != null && bDay != null) {
+        final byDay = aDay.compareTo(bDay);
+        if (byDay != 0) return byDay;
+      } else if (aDay != bDay) {
+        return aDay == null ? 1 : -1;
+      }
+      return aIndex.compareTo(bIndex);
+    });
+  return [for (final (_, entry) in indexed) entry];
+}
+
+/// The row's name: the record's own, then the event when a film has several —
+/// `Sprite Fright · on digital`.
+String arrCalendarTitle(ArrCalendarEntry entry, ServiceKey service) {
+  final title = _title(entry.record, service);
+  final event = entry.event;
+  return event == null ? title : '$title · $event';
+}
+
+final _leadingDate = RegExp(r'^(\d{4})-(\d{2})-(\d{2})');
+
+/// The calendar date [raw] spells, as a local midnight, or null.
+///
+/// The `YYYY-MM-DD` at the front is read as written and never converted: the
+/// \*arrs store a release date as midnight UTC, and that instant is the
+/// previous evening west of Greenwich.
+DateTime? _calendarDate(Object? raw) {
+  final match = _leadingDate.firstMatch(raw?.toString().trim() ?? '');
+  if (match == null) return null;
+  final year = int.parse(match.group(1)!);
+  final month = int.parse(match.group(2)!);
+  final day = int.parse(match.group(3)!);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return DateTime(year, month, day);
 }

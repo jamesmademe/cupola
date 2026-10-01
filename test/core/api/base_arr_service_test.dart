@@ -392,6 +392,25 @@ void main() {
 
       expect(service.fetchRootFolders(), throwsA(isA<Exception>()));
     });
+
+    test('getCalendar returns the records the server sent', () async {
+      client.getResponseData = [
+        {'title': 'Sprite Fright'},
+      ];
+
+      final records = await service.getCalendar();
+
+      expect(client.lastGetPath, '/api/v3/calendar');
+      expect(records, hasLength(1));
+    });
+
+    test('getCalendar throws on an answer that is not a list', () async {
+      // A proxy's HTML page used to read as an empty calendar, and the page
+      // said "The next 30 days are clear" about a server it never heard from.
+      client.getResponseData = '<html>Sign in</html>';
+
+      expect(service.getCalendar(), throwsA(isA<FormatException>()));
+    });
   });
 }
 

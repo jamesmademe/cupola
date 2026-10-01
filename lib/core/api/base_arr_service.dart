@@ -182,9 +182,14 @@ mixin ArrActivityMixin {
         ...?queryParameters,
       },
     );
-    return response.data is List
-        ? List<dynamic>.from(response.data as List)
-        : const [];
+    // Not a list is not an empty calendar. A reverse proxy's HTML page used to
+    // become `[]` here, and the page said "The next 30 days are clear" about a
+    // server it had not heard from; the screen draws this throw as its fault.
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('The calendar answer is not a list');
+    }
+    return List<dynamic>.from(data);
   }
 
   /// Fetches one page of history, **with the envelope's total**.
