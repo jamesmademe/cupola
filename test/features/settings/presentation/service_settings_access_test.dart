@@ -123,6 +123,21 @@ void _expectChoicesWhole(WidgetTester tester, double width) {
     expect(rect.right, lessThanOrEqualTo(width), reason: choice);
     final label = tester.renderObject<RenderParagraph>(find.text(choice));
     expect(label.didExceedMaxLines, isFalse, reason: choice);
+    // A pill as wide as its label and its inset, never stretched across the
+    // line.
+    expect(
+      rect.width,
+      lessThanOrEqualTo(tester.getSize(find.text(choice)).width + 34),
+      reason: choice,
+    );
+  }
+  // On a 390pt phone the first two choices share a line. (The test font is
+  // wider than the app's, so at 320pt it is allowed a line each.)
+  if (width >= 390) {
+    expect(
+      tester.getRect(find.bySemanticsLabel('None')).top,
+      tester.getRect(find.bySemanticsLabel('Cloudflare Access')).top,
+    );
   }
 }
 

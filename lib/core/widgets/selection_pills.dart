@@ -98,10 +98,16 @@ class SelectionPills<T> extends StatelessWidget {
           runSpacing: AppSpacing.sm,
           children: [
             for (final value in values)
-              _Pill(
-                label: labelBuilder(value),
-                selected: value == selected,
-                onTap: () => onSelected(value),
+              // Sized by its label. The pill centres its label by filling
+              // what it is given, which in a scrolling row (or a pinned
+              // header that sets its height) is its own width; a wrap gives
+              // it the whole line, so it is held to its label's width here.
+              IntrinsicWidth(
+                child: _Pill(
+                  label: labelBuilder(value),
+                  selected: value == selected,
+                  onTap: () => onSelected(value),
+                ),
               ),
           ],
         ),
