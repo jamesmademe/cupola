@@ -592,7 +592,31 @@ final globalHistoryFeedProvider =
 /// beside its heading, which is why the cap is allowed to be this low.
 const finishedTodayLimit = 6;
 
-/// What landed today, capped at [finishedTodayLimit].
+/// What landed today: the rows the band draws, and how many there were.
+class FinishedToday {
+  const FinishedToday({
+    required this.rows,
+    required this.count,
+    required this.complete,
+  });
+
+  static const none = FinishedToday(rows: [], count: 0, complete: true);
+
+  /// Today's records, capped at [finishedTodayLimit].
+  final List<GlobalActivityItem> rows;
+
+  /// Every one of today's records among what arrived, before the cap. The
+  /// heading's figure: "Finished today · 6 items" over six rows used to be the
+  /// cap speaking, on a day with twenty.
+  final int count;
+
+  /// Whether [count] is the day. False when it is only a floor: a connection
+  /// failed, or its first page was full of today and so cannot prove there
+  /// were no more.
+  final bool complete;
+}
+
+/// What landed today, with its true count beside the capped rows.
 ///
 /// In the history feed's own order, which is faults first and then newest —
 /// deliberately not re-sorted by time here, because a failed import is the row
@@ -601,30 +625,80 @@ const finishedTodayLimit = 6;
 /// A provider rather than a filter inside a widget because **two** surfaces
 /// draw this — the Activity page and the desktop inspector pane — and a second
 /// hand-rolled `date.year == now.year && …` is how two readouts of one day
-/// start disagreeing at midnight. The pane still carries its own copy
-/// (`inspector_pane.dart`'s `_FinishedToday`) and has to be moved onto this;
-/// until it is, the drift this provider exists to prevent is still possible.
+/// start disagreeing at midnight. The pane's own copy had already drifted: it
+/// compared the UTC date of each record with the local day.
 ///
 /// Reading it starts the history feed's first page, which is why the page only
 /// watches it on the Now section and the pane only when it is open: an
 /// inspector nobody opened must not cost a round of history requests per
 /// service.
-final finishedTodayProvider = Provider<List<GlobalActivityItem>>((ref) {
-  final feed = ref.watch(globalHistoryFeedProvider).feed;
-  if (feed == null) return const [];
-
-  final now = DateTime.now();
-  return feed.items
-      .where((item) {
-        final date = item.sortDate?.toLocal();
-        return date != null &&
-            date.year == now.year &&
-            date.month == now.month &&
-            date.day == now.day;
-      })
-      .take(finishedTodayLimit)
-      .toList(growable: false);
+final finishedTodayProvider = Provider<FinishedToday>((ref) {
+  return finishedTodayOf(
+    ref.watch(globalHistoryFeedProvider),
+    now: DateTime.now(),
+  );
 });
+
+/// The day [now] falls on, read off a history window.
+///
+/// "Finished today" comes from the history's first page of fifty, and a count
+/// taken inside a page is the day only when the page proves it reaches past
+/// the day, connection by connection. Either of two things proves it:
+///
+///  * the connection has nothing more to give — its total is in hand, or its
+///    last page came back short; or
+///  * one of its records is older than today. History is served newest first,
+///    so every one of today's is above that one.
+///
+/// When neither holds, or a connection failed, the count is a **floor**, and
+/// the heading says `12+` rather than a total it cannot stand behind. A record
+/// with no readable date is dropped: it cannot be placed in the day, and it
+/// proves nothing about where the page ends.
+FinishedToday finishedTodayOf(
+  PagedArrFeedState state, {
+  required DateTime now,
+}) {
+  final feed = state.feed;
+  if (feed == null) return FinishedToday.none;
+
+  final local = now.toLocal();
+  final startOfDay = DateTime(local.year, local.month, local.day);
+  bool isToday(DateTime date) {
+    final day = date.toLocal();
+    return day.year == local.year &&
+        day.month == local.month &&
+        day.day == local.day;
+  }
+
+  final today = [
+    for (final item in feed.items)
+      if (item.sortDate case final date? when isToday(date)) item,
+  ];
+
+  var complete = true;
+  for (final MapEntry(key: (_, serviceType, instanceId), value: cursor)
+      in state.cursors.entries) {
+    if (!cursor.configured) continue;
+    if (cursor.failed) {
+      complete = false;
+      continue;
+    }
+    if (!cursor.hasMore) continue;
+    final reachedBeforeToday = feed.items.any(
+      (item) =>
+          item.serviceType == serviceType &&
+          item.instanceId == instanceId &&
+          (item.sortDate?.toLocal().isBefore(startOfDay) ?? false),
+    );
+    if (!reachedBeforeToday) complete = false;
+  }
+
+  return FinishedToday(
+    rows: today.take(finishedTodayLimit).toList(growable: false),
+    count: today.length,
+    complete: complete,
+  );
+}
 
 /// Wanted "All" bucket: missing and cutoff unmet, paged like History.
 final globalWantedFeedProvider =

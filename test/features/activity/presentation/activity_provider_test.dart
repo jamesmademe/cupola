@@ -644,8 +644,11 @@ void main() {
 
       final today = container.read(finishedTodayProvider);
 
-      expect(today, hasLength(finishedTodayLimit));
-      expect(today.map((i) => i.title), isNot(contains('Yesterday')));
+      expect(today.rows, hasLength(finishedTodayLimit));
+      expect(today.rows.map((i) => i.title), isNot(contains('Yesterday')));
+      // The rows stop at the cap; the count does not. The heading said 6 here,
+      // on a day with nine.
+      expect(today.count, 9);
     });
 
     test('an unloaded history feed is empty rather than absent', () {
@@ -659,7 +662,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(container.read(finishedTodayProvider), isEmpty);
+      final today = container.read(finishedTodayProvider);
+      expect(today.rows, isEmpty);
+      expect(today.count, 0);
     });
   });
 }

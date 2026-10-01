@@ -375,6 +375,144 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  group('Finished today', () {
+    // 15:00 local, so "today" and "yesterday" are hours from either edge.
+    final now = DateTime(2026, 10, 1, 15);
+    const radarr = (GlobalActivityKind.history, ServiceType.movies, 'radarr');
+    const sonarr = (GlobalActivityKind.history, ServiceType.series, 'sonarr');
+
+    GlobalActivityItem landed(String id, DateTime at, {ServiceType? type}) =>
+        GlobalActivityItem(
+          kind: GlobalActivityKind.history,
+          service: type == ServiceType.series
+              ? ServiceKey.sonarr
+              : ServiceKey.radarr,
+          serviceType: type ?? ServiceType.movies,
+          instanceId: id,
+          title: 'Landed',
+          subtitle: '',
+          status: const MediaStatusInfo.unknown(),
+          sortDate: at,
+        );
+
+    PagedCursor cursor({bool hasMore = true, Object? error}) => PagedCursor(
+      fetched: 50,
+      lastPageFull: hasMore,
+      total: hasMore ? 300 : 50,
+      configured: true,
+      error: error,
+    );
+
+    test('a first page full of today is a floor, not the day', () {
+      final today = finishedTodayOf(
+        PagedArrFeedState(
+          feed: ActivityFeed(
+            items: [
+              for (var i = 0; i < 50; i++)
+                landed('radarr', now.subtract(Duration(minutes: i))),
+            ],
+            results: const [],
+          ),
+          cursors: {radarr: cursor()},
+        ),
+        now: now,
+      );
+
+      expect(today.rows, hasLength(finishedTodayLimit));
+      expect(today.count, 50);
+      expect(today.complete, isFalse);
+    });
+
+    test('a page that reaches yesterday holds the whole day', () {
+      final today = finishedTodayOf(
+        PagedArrFeedState(
+          feed: ActivityFeed(
+            items: [
+              for (var i = 0; i < 9; i++)
+                landed('radarr', now.subtract(Duration(minutes: i))),
+              landed('radarr', now.subtract(const Duration(days: 1))),
+              // Sonarr has nothing more to give, so it needs no such proof.
+              landed('sonarr', now, type: ServiceType.series),
+            ],
+            results: const [],
+          ),
+          cursors: {radarr: cursor(), sonarr: cursor(hasMore: false)},
+        ),
+        now: now,
+      );
+
+      expect(today.count, 10);
+      expect(today.complete, isTrue);
+    });
+
+    test('a connection that failed leaves the day a floor', () {
+      final today = finishedTodayOf(
+        PagedArrFeedState(
+          feed: ActivityFeed(items: [landed('radarr', now)], results: const []),
+          cursors: {
+            radarr: cursor(hasMore: false),
+            sonarr: cursor(error: const SocketException('Connection refused')),
+          },
+        ),
+        now: now,
+      );
+
+      expect(today.count, 1);
+      expect(today.complete, isFalse);
+    });
+
+    testWidgets(
+      'P3 on the desktop: the band counts the day, not its six rows',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 3000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final harness = await ProfileHarness.start(Profiles.p3);
+        // Fifty records of Radarr's 300, every one of them from today: the
+        // page cannot prove the day ends inside it.
+        final at = DateTime.now().toUtc().toIso8601String();
+        harness.network.on(WorldIds.radarr, 'GET', '/api/v3/history', (r) {
+          final page = int.tryParse(r.query['page'] ?? '') ?? 1;
+          return NetworkReply.json({
+            'page': page,
+            'pageSize': 50,
+            'totalRecords': 300,
+            'records': page == 1
+                ? [
+                    for (var i = 0; i < 50; i++)
+                      {
+                        'id': i + 1,
+                        'eventType': 'grabbed',
+                        'sourceTitle': 'Release.$i',
+                        'date': at,
+                      },
+                  ]
+                : const [],
+          });
+        });
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: harness.overrides,
+            child: MaterialApp(
+              theme: AppTheme.darkTheme(),
+              home: const GlobalActivityScreen(),
+            ),
+          ),
+        );
+        await harness.settle(tester);
+
+        // At least Radarr's fifty; six rows drawn under it.
+        expect(
+          find.textContaining(RegExp(r'^Finished today · \d+\+ items$')),
+          findsOneWidget,
+        );
+        expect(find.text('Finished today · 6 items'), findsNothing);
+
+        await harness.unmount(tester);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    );
+  });
 }
 
 /// Answers [connection]'s history with fifty records out of [total], or with

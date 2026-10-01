@@ -1069,8 +1069,14 @@ class _FinishedTodayBand extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(finishedTodayProvider);
+    final today = ref.watch(finishedTodayProvider);
+    final items = today.rows;
     if (items.isEmpty) return const SizedBox.shrink();
+
+    // The day's count, not the six rows drawn; and a floor (`12+`) when the
+    // first page of history cannot prove it holds the whole day.
+    final count = today.count;
+    final noun = count == 1 && today.complete ? 'item' : 'items';
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -1089,8 +1095,10 @@ class _FinishedTodayBand extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Finished today · ${items.length} '
-                  '${items.length == 1 ? 'item' : 'items'}',
+                  'Finished today · $count${today.complete ? '' : '+'} $noun',
+                  semanticsLabel: today.complete
+                      ? 'Finished today, $count $noun'
+                      : 'Finished today, at least $count $noun',
                   style: AppTheme.chrome(
                     context,
                     color: CupolaThemeColors.of(context).dimText,

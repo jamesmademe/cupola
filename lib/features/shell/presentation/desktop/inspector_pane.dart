@@ -397,30 +397,20 @@ class _UnreachableCard extends ConsumerWidget {
 
 /// What landed today, from the history feed the Activity screen already pages.
 ///
-/// Reading it here does start that feed's first page, which is why the pane is
+/// Reading it does start that feed's first page, which is why the pane is
 /// closed by default and this section renders nothing until the feed has
 /// something: an inspector nobody opened must not cost a round of history
 /// requests per service.
+///
+/// The day is `finishedTodayProvider`'s, the one the Activity band reads. This
+/// section kept a copy of its own that compared each record's UTC date with
+/// the local day, so after midnight the two disagreed about what "today" held.
 class _FinishedToday extends ConsumerWidget {
   const _FinishedToday();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(globalHistoryFeedProvider);
-    final feed = state.feed;
-    if (feed == null) return const SizedBox.shrink();
-
-    final now = DateTime.now();
-    final today = feed.items
-        .where((item) {
-          final date = item.sortDate;
-          return date != null &&
-              date.year == now.year &&
-              date.month == now.month &&
-              date.day == now.day;
-        })
-        .take(6)
-        .toList(growable: false);
+    final today = ref.watch(finishedTodayProvider).rows;
     if (today.isEmpty) return const SizedBox.shrink();
 
     final colorScheme = Theme.of(context).colorScheme;
