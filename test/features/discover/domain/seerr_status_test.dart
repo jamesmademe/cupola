@@ -181,6 +181,56 @@ void main() {
     });
   });
 
+  group('seerr4kMediaStatus', () {
+    test('no 4K record reads nothing, not a second Unknown', () {
+      expect(seerr4kMediaStatus(null), isNull);
+      expect(seerr4kMediaStatus({'status': 5}), isNull);
+      // UNKNOWN is Seerr's default for every title: a 4K copy nobody asked
+      // for.
+      expect(seerr4kMediaStatus({'status': 5, 'status4k': 1}), isNull);
+    });
+
+    test('a title on disk in HD and waiting in 4K reads both', () {
+      final media = {'status': 5, 'status4k': 2};
+
+      expect(seerrMediaStatus(media).label, 'Available');
+      final uhd = seerr4kMediaStatus(media)!;
+      expect(uhd.label, '4K: Waiting for approval');
+      // The same tone the HD copy would take in that state.
+      expect(uhd.tone, seerrMediaStatus({'status': 2}).tone);
+    });
+
+    test('a 4K download moving reads it, with its progress', () {
+      final uhd = seerr4kMediaStatus({
+        'status': 5,
+        'status4k': 3,
+        'downloadStatus4k': [
+          {'status': 'downloading', 'size': 100, 'sizeLeft': 25},
+        ],
+      })!;
+
+      expect(uhd.label, '4K: Downloading');
+      expect(uhd.progress, closeTo(0.75, 1e-9));
+    });
+
+    test('the 4K code is read in the numbering of the server', () {
+      expect(
+        seerr4kMediaStatus({
+          'status': 5,
+          'status4k': 6,
+        }, numbering: SeerrNumbering.seerr)!.label,
+        '4K: Blocklisted',
+      );
+      expect(
+        seerr4kMediaStatus({
+          'status': 5,
+          'status4k': 6,
+        }, numbering: SeerrNumbering.overseerr)!.label,
+        '4K: Deleted',
+      );
+    });
+  });
+
   group('seerrDownloadEntry', () {
     test('returns null for anything that is not a populated list', () {
       expect(seerrDownloadEntry(null), isNull);

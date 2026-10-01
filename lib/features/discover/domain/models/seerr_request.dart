@@ -211,8 +211,21 @@ typedef SeerrRequestDisplayStatus = ({
 });
 
 extension SeerrRequestDisplayStatusX on SeerrRequest {
+  /// What Seerr holds of this request's title **at the request's own
+  /// resolution**: the 4K state for a 4K request, the standard one otherwise.
+  ///
+  /// Seerr keeps the two apart on the media row (`status` and `status4k`), and
+  /// a title can be on disk in HD while its 4K copy is still waiting for
+  /// approval. Read through the standard field, that 4K request said
+  /// "Available" for a file nobody had downloaded.
+  SeerrMediaAvailability? get mediaAvailability {
+    final media = this.media;
+    if (media == null) return null;
+    return is4k ? media.status4k : media.status;
+  }
+
   SeerrRequestDisplayStatus get displayStatus {
-    final mediaStatus = media?.status;
+    final mediaStatus = mediaAvailability;
 
     if (mediaStatus != null) {
       switch (mediaStatus) {
@@ -272,6 +285,11 @@ class RequestMedia {
   final int? tmdbId;
   final int? tvdbId;
   final SeerrMediaAvailability status;
+
+  /// The 4K copy's state, Seerr's `status4k`: decoded with the same
+  /// numbering as [status], and [SeerrMediaAvailability.unknown] when Seerr
+  /// holds no 4K record of the title.
+  final SeerrMediaAvailability status4k;
   final String? externalServiceSlug;
   final int? externalServiceId; // Radarr/Sonarr ID
   final String? mediaType;
@@ -284,6 +302,7 @@ class RequestMedia {
     this.tmdbId,
     this.tvdbId,
     this.status = SeerrMediaAvailability.unknown,
+    this.status4k = SeerrMediaAvailability.unknown,
     this.externalServiceSlug,
     this.externalServiceId,
     this.mediaType,
@@ -300,6 +319,10 @@ class RequestMedia {
     final tvdbId = json['tvdbId'];
     final status = SeerrMediaAvailability.fromCode(
       json['status'],
+      numbering: numbering,
+    );
+    final status4k = SeerrMediaAvailability.fromCode(
+      json['status4k'],
       numbering: numbering,
     );
     final slug = json['externalServiceSlug']?.toString();
@@ -319,6 +342,7 @@ class RequestMedia {
       tmdbId: tmdbId,
       tvdbId: tvdbId,
       status: status,
+      status4k: status4k,
       externalServiceSlug: slug,
       externalServiceId: externalServiceId,
       mediaType: mediaType,
@@ -334,6 +358,7 @@ class RequestMedia {
       tmdbId: tmdbId,
       tvdbId: tvdbId,
       status: status,
+      status4k: status4k,
       externalServiceSlug: externalServiceSlug,
       externalServiceId: externalServiceId,
       mediaType: mediaType,

@@ -84,6 +84,34 @@ MediaStatusInfo seerrMediaStatus(
   );
 }
 
+/// The 4K copy of a title, beside its standard one, or null when Seerr holds
+/// no 4K record of it.
+///
+/// Seerr keeps the two resolutions apart (`status4k`, `downloadStatus4k`),
+/// and a title can be on disk in HD while its 4K copy waits for approval.
+/// The page used to read the standard fields alone, so that title said
+/// "Available" and nothing about the request still waiting.
+///
+/// Null for a `status4k` that is absent or UNKNOWN (1) with no 4K download
+/// moving: Seerr's default for every title, which is a 4K copy nobody asked
+/// for, not a state to show. Otherwise [seerrMediaStatus] on the 4K axis,
+/// decoded with the same [numbering], its label led by `4K: ` so the two
+/// badges cannot be read as one.
+MediaStatusInfo? seerr4kMediaStatus(
+  Map<String, dynamic>? mediaInfo, {
+  SeerrNumbering? numbering,
+}) {
+  final code = intOrNull(mediaInfo?['status4k']);
+  final moving = seerrDownloadEntry(mediaInfo?['downloadStatus4k']) != null;
+  if ((code == null || code == _seerrUnknownCode) && !moving) return null;
+
+  final info = seerrMediaStatus(mediaInfo, is4k: true, numbering: numbering);
+  return info.copyWith(labelOverride: '4K: ${info.label}');
+}
+
+/// Seerr's `MediaStatus.UNKNOWN`, the code of a resolution nobody asked for.
+const int _seerrUnknownCode = 1;
+
 /// Resolves a status for every season of a title, keyed by season number.
 ///
 /// Seerr reports per-season availability inside `mediaInfo.seasons`, a list of
