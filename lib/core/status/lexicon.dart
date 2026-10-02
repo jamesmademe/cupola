@@ -125,6 +125,28 @@ abstract final class Lexicon {
   /// Ending an account's session, on the server and on this device.
   static const signOut = 'Sign out';
 
+  // The requester's words: what will happen to a request, never how, and
+  // never a service name.
+
+  /// A request that waits on whoever runs the server, under a disabled
+  /// Request: [StateWord.waitingForApproval] as a sentence.
+  static final requestWaiting = '${StateWord.waitingForApproval.label}.';
+
+  /// Approved, and on its way to the server. Seerr cannot see the download,
+  /// so this is all it can say.
+  static const onItsWay = 'On its way.';
+
+  /// The last request for a title failed on the stack, and the server takes
+  /// no other while it stands. The requester cannot fix it, and is told who
+  /// can.
+  static const lastRequestFailed =
+      "The last request didn't go through. Whoever runs the server can send "
+      'it again.';
+
+  /// A title the operator barred: a choice, never a fault.
+  static const blockedByOwner =
+      'Whoever runs the server has blocked requests for this title.';
+
   /// A film's three dated events, as every screen that dates one names them:
   /// the calendar's `Sprite Fright · on digital` and the Radarr home's Coming
   /// up, `on digital · monitored`. Coming up used to say `digital release`

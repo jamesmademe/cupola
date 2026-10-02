@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
+import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -650,6 +651,53 @@ class CapabilityGatedMenuLabel extends ConsumerWidget {
           ? CapabilityCopy.unansweredHint(service)
           : hint,
       child: Text(text, style: style),
+    );
+  }
+}
+
+/// [GatedAffordance] wired to a Seerr connection's role gate: one control as
+/// the gate's [verdict] for it says.
+///
+/// [Live] is an ordinary control. [Dimmed] keeps the control, its target and
+/// its name, drains its content, hints [Dimmed.reason] and answers a tap with
+/// that sentence: *Your account on Seerr can't approve requests.*, *You can't
+/// ask for series on this server.* The fix lives on the server, with whoever
+/// runs it, so the toast offers no action. [Absent] draws nothing: the control
+/// is not part of this person's app, which is the one case a gate may leave a
+/// control out.
+///
+/// The verdict is the caller's to read (`roleGateProvider` for the Seerr the
+/// surface shows), so the control itself reads no provider.
+class RoleGatedAction extends StatelessWidget {
+  /// A control that is already a button — see [GatedAffordance.builder].
+  const RoleGatedAction.builder({
+    super.key,
+    required this.verdict,
+    required this.onTap,
+    required this.builder,
+  });
+
+  /// What the gate said about this control.
+  final GateVerdict verdict;
+
+  /// What the control does when it can act.
+  final VoidCallback onTap;
+
+  final GatedAffordanceBuilder builder;
+
+  @override
+  Widget build(BuildContext context) {
+    final verdict = this.verdict;
+    if (verdict is Absent) return const SizedBox.shrink();
+    final reason = verdict.reason;
+    return GatedAffordance.builder(
+      enabled: verdict.acts,
+      hint: reason,
+      onTap: onTap,
+      onBlocked: () {
+        if (reason != null) SnackBarHelper.info(context, reason);
+      },
+      builder: builder,
     );
   }
 }

@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_extras_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
@@ -71,7 +74,15 @@ class DiscoverActionButtons extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final serviceName = _normalizedMediaType == 'movie' ? 'Radarr' : 'Sonarr';
+    final isMovie = _normalizedMediaType == 'movie';
+    final arr = isMovie ? ServiceKey.radarr : ServiceKey.sonarr;
+    final serviceName = arr.title;
+    // The page reads the lens's Seerr, so its gate is the lens's: a
+    // requester reads no service name and no operator's control here, and an
+    // account that may not do something says so on the control.
+    final gate = ref.watch(roleGateProvider(''));
+    final namesSeerr = gate.namesService(ServiceKey.seerr);
+    final namesArr = gate.namesService(arr);
     // The page's one primary is the ink button, the same on every page: a
     // request is not Seerr-coloured, it is the thing this page is for.
     final room = CupolaRoom.of(context);
@@ -95,24 +106,31 @@ class DiscoverActionButtons extends ConsumerWidget {
       case SeerrRequestState.waitingForApproval:
         requestLabel = 'Requested';
         requestIcon = Icons.check_circle_outline_rounded;
-        disabledReason = 'Waiting for approval in Seerr.';
+        disabledReason = namesSeerr
+            ? 'Waiting for approval in Seerr.'
+            : Lexicon.requestWaiting;
       case SeerrRequestState.onItsWay:
         requestLabel = 'Requested';
         requestIcon = Icons.check_circle_outline_rounded;
-        disabledReason = '$serviceName is already tracking this.';
+        disabledReason = namesArr
+            ? '$serviceName is already tracking this.'
+            : Lexicon.onItsWay;
       case SeerrRequestState.failed:
         // Seerr takes no second request while this one stands, and the row
         // that can remove it is under Manage.
         requestLabel = 'Request failed';
         requestIcon = Icons.error_outline_rounded;
-        disabledReason =
-            'Seerr could not send the last request to $serviceName.';
+        disabledReason = namesSeerr && namesArr
+            ? 'Seerr could not send the last request to $serviceName.'
+            : Lexicon.lastRequestFailed;
       case SeerrRequestState.blocklisted:
         // The operator's own choice, made in Seerr: neutral, and nothing to
         // fix from here. Seerr refuses any request for it.
         requestLabel = StateWord.blocklisted.label;
         requestIcon = Icons.block_rounded;
-        disabledReason = 'Blocklisted in Seerr, which takes no request for it.';
+        disabledReason = namesSeerr
+            ? 'Blocklisted in Seerr, which takes no request for it.'
+            : Lexicon.blockedByOwner;
       case SeerrRequestState.open:
         requestLabel = 'Request';
         requestIcon = Icons.add_circle_outline_rounded;
@@ -132,7 +150,51 @@ class DiscoverActionButtons extends ConsumerWidget {
               '${missing.length == 1 ? 'is' : 'are'} not requested '
               '${only4k ? 'in 4K ' : ''}yet.';
     final canRequest = disabledReason == null;
-    final openAction = _openAction(context, ref);
+    // Open, Seerr would take a request: whether this account may ask for
+    // this kind at all. One that may not keeps Request, dimmed, and says why
+    // under it and on a tap.
+    final requestVerdict = canRequest
+        ? gate.requestAction(isMovie ? SeerrMediaKind.movie : SeerrMediaKind.tv)
+        : const Live();
+    final note = disabledReason ?? requestVerdict.reason ?? requestNote;
+    final openAction = namesArr ? _openAction(context, ref) : null;
+    // Manage is the operator's: absent from the requester's app, dimmed for
+    // an account of the operator's that may not manage media.
+    final manage = gate.operatorAction(SeerrAbility.manageMedia);
+
+    Widget requestButton(
+      VoidCallback? onPressed,
+      Widget Function(Widget content) annotate,
+    ) => FilledButton.icon(
+      onPressed: onPressed,
+      // The glyph drains with the label; the hint rides on the label alone,
+      // so it is heard once.
+      icon: Opacity(
+        opacity: requestVerdict.acts ? 1 : GatedAffordance.dimmedOpacity,
+        child: Icon(requestIcon, size: ActionStateGlyph.glyphSize),
+      ),
+      // Clamped at 1.6x for the reason the stacking section header is: an
+      // unclamped single word too wide for its line gets broken mid-word,
+      // which is how this button came to read "Requeste / d" at an
+      // accessibility reading size.
+      label: annotate(
+        MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
+          child: Text(requestLabel, maxLines: 2, textAlign: TextAlign.center),
+        ),
+      ),
+      style: HeaderActionRow.expandedButtonStyle(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        // "Available" and "Requested" are states read, not dead controls, so
+        // the label stays legible: the secondary ink on the room's strong
+        // fill, not Material's 38% grey.
+        disabledBackgroundColor: room.fillStrong,
+        disabledForegroundColor: colorScheme.onSurfaceVariant,
+      ),
+    );
 
     return Row(
       // Tops align, so the two captions hang below their own buttons instead
@@ -143,36 +205,16 @@ class DiscoverActionButtons extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FilledButton.icon(
-                onPressed: canRequest
-                    ? () => _showRequestSheet(context, ref)
-                    : null,
-                icon: Icon(requestIcon, size: ActionStateGlyph.glyphSize),
-                // Clamped at 1.6x for the reason the stacking section header
-                // is: an unclamped single word too wide for its line gets
-                // broken mid-word, which is how this button came to read
-                // "Requeste / d" at an accessibility reading size.
-                label: MediaQuery(
-                  data: MediaQuery.of(context).copyWith(
-                    textScaler: TextScaleMetrics.clampedScalerOf(context),
-                  ),
-                  child: Text(
-                    requestLabel,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                  ),
+              if (!canRequest)
+                requestButton(null, (content) => content)
+              else
+                RoleGatedAction.builder(
+                  verdict: requestVerdict,
+                  onTap: () => _showRequestSheet(context, ref),
+                  builder: (context, onPressed, annotate) =>
+                      requestButton(onPressed, annotate),
                 ),
-                style: HeaderActionRow.expandedButtonStyle(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  // "Available" and "Requested" are states read, not dead
-                  // controls, so the label stays legible: the secondary ink on
-                  // the room's strong fill, not Material's 38% grey.
-                  disabledBackgroundColor: room.fillStrong,
-                  disabledForegroundColor: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              if ((disabledReason ?? requestNote) case final note?) ...[
+              if (note != null) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   note,
@@ -198,14 +240,18 @@ class DiscoverActionButtons extends ConsumerWidget {
             onPressed: () => DiscoverVideosButton.show(context, videos),
           ),
         ],
-        if (hasManageableMedia) ...[
+        if (hasManageableMedia && manage.isDrawn) ...[
           const SizedBox(width: AppSpacing.sm),
-          HeaderActionButton(
-            icon: Icons.settings_outlined,
-            label: 'Manage',
-            semanticLabel:
-                'Manage ${_normalizedMediaType == 'movie' ? 'movie' : 'series'}',
-            onPressed: () => _showManageSheet(context, ref),
+          RoleGatedAction.builder(
+            verdict: manage,
+            onTap: () => _showManageSheet(context, ref),
+            builder: (context, onPressed, annotate) => HeaderActionButton(
+              icon: Icons.settings_outlined,
+              label: 'Manage',
+              semanticLabel: 'Manage ${isMovie ? 'movie' : 'series'}',
+              onPressed: onPressed,
+              annotate: annotate,
+            ),
           ),
         ] else if (openAction != null) ...[
           const SizedBox(width: AppSpacing.sm),

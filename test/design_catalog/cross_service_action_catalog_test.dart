@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
+import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
@@ -116,6 +117,19 @@ Widget _save(String connectionId) => CapabilityGatedAction.builder(
   onTap: () {},
   builder: (context, onPressed, annotate) =>
       FilledButton(onPressed: onPressed, child: annotate(const Text('Save'))),
+);
+
+/// Manage on a title's page, as the gate of its Seerr says.
+Widget _manage(GateVerdict verdict) => RoleGatedAction.builder(
+  verdict: verdict,
+  onTap: () {},
+  builder: (context, onPressed, annotate) => HeaderActionButton(
+    icon: Icons.settings_outlined,
+    label: 'Manage',
+    semanticLabel: 'Manage movie',
+    onPressed: onPressed,
+    annotate: annotate,
+  ),
 );
 
 /// A popup menu's panel, drawn in place: an open menu is a route of its own
@@ -291,6 +305,19 @@ void main() {
         (_) => _row([
           _labelled('admin', _menu(_readWrite)),
           _labelled('not an admin', _menu(_readOnly)),
+        ]),
+      ),
+      CatalogScene(
+        'RoleGatedAction.builder · Manage as a Seerr gate says: the key, an '
+        "account of the operator's that may not, and the requester, for whom "
+        'it is not drawn at all',
+        (_) => _row([
+          _labelled('live', _manage(const Live())),
+          _labelled(
+            'dimmed',
+            _manage(const Dimmed("Your account on Seerr can't manage media.")),
+          ),
+          _labelled('absent', _manage(const Absent())),
         ]),
       ),
       _toastScene(

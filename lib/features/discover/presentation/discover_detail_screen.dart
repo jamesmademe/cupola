@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_extras_provider.dart';
@@ -89,6 +91,21 @@ class DiscoverDetailScreen extends ConsumerWidget {
         // as neither.
         final numbering = ref.watch(seerrNumberingProvider).value;
         final isMovie = normalizedMediaType == 'movie';
+        // Whether a 4K copy can be asked for here. For an account, only when
+        // it may ask for 4K and the server has a default 4K server: an option
+        // it cannot take is not offered, and the servers Seerr lists are the
+        // operator's to read, not the account's.
+        final gate = ref.watch(roleGateProvider(''));
+        final has4kServer = gate.grant?.isApiKey == false
+            ? gate.offers4k(isMovie ? SeerrMediaKind.movie : SeerrMediaKind.tv)
+            : ref
+                      .watch(
+                        seerrTakes4kProvider(
+                          isMovie ? ServiceKey.radarr : ServiceKey.sonarr,
+                        ),
+                      )
+                      .value ??
+                  false;
         final extrasAsync = ref.watch(
           discoverDetailExtrasProvider((
             mediaId: mediaId,
@@ -183,15 +200,7 @@ class DiscoverDetailScreen extends ConsumerWidget {
                 numbering: numbering,
                 // The 4K copy is read only once Seerr is known to take 4K
                 // requests: a title on disk in HD then stays requestable.
-                has4kServer:
-                    ref
-                        .watch(
-                          seerrTakes4kProvider(
-                            isMovie ? ServiceKey.radarr : ServiceKey.sonarr,
-                          ),
-                        )
-                        .value ??
-                    false,
+                has4kServer: has4kServer,
               ),
               tvdbId: viewModel.tvdbId,
               mediaInfo: viewModel.mediaInfo,
@@ -211,6 +220,9 @@ class DiscoverDetailScreen extends ConsumerWidget {
                   // A lazy sliver mid-page: a 40-season show builds the rows on
                   // screen instead of every episode of every season.
                   sliver: DiscoverSeasonsList(
+                    source: gate.namesService(ServiceKey.seerr)
+                        ? ServiceKey.seerr.title
+                        : 'The server',
                     seasons: viewModel.seasons,
                     seasonStatuses: seerrSeasonStatuses(
                       viewModel.mediaInfo,

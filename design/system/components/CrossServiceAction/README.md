@@ -2,7 +2,7 @@
 
 A control whose precondition is not met — another service not set up, or a credential that may only read — stays visible, reachable and pressable, dims its foreground, and answers a tap with the fix.
 
-Rendered from `lib/core/widgets/cross_service_action.dart` (`GatedAffordance`, `CrossServiceAction`, `CapabilityGatedAction`, `CapabilityGatedMenuLabel`) by `test/design_catalog/cross_service_action_catalog_test.dart`.
+Rendered from `lib/core/widgets/cross_service_action.dart` (`GatedAffordance`, `CrossServiceAction`, `CapabilityGatedAction`, `CapabilityGatedMenuLabel`, `RoleGatedAction`) by `test/design_catalog/cross_service_action_catalog_test.dart`.
 
 ## The rule
 
@@ -21,6 +21,7 @@ Rendered from `lib/core/widgets/cross_service_action.dart` (`GatedAffordance`, `
 | `CapabilityGatedAction.icon` | same | on the icon inside the `IconButton` | same |
 | `CapabilityGatedAction.toggle` | same | merged onto the switch's own node; the whole switch dims and keeps the server's value | same |
 | `CapabilityGatedMenuLabel` | same | on the menu item's label; the item stays enabled and its `onSelected` asks `capabilityWriteAllowed` | same |
+| `RoleGatedAction.builder` | the verdict a Seerr connection's `RoleGate` gives the control: `Live`, `Dimmed` with its reason, or `Absent` | the reason, while dimmed: *Your account on Seerr can't manage media.*, *You can't ask for series on this server.* | Toast with the reason and no action: the fix is on the server, with whoever runs it. `Absent` draws nothing, the one gate that may leave a control out, because the control is not part of the requester's app |
 
 The cell draws its child through `PressableScale`: a 44 × 44 minimum target around the child, a 0.96 press dip, and the haptic only when it can act. The builder shapes hand the caller's button the gated `onPressed` and an `annotate` function that dims and hints the button's **content** — `HeaderActionButton` (an outlined 48pt square with a caption under it) takes it as its `annotate` parameter and dims glyph and caption together; a `TextButton` or `FilledButton` wraps its label in it. `.icon` keeps the `IconButton`'s own target.
 
@@ -40,5 +41,5 @@ One node per control: button, enabled, the name, and the hint. A cross-service j
 
 - Do use a builder shape for anything that is already a button; wrapping a Material button in the cell nests a button inside a button.
 - Do gate a flow (a form sheet, a typed confirmation) at the tap that opens it, never after the form is filled.
-- Don't use `Semantics(enabled: false)`, `onPressed: null` or `SizedBox.shrink()` for a blocked control.
+- Don't use `Semantics(enabled: false)`, `onPressed: null` or `SizedBox.shrink()` for a blocked control. The requester's `Absent` is not a blocked control: it is one the requester's app does not have.
 - Don't dim the plate or the fill, and don't shrink the target.

@@ -30,10 +30,15 @@ class DiscoverSeasonsList extends StatelessWidget {
   /// availability inside `build`.
   final Map<int, MediaStatusInfo> seasonStatuses;
 
+  /// Who the notes say holds the seasons: `Seerr`, or `The server` for a
+  /// reader who is not told which service answers.
+  final String source;
+
   const DiscoverSeasonsList({
     super.key,
     required this.seasons,
     required this.seasonStatuses,
+    this.source = 'Seerr',
   });
 
   @override
@@ -78,7 +83,7 @@ class DiscoverSeasonsList extends StatelessWidget {
       emptyState: AppEmptyState.compact(
         icon: Icons.tv_off_rounded,
         title: 'No seasons listed',
-        message: 'Seerr has no season details for this title.',
+        message: '$source has no season details for this title.',
         accentColor: accent,
       ),
       childOverride: (context, group) {
@@ -94,8 +99,8 @@ class DiscoverSeasonsList extends StatelessWidget {
         return AppEmptyState.inline(
           icon: Icons.event_note_outlined,
           title: listed > 0
-              ? 'Seerr lists no individual episodes for ${group.label}.'
-              : 'Seerr lists no episodes for ${group.label}.',
+              ? '$source lists no individual episodes for ${group.label}.'
+              : '$source lists no episodes for ${group.label}.',
           accentColor: accent,
         );
       },
