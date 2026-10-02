@@ -33,7 +33,6 @@ import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_se
 import 'package:cupola/features/services/domain/seerr_request_filter.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ServiceAllRequestsScreen extends ConsumerStatefulWidget {
@@ -412,18 +411,6 @@ class _RequestListRow extends ConsumerWidget {
     );
   }
 
-  /// The account the lens's Seerr signs in with, by its user id; null for
-  /// the key.
-  int? _accountUserId(WidgetRef ref) {
-    final id = ref.watch(activeInstanceProvider(ServiceKey.seerr))?.id;
-    if (id == null) return null;
-    return ref.watch(
-      currentSettingsProvider.select(
-        (s) => s.instanceById(id)?.account?.userId,
-      ),
-    );
-  }
-
   /// Delete for the key and for an account that manages requests; for any
   /// other account, Cancel on its own request while it still waits, and
   /// nothing on the rest (the requester), or dimmed with the reason (an
@@ -436,7 +423,7 @@ class _RequestListRow extends ConsumerWidget {
   }) {
     final own =
         request.requestedBy?.id != null &&
-        request.requestedBy?.id == _accountUserId(ref);
+        request.requestedBy?.id == ref.watch(seerrAccountUserIdProvider(''));
     final verdict = gate.cancelAction(
       own: own,
       waitingForApproval: request.status == RequestStatus.pendingApproval,

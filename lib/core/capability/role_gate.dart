@@ -193,6 +193,17 @@ final class RoleGate {
     );
   }
 
+  /// Resolve on one issue, [own] when this connection's account reported it.
+  ///
+  /// Not part of the requester's app. The operator's account sees it dimmed
+  /// with the reason where the server would refuse it.
+  GateVerdict resolveIssueAction({required bool own}) {
+    final grant = this.grant;
+    if (!_operator) return const Absent();
+    if (grant == null || grant.mayResolveIssue(own: own)) return const Live();
+    return Dimmed(_cannot(SeerrAbility.manageIssues, null));
+  }
+
   /// Whether the request sheet offers 4K for [kind]: the account may ask for
   /// it **and** the server has a default 4K server for it.
   bool offers4k(SeerrMediaKind kind) {

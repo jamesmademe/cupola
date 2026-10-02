@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
@@ -144,6 +145,60 @@ void main() {
         await again.unmount(tester);
       });
     }
+
+    group('Resolve', () {
+      Iterable<Object> resolveCalls(ProfileHarness harness) => harness.network
+          .requestsTo(WorldIds.seerrFriend)
+          .where(
+            (r) => r.method == 'POST' && r.path.startsWith('/api/v1/issue'),
+          );
+
+      testWidgets(
+        "P9, seeing the issues only: Resolve on somebody else's is dimmed and "
+        'says why',
+        (tester) async {
+          final harness = await pumpWithProfile(
+            tester,
+            _friend.withSeerrPermissions(
+              SeerrPermission.request.value | SeerrPermission.viewIssues.value,
+            ),
+            child: const SeerrIssuesScreen(),
+          );
+
+          final resolve = find.byTooltip('Resolve issue');
+          expect(resolve, findsOneWidget);
+          await tester.tap(resolve);
+          await tester.pumpAndSettle();
+
+          expect(find.text('Resolve this issue?'), findsNothing);
+          expect(
+            find.text("Your account on Jellyseerr can't manage issues."),
+            findsOneWidget,
+          );
+          expect(resolveCalls(harness), isEmpty);
+
+          await harness.unmount(tester);
+        },
+      );
+
+      testWidgets('P9, managing issues: Resolve asks, then resolves', (
+        tester,
+      ) async {
+        final harness = await pumpWithProfile(
+          tester,
+          _friend.withSeerrPermissions(
+            SeerrPermission.request.value | SeerrPermission.manageIssues.value,
+          ),
+          child: const SeerrIssuesScreen(),
+        );
+
+        await tester.tap(find.byTooltip('Resolve issue'));
+        await tester.pumpAndSettle();
+        expect(find.text('Resolve this issue?'), findsOneWidget);
+
+        await harness.unmount(tester);
+      });
+    });
 
     testWidgets('P1: the key reads the issues', (tester) async {
       final harness = await pumpWithProfile(

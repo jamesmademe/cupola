@@ -44,6 +44,11 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
       topPadding: widget.topPadding,
     );
     if (blocked != null) return blocked;
+    // Seeing the issues is not resolving them: where the server would refuse
+    // (anybody else's issue without MANAGE_ISSUES), Resolve reads dimmed with
+    // why, never a tap that fails.
+    final gate = ref.watch(roleGateProvider(''));
+    final accountUserId = ref.watch(seerrAccountUserIdProvider(''));
     final issues = ref.watch(seerrIssuesProvider(_filter));
     final partial = issues.asData?.value;
     return ServiceListPage<SeerrIssue>.unsummarised(
@@ -80,6 +85,11 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
         // the filter, the "All" tab offered Resolve on nothing at all, open
         // issues included.
         onResolve: issue.isOpen ? () => _resolve(issue) : null,
+        resolve: gate.resolveIssueAction(
+          own:
+              issue.createdBy?.id != null &&
+              issue.createdBy?.id == accountUserId,
+        ),
       ),
     );
   }
@@ -170,9 +180,9 @@ class SeerrUsersScreen extends ConsumerWidget {
 /// A tab of the Seerr room the lens's account may not use: why, in place of
 /// the list, and no read the server would refuse.
 ///
-/// The operator reads it about his account (`Your account on Seerr can't
-/// see issues.`); a household member, who has no Seerr room in her app, reads
-/// it about herself.
+/// The operator reads it about the account (`Your account on Seerr can't
+/// see issues.`); a household member, who has no Seerr room in their app,
+/// reads it about themselves.
 class _SeerrBlockedTab extends StatelessWidget {
   const _SeerrBlockedTab({
     required this.reason,
@@ -213,10 +223,17 @@ class _SeerrBlockedTab extends StatelessWidget {
 }
 
 class _IssueCard extends StatelessWidget {
-  const _IssueCard({required this.issue, this.onResolve});
+  const _IssueCard({
+    required this.issue,
+    this.onResolve,
+    this.resolve = const Live(),
+  });
 
   final SeerrIssue issue;
   final VoidCallback? onResolve;
+
+  /// What the role gate says about Resolve on this connection.
+  final GateVerdict resolve;
 
   @override
   Widget build(BuildContext context) {
@@ -265,11 +282,15 @@ class _IssueCard extends StatelessWidget {
               ],
             ),
           ),
-          if (onResolve != null)
-            IconButton(
-              tooltip: 'Resolve issue',
-              onPressed: onResolve,
-              icon: const Icon(Icons.check_circle_outline_rounded),
+          if (onResolve case final onResolve?)
+            RoleGatedAction.builder(
+              verdict: resolve,
+              onTap: onResolve,
+              builder: (context, onPressed, annotate) => IconButton(
+                tooltip: 'Resolve issue',
+                onPressed: onPressed,
+                icon: annotate(const Icon(Icons.check_circle_outline_rounded)),
+              ),
             ),
         ],
       ),

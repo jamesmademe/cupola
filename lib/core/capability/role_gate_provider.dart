@@ -96,3 +96,19 @@ final roleGateOfProvider = Provider.family<RoleGate, String>(
     grant: ref.watch(seerrGrantProvider(connectionId)),
   ),
 );
+
+/// The Seerr user id of connection [connectionId]'s account (empty: the
+/// lens), which tells a request or an issue of its own from anybody else's;
+/// null for the key and for no connection.
+final seerrAccountUserIdProvider = Provider.autoDispose.family<int?, String>((
+  ref,
+  connectionId,
+) {
+  final id = connectionId.isEmpty
+      ? ref.watch(activeInstanceProvider(ServiceKey.seerr))?.id
+      : connectionId;
+  if (id == null) return null;
+  return ref.watch(
+    currentSettingsProvider.select((s) => s.instanceById(id)?.account?.userId),
+  );
+});

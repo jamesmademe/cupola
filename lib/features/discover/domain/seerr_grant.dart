@@ -230,6 +230,17 @@ final class SeerrGrant {
     return own && waitingForApproval;
   }
 
+  /// Whether this connection may resolve or reopen one issue: anybody's with
+  /// MANAGE_ISSUES, otherwise only an [own] issue, and only with
+  /// CREATE_ISSUES (`issue.ts:329-346`: the route admits either permission,
+  /// then refuses with a 401 anybody else's issue).
+  bool mayResolveIssue({required bool own}) {
+    final value = permissions;
+    if (value == null) return true;
+    if (hasSeerrPermission(value, SeerrPermission.manageIssues)) return true;
+    return own && hasSeerrPermission(value, SeerrPermission.createIssues);
+  }
+
   /// A manager decides on requests; everybody else asks.
   SeerrRole get role =>
       may(SeerrAbility.approve) ? SeerrRole.manager : SeerrRole.requester;

@@ -435,6 +435,43 @@ void main() {
     });
   });
 
+  group('resolveIssueAction', () {
+    final viewer = SeerrGrant.account(
+      permissions:
+          SeerrPermission.request.value | SeerrPermission.viewIssues.value,
+    );
+    final reporter = SeerrGrant.account(
+      permissions:
+          SeerrPermission.request.value | SeerrPermission.createIssues.value,
+    );
+    final rows = <(String, RoleGate, bool own, GateVerdict)>[
+      ('the key, anybody\'s', _operator(_key), false, const Live()),
+      ('a reporter, own', _operator(reporter), true, const Live()),
+      (
+        'a reporter, somebody else\'s',
+        _operator(reporter),
+        false,
+        const Dimmed("Your account on Seerr can't manage issues."),
+      ),
+      (
+        'a viewer, own',
+        _operator(viewer),
+        true,
+        const Dimmed("Your account on Seerr can't manage issues."),
+      ),
+      ('a requester, own', _requester(reporter), true, const Absent()),
+      (
+        'no Seerr, the operator',
+        const RoleGate.operator(),
+        false,
+        const Live(),
+      ),
+    ];
+    for (final (name, gate, own, expected) in rows) {
+      test(name, () => expect(gate.resolveIssueAction(own: own), expected));
+    }
+  });
+
   group('every reason the gate gives', () {
     final gates = [
       for (final grant in [_anna, _moviesOnly, _manager, _luca]) ...[
@@ -458,6 +495,8 @@ void main() {
         for (final own in [true, false])
           for (final waiting in [true, false])
             gate.cancelAction(own: own, waitingForApproval: waiting).reason,
+        for (final own in [true, false])
+          gate.resolveIssueAction(own: own).reason,
       ],
     }.whereType<String>().toSet();
 

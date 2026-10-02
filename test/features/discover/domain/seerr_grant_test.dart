@@ -201,6 +201,31 @@ void main() {
     }
   });
 
+  group('resolving one issue', () {
+    // `issue.ts:329-346`: MANAGE_ISSUES or CREATE_ISSUES to reach the route,
+    // then MANAGE_ISSUES or the reporter. Anything else is answered 401.
+    final viewer = SeerrGrant.account(
+      permissions: SeerrPermission.viewIssues.value,
+    );
+    final reporter = SeerrGrant.account(
+      permissions: SeerrPermission.createIssues.value,
+    );
+    final keeper = SeerrGrant.account(
+      permissions: SeerrPermission.manageIssues.value,
+    );
+    final rows = <(String, SeerrGrant, bool own, bool may)>[
+      ('a viewer, own', viewer, true, false),
+      ('a viewer, somebody else\'s', viewer, false, false),
+      ('a reporter, own', reporter, true, true),
+      ('a reporter, somebody else\'s', reporter, false, false),
+      ('a manager, somebody else\'s', keeper, false, true),
+      ('the key, somebody else\'s', const SeerrGrant.apiKey(), false, true),
+    ];
+    for (final (name, grant, own, may) in rows) {
+      test(name, () => expect(grant.mayResolveIssue(own: own), may));
+    }
+  });
+
   group('asCapability', () {
     test('the key writes everything', () {
       expect(

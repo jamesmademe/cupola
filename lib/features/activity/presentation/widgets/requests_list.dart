@@ -165,7 +165,8 @@ class _RequestCard extends ConsumerWidget {
     final waiting = request.status == RequestStatus.pendingApproval;
     final own =
         request.requestedBy?.id != null &&
-        request.requestedBy?.id == _accountUserId(ref);
+        request.requestedBy?.id ==
+            ref.watch(seerrAccountUserIdProvider(instanceId));
     final remove = gate.cancelAction(own: own, waitingForApproval: waiting);
     // A key, or an account that manages requests, deletes any request; any
     // other account only takes back its own, which it calls cancelling.
@@ -365,20 +366,6 @@ class _RequestCard extends ConsumerWidget {
           .declineRequest(request.id),
       successMessage: 'Request declined',
       failureMessage: 'Could not decline the request',
-    );
-  }
-
-  /// The account [instanceId] signs in with, by its Seerr user id; null for
-  /// the key.
-  int? _accountUserId(WidgetRef ref) {
-    final id = instanceId.isEmpty
-        ? ref.watch(activeInstanceProvider(ServiceKey.seerr))?.id
-        : instanceId;
-    if (id == null) return null;
-    return ref.watch(
-      currentSettingsProvider.select(
-        (s) => s.instanceById(id)?.account?.userId,
-      ),
     );
   }
 
