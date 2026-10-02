@@ -42,7 +42,7 @@ Each sheet is drawn in the dark and the light room.
 - Every arm of the tone rule: green, blue, amber, red, primary, neutral.
 - `compact: true` and `iconOnly: true` over artwork.
 - Text at 200%: every state.
-- A long label and a figure, each in a 150pt room.
+- A long label and a figure, each in a 150pt room: the label wraps inside the badge (a state word cut short loses the state), the figure stays whole.
 
 ## Do / don't
 

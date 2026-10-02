@@ -60,11 +60,15 @@ class TagChip extends StatelessWidget {
             Icon(icon, size: 14, color: ink),
             const SizedBox(width: AppSpacing.xs),
           ],
-          Text(
-            text,
-            style: Theme.of(context).textTheme.labelSmall!
-                .weight(FontWeight.w600)
-                .copyWith(color: ink),
+          // Flexible: a title wider than its place wraps inside the chip
+          // rather than running out of it.
+          Flexible(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.labelSmall!
+                  .weight(FontWeight.w600)
+                  .copyWith(color: ink),
+            ),
           ),
         ],
       ),

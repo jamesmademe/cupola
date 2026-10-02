@@ -23,7 +23,7 @@ Each sheet is drawn in the dark and the light room.
 
 - `TagChip` with and without an icon, `GenreChip`, and `surface:` on a card container.
 - Text at 200%.
-- A long label in a 200pt room, for both chips.
+- A long label in a 200pt room, for both chips: `TagChip` wraps its title inside the pill rather than running out of it.
 
 ## Do / don't
 

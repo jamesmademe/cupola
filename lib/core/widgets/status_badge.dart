@@ -159,11 +159,16 @@ class StatusBadge extends StatelessWidget {
         _leading(size: compact ? 10 : 12, color: foreground, animate: animate),
         if (!compact) ...[
           const SizedBox(width: AppSpacing.xs),
-          Text(
-            info.label,
-            style: theme.textTheme.labelSmall!
-                .weight(FontWeight.w600)
-                .copyWith(color: textColor),
+          // Flexible: a label wider than its place wraps inside the badge
+          // rather than running out of it. A state word cut short loses the
+          // state; on two lines it is still read.
+          Flexible(
+            child: Text(
+              info.label,
+              style: theme.textTheme.labelSmall!
+                  .weight(FontWeight.w600)
+                  .copyWith(color: textColor),
+            ),
           ),
         ],
         if (percentText != null) ...[
