@@ -286,7 +286,7 @@ class DiscoverActionButtons extends ConsumerWidget {
       target: isMovie ? ServiceKey.radarr : ServiceKey.sonarr,
       blockedMessage:
           '${Lexicon.setUp(serviceName)} to open this '
-          '${isMovie ? 'movie' : 'series'}',
+          '${isMovie ? 'movie' : 'series'}.',
       onTap: () => _openInService(context, ref),
       builder: (context, onPressed, annotate) => HeaderActionButton(
         icon: Icons.open_in_new_rounded,

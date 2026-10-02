@@ -347,7 +347,7 @@ void main() {
 
       await tester.tap(open);
       await tester.pumpAndSettle();
-      expect(find.text('Set up Radarr to open this movie'), findsOneWidget);
+      expect(find.text('Set up Radarr to open this movie.'), findsOneWidget);
       expect(
         find.widgetWithText(SnackBarAction, 'Set up Radarr'),
         findsOneWidget,

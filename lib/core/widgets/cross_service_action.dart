@@ -237,7 +237,8 @@ class CrossServiceAction extends ConsumerWidget {
   /// button names itself.
   final String? label;
 
-  /// The toast, e.g. `Set up qBittorrent to open this transfer`.
+  /// The toast, e.g. `Set up qBittorrent to open this transfer.`: a full
+  /// sentence, so it ends with a full stop.
   final String blockedMessage;
 
   /// What the control does when [target] is configured.

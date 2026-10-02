@@ -89,7 +89,7 @@ void main() {
 
         await tester.tap(find.text('Open in Radarr'));
         await tester.pump();
-        expect(find.text('Set up Radarr to open this movie'), findsOneWidget);
+        expect(find.text('Set up Radarr to open this movie.'), findsOneWidget);
         expect(find.text('Set up Radarr'), findsOneWidget);
       },
     );
@@ -110,7 +110,7 @@ void main() {
 
         await tester.tap(find.text('Open in Sonarr'));
         await tester.pump();
-        expect(find.text('Set up Sonarr to open this series'), findsOneWidget);
+        expect(find.text('Set up Sonarr to open this series.'), findsOneWidget);
       },
     );
 

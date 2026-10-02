@@ -434,7 +434,7 @@ class _CopyControls extends StatelessWidget {
             MediaCopyOpen.service => CrossServiceAction.builder(
               target: target,
               blockedMessage:
-                  '${Lexicon.setUp(target.title)} to open this $noun',
+                  '${Lexicon.setUp(target.title)} to open this $noun.',
               onTap: copy.onOpen,
               builder: (context, onPressed, annotate) =>
                   openButton(onPressed, annotate),
