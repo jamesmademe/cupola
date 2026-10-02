@@ -220,6 +220,10 @@ class _RailBadge extends StatelessWidget {
   static const double left = 12;
   static const double top = -8;
 
+  /// The largest reading size the numeral takes: chrome, like the glyph it
+  /// sits on, which does not scale at all.
+  static const double maxScale = 1.2;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -229,8 +233,11 @@ class _RailBadge extends StatelessWidget {
       // asserted, and it records that this badge grew precisely so it would not
       // need a 9px numeral — the phone's did, and the rail's was left behind.
       // Where the geometry cannot take 11px, the geometry yields.
-      constraints: const BoxConstraints(minWidth: 18),
-      height: 18,
+      //
+      // A floor, not a height, as the phone bar's badge: at 200% a fixed 18pt
+      // disc cut the numeral off. The numeral grows with the reading size to
+      // [maxScale] and no further, as far as the 56pt rail holds the disc.
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
       padding: const EdgeInsets.symmetric(horizontal: 3),
       decoration: BoxDecoration(
         color: colorScheme.primary,
@@ -239,9 +246,15 @@ class _RailBadge extends StatelessWidget {
         // top of the glyph rather than merging into it.
         border: Border.all(color: colorScheme.surfaceContainerLowest, width: 2),
       ),
+      alignment: Alignment.center,
       child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
         child: Text(
           destination.badgeLabel,
+          textScaler: MediaQuery.textScalerOf(
+            context,
+          ).clamp(maxScaleFactor: maxScale),
           style: AppTheme.chrome(
             context,
             size: 11,
