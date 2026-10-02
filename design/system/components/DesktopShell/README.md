@@ -15,6 +15,13 @@ Keys (Ctrl for ⌘ and Alt for ⌥ on Windows and Linux): ⌘K deck (again to cl
 
 The consumer is the shell screen: it passes the branch navigator (`navigationShell`), the destination list shared with the phone bar, the selected index and `onDestinationSelected`. The shell records each location it sees as a recent for the deck.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room, on the desktop sheet.
+
+- A 1280 × 800 window with the inspector open, and a 960 × 640 window with no inspector.
+- Text at 200%: the 1280 × 800 window.
+
 ## Do / don't
 
 - Do keep the desktop layer an accelerator: nothing may exist only in the chrome, deck or inspector.

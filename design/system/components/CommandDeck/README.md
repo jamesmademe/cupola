@@ -19,6 +19,13 @@ Content and states:
 
 Each row is a button that speaks *label, detail*, reports `selected`, and hints *Open label*. At the 520 cap about ten rows show before the list scrolls.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room, on the desktop sheet.
+
+- An empty query, typed `radarr`, typed `cert`, nothing matched; the field holds focus in each.
+- Text at 200%: an empty query and typed `radarr`.
+
 ## Do / don't
 
 - Do keep the footer's keys visible; it is the app's keyboard lesson.

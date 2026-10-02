@@ -16,6 +16,13 @@ States: loading *Reading the queue…*; empty *Nothing downloading right now.*, 
 
 The consumer provides nothing: the pane reads the Activity providers (`globalNowItemsProvider`, `unreachableServicesProvider`, and `finishedTodayProvider` over `globalHistoryFeedProvider`). Everything in it also exists on `/activity` (the pane is an accelerator, never the only home of a feature). Toggle ⌥I; ⌥⏎ in the command deck opens it.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room, on the desktop sheet.
+
+- The live queue with two services that did not answer and finished today, nothing downloading, nothing downloading from what answered, loading, the queue could not be read.
+- Text at 200%: the live queue, and the queue that could not be read.
+
 ## Do / don't
 
 - Do keep every fact here also on `/activity`.

@@ -213,6 +213,23 @@ void main() {
         height: 220,
         platform: CatalogPlatform.desktop,
       ),
+      const CatalogScene(
+        'Text at 200% · CommandDeck, empty query: the sections, the rows and '
+        'the footer at twice the reading size',
+        _emptyQuery,
+        width: width,
+        height: 760,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
+      const CatalogScene(
+        'Text at 200% · CommandDeck, typed "radarr"',
+        _radarr,
+        width: width,
+        height: 460,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

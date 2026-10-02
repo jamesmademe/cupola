@@ -66,6 +66,15 @@ void main() {
         height: 360,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · DesktopNavRail, Activity selected with twelve searches '
+        'waiting: the 9+ badge at twice the reading size',
+        (_) => _rail(NavTab.activity.index, searchesWaiting: 12),
+        width: DesktopNavRail.width,
+        height: 360,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

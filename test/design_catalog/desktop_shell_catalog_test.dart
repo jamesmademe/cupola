@@ -340,6 +340,15 @@ void main() {
         height: 640,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'DesktopShell · a 1280 × 800 window at 200% reading size: the chrome, '
+        'rail, deck, page header and inspector with their text doubled',
+        (_) => const _Window(),
+        width: 1280,
+        height: 800,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

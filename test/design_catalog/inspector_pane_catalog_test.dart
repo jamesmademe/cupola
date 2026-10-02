@@ -265,6 +265,46 @@ void main() {
         height: 130,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · InspectorPane, the live queue with two services that '
+        'did not answer and finished today, at twice the reading size',
+        (_) => _Pane(
+          queue: () async => ActivityFeed(items: _queue, results: const []),
+          offline: const [ServiceKey.sonarr, ServiceKey.prowlarr],
+          history: _today,
+        ),
+        width: width,
+        height: 1000,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · InspectorPane, the queue could not be read: the note '
+        'that sends you to Activity',
+        (_) => _Pane(
+          queue: () async => const ActivityFeed(
+            items: [],
+            results: [
+              ActivityServiceResult(
+                service: ServiceKey.radarr,
+                items: [],
+                configured: true,
+                error: 'silent',
+              ),
+              ActivityServiceResult(
+                service: ServiceKey.sonarr,
+                items: [],
+                configured: true,
+                error: 'silent',
+              ),
+            ],
+          ),
+        ),
+        width: width,
+        height: 300,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

@@ -253,6 +253,31 @@ void main() {
         height: WindowChrome.height,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · WindowChrome, full, inside Radarr: the breadcrumb, the '
+        'lens readout and the chips in their 44pt row',
+        (_) => const _Scene(
+          location: ServiceRoutes.radarrLibrary,
+          child: WindowChrome(inspectorOpen: true),
+        ),
+        width: 1280,
+        height: WindowChrome.height,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · ServiceDeck, full, on a pushed page: the active chip, '
+        'the stack figure, the freshness line and the jump pill',
+        (_) => _DeckScene(
+          location: ServiceRoutes.radarrMovie(1),
+          health: _stillChecking,
+          onCommandDeck: () {},
+        ),
+        width: deckWidth,
+        height: ServiceDeck.fullHeight,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

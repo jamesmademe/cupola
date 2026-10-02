@@ -267,6 +267,21 @@ void main() {
         width: phone.width,
         height: phone.height,
       ),
+      CatalogScene(
+        'Text at 200% · PortalStage at rest with the coach mark',
+        (_) => const _PortalPose(0),
+        width: phone.width,
+        height: phone.height,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · PortalStage open, t = 1: the ServiceMatrix picker on '
+        'the floor at twice the reading size',
+        (_) => const _PortalPose(1),
+        width: phone.width,
+        height: phone.height,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

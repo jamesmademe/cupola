@@ -32,6 +32,13 @@ Windows and Linux (what the OS switch is allowed to change: button placement, gu
 
 `WindowDragStrip`, in the same file, stands in for the chrome above a flow the shell does not host (onboarding): the same height and gutter, the caption buttons where the OS needs them, and a trail (*Cupola › Setup*) in `chrome` 11 / 500 `dim-text` throughout, because none of its crumbs is a link. It draws nothing on a phone.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room, on the desktop sheet.
+
+- `WindowChrome` full inside Radarr, on Activity with the inspector open, compact; `ServiceDeck` on a canonical tab, a service's tab root, a pushed page, compact, under 500pt; `WindowDragStrip`.
+- Text at 200%: the chrome inside Radarr, and the deck on a pushed page.
+
 ## Do / don't
 
 - Do keep every per-OS difference to button placement, gutter width and modifier label.

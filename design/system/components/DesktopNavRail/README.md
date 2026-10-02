@@ -11,6 +11,13 @@ Rendered from `lib/features/shell/presentation/desktop/desktop_nav_rail.dart` by
 
 The consumer provides the same `FloatingNavDestination` list the phone's bar takes (so badges and their spoken labels are defined once), the selected index, `onDestinationSelected` and `onCommandDeck`. Every item is a real button with a tooltip of its name and key (*Activity, 2 finished searches to look at  ⌘2*); the rail is a semantics container labelled *Section navigation*, and each item speaks its label and badge and reports `selected`. Keys: ⌘1–⌘4 for the sections (Ctrl+1–4 on Windows and Linux), ⌘K for the deck.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room, on the desktop sheet.
+
+- Dashboard selected, Activity selected with two finished searches, Settings selected with twelve waiting (`9+`).
+- Text at 200%: Activity with the `9+` badge.
+
 ## Do / don't
 
 - Do teach the keyboard map here: every item keeps its tooltip with the key.

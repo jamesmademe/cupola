@@ -26,6 +26,13 @@ The consumer is the phone shell: it owns the controller, hands it to the nav bar
 
 Accessibility: a screen reader never needs the drag. Under one (`accessibleNavigation`) the drag delegate and the coach mark are withheld, and the Dashboard tab of the bar carries a custom action, *Open the Portal*, that opens it with the release spring from rest (`openFromUi`); Voice Control and Switch Access see the same action. Opening it, by either way, makes one announcement at the commit, counted from the floor's own cells and probes: *Portal open. 12 services, 3 with a fault.* — *1 with a fault*, *none with a fault* only once every probe has answered, *2 checking* while probes are out, never a pending request. A fault is what the picker draws as one: a connection that did not answer, or one that answered but refused. While `t > 0` the card is hidden from the reader as it is inert to the finger, and the spacer above the matrix is a button named *Close the Portal*. The demo bounce is skipped under Reduce Motion and under a screen reader — including the one the coach mark would play on arrival; the gesture itself is not. The announcement goes through `announce()`, and both readers hear it once: VoiceOver as a native announcement, TalkBack — whose engine has no announcement channel — through the app's one polite live region (`AnnouncementHost`, mounted around every route in `MaterialApp.builder`, so hiding the card from the reader does not hide the sentence).
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `PortalStage` at rest with the coach mark, mid-gesture (t = 0.45), open (t = 1) with the picker.
+- Text at 200%: at rest with the coach mark, and open.
+
 ## Do / don't
 
 - Do re-tune by hand on a device if a constant must change. The physics durations (160, 220, 240, 260, 400, 500ms) sit off the motion ladder deliberately; don't normalise them.
