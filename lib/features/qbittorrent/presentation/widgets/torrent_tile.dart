@@ -115,10 +115,13 @@ class TorrentTile extends StatelessWidget {
 ///  * **amber** for stalled and error — both *faults*: something that should be
 ///    moving and is not. Red would claim the client did not answer, and it did:
 ///    it answered by telling us the torrent is stuck;
-///  * **blue** for a live download, which is work in flight;
-///  * **neutral** for queued, paused and unknown — backlog and deliberate
-///    stops, which are the normal resting state of a torrent client and must
-///    not compete for attention with the two states that are actually wrong.
+///  * **blue** for a live download, which is work in flight, and for a
+///    torrent queued for its turn: it is in line, as a queued grab is in an
+///    arr's queue, a queued job in SABnzbd's and NZBGet's. It used to be
+///    neutral here and in Transmission alone, so one word read in two tones;
+///  * **neutral** for paused and unknown — deliberate stops, which are the
+///    normal resting state of a torrent client and must not compete for
+///    attention with the two states that are actually wrong.
 ///
 /// `error` losing its red is the one that will look like a regression and is
 /// not: a torrent qB reports as errored is a fault it reported, and red in this
@@ -128,9 +131,8 @@ StatusTone _toneFor(TorrentState state) => switch (state) {
   TorrentState.stalled || TorrentState.error => StatusTone.warning,
   TorrentState.downloading ||
   TorrentState.metaDownloading ||
-  TorrentState.checking => StatusTone.info,
-  TorrentState.paused ||
+  TorrentState.checking ||
   TorrentState.queuedDl ||
-  TorrentState.queuedUp ||
-  TorrentState.unknown => StatusTone.neutral,
+  TorrentState.queuedUp => StatusTone.info,
+  TorrentState.paused || TorrentState.unknown => StatusTone.neutral,
 };

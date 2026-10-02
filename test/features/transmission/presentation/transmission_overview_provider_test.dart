@@ -377,8 +377,9 @@ void main() {
 
     test('a finished torrent waiting to seed has not finished seeding', () {
       // `status: 5` is seedWait. Green here contradicted the same torrent's
-      // neutral chip in Transferring, two regions above, on the same page.
-      expect(toneOf(5), StatusTone.neutral);
+      // chip in Transferring, two regions above, on the same page; both read
+      // the queue's blue, in line to seed.
+      expect(toneOf(5), StatusTone.info);
     });
 
     test('one being re-verified is work in flight', () {

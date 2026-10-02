@@ -19,8 +19,9 @@ Rendered from `lib/core/widgets/download_queue_tile.dart`, with the qBittorrent 
 As qBittorrent maps them (the tone rule, applied once in `_toneFor`):
 
 - **Downloading**, **Fetching metadata**, **Checking** — `info`; the bar in blue, `↓` rate accented (ink) and `↑` rate neutral.
+- **Queued** — `info`, as queued is blue in every queue the app draws (an arr's, SABnzbd's, NZBGet's, Transmission's): in line, waiting its turn. No bar, and qBittorrent's unknown ETA prints `∞`.
 - **Stuck** and **Error** — `warning`: a fault the client reported. An errored torrent draws no bar.
-- **Stopped** and **Queued** — neutral: a deliberate stop and the backlog. Stopped keeps its bar and prints no ETA; Queued draws no bar, and qBittorrent's unknown ETA prints `∞`.
+- **Stopped** — neutral: a deliberate stop. It keeps its bar and prints no ETA.
 - **Seeding** (complete) — `success`, no bar (a full bar would say "finishing").
 
 Across clients:

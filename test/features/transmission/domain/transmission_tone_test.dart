@@ -42,11 +42,12 @@ void main() {
       expect(transmissionTorrentTone(_torrent(status: 0)), StatusTone.neutral);
     });
 
-    test('the three queues are backlog, not completion', () {
+    test('the three queues are in line: blue, as queued is everywhere, and '
+        'never completion', () {
       for (final code in [1, 3, 5]) {
         expect(
           transmissionTorrentTone(_torrent(status: code)),
-          StatusTone.neutral,
+          StatusTone.info,
           reason: 'status $code is queued, not done',
         );
       }

@@ -104,9 +104,10 @@ void main() {
         4: StatusTone.info, // download
         2: StatusTone.info, // check
         0: StatusTone.neutral, // stopped
-        3: StatusTone.neutral, // downloadWait
-        5: StatusTone.neutral, // seedWait
-        1: StatusTone.neutral, // checkWait
+        // The three queues: in line, blue as queued is everywhere.
+        3: StatusTone.info, // downloadWait
+        5: StatusTone.info, // seedWait
+        1: StatusTone.info, // checkWait
       };
       for (final entry in expected.entries) {
         final plate = await _plateFor(tester, _torrent(status: entry.key));

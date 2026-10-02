@@ -157,11 +157,15 @@ void main() {
     // Seeding is the one qBittorrent state that means "this one is done", and
     // queued/paused are backlog — the resting state of every torrent client,
     // which must not compete for attention with the two states that are wrong.
-    testWidgets('tones the calm states green and neutral', (tester) async {
+    testWidgets('tones the calm states green, blue and neutral', (
+      tester,
+    ) async {
       const expected = {
         'uploading': StatusTone.success,
         'stalledUP': StatusTone.success,
-        'queuedDL': StatusTone.neutral,
+        // Queued is blue in every queue the app draws: in line, not a stop.
+        'queuedDL': StatusTone.info,
+        'queuedUP': StatusTone.info,
         'pausedDL': StatusTone.neutral,
         'downloading': StatusTone.info,
       };
