@@ -124,11 +124,22 @@ class ProwlarrService {
 
   /// Configured providers of one [kind] (apps, download clients,
   /// notifications, indexer proxies).
+  ///
+  /// An empty list means Prowlarr answered with none; an answer that is not a
+  /// list throws, as [knownApplications] does, rather than reading as none: a
+  /// page that says "no download clients" about a reply it could not read tells
+  /// the user to add what is already there.
   Future<List<ProwlarrProviderResource>> getProviders(
     ProwlarrProviderKind kind,
   ) async {
     final response = await client.get('/api/v1/${kind.path}');
-    return jsonObjects(response.data, ProwlarrProviderResource.fromJson);
+    final data = response.data;
+    if (data is! List) {
+      throw FormatException(
+        'Prowlarr answered without a list of ${kind.title.toLowerCase()}',
+      );
+    }
+    return jsonObjects(data, ProwlarrProviderResource.fromJson);
   }
 
   /// Implementations of [kind] that can be added, from `<kind>/schema`.

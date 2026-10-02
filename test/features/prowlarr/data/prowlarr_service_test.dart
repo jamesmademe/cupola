@@ -659,6 +659,33 @@ void main() {
       }
     });
 
+    test('an answer that is not a list throws, never reads as none', () async {
+      for (final kind in ProwlarrProviderKind.values) {
+        for (final body in <Object?>[
+          {'message': 'nope'},
+          '<html></html>',
+          null,
+        ]) {
+          final client = FakeApiClient()..getResponseData = body;
+          await expectLater(
+            ProwlarrService(client).getProviders(kind),
+            throwsA(isA<FormatException>()),
+            reason: '${kind.name}: $body',
+          );
+        }
+      }
+    });
+
+    test('an empty list is none, not a failure', () async {
+      final client = FakeApiClient()..getResponseData = const [];
+      expect(
+        await ProwlarrService(
+          client,
+        ).getProviders(ProwlarrProviderKind.downloadClient),
+        isEmpty,
+      );
+    });
+
     test('an application is active unless its sync level is disabled', () async {
       final client = FakeApiClient()
         ..getResponseData = [
