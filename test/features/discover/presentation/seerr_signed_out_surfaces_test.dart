@@ -165,6 +165,52 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('one header: the stack, the band and the cells agree', (
+      tester,
+    ) async {
+      // Anna's Seerr signed out beside her own Jellyfin, whose figures say
+      // what her token may read.
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p2WithJellyfin.withSeerrSignedOut(WorldIds.seerr),
+        child: const DashboardScreen(),
+        surfaceSize: const Size(430, 2400),
+      );
+
+      expect(
+        find.textContaining('1 of 1 answering · 1 signed out · 15 not set up'),
+        findsOne,
+      );
+      expect(find.text('Seerr signed out · 5 not set up'), findsOne);
+      expect(find.text('1 of 1 clean · 1 not set up'), findsOne);
+      expect(find.text('Signed out'), findsOne);
+      expect(find.textContaining('fault'), findsNothing);
+      expect(find.textContaining('needs a look'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a signed-out Seerr beside a working one is no fault', (
+      tester,
+    ) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p9.withSeerrSignedOut(WorldIds.seerrFriend),
+        child: const DashboardScreen(),
+        surfaceSize: const Size(430, 3000),
+      );
+
+      expect(
+        find.textContaining('11 of 11 answering · 6 not set up'),
+        findsOne,
+      );
+      expect(find.text('5 of 5 clean · 1 not set up'), findsOne);
+      expect(find.textContaining('with a fault'), findsNothing);
+      expect(find.textContaining('Seerr needs a look'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
     test("the probe reads a signed-out Seerr as the person's step", () async {
       final harness = await ProfileHarness.start(_p2SignedOut);
       final container = harness.container(retry: (_, _) => null);

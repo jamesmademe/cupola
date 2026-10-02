@@ -128,7 +128,12 @@ final foldedServiceHealthProvider =
         switch (summary) {
           case AsyncData(:final value):
             if (value.didNotAnswer) offline++;
-            if (value.isFault) faulted++;
+            // A Seerr account that signed out was asked nothing and is the
+            // person's step: beside a working connection it is no fault.
+            if (value.isFault &&
+                value.failureReason != ServiceFailureReason.sessionEnded) {
+              faulted++;
+            }
           case AsyncError(:final error):
             if (failureDidNotAnswer(classifyConnectionFailure(error))) {
               offline++;

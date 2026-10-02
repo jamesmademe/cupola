@@ -377,13 +377,21 @@ class _DomainBand extends ConsumerWidget {
         notSetUp++;
         continue;
       }
+      // Only a Seerr account that signed out: counted apart, as the stack's
+      // own header counts it, neither among the services that answered nor
+      // among those to set up.
+      if (!settings.isServiceConfigured(service)) {
+        qualifiers.add('${service.title} signed out');
+        continue;
+      }
       configured++;
 
       final folded = ref.watch(foldedServiceHealthProvider(service));
       final summary = ref.watch(serviceSummaryProvider(service));
       final reachability = serviceReachabilityOf(summary);
 
-      // Signed out is the person's step, not a fault to look at.
+      // The lens resting on a signed-out connection beside a working one:
+      // the person's step, not a fault to look at.
       if (_failureOf(summary) == ServiceFailureReason.sessionEnded) {
         qualifiers.add('${service.title} signed out');
         continue;
@@ -441,7 +449,15 @@ class _DomainBand extends ConsumerWidget {
       }
     }
 
-    if (configured == 0) return null;
+    if (configured == 0) {
+      // A band whose only connection signed out still says so.
+      return qualifiers.isEmpty
+          ? null
+          : [
+              ...qualifiers,
+              if (notSetUp > 0) '$notSetUp not set up',
+            ].join(' · ');
+    }
     return serviceDomainHealthLine(
       clean: clean,
       total: configured,
