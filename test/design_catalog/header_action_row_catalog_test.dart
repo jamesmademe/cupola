@@ -287,7 +287,7 @@ void _noop() {}
 List<CatalogScene> _bands(CatalogPlatform platform, double width) => [
   CatalogScene(
     'Primary + two discs · Radarr, Automatic search · the ink fill with the '
-    'on-ink label, 48pt tall, radius md — never the service\'s colour',
+    'on-ink label, 52pt tall (button-l), radius.button: never the service\'s colour',
     (_) => _primaryBand(
       service: ServiceKey.radarr,
       label: 'Automatic search',
@@ -433,7 +433,7 @@ void main() {
       ..._bands(CatalogPlatform.phone, 390),
       CatalogScene(
         'HeaderActionButton · idle, busy, confirmed, onPressed: null, long '
-        'caption · a 48pt square in a 72pt measure, caption wraps to two lines',
+        'caption · a 52pt square in a 72pt measure, caption wraps to two lines',
         (_) => _buttonStates(),
       ),
       CatalogScene(
@@ -445,7 +445,7 @@ void main() {
       ),
       CatalogScene(
         'At 2× reading size · the library band: the primary label and the '
-        'consequence sentence take the lines they need, the discs keep 48pt',
+        'consequence sentence take the lines they need, the discs keep 52pt',
         (_) => _primaryBand(
           service: ServiceKey.radarr,
           label: 'Automatic search',
