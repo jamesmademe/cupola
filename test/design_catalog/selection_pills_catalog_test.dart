@@ -87,7 +87,7 @@ void main() {
       ),
       CatalogScene(
         'Text at 200% · the scrolling row: the pills grow with the label and '
-        'the last one is reached by scrolling, never clipped',
+        'the fourth is reached by scrolling',
         (_) => SelectionPills<int>(
           values: const [0, 1, 2, 3],
           selected: 1,
@@ -99,8 +99,8 @@ void main() {
         textScale: catalogTextScale,
       ),
       CatalogScene(
-        'Text at 200% · SelectionPills.wrap: the four Access choices take as '
-        'many lines as they need',
+        'Text at 200% · SelectionPills.wrap: the four Access choices on '
+        'a 390pt phone',
         (_) => SelectionPills<int>.wrap(
           values: const [0, 1, 2, 3],
           selected: 1,

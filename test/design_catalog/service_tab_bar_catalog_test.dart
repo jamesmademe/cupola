@@ -79,9 +79,8 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'ServiceTabBar · Radarr, Overview, at 200% · the bar is 44 high; its '
-        'pill and labels follow the reading size or the row scrolls, nothing '
-        'clips',
+        'ServiceTabBar · Radarr, Overview, at 200% · the 44pt row at twice the '
+        'reading size, scrolling from the start',
         (_) => ServiceTabBar(
           service: ServiceKey.radarr,
           current: _tab(ServiceKey.radarr, 'Overview'),
@@ -92,7 +91,7 @@ void main() {
       ),
       CatalogScene(
         'ServiceTabBar.header · Radarr, Overview, with the lens, at 200% · the '
-        'desktop header with the whole row at twice the reading size',
+        'desktop header, name, lens and tabs at twice the reading size',
         (_) => ServiceTabBar.header(
           service: ServiceKey.radarr,
           current: _tab(ServiceKey.radarr, 'Overview'),

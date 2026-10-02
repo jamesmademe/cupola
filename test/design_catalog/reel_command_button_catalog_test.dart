@@ -124,9 +124,9 @@ void main() {
         ),
       ),
       CatalogScene(
-        'A long label · the slot holds the widest label it will roll to '
-        '(Continue to the next service), so the resting one sits centred in '
-        'it and nothing clips on a 280pt measure',
+        'A long label · on a 280pt measure the slot holds the widest label it '
+        'will roll to (Continue to the next service), and the resting one '
+        'sits centred in it',
         (_) => ReelCommandButton(
           label: 'Test every connection',
           busyLabel: 'Testing every connection',
@@ -137,9 +137,8 @@ void main() {
         width: 280,
       ),
       CatalogScene(
-        'Text at 200% · rest and waiting: the slot measures the widest label '
-        'at the reading size, so the button grows with it and the roll keeps '
-        'its width',
+        'Text at 200% · rest, waiting and disabled: the slot measures the '
+        'widest label at the reading size',
         (_) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

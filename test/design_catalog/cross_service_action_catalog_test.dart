@@ -324,8 +324,7 @@ void main() {
       ),
       CatalogScene(
         'Text at 200% · a cross-service button, a gated icon, a gated switch, '
-        'a gated save and a dimmed Manage: the label grows, the dim stays on '
-        'the foreground only, the target never shrinks',
+        'a gated save and a dimmed Manage, at twice the reading size',
         (_) => _row([
           _labelled('Radarr set up', _openIn(ServiceKey.radarr)),
           _labelled('Sonarr not set up', _openIn(ServiceKey.sonarr)),
@@ -345,8 +344,8 @@ void main() {
         textScale: catalogTextScale,
       ),
       _toastScene(
-        'Blocked tap at 200% · the sentence takes the lines it needs and the '
-            'action moves under it',
+        'Blocked tap at 200% · the toast at twice the reading size: the '
+            'sentence takes four lines and the action sits under it',
         'This Unraid key can\'t start or stop VMs.',
         ServiceKey.unraid.capabilityFixLabel,
         height: 260,

@@ -135,8 +135,8 @@ List<CatalogScene> _scenes(CatalogPlatform platform) => [
     platform: platform,
   ),
   CatalogScene(
-    'A long label · the button grows to hold it on a second line, 44 high at '
-    'the least, never a fixed height that clips',
+    'A long label · each button on a 300pt measure: the label takes a second '
+    'line and the button grows with it, 44 high at the least',
     (_) => Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -161,7 +161,7 @@ List<CatalogScene> _scenes(CatalogPlatform platform) => [
   ),
   CatalogScene(
     'Text at 200% · filled, outlined, text, the gated one and the amber '
-    'remedy: every label wraps or grows the button, none clips',
+    'remedy, at twice the reading size',
     (_) => Wrap(
       spacing: 12,
       runSpacing: 12,
