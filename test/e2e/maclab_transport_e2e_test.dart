@@ -6,6 +6,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
@@ -236,17 +238,86 @@ void main() {
     expect(await client.auditLog(), isA<List>());
   });
 
-  test('TrueNAS WebSocket JSON-RPC + dashboard parser', () async {
+  test('TrueNAS WebSocket JSON-RPC over TLS + dashboard parser', () async {
+    // The address a person saves: https://, with the self-signed certificate
+    // trusted by its fingerprint. The client dials wss:// from it.
     final client = TrueNasWsClient(
-      baseUrl: 'ws://127.0.0.1:8460',
+      baseUrl: _truenasUrl,
       apiKey: 'test-key',
+      certFingerprint: _truenasPin(credentials),
     );
     addTearDown(client.close);
+    expect(client.resolveEndpoint().scheme, 'wss');
     final service = TrueNasService(client);
     expect(await service.ping(), isTrue);
     final dashboard = await service.loadDashboard();
     expect(dashboard.system.hostname, isNotEmpty);
     expect(dashboard.pools, isA<List>());
+  });
+
+  test(
+    'TrueNAS certificate probe reads the fingerprint the lab recorded',
+    () async {
+      // The trust prompt on "Test connection" shows what this probe reads, and a
+      // person's saved pin is that same text: the bootstrap's must be too.
+      final certificate = await probeServerCertificate(
+        '127.0.0.1',
+        _truenasPort,
+      );
+      expect(certificate, isNotNull);
+      expect(certificate!.fingerprint, _truenasPin(credentials));
+    },
+  );
+
+  test('TrueNAS refuses a certificate it was not told to trust as untrusted, '
+      'not as a dead server', () async {
+    final pin = _truenasPin(credentials);
+    // The server is there and answers: the same address, with its own pin.
+    final trusted = TrueNasWsClient(
+      baseUrl: _truenasUrl,
+      apiKey: 'test-key',
+      certFingerprint: pin,
+    );
+    addTearDown(trusted.close);
+    expect(await TrueNasService(trusted).ping(), isTrue);
+
+    // A pin that is one digit off: a certificate that was replaced after the
+    // person trusted the old one. Never sent a key, never read as a dead host.
+    final rotated = TrueNasWsClient(
+      baseUrl: _truenasUrl,
+      apiKey: 'test-key',
+      certFingerprint: _oneDigitOff(pin),
+    );
+    addTearDown(rotated.close);
+    await _expectUntrusted(
+      TrueNasService(rotated).ping(),
+      'a pin one digit off',
+    );
+
+    // No pin at all: the platform's trust store does not know the lab's
+    // self-signed certificate, and nothing makes an exception for it.
+    final unpinned = TrueNasWsClient(baseUrl: _truenasUrl, apiKey: 'test-key');
+    addTearDown(unpinned.close);
+    await _expectUntrusted(TrueNasService(unpinned).ping(), 'no pin');
+
+    // The contrast: where nothing listens, the same code reads unreachable.
+    final dead = TrueNasWsClient(
+      baseUrl: 'https://127.0.0.1:${await _closedPort()}',
+      apiKey: 'test-key',
+      certFingerprint: pin,
+    );
+    addTearDown(dead.close);
+    await expectLater(
+      TrueNasService(dead).ping(),
+      throwsA(
+        isA<TrueNasException>().having(
+          (error) => classifyConnectionFailure(error),
+          'reason',
+          ServiceFailureReason.unreachable,
+        ),
+      ),
+      reason: 'a port nothing listens on',
+    );
   });
 
   test('Unraid GraphQL + dashboard parsers', () async {
@@ -378,14 +449,22 @@ void main() {
       reason: 'Nginx Proxy Manager',
     );
 
+    // Past the certificate, with the right pin: the refusal is the key's.
     final truenas = TrueNasWsClient(
-      baseUrl: 'ws://127.0.0.1:8460',
+      baseUrl: _truenasUrl,
       apiKey: 'wrong-key',
+      certFingerprint: _truenasPin(credentials),
     );
     addTearDown(truenas.close);
     await expectLater(
       TrueNasService(truenas).ping(),
-      throwsA(anything),
+      throwsA(
+        isA<TrueNasException>().having(
+          (error) => classifyConnectionFailure(error),
+          'reason',
+          ServiceFailureReason.unauthorized,
+        ),
+      ),
       reason: 'TrueNAS',
     );
 
@@ -423,6 +502,65 @@ void main() {
 
 ApiClient _arr(String baseUrl) =>
     ApiClient(baseUrl: baseUrl, apiKey: 'test-key');
+
+const _truenasPort = 8460;
+
+/// TrueNAS as a person saves it. The client derives `wss://` from it.
+const _truenasUrl = 'https://127.0.0.1:$_truenasPort';
+
+/// The fingerprint the bootstrap recorded for the TrueNAS mock's certificate:
+/// 64 lowercase hex digits, the form `certFingerprint` compares.
+String _truenasPin(Map<String, String> credentials) {
+  final pin = credentials['CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT'];
+  if (pin == null || pin.isEmpty) {
+    fail(
+      'Missing CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT in the lab credentials: '
+      'run test/e2e/maclab/truenas_cert.sh credentials (see test/e2e/README.md)',
+    );
+  }
+  if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(pin)) {
+    fail(
+      'CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT must be 64 lowercase hex digits '
+      'without colons, the SHA-256 of the certificate',
+    );
+  }
+  return pin;
+}
+
+/// [pin] with its first digit changed, still a well-formed fingerprint.
+String _oneDigitOff(String pin) =>
+    '${pin.startsWith('0') ? '1' : '0'}${pin.substring(1)}';
+
+/// A loopback port nothing listens on: bound a moment ago, then released.
+Future<int> _closedPort() async {
+  final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+  final port = socket.port;
+  await socket.close();
+  return port;
+}
+
+/// [call] fails the way a certificate the app does not trust fails: a TLS
+/// refusal, classified [ServiceFailureReason.tls] and nothing else. Not
+/// unreachable (the server answered the handshake), not a refused key (no key
+/// was sent), not the cleartext refusal (the address was dialled).
+Future<void> _expectUntrusted(Future<Object?> call, String reason) =>
+    expectLater(
+      call,
+      throwsA(
+        isA<TrueNasException>()
+            .having(
+              (error) => classifyConnectionFailure(error),
+              'reason',
+              ServiceFailureReason.tls,
+            )
+            .having(
+              (error) => error is TrueNasInsecureTransportException,
+              'refused as cleartext',
+              isFalse,
+            ),
+      ),
+      reason: reason,
+    );
 
 Map<String, String> _loadCredentials() {
   final path = Platform.environment['CUPOLA_MACLAB_CREDENTIALS_FILE'];

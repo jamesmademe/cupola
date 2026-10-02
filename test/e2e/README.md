@@ -68,6 +68,15 @@ the disposable container is running with local authentication disabled, since
 that mode accepts an arbitrary `X-Plex-Token`; use a claimed/authenticated Plex
 server for the token-rejection check.
 
+The TrueNAS checks go over TLS with the fingerprint the bootstrap recorded in
+`CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT`, at the address a person saves,
+`https://127.0.0.1:8460`. The wrong key is refused as a key (classified
+`unauthorized`, so a failure of the certificate can never pass for it). A pin
+one digit off, and no pin at all, are each refused as an untrusted certificate
+(`tls`), never as a dead host: the same test reads a port nothing listens on as
+`unreachable`. The certificate probe the trust prompt uses must read the
+recorded fingerprint, which is what ties the bootstrap's text to the app's.
+
 ## Published endpoint map
 
 | Service | Native endpoint | Auth in the lab | Transport |
@@ -113,7 +122,10 @@ trusts it the way a person does, by its fingerprint: the SHA-256 of the
 certificate's DER encoding as 64 lowercase hex digits, without colons, the form
 `certFingerprint` compares and `SettingsModel.trustedCertificates` stores under
 the origin `https://127.0.0.1:8460`. The bootstrap writes it to the credentials
-file as `CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT`. A lab started before this
+file as `CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT`. Added by hand in the app at
+`https://127.0.0.1:8460`, "Test connection" reads the certificate and offers to
+trust it; the fingerprint it shows is that one, written in colon-separated
+uppercase pairs. A lab started before this
 existed gets the certificate, the credentials entry and a mock that serves it
 without a reset (the other credentials are left as they are):
 
@@ -305,6 +317,13 @@ flutter drive -d macos \
   --dart-define=CUPOLA_MACLAB_SCREENSHOTS=true \
   --dart-define=CUPOLA_MACLAB_DRIVER_SCREENSHOTS=true
 ~~~
+
+The matrix saves TrueNAS as `https://127.0.0.1:8460` with the recorded
+fingerprint as the trusted certificate of that origin, as a person's settings
+hold it after they trust the lab's certificate; the credentials it exports
+carry `CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT` with the rest. A run without it
+stops before the first route and names the missing entry (every `unreachable`
+run needs none: nothing is dialled).
 
 This matrix is intentionally separate from onboarding: the native smoke test
 proves the real first-run path, while the matrix makes the 17-service visual

@@ -325,10 +325,16 @@ SettingsModel _labSettings(
     return value;
   }
 
-  String websocketEndpoint(String value, {bool broken = false}) {
-    if (unreachable || (degraded && broken)) return 'ws://127.0.0.1:1';
-    return value;
-  }
+  // TrueNAS is saved as https://, the only scheme the client will send its key
+  // to; it dials wss:// from it. The mock's certificate is self-signed, so the
+  // settings carry its fingerprint the way a person's do after trusting it. In
+  // the unreachable scenario nothing is dialled, so there is no pin to carry.
+  final truenasUrl = unreachable
+      ? 'https://127.0.0.1:1'
+      : 'https://127.0.0.1:8460';
+  final truenasPin = unreachable
+      ? ''
+      : _required(credentials, 'CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT');
 
   String username(String key) =>
       invalidAuth ? 'wrong-user' : _required(credentials, key);
@@ -336,7 +342,7 @@ SettingsModel _labSettings(
   String password(String key) =>
       invalidAuth ? 'wrong-password' : _required(credentials, key);
 
-  return settingsWith(
+  final settings = settingsWith(
     themeMode: theme,
     plexClientId: 'cupola-maclab-ui-matrix',
     seerrUrl: endpoint('http://127.0.0.1:5055'),
@@ -381,10 +387,14 @@ SettingsModel _labSettings(
     npmUrl: endpoint('http://127.0.0.1:8181'),
     npmUsername: username('CUPOLA_MACLAB_NPM_USERNAME'),
     npmPassword: password('CUPOLA_MACLAB_NPM_PASSWORD'),
-    truenasUrl: websocketEndpoint('ws://127.0.0.1:8460'),
+    truenasUrl: truenasUrl,
     truenasApiKey: apiKey,
     unraidUrl: endpoint('http://127.0.0.1:8480'),
     unraidApiKey: apiKey,
+  );
+  return settings.copyWithTrustedCertificate(
+    url: truenasUrl,
+    fingerprint: truenasPin,
   );
 }
 
