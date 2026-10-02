@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -206,6 +208,41 @@ void main() {
       );
       addTearDown(subscription.close);
     }
+
+    test('a sheet closed while Seerr answers writes nothing after', () async {
+      final servers = Completer<List<Map<String, dynamic>>>();
+      final service = _FakeSeerr(radarrServersFuture: servers.future);
+      final container = createContainer(service);
+      const args = (
+        mediaId: 1,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
+      final subscription = container.listen<RequestFormState>(
+        requestFormProvider(args),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      // The load is under way, waiting on Seerr.
+      await Future<void>.delayed(Duration.zero);
+      expect(service.radarrServersCallCount, 1);
+
+      // The sheet closes: the form goes.
+      subscription.close();
+      await Future<void>.delayed(Duration.zero);
+      expect(container.exists(requestFormProvider(args)), isFalse);
+
+      // Seerr answers after all. Writing to the gone form threw "Cannot use
+      // the Ref ... after it has been disposed", uncaught, which fails this
+      // test.
+      servers.complete([
+        {'id': 1, 'name': 'Radarr', 'isDefault': true},
+      ]);
+      for (var i = 0; i < 10; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(service.radarrProfilesCallCount, isEmpty);
+    });
 
     test('loads movie servers and active defaults', () async {
       final service = _FakeSeerr(
@@ -524,7 +561,11 @@ class _FakeSeerr extends shared.FakeSeerrService {
     this.radarrProfilesByServer = const <int, Map<String, dynamic>>{},
     this.sonarrProfilesByServer = const <int, Map<String, dynamic>>{},
     this.radarrServersError,
+    this.radarrServersFuture,
   });
+
+  /// Answered instead of [radarrServers], when set: Seerr still thinking.
+  final Future<List<Map<String, dynamic>>>? radarrServersFuture;
 
   final List<Map<String, dynamic>> radarrServers;
   final List<Map<String, dynamic>> sonarrServers;
@@ -545,7 +586,7 @@ class _FakeSeerr extends shared.FakeSeerrService {
     radarrServersCallCount += 1;
     final error = radarrServersError;
     if (error != null) throw error;
-    return radarrServers;
+    return radarrServersFuture ?? radarrServers;
   }
 
   @override

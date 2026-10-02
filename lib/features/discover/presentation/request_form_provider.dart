@@ -239,12 +239,17 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
     return const RequestFormState();
   }
 
+  /// Every `await` below is followed by a [Ref.mounted] check: the sheet can
+  /// close while Seerr is still answering, and the form it was filling is gone
+  /// by then. Writing `state` to it throws, from a microtask nobody awaits.
   Future<void> _loadServers() async {
+    if (!ref.mounted) return;
     try {
       final service = ref.read(seerrServiceProvider);
       final serverMaps = arg.mediaType == 'movie'
           ? await service.getRadarrServers()
           : await service.getSonarrServers();
+      if (!ref.mounted) return;
       final servers = requestServersFor(
         serverMaps.map(SeerrServer.fromJson).toList(),
         arg.copies,
@@ -276,6 +281,7 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
       );
       await _loadProfiles(chosen.id);
     } catch (error) {
+      if (!ref.mounted) return;
       // Classified, and never the exception: the sheet used to print
       // "Failed to load servers: DioException […]".
       state = state.copyWith(
@@ -294,6 +300,7 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
       final data = arg.mediaType == 'movie'
           ? await service.getRadarrProfiles(serverId)
           : await service.getSonarrProfiles(serverId);
+      if (!ref.mounted) return;
 
       final profileMaps = data['profiles'] as List<dynamic>? ?? const [];
       final rootFolderMaps = data['rootFolders'] as List<dynamic>? ?? const [];
@@ -339,6 +346,7 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
         clearError: true,
       );
     } catch (error) {
+      if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: _loadFailure(error),
@@ -383,7 +391,7 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
       return 'Could not send the request. '
           '${writeFailureReason(ServiceKey.seerr, error)}';
     } finally {
-      state = state.copyWith(isSubmitting: false);
+      if (ref.mounted) state = state.copyWith(isSubmitting: false);
     }
   }
 }
