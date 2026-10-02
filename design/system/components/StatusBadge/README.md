@@ -36,6 +36,15 @@ The `MediaStatusInfo`. Set `excludeFromSemantics: true` when the enclosing tile 
 
 Every variant speaks `MediaStatusInfo.semanticLabel` as one container node and silences its painted children. The badge is not a button: the tap belongs to the enclosing tile.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Every arm of the tone rule: green, blue, amber, red, primary, neutral.
+- `compact: true` and `iconOnly: true` over artwork.
+- Text at 200%: every state.
+- A long label and a figure, each in a 150pt room.
+
 ## Do / don't
 
 - Do use `.animated` only where one badge changing state is the point of the surface.

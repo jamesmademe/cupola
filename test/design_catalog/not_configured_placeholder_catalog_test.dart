@@ -1,6 +1,7 @@
 @Tags(['catalog'])
 library;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
@@ -54,6 +55,18 @@ void main() {
         'in again opens its own form, never Set up Seerr',
         (_) => NotConfiguredPlaceholder.forService(ServiceKey.seerr),
         width: 320,
+      ),
+      CatalogScene(
+        'Text at 200% · forService(radarr) and the signed-out Seerr form, '
+        'at twice the reading size',
+        (_) => Column(
+          children: [
+            NotConfiguredPlaceholder.forService(ServiceKey.radarr),
+            NotConfiguredPlaceholder.forService(ServiceKey.seerr),
+          ],
+        ),
+        width: 320,
+        textScale: catalogTextScale,
       ),
     ],
   );

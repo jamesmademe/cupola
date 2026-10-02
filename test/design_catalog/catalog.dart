@@ -391,8 +391,14 @@ Future<void> _paint(
         ),
         home: Material(
           color: Colors.transparent,
-          child: Align(
+          // As tall as its scenes: a card with many of them outgrows the
+          // window, and a sheet cut at the window's height would lose its
+          // last scenes without a word.
+          child: OverflowBox(
             alignment: Alignment.topLeft,
+            minWidth: 0,
+            minHeight: 0,
+            maxHeight: double.infinity,
             child: RepaintBoundary(
               key: sheet,
               child: _Sheet(width: width, scenes: scenes, shared: overrides),

@@ -106,6 +106,28 @@ void main() {
         ),
         width: 420,
       ),
+      CatalogScene(
+        'Text at 200% · the pill, and the Activity row shape: the badge grows '
+        'with its label and the title gives way',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ConnectionBadge(label: '4K', accent: ServiceKey.radarr.accent),
+            const SizedBox(height: AppSpacing.sm),
+            _row('Nosferatu (1922)', '4K', 'downloading'),
+            const SizedBox(height: AppSpacing.sm),
+            _row('Metropolis (1927)', 'Main', 'available'),
+          ],
+        ),
+        width: 420,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'A long label · a connection named for where it lives, in the '
+        'Activity row shape on a 320pt phone',
+        (_) => _row('Nosferatu (1922)', 'Living room seedbox', 'downloading'),
+        width: 320,
+      ),
     ],
   );
 }

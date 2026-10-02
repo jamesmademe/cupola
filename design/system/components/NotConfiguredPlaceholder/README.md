@@ -16,3 +16,10 @@ Two constructors:
 **A Seerr account that signed out is set up**, and never reads as not set up: for Seerr the placeholder asks the settings for the signed-out connection the screen stands on (the lens's, else the only one) and draws `AppErrorState` for the ended session instead: the blue `logout` glyph, *Signed out of Seerr*, *Sign in again to keep asking for movies and series.*, and *Sign in again* in the ink fill, opening that connection's own form. No Retry: no request revives a session. Only inside a `ProviderScope`, which the app always has.
 
 A screen checks `isServiceConfigured` **before** reaching its providers and draws this instead, so a missing config never becomes a failing provider that retries. Not configured is a normal condition, not a fault: no error tone, and no dimming beyond this screen. Distinct from ServiceOfflineState (configured, not answering).
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `forService(radarr)`, the generic form with a name, and `forService(seerr)` for a signed-out account (blue).
+- Text at 200%: `forService(radarr)` and the signed-out Seerr form.

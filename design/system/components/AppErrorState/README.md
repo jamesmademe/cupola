@@ -34,6 +34,15 @@ A household member never reads the classification (`RoleGate.faultVoice`): insid
 
 For `AppErrorState`: the error and `service:`, with `instanceId:` where the screen knows the connection, and optionally `serviceName` and `onRetry`. `service:` wins over the service `serviceName` starts with, which stays the fallback for the states handed only a display name (`AsyncValueWidget`, `MediaDetailPlaceholderView`); `test/core/widgets/failure_service_guard_test.dart` fails on a call that names no service and lists the few that cannot know it, with the reason. For `InlineErrorRetry`: the message, `onRetry` and the `error` that failed — required, because a section that left it out stayed red for a refused key — and `service:`, with `instanceId:` where the screen knows the connection, which win over the service the message names. A remedy opens the form with `context.push` and reads the lens from the `ProviderScope`, both of which the app always has.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `AppErrorState`: nothing answered (red, ghost Retry), a closed client, a 401 and a 404 (amber, the remedy as the one amber fill), a qBittorrent refusal, Cloudflare Access, a signed-out Seerr account (blue), and the compact form.
+- `InlineErrorRetry`: red, amber with the remedy, blue with Sign in again, a certificate with both verbs, `fixedHeight`.
+- The requester's app: Seerr did not answer, her session ended, a rail answered with a 5xx.
+- Text at 200%: nothing answered, a 401, a signed-out account, the compact form, a certificate row and the fixed-height row.
+
 ## Do / don't
 
 - Do prefer a FaultBand over retained data whenever there is anything to retain — the last readout is what the operator came for.

@@ -33,6 +33,14 @@ Used by the library walls (`MediaBrowseScaffold(service:)`), Readarr's author li
 
 The column speaks one sentence (*SABnzbd did not answer. It has not answered for 40 minutes. …*); glyph, title and body are excluded under it, and the buttons remain separate controls.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `ServiceOfflineState`: did not answer with and without a known age.
+- `.failure`: connection refused (red), 401, a certificate, a web page in the service's place, Cloudflare Access, a 500 (amber).
+- Text at 200%: did not answer, a 401, Cloudflare Access.
+
 ## Do / don't
 
 - Do prefer `FaultBand.unreachable` wherever any retained readout exists: last-known data at full ink beats an emptied page. This leaf is for the cold open only.

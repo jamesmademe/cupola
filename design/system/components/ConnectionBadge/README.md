@@ -24,6 +24,14 @@ On the row, after the `StatusBadge`, `AppSpacing.sm` apart, at every width. On t
 
 Plain text in the row's reading order; the tile's own sentence carries the connection name.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Four services on the page surface, on a card with `surface:` passed, `label: ''` drawing nothing, the Activity row shape.
+- A long label in the row shape on a 320pt phone.
+- Text at 200%: the pill and the row shape.
+
 ## Do / don't
 
 - Do pass the ground the badge lands on, or the ink is measured against the wrong colour.

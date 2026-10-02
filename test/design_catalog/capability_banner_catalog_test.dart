@@ -75,16 +75,30 @@ void main() {
       CatalogScene(
         'CapabilityBanner · bare, at 2x text scale · past stackThreshold '
         'the verb drops to its own line',
-        (context) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const TextScaler.linear(2)),
-          child: CapabilityBanner(
-            message: unraidVmsCopy.answered,
-            onFix: () {},
-          ),
-        ),
+        (_) => CapabilityBanner(message: unraidVmsCopy.answered, onFix: () {}),
         width: 420,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · CapabilityBannerSlot, NPM account that manages some of '
+        'the page: the sentence and the verb on a 390pt phone',
+        (_) => CapabilityBannerSlot(
+          connectionId: 'npm-partial',
+          copy: npmCapabilityCopy(),
+          resources: const {'proxy_hosts', 'certificates'},
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · CapabilityBannerSlot, Cupola could not ask (TrueNAS): '
+        'Check again on a 390pt phone',
+        (_) => const CapabilityBannerSlot(
+          connectionId: 'truenas-unanswered',
+          copy: trueNasCapabilityCopy,
+        ),
+        width: 390,
+        textScale: catalogTextScale,
       ),
     ],
   );

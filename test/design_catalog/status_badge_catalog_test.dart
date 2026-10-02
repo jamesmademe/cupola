@@ -97,6 +97,40 @@ void main() {
           ],
         ),
       ),
+      CatalogScene(
+        'Text at 200% · every arm of the tone rule, and a long label '
+        '(Waiting for approval), at twice the reading size',
+        (_) => Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [for (final info in _states) StatusBadge(info: info)],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'A long label · a label of forty characters and a downloading figure, '
+        'each badge in a 150pt room',
+        (_) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            StatusBadge(
+              info: MediaStatusInfo(
+                labelOverride: 'Waiting for approval from the household',
+                toneOverride: StatusTone.info,
+              ),
+            ),
+            SizedBox(height: 8),
+            StatusBadge(
+              info: MediaStatusInfo(
+                pipeline: MediaPipeline.downloading,
+                progress: 0.42,
+              ),
+            ),
+          ],
+        ),
+        width: 150,
+      ),
     ],
   );
 }

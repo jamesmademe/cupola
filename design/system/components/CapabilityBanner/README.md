@@ -32,6 +32,13 @@ For the slot: `connectionId`, the feature's `CapabilityCopy` and the page's `res
 
 One container node (`Semantics(container: true, explicitChildNodes: true, label: message)`); the verb stays its own reachable control. **Not** a live region: the banner is drawn on every visit to every page of a read-only connection, and announcing it each time would interrupt each visit with the same sentences. The dimmed controls below carry the same fact in their own hints.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `CapabilityBannerSlot`: a key that can read and not write, a write refused this session, a view-only NPM account, an NPM account that manages part of the page, a probe that could not ask.
+- Text at 200%: the bare banner, the partial NPM banner and the unanswered TrueNAS banner.
+
 ## Do / don't
 
 - Do keep it blue: a read-only credential is a configuration fact, not a fault.

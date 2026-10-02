@@ -135,6 +135,44 @@ void main() {
         ),
         width: 320,
       ),
+      CatalogScene(
+        'Text at 200% · ServiceOfflineState, did not answer: the red glyph, '
+        'the age, Retry as a ghost and Settings',
+        (_) => ServiceOfflineState(
+          serviceName: 'SABnzbd',
+          since: const Duration(minutes: 40),
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+        width: 320,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · ServiceOfflineState.failure, a 401: the amber fault '
+        'with its remedy as the one amber fill',
+        (_) => ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: _status(401),
+          onRetry: () {},
+        ),
+        width: 320,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · ServiceOfflineState.failure, Cloudflare Access answered '
+        'in Radarr\'s place, with its service-token remedy',
+        (_) => ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.badResponse,
+            error: _access,
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

@@ -279,6 +279,89 @@ void main() {
         overrides: _requester,
         width: 360,
       ),
+      CatalogScene(
+        'Text at 200% · AppErrorState, nothing answered: the red headline, the '
+        'classified sentence and the ghost Retry at twice the reading size',
+        (_) => AppErrorState(
+          serviceName: 'Radarr',
+          error: DioException.connectionError(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            reason: 'Connection refused',
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · AppErrorState, a 401: the amber fault with its remedy '
+        'as the one amber fill',
+        (_) => AppErrorState(
+          serviceName: 'Radarr',
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v3/movie'),
+              statusCode: 401,
+            ),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · AppErrorState, a Seerr account whose session ended: '
+        'the blue state with its ink fill',
+        (_) => AppErrorState(
+          service: ServiceKey.seerr,
+          error: const SeerrSessionEnded(),
+          onRetry: () {},
+        ),
+        overrides: _requester,
+        width: 320,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · AppErrorState.compact, a failure nobody can attribute',
+        (_) => const AppErrorState.compact(error: 'Exception: parser'),
+        width: 280,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · InlineErrorRetry, a certificate Cupola does not trust: '
+        'the amber remedy first and Retry in ink, under the sentence',
+        (_) => InlineErrorRetry(
+          message:
+              'Unraid has a certificate Cupola does not trust, so its shares '
+              'are not shown.',
+          error: const ClassifiedFailure(ServiceFailureReason.tls),
+          service: ServiceKey.unraid,
+          onRetry: () {},
+        ),
+        width: 360,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · InlineErrorRetry.fixedHeight, locked to 120px: the '
+        'carousel row at twice the reading size',
+        (_) => DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: const Color(0x40808080),
+              style: BorderStyle.solid,
+            ),
+          ),
+          child: InlineErrorRetry.fixedHeight(
+            message: 'Unraid did not answer, so its containers are not shown.',
+            error: const SocketException('Connection refused'),
+            onRetry: () {},
+          ),
+        ),
+        width: 360,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }
