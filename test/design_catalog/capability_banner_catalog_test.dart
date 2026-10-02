@@ -1,7 +1,6 @@
 @Tags(['catalog'])
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/capability/capability_scope.dart';
