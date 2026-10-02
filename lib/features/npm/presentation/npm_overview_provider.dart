@@ -19,12 +19,18 @@
 /// "down among the eight we looked at", and stating it as "2 upstreams down"
 /// with nothing else would turn fifteen unknowns into fifteen green ticks.
 ///
+/// **And the probe runs from this device, not from NPM.** The commonest reason
+/// a socket does not open is a forward host that only resolves on the server's
+/// own network (`immich.lan`, a Docker service name), so from a phone away from
+/// home every such host fails. A failed probe is therefore an observation, said
+/// with where it was made ("not reachable from this device"), and never a
+/// fault: Needs attention lists only what NPM itself declared.
+///
 /// Three rules follow, and they are the reason this file exists rather than the
 /// fold living in the widget:
 ///
 ///  * every subtitle that reports anything derived from the probe carries
-///    [NpmUpstreamReport.coverage] beside it — see [npmAttentionSubtitle] and
-///    [npmProxyHostsSubtitle];
+///    [NpmUpstreamReport.coverage] beside it — see [npmProxyHostsSubtitle];
 ///  * a host with no verdict contributes **no clause at all** to its row, never
 ///    a reassuring one ([npmUpstreamClause] answers null for
 ///    [NpmUpstream.unchecked]);
@@ -35,9 +41,9 @@
 ///
 /// ## Tone, in this service's vocabulary
 ///
-/// Amber is a **fault**: nginx refused a host's configuration, nothing is
-/// listening where a host forwards, a certificate is inside its renewal window
-/// and has not renewed, a certificate has lapsed. Neutral is the **backlog**: a
+/// Amber is a **fault**: nginx refused a host's configuration, a certificate is
+/// inside its renewal window and has not renewed, a certificate has lapsed. A
+/// forward target this device could not reach is not one: see above. Neutral is the **backlog**: a
 /// host the user switched off is doing exactly what they asked, and painting it
 /// amber is the single commonest way the five-arm rule breaks. Red appears
 /// nowhere in this file — red is an NPM that did not answer, which the page's
@@ -109,15 +115,19 @@ String npmCertificateExpiryLabel(NpmCertificate certificate, DateTime now) {
 /// Null is load-bearing. A host outside the budget has not been measured, and a
 /// row that quietly said nothing where a verdict would have gone reads as a
 /// verdict of "fine" to anyone scanning a column.
+///
+/// What it says is what was seen and from where: a socket this device could not
+/// open says so, and never that the upstream is down, which only something on
+/// the server's own network could know.
 String? npmUpstreamClause(NpmUpstream upstream) => switch (upstream) {
   NpmUpstream.answering => 'upstream answering',
-  NpmUpstream.down => 'upstream down',
+  NpmUpstream.down => 'not reachable from this device',
   NpmUpstream.unchecked => null,
 };
 
 // ─── Needs attention ────────────────────────────────────────────────────────
 
-/// The four conditions this page can derive today, **worst first**.
+/// The three faults NPM itself declares, **worst first**.
 ///
 /// The declaration order is load-bearing: [npmAttentionItems] sorts on it, and
 /// the preview cap means the tail is reported only as a number. What is at the
@@ -127,11 +137,14 @@ String? npmUpstreamClause(NpmUpstream upstream) => switch (upstream) {
 ///    all — the site is simply gone;
 ///  * an expired certificate means every browser refuses it, which is the same
 ///    outage with a different error page;
-///  * a dead upstream means nginx is serving the hostname and answering 502,
-///    so the domain at least exists;
 ///  * a certificate inside its window is a deadline, not yet an outage.
 ///
-/// All four are [StatusTone.warning]. None is [StatusTone.error]: red on this
+/// A forward target this device could not reach is not among them: the probe
+/// is this device's view of the network, not NPM's, and it used to head this
+/// list with "Upstream down" for every LAN host whenever the phone was away
+/// from home. Its rows say what they saw on the proxy hosts instead.
+///
+/// All three are [StatusTone.warning]. None is [StatusTone.error]: red on this
 /// screen belongs to an NPM that did not answer, and every one of these facts
 /// arrived *because* it answered.
 enum NpmAttentionKind {
@@ -142,10 +155,6 @@ enum NpmAttentionKind {
   /// The certificate's `expires_on` is in the past.
   certificateExpired(Icons.gpp_bad_rounded),
 
-  /// The client-side probe opened a socket at the forward target and nothing
-  /// accepted it.
-  upstreamDown(Icons.cloud_off_rounded),
-
   /// Inside twenty-one days, and still here.
   certificateExpiring(Icons.lock_clock_rounded);
 
@@ -153,7 +162,7 @@ enum NpmAttentionKind {
 
   final IconData icon;
 
-  /// Amber for all four. See the enum's own doc for why there is no red arm.
+  /// Amber for all three. See the enum's own doc for why there is no red arm.
   StatusTone get tone => StatusTone.warning;
 }
 
@@ -185,24 +194,20 @@ class NpmAttentionItem {
       joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
 }
 
-/// Everything wrong that this client can prove, worst first.
+/// Everything wrong that NPM itself declared, worst first.
 ///
 /// Returns the **whole** census rather than a page of it. The cap belongs to
 /// the widget, so the header can print a number that is the truth and the rows
 /// below it can be a sample — the other way round is the defect where nine
 /// broken hosts are reported as four.
 ///
-/// [upstreams] defaults to a report that checked nothing, which is exactly the
-/// state the screen is in for the first second or two: hosts and certificates
-/// have landed and the probe has not. Every fault the server itself declared is
-/// already drawn by then; the upstream rows join when the sockets come back.
+/// Nothing here comes from the probe: what this device could reach is not a
+/// fault NPM declared. See [NpmAttentionKind].
 List<NpmAttentionItem> npmAttentionItems({
   required List<NpmProxyHost> hosts,
   required List<NpmCertificate> certificates,
   required DateTime now,
-  NpmUpstreamReport? upstreams,
 }) {
-  final report = upstreams ?? NpmUpstreamReport.empty;
   final items = <NpmAttentionItem>[];
 
   for (final host in hosts) {
@@ -252,25 +257,6 @@ List<NpmAttentionItem> npmAttentionItems({
     }
   }
 
-  for (final host in hosts) {
-    if (report.forHost(host.id) != NpmUpstream.down) continue;
-    items.add(
-      NpmAttentionItem(
-        kind: NpmAttentionKind.upstreamDown,
-        headline: 'Upstream down · ${host.primaryDomain}',
-        // The probe runs from **this device**, and the commonest reason it
-        // fails is a forward host that only resolves on the server's own
-        // network (`immich.lan`, a Docker service name). Saying where the
-        // measurement was taken is not a hedge — without it the row asserts an
-        // outage that may not exist.
-        detail: joinDisplayParts([
-          host.target,
-          'not reachable from this device',
-        ]),
-      ),
-    );
-  }
-
   // One row for the set rather than one per certificate. Two certificates
   // expiring the same week is one errand — renewal is not working — and four
   // rows of it would push the hostname that is actually down off a preview of
@@ -318,33 +304,18 @@ List<NpmAttentionItem> npmAttentionItems({
   return List.unmodifiable(items);
 }
 
-/// The Needs attention header: the census, then how much of the set was
-/// actually looked at.
+/// The Needs attention header: the census.
 ///
 /// `—` while the documents are in flight or after they failed, never `0`: a
 /// zero here says "nothing is wrong", which is precisely the reading a user
-/// would act on and precisely the one nobody has established.
-///
-/// The coverage rides along **even when the count is zero**, and especially
-/// then: `0 · reachability checked for 8 of 23 enabled` is an honest all-clear,
-/// while a
-/// bare `0` over a probe that looked at a third of the table is not.
-String npmAttentionSubtitle(
-  List<NpmAttentionItem>? items,
-  NpmUpstreamReport? upstreams,
-) {
+/// would act on and precisely the one nobody has established. No probe
+/// coverage: nothing in the census comes from the probe.
+String npmAttentionSubtitle(List<NpmAttentionItem>? items) {
   if (items == null) return '—';
-  return joinDisplayParts(['${items.length}', upstreams?.coverage]);
+  return '${items.length}';
 }
 
-/// Hosts, certificates and whatever the probe has managed so far.
-///
-/// The probe is read as an [AsyncValue] rather than awaited, and that is the
-/// difference between a region that draws in one frame and one that waits on up
-/// to three socket timeouts. Everything the server itself declared — refused
-/// configurations, expiry dates — is already in hand; watching the report means
-/// this provider simply recomputes when the sockets answer, and the upstream
-/// rows appear then.
+/// Hosts and certificates: what NPM itself declared.
 ///
 /// `retry: noProviderRetry`, because both sources carry it: a derivation on
 /// the default would bring back through the back door the retry the source
@@ -353,14 +324,10 @@ final npmOverviewAttentionProvider =
     FutureProvider.autoDispose<List<NpmAttentionItem>>((ref) async {
       final hosts = await ref.watch(npmProxyHostsProvider.future);
       final certificates = await ref.watch(npmCertificatesProvider.future);
-      // `.asData` and not `.future`: a probe still out, or one that threw, is
-      // not a reason to hold back four faults NPM already told us about.
-      final upstreams = ref.watch(npmUpstreamReportProvider).asData?.value;
       return npmAttentionItems(
         hosts: hosts,
         certificates: certificates,
         now: DateTime.now(),
-        upstreams: upstreams,
       );
     }, retry: noProviderRetry);
 
@@ -373,8 +340,6 @@ class NpmProxyHostRow {
 
   final NpmProxyHost host;
   final NpmUpstream upstream;
-
-  bool get _isDown => upstream == NpmUpstream.down;
 
   /// What nginx is doing with this hostname, in words rather than in colour.
   ///
@@ -389,20 +354,21 @@ class NpmProxyHostRow {
     return 'serving';
   }
 
-  /// Amber for a fault, neutral for a host the user switched off.
+  /// Amber for a fault, neutral for a host the user switched off. A forward
+  /// target this device could not reach is no fault of the host's: its row
+  /// says so in words ([npmUpstreamClause]) and keeps the host's own tone.
   ///
   /// A disabled host is **backlog**: it is doing what it was told. Amber there
   /// would put the alarm colour on the one thing working as intended and drown
   /// the row above it that is genuinely broken.
   StatusTone get tone {
-    if (host.hasConfigError || _isDown) return StatusTone.warning;
+    if (host.hasConfigError) return StatusTone.warning;
     if (!host.enabled) return StatusTone.neutral;
     return StatusTone.success;
   }
 
   IconData get icon {
     if (host.hasConfigError) return Icons.error_outline_rounded;
-    if (_isDown) return Icons.cloud_off_rounded;
     if (!host.enabled) return Icons.pause_circle_outline_rounded;
     return Icons.check_circle_outline_rounded;
   }
@@ -421,18 +387,14 @@ class NpmProxyHostRow {
     if (host.hasAccessList) 'access list',
   ]);
 
-  String get spoken => joinSpokenParts([
-    host.primaryDomain,
-    spokenFromDotted(detail),
-    if (_isDown) 'not reachable from this device',
-  ]);
+  String get spoken =>
+      joinSpokenParts([host.primaryDomain, spokenFromDotted(detail)]);
 }
 
 /// Every proxy host, worst first.
 ///
 /// The order is the control-room order the rest of this service already uses:
-/// what nginx refused, then what has no backend answering, then what is
-/// serving, then what the user switched off. A preview of five that led with
+/// what nginx refused, then what is serving, then what the user switched off. A preview of five that led with
 /// the alphabet would routinely draw five healthy hosts on a box with a broken
 /// one.
 ///
@@ -451,9 +413,8 @@ List<NpmProxyHostRow> npmProxyHostRows(
 
   int rank(NpmProxyHostRow row) {
     if (row.host.hasConfigError) return 0;
-    if (row._isDown) return 1;
-    if (!row.host.enabled) return 3;
-    return 2;
+    if (!row.host.enabled) return 2;
+    return 1;
   }
 
   rows.sort((a, b) {

@@ -93,7 +93,11 @@ void main() {
       // Null, never "unknown" and never nothing-that-reads-as-fine: the section
       // header carries the coverage, and silence in the row means unmeasured.
       expect(npmUpstreamClause(NpmUpstream.unchecked), isNull);
-      expect(npmUpstreamClause(NpmUpstream.down), 'upstream down');
+      // What was seen, and from where: never that the upstream is down.
+      expect(
+        npmUpstreamClause(NpmUpstream.down),
+        'not reachable from this device',
+      );
       expect(npmUpstreamClause(NpmUpstream.answering), 'upstream answering');
     });
   });
@@ -143,39 +147,32 @@ void main() {
       expect(items, isEmpty);
     });
 
-    test('a dead upstream says where the measurement was taken', () {
+    test('a forward target this device could not reach is no fault, and '
+        'says where it was looked at from', () {
+      // The probe runs from this device, and from a phone away from home every
+      // LAN host fails it. It used to head Needs attention with "Upstream
+      // down", in amber, for hosts that were fine.
+      final host = _host(
+        id: 7,
+        domain: 'photos.example.net',
+        forwardHost: 'immich.lan',
+        forwardPort: 2283,
+      );
       final items = npmAttentionItems(
-        hosts: [
-          _host(
-            id: 7,
-            domain: 'photos.example.net',
-            forwardHost: 'immich.lan',
-            forwardPort: 2283,
-          ),
-        ],
+        hosts: [host],
         certificates: const [],
         now: now,
-        upstreams: _report({7: NpmUpstream.down}, checked: 8, total: 23),
       );
-
-      expect(items.single.kind, NpmAttentionKind.upstreamDown);
-      expect(
-        items.single.detail,
-        'http://immich.lan:2283 · not reachable from this device',
-      );
-    });
-
-    test('a host outside the probe budget is not reported as down', () {
-      final items = npmAttentionItems(
-        hosts: [_host(id: 7), _host(id: 8)],
-        certificates: const [],
-        now: now,
-        // Only host 7 was reached, and it answered. Host 8 is unmeasured, and
-        // an unmeasured host must produce neither a fault nor a green tick.
-        upstreams: _report({7: NpmUpstream.answering}, checked: 1, total: 2),
-      );
+      final row = npmProxyHostRows([
+        host,
+      ], _report({7: NpmUpstream.down}, checked: 8, total: 23)).single;
 
       expect(items, isEmpty);
+      expect(
+        row.detail,
+        'http://immich.lan:2283 · serving · not reachable from this device',
+      );
+      expect(row.tone, StatusTone.success);
     });
 
     test('an expired certificate is amber, never red', () {
@@ -297,13 +294,11 @@ void main() {
             _cert(name: 'gone', expiresIn: const Duration(days: -1)),
           ],
           now: now,
-          upstreams: _report({1: NpmUpstream.down}, checked: 2, total: 2),
         );
 
         expect(items.map((i) => i.kind), [
           NpmAttentionKind.nginxRefused,
           NpmAttentionKind.certificateExpired,
-          NpmAttentionKind.upstreamDown,
           NpmAttentionKind.certificateExpiring,
         ]);
       },
@@ -317,17 +312,16 @@ void main() {
             domain: 'photos.example.net',
             forwardHost: 'immich.lan',
             forwardPort: 2283,
+            configLoaded: false,
           ),
         ],
         certificates: const [],
         now: now,
-        upstreams: _report({7: NpmUpstream.down}, checked: 1, total: 1),
       );
 
       expect(
         items.single.spoken,
-        'Upstream down, photos.example.net, http://immich.lan:2283, '
-        'not reachable from this device',
+        'nginx refused, photos.example.net, http://immich.lan:2283',
       );
     });
   });
@@ -336,35 +330,17 @@ void main() {
     test('a source that has not answered reads an em dash, never 0', () {
       // "0" would say "nothing is wrong" over a question nobody answered, which
       // is exactly the reading a user would act on.
-      expect(npmAttentionSubtitle(null, null), '—');
+      expect(npmAttentionSubtitle(null), '—');
     });
 
-    test('the coverage rides along even when the count is zero', () {
-      // `0 · reachability checked for 8 of 23 enabled` is an honest all-clear.
-      // A bare
-      // `0` over a probe that looked at a third of the table is not.
-      expect(
-        npmAttentionSubtitle(
-          const [],
-          _report(const {}, checked: 8, total: 23),
-        ),
-        '0 · reachability checked for 8 of 23 enabled',
-      );
-    });
-
-    test('a probe that has checked nothing adds nothing', () {
-      expect(
-        npmAttentionSubtitle(
-          const [],
-          _report(const {}, checked: 0, total: 23),
-        ),
-        '0',
-      );
+    test('the census is the count alone: none of it comes from the probe', () {
+      expect(npmAttentionSubtitle(const []), '0');
     });
   });
 
   group('npmProxyHostRows', () {
-    test('refused first, then down, then serving, then disabled', () {
+    test('refused first, then serving, then disabled; a host this device '
+        'could not reach is serving', () {
       final rows = npmProxyHostRows([
         _host(id: 1, domain: 'serving.example.net'),
         _host(id: 2, domain: 'off.example.net', enabled: false),
@@ -381,7 +357,7 @@ void main() {
       ]);
       expect(rows.map((r) => r.tone), [
         StatusTone.warning,
-        StatusTone.warning,
+        StatusTone.success,
         StatusTone.success,
         StatusTone.neutral,
       ]);
@@ -431,7 +407,7 @@ void main() {
         npmProxyHostsSubtitle([
           for (var i = 0; i < 23; i++) _host(id: i),
         ], _report(const {}, checked: 8, total: 23)),
-        '23 · reachability checked for 8 of 23 enabled',
+        '23 · reachability checked from this device for 8 of 23 enabled',
       );
     });
 
@@ -446,7 +422,7 @@ void main() {
           _host(id: 23, enabled: false),
           _host(id: 24, enabled: false),
         ], _report(const {}, checked: 8, total: 23)),
-        '25 · reachability checked for 8 of 23 enabled',
+        '25 · reachability checked from this device for 8 of 23 enabled',
       );
     });
 

@@ -625,32 +625,26 @@ class _ProxyHostTile extends ConsumerWidget {
         NpmUpstream.unchecked;
     final down = upstream == NpmUpstream.down;
 
-    // A backend that is not answering leads the line, for the same reason a
-    // broken host leads the table: the reader is here for the thing that is
-    // wrong. A host nobody probed says nothing at all — the section header
-    // carries the coverage, so silence here means "not measured", not "fine".
+    // What the probe saw, and from where: a socket this device could not open
+    // is no outage of the host's, and the commonest reason for one is a
+    // forward host that only resolves on the server's own network. A host
+    // nobody probed says nothing at all — the section header carries the
+    // coverage, so silence here means "not measured", not "fine".
     final detail = [
-      if (down) 'upstream down',
       state,
       host.target,
       if (upstream == NpmUpstream.answering) 'upstream answering',
+      if (down) 'not reachable from this device',
       if (host.hasCertificate) 'TLS',
       if (host.hasAccessList) 'Access list',
     ].join(' · ');
 
-    final hasFault = host.errorText.isNotEmpty || down;
+    final hasFault = host.errorText.isNotEmpty;
     final detailText = host.errorText.isNotEmpty ? host.errorText : detail;
 
     return Semantics(
       container: true,
-      label: [
-        host.primaryDomain,
-        detailText,
-        // The probe runs from the phone, not from the server, and the most
-        // common reason it fails is a forward host that only resolves on the
-        // server's own network. Said out loud rather than left as a colour.
-        if (down) 'not reachable from this device',
-      ].join(', '),
+      label: [host.primaryDomain, detailText].join(', '),
       // The actions menu is the only control on the row and has to stay on the
       // screen reader's path, so the subtree is explicit rather than excluded.
       explicitChildNodes: true,

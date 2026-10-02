@@ -184,15 +184,14 @@ class _NeedsAttentionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(npmOverviewAttentionProvider);
-    final report = ref.watch(npmUpstreamReportProvider).asData?.value;
 
     return ServiceOverviewSection(
       service: ServiceKey.nginxProxyManager,
       title: 'Needs attention',
-      // The **census**, plus how much of the host table the probe covered.
-      // `npmAttentionItems` returns the whole list and the cap is applied below
-      // at draw time, so this number can never be the length of the sample.
-      subtitle: npmAttentionSubtitle(items.asData?.value, report),
+      // The **census**. `npmAttentionItems` returns the whole list and the cap
+      // is applied below at draw time, so this number can never be the length
+      // of the sample.
+      subtitle: npmAttentionSubtitle(items.asData?.value),
       // No link: a refused configuration belongs to Proxy hosts and a lapsing
       // certificate to Certificates, and one destination would have to lie
       // about half the rows.

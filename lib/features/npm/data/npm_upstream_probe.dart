@@ -51,9 +51,10 @@ class NpmUpstreamReport {
   int get downCount =>
       byHostId.values.where((u) => u == NpmUpstream.down).length;
 
-  /// `reachability checked for 8 of 23 enabled`, or null when nothing was
-  /// checked — a coverage line reading "0 of 23" is noise on a screen that has
-  /// not probed anything yet.
+  /// `reachability checked from this device for 8 of 23 enabled`, or null
+  /// when nothing was checked — a coverage line reading "0 of 23" is noise on
+  /// a screen that has not probed anything yet. It says where the check ran,
+  /// because that is half of what it found.
   ///
   /// The word `enabled` is load-bearing and not padding. This line is printed
   /// beside a header count of the **whole** host table, and [total] counts only
@@ -64,7 +65,7 @@ class NpmUpstreamReport {
   /// what makes the pair honest.
   String? get coverage => checked == 0
       ? null
-      : 'reachability checked for $checked of $total enabled';
+      : 'reachability checked from this device for $checked of $total enabled';
 }
 
 /// Asks, from **this device**, whether anything is listening where each proxy

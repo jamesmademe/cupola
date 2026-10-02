@@ -93,30 +93,32 @@ void main() {
       upstreams: _report({1: NpmUpstream.down, 2: NpmUpstream.answering}),
     );
 
-    // Two hosts of three were reached. A count that dropped the coverage would
-    // turn the one unchecked host into a healthy one.
+    // Two hosts of three were reached, from this device. A count that
+    // dropped the coverage would turn the one unchecked host into a healthy
+    // one. Needs attention carries none: nothing in it comes from the probe.
     final headers = tester
         .widgetList<SectionHeader>(find.byType(SectionHeader))
         .toList();
-    expect(headers[0].subtitle, '1 · reachability checked for 2 of 3 enabled');
-    expect(headers[1].subtitle, '3 · reachability checked for 2 of 3 enabled');
+    expect(headers[0].subtitle, '0');
+    expect(
+      headers[1].subtitle,
+      '3 · reachability checked from this device for 2 of 3 enabled',
+    );
   });
 
-  testWidgets('a dead upstream is a fault and speaks one sentence', (
+  testWidgets('a host this device could not reach says so, and is no fault', (
     tester,
   ) async {
     await _pump(tester, upstreams: _report({1: NpmUpstream.down}));
 
-    // One node for the whole row, with the layout's dots read as pauses — not
-    // four fragments a screen reader walks separately — and it names where the
-    // measurement was taken, because the probe runs from this device.
-    expect(
-      find.semantics.byLabel(
-        'Upstream down, jellyfin.lan, http://10.0.0.1:8080, '
-        'not reachable from this device',
-      ),
-      findsOneWidget,
+    // It used to head Needs attention as "Upstream down": from a phone away
+    // from home, every LAN host fails the probe.
+    expect(find.textContaining('Upstream down'), findsNothing);
+    final attention = tester.widget<SectionHeader>(
+      find.widgetWithText(SectionHeader, 'Needs attention'),
     );
+    expect(attention.subtitle, '0');
+    expect(find.textContaining('not reachable from this device'), findsWidgets);
   });
 
   testWidgets('a host the user switched off is backlog, never a fault', (

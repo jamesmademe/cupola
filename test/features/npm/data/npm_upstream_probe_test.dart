@@ -44,7 +44,10 @@ void main() {
       // The word `enabled` is part of the sentence: the total is the probe's
       // own population, and it is printed beside a header count of the whole
       // host table.
-      expect(report.coverage, 'reachability checked for 2 of 5 enabled');
+      expect(
+        report.coverage,
+        'reachability checked from this device for 2 of 5 enabled',
+      );
     });
 
     test(
