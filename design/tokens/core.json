@@ -1538,18 +1538,6 @@
         "$value": "{type.role.micro}",
         "$description": "The 11px floor. Nothing in the app renders smaller."
       },
-      "eyebrow": {
-        "$type": "typography",
-        "$value": {
-          "fontFamily": "{type.family.text}",
-          "fontSize": "11px",
-          "lineHeight": "14px",
-          "fontWeight": 600,
-          "fontWidth": "100%",
-          "letterSpacing": "1.4px"
-        },
-        "$description": "Uppercase kicker above a section or a single-value readout: micro with authored tracking. The system has no uppercase voice; kept for the sites that use it."
-      },
       "chrome": {
         "$type": "typography",
         "$value": "{type.role.micro}",

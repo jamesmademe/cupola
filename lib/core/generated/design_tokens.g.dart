@@ -1130,19 +1130,6 @@ abstract final class DesignTokens {
   static const double typeLabelSmallFontWidth = typeRoleMicroFontWidth;
   static const double typeLabelSmallLetterSpacing = typeRoleMicroLetterSpacing;
 
-  /// Uppercase kicker above a section or a single-value readout: micro with
-  /// authored tracking. The system has no uppercase voice; kept for the sites
-  /// that use it.
-  static const String typeLabelEyebrowFontFamily = typeFamilyText;
-  static const List<String> typeLabelEyebrowFontFamilyFallback =
-      typeFamilyTextFallback;
-  static const double typeLabelEyebrowFontSize = 11;
-  static const double typeLabelEyebrowLineHeight = 1.2727;
-  static const FontWeight typeLabelEyebrowFontWeight = FontWeight.w600;
-  static const double typeLabelEyebrowWght = 600;
-  static const double typeLabelEyebrowFontWidth = 100;
-  static const double typeLabelEyebrowLetterSpacing = 1.4;
-
   /// Dense desktop-shell chrome. Its size is both the default and the enforced
   /// floor.
   static const String typeLabelChromeFontFamily = typeRoleMicroFontFamily;

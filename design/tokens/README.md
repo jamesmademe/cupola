@@ -16,7 +16,7 @@ into token sets:
 
 | File | Set | Holds |
 | --- | --- | --- |
-| `core.json` | `core` | Everything shared by both themes: the fixed palette (service and section accents, the dark room's tone bytes, the plate, the neutral lamp, the legacy brand indigo), the spacing scale, radius, component sizes, breakpoints, motion (durations and curves), the type families and roles, and the shadow geometry. |
+| `core.json` | `core` | Everything shared by both themes: the fixed palette (service and section accents, the dark room's tone bytes, the plate, the neutral lamp), the spacing scale, radius, component sizes, breakpoints, motion (durations and curves), the type families and roles, and the shadow geometry. |
 | `theme/dark.json` | `theme/dark` | The dark room: its steps (`color.room`), lines, fills, inks and five tones as drawn, the colour-scheme roles built on them, dim text, glass and glow opacities, and each shadow layer's opacity. |
 | `theme/light.json` | `theme/light` | The same roles for the day room. |
 | `$themes.json` | — | The two themes, each using `core` as its source set and enabling its own theme set. |

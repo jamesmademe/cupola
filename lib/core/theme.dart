@@ -966,26 +966,6 @@ class AppTheme {
     ],
   ];
 
-  /// The retired "eyebrow" / overline style: small, uppercase-tracked label.
-  ///
-  /// There is no uppercase voice any more (the brand book's Words): every
-  /// section label, KPI label and badge that wore this now sets the micro role
-  /// ([chrome]) in sentence case. It stays for the token's sake; do not add a
-  /// site.
-  ///
-  /// The one style whose tracking is authored for uppercase: +1.4 is what
-  /// uppercasing at 11pt needs to stop reading as a cramped acronym.
-  static TextStyle eyebrow(Color color) => _role(
-    color: color,
-    family: DesignTokens.typeLabelEyebrowFontFamily,
-    fallback: DesignTokens.typeLabelEyebrowFontFamilyFallback,
-    fontSize: DesignTokens.typeLabelEyebrowFontSize,
-    fontWeight: DesignTokens.typeLabelEyebrowFontWeight,
-    wght: DesignTokens.typeLabelEyebrowWght,
-    height: DesignTokens.typeLabelEyebrowLineHeight,
-    letterSpacing: DesignTokens.typeLabelEyebrowLetterSpacing,
-  );
-
   /// The four roles the Material ramp has no slot for.
   ///
   /// They exist because the alternative is what the codebase actually had:
