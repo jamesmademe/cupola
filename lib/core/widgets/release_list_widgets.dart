@@ -109,6 +109,21 @@ class _ReleaseListItemState extends State<ReleaseListItem> {
     final protocol = releaseProtocolOf(release);
     final score = (release['customFormatScore'] as num?)?.toInt() ?? 0;
 
+    // One sentence for the row, its badges and meta silenced: it was read
+    // pill by pill, a quality, a protocol and a score with no title to hang
+    // them on. Grab stays its own control.
+    final facts = [
+      if (quality.isNotEmpty) quality,
+      ?protocol?.label,
+      sizeStr,
+      ageStr,
+      indexer,
+      if (protocol == ReleaseProtocol.torrent && seeders != null)
+        '$seeders seeders',
+      if (score != 0) 'score ${score > 0 ? '+' : ''}$score',
+    ].join(', ');
+    final spoken = '$releaseTitle. $facts. ${tone.label}.';
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -143,6 +158,7 @@ class _ReleaseListItemState extends State<ReleaseListItem> {
                 type: MaterialType.transparency,
                 child: InkWell(
                   onTap: _toggle,
+                  excludeFromSemantics: true,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.md,
@@ -157,35 +173,47 @@ class _ReleaseListItemState extends State<ReleaseListItem> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _ReleaseBadgeRow(
-                                    quality: quality,
-                                    protocol: protocol,
-                                    score: score,
-                                    tone: tone,
+                              child: Semantics(
+                                container: true,
+                                button: true,
+                                label: spoken,
+                                hint: _expanded
+                                    ? 'Hide details'
+                                    : 'Show details',
+                                onTap: _toggle,
+                                child: ExcludeSemantics(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _ReleaseBadgeRow(
+                                        quality: quality,
+                                        protocol: protocol,
+                                        score: score,
+                                        tone: tone,
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                      Text(
+                                        releaseTitle,
+                                        maxLines: _expanded ? 4 : 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodyMedium!
+                                            .weight(FontWeight.w600)
+                                            .copyWith(height: 1.25),
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                      _ReleaseMetaRow(
+                                        indexer: indexer,
+                                        sizeStr: sizeStr,
+                                        ageStr: ageStr,
+                                        seeders: seeders,
+                                        leechers: leechers,
+                                        isTorrent:
+                                            protocol == ReleaseProtocol.torrent,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Text(
-                                    releaseTitle,
-                                    maxLines: _expanded ? 4 : 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodyMedium!
-                                        .weight(FontWeight.w600)
-                                        .copyWith(height: 1.25),
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  _ReleaseMetaRow(
-                                    indexer: indexer,
-                                    sizeStr: sizeStr,
-                                    ageStr: ageStr,
-                                    seeders: seeders,
-                                    leechers: leechers,
-                                    isTorrent:
-                                        protocol == ReleaseProtocol.torrent,
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),

@@ -18,6 +18,10 @@ The consumer provides the release list (or a fetch taking a `CancelToken`), the 
 
 Do keep the rail, the Grab and the header count on the one `releaseStatusTone` so the three agree. Don't invent a percentage for a release search.
 
+## Semantics
+
+The row speaks one sentence and silences its badges and meta: the release name, then its facts, then its state, *Nosferatu.1922.1080p.BluRay.x264-GROUP. Bluray-1080p, Torrent, 4.1 GB, 3 d, Indexer A, 42 seeders, score +120. Approved.*, a button with the hint *Show details* or *Hide details*. Grab stays its own control. It used to be read pill by pill, with no title to hang them on.
+
 ## States in the catalog
 
 Each sheet is drawn in the dark and the light room; the row also on the desktop.
