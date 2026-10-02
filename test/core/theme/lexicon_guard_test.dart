@@ -17,7 +17,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// What it reads: every string literal in `lib/`, with its interpolations
 /// blanked (an identifier such as `folded.offline` inside `${…}` is code, not
-/// copy). What it leaves alone, because none of it is read by a person:
+/// copy), and adjacent literals joined as Dart joins them, so a sentence
+/// wrapped across lines is read whole. What it leaves alone, because none of it is read by a person:
 ///
 ///  * a literal matched against a wire value — after `==`, `!=` or `case`, as
 ///    a `switch` pattern (followed by `=>` or `||`), a map key or case label
@@ -138,6 +139,23 @@ void main() {
       ];
       expect(caught, ['Saved — Radarr', '$_hole — $_hole']);
     });
+  });
+
+  test('a sentence wrapped across adjacent literals is read whole', () {
+    // Dart joins adjacent literals into one string, so a phrase split at the
+    // wrap is one phrase on screen: read per literal, `'… try '` `'again.'`
+    // hid a banned "try again" from every check above.
+    const planted =
+        "final a = 'Refresh the list and try '\n"
+        "    // a comment between the halves\n"
+        "    'again.';\n"
+        "final b = ['try', 'again'];\n";
+    final prose = [
+      for (final literal in _copyOf('lib/zz_planted.dart', planted))
+        literal.prose,
+    ];
+    expect(prose, ['Refresh the list and try again.', 'try', 'again']);
+    expect(_never['Try again → Retry']!.hasMatch(prose.first), isTrue);
   });
 
   test('there is no uppercase voice', () {
@@ -271,7 +289,9 @@ const _allowed = <({String file, String literal, String reason})>[
   (
     file:
         'lib/features/truenas/presentation/system/truenas_diagnostics_screen.dart',
-    literal: 'Debug-only: raw JSON-RPC responses from the connected server. ',
+    literal:
+        'Debug-only: raw JSON-RPC responses from the connected server. Copy '
+        'these to help finalise parsing.',
     reason: 'a debug-only diagnostic screen, not product copy',
   ),
   (
@@ -362,8 +382,9 @@ List<_Literal> _copyOf(String path, String source) {
 
   late int Function(int start, {bool closeBrace}) code;
 
-  // Lexes the literal at [start] and returns the offset after it.
-  int string(int start) {
+  // Lexes the literal at [start]: the offset after it, and its prose (null for
+  // a raw string, which is a pattern).
+  (int, String?) string(int start) {
     var i = start;
     var raw = false;
     if (s[i] == 'r') {
@@ -377,11 +398,7 @@ List<_Literal> _copyOf(String path, String source) {
     final prose = StringBuffer();
     while (i < s.length) {
       if (s.startsWith(delimiter, i)) {
-        final end = i + delimiter.length;
-        if (!raw && !_isWireValue(s, start, end)) {
-          found.add(_Literal(path, lineAt(start), prose.toString()));
-        }
-        return end;
+        return (i + delimiter.length, raw ? null : prose.toString());
       }
       final c = s[i];
       if (!raw && c == r'\') {
@@ -408,11 +425,66 @@ List<_Literal> _copyOf(String path, String source) {
           continue;
         }
       }
-      if (!triple && c == '\n') return i;
+      if (!triple && c == '\n') return (i, raw ? null : prose.toString());
       prose.write(c);
       i++;
     }
+    return (i, raw ? null : prose.toString());
+  }
+
+  bool opensString(int i) {
+    if (i >= s.length) return false;
+    final c = s[i];
+    if (c == "'" || c == '"') return true;
+    return c == 'r' &&
+        i + 1 < s.length &&
+        (s[i + 1] == "'" || s[i + 1] == '"') &&
+        (i == 0 || !isIdent(s[i - 1]));
+  }
+
+  // The offset of the next token after [i], past whitespace and comments.
+  int skipGap(int i) {
+    while (i < s.length) {
+      if (s.startsWith('//', i)) {
+        final end = s.indexOf('\n', i);
+        if (end < 0) return s.length;
+        i = end;
+        continue;
+      }
+      if (s.startsWith('/*', i)) {
+        final end = s.indexOf('*/', i + 2);
+        i = end < 0 ? s.length : end + 2;
+        continue;
+      }
+      if (s[i].trim().isEmpty) {
+        i++;
+        continue;
+      }
+      return i;
+    }
     return i;
+  }
+
+  // Lexes the literal at [start] and every literal adjacent to it, which Dart
+  // joins into one string: a sentence wrapped across lines is read whole, so
+  // a banned phrase split at the wrap (`'… try '` `'again.'`) is still seen.
+  // Returns the offset after the last of them.
+  int strings(int start) {
+    var (end, prose) = string(start);
+    var raw = prose == null;
+    final joined = StringBuffer(prose ?? '');
+    var next = skipGap(end);
+    while (opensString(next)) {
+      final (nextEnd, nextProse) = string(next);
+      raw = raw || nextProse == null;
+      joined.write(nextProse ?? '');
+      end = nextEnd;
+      next = skipGap(end);
+    }
+    if (!raw && !_isWireValue(s, start, end)) {
+      found.add(_Literal(path, lineAt(start), joined.toString()));
+    }
+    return end;
   }
 
   code = (int start, {bool closeBrace = false}) {
@@ -431,15 +503,8 @@ List<_Literal> _copyOf(String path, String source) {
         continue;
       }
       final c = s[i];
-      if (c == "'" || c == '"') {
-        i = string(i);
-        continue;
-      }
-      if (c == 'r' &&
-          i + 1 < s.length &&
-          (s[i + 1] == "'" || s[i + 1] == '"') &&
-          (i == 0 || !isIdent(s[i - 1]))) {
-        i = string(i);
+      if (opensString(i)) {
+        i = strings(i);
         continue;
       }
       if (c == '{') depth++;

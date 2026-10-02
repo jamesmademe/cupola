@@ -593,8 +593,8 @@ class PlexClient implements StreamServerClient {
     }
     if (status == 403) {
       return const PlexException(
-        'The server did not accept that session id. Refresh the list and try '
-        'again.',
+        'The server did not accept that session id. Refresh the list and '
+        'retry.',
         reason: ServiceFailureReason.notFound,
       );
     }
