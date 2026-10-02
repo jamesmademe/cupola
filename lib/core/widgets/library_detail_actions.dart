@@ -510,6 +510,7 @@ class LibraryDetailActions extends StatelessWidget {
     );
 
     final tonalStyle = HeaderActionRow.tonalIconButtonStyle(
+      context,
       foregroundColor: colorScheme.onSurfaceVariant,
       backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
       borderColor: colorScheme.outlineVariant,
@@ -576,6 +577,7 @@ class LibraryDetailActions extends StatelessWidget {
       onPressed: _whenIdle(candidate.action.onInvoke),
       style:
           HeaderActionRow.tonalExpandedButtonStyle(
+            context,
             foregroundColor: colorScheme.onSurfaceVariant,
             backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
             borderColor: colorScheme.outlineVariant,
@@ -685,6 +687,7 @@ class LibraryDetailActions extends StatelessWidget {
             ),
             label: label,
             style: HeaderActionRow.expandedButtonStyle(
+              context,
               foregroundColor: onPrimaryFill,
               backgroundColor: primaryFill,
               disabledForegroundColor: onPrimaryFill,

@@ -30,7 +30,7 @@ class DiscoverVideosButton extends StatelessWidget {
           : () => _showVideosSheet(context, videos),
       icon: const Icon(Icons.play_circle_outline_rounded),
       label: const Text('Videos'),
-      style: HeaderActionRow.expandedButtonStyle(),
+      style: HeaderActionRow.expandedButtonStyle(context),
     );
   }
 }
@@ -47,7 +47,7 @@ class _DiscoverVideosIconButton extends StatelessWidget {
       onPressed: videos.isEmpty
           ? null
           : () => _showVideosSheet(context, videos),
-      style: HeaderActionRow.iconOnlyButtonStyle(),
+      style: HeaderActionRow.iconOnlyButtonStyle(context),
       child: const Icon(Icons.play_circle_outline_rounded),
     );
   }

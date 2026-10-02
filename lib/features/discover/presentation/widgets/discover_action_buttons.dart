@@ -194,6 +194,7 @@ class DiscoverActionButtons extends ConsumerWidget {
         ),
       ),
       style: HeaderActionRow.expandedButtonStyle(
+        context,
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         // "Available" and "Requested" are states read, not dead controls, so

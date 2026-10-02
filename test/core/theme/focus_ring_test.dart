@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/focus_ring.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
 
 /// The keyboard's place is a ring (brand book, *Lines and fills*: the focus
@@ -80,5 +81,40 @@ void main() {
       ),
     );
     expect(material.shape, isA<FocusRingBorder>());
+  });
+
+  testWidgets('the detail band rings its own shapes', (tester) async {
+    late List<ButtonStyle> styles;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.darkTheme(),
+        home: Builder(
+          builder: (context) {
+            styles = [
+              HeaderActionRow.expandedButtonStyle(context),
+              HeaderActionRow.iconOnlyButtonStyle(context),
+              HeaderActionRow.tonalIconButtonStyle(
+                context,
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.black,
+                borderColor: Colors.grey,
+              ),
+              HeaderActionRow.tonalExpandedButtonStyle(
+                context,
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.black,
+                borderColor: Colors.grey,
+              ),
+            ];
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    for (final style in styles) {
+      final focused = style.shape!.resolve({WidgetState.focused});
+      expect(focused, isA<FocusRingBorder>());
+      expect((focused! as FocusRingBorder).color, CupolaRoom.dark.focus);
+    }
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/focus_ring.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -61,7 +62,14 @@ class HeaderActionRow extends StatelessWidget {
     borderRadius: BorderRadius.circular(AppRadius.button),
   );
 
-  static ButtonStyle _filledButtonStyle({
+  /// [_buttonShape], ringed in `line.focus` while the keyboard holds it
+  /// (`FocusRingBorder`): a style that sets its own shape replaces the
+  /// theme's, ring included, so the band draws it itself.
+  static WidgetStateProperty<OutlinedBorder> _ringed(BuildContext context) =>
+      focusRingShape(_buttonShape, ring: CupolaRoom.of(context).focus);
+
+  static ButtonStyle _filledButtonStyle(
+    BuildContext context, {
     EdgeInsetsGeometry? padding,
     Size? minimumSize,
     Size? fixedSize,
@@ -73,17 +81,18 @@ class HeaderActionRow extends StatelessWidget {
     fixedSize: fixedSize,
     foregroundColor: foregroundColor,
     backgroundColor: backgroundColor,
-    shape: _buttonShape,
-  );
+  ).copyWith(shape: _ringed(context));
 
   /// Creates a [ButtonStyle] for icon-only [FilledButton] trailing widgets.
   ///
   /// Produces a [buttonHeight]×[buttonHeight] square button. Pass
   /// [backgroundColor] and [foregroundColor] for variants like error/delete.
-  static ButtonStyle iconOnlyButtonStyle({
+  static ButtonStyle iconOnlyButtonStyle(
+    BuildContext context, {
     Color? foregroundColor,
     Color? backgroundColor,
   }) => _filledButtonStyle(
+    context,
     padding: EdgeInsets.zero,
     minimumSize: const Size(buttonHeight, buttonHeight),
     fixedSize: const Size(buttonHeight, buttonHeight),
@@ -97,7 +106,8 @@ class HeaderActionRow extends StatelessWidget {
   /// that no longer fits is broken *inside the word* — which is how the request
   /// button came to read "Requeste / d" at an accessibility reading size. The
   /// button grows instead.
-  static ButtonStyle expandedButtonStyle({
+  static ButtonStyle expandedButtonStyle(
+    BuildContext context, {
     Color? foregroundColor,
     Color? backgroundColor,
     Color? disabledForegroundColor,
@@ -114,10 +124,10 @@ class HeaderActionRow extends StatelessWidget {
     backgroundColor: backgroundColor,
     disabledForegroundColor: disabledForegroundColor,
     disabledBackgroundColor: disabledBackgroundColor,
-    shape: _buttonShape,
-  );
+  ).copyWith(shape: _ringed(context));
 
-  static ButtonStyle tonalIconButtonStyle({
+  static ButtonStyle tonalIconButtonStyle(
+    BuildContext context, {
     required Color foregroundColor,
     required Color backgroundColor,
     required Color borderColor,
@@ -128,10 +138,10 @@ class HeaderActionRow extends StatelessWidget {
     foregroundColor: foregroundColor,
     backgroundColor: backgroundColor,
     side: BorderSide(color: borderColor),
-    shape: _buttonShape,
-  );
+  ).copyWith(shape: _ringed(context));
 
-  static ButtonStyle tonalExpandedButtonStyle({
+  static ButtonStyle tonalExpandedButtonStyle(
+    BuildContext context, {
     required Color foregroundColor,
     required Color backgroundColor,
     required Color borderColor,
@@ -143,8 +153,7 @@ class HeaderActionRow extends StatelessWidget {
     foregroundColor: foregroundColor,
     backgroundColor: backgroundColor,
     side: BorderSide(color: borderColor),
-    shape: _buttonShape,
-  );
+  ).copyWith(shape: _ringed(context));
 
   @override
   Widget build(BuildContext context) {
@@ -365,6 +374,7 @@ class HeaderActionButton extends StatelessWidget {
             child: OutlinedButton(
               onPressed: isBusy ? null : onPressed,
               style: HeaderActionRow.tonalIconButtonStyle(
+                context,
                 foregroundColor: foreground,
                 backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
                 borderColor: colorScheme.outlineVariant,

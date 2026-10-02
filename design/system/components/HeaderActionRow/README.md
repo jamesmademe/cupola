@@ -7,7 +7,7 @@ Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `Act
 ## The row
 
 - `HeaderActionRow(expanded:, trailing:, crossAxisAlignment:)`: `expanded` fills the row, `AppSpacing.sm` (8), then `trailing`. Centred by default; `CrossAxisAlignment.start` when a trailing control hangs a caption, so the tops align and the caption hangs below.
-- `HeaderActionRow.buttonHeight` is **52**, `size.button-l`: the brand book's primary, which the promoted verb is, above the 48 touch floor (the larger of iOS 44pt and Android 48dp); the discs take it too, so a band has one height. Every control's shape is `radius.button` (16), continuous. Adjacent targets are at least `AppSpacing.sm` apart.
+- `HeaderActionRow.buttonHeight` is **52**, `size.button-l`: the brand book's primary, which the promoted verb is, above the 48 touch floor (the larger of iOS 44pt and Android 48dp); the discs take it too, so a band has one height. Every control's shape is `radius.button` (16), continuous, and ringed in `line.focus` while the keyboard holds it (the styles take the `BuildContext` for it: a style that sets its own shape replaces the theme's ring). Adjacent targets are at least `AppSpacing.sm` apart.
 - Every control uses `AppRadius.borderRadiusMd` (14), the control radius. None is drawn as a pill.
 
 ## Styles
