@@ -48,7 +48,7 @@ Future<void> updateAllApps(
   if (failures.isEmpty) {
     SnackBarHelper.success(context, 'Updated ${upgradable.length} app$plural');
   } else {
-    SnackBarHelper.error(context, 'Failed to update: ${failures.join(', ')}');
+    SnackBarHelper.error(context, 'Could not update: ${failures.join(', ')}');
   }
 }
 

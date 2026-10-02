@@ -157,7 +157,7 @@ class BazarrProvidersScreen extends ConsumerWidget {
       if (context.mounted) {
         SnackBarHelper.error(
           context,
-          'Failed to reset provider throttles',
+          'Could not reset provider throttles',
           detail: error,
         );
       }

@@ -202,7 +202,7 @@ class _TransmissionLabelsScreenState
       ref,
       action: (client) => client.setLabels([torrent.rpcId], labels),
       successMessage: labels.isEmpty ? 'Labels cleared' : 'Labels updated',
-      failureMessage: 'Failed to update labels',
+      failureMessage: 'Could not update labels',
       invalidate: <ProviderOrFamily>[
         transmissionTorrentsProvider,
         transmissionLabelsProvider,
@@ -817,7 +817,7 @@ class _TransmissionSessionBodyState
       ref,
       action: action,
       successMessage: successMessage,
-      failureMessage: 'Failed to update Transmission session',
+      failureMessage: 'Could not update the Transmission session',
       invalidate: <ProviderOrFamily>[
         transmissionSessionProvider,
         transmissionSessionFactsProvider,

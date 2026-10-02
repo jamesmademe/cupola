@@ -38,7 +38,7 @@ Future<List<bool>> _run(
                     ref,
                     action: action,
                     successMessage: 'Job paused',
-                    failureMessage: 'Failed to pause the job',
+                    failureMessage: 'Could not pause the job',
                   ),
                 );
               },
@@ -73,7 +73,7 @@ void main() {
 
       expect(outcomes, [isFalse]);
       expect(find.text('Job paused'), findsNothing);
-      expect(find.textContaining('Failed to pause the job'), findsOneWidget);
+      expect(find.textContaining('Could not pause the job'), findsOneWidget);
       expect(find.textContaining('rejected'), findsOneWidget);
     });
 
@@ -129,7 +129,7 @@ void main() {
       final outcomes = await _run(tester, adapter, (c) => c.pauseGroup(5));
 
       expect(outcomes, [isFalse]);
-      expect(find.textContaining('Failed to pause the job'), findsOneWidget);
+      expect(find.textContaining('Could not pause the job'), findsOneWidget);
     });
   });
 }

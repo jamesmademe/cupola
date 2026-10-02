@@ -318,7 +318,7 @@ class _InfoTab extends ConsumerWidget {
       ref,
       action: (service) => service.setCategory([torrent.hash], result),
       successMessage: 'Category set to "${result.trim()}"',
-      failureMessage: 'Failed to set category',
+      failureMessage: 'Could not set category',
       invalidate: [torrentsProvider, allTorrentsProvider],
     );
   }
@@ -346,7 +346,7 @@ class _InfoTab extends ConsumerWidget {
         }
       },
       successMessage: 'Tags updated',
-      failureMessage: 'Failed to update tags',
+      failureMessage: 'Could not update tags',
       invalidate: [torrentsProvider, allTorrentsProvider],
     );
   }
@@ -584,7 +584,7 @@ class _FileRow extends ConsumerWidget {
       action: (service) =>
           service.filePrio(hash: hash, fileIndexes: [index], priority: picked),
       successMessage: 'Priority set to ${_priorityLabels[picked]}',
-      failureMessage: 'Failed to set priority',
+      failureMessage: 'Could not set priority',
       invalidate: [torrentFilesProvider(hash)],
     );
   }
@@ -719,7 +719,7 @@ class _ActionsTab extends ConsumerWidget {
             ref,
             action: (service) => service.resumeTorrents([torrent.hash]),
             successMessage: 'Resumed',
-            failureMessage: 'Failed to resume',
+            failureMessage: 'Could not resume',
             invalidate: [torrentsProvider, allTorrentsProvider],
           ),
           icon: const Icon(Icons.play_arrow_rounded, size: 18),
@@ -748,7 +748,7 @@ class _ActionsTab extends ConsumerWidget {
             ref,
             action: (service) => service.pauseTorrents([torrent.hash]),
             successMessage: StateWord.stopped.label,
-            failureMessage: 'Failed to pause',
+            failureMessage: 'Could not pause',
             invalidate: [torrentsProvider, allTorrentsProvider],
           ),
           icon: const Icon(Icons.pause_rounded, size: 18),
@@ -828,7 +828,7 @@ class _ActionsTab extends ConsumerWidget {
       ref,
       action: (service) => service.recheck(torrent.hash),
       successMessage: 'Recheck started',
-      failureMessage: 'Failed to recheck',
+      failureMessage: 'Could not recheck',
     );
   }
 
@@ -874,7 +874,7 @@ class _ActionsTab extends ConsumerWidget {
       successMessage: isDownload
           ? 'Download limit set to $label'
           : 'Upload limit set to $label',
-      failureMessage: 'Failed to set limit',
+      failureMessage: 'Could not set limit',
       invalidate: [torrentsProvider, allTorrentsProvider],
     );
   }
@@ -885,7 +885,7 @@ class _ActionsTab extends ConsumerWidget {
       ref,
       action: (service) => service.toggleAlternativeSpeedLimits(),
       successMessage: 'Alternative speed limits toggled',
-      failureMessage: 'Failed to toggle',
+      failureMessage: 'Could not toggle',
       invalidate: [transferInfoProvider],
     );
   }
@@ -911,7 +911,7 @@ class _ActionsTab extends ConsumerWidget {
         successMessage: result.deleteFiles
             ? 'Deleted torrent and files'
             : 'Deleted torrent',
-        failureMessage: 'Failed to delete',
+        failureMessage: 'Could not delete',
         invalidate: [torrentsProvider, allTorrentsProvider],
       );
       if (ok && context.mounted) context.pop();

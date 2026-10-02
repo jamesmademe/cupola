@@ -205,7 +205,7 @@ class _ActionBar extends ConsumerWidget {
             ref,
             (c) => c.startStack(name),
             'Started $name',
-            'Failed to start',
+            'Could not start',
             onSuccess: () => onRefresh(ref),
           ),
         ),
@@ -219,7 +219,7 @@ class _ActionBar extends ConsumerWidget {
             DockgeStackLifecycle.stop,
             (c) => c.stopStack(name),
             'Stopped $name',
-            'Failed to stop',
+            'Could not stop',
           ),
         ),
         _ActionChip(
@@ -232,7 +232,7 @@ class _ActionBar extends ConsumerWidget {
             DockgeStackLifecycle.restart,
             (c) => c.restartStack(name),
             'Restarted $name',
-            'Failed to restart',
+            'Could not restart',
           ),
         ),
         _ActionChip(
@@ -245,7 +245,7 @@ class _ActionBar extends ConsumerWidget {
             DockgeStackLifecycle.update,
             (c) => c.updateStack(name),
             'Updated $name',
-            'Failed to update',
+            'Could not update',
           ),
         ),
         _ActionChip(
@@ -311,7 +311,7 @@ class _ActionBar extends ConsumerWidget {
       ref,
       action: (c) => c.deleteStack(name),
       successMessage: 'Deleted $name',
-      failureMessage: 'Failed to delete',
+      failureMessage: 'Could not delete',
       invalidate: [dockgeStackListProvider],
     );
     if (ok && context.mounted) context.pop();

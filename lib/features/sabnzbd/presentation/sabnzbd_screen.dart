@@ -221,8 +221,8 @@ class _SabnzbdActionsBar extends ConsumerWidget {
                             ? 'Queue resumed'
                             : 'Queue stopped',
                         failureMessage: paused
-                            ? 'Failed to resume the queue'
-                            : 'Failed to pause the queue',
+                            ? 'Could not resume the queue'
+                            : 'Could not pause the queue',
                         invalidate: _sabnzbdInvalidateAfterAction,
                       );
                     },
@@ -255,7 +255,7 @@ Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
     ref,
     action: (c) => c.addUrl(result.url, category: result.category),
     successMessage: 'NZB added',
-    failureMessage: 'Failed to add the NZB',
+    failureMessage: 'Could not add the NZB',
     invalidate: _sabnzbdInvalidateAfterAction,
   );
 }
@@ -396,7 +396,7 @@ class _QueueTile extends ConsumerWidget {
           ref,
           action: (c) => c.pauseJob(slot.nzoId),
           successMessage: 'Job stopped',
-          failureMessage: 'Failed to pause the job',
+          failureMessage: 'Could not pause the job',
           invalidate: _sabnzbdInvalidateAfterAction,
         );
       case DownloadQueueCommand.resume:
@@ -405,7 +405,7 @@ class _QueueTile extends ConsumerWidget {
           ref,
           action: (c) => c.resumeJob(slot.nzoId),
           successMessage: 'Job resumed',
-          failureMessage: 'Failed to resume the job',
+          failureMessage: 'Could not resume the job',
           invalidate: _sabnzbdInvalidateAfterAction,
         );
       case DownloadQueueCommand.delete:
@@ -448,7 +448,7 @@ class _QueueTile extends ConsumerWidget {
       ref,
       action: (c) => c.deleteJob(slot.nzoId, deleteFiles: deleteFiles),
       successMessage: deleteFiles ? 'Job and its files deleted' : 'Job removed',
-      failureMessage: 'Failed to remove the job',
+      failureMessage: 'Could not remove the job',
       invalidate: _sabnzbdInvalidateAfterAction,
     );
   }

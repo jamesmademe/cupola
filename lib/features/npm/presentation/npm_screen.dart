@@ -773,7 +773,7 @@ class _ProxyHostMenu extends ConsumerWidget {
               resource: NpmResource.proxyHosts,
               action: (c) => c.setProxyHostEnabled(host.id, true),
               successMessage: '${host.primaryDomain} enabled',
-              failureMessage: 'Failed to enable ${host.primaryDomain}',
+              failureMessage: 'Could not enable ${host.primaryDomain}',
               invalidate: _invalidateAfterAction,
             );
           case 'disable':
@@ -831,7 +831,7 @@ Future<void> _confirmDisable(
     resource: NpmResource.proxyHosts,
     action: (c) => c.setProxyHostEnabled(host.id, false),
     successMessage: '${host.primaryDomain} is no longer served',
-    failureMessage: 'Failed to disable ${host.primaryDomain}',
+    failureMessage: 'Could not disable ${host.primaryDomain}',
     invalidate: _invalidateAfterAction,
   );
 }
@@ -997,7 +997,7 @@ class _CertificateTile extends ConsumerWidget {
                     resource: NpmResource.certificates,
                     action: (c) => c.renewCertificate(cert.id),
                     successMessage: 'Renewal requested',
-                    failureMessage: 'Failed to request renewal',
+                    failureMessage: 'Could not request renewal',
                     invalidate: _invalidateAfterAction,
                   ),
                   builder: (context, onPressed, annotate) => TextButton(

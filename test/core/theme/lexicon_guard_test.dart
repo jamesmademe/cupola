@@ -72,7 +72,8 @@ void main() {
           'Copy here uses a word the brand book bans. Use the lexicon '
           '(StateWord, Lexicon, failureLabel/failureHeadline): Answering · '
           'Did not answer · Not set up · Set up X · Retry · Stuck · Stopped · '
-          'Waiting for approval · Could not (never the contraction). A word '
+          'Waiting for approval · Could not (never the contraction, never '
+          '"Failed to"). A word '
           'that is not the banned state goes in '
           '_allowed with its reason.',
     );
@@ -186,6 +187,32 @@ final e = "The server couldn't check $it";
     ]);
   });
 
+  test('"Failed to" fails through the same lexer; a comment, a wire value and '
+      'a state word do not', () {
+    // The app says "Could not" in a toast and a failure line alike. A server's
+    // own message (`text == 'Failed to …'`) is matched, never shown, and
+    // "Import failed" is a state, not the verb phrase this entry bans.
+    const planted = r"""
+final a = 'Failed to pause the job';
+final b = "Failed to add $title";
+// Failed to, in a comment, is not copy.
+final c = 'Could not pause the job';
+final d = 'Import failed';
+final e = text == 'Failed to check Quick Connect status';
+final f = 'failed to start';
+""";
+    final caught = [
+      for (final literal in copyOf('lib/zz_planted.dart', planted))
+        if (_never['Failed to → Could not']!.hasMatch(literal.prose))
+          literal.prose,
+    ];
+    expect(caught, [
+      'Failed to pause the job',
+      'Failed to add $copyHole',
+      'failed to start',
+    ]);
+  });
+
   test('there is no uppercase voice', () {
     // Sentence case everywhere: the eyebrow, the one style whose tracking is
     // authored for capitals, has no site left, and a new one would bring the
@@ -278,6 +305,7 @@ final _never = <String, RegExp>{
   'Snooze → Keep waiting': RegExp(r'\bsnooze', caseSensitive: false),
   'a bare Delete': RegExp(r'^Delete$'),
   "Couldn't → Could not": RegExp(r"\bcouldn['’]t\b", caseSensitive: false),
+  'Failed to → Could not': RegExp(r'\bfailed to\b', caseSensitive: false),
   'Could not load X → the classification\'s headline': RegExp(
     r'\b(could not|failed to) load\b',
     caseSensitive: false,

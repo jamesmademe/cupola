@@ -236,7 +236,7 @@ class _StackQuickActions extends ConsumerWidget {
               verb: DockgeStackLifecycle.stop,
               action: (c) => c.stopStack(stack.name),
               success: 'Stopped ${stack.name}',
-              failure: 'Failed to stop ${stack.name}',
+              failure: 'Could not stop ${stack.name}',
             ),
           )
         else
@@ -249,7 +249,7 @@ class _StackQuickActions extends ConsumerWidget {
               ref,
               (c) => c.startStack(stack.name),
               'Started ${stack.name}',
-              'Failed to start ${stack.name}',
+              'Could not start ${stack.name}',
               invalidate: [dockgeStackListProvider],
             ),
           ),
@@ -262,7 +262,7 @@ class _StackQuickActions extends ConsumerWidget {
             verb: DockgeStackLifecycle.restart,
             action: (c) => c.restartStack(stack.name),
             success: 'Restarted ${stack.name}',
-            failure: 'Failed to restart ${stack.name}',
+            failure: 'Could not restart ${stack.name}',
           ),
         ),
       ],

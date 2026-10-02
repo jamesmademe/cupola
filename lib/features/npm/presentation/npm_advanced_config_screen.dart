@@ -123,7 +123,7 @@ class _NpmAdvancedConfigScreenState
         );
       },
       successMessage: 'Saved · nginx reloaded',
-      failureMessage: 'Failed to save the advanced config',
+      failureMessage: 'Could not save the advanced config',
       invalidate: [npmProxyHostsProvider],
     );
 

@@ -269,8 +269,8 @@ class _TransmissionActionsBar extends ConsumerWidget {
                       ? 'Speed limits off'
                       : 'Alternative speed limits on',
                   failureMessage: turtle
-                      ? 'Failed to turn speed limits off'
-                      : 'Failed to turn speed limits on',
+                      ? 'Could not turn speed limits off'
+                      : 'Could not turn speed limits on',
                   invalidate: _invalidateAfterAction,
                 );
               },
@@ -377,7 +377,7 @@ class _TorrentMenu extends ConsumerWidget {
               ref,
               action: (c) => c.start(ids),
               successMessage: 'Started',
-              failureMessage: 'Failed to start the torrent',
+              failureMessage: 'Could not start the torrent',
               invalidate: _invalidateAfterAction,
             );
           case 'stop':
@@ -386,7 +386,7 @@ class _TorrentMenu extends ConsumerWidget {
               ref,
               action: (c) => c.stop(ids),
               successMessage: 'Stopped',
-              failureMessage: 'Failed to stop the torrent',
+              failureMessage: 'Could not stop the torrent',
               invalidate: _invalidateAfterAction,
             );
           case 'verify':
@@ -398,7 +398,7 @@ class _TorrentMenu extends ConsumerWidget {
               // as the daemon accepts the job, while the re-check itself runs
               // for minutes or hours. Claiming completion here would be false.
               successMessage: 'Verifying, this runs in the background',
-              failureMessage: 'Failed to start verification',
+              failureMessage: 'Could not start verification',
               invalidate: _invalidateAfterAction,
             );
           case 'reannounce':
@@ -416,7 +416,7 @@ class _TorrentMenu extends ConsumerWidget {
               ref,
               action: (c) => c.queueMove(ids, TransmissionQueueMove.top),
               successMessage: 'Moved to the top of the queue',
-              failureMessage: 'Failed to move the torrent',
+              failureMessage: 'Could not move the torrent',
               invalidate: _invalidateAfterAction,
             );
           case 'remove':
@@ -485,7 +485,7 @@ Future<void> _confirmRemove(
     action: (c) =>
         c.removeTorrents([torrent.rpcId], deleteLocalData: deleteData),
     successMessage: deleteData ? 'Removed and files deleted' : 'Removed',
-    failureMessage: 'Failed to remove the torrent',
+    failureMessage: 'Could not remove the torrent',
     invalidate: _invalidateAfterAction,
   );
 }

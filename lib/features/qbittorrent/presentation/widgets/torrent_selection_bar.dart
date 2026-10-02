@@ -54,7 +54,7 @@ class TorrentSelectionBar extends ConsumerWidget {
                   action: (service) =>
                       service.resumeTorrents(selectedHashes.toList()),
                   successMessage: 'Resumed',
-                  failureMessage: 'Failed to resume',
+                  failureMessage: 'Could not resume',
                   invalidate: [torrentsProvider, allTorrentsProvider],
                 ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
@@ -82,7 +82,7 @@ class TorrentSelectionBar extends ConsumerWidget {
                   ref,
                   action: (service) =>
                       service.pauseTorrents(selectedHashes.toList()),
-                  failureMessage: 'Failed to pause',
+                  failureMessage: 'Could not pause',
                   invalidate: [torrentsProvider, allTorrentsProvider],
                 ),
               ),
@@ -127,7 +127,7 @@ Future<bool> confirmDeleteTorrents(
     successMessage: result.deleteFiles
         ? 'Deleted $count torrent$plural and files'
         : 'Deleted $count torrent$plural',
-    failureMessage: 'Failed to delete',
+    failureMessage: 'Could not delete',
     invalidate: [torrentsProvider, allTorrentsProvider],
   );
   if (ok) {

@@ -212,8 +212,8 @@ class _NzbgetActionsBar extends ConsumerWidget {
                             ? 'Downloads resumed'
                             : 'Downloads stopped',
                         failureMessage: paused
-                            ? 'Failed to resume downloads'
-                            : 'Failed to pause downloads',
+                            ? 'Could not resume downloads'
+                            : 'Could not pause downloads',
                         invalidate: _nzbgetInvalidateAfterAction,
                       );
                     },
@@ -247,7 +247,7 @@ Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
     ref,
     action: (c) => c.append(name.isEmpty ? 'cupola.nzb' : name, url),
     successMessage: 'NZB added',
-    failureMessage: 'Failed to add the NZB',
+    failureMessage: 'Could not add the NZB',
     invalidate: _nzbgetInvalidateAfterAction,
   );
 }
@@ -347,7 +347,7 @@ class _QueueTile extends ConsumerWidget {
           ref,
           action: (c) => c.pauseGroup(group.nzbId),
           successMessage: 'Job stopped',
-          failureMessage: 'Failed to pause the job',
+          failureMessage: 'Could not pause the job',
           invalidate: _nzbgetInvalidateAfterAction,
         );
       case DownloadQueueCommand.resume:
@@ -356,7 +356,7 @@ class _QueueTile extends ConsumerWidget {
           ref,
           action: (c) => c.resumeGroup(group.nzbId),
           successMessage: 'Job resumed',
-          failureMessage: 'Failed to resume the job',
+          failureMessage: 'Could not resume the job',
           invalidate: _nzbgetInvalidateAfterAction,
         );
       case DownloadQueueCommand.delete:
@@ -388,7 +388,7 @@ class _QueueTile extends ConsumerWidget {
       ref,
       action: (c) => c.deleteGroup(group.nzbId),
       successMessage: 'Job removed',
-      failureMessage: 'Failed to remove the job',
+      failureMessage: 'Could not remove the job',
       invalidate: _nzbgetInvalidateAfterAction,
     );
   }
