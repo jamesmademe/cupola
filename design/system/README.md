@@ -281,7 +281,7 @@ A credential can work and still not be allowed to write: an Unraid or TrueNAS ke
 
 Binding, not best effort. WCAG AA in both rooms, measured against the ground each colour actually lands on. Text grows and never clips. VoiceOver and TalkBack operate everything.
 
-- **A row that is one link speaks one sentence** and silences its parts: *Sprite Fright, out on digital today, downloading, 62 percent.* The state comes before the time; units are words (*percent*, *hours*, *votes*); a dash is spoken as *no rating*, never *dash*.
+- **A row that is one link speaks one sentence** and silences its parts: *Sprite Fright, out on digital today, downloading, 62 percent.* The state comes before the time; units are words (*percent*, *hours*, *votes*), a percentage always *62 percent* in American spelling, never *62%* in a semantics label and never *per cent* (`spokenPercent` and `spokenPercents` in `lib/core/utils/percent_format.dart`, held by `test/core/utils/spoken_percent_guard_test.dart`); a dash is spoken as *no rating*, never *dash*.
 - A remedy inside a row stays its own button. Silence the text, not the row: `Semantics(container: true, excludeSemantics: true)` on the whole row discards the button too.
 - A `Semantics(hint:)` wrapped around a button is dropped — annotate the child.
 - A dimmed control is never `Semantics(enabled: false)`: it is tappable, and its hint says what it needs.
