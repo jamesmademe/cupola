@@ -334,17 +334,20 @@ Future<void> _render(
 }
 
 /// The one-line account of a RenderFlex overflow ("A RenderFlex overflowed by
-/// 24 pixels on the right", then the widget at fault and the line that built
-/// it), or null for any other error.
+/// 24 pixels on the right · lib/core/widgets/tag_chip.dart:56"), the widget at
+/// fault and the line that built it, or null for any other error.
 String? _overflowFinding(FlutterErrorDetails details) {
-  final text = details.exceptionAsString();
-  if (!text.contains('overflowed by')) return null;
-  final lines = text.split('\n');
-  final cause = lines.indexWhere((l) => l.contains('error-causing widget'));
-  final where = cause >= 0 && cause + 1 < lines.length
-      ? lines[cause + 1].trim()
-      : '';
-  return where.isEmpty ? lines.first : '${lines.first} · $where';
+  if (!details.exceptionAsString().contains('overflowed by')) return null;
+  // The whole report, not the message alone: the widget at fault and the line
+  // that built it are in the diagnostics that follow the message.
+  final report = details.toString();
+  final message = report
+      .split('\n')
+      .firstWhere((l) => l.contains('overflowed by'), orElse: () => 'overflow');
+  final where = RegExp(
+    r'error-causing widget[^\n]*\n[^\n]*\n\s*\S+:file://\S*?/((?:lib|test)/[^:\s]+:\d+)',
+  ).firstMatch(report)?.group(1);
+  return where == null ? message : '$message · $where';
 }
 
 Future<void> _paint(
