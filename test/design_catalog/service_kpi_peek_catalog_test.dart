@@ -209,16 +209,31 @@ void main() {
       ),
       CatalogScene(
         'At 2× reading size · the rail grows with the text, clamped at 1.6×',
-        (context) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const TextScaler.linear(2)),
-          child: ServiceKpiPeek(
-            kpis: const AsyncValue.data(_radarr),
-            accent: ServiceKey.radarr.accent,
-          ),
+        (_) => ServiceKpiPeek(
+          kpis: const AsyncValue.data(_radarr),
+          accent: ServiceKey.radarr.accent,
         ),
         width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'At 2× reading size · the cards that read a dash and a note '
+        '(Radarr silent, Jellyfin on a member\'s token)',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ServiceKpiPeek(
+              kpis: const AsyncValue.data(_radarrSilent),
+              accent: ServiceKey.radarr.accent,
+            ),
+            ServiceKpiPeek(
+              kpis: const AsyncValue.data(_jellyfinMember),
+              accent: ServiceKey.jellyfin.accent,
+            ),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
       ),
       _scene(
         'On a desktop window · the same rail, wide enough for every card',

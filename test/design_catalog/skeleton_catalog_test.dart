@@ -64,6 +64,47 @@ void main() {
         (_) => AppSkeleton.detailBody(),
         height: 520,
       ),
+      CatalogScene(
+        'Reduce Motion · the controller stops and each block paints the flat '
+        'base colour, no gradient',
+        (_) => Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerPlaceholder.card(width: 80, height: 120),
+                const SizedBox(width: 24),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShimmerPlaceholder.text(width: 200, height: 22),
+                    const SizedBox(height: 12),
+                    ShimmerPlaceholder.text(width: 120),
+                  ],
+                ),
+                const SizedBox(width: 24),
+                const ShimmerPlaceholder.circle(size: 48),
+              ],
+            ),
+          ),
+        ),
+      ),
+      CatalogScene(
+        'Text at 200% · the list rows and the poster row at twice the '
+        'reading size',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppSkeleton.listRows(),
+            const SizedBox(height: 12),
+            AppSkeleton.posterRow(),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

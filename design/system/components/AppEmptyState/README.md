@@ -17,6 +17,14 @@ Rendered from `lib/core/widgets/app_empty_state.dart` by `test/design_catalog/ap
 
 `AppEmptyState` itself never scrolls or centres beyond its own column — it is a leaf sized to its content, so a full-page caller must wrap it in a viewport that can grow at accessibility text sizes. `AppEmptyStatePage` (built on `AppScrollablePage`) is that wrapper: it centres the state while it fits the viewport and scrolls once it does not, which is also what keeps a long error or message from clipping off the bottom of a short pane.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Full with an action, `.compact(accentColor:)`, `.inline`.
+- Text at 200%: the three forms.
+- A long title and message on a 280pt phone.
+
 ## Do / don't
 
 - Do reach for `AppEmptyStatePage` from a screen-level caller rather than centring the state by hand.

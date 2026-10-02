@@ -34,6 +34,13 @@ The service name (or, for `.section` and `.partial`, the whole sentence), the st
 
 The band is one container node (`Semantics(container: true, explicitChildNodes: true, liveRegion: true)`) labelled with the sentence, so it is announced when it appears. The glyph and text are excluded from the tree; each verb stays its own reachable control.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `.unreachable` with and without an age, `.fault` for a refused key, a qBittorrent sign-in, Cloudflare Access and a server error, `.section`, `.partial`, `.stale` (6 min and just now), `.offlinePush`.
+- Text at 200% on a 390pt phone: `.unreachable`, `.fault` with its remedy, and `.partial` with `.stale`.
+
 ## Do / don't
 
 - Do keep the page below the band at full ink: nothing is dimmed for being unreachable — dimming means *not configured*.

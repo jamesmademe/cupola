@@ -32,6 +32,15 @@ An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional n
 
 Each card is one container node speaking `ServiceKpi.semanticLabel` — *Movies: 1,284*, *Queue: at least 200* for a floor, or *Movies: unavailable, Radarr · Did not answer*; the glyph, figure and eyebrow are excluded.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the wide rail also on the desktop.
+
+- Radarr answered, qBittorrent (the speed pair, scrolling), TrueNAS (fault tones), Readarr with a floor figure (`200+`).
+- `ServiceKpi.unavailable` (Radarr silent), a household member's Jellyfin and a shared Plex account.
+- Source failed, loading, and no figures (the rail collapses).
+- Text at 200%: the answered rail, and the cards that read a dash and a note.
+
 ## Do / don't
 
 - Do state an unanswered figure as a dash.

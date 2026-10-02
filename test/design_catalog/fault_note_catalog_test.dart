@@ -63,6 +63,36 @@ void main() {
         ),
         width: 260,
       ),
+      CatalogScene(
+        'Text at 200% · .unreachable and .fault in a sheet, at twice the '
+        'reading size',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ground(
+              (scheme) => scheme.surfaceContainer,
+              Builder(
+                builder: (context) => FaultNote.unreachable(
+                  message: 'Failed to load servers: the connection timed out.',
+                  surface: Theme.of(context).colorScheme.surfaceContainer,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _ground(
+              (scheme) => scheme.surfaceContainerLow,
+              Builder(
+                builder: (context) => FaultNote.fault(
+                  message: 'Purchase failed. You have not been charged.',
+                  surface: Theme.of(context).colorScheme.surfaceContainerLow,
+                ),
+              ),
+            ),
+          ],
+        ),
+        width: 360,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

@@ -24,6 +24,13 @@ Rendered from `lib/core/widgets/fault_note.dart` by `test/design_catalog/fault_n
 
 The glyph is excluded; the sentence is read as plain text. There is no live region — the host control that failed (a submit button, a tier) owns the announcement.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `.unreachable` and `.fault` in a request sheet and a purchase sheet, `.unreachable` on the default surface, a long message.
+- Text at 200%: both forms in a sheet.
+
 ## Do / don't
 
 - Do use it where the retry is already on screen: a form sheet whose submit is the retry, a purchase restarted by tapping a tier.

@@ -26,6 +26,14 @@ Only counts and heights — `AppSkeleton`'s presets take no colour or shape para
 
 The blocks carry no semantics, so the loading state is silent unless the surrounding screen announces it.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- The bare shapes, `listRows`, `ListRowsShimmer`, `posterRow`, `posterGrid`, `detailBody`.
+- Reduce Motion: the flat base colour, no gradient.
+- Text at 200%: the list rows and the poster row.
+
 ## Do / don't
 
 - Do match the preset to the row it stands in for; a skeleton shorter than its content makes the page jump on settle.

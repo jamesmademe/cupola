@@ -1,6 +1,7 @@
 @Tags(['catalog'])
 library;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
@@ -119,6 +120,51 @@ void main() {
           onRetry: () {},
           onOpen: () {},
         ),
+      ),
+      CatalogScene(
+        'Text at 200% · .unreachable with its age, Retry and Settings on a '
+        '390pt phone',
+        (_) => FaultBand.unreachable(
+          serviceName: 'TrueNAS',
+          since: const Duration(minutes: 6),
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · .fault, a refused key: the remedy in the amber fill '
+        'and Settings on a 390pt phone',
+        (_) => FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · .partial and .stale on a 390pt phone',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FaultBand.partial(
+              message:
+                  'Seerr returned 50 of 300 users; later pages are unavailable.',
+              onRetry: () {},
+            ),
+            const SizedBox(height: 12),
+            FaultBand.stale(
+              age: const Duration(minutes: 6),
+              detail: 'TrueNAS live metrics have not returned.',
+              onRefresh: () {},
+            ),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
       ),
     ],
   );
