@@ -41,19 +41,19 @@ void main() {
     scenes: [
       CatalogScene(
         'AppCard.filled · .outlined · .surfaceOutlined · .elevated · '
-        'non-tappable, no shadow unless elevated',
+        'non-tappable: slabs at 26 with their hairline, lifted on paper',
         (_) => Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
-            AppCard.filled(child: _tile('Nosferatu', 'Filled · flat panel')),
+            AppCard.filled(child: _tile('Nosferatu', 'Filled · the slab')),
             AppCard.outlined(
               child: _tile('Metropolis', 'Outlined · transparent'),
             ),
             AppCard.surfaceOutlined(
               child: _tile(
                 'The Cabinet of Dr. Caligari',
-                'Surface outlined · outline-variant',
+                'Surface outlined · its own edge',
               ),
             ),
             AppCard.elevated(
@@ -114,14 +114,14 @@ void main() {
           spacing: 12,
           runSpacing: 12,
           children: [
-            AppCard.filled(child: _tile('Nosferatu', 'Filled · flat panel')),
+            AppCard.filled(child: _tile('Nosferatu', 'Filled · the slab')),
             AppCard.outlined(
               child: _tile('Metropolis', 'Outlined · transparent'),
             ),
             AppCard.surfaceOutlined(
               child: _tile(
                 'The Cabinet of Dr. Caligari',
-                'Surface outlined · outline-variant',
+                'Surface outlined · its own edge',
               ),
             ),
             AppCard.elevated(

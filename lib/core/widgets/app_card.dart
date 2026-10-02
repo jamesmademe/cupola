@@ -228,34 +228,38 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final effectiveBorderRadius = borderRadius ?? AppRadius.borderRadiusMd;
+    // A slab (brand book, *The room*): `radius.slab` and always its
+    // `line.hair` edge, lifted softly on paper and flat in the dark room
+    // (`level1` is 0 there). It drew 14 with no edge.
+    final effectiveBorderRadius = borderRadius ?? AppRadius.borderRadiusSlab;
     final effectivePadding = padding ?? const EdgeInsets.all(AppSpacing.lg);
+    final hair = CupolaRoom.of(context).hair;
 
     // Determine styling based on variant
     Color bgColor;
-    BoxBorder? border;
+    BorderSide edge;
     List<BoxShadow>? shadows;
 
     switch (variant) {
       case AppCardVariant.filled:
         bgColor = backgroundColor ?? colorScheme.surfaceContainer;
-        border = null;
-        shadows = null;
+        edge = BorderSide(color: hair);
+        shadows = AppElevation.level1(colorScheme);
         break;
       case AppCardVariant.outlined:
         bgColor = backgroundColor ?? Colors.transparent;
-        border = Border.all(color: borderColor ?? colorScheme.outline);
+        edge = BorderSide(color: borderColor ?? colorScheme.outline);
         shadows = null;
         break;
       case AppCardVariant.elevated:
         bgColor = backgroundColor ?? colorScheme.surfaceContainer;
-        border = null;
+        edge = BorderSide(color: hair);
         shadows = AppElevation.level2(colorScheme);
         break;
       case AppCardVariant.surfaceOutlined:
         bgColor = backgroundColor ?? colorScheme.surfaceContainer;
-        border = Border.all(color: borderColor ?? colorScheme.outlineVariant);
-        shadows = null;
+        edge = BorderSide(color: borderColor ?? hair);
+        shadows = AppElevation.level1(colorScheme);
         break;
     }
 
@@ -290,17 +294,7 @@ class AppCard extends StatelessWidget {
       // not change interior height when it gains or loses an `onTap`.
       final shape = RoundedRectangleBorder(
         borderRadius: effectiveBorderRadius,
-        side:
-            variant == AppCardVariant.outlined ||
-                variant == AppCardVariant.surfaceOutlined
-            ? BorderSide(
-                color:
-                    borderColor ??
-                    (variant == AppCardVariant.surfaceOutlined
-                        ? colorScheme.outlineVariant
-                        : colorScheme.outline),
-              )
-            : BorderSide.none,
+        side: edge,
       );
 
       final padded = wrapWithGlow(
@@ -355,14 +349,19 @@ class AppCard extends StatelessWidget {
       );
     }
 
-    // Non-tappable: plain Container.
+    // Non-tappable: plain Container. The edge is drawn over the card rather
+    // than as its border, which would inset the child 1px per side: like the
+    // tappable branch's shape, the stroke costs no layout.
     return _spoken(
       Container(
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: effectiveBorderRadius,
-          border: border,
           boxShadow: shadows,
+        ),
+        foregroundDecoration: BoxDecoration(
+          borderRadius: effectiveBorderRadius,
+          border: Border.fromBorderSide(edge),
         ),
         clipBehavior: glow != null ? Clip.antiAlias : Clip.none,
         child: wrapWithGlow(Padding(padding: effectivePadding, child: child)),
