@@ -77,26 +77,29 @@ void main() {
       TargetPlatform.macOS,
       SizedBox(
         width: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FilledButton.icon(
-              style: HeaderActionRow.expandedButtonStyle(),
-              onPressed: () {},
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Request'),
-            ),
-            OutlinedButton.icon(
-              style: HeaderActionRow.tonalExpandedButtonStyle(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.black,
-                borderColor: Colors.grey,
+        child: Builder(
+          builder: (context) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FilledButton.icon(
+                style: HeaderActionRow.expandedButtonStyle(context),
+                onPressed: () {},
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Request'),
               ),
-              onPressed: () {},
-              icon: const Icon(Icons.search_rounded),
-              label: const Text('Search'),
-            ),
-          ],
+              OutlinedButton.icon(
+                style: HeaderActionRow.tonalExpandedButtonStyle(
+                  context,
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.black,
+                  borderColor: Colors.grey,
+                ),
+                onPressed: () {},
+                icon: const Icon(Icons.search_rounded),
+                label: const Text('Search'),
+              ),
+            ],
+          ),
         ),
       ),
     );

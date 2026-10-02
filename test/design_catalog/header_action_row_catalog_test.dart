@@ -37,8 +37,9 @@ Widget _consequence(BuildContext context, String text) => Text(
   ),
 );
 
-ButtonStyle _discStyle(ColorScheme scheme) =>
+ButtonStyle _discStyle(BuildContext context, ColorScheme scheme) =>
     HeaderActionRow.tonalIconButtonStyle(
+      context,
       foregroundColor: scheme.onSurfaceVariant,
       backgroundColor: scheme.onSurface.withValues(alpha: 0.06),
       borderColor: scheme.outlineVariant,
@@ -53,7 +54,7 @@ Widget _disc(
   dimension: HeaderActionRow.buttonHeight,
   child: OutlinedButton(
     onPressed: enabled ? () {} : null,
-    style: _discStyle(Theme.of(context).colorScheme),
+    style: _discStyle(context, Theme.of(context).colorScheme),
     child: Icon(icon, size: ActionStateGlyph.glyphSize, semanticLabel: name),
   ),
 );
@@ -102,6 +103,7 @@ Widget _primaryBand({
               Text(label, maxLines: 2, textAlign: TextAlign.center),
             ),
             style: HeaderActionRow.expandedButtonStyle(
+              context,
               foregroundColor: onFill,
               backgroundColor: fill,
             ),
@@ -138,6 +140,7 @@ Widget _tonalBand(String consequence) => Builder(
       onPressed: () {},
       style:
           HeaderActionRow.tonalExpandedButtonStyle(
+            context,
             foregroundColor: scheme.onSurfaceVariant,
             backgroundColor: scheme.onSurface.withValues(alpha: 0.06),
             borderColor: scheme.outlineVariant,
