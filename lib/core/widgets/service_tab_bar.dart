@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
@@ -361,6 +362,13 @@ class _Tab extends StatelessWidget {
                   ),
                   child: Text(
                     tab.label,
+                    // Chrome, like the phone's bar: the label grows with the
+                    // reading size to the same 1.3x and no further, so it
+                    // stays whole in the 44pt row every hosted page reserves.
+                    // At 200% the row cut "Library" below its baseline.
+                    textScaler: FloatingNavBarMetrics.effectiveTextScaler(
+                      context,
+                    ),
                     style: theme.textTheme.labelLarge!
                         .weight(selected ? FontWeight.w600 : FontWeight.w500)
                         .copyWith(

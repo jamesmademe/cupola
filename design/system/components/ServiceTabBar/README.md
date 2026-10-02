@@ -7,7 +7,7 @@ Rendered from `lib/core/widgets/service_tab_bar.dart` by `test/design_catalog/se
 ## Default bar
 
 - Height 44. Horizontal padding `space-lg`; tabs `space-xs` apart; every tab built (no lazy list). The row scrolls and is aligned to the start — never distributed, never centred.
-- Tab: at least 44 wide, padding `space-md` × `space-sm`, `label-large`, one line. Unselected: weight 500 in `dim-text` (the tertiary ink). Selected: weight 600 in `on-surface` (the primary ink).
+- Tab: at least 44 wide, padding `space-md` × `space-sm`, `label-large`, one line, growing with the reading size to 1.3× and no further (`FloatingNavBarMetrics.effectiveTextScaler`, the phone bar's ceiling), so it stays whole in the 44pt row every hosted page reserves; at 200% the row used to cut it below its baseline. Unselected: weight 500 in `dim-text` (the tertiary ink). Selected: weight 600 in `on-surface` (the primary ink).
 - Pill: the selected tab sits on the room's strong fill (`fill-strong`), 36 tall, `radius-pill`, centred in the 44 cell and positioned behind the label so nothing shifts when it appears. It spans the label plus its `space-md` padding on both sides — the pill of the phone's bar and the desktop rail, never the service's colour.
 
 ## `.header` — the desktop service header
@@ -39,7 +39,7 @@ Each sheet is drawn in the dark and the light room.
 
 - `ServiceTabBar.header` on the desktop: Radarr with the instance lens, Transmission without.
 - `ServiceTabBar` on the phone: Radarr with Queue selected, Nginx Proxy Manager scrolling from the start.
-- Text at 200%: the phone bar and the desktop header.
+- Text at 200%: the phone bar and the desktop header, the labels at their 1.3× ceiling.
 
 ## Do / don't
 

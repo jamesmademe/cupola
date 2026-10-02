@@ -79,8 +79,8 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'ServiceTabBar · Radarr, Overview, at 200% · the 44pt row at twice the '
-        'reading size, scrolling from the start',
+        'ServiceTabBar · Radarr, Overview, at 200% · the labels grow to 1.3x, '
+        'the phone bar\'s ceiling, and stay whole in the 44pt row',
         (_) => ServiceTabBar(
           service: ServiceKey.radarr,
           current: _tab(ServiceKey.radarr, 'Overview'),
