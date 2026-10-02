@@ -298,6 +298,14 @@ void main() {
         _message('Access denied.'),
         SeerrRefusal.accountNotAllowed,
       ),
+      // Jellyfin's Quick Connect off while a code waits (Seerr 3.4.1, live).
+      (
+        401,
+        'GET',
+        '/api/v1/auth/jellyfin/quickconnect/check?secret=${'A' * 64}',
+        _message('Failed to check Quick Connect status'),
+        SeerrRefusal.signInTurnedOff,
+      ),
     ];
 
     for (final (status, method, path, body, verdict) in rows) {
@@ -305,6 +313,22 @@ void main() {
         expect(_classify(status, method, path, body), verdict);
       });
     }
+
+    test('the check\'s refusal is read on the check alone', () {
+      final off = _message('Failed to check Quick Connect status');
+      // A code Jellyfin no longer knows is the code expiring, not this.
+      expect(
+        _classify(404, 'GET', '/api/v1/auth/jellyfin/quickconnect/check', off),
+        isNull,
+      );
+      for (final (method, path) in [
+        ('POST', '/api/v1/auth/jellyfin/quickconnect/authenticate'),
+        ('GET', '/api/v1/request'),
+        ('GET', '/api/v1/auth/me'),
+      ]) {
+        expect(_classify(401, method, path, off), isNull, reason: path);
+      }
+    });
   });
 
   group('the shapes of an answer', () {

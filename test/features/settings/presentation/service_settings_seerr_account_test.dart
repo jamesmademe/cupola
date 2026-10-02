@@ -18,6 +18,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
+import '../../../test_helpers/profiles/fakes/seerr_sessions.dart'
+    show seerrError;
 import '../../../test_helpers/profiles/profiles.dart';
 
 const _surface = Size(430, 2600);
@@ -262,6 +264,54 @@ void main() {
 
     expect(_saved(container).account?.kind, SeerrAccountKind.jellyfin);
     expect(find.text('Signed in as ${WorldPeople.anna}'), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Quick Connect turned off in Jellyfin while the code waits', (
+    tester,
+  ) async {
+    final (harness, container, _) = await _pumpForm(
+      tester,
+      _signedOut(Profiles.p2ViaJellyfin),
+    );
+    await _tap(tester, harness, find.text('Sign in again'));
+    await _tap(tester, harness, find.text('Sign in another way'));
+    await _tap(tester, harness, find.text('Sign in with a code from Jellyfin'));
+
+    // Jellyfin's Quick Connect goes off: every check is refused, the way
+    // Seerr relays it (the fake's own answer with Quick Connect off), and
+    // `/settings/public` says nothing about it.
+    harness.network.on(
+      WorldIds.seerr,
+      'GET',
+      '/api/v1/auth/jellyfin/quickconnect/check',
+      (_) => seerrError(401, 'Failed to check Quick Connect status'),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await harness.settle(tester);
+
+    expect(
+      find.text('This way of signing in was just turned off'),
+      findsOneWidget,
+    );
+    // Back to the ways in, without the one that went.
+    expect(find.text('Sign in with a code from Jellyfin'), findsNothing);
+    expect(find.text('Sign in with Jellyfin'), findsOneWidget);
+    // Nothing asks again once it is gone.
+    final checks = harness.network
+        .requestsTo(WorldIds.seerr)
+        .where((r) => r.path.endsWith('/quickconnect/check'))
+        .length;
+    await tester.pump(const Duration(seconds: 6));
+    await harness.settle(tester);
+    expect(
+      harness.network
+          .requestsTo(WorldIds.seerr)
+          .where((r) => r.path.endsWith('/quickconnect/check')),
+      hasLength(checks),
+    );
+    expect(_saved(container).account?.isSignedIn, isFalse);
 
     await harness.unmount(tester);
   });

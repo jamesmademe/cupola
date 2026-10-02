@@ -79,7 +79,9 @@ enum SeerrRefusal {
   plexCheckFailed,
 
   /// A sign-in method the server has turned off since the app last read
-  /// `/settings/public`. Read it again and redraw the methods.
+  /// `/settings/public`. Read it again and redraw the methods. Also Jellyfin's
+  /// own Quick Connect turned off while a code waits, which
+  /// `/settings/public` never shows.
   signInTurnedOff,
 
   /// The server is still in its first setup. The app never signs in to one,
@@ -200,6 +202,18 @@ SeerrRefusal? _signInRefusal(
         status == 403 &&
         text == 'You do not have permission to access this endpoint';
     return refused ? SeerrRefusal.sessionEnded : null;
+  }
+  // `auth.ts:675-712`, Seerr 3.4.0 and later. With its own Quick Connect off,
+  // Jellyfin refuses every check, and Seerr relays its 401 (Seerr 3.4.1 on
+  // Jellyfin 12.1, live). `/settings/public` does not say Jellyfin turned it
+  // off. Only this route reads so: a 401 anywhere else means something else.
+  if (verb == 'GET' &&
+      route.length == 4 &&
+      route[1] == 'jellyfin' &&
+      route[2] == 'quickconnect' &&
+      route[3] == 'check') {
+    final off = status == 401 && text == 'Failed to check Quick Connect status';
+    return off ? SeerrRefusal.signInTurnedOff : null;
   }
   if (verb != 'POST' || route.length < 2) return null;
 

@@ -423,8 +423,22 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
       _stopWaiting();
       if (!mounted) return;
       return _stop(SeerrSignInNotice.codeExpired, back: _Stage.methods);
-    } catch (_) {
-      return;
+    } catch (error) {
+      final notice = SeerrSignInNotice.ofSignIn(
+        error,
+        method: SeerrSignInMethod.jellyfinQuickConnect,
+      );
+      // Anything but Jellyfin turning its Quick Connect off is one missed
+      // answer, and the next tick asks again.
+      if (notice.kind != SeerrSignInNoticeKind.methodTurnedOff) return;
+      if (!mounted || _stage != _Stage.quickConnect) return;
+      // The server's settings do not say so, so reading them again would
+      // offer the code once more: the way is not offered again.
+      setState(() {
+        _quickConnectOff = true;
+        _code = null;
+      });
+      return _stop(notice, back: _Stage.methods);
     }
     if (!approved || !mounted || _stage != _Stage.quickConnect) return;
     _stopWaiting();
