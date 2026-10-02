@@ -915,7 +915,7 @@ void main() {
     ) async {
       final harness = await _pumpShell(
         tester,
-        overrides: await _lensOverrides(),
+        overrides: await _lensOverrides(demoDue: true),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
       );
@@ -946,7 +946,7 @@ void main() {
     ) async {
       final harness = await _pumpShell(
         tester,
-        overrides: await _lensOverrides(),
+        overrides: await _lensOverrides(demoDue: true),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
       );
@@ -1026,8 +1026,17 @@ const _lensInstances = [
 /// Enough of a world for the Portal's floor to build: two connections, and a
 /// health answer for each so no cell reaches for a socket. The ids in [silent]
 /// answer that they did not answer.
-Future<List<Override>> _lensOverrides({Set<String> silent = const {}}) async {
-  SharedPreferences.setMockInitialValues({});
+///
+/// The one-shot demo is marked shown, because a fresh install owes it and it
+/// would play 700 ms into any test that pumps that long, folding the page
+/// mid-assertion. The tests of the demo itself ask for it with [demoDue].
+Future<List<Override>> _lensOverrides({
+  Set<String> silent = const {},
+  bool demoDue = false,
+}) async {
+  SharedPreferences.setMockInitialValues({
+    if (!demoDue) 'portal_hint_demo_shown': true,
+  });
   final prefs = await SharedPreferences.getInstance();
   return [
     sharedPreferencesProvider.overrideWithValue(prefs),
