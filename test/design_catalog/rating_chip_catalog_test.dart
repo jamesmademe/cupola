@@ -62,7 +62,9 @@ void main() {
       CatalogScene(
         'MediaMetadataLine · the hero fact line, non-empty items joined with '
         'the house middot',
-        (_) => const MediaMetadataLine(items: ['1922', '1h 34m', 'Horror']),
+        (_) => const MediaMetadataLine(
+          items: ['1922', '1\u00A0h 34\u00A0min', 'Horror'],
+        ),
       ),
     ],
   );

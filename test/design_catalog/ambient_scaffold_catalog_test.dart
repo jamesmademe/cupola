@@ -70,7 +70,7 @@ Widget _radarrBody({double offset = 72}) => SafeArea(
       ])
         DownloadQueueTile(
           title: name,
-          subtitle: 'Downloading · 12m left',
+          subtitle: 'Downloading · 12\u00A0min left',
           progress: progress,
           percentage: (progress * 100).round(),
           accent: ServiceKey.radarr.accent,

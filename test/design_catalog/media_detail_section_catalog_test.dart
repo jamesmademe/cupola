@@ -57,7 +57,7 @@ Widget _radarrPage({Widget? band}) {
       ),
       statusBadge: const StatusBadge(info: _available),
       title: 'Nosferatu',
-      metadataItems: const ['1922', '1h 34m', 'Not Rated'],
+      metadataItems: const ['1922', '1\u00A0h 34\u00A0min', 'Not Rated'],
       tags: [TagChip(text: '1 file', color: accent)],
     ),
     body: MediaDetailBody(

@@ -101,7 +101,7 @@ Widget _radarrRow({
     availability: MediaAvailability.missing,
   ),
   String chip = 'No file',
-  List<String> metadata = const ['1922', '1h 34m'],
+  List<String> metadata = const ['1922', '1\u00A0h 34\u00A0min'],
 }) => MediaDetailPosterRow(
   statusBadge: StatusBadge.animated(info: status),
   title: title,
@@ -188,7 +188,12 @@ void main() {
               availability: MediaAvailability.available,
             ),
             chip: '1 file',
-            metadata: const ['1920', '1h 16m', 'Not Rated', 'Expressionism'],
+            metadata: const [
+              '1920',
+              '1\u00A0h 16\u00A0min',
+              'Not Rated',
+              'Expressionism',
+            ],
           ),
         ),
         width: 390,
@@ -209,7 +214,7 @@ void main() {
               ),
             ),
             title: 'Metropolis',
-            metadataItems: const ['1927', '2h 33m'],
+            metadataItems: const ['1927', '2\u00A0h 33\u00A0min'],
             tags: [TagChip(text: 'Requested', color: ServiceKey.seerr.accent)],
             posterCard: const MediaPosterCard(
               heroTag: 'f',

@@ -118,6 +118,38 @@ void main() {
         width: 390,
       ),
       CatalogScene(
+        'TorrentTile · a long wait · `2 h 10 min` and `1 d 5 h` left beside a '
+        'long name at 390 · the unit stays with its figure, and the name is '
+        'what ellipsises',
+        (_) => _column([
+          TorrentTile(
+            torrent: _torrent(
+              'Metropolis.1927.2160p.Restored.BluRay.REMUX.x265-GROUP',
+              TorrentState.downloading,
+              'downloading',
+              progress: 0.12,
+              size: 48 * _gb,
+              dlSpeed: 6 * _mb,
+              eta: 7800,
+            ),
+            onTap: _noop,
+          ),
+          TorrentTile(
+            torrent: _torrent(
+              'The.Cabinet.of.Dr.Caligari.1920.2160p.UHD.BluRay.REMUX-GROUP',
+              TorrentState.downloading,
+              'downloading',
+              progress: 0.03,
+              size: 61 * _gb,
+              dlSpeed: 700 * 1024,
+              eta: 104400,
+            ),
+            onTap: _noop,
+          ),
+        ]),
+        width: 390,
+      ),
+      CatalogScene(
         'TorrentTile · error draws no bar; fetching metadata and checking '
         'read as in progress',
         (_) => _column([
@@ -174,7 +206,7 @@ void main() {
         'bar drains to neutral at its last position',
         (_) => DownloadQueueTile(
           title: 'Nosferatu.1922.1080p.BluRay.x264-GROUP',
-          subtitle: '9.0 GB · 12m',
+          subtitle: '9.0\u00A0GB · 12\u00A0min',
           progress: 0.63,
           percentage: 63,
           accent: ServiceKey.qbittorrent.accent,
@@ -227,7 +259,7 @@ void main() {
           title:
               'The.Cabinet.of.Dr.Caligari.1920.Restored.Tinted.1080p.BluRay.'
               'x264-GROUP',
-          subtitle: '6.4 GB · 3h 10m',
+          subtitle: '6.4\u00A0GB · 3\u00A0h 10\u00A0min',
           progress: 0.04,
           percentage: 4,
           accent: ServiceKey.transmission.accent,
