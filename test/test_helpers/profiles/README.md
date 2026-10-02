@@ -46,7 +46,8 @@ Profiles can be varied:
 - `withBehaviour(id, behaviour)` changes how one connection behaves.
 - `withLens(service, id)` moves the lens.
 - `at(NetworkPlace.home)` changes where the device is.
-- `without(service)` removes a service.
+- `without(service)` removes a service, and `withoutConnection(id)` one
+  connection of it.
 - `withConnection(WorldConnections.npm)` adds a connection.
 - `withLatency(id, duration)` makes one connection slow.
 - `withSeerrPermissions(mask)` gives every Seerr account of the profile

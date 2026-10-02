@@ -1002,6 +1002,22 @@ class ConfigProfile {
     );
   }
 
+  /// A copy without the connection [instanceId], the rest of its service
+  /// kept: P1 without its 4K Radarr, say, while Seerr still knows it.
+  ConfigProfile withoutConnection(String instanceId) {
+    final removed = connection(instanceId);
+    return _copy(
+      connections: [
+        for (final c in connections)
+          if (c.id != instanceId) c,
+      ],
+      lens: {
+        for (final entry in lens.entries)
+          if (entry.value != removed.id) entry.key: entry.value,
+      },
+    );
+  }
+
   /// A copy without any connection of [service] — its a case.
   ConfigProfile without(ServiceKey service) => _copy(
     connections: [

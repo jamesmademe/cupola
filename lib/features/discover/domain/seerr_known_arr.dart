@@ -31,12 +31,18 @@ class SeerrKnownArr {
   });
 
   /// [service] is the kind the list was read for: Seerr's settings say
-  /// nothing about it, the route does.
+  /// nothing about it, the route does. [seenFrom] is the address Cupola read
+  /// them at (see [SeerrArrServer.seenFrom]).
   factory SeerrKnownArr.fromSettingsJson(
     Map<String, dynamic> json, {
     required ServiceKey service,
+    String? seenFrom,
   }) {
-    final server = SeerrArrServer.fromSettingsJson(json, service: service);
+    final server = SeerrArrServer.fromSettingsJson(
+      json,
+      service: service,
+      seenFrom: seenFrom,
+    );
     return SeerrKnownArr(
       server: server,
       address: _address(

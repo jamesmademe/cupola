@@ -112,6 +112,105 @@ void main() {
     await harness.unmount(tester);
   });
 
+  group('Seerr naming its arrs by container', () {
+    /// Sintel waiting in 4K, the one request on Seerr's list.
+    void sintelIn4k(ProfileNetwork network) => network.on(
+      WorldIds.seerr,
+      'GET',
+      '/api/v1/request',
+      (_) => NetworkReply.json({
+        'pageInfo': {'pages': 1, 'pageSize': 50, 'results': 1, 'page': 1},
+        'results': [
+          {
+            'id': 8,
+            'status': 1,
+            'type': 'movie',
+            'is4k': true,
+            'createdAt': _scriptedCreatedAt.toIso8601String(),
+            'requestedBy': {'id': 3, 'displayName': WorldPeople.luca},
+            'media': {
+              'id': WorldTitles.sintel.tmdbId,
+              'tmdbId': WorldTitles.sintel.tmdbId,
+              'mediaType': 'movie',
+              'status': 5,
+              'status4k': 2,
+            },
+          },
+        ],
+      }),
+    );
+
+    for (final profile in [Profiles.p1, Profiles.p6]) {
+      testWidgets('${profile.id}: a standard request goes to Radarr 1', (
+        tester,
+      ) async {
+        final harness = await pump(tester, profile.withDockerHostnames());
+        await openApprove(tester, harness);
+
+        expect(
+          find.text('Charge goes to Radarr 1 and starts downloading.'),
+          findsOneWidget,
+        );
+
+        await harness.unmount(tester);
+      });
+
+      testWidgets('${profile.id}: a 4K request goes to Radarr 4K, not to the '
+          'Radarr at the port Seerr knows', (tester) async {
+        final harness = await pump(
+          tester,
+          profile.withDockerHostnames(),
+          routes: sintelIn4k,
+        );
+        await openApprove(tester, harness);
+
+        expect(
+          find.text('Sintel goes to Radarr 4K and starts downloading.'),
+          findsOneWidget,
+        );
+
+        await harness.unmount(tester);
+      });
+    }
+
+    testWidgets('P1 without its 4K Radarr: the Radarr at the port Seerr knows '
+        'is not taken for it', (tester) async {
+      final harness = await pump(
+        tester,
+        Profiles.p1.withDockerHostnames().withoutConnection(WorldIds.radarr4k),
+        routes: sintelIn4k,
+      );
+      await openApprove(tester, harness);
+
+      expect(
+        find.text(
+          'Sintel goes to Radarr 4K and starts downloading. Cupola has no '
+          'connection to that server.',
+        ),
+        findsOneWidget,
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P5: a Radarr Cupola has no connection to still reads so', (
+      tester,
+    ) async {
+      final harness = await pump(tester, Profiles.p5.withDockerHostnames());
+      await openApprove(tester, harness);
+
+      expect(
+        find.text(
+          'Charge goes to Radarr and starts downloading. Cupola has no '
+          'connection to that server.',
+        ),
+        findsOneWidget,
+      );
+
+      await harness.unmount(tester);
+    });
+  });
+
   testWidgets('P6: Seerr settings that did not answer leave the server '
       'unnamed, never invented', (tester) async {
     final harness = await pump(

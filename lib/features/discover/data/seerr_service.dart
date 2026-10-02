@@ -597,8 +597,9 @@ class SeerrService {
   /// own settings (`GET /api/v1/settings/radarr` or `/sonarr`, admin only).
   ///
   /// An empty list means Seerr answered with none; a failure throws. Each
-  /// server's API key is in the answer and is never read: see
-  /// [SeerrArrServer].
+  /// server carries this Seerr's address and the key Seerr uses for it, to
+  /// tell which of Cupola's connections it is and nothing else: see
+  /// [SeerrArrServer.reaches].
   Future<List<SeerrArrServer>> getArrServers(ServiceKey arr) async {
     if (arr != ServiceKey.radarr && arr != ServiceKey.sonarr) {
       throw ArgumentError.value(arr, 'arr', 'Seerr sends only to the arrs');
@@ -618,6 +619,7 @@ class SeerrService {
           SeerrArrServer.fromSettingsJson(
             raw.cast<String, dynamic>(),
             service: arr,
+            seenFrom: _client.baseUrl,
           ),
     ];
   }
@@ -685,6 +687,7 @@ class SeerrService {
           SeerrKnownArr.fromSettingsJson(
             raw.cast<String, dynamic>(),
             service: arr,
+            seenFrom: _client.baseUrl,
           ),
     ];
   }

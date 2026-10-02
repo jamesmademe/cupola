@@ -102,7 +102,8 @@ void main() {
       expect(hd.reaches(_radarr('http://nas.home.arpa:7878/radarr')), isFalse);
     });
 
-    test('another name for the host does not match: it cannot be told', () {
+    test('a container name, with no Seerr address to read it against, '
+        'does not match', () {
       final byContainer = _server(_settings(hostname: 'radarr'));
       expect(
         byContainer.reaches(_radarr('http://nas.home.arpa:7878')),
@@ -127,6 +128,107 @@ void main() {
       ];
       expect(uhd.connectionIn(connections)?.id, 'radarr-4k');
       expect(spare.connectionIn(connections), isNull);
+    });
+  });
+
+  group('reaches, read against the Seerr it came from', () {
+    const seerr = 'http://nas.home.arpa:5055';
+
+    /// A server as Seerr in Docker knows it: by container, with [key].
+    SeerrArrServer inDocker({
+      String hostname = 'radarr',
+      int port = 7878,
+      String key = 'key-hd',
+      bool is4k = false,
+    }) => SeerrArrServer.fromSettingsJson(
+      {..._settings(hostname: hostname, port: port, is4k: is4k), 'apiKey': key},
+      service: ServiceKey.radarr,
+      seenFrom: seerr,
+    );
+
+    ServiceInstance radarr(
+      String url, {
+      String id = 'radarr',
+      String key = '',
+    }) => ServiceInstance(
+      id: id,
+      service: ServiceKey.radarr,
+      url: url,
+      credential: key,
+    );
+
+    test("a container name is looked for at Seerr's own host", () {
+      expect(
+        inDocker().reaches(radarr('http://nas.home.arpa:7878', key: 'key-hd')),
+        isTrue,
+      );
+      expect(
+        inDocker(
+          hostname: 'localhost',
+        ).reaches(radarr('http://nas.home.arpa:7878')),
+        isTrue,
+        reason: 'no key on the connection: the proposal is all there is',
+      );
+      expect(
+        inDocker().reaches(radarr('http://nas.home.arpa:7879', key: 'key-hd')),
+        isTrue,
+        reason: 'the same key is the same server, at any address',
+      );
+    });
+
+    test('a different key at the proposed address is another server', () {
+      // Radarr 4K listens on 7878 in its container and is published on 7879:
+      // Seerr's host with 7878 is where the other Radarr answers.
+      final uhd = inDocker(hostname: 'radarr-4k', key: 'key-4k', is4k: true);
+      expect(
+        uhd.reaches(radarr('http://nas.home.arpa:7878', key: 'key-hd')),
+        isFalse,
+      );
+      expect(
+        uhd.connectionIn([radarr('http://nas.home.arpa:7878', key: 'key-hd')]),
+        isNull,
+      );
+    });
+
+    test('the key decides between two Radarrs near Seerr', () {
+      final connections = [
+        radarr('http://nas.home.arpa:7878', key: 'key-hd'),
+        radarr('https://nas.home.arpa:7879', id: 'radarr-4k', key: 'key-4k'),
+      ];
+      expect(inDocker().connectionIn(connections)?.id, 'radarr');
+      expect(
+        inDocker(
+          hostname: 'radarr-4k',
+          key: 'key-4k',
+          is4k: true,
+        ).connectionIn(connections)?.id,
+        'radarr-4k',
+      );
+    });
+
+    test('a key match comes before an address match', () {
+      final connections = [
+        radarr('http://nas.home.arpa:7878', key: 'stale'),
+        radarr('https://radarr.example.com', id: 'radarr-proxy', key: 'key-hd'),
+      ];
+      final server = SeerrArrServer.fromSettingsJson(
+        {..._settings(), 'apiKey': 'key-hd'},
+        service: ServiceKey.radarr,
+        seenFrom: seerr,
+      );
+      expect(server.connectionIn(connections)?.id, 'radarr-proxy');
+      // Without the key's match, the shared address still is the server.
+      expect(server.connectionIn([connections.first])?.id, 'radarr');
+    });
+
+    test("a real address is never moved to Seerr's host", () {
+      final elsewhere = inDocker(hostname: 'radarr.example.com', port: 443);
+      expect(elsewhere.reaches(radarr('http://nas.home.arpa:443')), isFalse);
+    });
+
+    test('the key it holds is never printed', () {
+      final server = inDocker(key: 'sentinel-key-5c09d2');
+      expect(server.toString(), isNot(contains('sentinel-key-5c09d2')));
     });
   });
 

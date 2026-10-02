@@ -1,3 +1,4 @@
+import 'package:cupola/core/network/found_address.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -8,13 +9,15 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// settings describe it (`GET /api/v1/settings/radarr|sonarr`).
 ///
 /// The settings route rather than `/api/v1/service/*`, which a requester may
-/// read too: only the settings say **where** the server is, and the address is
-/// how Cupola tells a server it also connects to from one known only to Seerr.
-/// The route is admin-only, and Cupola signs in with the admin API key.
+/// read too: only the settings say **where** the server is and with which
+/// key, and those are how Cupola tells a server it also connects to from one
+/// known only to Seerr. The route is admin-only: the API key reads it, and so
+/// does an account with ADMIN; any other account is refused.
 ///
-/// The settings carry each server's API key as well. It is never read: this
-/// class has no field for it, so no copy of another service's secret leaves
-/// the parse.
+/// The settings carry each server's API key as well. It is held for one
+/// thing, telling which of Cupola's connections the server is ([reaches]),
+/// and compared in memory there: no getter hands it out and nothing prints
+/// it. Setting a server up from Seerr reads it through `SeerrKnownArr`.
 class SeerrArrServer {
   const SeerrArrServer({
     required this.service,
@@ -28,13 +31,17 @@ class SeerrArrServer {
     this.hostname,
     this.port,
     this.baseUrl = '',
-  });
+    this.seenFrom,
+    String? apiKey,
+  }) : _apiKey = apiKey;
 
   /// [service] is the kind the list was read for: Seerr's settings say
-  /// nothing about it, the route does.
+  /// nothing about it, the route does. [seenFrom] is the address Cupola read
+  /// the settings at, the Seerr connection's own.
   factory SeerrArrServer.fromSettingsJson(
     Map<String, dynamic> json, {
     required ServiceKey service,
+    String? seenFrom,
   }) {
     return SeerrArrServer(
       service: service,
@@ -48,6 +55,8 @@ class SeerrArrServer {
       hostname: stringOrNull(json['hostname']),
       port: intOrNull(json['port']),
       baseUrl: stringOrNull(json['baseUrl']) ?? '',
+      seenFrom: stringOrNull(seenFrom),
+      apiKey: stringOrNull(json['apiKey']),
     );
   }
 
@@ -78,20 +87,94 @@ class SeerrArrServer {
   /// The path Seerr reaches the server under, e.g. `/radarr`. Empty for none.
   final String baseUrl;
 
-  /// Whether [instance] is a connection to this same server: the same host,
-  /// the same port and the same base path.
+  /// The address Cupola reaches the Seerr these settings came from at, or
+  /// null when whoever read them did not say. A host only that Seerr resolves
+  /// (a container name, `localhost`) is looked for on this address's host.
+  final String? seenFrom;
+
+  /// The key Seerr reaches the server with, or null. Compared, never handed
+  /// out: see the class comment.
+  final String? _apiKey;
+
+  /// Whether [instance] is a connection to this same server.
   ///
-  /// Compared on the address alone, never the name or the key: a name is
-  /// whatever each side chose to call it. The scheme is left out, since one
-  /// port does not speak both. A Seerr that reaches Radarr by another name
-  /// for the host (a container name, an IP address) does not match, and the
-  /// server reads as known only to Seerr: that is all Cupola can tell.
+  /// - **The same key** is the same server, wherever each side reaches it: a
+  ///   key names one instance.
+  /// - **The same address**: host, port and base path, the scheme left out
+  ///   since one port does not speak both. Seerr and Cupola reaching one
+  ///   address reach one server, whatever key each holds.
+  /// - **A host only Seerr resolves** (a container name, `localhost`; see
+  ///   `foundHostIsLocalToSource`) is looked for at Seerr's own host with the
+  ///   port Seerr knows, the proposal `proposeFoundAddress` makes. A
+  ///   proposal and nothing more: a connection there whose key differs from
+  ///   the one Seerr uses is another server. Docker republishing Radarr 4K's
+  ///   7878 as 7879 puts the other Radarr at that address.
+  ///
+  /// Never the name: a name is whatever each side chose to call it.
   bool reaches(ServiceInstance instance) {
     if (instance.service != service) return false;
+    final key = _keyAgreesWith(instance);
+    if (key == true) return true;
     final host = _host(hostname);
     final port = this.port;
     if (host == null || port == null) return false;
+    if (_isAt(instance, host: host, port: port, path: baseUrl)) return true;
+    if (key == false) return false;
 
+    final source = seenFrom;
+    if (source == null) return false;
+    final String reported;
+    try {
+      reported = Uri(scheme: 'http', host: host, port: port).toString();
+    } on FormatException {
+      return false;
+    }
+    final proposal = proposeFoundAddress(reported, sourceUrl: source);
+    if (proposal == null || proposal.basis != FoundAddressBasis.sourceHost) {
+      return false;
+    }
+    final at = Uri.parse(proposal.url);
+    return _isAt(instance, host: at.host, port: at.port, path: baseUrl);
+  }
+
+  /// The configured connection among [connections] that is this server, or
+  /// null when Cupola has no connection to it.
+  ///
+  /// A connection holding the key Seerr uses comes first, before any address
+  /// matches: of two Radarrs both answering near Seerr's own host, the key
+  /// says which one this is.
+  ServiceInstance? connectionIn(Iterable<ServiceInstance> connections) {
+    final configured = [
+      for (final connection in connections)
+        if (connection.isConfigured) connection,
+    ];
+    for (final connection in configured) {
+      if (connection.service == service && _keyAgreesWith(connection) == true) {
+        return connection;
+      }
+    }
+    for (final connection in configured) {
+      if (reaches(connection)) return connection;
+    }
+    return null;
+  }
+
+  /// True when [instance] holds the key Seerr uses for this server, false
+  /// when both hold one and they differ, null when either holds none.
+  bool? _keyAgreesWith(ServiceInstance instance) {
+    final ours = _apiKey?.trim() ?? '';
+    final theirs = instance.credential.trim();
+    if (ours.isEmpty || theirs.isEmpty) return null;
+    return ours == theirs;
+  }
+
+  /// Whether [instance] is reached at [host], [port] and [path].
+  static bool _isAt(
+    ServiceInstance instance, {
+    required String host,
+    required int port,
+    required String path,
+  }) {
     final normalized = UrlUtils.normalizeBaseUrl(instance.url);
     if (normalized.isEmpty) return false;
     final uri = Uri.tryParse(normalized);
@@ -100,18 +183,9 @@ class SeerrArrServer {
         ? uri.port
         : (uri.scheme.toLowerCase() == 'http' ? 80 : 443);
 
-    return uri.host.toLowerCase() == host &&
+    return uri.host.toLowerCase() == host.toLowerCase() &&
         theirPort == port &&
-        _path(uri.path) == _path(baseUrl);
-  }
-
-  /// The first of [connections] that [reaches] this server, or null when Cupola
-  /// has no connection to it.
-  ServiceInstance? connectionIn(Iterable<ServiceInstance> connections) {
-    for (final connection in connections) {
-      if (connection.isConfigured && reaches(connection)) return connection;
-    }
-    return null;
+        _path(uri.path) == _path(path);
   }
 
   /// A hostname as Seerr stores it, bare; tolerating a scheme or a path a
