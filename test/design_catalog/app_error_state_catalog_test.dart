@@ -7,6 +7,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
@@ -235,6 +237,51 @@ void main() {
         ),
         width: 360,
       ),
+      CatalogScene(
+        "AppErrorState, in the requester's app · Seerr did not answer: one "
+        'line with its time, no service named and no cause, and Retry as '
+        'a ghost in ink',
+        (_) => AppErrorState(
+          service: ServiceKey.seerr,
+          error: const SocketException('Connection refused'),
+          onRetry: () {},
+        ),
+        overrides: _requester,
+        width: 320,
+      ),
+      CatalogScene(
+        "AppErrorState, in the requester's app · her session ended: You were "
+        'signed out, blue, and Sign in again in the ink fill',
+        (_) => AppErrorState(
+          service: ServiceKey.seerr,
+          error: const SeerrSessionEnded(),
+          onRetry: () {},
+        ),
+        overrides: _requester,
+        width: 320,
+      ),
+      CatalogScene(
+        "InlineErrorRetry, in the requester's app · a rail Seerr answered "
+        'with a 5xx: the same one line, amber, and Retry in the amber fill',
+        (_) => InlineErrorRetry(
+          message: 'Seerr answered with an error, so this rail is not shown.',
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v1/discover/movies'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v1/discover/movies'),
+              statusCode: 502,
+            ),
+          ),
+          service: ServiceKey.seerr,
+          onRetry: () {},
+        ),
+        overrides: _requester,
+        width: 360,
+      ),
     ],
   );
 }
+
+/// The app as a household member's: every failure in the brief voice.
+final _requester = [audienceProvider.overrideWithValue(Audience.requester)];

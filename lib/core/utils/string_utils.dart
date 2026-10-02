@@ -95,6 +95,14 @@ String formatShortDate(String isoDate, {DateTime? now}) {
       : '$day ${parsed.year}';
 }
 
+/// A time of day as the brand book writes one: 24 h, `20:41`, on this
+/// device's clock.
+String formatClockTime(DateTime time) {
+  final local = time.toLocal();
+  return '${local.hour.toString().padLeft(2, '0')}:'
+      '${local.minute.toString().padLeft(2, '0')}';
+}
+
 /// [formatMediumDate] for a nullable field, answering null rather than echoing
 /// something unparseable back.
 ///

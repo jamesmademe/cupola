@@ -74,6 +74,7 @@ export 'machine_name.dart';
 
 // Async handling
 export 'async_value_widget.dart';
+export 'brief_failure_line.dart';
 export 'service_list_page.dart';
 export 'not_configured_placeholder.dart';
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/brief_failure_line.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -119,8 +120,23 @@ class InlineErrorRetry extends StatelessWidget {
   /// `null` for the self-sizing default; [_fixedHeight] for the fixed variant.
   final double? _height;
 
+  /// The requester reads one line with its time ([BriefFailureLine]),
+  /// never this classification; see `RoleGate.faultVoice`.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FaultVoiceSwitch(
+    full: _full,
+    brief: (context) => SizedBox(
+      height: _height,
+      child: BriefFailureLine.line(
+        error: error,
+        onRetry: onRetry,
+        service: service ?? FailureRemedy.serviceNamedBy(message),
+        instanceId: instanceId,
+      ),
+    ),
+  );
+
+  Widget _full(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final reason = classifyConnectionFailure(error);

@@ -27,7 +27,7 @@ cards live in [`../motion/`](../motion/).
 | Lists | [ServiceRecordRow](ServiceRecordRow/README.md) | `lib/core/widgets/service_record_row.dart` |
 | Metadata | [TagChip](TagChip/README.md) | `lib/core/widgets/tag_chip.dart` |
 | Metadata | [MachineName](MachineName/README.md) | `lib/core/widgets/machine_name.dart` |
-| Status | [AppErrorState](AppErrorState/README.md) | `lib/core/widgets/app_error_state.dart`, `lib/core/widgets/inline_error_retry.dart` |
+| Status | [AppErrorState](AppErrorState/README.md) | `lib/core/widgets/app_error_state.dart`, `lib/core/widgets/inline_error_retry.dart`, `lib/core/widgets/brief_failure_line.dart` |
 | Status | [CapabilityBanner](CapabilityBanner/README.md) | `lib/core/widgets/capability_banner.dart`, `lib/core/capability/capability_copy.dart` |
 | Status | [ConnectionBadge](ConnectionBadge/README.md) | `lib/core/widgets/connection_badge.dart` |
 | Status | [NotConfiguredPlaceholder](NotConfiguredPlaceholder/README.md) | `lib/core/widgets/not_configured_placeholder.dart` |

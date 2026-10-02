@@ -164,6 +164,12 @@ abstract final class Lexicon {
   static const noSeasonsLeft =
       'Every season is already on the server or requested.';
 
+  /// A failure as the requester reads it, whatever its cause: the server
+  /// ([subject], `the server`, or the player she watches with) and since when
+  /// ([time], `20:41`). Never the service's name or the classification.
+  static String cantReachSince(String subject, String time) =>
+      "Can't reach $subject since $time";
+
   /// What [youWereSignedOut] asks of the requester.
   static const signInToKeepAsking =
       'Sign in again to keep asking for movies and series.';

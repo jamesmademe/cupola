@@ -22,6 +22,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/brief_failure_line.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -546,7 +547,17 @@ class _LaneBody extends ConsumerWidget {
         .namesService(lane.service);
 
     if (lane.hasFault) {
-      return _SearchLaneFault(lane: lane, onRetry: onRetry);
+      // The requester reads one line with its time, never the cause.
+      return named
+          ? _SearchLaneFault(lane: lane, onRetry: onRetry)
+          : BriefFailureLine.line(
+              error: lane.reason == null
+                  ? null
+                  : ClassifiedFailure(lane.reason!),
+              onRetry: onRetry,
+              service: lane.service,
+              instanceId: lane.instanceId,
+            );
     }
     if (lane.state == SearchLaneState.searching) {
       // Two plates at the drawn 46pt, not the whole page's skeleton: the point

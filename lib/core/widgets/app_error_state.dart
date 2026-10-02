@@ -4,6 +4,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/brief_failure_line.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -176,6 +177,20 @@ class AppErrorState extends StatelessWidget {
         label: 'Loading ${_service?.title ?? serviceName ?? ''}'.trim(),
       );
     }
+    // The requester reads one line with its time, never this
+    // classification; see `RoleGate.faultVoice`.
+    return FaultVoiceSwitch(
+      full: _full,
+      brief: (context) => BriefFailureLine.page(
+        error: error,
+        onRetry: onRetry,
+        service: _service,
+        instanceId: instanceId,
+      ),
+    );
+  }
+
+  Widget _full(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final reason = classifyConnectionFailure(error);

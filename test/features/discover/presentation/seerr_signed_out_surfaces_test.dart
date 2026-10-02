@@ -60,9 +60,15 @@ void main() {
       "Seerr's overview": const SeerrOverviewScreen(topPadding: 0),
     };
 
-    for (final (name, profile) in [
-      ('P2 signed out', _p2SignedOut),
-      ("P9, the lens on Sara's signed-out Seerr", _p9FriendSignedOut),
+    // The requester reads it about herself and never names Seerr; the
+    // operator reads which Seerr signed him out.
+    for (final (name, profile, headline) in [
+      ('P2 signed out', _p2SignedOut, 'You were signed out'),
+      (
+        "P9, the lens on Sara's signed-out Seerr",
+        _p9FriendSignedOut,
+        'Signed out of Seerr',
+      ),
     ]) {
       for (final MapEntry(key: page, value: widget) in pages.entries) {
         testWidgets('$name: $page reads signed out, never Set up Seerr', (
@@ -79,7 +85,7 @@ void main() {
           );
           await tester.pump();
 
-          expect(find.text('Signed out of Seerr'), findsOneWidget);
+          expect(find.text(headline), findsOneWidget);
           expect(_filled('Sign in again'), findsOneWidget);
           expect(find.text('Set up Seerr'), findsNothing);
           expect(find.text('Seerr is not set up'), findsNothing);

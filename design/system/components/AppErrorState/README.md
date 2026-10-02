@@ -2,7 +2,7 @@
 
 The two failure leaves beneath the FaultBand: `AppErrorState`, the centred full-page state for a cold open with nothing retained, and `InlineErrorRetry`, the one-line notice for a single section.
 
-Rendered from `lib/core/widgets/app_error_state.dart` and `lib/core/widgets/inline_error_retry.dart` by `test/design_catalog/app_error_state_catalog_test.dart`; routing from `async_value_widget.dart`. The inline messages are Unraid's, as a section that did not answer.
+Rendered from `lib/core/widgets/app_error_state.dart`, `lib/core/widgets/inline_error_retry.dart` and `lib/core/widgets/brief_failure_line.dart` by `test/design_catalog/app_error_state_catalog_test.dart`; routing from `async_value_widget.dart`. The inline messages are Unraid's, as a section that did not answer.
 
 ## How the four relate
 
@@ -25,6 +25,10 @@ None of them is drawn for a read whose own client was closed under it (`isClosed
 - The message is worded from the same classification (`sectionFailureMessage`): the headline, then what the page is without — *Unraid did not answer, so its virtual machines are not shown.* · *Unraid answered but refused the key, so its shares are not shown.*
 - `.fixedHeight` locks the slot to 120px so a carousel row does not jump between loading, loaded and failed.
 - A live region announced on appearance; each verb stays its own control.
+
+## In the requester's app
+
+A household member never reads the classification (`RoleGate.faultVoice`): inside a provider scope whose audience is the requester (`audienceProvider`), both widgets draw `BriefFailureLine` (`lib/core/widgets/brief_failure_line.dart`, through `FaultVoiceSwitch`) instead, `.page` for `AppErrorState` and `.line` for `InlineErrorRetry`. Whatever the cause, one line with the time it first appeared: *Can't reach the server since 20:41* (*Jellyfin* or *Plex* in place of *the server*, the players she watches with; no other service is ever named), the glyph in the cause's tone as above (red only when nothing answered), and *Retry* only where the same request can still succeed, in the amber fill for a fault and a ghost in ink beside silence. No form's remedy: the fix is not hers to make. A session that ended is the one cause she can act on: *You were signed out* · *Sign in again to keep asking for movies and series.*, blue, with *Sign in again* in the ink fill into her account's form. Outside a provider scope (a bare widget test) both draw the operator's state.
 
 ## The consumer provides
 
