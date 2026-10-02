@@ -201,15 +201,14 @@ class _AddTorrentFormState extends ConsumerState<_AddTorrentForm> {
           ),
           const SizedBox(height: AppSpacing.xl),
           FilledButton(
-            style: FilledButton.styleFrom(
-              // The ink button, the theme's. The label's weight lives
-              // here, not on the Text: a `labelLarge` style on the Text
-              // carries the theme's own text colour and overrides the
-              // button's foreground.
-              textStyle: Theme.of(
-                context,
-              ).textTheme.labelLarge!.weight(FontWeight.w600),
-              minimumSize: const Size.fromHeight(46),
+            // The sheet's one primary, `button-l`. The label's weight lives
+            // here, not on the Text: a `labelLarge` style on the Text carries
+            // the theme's own text colour and overrides the button's
+            // foreground.
+            style: AppTheme.primaryButtonStyle(context).copyWith(
+              textStyle: WidgetStatePropertyAll(
+                Theme.of(context).textTheme.labelLarge!.weight(FontWeight.w600),
+              ),
             ),
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;

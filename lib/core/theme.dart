@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/focus_ring.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
+import 'package:cupola/core/text_scale.dart';
 
 /// Builds a [TextStyle] for one role of the type system.
 ///
@@ -883,6 +884,29 @@ abstract final class AppType {
 /// Material Design 3 Theme configuration for Cupola
 class AppTheme {
   AppTheme._();
+
+  /// A page's one primary action (brand book *Sizes*: `button-l`): the ink
+  /// button full width at 52, growing with its label, `radius.button` (16),
+  /// continuous, ringed when focused. A sheet's submit, the walk's Continue;
+  /// a button in a row or a dialog is the medium one, the theme's own.
+  static ButtonStyle primaryButtonStyle(BuildContext context) =>
+      FilledButton.styleFrom(
+        visualDensity: VisualDensity.standard,
+        minimumSize: Size.fromHeight(
+          TextScaleMetrics.boxHeight(
+            context,
+            base: DesignTokens.sizeButtonL,
+            textHeight: 20,
+          ),
+        ),
+      ).copyWith(
+        shape: focusRingShape(
+          RoundedSuperellipseBorder(
+            borderRadius: BorderRadius.circular(AppRadius.button),
+          ),
+          ring: CupolaRoom.of(context).focus,
+        ),
+      );
 
   /// The text family: every Material slot that is not display type.
   static const String fontFamily = DesignTokens.typeFamilySans;

@@ -450,7 +450,7 @@ class _CopyControls extends StatelessWidget {
         // do.
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
+          child: OutlinedButton.icon(
             // Null only while the removal is in flight.
             onPressed: isDeleting ? null : copy.onRemove,
             icon: isDeleting
@@ -495,7 +495,7 @@ class AdvancedSection extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
+          child: OutlinedButton.icon(
             onPressed: !isDeleting ? onClear : null,
             icon: const Icon(Icons.cleaning_services_outlined),
             label: const Text('Clear data'),

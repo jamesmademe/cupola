@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:cupola/core/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
@@ -143,7 +145,9 @@ class RequestBottomSheet extends ConsumerWidget {
             child: RoleGatedAction.builder(
               verdict: submitVerdict,
               onTap: submit,
-              builder: (context, onPressed, annotate) => ElevatedButton(
+              builder: (context, onPressed, annotate) => FilledButton(
+                // The sheet's one primary: `button-l`.
+                style: AppTheme.primaryButtonStyle(context),
                 onPressed:
                     state.canSubmit &&
                         (state.seasons.isEmpty ||
@@ -227,7 +231,8 @@ class RequestBottomSheet extends ConsumerWidget {
           ],
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: FilledButton(
+              style: AppTheme.primaryButtonStyle(context),
               onPressed: state.canSubmit ? submit : null,
               child: state.isSubmitting
                   ? const SizedBox(

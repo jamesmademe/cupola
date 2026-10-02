@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -48,13 +49,16 @@ class HeaderActionRow extends StatelessWidget {
   /// reading size — a captioned button's column grows *wider* than its own
   /// square as the caption grows, so the gap between two targets only ever
   /// opens up. Locked by `header_action_row_test.dart`.
-  static const double buttonHeight = 48.0;
+  ///
+  /// 52 now, `size.button-l`: the brand book's primary, which the promoted
+  /// action is, and the band keeps one height, so its discs grow with it.
+  static const double buttonHeight = DesignTokens.sizeButtonL;
 
-  /// Shared rounded shape for all detail header action buttons: the 12dp
-  /// interactive radius. These are controls, and full or near-full radius is
-  /// the metadata shape in this system.
-  static final _buttonShape = RoundedRectangleBorder(
-    borderRadius: AppRadius.borderRadiusMd,
+  /// Shared shape for all detail header action buttons: `radius.button` (16),
+  /// the large button's, continuous. These are controls, and full or
+  /// near-full radius is the metadata shape in this system.
+  static final _buttonShape = RoundedSuperellipseBorder(
+    borderRadius: BorderRadius.circular(AppRadius.button),
   );
 
   static ButtonStyle _filledButtonStyle({

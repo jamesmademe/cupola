@@ -405,18 +405,18 @@ void main() {
       tester,
     ) async {
       // iOS documents 44pt and Android 48dp. The app used to carry both answers
-      // for one floor — 44 here, 48 on the action band — so the shared numbers
-      // are asserted equal rather than merely adequate.
+      // for one floor, 44 here and 48 on the action band.
       expect(
         MediaDetailBackButton.targetSize,
         greaterThanOrEqualTo(48),
         reason: 'must clear Android 48dp, not just iOS 44pt',
       );
+      // The action band is the brand book's primary, `button-l`, which sits
+      // above the floor rather than on it.
       expect(
-        MediaDetailBackButton.targetSize,
         HeaderActionRow.buttonHeight,
-        reason:
-            'one floor, one constant: the detail chrome has one target size',
+        greaterThanOrEqualTo(MediaDetailBackButton.targetSize),
+        reason: 'no detail control is smaller than the floor',
       );
     });
 

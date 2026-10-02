@@ -89,10 +89,10 @@ class MediaDetailBackButton extends StatelessWidget {
 
   /// The minimum touch target this button always occupies.
   ///
-  /// 48, matching [HeaderActionRow.buttonHeight]: one cross-platform constant
-  /// has to satisfy the larger of iOS' 44pt and Android's 48dp, and the app had
-  /// been carrying two different answers (44 here, 48 on the action band) for
-  /// the same floor. Raising it changes nothing that is painted — the plate is
+  /// 48: one cross-platform constant has to satisfy the larger of iOS' 44pt
+  /// and Android's 48dp, and the app had been carrying two different answers
+  /// (44 here, 48 on the action band) for the same floor. The action band now
+  /// stands above it, at the primary's 52 ([HeaderActionRow.buttonHeight]). Raising it changes nothing that is painted — the plate is
   /// still [discSize] — only the hit box and, through
   /// [gutterAlignedLeftInset], the inset that keeps the plate on the gutter.
   static const double targetSize = 48;

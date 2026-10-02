@@ -405,11 +405,11 @@ class ImportPrimaryButton extends StatelessWidget {
               )
             : Icon(icon, size: 18),
         label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        // The station's one primary, `button-l`.
         style: FilledButton.styleFrom(
           disabledBackgroundColor: colorScheme.surfaceContainerHighest,
           disabledForegroundColor: colorScheme.onSurfaceVariant,
-          minimumSize: const Size.fromHeight(48),
-        ),
+        ).merge(AppTheme.primaryButtonStyle(context)),
       ),
     );
   }

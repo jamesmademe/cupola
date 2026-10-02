@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/lifecycle/gated_poll.dart';
@@ -429,10 +430,11 @@ class _TrackButtons extends StatelessWidget {
                 onPressed: submitting ? null : () => context.pop(),
                 icon: const Icon(Icons.chevron_left_rounded, size: 18),
                 label: const Text('Back to review'),
+                // Beside the primary, at its height.
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colorScheme.onSurface,
                   side: BorderSide(color: colorScheme.outlineVariant),
-                  minimumSize: const Size.fromHeight(48),
+                  minimumSize: const Size.fromHeight(DesignTokens.sizeButtonL),
                 ),
               ),
             ),
@@ -454,11 +456,11 @@ class _TrackButtons extends StatelessWidget {
                       size: 18,
                     ),
               label: Text(failed ? 'Retry' : 'Done'),
+              // The station's one primary, `button-l`.
               style: FilledButton.styleFrom(
                 disabledBackgroundColor: colorScheme.surfaceContainerHighest,
                 disabledForegroundColor: colorScheme.onSurfaceVariant,
-                minimumSize: const Size.fromHeight(48),
-              ),
+              ).merge(AppTheme.primaryButtonStyle(context)),
             ),
           ),
         ],
