@@ -10,7 +10,7 @@ Rendered from `lib/core/widgets/capability_banner.dart` (`CapabilityBanner`, `Ca
 - Glyph `Icons.key_outlined`, 16px, the info tone walked against `colorScheme.surface` through `statusToneColor` — the only coloured thing on the line.
 - Message in `textTheme.bodySmall`, coloured `onSurfaceVariant`.
 - Verb: `TextButton` in `colorScheme.primary`, `minimumSize: Size(56, 44)`, `AppSpacing.sm` horizontal padding. No compact density.
-- When a 12px measure scaled by the reading size exceeds `CapabilityBanner.stackThreshold` (20 logical pixels, about 1.6×) the verb moves to its own line, right-aligned, `AppSpacing.xs` below the glyph and sentence. A `Row` cannot shrink a 44pt-target button, so past that scale the layout stacks instead of overflowing.
+- When the reading size grows the sentence's own role (`bodySmall`) past `CapabilityBanner.stackScale` (1.6×, `TextScaleMetrics.defaultMaxScaleFactor`) the verb moves to its own line, right-aligned, `AppSpacing.xs` below the glyph and sentence. A `Row` cannot shrink a 44pt-target button, so past that scale the layout stacks instead of overflowing.
 
 ## Variants
 

@@ -6,6 +6,8 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
+import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -77,17 +79,19 @@ class CapabilityBanner extends StatelessWidget {
   /// that does not exist — and for *Check again*.
   final String actionLabel;
 
-  /// Above this scaled size the action goes on its own line.
+  /// Above this reading scale the action goes on its own line.
   ///
   /// A `Row` of glyph, sentence and button overflows at large reading sizes: a
   /// `TextButton` is not flexible, so the action laid out at three times its
   /// normal width takes more room than the row has and the `Expanded` beside
   /// it cannot give any more away. Shrinking the button is not an option — it
   /// is a 44pt target with a name that has to stay readable — so past this
-  /// size the layout stacks instead. 20 logical pixels is `bodySmall` (12)
-  /// grown by about 1.6x, the clamp `TextScaleMetrics.defaultMaxScaleFactor`
-  /// uses for the boxes it grows. The NPM access band carried this first.
-  static const double stackThreshold = 20;
+  /// scale the layout stacks instead. It is the clamp
+  /// `TextScaleMetrics.defaultMaxScaleFactor` uses for the boxes it grows,
+  /// applied to the size the sentence is actually drawn at (the `bodySmall`
+  /// role), so the threshold follows the role rather than a copy of its size.
+  /// The NPM access band carried this first.
+  static const double stackScale = TextScaleMetrics.defaultMaxScaleFactor;
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +130,13 @@ class CapabilityBanner extends StatelessWidget {
       child: Text(actionLabel),
     );
 
-    final stacked = MediaQuery.textScalerOf(context).scale(12) > stackThreshold;
+    // The measure is the sentence's own role, so what is compared is what is
+    // drawn.
+    final measure =
+        theme.textTheme.bodySmall?.fontSize ??
+        DesignTokens.typeBodySmallFontSize;
+    final stacked =
+        MediaQuery.textScalerOf(context).scale(measure) > measure * stackScale;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(

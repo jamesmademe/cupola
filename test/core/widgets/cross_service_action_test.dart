@@ -889,6 +889,35 @@ void _bannerSlot() {
       expect(action.top, greaterThanOrEqualTo(message.bottom));
     });
 
+    testWidgets('stacks once the reading size grows its role past 1.6x, and '
+        'not before', (tester) async {
+      // The threshold is a scale of the role the sentence is drawn in
+      // (`bodySmall`), not 20 logical pixels measured on a 12px copy of it:
+      // that put the line at 1.67x for text that is drawn at 13. The view is
+      // wide because the test font is as wide as it is tall: the row must have
+      // room to stay a row below the threshold.
+      tester.view.physicalSize = const Size(640, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      Future<bool> stackedAt(double scale) async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await _pumpGated(
+          tester,
+          grant: const CapabilityGrant.readOnly(),
+          textScaler: TextScaler.linear(scale),
+          child: slot(),
+        );
+        expect(tester.takeException(), isNull);
+        final message = tester.getRect(find.text(copy.answered));
+        final action = tester.getRect(find.text('Update the key'));
+        return action.top >= message.bottom;
+      }
+
+      expect(await stackedAt(1.55), isFalse);
+      expect(await stackedAt(1.63), isTrue);
+    });
+
     testWidgets('is not a live region', (tester) async {
       // A standing state, not an event: drawn on every visit to a read-only
       // connection's pages, it would otherwise interrupt each of them.
