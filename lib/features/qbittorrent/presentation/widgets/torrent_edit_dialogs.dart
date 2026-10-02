@@ -4,35 +4,15 @@ Future<String?> showEditCategoryDialog(
   BuildContext context, {
   required String currentCategory,
 }) {
-  final controller = TextEditingController(text: currentCategory);
   return showDialog<String>(
     context: context,
-    builder: (ctx) {
-      return AlertDialog(
-        title: const Text('Set category'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Category',
-            hintText: 'Leave empty to clear',
-            border: OutlineInputBorder(),
-          ),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => Navigator.of(ctx).pop(controller.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      );
-    },
+    builder: (_) => _TorrentFieldDialog<String>(
+      title: 'Set category',
+      initialText: currentCategory,
+      labelText: 'Category',
+      hintText: 'Leave empty to clear',
+      resultOf: (raw) => raw,
+    ),
   );
 }
 
@@ -40,47 +20,23 @@ Future<List<String>?> showEditTagsDialog(
   BuildContext context, {
   required List<String> currentTags,
 }) {
-  final controller = TextEditingController(text: currentTags.join(', '));
   return showDialog<List<String>>(
     context: context,
-    builder: (ctx) {
-      return AlertDialog(
-        title: const Text('Set tags'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Tags (comma-separated)',
-            hintText: 'e.g. 4k, italian, dubbed',
-            border: OutlineInputBorder(),
-          ),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _submitTags(ctx, controller.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => _submitTags(ctx, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      );
-    },
+    builder: (_) => _TorrentFieldDialog<List<String>>(
+      title: 'Set tags',
+      initialText: currentTags.join(', '),
+      labelText: 'Tags (comma-separated)',
+      hintText: 'e.g. 4k, italian, dubbed',
+      resultOf: _tagsOf,
+    ),
   );
 }
 
-List<String> _submitTags(BuildContext ctx, String raw) {
-  final tags = raw
-      .split(',')
-      .map((t) => t.trim())
-      .where((t) => t.isNotEmpty)
-      .toList(growable: false);
-  Navigator.of(ctx).pop(tags);
-  return tags;
-}
+List<String> _tagsOf(String raw) => raw
+    .split(',')
+    .map((t) => t.trim())
+    .where((t) => t.isNotEmpty)
+    .toList(growable: false);
 
 class SpeedLimitResult {
   final int? bytesPerSecond;
@@ -94,57 +50,96 @@ Future<SpeedLimitResult?> showSpeedLimitDialog(
   required String title,
   required int currentLimitBytes,
 }) {
-  final controller = TextEditingController(
-    text: currentLimitBytes > 0
-        ? (currentLimitBytes / 1024).toStringAsFixed(0)
-        : '',
-  );
   return showDialog<SpeedLimitResult>(
     context: context,
-    builder: (ctx) {
-      return AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Limit (KB/s)',
-            hintText: '0 = no limit',
-            border: OutlineInputBorder(),
-          ),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _submitSpeedLimit(ctx, controller.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => _submitSpeedLimit(ctx, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      );
-    },
+    builder: (_) => _TorrentFieldDialog<SpeedLimitResult>(
+      title: title,
+      initialText: currentLimitBytes > 0
+          ? (currentLimitBytes / 1024).toStringAsFixed(0)
+          : '',
+      labelText: 'Limit (KB/s)',
+      hintText: '0 = no limit',
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      resultOf: _speedLimitOf,
+    ),
   );
 }
 
-SpeedLimitResult _submitSpeedLimit(BuildContext ctx, String raw) {
+SpeedLimitResult _speedLimitOf(String raw) {
   final trimmed = raw.trim();
-  if (trimmed.isEmpty) {
-    Navigator.of(ctx).pop(const SpeedLimitResult._(0));
-    return const SpeedLimitResult._(0);
-  }
+  if (trimmed.isEmpty) return const SpeedLimitResult._(0);
   final kbps = double.tryParse(trimmed.replaceAll(',', '.'));
-  if (kbps == null || kbps < 0) {
-    Navigator.of(ctx).pop(SpeedLimitResult.noChange);
-    return SpeedLimitResult.noChange;
-  }
-  final result = kbps == 0
+  if (kbps == null || kbps < 0) return SpeedLimitResult.noChange;
+  return kbps == 0
       ? const SpeedLimitResult._(0)
       : SpeedLimitResult._((kbps * 1024).round());
-  Navigator.of(ctx).pop(result);
-  return result;
+}
+
+/// One text field, Cancel and Save, for a value the torrent's page edits.
+///
+/// The field's controller lives in this [State], so it is disposed with the
+/// route's content: after the exit transition, never while the dialog is still
+/// on screen fading out (a `showDialog` future completes as the route pops,
+/// well before the transition ends).
+class _TorrentFieldDialog<T> extends StatefulWidget {
+  const _TorrentFieldDialog({
+    required this.title,
+    required this.initialText,
+    required this.labelText,
+    required this.hintText,
+    required this.resultOf,
+    this.keyboardType,
+  });
+
+  final String title;
+  final String initialText;
+  final String labelText;
+  final String hintText;
+  final TextInputType? keyboardType;
+
+  /// What Save and the keyboard's Done hand back for what was typed.
+  final T Function(String raw) resultOf;
+
+  @override
+  State<_TorrentFieldDialog<T>> createState() => _TorrentFieldDialogState<T>();
+}
+
+class _TorrentFieldDialogState<T> extends State<_TorrentFieldDialog<T>> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialText,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() => Navigator.of(context).pop(widget.resultOf(_controller.text));
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: widget.keyboardType,
+        decoration: InputDecoration(
+          labelText: widget.labelText,
+          hintText: widget.hintText,
+          border: const OutlineInputBorder(),
+        ),
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _save(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _save, child: const Text('Save')),
+      ],
+    );
+  }
 }
