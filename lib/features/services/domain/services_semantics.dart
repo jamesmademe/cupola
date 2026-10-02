@@ -240,14 +240,16 @@ String servicesSectionOfflineMessage(List<String> offlineServiceTitles) =>
 /// only the latter shows a date, hence the optional [dateLabel]. The avatar
 /// initials beside the requester are deliberately not spoken: they are the same
 /// name in shorter form.
+///
+/// A null [requester] says nobody: a row the gate does not let name who asked.
 String seerrRequestRowValue({
   required String mediaTypeLabel,
-  required String requester,
+  required String? requester,
   required String statusLabel,
   String? dateLabel,
 }) => joinSpokenParts([
   mediaTypeLabel,
-  'requested by $requester',
+  if (requester != null) 'requested by $requester',
   statusLabel,
   dateLabel,
 ]);

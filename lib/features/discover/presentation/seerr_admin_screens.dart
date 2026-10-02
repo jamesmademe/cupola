@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/core/capability/role_gate_copy.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -31,6 +35,15 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
     if (!watchSeerrConfigured(ref)) {
       return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
     }
+    // An account that may not see the issues is told so, and nothing is
+    // asked of the server: it would refuse.
+    final blocked = _SeerrBlockedTab.of(
+      ref,
+      SeerrAbility.viewIssues,
+      icon: Icons.report_problem_outlined,
+      topPadding: widget.topPadding,
+    );
+    if (blocked != null) return blocked;
     final issues = ref.watch(seerrIssuesProvider(_filter));
     final partial = issues.asData?.value;
     return ServiceListPage<SeerrIssue>.unsummarised(
@@ -121,6 +134,15 @@ class SeerrUsersScreen extends ConsumerWidget {
     if (!watchSeerrConfigured(ref)) {
       return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
     }
+    // The users are the operator's to manage: an account that may not is
+    // told so, and the list is not read.
+    final blocked = _SeerrBlockedTab.of(
+      ref,
+      SeerrAbility.manageUsers,
+      icon: Icons.people_outline_rounded,
+      topPadding: topPadding,
+    );
+    if (blocked != null) return blocked;
     final users = ref.watch(seerrUsersProvider);
     final partial = users.asData?.value;
     return ServiceListPage<SeerrUser>.unsummarised(
@@ -143,6 +165,51 @@ class SeerrUsersScreen extends ConsumerWidget {
       rowBuilder: (user) => _UserCard(user: user),
     );
   }
+}
+
+/// A tab of the Seerr room the lens's account may not use: why, in place of
+/// the list, and no read the server would refuse.
+///
+/// The operator reads it about his account (`Your account on Seerr can't
+/// see issues.`); a household member, who has no Seerr room in her app, reads
+/// it about herself.
+class _SeerrBlockedTab extends StatelessWidget {
+  const _SeerrBlockedTab({
+    required this.reason,
+    required this.icon,
+    required this.topPadding,
+  });
+
+  /// The tab for [ability] on the lens's Seerr, or null when the account may.
+  static Widget? of(
+    WidgetRef ref,
+    SeerrAbility ability, {
+    required IconData icon,
+    required double topPadding,
+  }) {
+    final verdict = ref.watch(roleGateProvider('')).operatorAction(ability);
+    if (verdict.acts) return null;
+    return _SeerrBlockedTab(
+      reason: switch (verdict) {
+        Dimmed(:final reason) => reason,
+        _ => RoleGateCopy.youCannot(ability),
+      },
+      icon: icon,
+      topPadding: topPadding,
+    );
+  }
+
+  final String reason;
+  final IconData icon;
+  final double topPadding;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.only(
+      top: topPadding + MediaQuery.paddingOf(context).top,
+    ),
+    child: AppEmptyState(icon: icon, title: reason),
+  );
 }
 
 class _IssueCard extends StatelessWidget {

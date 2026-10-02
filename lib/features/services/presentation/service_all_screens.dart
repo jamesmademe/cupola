@@ -6,6 +6,9 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/route_utils.dart';
@@ -16,17 +19,21 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
 import 'package:cupola/features/services/domain/seerr_request_filter.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ServiceAllRequestsScreen extends ConsumerStatefulWidget {
@@ -229,7 +236,12 @@ class _RequestListRow extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final media = request.media;
     final title = media?.title ?? 'Unknown media';
-    final requester = request.requestedBy?.displayName ?? 'Unknown';
+    // The lens's Seerr, which this list reads: who asked only where the
+    // connection sees everyone's requests, never to the requester.
+    final gate = ref.watch(roleGateProvider(''));
+    final requester = gate.showsRequesterNames
+        ? request.requestedBy?.displayName ?? 'Unknown'
+        : null;
     final mediaType = request.type == 'tv' ? 'Series' : 'Movie';
     // The request's own state, the media's only past approval: the same
     // reading the Pending chip and the counts make.
@@ -253,7 +265,13 @@ class _RequestListRow extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _rowBody(context, ref, title: title, requester: requester),
+          _rowBody(
+            context,
+            ref,
+            title: title,
+            requester: requester,
+            gate: gate,
+          ),
           // A waiting request is answered where it is listed, with the
           // dashboard's own pair, on a line of its own so the title keeps its
           // width on a phone. "N waiting" links here, and this was the one
@@ -276,7 +294,8 @@ class _RequestListRow extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required String title,
-    required String requester,
+    required String? requester,
+    required RoleGate gate,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final media = request.media;
@@ -340,11 +359,15 @@ class _RequestListRow extends ConsumerWidget {
                 // its own label and value, so nothing spoken is cut.
                 Row(
                   children: [
-                    _RequesterAvatar(name: requester),
-                    const SizedBox(width: 5),
+                    if (requester != null) ...[
+                      _RequesterAvatar(name: requester),
+                      const SizedBox(width: 5),
+                    ],
                     Expanded(
                       child: Text(
-                        '$requester · $mediaType',
+                        requester == null
+                            ? mediaType
+                            : '$requester · $mediaType',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -382,14 +405,48 @@ class _RequestListRow extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            _deleteButton(context, ref, title),
+            _deleteButton(context, ref, title, gate: gate),
           ],
         ),
       ],
     );
   }
 
-  Widget _deleteButton(BuildContext context, WidgetRef ref, String title) {
+  /// The account the lens's Seerr signs in with, by its user id; null for
+  /// the key.
+  int? _accountUserId(WidgetRef ref) {
+    final id = ref.watch(activeInstanceProvider(ServiceKey.seerr))?.id;
+    if (id == null) return null;
+    return ref.watch(
+      currentSettingsProvider.select(
+        (s) => s.instanceById(id)?.account?.userId,
+      ),
+    );
+  }
+
+  /// Delete for the key and for an account that manages requests; for any
+  /// other account, Cancel on its own request while it still waits, and
+  /// nothing on the rest (the requester), or dimmed with the reason (an
+  /// operator's account).
+  Widget _deleteButton(
+    BuildContext context,
+    WidgetRef ref,
+    String title, {
+    required RoleGate gate,
+  }) {
+    final own =
+        request.requestedBy?.id != null &&
+        request.requestedBy?.id == _accountUserId(ref);
+    final verdict = gate.cancelAction(
+      own: own,
+      waitingForApproval: request.status == RequestStatus.pendingApproval,
+    );
+    final cancels =
+        !(gate.grant?.mayCancelRequest(own: false, waitingForApproval: false) ??
+            true);
+    if (!verdict.isDrawn) {
+      return SizedBox.square(dimension: _deleteTarget);
+    }
     final colorScheme = Theme.of(context).colorScheme;
     // The plate stays the 28pt square the row was drawn with; what grows is
     // the square around it. `Center` loosens the constraints so
@@ -398,28 +455,39 @@ class _RequestListRow extends ConsumerWidget {
     return SizedBox.square(
       dimension: _deleteTarget,
       child: Center(
-        child: IconButton.filledTonal(
-          icon: const Icon(Icons.delete_outline_rounded, size: 14),
-          // Neutral: the instrument-face plate chips sit on, and
-          // the secondary ink. Red means unreachable and nothing
-          // else; the confirmation says what the tap deletes.
-          color: colorScheme.onSurfaceVariant,
-          style: IconButton.styleFrom(
-            backgroundColor: colorScheme.surfaceContainerHighest,
-            padding: EdgeInsets.zero,
-            // `minimumSize` as well as `fixedSize`: `fixedSize` is
-            // clamped into the resolved minimum, and IconButton's M3
-            // default minimum is 48.
-            minimumSize: const Size.square(_deletePlate),
-            fixedSize: const Size.square(_deletePlate),
-            visualDensity: VisualDensity.standard,
-            tapTargetSize: AppBreakpoints.isDesktopPlatform
-                ? MaterialTapTargetSize.shrinkWrap
-                : MaterialTapTargetSize.padded,
+        child: RoleGatedAction.builder(
+          verdict: verdict,
+          onTap: () => _deleteRequest(context, ref, title, cancels: cancels),
+          builder: (context, onPressed, annotate) => IconButton.filledTonal(
+            icon: annotate(
+              Icon(
+                cancels ? Icons.undo_rounded : Icons.delete_outline_rounded,
+                size: 14,
+              ),
+            ),
+            // Neutral: the instrument-face plate chips sit on, and
+            // the secondary ink. Red means unreachable and nothing
+            // else; the confirmation says what the tap deletes.
+            color: colorScheme.onSurfaceVariant,
+            style: IconButton.styleFrom(
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              padding: EdgeInsets.zero,
+              // `minimumSize` as well as `fixedSize`: `fixedSize` is
+              // clamped into the resolved minimum, and IconButton's M3
+              // default minimum is 48.
+              minimumSize: const Size.square(_deletePlate),
+              fixedSize: const Size.square(_deletePlate),
+              visualDensity: VisualDensity.standard,
+              tapTargetSize: AppBreakpoints.isDesktopPlatform
+                  ? MaterialTapTargetSize.shrinkWrap
+                  : MaterialTapTargetSize.padded,
+            ),
+            onPressed: onPressed,
+            // Names which request: there is one of these per row.
+            tooltip: cancels
+                ? '${Lexicon.cancelRequest} for $title'
+                : 'Delete request for $title',
           ),
-          onPressed: () => _deleteRequest(context, ref, title),
-          // Names which request: there is one of these per row.
-          tooltip: 'Delete request for $title',
         ),
       ),
     );
@@ -428,13 +496,17 @@ class _RequestListRow extends ConsumerWidget {
   Future<void> _deleteRequest(
     BuildContext context,
     WidgetRef ref,
-    String title,
-  ) async {
+    String title, {
+    required bool cancels,
+  }) async {
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Delete request?',
-      message: 'This removes the request for $title from Seerr.',
-      confirmLabel: 'Delete request',
+      title: cancels ? '${Lexicon.cancelRequest}?' : 'Delete request?',
+      message: cancels
+          ? title
+          : 'This removes the request for $title from Seerr.',
+      confirmLabel: cancels ? Lexicon.cancelRequest : 'Delete request',
+      cancelLabel: cancels ? 'Keep it' : 'Cancel',
     );
     if (!result.confirmed || !context.mounted) return;
 
@@ -444,13 +516,28 @@ class _RequestListRow extends ConsumerWidget {
       if (!context.mounted) return;
       // The row simply vanishes otherwise, which reads as a glitch rather than a
       // result. SnackBar carries liveRegion, so this is also the announcement.
-      SnackBarHelper.success(context, 'Deleted the request for $title');
+      SnackBarHelper.success(
+        context,
+        cancels
+            ? 'Cancelled the request for $title'
+            : 'Deleted the request for $title',
+      );
     } catch (error) {
       if (!context.mounted) return;
+      if (seerrRefusalOf(error) == SeerrRefusal.noLongerCancellable) {
+        // Approved meanwhile: the list is stale.
+        ref.invalidate(servicesRequestsProvider);
+        SnackBarHelper.info(context, Lexicon.noLongerCancellable);
+        return;
+      }
       SnackBarHelper.error(
         context,
-        "Couldn't delete the request.",
-        detail: error,
+        cancels
+            ? "Couldn't cancel the request. ${Lexicon.nothingChanged}"
+            : "Couldn't delete the request.",
+        detail: ref.read(roleGateProvider('')).faultVoice == FaultVoice.brief
+            ? null
+            : error,
       );
     }
   }

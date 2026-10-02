@@ -8,6 +8,8 @@ import 'package:cupola/core/app_animation.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 
+import 'package:cupola/core/capability/role_gate_provider.dart';
+
 import 'package:cupola/core/models/media_preview.dart';
 
 import 'package:cupola/core/text_scale.dart';
@@ -19,6 +21,8 @@ import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 
 import 'package:cupola/core/widgets/widgets.dart';
+
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 
@@ -130,6 +134,11 @@ class _DecisionsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The requester decides nothing: the region is not part of her app.
+    final decide = ref
+        .watch(roleGateProvider(''))
+        .operatorAction(SeerrAbility.approve);
+    if (!decide.isDrawn) return const SizedBox.shrink();
     final section = ref.watch(seerrOverviewDecisionsProvider);
     final total = section.asData?.value.total;
     // A lost page of requests leaves the count a floor: `3+`.

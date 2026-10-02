@@ -6,6 +6,10 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 void main() {
   final now = DateTime.utc(2026, 9, 16, 12);
@@ -203,6 +207,10 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             requestsProvider.overrideWith((ref) async => [pendingButAvailable]),
+            // The operator's key: the rows he has always read.
+            currentSettingsProvider.overrideWith(
+              (ref) => settingsWithServices(const [ServiceKey.seerr]),
+            ),
           ],
         );
         addTearDown(container.dispose);

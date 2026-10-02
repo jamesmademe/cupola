@@ -14,6 +14,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
@@ -21,6 +22,7 @@ import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
@@ -98,26 +100,56 @@ String seerrRequestHeadline(SeerrRequest request) {
 /// The quality clause is the request's own profile name, or the bare `4K` flag
 /// when Seerr named no profile. Nothing is printed when it carried neither:
 /// a default of `1080p` would be a figure nobody sent.
-String seerrRequestDetail(SeerrRequest request, {required DateTime now}) {
+///
+/// Who asked only with [namesWho], and the profile only with [showsProfile]:
+/// the gate of the Seerr the request came off says each (who may see
+/// everyone's requests, who may choose where one goes). Without the profile
+/// the bare `4K` stands in.
+String seerrRequestDetail(
+  SeerrRequest request, {
+  required DateTime now,
+  bool namesWho = true,
+  bool showsProfile = true,
+}) {
   final created = DateTime.tryParse(request.createdAt);
   return joinDisplayParts([
-    request.requestedBy?.displayName,
+    if (namesWho) request.requestedBy?.displayName,
     created == null ? null : formatRelativeDateTime(created, now: now),
     request.type == 'tv' ? 'TV' : 'Movie',
-    request.profileName ?? (request.is4k ? '4K' : null),
+    (showsProfile ? request.profileName : null) ?? (request.is4k ? '4K' : null),
   ]);
+}
+
+/// What the gate of the lens's Seerr lets a request row say.
+typedef SeerrRowVoice = ({bool namesWho, bool showsProfile});
+
+/// [SeerrRowVoice] for the lens's Seerr, from its gate.
+SeerrRowVoice seerrRowVoice(Ref ref) {
+  final gate = ref.watch(roleGateOfProvider(''));
+  return (
+    namesWho: gate.showsRequesterNames,
+    showsProfile: gate.operatorAction(SeerrAbility.chooseDestination).isDrawn,
+  );
 }
 
 SeerrOverviewRow _row(
   SeerrRequest request, {
   required DateTime now,
   required StatusTone tone,
+  required SeerrRowVoice voice,
 }) => SeerrOverviewRow(
   request: request,
   headline: seerrRequestHeadline(request),
-  detail: seerrRequestDetail(request, now: now),
+  detail: seerrRequestDetail(
+    request,
+    now: now,
+    namesWho: voice.namesWho,
+    showsProfile: voice.showsProfile,
+  ),
   tone: tone,
 );
+
+const SeerrRowVoice _operatorVoice = (namesWho: true, showsProfile: true);
 
 /// The requests waiting on a human, shaped into rows.
 ///
@@ -127,9 +159,10 @@ SeerrOverviewRow _row(
 List<SeerrOverviewRow> seerrDecisionRows(
   List<SeerrRequest> requests, {
   required DateTime now,
+  SeerrRowVoice voice = _operatorVoice,
 }) => List.unmodifiable([
   for (final request in requests)
-    _row(request, now: now, tone: StatusTone.neutral),
+    _row(request, now: now, tone: StatusTone.neutral, voice: voice),
 ]);
 
 /// The requests Seerr has already accepted and is still working on.
@@ -145,6 +178,7 @@ SeerrOverviewSection seerrProcessingSection(
   List<SeerrRequest> requests, {
   required DateTime now,
   int limit = seerrProcessingPreviewLimit,
+  SeerrRowVoice voice = _operatorVoice,
 }) {
   final working = <SeerrRequest>[];
   for (final request in requests) {
@@ -181,7 +215,7 @@ SeerrOverviewSection seerrProcessingSection(
   return (
     rows: List.unmodifiable([
       for (final request in working.take(limit))
-        _row(request, now: now, tone: StatusTone.info),
+        _row(request, now: now, tone: StatusTone.info, voice: voice),
     ]),
     total: working.length,
     isFloor: !holdsEveryRequest(requests),
@@ -199,9 +233,14 @@ SeerrOverviewSection seerrProcessingSection(
 /// minute.
 final seerrOverviewDecisionsProvider =
     FutureProvider.autoDispose<SeerrOverviewSection>((ref) async {
+      final voice = seerrRowVoice(ref);
       final decisions = await ref.watch(seerrDecisionsProvider.future);
       return (
-        rows: seerrDecisionRows(decisions.preview, now: DateTime.now()),
+        rows: seerrDecisionRows(
+          decisions.preview,
+          now: DateTime.now(),
+          voice: voice,
+        ),
         total: decisions.total,
         isFloor: decisions.isFloor,
       );
@@ -210,8 +249,13 @@ final seerrOverviewDecisionsProvider =
 /// The Overview's second region: what Seerr is already doing about the rest.
 final seerrOverviewProcessingProvider =
     FutureProvider.autoDispose<SeerrOverviewSection>((ref) async {
+      final voice = seerrRowVoice(ref);
       final requests = await ref.watch(requestsProvider.future);
-      return seerrProcessingSection(requests, now: DateTime.now());
+      return seerrProcessingSection(
+        requests,
+        now: DateTime.now(),
+        voice: voice,
+      );
     }, retry: noProviderRetry);
 
 /// The trending rail, cut to the rail's budget.
