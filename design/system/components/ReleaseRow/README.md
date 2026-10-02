@@ -17,3 +17,11 @@ Rendered from `lib/core/widgets/release_list_widgets.dart` (`ReleaseListItem`, `
 The consumer provides the release list (or a fetch taking a `CancelToken`), the title, the accent (the lamp) and the grab callback; a callback that decides not to grab throws `ReleaseGrabAbandoned` and the row returns to idle.
 
 Do keep the rail, the Grab and the header count on the one `releaseStatusTone` so the three agree. Don't invent a percentage for a release search.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the row also on the desktop.
+
+- `ReleaseListItem`: approved, not approved, rejected; the peers tones; grabbing and another row's grab in flight; expanded (rejected, approved, no custom format data).
+- `ScoreBadge`, `CustomFormatChip`, `InfoChip`; `InteractiveSearchSheet` with releases and with none.
+- Text at 200%: the three rows and the chips, a rejected row expanded, and the search sheet.

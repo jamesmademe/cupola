@@ -275,6 +275,48 @@ void main() {
         width: 640,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · approved, not approved and rejected rows, then the '
+        'score and info chips, at twice the reading size',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ReleaseListItem(release: _remux, onGrab: _noop),
+            ReleaseListItem(release: _usenet, onGrab: _noop),
+            ReleaseListItem(release: _rejected, onGrab: _noop),
+            const SizedBox(height: 12),
+            const Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                ScoreBadge(score: 1450),
+                ScoreBadge(score: -50),
+                CustomFormatChip(name: 'HDR', score: 150),
+                InfoChip(icon: Icons.storage_outlined, text: '18.6 GB'),
+              ],
+            ),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · a rejected row expanded: the full name, the custom '
+        'formats and the rejection reasons',
+        (_) => _Expanded(
+          child: ReleaseListItem(release: _rejected, onGrab: _noop),
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · InteractiveSearchSheet in AppBottomSheet: the filter '
+        'field, the chips and the rows',
+        (_) => _sheet([_usenet, _rejected, _remux, _fewSeeders]),
+        width: 390,
+        height: 1200,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

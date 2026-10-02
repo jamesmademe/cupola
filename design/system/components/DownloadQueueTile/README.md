@@ -37,6 +37,14 @@ Across clients:
 
 The row is one container that speaks one sentence — *title, state, 63 percent, second line, metrics* (a null percentage says *progress unavailable*; a metric's `spoken` text replaces the arrow: *downloading at 25.0 MB/s*) — reports selection as a state when it is interactive, and carries tap and long-press itself; `actions` is the only child left on the reader's path. Long-press starts selection and is never the menu.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the torrent tile also on the desktop.
+
+- `TorrentTile`: downloading, stalled, paused, queued, seeding; a long wait; error, fetching metadata and checking; selected; stale (`sampleAge`).
+- Usenet rows for SABnzbd and NZBGet; a long name with a long state label.
+- Text at 200%: a downloading, a selected, a Usenet and a long-label tile.
+
 ## Do / don't
 
 - Do pass `null` progress for a job that has not started.

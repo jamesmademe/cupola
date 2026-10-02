@@ -299,6 +299,59 @@ void main() {
         width: 720,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · a downloading and a stalled TorrentTile, a selected '
+        'one, a Usenet row and a long state label, at twice the reading size',
+        (_) => _column([
+          TorrentTile(
+            torrent: _torrent(
+              'Nosferatu.1922.1080p.BluRay.x264-GROUP',
+              TorrentState.downloading,
+              'downloading',
+              progress: 0.63,
+              size: 9 * _gb,
+              dlSpeed: 25 * _mb,
+              upSpeed: 1200 * 1024,
+              eta: 720,
+            ),
+            onTap: _noop,
+          ),
+          TorrentTile(
+            torrent: _torrent(
+              'Metropolis.1927.2160p.Restored.BluRay.x265-GROUP',
+              TorrentState.stalled,
+              'stalledDL',
+              progress: 0.41,
+              size: 22 * _gb,
+            ),
+            selected: true,
+            onTap: _noop,
+            onLongPress: _noop,
+          ),
+          DownloadQueueTile(
+            title: 'Metropolis.1927.1080p.BluRay.x264-GROUP',
+            subtitle: 'Downloading · 0:12:00 · 1.2 GB left of 3.4 GB',
+            progress: 0.65,
+            percentage: 65,
+            accent: ServiceKey.sabnzbd.accent,
+            actions: DownloadQueueActionsMenu(paused: false, onCommand: (_) {}),
+          ),
+          DownloadQueueTile(
+            title:
+                'The.Cabinet.of.Dr.Caligari.1920.Restored.Tinted.1080p.BluRay.'
+                'x264-GROUP',
+            subtitle: '6.4\u00A0GB · 3\u00A0h 10\u00A0min',
+            progress: 0.04,
+            percentage: 4,
+            accent: ServiceKey.transmission.accent,
+            statusLabel: 'Tracker unreachable',
+            statusTone: StatusTone.warning,
+            onTap: _noop,
+          ),
+        ]),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }
