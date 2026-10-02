@@ -132,7 +132,7 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainer,
                   borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(AppRadius.lg - 1),
+                    bottom: Radius.circular(AppRadius.control),
                   ),
                   border: Border.all(color: colorScheme.outlineVariant),
                   boxShadow: AppElevation.level3(colorScheme),
@@ -207,7 +207,7 @@ class _DeckField extends StatelessWidget {
         AppSpacing.sm,
       ),
       height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md + 2),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.slabY),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -216,7 +216,7 @@ class _DeckField extends StatelessWidget {
       child: Row(
         children: [
           Icon(Icons.search_rounded, size: 16, color: colorScheme.onSurface),
-          const SizedBox(width: AppSpacing.sm + 2),
+          const SizedBox(width: AppSpacing.row),
           Expanded(
             child: TextField(
               controller: controller,
@@ -299,11 +299,9 @@ class _EntryRow extends StatelessWidget {
               height: 38,
               margin: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.sm,
-                vertical: 1,
+                vertical: AppSpacing.xxs,
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md - 1,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.row),
               decoration: BoxDecoration(
                 color: selected
                     ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
@@ -333,7 +331,7 @@ class _EntryRow extends StatelessWidget {
                           )
                         : CupolaThemeColors.of(context).dimText,
                   ),
-                  const SizedBox(width: AppSpacing.md - 1),
+                  const SizedBox(width: AppSpacing.row),
                   Expanded(
                     child: Text(
                       entry.label,
@@ -393,13 +391,13 @@ class _DeckFooter extends ConsumerWidget {
     final dim = CupolaThemeColors.of(context).dimText;
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg + 4,
-        vertical: AppSpacing.sm + 2,
+        horizontal: AppSpacing.scaleXl,
+        vertical: AppSpacing.row,
       ),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow.withValues(alpha: 0.9),
         borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(AppRadius.lg - 2),
+          bottom: Radius.circular(AppRadius.control),
         ),
         border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
       ),

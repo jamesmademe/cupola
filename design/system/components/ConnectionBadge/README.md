@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/connection_badge.dart` by `test/design_catalog/c
 
 ## Anatomy
 
-- Padding 6px horizontal, 1px vertical; `radius-xs2` (8); fill the accent (the lamp, for every service) at 14% alpha; 1px border, the accent at 34% alpha.
+- Padding 6px horizontal, 2px vertical; `radius-xs2` (8); fill the accent (the lamp, for every service) at 14% alpha; 1px border, the accent at 34% alpha.
 - Text: the micro role (`AppTheme.chrome`, 11 / 600 / 14, the role's own tracking), in sentence case — the connection's name exactly as the user typed it, never recased. The ink is the accent walked against its own 14% wash over the ground the badge sits on (`ServiceTheme.onTint`, `tintAlpha: 0.14`) — the lamp resolves to the room's primary ink, so the badge is monochrome in both themes.
 - An empty `label` renders `SizedBox.shrink()`: a stack with one Radarr never grows a badge naming the only Radarr.
 

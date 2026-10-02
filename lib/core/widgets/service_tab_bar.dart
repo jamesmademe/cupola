@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -265,13 +266,13 @@ class _Identity extends StatelessWidget {
             height: 24,
             decoration: BoxDecoration(
               color: room.fillStrong,
-              borderRadius: BorderRadius.circular(AppRadius.sm - 1),
+              borderRadius: BorderRadius.circular(DesignTokens.radiusSm2),
               border: Border.all(color: room.edge),
             ),
             child: Icon(service.icon, size: 14, color: colorScheme.onSurface),
           ),
         ),
-        const SizedBox(width: AppSpacing.sm + 2),
+        const SizedBox(width: AppSpacing.row),
         // Capped rather than flexible: a flexible name would take a share of
         // the row's free space and strand the actions short of its end. Past
         // the cap the name ellipsizes and the tabs keep scrolling.

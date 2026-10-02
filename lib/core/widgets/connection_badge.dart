@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
@@ -37,6 +38,7 @@ class ConnectionBadge extends StatelessWidget {
   final Color? surface;
 
   static const double _tintAlpha = 0.14;
+  static const double _edgeAlpha = 0.34;
 
   @override
   Widget build(BuildContext context) {
@@ -49,11 +51,14 @@ class ConnectionBadge extends StatelessWidget {
     );
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s,
+        vertical: AppSpacing.xxs,
+      ),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: _tintAlpha),
         borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
-        border: Border.all(color: accent.withValues(alpha: 0.34)),
+        border: Border.all(color: accent.withValues(alpha: _edgeAlpha)),
       ),
       child: Text(label, style: AppTheme.chrome(context, color: ink)),
     );

@@ -161,10 +161,7 @@ class _ActiveChip extends ConsumerWidget {
 
     final chip = Container(
       height: compact ? 26 : 32,
-      padding: EdgeInsets.only(
-        left: AppSpacing.sm,
-        right: compact ? AppSpacing.sm + 3 : AppSpacing.md - 1,
-      ),
+      padding: EdgeInsets.only(left: AppSpacing.sm, right: AppSpacing.row),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -208,7 +205,7 @@ class _ActiveChip extends ConsumerWidget {
               ),
             ),
             if (label.isNotEmpty) ...[
-              const SizedBox(width: 2),
+              const SizedBox(width: AppSpacing.xxs),
               // The name the user gave the connection: their own word, not a
               // machine string and not a figure.
               Text(
@@ -260,10 +257,10 @@ class _HealthReadout extends ConsumerWidget {
       excludeSemantics: true,
       child: Container(
         height: compact ? 26 : 30,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.row),
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(AppRadius.sm + 2),
+          borderRadius: BorderRadius.circular(AppRadius.control),
           border: Border.all(color: colorScheme.outlineVariant),
         ),
         child: Row(
@@ -289,7 +286,7 @@ class _HealthReadout extends ConsumerWidget {
                 color: colorScheme.onSurface,
               ).tabular,
             ),
-            const SizedBox(width: 3),
+            const SizedBox(width: AppSpacing.xxs),
             Text(
               '/ ${health.configured}',
               style: AppTheme.chrome(
@@ -300,7 +297,7 @@ class _HealthReadout extends ConsumerWidget {
               ),
             ),
             if (health.faulted > 0 && !narrow) ...[
-              const SizedBox(width: 5),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 '· ${health.faulted} '
                 '${health.faulted == 1 ? 'fault' : 'faults'}',
@@ -317,7 +314,7 @@ class _HealthReadout extends ConsumerWidget {
               ),
             ],
             if (health.unreachable > 0 && !narrow) ...[
-              const SizedBox(width: 5),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 '· ${health.unreachable} did not answer',
                 style: AppTheme.chrome(
@@ -348,9 +345,9 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 7,
-    height: 7,
-    margin: const EdgeInsets.only(right: 3),
+    width: 8,
+    height: 8,
+    margin: const EdgeInsets.only(right: AppSpacing.xxs),
     decoration: BoxDecoration(color: color, shape: BoxShape.circle),
   );
 }
@@ -428,7 +425,7 @@ class _JumpPillState extends State<_JumpPill> {
                       color: CupolaThemeColors.of(context).dimText,
                     ),
                     if (!widget.narrow) ...[
-                      const SizedBox(width: 9),
+                      const SizedBox(width: AppSpacing.sm),
                       Text(
                         widget.compact ? 'Jump' : 'Jump to anything',
                         style: AppTheme.chrome(
@@ -438,9 +435,9 @@ class _JumpPillState extends State<_JumpPill> {
                           color: CupolaThemeColors.of(context).dimText,
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: AppSpacing.sm),
                     ] else
-                      const SizedBox(width: 6),
+                      const SizedBox(width: AppSpacing.s),
                     // The key legend: mono, as the rail's is. Mono digits are
                     // already one width, so no `.tabular`.
                     Text(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -116,7 +117,7 @@ class _InspectorHeader extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md + 2),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.slabY),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -184,8 +185,8 @@ class _QueueRow extends StatelessWidget {
     final warning = item.status.hasWarning;
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md + 2,
-        vertical: 11,
+        horizontal: AppSpacing.slabY,
+        vertical: AppSpacing.row,
       ),
       decoration: BoxDecoration(
         border: Border(
@@ -201,10 +202,10 @@ class _QueueRow extends StatelessWidget {
           // said by the mark's shape and the name under it, never by a hue.
           Icon(
             item.service.icon,
-            size: 17,
+            size: 16,
             color: colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: 11),
+          const SizedBox(width: AppSpacing.row),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,9 +223,9 @@ class _QueueRow extends StatelessWidget {
                   ),
                 ),
                 if (progress != null) ...[
-                  const SizedBox(height: 5),
+                  const SizedBox(height: AppSpacing.xs),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(AppRadius.xs),
                     child: LinearProgressIndicator(
                       value: progress.clamp(0, 1),
                       minHeight: 3,
@@ -247,7 +248,7 @@ class _QueueRow extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 5),
+                const SizedBox(height: AppSpacing.xs),
                 // The episode, its title and the release it came as: a line of
                 // prose with a name in it, the same line the Activity table
                 // sets in the text face. Not a figure, and not a machine string
@@ -305,7 +306,7 @@ class _UnreachableCard extends ConsumerWidget {
 
     return Padding(
       key: const ValueKey('inspector-did-not-answer'),
-      padding: const EdgeInsets.all(AppSpacing.md + 2),
+      padding: const EdgeInsets.all(AppSpacing.slabY),
       child: Semantics(
         container: true,
         explicitChildNodes: true,
@@ -421,10 +422,10 @@ class _FinishedToday extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md + 2,
+        AppSpacing.slabY,
         0,
-        AppSpacing.md + 2,
-        AppSpacing.md + 2,
+        AppSpacing.slabY,
+        AppSpacing.slabY,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -436,8 +437,8 @@ class _FinishedToday extends ConsumerWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 7,
-                    height: 7,
+                    width: 8,
+                    height: 8,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       // Two defects in one expression, both now gone.
