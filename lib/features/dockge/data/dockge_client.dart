@@ -39,6 +39,14 @@ class DockgeException implements Exception, HasFailureReason, HasFailureCause {
   String toString() => 'DockgeException: $message';
 }
 
+/// A connect that was still waiting when the client was closed under it: its
+/// connection's settings changed and the provider let it go. Not Dockge
+/// failing ([isClosedClientFailure]).
+class DockgeClientClosed extends DockgeException
+    implements ClientClosedFailure {
+  const DockgeClientClosed() : super('Client closed');
+}
+
 /// A chunk of terminal output pushed by Dockge (`terminalWrite` event).
 class DockgeTerminalOutput {
   final String terminalName;
@@ -85,6 +93,10 @@ class DockgeClient {
 
   socket_io.Socket? _socket;
   bool _authed = false;
+
+  /// Set by [close]: its provider let it go, and nothing connects through it
+  /// again.
+  bool _closed = false;
   Completer<void>? _connecting;
 
   /// Server info from the `info` event (contains the Dockge version).
@@ -221,6 +233,10 @@ class DockgeClient {
   }
 
   Future<void> ensureConnected() {
+    // Closed under whoever still holds it: the connection changed, and the
+    // provider's new client is the one to ask, never a socket opened with
+    // what the connection used to be.
+    if (_closed) return Future.error(const DockgeClientClosed());
     if (_socket != null && _authed) return Future.value();
     final existing = _connecting;
     if (existing != null) return existing.future;
@@ -692,12 +708,13 @@ class DockgeClient {
   }
 
   Future<void> close() async {
+    _closed = true;
     _authed = false;
     // Fail any in-flight connect so `ensureConnected` callers don't hang.
     final connecting = _connecting;
     _connecting = null;
     if (connecting != null && !connecting.isCompleted) {
-      connecting.completeError(const DockgeException('Client closed'));
+      connecting.completeError(const DockgeClientClosed());
     }
     final socket = _socket;
     _socket = null;

@@ -28,6 +28,9 @@ class _ActivityTabState extends ConsumerState<ActivityTab>
   @override
   ServiceKey get failureService => widget.serviceType.service;
 
+  @override
+  void readAgain() => _refresh();
+
   ActivitySegment _selectedSegment = ActivitySegment.queue;
   Key _refreshKey = UniqueKey();
 

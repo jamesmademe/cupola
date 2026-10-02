@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
@@ -163,6 +164,9 @@ mixin ActivityTabHelpers {
   /// and opens its connection form for the remedy.
   ServiceKey get failureService;
 
+  /// Reads the tab again, the way a pull does.
+  void readAgain();
+
   Widget buildRefreshableSegmentedView<T extends Enum>({
     required Key refreshKey,
     required VoidCallback onRefreshRequested,
@@ -240,7 +244,14 @@ mixin ActivityTabHelpers {
     if (snapshot.hasError) {
       return SliverFillRemaining(
         hasScrollBody: false,
-        child: AppErrorState(error: snapshot.error!, service: failureService),
+        child: AppErrorState(
+          error: snapshot.error!,
+          service: failureService,
+          // These tabs are read again by pulling. A read whose client was
+          // closed under it by a settings change is read again by itself,
+          // on the rebuilt client, and never reads as a failure.
+          onRetry: isClosedClientFailure(snapshot.error) ? readAgain : null,
+        ),
       );
     }
 

@@ -374,6 +374,59 @@ String? connectionFailureDetail(Object? error) {
   return null;
 }
 
+/// Implemented by a client's own exception for a request it failed because
+/// it was closed under it: the WebSocket clients (TrueNAS, Dockge) fail what
+/// was in flight that way when their provider lets them go.
+abstract interface class ClientClosedFailure {}
+
+/// Whether [error] is a request that never reached anything because its own
+/// client had been closed: the connection's settings changed, its provider
+/// closed the client it held (`ref.onDispose(client.close)`), and something
+/// still holding that client sent on it before reading the provider again.
+///
+/// Not the server failing, and never "did not answer": nothing was dialled.
+/// The provider's rebuilt client is the one to ask, so a provider whose
+/// build fails this way reads again at once (`noProviderRetry`), and the
+/// shared failure states draw it as the read it is about to be
+/// (`AsyncValueWidget`, `AppErrorState`).
+///
+/// Dio refuses a request on a closed `Dio` before sending it, as a connection
+/// error with no cause and its own sentence, and a request an interceptor
+/// sends again (a redirect followed, a sign-in retried) on a closed adapter
+/// as a `StateError` it wraps. Both are read here, from Dio 5.9's own words,
+/// and `closed_client_test.dart` holds each client to them. A client's own
+/// exception is followed to the failure it wraps ([HasFailureCause]).
+bool isClosedClientFailure(Object? error) {
+  var current = unwrapFailure(error);
+  for (var depth = 0; depth < 4 && current != null; depth++) {
+    switch (current) {
+      case ClientClosedFailure():
+        return true;
+      case DioException(
+            type: DioExceptionType.connectionError,
+            error: null,
+            :final message,
+          )
+          when message != null &&
+              message.contains(
+                "can't establish a new connection after it "
+                'was closed',
+              ):
+        return true;
+      case DioException(error: StateError(:final message))
+          when message.contains('after the adapter was closed'):
+        return true;
+      case DioException(error: final inner?):
+        current = inner;
+      case HasFailureCause(:final failureCause):
+        current = failureCause;
+      default:
+        return false;
+    }
+  }
+  return false;
+}
+
 /// The failure a [ParallelWaitError] stands in front of — the first of the
 /// requests that failed — or the one a Riverpod [ProviderException] wraps, or
 /// [error] itself.

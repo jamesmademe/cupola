@@ -14,6 +14,9 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 ///              provider is reloading or retrying over that error
 /// - error    → [AppErrorState] with a retry button when [onRetry] is set
 ///              (the "not configured" case still routes to [NotConfiguredPlaceholder])
+/// - error from a client closed under the read ([isClosedClientFailure]) →
+///              not an error: the retained value, or the loading state, while
+///              the provider reads again on its rebuilt client
 /// - data     → [emptyBuilder]/[AppEmptyState] when [isEmpty] returns true,
 ///              otherwise [data]
 ///
@@ -96,34 +99,45 @@ class AsyncValueWidget<T> extends StatelessWidget {
     this.loadingLabel,
   });
 
+  Widget _data(T value) {
+    if (isEmpty != null && isEmpty!(value) && emptyBuilder != null) {
+      return emptyBuilder!;
+    }
+    return data(value);
+  }
+
+  Widget _loading() => Semantics(
+    container: true,
+    // The placeholder is decoration: its shimmer boxes carry no text, and
+    // its ListView/GridView would otherwise publish a scroll container over
+    // content that does not exist yet.
+    //
+    // No `liveRegion`: this widget rebuilds on every provider tick, so a
+    // polling dashboard would announce "Loading Radarr" on a loop.
+    excludeSemantics: true,
+    label: loadingLabel ?? 'Loading $serviceName',
+    child:
+        skeleton ??
+        loadingWidget ??
+        const Center(child: CircularProgressIndicator()),
+  );
+
   @override
   Widget build(BuildContext context) {
+    // A read whose client was closed under it by a settings change is not a
+    // failure of the service's: the provider reads again on the rebuilt
+    // client. What it had stays up meanwhile, or the loading state when it
+    // had nothing; never a band or a page saying it did not answer.
+    if (value.hasError && isClosedClientFailure(value.error)) {
+      return value.hasValue ? _data(value.requireValue) : _loading();
+    }
     return value.when(
       // A refresh (an invalidate, a poll tick) already skips its loading state
       // by default; this extends the same to a reload or a retry, but only over
       // a failure that has a retained readout to show. See the class doc.
       skipLoadingOnReload: value.hasValue && value.hasError,
-      data: (value) {
-        if (isEmpty != null && isEmpty!(value) && emptyBuilder != null) {
-          return emptyBuilder!;
-        }
-        return data(value);
-      },
-      loading: () => Semantics(
-        container: true,
-        // The placeholder is decoration: its shimmer boxes carry no text, and
-        // its ListView/GridView would otherwise publish a scroll container over
-        // content that does not exist yet.
-        //
-        // No `liveRegion`: this widget rebuilds on every provider tick, so a
-        // polling dashboard would announce "Loading Radarr" on a loop.
-        excludeSemantics: true,
-        label: loadingLabel ?? 'Loading $serviceName',
-        child:
-            skeleton ??
-            loadingWidget ??
-            const Center(child: CircularProgressIndicator()),
-      ),
+      data: _data,
+      loading: _loading,
       error: (e, stack) {
         if (e.toString().contains('not configured')) {
           return NotConfiguredPlaceholder(serviceName: serviceName);

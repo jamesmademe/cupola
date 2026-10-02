@@ -167,6 +167,15 @@ class AppErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A read whose client was closed under it by a settings change: nothing
+    // failed and nothing was dialled. It is read again on the rebuilt client
+    // through [onRetry], and this is the wait for it, never a failure's words.
+    if (isClosedClientFailure(error)) {
+      return _ReadingAgain(
+        onRetry: onRetry,
+        label: 'Loading ${_service?.title ?? serviceName ?? ''}'.trim(),
+      );
+    }
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final reason = classifyConnectionFailure(error);
@@ -270,4 +279,40 @@ class AppErrorState extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The wait for a read asked again after its client was closed under it: the
+/// loading state a reader hears as loading, and [onRetry] once, after the
+/// frame, so the screen's own read goes to the rebuilt client.
+///
+/// Once per state and no more: a screen that kept the closed client would
+/// otherwise be asked again on every frame.
+class _ReadingAgain extends StatefulWidget {
+  const _ReadingAgain({required this.onRetry, required this.label});
+
+  final VoidCallback? onRetry;
+  final String label;
+
+  @override
+  State<_ReadingAgain> createState() => _ReadingAgainState();
+}
+
+class _ReadingAgainState extends State<_ReadingAgain> {
+  @override
+  void initState() {
+    super.initState();
+    final retry = widget.onRetry;
+    if (retry == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) retry();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    excludeSemantics: true,
+    label: widget.label,
+    child: const Center(child: CircularProgressIndicator()),
+  );
 }

@@ -24,7 +24,7 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 
 `since`/`age` go through the shared age vocabulary in `core/utils/sample_age.dart`: `formatElapsedSpan` returns `null` under a minute (the sentence drops the span), and `formatDurationAge` buckets to `just now` / `N min ago` / `N h ago` — hours never roll up into days.
 
-`AsyncValueWidget` chooses between the first two by the classification: an error over a retained value is `.unreachable` only when nothing answered, and `.fault` for a refusal or any other failure that did answer — red is never spent on a service that just replied. The band and the retained data stay up while Riverpod retries or reloads over that error; only a failure with nothing retained shows the loading state while it retries.
+`AsyncValueWidget` chooses between the first two by the classification: an error over a retained value is `.unreachable` only when nothing answered, and `.fault` for a refusal or any other failure that did answer — red is never spent on a service that just replied. The band and the retained data stay up while Riverpod retries or reloads over that error; only a failure with nothing retained shows the loading state while it retries. A read whose own client was closed under it by a settings change gets no band at all: nothing was dialled, and the retained data stays up while the provider reads again.
 
 ## The consumer provides
 

@@ -8,6 +8,8 @@ Rendered from `lib/core/widgets/app_error_state.dart` and `lib/core/widgets/inli
 
 `AsyncValueWidget` on error: a *not configured* error → NotConfiguredPlaceholder; an error over a retained value → `FaultBand.unreachable` above the last-known data at full ink, also while the provider retries or reloads; nothing retained → `AppErrorState`. A section that fails inside an otherwise loaded page → `InlineErrorRetry`. A failure whose retry already lives elsewhere → `FaultNote`.
 
+None of them is drawn for a read whose own client was closed under it (`isClosedClientFailure`): the connection's settings changed, its provider closed the client the read was holding, and nothing was dialled. That is no failure and gets no words. `AsyncValueWidget` keeps the retained value, or shows its loading state, while the provider reads again on the rebuilt client; `AppErrorState` shows the loading state, labelled *Loading Radarr* for a screen reader, and asks again once through `onRetry`.
+
 ## AppErrorState
 
 - Centred column, padding `space-xl`.

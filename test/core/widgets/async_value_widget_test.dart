@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -270,6 +271,66 @@ void main() {
       expect(find.byType(FaultBand), findsNothing);
 
       await unmount(tester);
+    });
+  });
+
+  group('a read whose client was closed under it', () {
+    // Dio's own refusal of a request on a closed client: the connection's
+    // settings changed and its provider closed the client the read held.
+    Future<Object> closedClientError() async {
+      final dio = Dio()..close();
+      try {
+        await dio.get<dynamic>('http://nas.home.arpa:7878/api/v3/movie');
+      } catch (error) {
+        return error;
+      }
+      fail('a closed client sent the request');
+    }
+
+    testWidgets('keeps what it had, under no band', (tester) async {
+      final error = await closedClientError();
+      expect(isClosedClientFailure(error), isTrue);
+
+      await _pump(tester, _failedOver('tank ONLINE', error: error));
+
+      expect(find.text('tank ONLINE'), findsOneWidget);
+      expect(find.byType(FaultBand), findsNothing);
+      expect(find.textContaining('did not answer'), findsNothing);
+    });
+
+    testWidgets('with nothing retained, loads', (tester) async {
+      final error = await closedClientError();
+
+      await _pump(tester, AsyncValue<String>.error(error, StackTrace.empty));
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(AppErrorState), findsNothing);
+      expect(find.textContaining('did not answer'), findsNothing);
+    });
+
+    testWidgets('AppErrorState loads and asks again, once', (tester) async {
+      final error = await closedClientError();
+      var asked = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AppErrorState(
+              error: error,
+              serviceName: 'Radarr',
+              onRetry: () => asked++,
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.textContaining('did not answer'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
+      expect(find.bySemanticsLabel('Loading Radarr'), findsOneWidget);
+
+      await tester.pump();
+      await tester.pump();
+      expect(asked, 1);
     });
   });
 }

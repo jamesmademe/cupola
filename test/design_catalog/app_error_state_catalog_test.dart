@@ -41,6 +41,21 @@ void main() {
         width: 320,
       ),
       CatalogScene(
+        'AppErrorState · a read whose client a settings change closed under '
+        'it: no failure and no words, the loading state while onRetry asks '
+        'again on the rebuilt client',
+        (_) => AppErrorState(
+          serviceName: 'Radarr',
+          // Dio's own refusal of a request on a closed client.
+          error: DioException.connectionError(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            reason: "Dio can't establish a new connection after it was closed.",
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
         'AppErrorState · a server that answered with 401: an amber fault whose '
         'remedy leads in the amber fill, Paste the key again, and no Retry: '
         'the same key can only be refused again',

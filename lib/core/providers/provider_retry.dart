@@ -1,3 +1,5 @@
+import 'package:cupola/core/network/connection_failure.dart';
+
 /// Retry policy for providers whose failure something else is waiting to read.
 ///
 /// ## What Riverpod does by default
@@ -45,4 +47,19 @@
 /// `service_kpi_provider.dart`; `readarrQueueProvider`). Those *are* awaited
 /// inside a `catch`, which turns a failure into an em dash — and without the
 /// policy that `catch` waits out ten backed-off attempts first.
-Duration? noProviderRetry(int retryCount, Object error) => null;
+///
+/// ## The one failure it retries at once
+///
+/// A read whose client was closed under it ([isClosedClientFailure]) is
+/// asked again straight away: the connection's settings changed, its client
+/// provider closed the client the read was holding, and the rebuilt one is a
+/// read away. Nothing about the server is known from it, and the user has
+/// nothing to retry. Bounded, because only a connection that keeps changing
+/// could close the next client too.
+Duration? noProviderRetry(int retryCount, Object error) =>
+    retryCount < _closedClientRetries && isClosedClientFailure(error)
+    ? Duration.zero
+    : null;
+
+/// How many times in a row a read caught by a closing client is asked again.
+const _closedClientRetries = 3;

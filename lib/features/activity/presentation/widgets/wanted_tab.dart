@@ -32,6 +32,9 @@ class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
   @override
   ServiceKey get failureService => widget.serviceType.service;
 
+  @override
+  void readAgain() => _refresh();
+
   WantedSegment _selectedSegment = WantedSegment.missing;
   Key _refreshKey = UniqueKey();
   Future<Map<int, String>>? _movieQualityProfilesFuture;

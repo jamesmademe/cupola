@@ -63,6 +63,14 @@ class TrueNasRpcException extends TrueNasException {
   const TrueNasRpcException(super.message, {super.reason, super.forbidden});
 }
 
+/// A call that was still waiting when the client was closed under it: its
+/// connection's settings changed and the provider let it go. Not TrueNAS
+/// failing ([isClosedClientFailure]).
+class TrueNasClientClosed extends TrueNasException
+    implements ClientClosedFailure {
+  const TrueNasClientClosed() : super('Client closed');
+}
+
 /// Thrown instead of dialling an address that would carry the API key in
 /// cleartext: an `http://` (or `ws://`) TrueNAS URL.
 ///
@@ -211,6 +219,9 @@ class TrueNasWsClient {
   WebSocket? _socket;
   HttpClient? _httpClient;
   bool _authed = false;
+
+  /// Set by [close]: its provider let it go, and nothing is sent on it again.
+  bool _closed = false;
   int _nextId = 1;
   Completer<void>? _connecting;
   final Map<int, Completer<dynamic>> _pending = {};
@@ -266,6 +277,10 @@ class TrueNasWsClient {
   );
 
   Future<void> _ensureConnected() {
+    // Closed under whoever still holds it: the connection changed, and the
+    // provider's new client is the one to ask. Never a dial with what the
+    // connection used to be.
+    if (_closed) return Future.error(const TrueNasClientClosed());
     if (_socket != null && _authed) return Future.value();
     final existing = _connecting;
     if (existing != null) return existing.future;
@@ -296,6 +311,11 @@ class TrueNasWsClient {
         endpoint,
         httpClient,
       ).timeout(const Duration(seconds: 10));
+      if (_closed) {
+        // Closed while the upgrade was on its way: this socket is nobody's.
+        _closeQuietly(socket);
+        throw const TrueNasClientClosed();
+      }
       _socket = socket;
       socket.listen(
         _onMessage,
@@ -329,6 +349,8 @@ class TrueNasWsClient {
       if (socket != null) _closeQuietly(socket);
       httpClient.close(force: true);
       _httpClient = null;
+      // A dial cut short by [close] is the client closing, not TrueNAS.
+      if (_closed) throw const TrueNasClientClosed();
       if (e is TrueNasException) rethrow;
       // A refused upgrade carries the status the server answered with — a
       // redirect this client will not follow, a 404 from a SCALE build without
@@ -538,7 +560,8 @@ class TrueNasWsClient {
   }
 
   Future<void> close() async {
-    _failAll(const TrueNasException('Client closed'));
+    _closed = true;
+    _failAll(const TrueNasClientClosed());
     _authed = false;
     final socket = _socket;
     _socket = null;
