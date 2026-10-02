@@ -434,7 +434,7 @@ void main() {
       );
     });
 
-    testWidgets('a long remedy goes under, at the sentence\'s start', (
+    testWidgets('a long remedy goes under, at the trailing edge', (
       tester,
     ) async {
       await phone(
@@ -454,7 +454,12 @@ void main() {
         tester.getTopLeft(remedy).dy,
         greaterThanOrEqualTo(tester.getBottomLeft(message).dy),
       );
-      expect(tester.getTopLeft(remedy).dx, tester.getTopLeft(message).dx);
+      // Where it sat beside: the verbs keep their place whatever the size.
+      expect(
+        tester.getTopRight(find.text('Retry')).dx,
+        greaterThan(tester.getTopRight(remedy).dx),
+      );
+      expect(tester.getTopRight(find.text('Retry')).dx, greaterThan(390 - 60));
     });
 
     testWidgets('at 200% every verb goes under, and the sentence keeps the '

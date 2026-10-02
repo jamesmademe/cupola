@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/sample_age.dart';
+import 'package:cupola/core/widgets/beside_or_below.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -325,12 +325,10 @@ class FaultBand extends StatelessWidget {
         // through `announce()` as well: that would read it twice.
         liveRegion: true,
         label: message,
-        child: _BesideOrBelow(
-          indent: _glyphSize + AppSpacing.sm,
+        child: BesideOrBelow(
           gap: AppSpacing.xs,
-          // Sixteen of the sentence's own em, about thirty characters a line:
-          // less, and a sentence reads a word at a time.
-          minLead: _glyphSize + AppSpacing.sm + 16 * em,
+          minLead:
+              BesideOrBelow.sentenceMeasure(em) + _glyphSize + AppSpacing.sm,
           lead: Row(
             // The glyph sits on the sentence's first line, so a sentence that
             // wraps keeps its mark where the reading starts.
@@ -352,8 +350,9 @@ class FaultBand extends StatelessWidget {
               ),
             ],
           ),
-          actions: Wrap(
+          trailing: Wrap(
             spacing: AppSpacing.xs,
+            alignment: WrapAlignment.end,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               for (final action in actions)
@@ -392,227 +391,6 @@ class FaultBand extends StatelessWidget {
 }
 
 const double _glyphSize = 16;
-
-enum _BandSlot { lead, actions }
-
-/// The sentence with its verbs beside it, or under it once beside them it
-/// would be narrower than [minLead].
-///
-/// Beside, the sentence takes what the verbs leave and both centre on each
-/// other, as the band always drew. A large text size, or a long remedy on a
-/// phone, used to leave the sentence a column of two or three letters that
-/// broke inside every word for a thousand points; under it, the sentence
-/// keeps the whole width and the verbs follow at its start ([indent]),
-/// wrapping onto a second line if even that is too narrow. [minLead] is in
-/// the sentence's own type, so text at 200% on a phone always goes under.
-class _BesideOrBelow
-    extends SlottedMultiChildRenderObjectWidget<_BandSlot, RenderBox> {
-  const _BesideOrBelow({
-    required this.lead,
-    required this.actions,
-    required this.indent,
-    required this.gap,
-    required this.minLead,
-  });
-
-  final Widget lead;
-  final Widget actions;
-
-  /// Where the verbs start under the sentence: past the glyph.
-  final double indent;
-
-  /// Between the sentence and the verbs, beside it or under it.
-  final double gap;
-
-  /// The narrowest the glyph and its sentence go beside the verbs.
-  final double minLead;
-
-  @override
-  Iterable<_BandSlot> get slots => _BandSlot.values;
-
-  @override
-  Widget childForSlot(_BandSlot slot) => switch (slot) {
-    _BandSlot.lead => lead,
-    _BandSlot.actions => actions,
-  };
-
-  @override
-  _RenderBesideOrBelow createRenderObject(BuildContext context) =>
-      _RenderBesideOrBelow(indent: indent, gap: gap, minLead: minLead);
-
-  @override
-  void updateRenderObject(
-    BuildContext context,
-    _RenderBesideOrBelow renderObject,
-  ) {
-    renderObject
-      ..indent = indent
-      ..gap = gap
-      ..minLead = minLead;
-  }
-}
-
-class _RenderBesideOrBelow extends RenderBox
-    with SlottedContainerRenderObjectMixin<_BandSlot, RenderBox> {
-  _RenderBesideOrBelow({
-    required double indent,
-    required double gap,
-    required double minLead,
-  }) : _indent = indent,
-       _gap = gap,
-       _minLead = minLead;
-
-  double get indent => _indent;
-  double _indent;
-  set indent(double value) {
-    if (value == _indent) return;
-    _indent = value;
-    markNeedsLayout();
-  }
-
-  double get gap => _gap;
-  double _gap;
-  set gap(double value) {
-    if (value == _gap) return;
-    _gap = value;
-    markNeedsLayout();
-  }
-
-  double get minLead => _minLead;
-  double _minLead;
-  set minLead(double value) {
-    if (value == _minLead) return;
-    _minLead = value;
-    markNeedsLayout();
-  }
-
-  RenderBox get _lead => childForSlot(_BandSlot.lead)!;
-  RenderBox get _actions => childForSlot(_BandSlot.actions)!;
-
-  /// The one decision: what the verbs at their natural width leave the
-  /// sentence, against [minLead].
-  bool _below(double width) =>
-      width - _actions.getMaxIntrinsicWidth(double.infinity) - _gap < _minLead;
-
-  @override
-  double computeMinIntrinsicWidth(double height) => math.max(
-    _lead.getMinIntrinsicWidth(double.infinity),
-    _indent + _actions.getMinIntrinsicWidth(double.infinity),
-  );
-
-  @override
-  double computeMaxIntrinsicWidth(double height) =>
-      _lead.getMaxIntrinsicWidth(double.infinity) +
-      _gap +
-      _actions.getMaxIntrinsicWidth(double.infinity);
-
-  @override
-  double computeMinIntrinsicHeight(double width) => _height(width);
-
-  @override
-  double computeMaxIntrinsicHeight(double width) => _height(width);
-
-  double _height(double width) {
-    if (!width.isFinite) {
-      return math.max(
-        _lead.getMaxIntrinsicHeight(double.infinity),
-        _actions.getMaxIntrinsicHeight(double.infinity),
-      );
-    }
-    if (_below(width)) {
-      return _lead.getMaxIntrinsicHeight(width) +
-          _gap +
-          _actions.getMaxIntrinsicHeight(math.max(0, width - _indent));
-    }
-    final verbs = _actions.getMaxIntrinsicWidth(double.infinity);
-    return math.max(
-      _lead.getMaxIntrinsicHeight(width - verbs - _gap),
-      _actions.getMaxIntrinsicHeight(verbs),
-    );
-  }
-
-  @override
-  Size computeDryLayout(BoxConstraints constraints) {
-    final width = constraints.maxWidth;
-    if (_below(width)) {
-      final lead = _lead.getDryLayout(BoxConstraints.tightFor(width: width));
-      final verbs = _actions.getDryLayout(
-        BoxConstraints(maxWidth: math.max(0, width - _indent)),
-      );
-      return constraints.constrain(
-        Size(width, lead.height + _gap + verbs.height),
-      );
-    }
-    final verbs = _actions.getDryLayout(BoxConstraints(maxWidth: width));
-    final lead = _lead.getDryLayout(
-      BoxConstraints.tightFor(width: width - verbs.width - _gap),
-    );
-    return constraints.constrain(
-      Size(width, math.max(lead.height, verbs.height)),
-    );
-  }
-
-  @override
-  void performLayout() {
-    final width = constraints.maxWidth;
-    final lead = _lead;
-    final actions = _actions;
-    final leadData = lead.parentData! as BoxParentData;
-    final actionsData = actions.parentData! as BoxParentData;
-
-    if (_below(width)) {
-      lead.layout(BoxConstraints.tightFor(width: width), parentUsesSize: true);
-      actions.layout(
-        BoxConstraints(maxWidth: math.max(0, width - _indent)),
-        parentUsesSize: true,
-      );
-      leadData.offset = Offset.zero;
-      actionsData.offset = Offset(_indent, lead.size.height + _gap);
-      size = constraints.constrain(
-        Size(width, lead.size.height + _gap + actions.size.height),
-      );
-      return;
-    }
-
-    actions.layout(BoxConstraints(maxWidth: width), parentUsesSize: true);
-    lead.layout(
-      BoxConstraints.tightFor(width: width - actions.size.width - _gap),
-      parentUsesSize: true,
-    );
-    final height = math.max(lead.size.height, actions.size.height);
-    leadData.offset = Offset(0, (height - lead.size.height) / 2);
-    actionsData.offset = Offset(
-      width - actions.size.width,
-      (height - actions.size.height) / 2,
-    );
-    size = constraints.constrain(Size(width, height));
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    for (final child in children) {
-      context.paintChild(
-        child,
-        offset + (child.parentData! as BoxParentData).offset,
-      );
-    }
-  }
-
-  @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    for (final child in children) {
-      final offset = (child.parentData! as BoxParentData).offset;
-      final hit = result.addWithPaintOffset(
-        offset: offset,
-        position: position,
-        hitTest: (result, transformed) =>
-            child.hitTest(result, position: transformed),
-      );
-      if (hit) return true;
-    }
-    return false;
-  }
-}
 
 /// A verb and what it does.
 ///

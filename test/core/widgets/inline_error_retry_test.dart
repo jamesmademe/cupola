@@ -76,32 +76,36 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('the fixed-height variant still holds its slot', (tester) async {
-    // The reason the variant exists: a carousel row that swaps to a failure
-    // must not make the page jump.
-    Future<double> heightFor(String message) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: InlineErrorRetry.fixedHeight(
-              message: message,
-              error: null,
-              onRetry: () {},
-            ),
+  testWidgets('at 200% the verb goes under, and the sentence keeps the line', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    const sentence = 'Radarr did not answer, so its queue is not shown.';
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: InlineErrorRetry(
+            message: sentence,
+            error: null,
+            onRetry: () {},
           ),
         ),
-      );
-      return tester.getSize(find.byType(InlineErrorRetry)).height;
-    }
-
-    // The rule is that the height does not depend on the message, not that it
-    // is any particular number of points.
-    final short = await heightFor('Down.');
-    final long = await heightFor(
-      'Radarr did not answer, so the release list below is missing '
-      'everything it would have contributed to this page.',
+      ),
     );
-    expect(short, long);
+    expect(
+      tester.getTopLeft(find.text('Retry')).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(find.text(sentence)).dy),
+    );
+    expect(tester.getSize(find.text(sentence)).width, greaterThan(300));
+    expect(tester.takeException(), isNull);
   });
 
   group('the glyph follows the classification', () {

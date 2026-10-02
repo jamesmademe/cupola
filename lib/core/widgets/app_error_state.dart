@@ -237,9 +237,9 @@ class AppErrorState extends StatelessWidget {
                       theme.extension<CupolaThemeColors>()?.dimText ??
                       colorScheme.onSurfaceVariant,
                 ),
+                // Whole, never cut: it is the line that says what to do, and
+                // at 200% three lines cut it mid-word.
                 textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
             if (_actions(context, reason, remedy) case final actions?) ...[

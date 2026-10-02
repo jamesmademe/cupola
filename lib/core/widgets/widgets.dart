@@ -4,6 +4,7 @@
 library;
 
 // Animation
+export 'beside_or_below.dart';
 export 'desktop_content_well.dart';
 export 'shimmer_placeholder.dart';
 export 'app_skeleton.dart';

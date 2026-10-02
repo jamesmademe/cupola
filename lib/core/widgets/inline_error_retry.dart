@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/beside_or_below.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
@@ -15,9 +18,8 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// section that fails must not take the whole page down: this line sits in the
 /// slot the content would have occupied and offers the retry right there.
 ///
-/// The default constructor sizes itself to its message. Use
-/// [InlineErrorRetry.fixedHeight] where the notice replaces a fixed-height slot
-/// (a carousel row) and a self-sizing one would make the page jump.
+/// It sizes itself to its message. A fixed-height variant for a carousel row
+/// went unused and clipped its sentence at a large text size; it is gone.
 ///
 /// ## Why it is a line and not a card
 ///
@@ -63,8 +65,9 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// refused key reads `Paste the key again` and opens the form, and Retry is
 /// left out because the same key can only be refused again. Where the same
 /// request can still succeed (a refused sign-in whose ban runs out, a
-/// certificate or an address the server may yet fix) both stay, the remedy first, on a row of their own under the sentence
-/// so it keeps its width.
+/// certificate or an address the server may yet fix) both stay, the remedy
+/// first. The verbs sit beside the sentence while it keeps sixteen of its own
+/// em, and go under it otherwise ([BesideOrBelow]), so it keeps its width.
 ///
 /// Whose form the remedy opens is [service], and [instanceId] when the caller
 /// knows which connection the read went to (the lens's otherwise). Every
@@ -85,21 +88,7 @@ class InlineErrorRetry extends StatelessWidget {
     required this.error,
     this.service,
     this.instanceId,
-  }) : _height = null;
-
-  /// A notice locked to [_fixedHeight], for slots whose height must not change
-  /// between the loading, loaded and failed states.
-  const InlineErrorRetry.fixedHeight({
-    super.key,
-    required this.message,
-    required this.onRetry,
-    required this.error,
-    this.service,
-    this.instanceId,
-  }) : _height = _fixedHeight;
-
-  /// Height of the [InlineErrorRetry.fixedHeight] variant.
-  static const double _fixedHeight = 120;
+  });
 
   final String message;
   final VoidCallback onRetry;
@@ -117,22 +106,16 @@ class InlineErrorRetry extends StatelessWidget {
   /// remedy opens that connection's form rather than the lens's.
   final String? instanceId;
 
-  /// `null` for the self-sizing default; [_fixedHeight] for the fixed variant.
-  final double? _height;
-
   /// The requester reads one line with its time ([BriefFailureLine]),
   /// never this classification; see `RoleGate.faultVoice`.
   @override
   Widget build(BuildContext context) => FaultVoiceSwitch(
     full: _full,
-    brief: (context) => SizedBox(
-      height: _height,
-      child: BriefFailureLine.line(
-        error: error,
-        onRetry: onRetry,
-        service: service ?? FailureRemedy.serviceNamedBy(message),
-        instanceId: instanceId,
-      ),
+    brief: (context) => BriefFailureLine.line(
+      error: error,
+      onRetry: onRetry,
+      service: service ?? FailureRemedy.serviceNamedBy(message),
+      instanceId: instanceId,
     ),
   );
 
@@ -167,27 +150,24 @@ class InlineErrorRetry extends StatelessWidget {
       fault: failureIsFault(reason),
       onRetry: onRetry,
     );
-    // In the fixed slot the second row of verbs takes the height a third line
-    // of the sentence would need, so the sentence stops at two there. The
-    // screen reader still hears all of it: the label is the whole message.
-    final clipped = _height != null && verbs.length > 1;
-    final sentence = ExcludeSemantics(
-      child: Text(
-        message,
-        maxLines: clipped ? 2 : null,
-        overflow: clipped ? TextOverflow.ellipsis : null,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: colorScheme.onSurfaceVariant,
-        ),
-      ),
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: colorScheme.onSurfaceVariant,
     );
-    final glyphMark = ExcludeSemantics(
-      child: Icon(glyph, size: 16, color: alarm),
+    final em = MediaQuery.textScalerOf(context).scale(style?.fontSize ?? 12);
+    final sentence = ExcludeSemantics(child: Text(message, style: style));
+    // On the sentence's first line, so a sentence that wraps keeps its mark
+    // where the reading starts.
+    final glyphMark = Padding(
+      padding: EdgeInsets.only(
+        top: math.max(0, (em * (style?.height ?? 1.4) - _glyphSize) / 2),
+      ),
+      child: ExcludeSemantics(
+        child: Icon(glyph, size: _glyphSize, color: alarm),
+      ),
     );
 
     return Container(
       width: double.infinity,
-      height: _height,
       margin: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
@@ -201,38 +181,28 @@ class InlineErrorRetry extends StatelessWidget {
         // through `announce()` as well: that double-reads on iOS.
         liveRegion: true,
         label: message,
-        child: verbs.length == 1
-            ? Row(
-                children: [
-                  glyphMark,
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(child: sentence),
-                  const SizedBox(width: AppSpacing.sm),
-                  verbs.single,
-                ],
-              )
-            // Two verbs beside the sentence would leave it a third of the
-            // line on a phone, so they take the row under it, at the trailing
-            // edge where the one verb sits otherwise.
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      glyphMark,
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: sentence),
-                    ],
-                  ),
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: AppSpacing.xs,
-                    children: verbs,
-                  ),
-                ],
-              ),
+        child: BesideOrBelow(
+          gap: AppSpacing.sm,
+          minLead:
+              BesideOrBelow.sentenceMeasure(em) + _glyphSize + AppSpacing.sm,
+          lead: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              glyphMark,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: sentence),
+            ],
+          ),
+          trailing: Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.xs,
+            children: verbs,
+          ),
+        ),
       ),
     );
   }
 }
+
+const double _glyphSize = 16;

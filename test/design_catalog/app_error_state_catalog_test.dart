@@ -4,7 +4,6 @@ library;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/capability/audience.dart';
@@ -220,24 +219,6 @@ void main() {
         width: 360,
       ),
       CatalogScene(
-        'InlineErrorRetry.fixedHeight · locked to 120px so a carousel row does '
-        'not jump between loading, loaded and failed',
-        (_) => DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: const Color(0x40808080),
-              style: BorderStyle.solid,
-            ),
-          ),
-          child: InlineErrorRetry.fixedHeight(
-            message: 'Unraid did not answer, so its containers are not shown.',
-            error: const SocketException('Connection refused'),
-            onRetry: () {},
-          ),
-        ),
-        width: 360,
-      ),
-      CatalogScene(
         "AppErrorState, in the requester's app · Seerr did not answer: one "
         'line with its time, no service named and no cause, and Retry as '
         'a ghost in ink',
@@ -344,20 +325,13 @@ void main() {
         textScale: catalogTextScale,
       ),
       CatalogScene(
-        'Text at 200% · InlineErrorRetry.fixedHeight, locked to 120px: the '
-        'carousel row at twice the reading size',
-        (_) => DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: const Color(0x40808080),
-              style: BorderStyle.solid,
-            ),
-          ),
-          child: InlineErrorRetry.fixedHeight(
-            message: 'Unraid did not answer, so its containers are not shown.',
-            error: const SocketException('Connection refused'),
-            onRetry: () {},
-          ),
+        'Text at 200% · InlineErrorRetry with Retry alone: under the sentence, '
+        'at the trailing edge, the sentence keeping the line',
+        (_) => InlineErrorRetry(
+          message: 'Unraid did not answer, so its containers are not shown.',
+          error: const SocketException('Connection refused'),
+          service: ServiceKey.unraid,
+          onRetry: () {},
         ),
         width: 360,
         textScale: catalogTextScale,

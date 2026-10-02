@@ -27,7 +27,7 @@ void main() {
   _guard(
     'InlineErrorRetry',
     libFiles,
-    RegExp(r'\bInlineErrorRetry(?:\.fixedHeight)?\('),
+    RegExp(r'\bInlineErrorRetry\('),
     definedIn: 'lib/core/widgets/inline_error_retry.dart',
     // None: every section that draws one reads one service.
     allowed: const {},

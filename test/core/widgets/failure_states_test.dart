@@ -553,14 +553,19 @@ void main() {
       const error = ClassifiedFailure(ServiceFailureReason.tls);
       await _pump(
         tester,
-        InlineErrorRetry(
-          message: sectionFailureMessage(
-            ServiceKey.radarr,
-            error,
-            consequence: 'its queue is not shown',
+        // A phone's line: beside two verbs the sentence would keep less than
+        // sixteen of its em, so they go under it.
+        SizedBox(
+          width: 480,
+          child: InlineErrorRetry(
+            message: sectionFailureMessage(
+              ServiceKey.radarr,
+              error,
+              consequence: 'its queue is not shown',
+            ),
+            error: error,
+            onRetry: () {},
           ),
-          error: error,
-          onRetry: () {},
         ),
       );
 
@@ -581,41 +586,6 @@ void main() {
       for (final verb in [_filled('Check the certificate'), _text('Retry')]) {
         expect(tester.getSize(verb).height, greaterThanOrEqualTo(44));
       }
-    });
-
-    testWidgets('InlineErrorRetry: the fixed-height slot holds two verbs', (
-      tester,
-    ) async {
-      Future<double> slotFor(Object error) async {
-        await _pump(
-          tester,
-          // Wide enough for both verbs on one line in the test font, whose
-          // glyphs are all a full em: a real phone fits them in 360.
-          SizedBox(
-            width: 600,
-            child: InlineErrorRetry.fixedHeight(
-              message: sectionFailureMessage(
-                ServiceKey.radarr,
-                error,
-                consequence: 'this row is missing',
-              ),
-              error: error,
-              onRetry: () {},
-            ),
-          ),
-        );
-        expect(tester.takeException(), isNull);
-        return tester.getSize(find.byType(InlineErrorRetry)).height;
-      }
-
-      final one = await slotFor(_refused());
-      final two = await slotFor(
-        const ClassifiedFailure(ServiceFailureReason.notFound),
-      );
-      expect(_filled('Check the address'), findsOneWidget);
-      expect(_text('Retry'), findsOneWidget);
-      // A carousel row that fails does not jump for having two verbs.
-      expect(two, one);
     });
 
     testWidgets('FaultBand.fault opens the form itself when its caller gives '
