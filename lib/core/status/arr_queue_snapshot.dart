@@ -1,6 +1,7 @@
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 
 export 'package:cupola/core/status/media_status.dart';
@@ -44,6 +45,19 @@ class ArrQueueEntry {
   });
 
   bool get hasWarning => severity != ArrQueueSeverity.ok;
+
+  /// This record as a stale reading keeps it: the state stays, the progress
+  /// goes. A percentage that is no longer moving must not look live, the
+  /// same reason a row under `FaultBand.stale` trades its time left for the
+  /// reading's age.
+  ArrQueueEntry withoutProgress() => progress == null
+      ? this
+      : ArrQueueEntry(
+          pipeline: pipeline,
+          severity: severity,
+          detail: detail,
+          label: label,
+        );
 
   /// The tone this record's severity earns over the one its [pipeline] implies.
   ///
@@ -270,6 +284,12 @@ MediaStatusInfo mediaStatusFromQueue({
 /// The last two used to read as the first. A failed read degraded to [empty],
 /// and every title that was downloading read `Missing` on its detail page,
 /// because "no entry" was taken as "not in the queue".
+///
+/// A fourth reading sits between them: a refresh that failed over a queue
+/// that answered before ([isStale], [staleAfter]). The last answer stays, so
+/// a title that was downloading a minute ago does not drop back to
+/// `Unknown`, and it says it is old: it did not answer now, so it is not
+/// whole and an absence proves nothing.
 class ArrQueueSnapshot {
   /// A queue that answered with nothing in it.
   static const ArrQueueSnapshot empty = ArrQueueSnapshot._(
@@ -287,16 +307,29 @@ class ArrQueueSnapshot {
     : entriesById = const <int, ArrQueueEntry>{},
       sampledAt = null,
       answered = false,
-      cutShort = false;
+      cutShort = false,
+      isStale = false;
+
+  const ArrQueueSnapshot._stale(this.entriesById, this.sampledAt, this.error)
+    : answered = false,
+      cutShort = false,
+      isStale = true;
 
   final Map<int, ArrQueueEntry> entriesById;
 
-  /// The queue answered. False only on [ArrQueueSnapshot.failed].
+  /// The queue answered. False on [ArrQueueSnapshot.failed], and on a
+  /// [isStale] snapshot, whose last read did not answer either.
   final bool answered;
 
   /// Why the queue could not be read, when it could not and the reader kept
   /// the reason. Null on every snapshot that [answered].
   final Object? error;
+
+  /// The last read failed and these entries are the answer before it, taken
+  /// at [sampledAt] ([staleAfter]). Every entry was true then; none says how
+  /// far a download has got now, and a title with none may have started
+  /// since, so the snapshot is not [isWhole].
+  final bool isStale;
 
   /// The walk across the queue's pages stopped before the end of it
   /// (`ArrRecordPage.cutShort`): every entry here is true, and a title with
@@ -310,7 +343,7 @@ class ArrQueueSnapshot {
 
   /// Nothing has come back yet: the queue has neither answered nor failed.
   /// [unknown] is this state; a failed read carries its error.
-  bool get isPending => !answered && error == null;
+  bool get isPending => !answered && !isStale && error == null;
 
   /// When the records in this snapshot were read from the service.
   ///
@@ -332,7 +365,26 @@ class ArrQueueSnapshot {
     this.sampledAt, {
     this.cutShort = false,
   }) : answered = true,
-       error = null;
+       error = null,
+       isStale = false;
+
+  /// This reading kept after a later read failed with [error].
+  ///
+  /// The entries stay without their progress
+  /// ([ArrQueueEntry.withoutProgress]) and [sampledAt] stays the time they
+  /// were read, so a page can say how old they are. A snapshot that never
+  /// answered has nothing to keep and stays [ArrQueueSnapshot.failed].
+  ArrQueueSnapshot staleAfter(Object? error) {
+    if (!answered && !isStale) return ArrQueueSnapshot.failed(error);
+    return ArrQueueSnapshot._stale(
+      {
+        for (final entry in entriesById.entries)
+          entry.key: entry.value.withoutProgress(),
+      },
+      sampledAt,
+      error,
+    );
+  }
 
   bool get isEmpty => entriesById.isEmpty;
   bool get isNotEmpty => entriesById.isNotEmpty;
@@ -384,6 +436,12 @@ class ArrQueueSnapshot {
     );
   }
 }
+
+/// How old [queue]'s reading is, in the app's one vocabulary for an age
+/// ([formatSampleAge]): `3 min ago`, `just now`. What a page under a stale
+/// queue ([ArrQueueSnapshot.isStale]) says of the downloads it still shows.
+String queueReadingAge(ArrQueueSnapshot queue, {DateTime? now}) =>
+    formatSampleAge(queue.sampledAt ?? now ?? DateTime.now(), now: now);
 
 /// Collapses several queue records onto one media item.
 ///

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 
 void main() {
   group('badgeOverQueue', () {
@@ -538,6 +539,74 @@ void main() {
       expect(snapshot.error, same(error));
       expect(snapshot.sampledAt, isNull);
       expect(ArrQueueSnapshot.unknown.answered, isFalse);
+    });
+  });
+
+  group('a refresh that failed keeps the answer before it, stale', () {
+    final read = DateTime(2026, 10, 2, 9, 30);
+    final answered = ArrQueueSnapshot.fromQueueItems(
+      const [
+        {
+          'movieId': 1,
+          'status': 'downloading',
+          'trackedDownloadState': 'downloading',
+          'size': 100,
+          'sizeleft': 38,
+        },
+      ],
+      idsFor: (item) => [item['movieId'] as int],
+      sampledAt: read,
+    );
+
+    test('the download stays, without a progress that no longer moves', () {
+      expect(answered.entryFor(1)?.progress, isNotNull);
+      final error = Exception('boom');
+
+      final stale = answered.staleAfter(error);
+
+      expect(stale.isStale, isTrue);
+      expect(stale.entryFor(1)?.pipeline, MediaPipeline.downloading);
+      expect(stale.entryFor(1)?.progress, isNull);
+      expect(stale.sampledAt, read);
+      expect(stale.error, same(error));
+      expect(
+        queueReadingAge(stale, now: read.add(const Duration(minutes: 3))),
+        '${withUnit(3, 'min')} ago',
+      );
+    });
+
+    test('it did not answer now: not whole, not pending, and an absence '
+        'proves nothing', () {
+      final stale = answered.staleAfter(Exception('boom'));
+
+      expect(stale.answered, isFalse);
+      expect(stale.isWhole, isFalse);
+      expect(stale.isPending, isFalse);
+      final kept = mediaStatusFromQueue(
+        availability: MediaAvailability.missing,
+        monitored: true,
+        queueEntry: stale.entryFor(1),
+        queueUnknown: !stale.isWhole,
+      );
+      final other = mediaStatusFromQueue(
+        availability: MediaAvailability.missing,
+        monitored: true,
+        queueEntry: stale.entryFor(2),
+        queueUnknown: !stale.isWhole,
+      );
+      // The film that was downloading a minute ago never reads Missing, nor
+      // Unknown; the one that was not may have started since.
+      expect(kept.label, 'Downloading');
+      expect(badgeOverQueue(other, stale)?.label, 'Unknown');
+    });
+
+    test('a read that never answered has nothing to keep', () {
+      final error = Exception('boom');
+      final again = ArrQueueSnapshot.failed(error).staleAfter(error);
+
+      expect(again.isStale, isFalse);
+      expect(again.isEmpty, isTrue);
+      expect(ArrQueueSnapshot.unknown.staleAfter(error).isStale, isFalse);
     });
   });
 

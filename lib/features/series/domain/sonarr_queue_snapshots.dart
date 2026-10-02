@@ -86,6 +86,14 @@ class SonarrQueueSnapshots {
     );
   }
 
+  /// This reading kept, every way, after a later read failed with [error]:
+  /// see [ArrQueueSnapshot.staleAfter].
+  SonarrQueueSnapshots staleAfter(Object? error) => SonarrQueueSnapshots._(
+    bySeries: bySeries.staleAfter(error),
+    byEpisode: byEpisode.staleAfter(error),
+    bySeason: _bySeason.staleAfter(error),
+  );
+
   /// The queue answered and every record of it was read.
   bool get isWhole => byEpisode.isWhole;
 

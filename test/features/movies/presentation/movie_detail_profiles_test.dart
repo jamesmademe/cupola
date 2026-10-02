@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_provider.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -375,6 +376,55 @@ void main() {
       expect(_queueReads(harness), greaterThan(asked));
       expect(find.byType(InlineErrorRetry), findsNothing);
       expect(_badge(tester).label, 'Downloading');
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a refresh that fails keeps the download it held, and says '
+        'how old it is', (tester) async {
+      var failing = false;
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        const MovieDetailScreen(movieId: 1, heroTag: 'movie-1'),
+        routes: (network) => network.on(
+          WorldIds.radarr,
+          'GET',
+          '/api/v3/queue',
+          (_) => failing
+              ? NetworkReply.json({'message': 'boom'}, status: 500)
+              : null,
+        ),
+      );
+      expect(_badge(tester).label, 'Downloading');
+      expect(_badge(tester).progress, isNotNull);
+
+      // The queue is read again elsewhere (a pull on the grid) and fails.
+      failing = true;
+      _container(tester).invalidate(radarrQueueSnapshotForProvider);
+      await harness.settle(tester);
+
+      // It used to drop to "Unknown", and the download left the page.
+      expect(_badge(tester).label, 'Downloading');
+      expect(_badge(tester).progress, isNull);
+      expect(
+        find.text(
+          "Radarr 1's queue answered with an error, so the download shown is "
+          'as it was just now.',
+        ),
+        findsOneWidget,
+      );
+
+      failing = false;
+      await tester.tap(
+        find.descendant(
+          of: find.byType(InlineErrorRetry),
+          matching: find.text('Retry'),
+        ),
+      );
+      await harness.settle(tester);
+      expect(find.byType(InlineErrorRetry), findsNothing);
+      expect(_badge(tester).progress, isNotNull);
 
       await harness.unmount(tester);
     });

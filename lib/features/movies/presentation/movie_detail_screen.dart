@@ -215,6 +215,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
                 instanceId,
                 inLibrary: viewModel.isInLibrary,
                 status: status,
+                movieId: movie.id,
               ),
       ),
     );
@@ -260,18 +261,24 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
   /// while it is still being read. A queue that answered but was not read to
   /// the end ([ArrQueueSnapshot.cutShort]) leaves the badge unknown and draws
   /// no line: nothing failed, and Retry would walk the same pages again.
+  ///
+  /// Over a refresh that failed after an answer ([ArrQueueSnapshot.isStale])
+  /// the badge keeps the download that answer held, and the line says how old
+  /// it is: a page that still shows it must not pass it off as current.
   Widget? _queueUnknown(
     ArrQueueSnapshot queue,
     String instanceId, {
     required bool inLibrary,
     required MediaStatusInfo status,
+    required int movieId,
   }) {
     if (queue.answered || queue.error == null || !inLibrary) return null;
+    final kept = queue.isStale && queue.entryFor(movieId) != null;
     final onDisk = switch (status.availability) {
       MediaAvailability.available || MediaAvailability.upgradable => true,
       _ => false,
     };
-    if (onDisk || status.isInPipeline) return null;
+    if (!kept && (onDisk || status.isInPipeline)) return null;
     final name = ref.watch(
       currentSettingsProvider.select(
         (s) => s.connectionTitle(instanceId, ServiceKey.radarr),
@@ -282,7 +289,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         ServiceKey.radarr,
         queue.error,
         subject: "$name's queue",
-        consequence: 'this page cannot tell whether the movie is downloading',
+        consequence: kept
+            ? 'the download shown is as it was ${queueReadingAge(queue)}'
+            : 'this page cannot tell whether the movie is downloading',
       ),
       error: queue.error,
       service: ServiceKey.radarr,

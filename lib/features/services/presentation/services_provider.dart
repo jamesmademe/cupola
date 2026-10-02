@@ -641,6 +641,7 @@ final radarrQueueSnapshotForProvider =
           ? ref.watch(radarrServiceProvider)
           : ref.watch(radarrServiceForProvider(instanceId));
       return _loadArrQueueSnapshot(
+        service,
         service.getQueuePage,
         (item) => [
           intOrNull(mapOrNull(item['movie'])?['id'] ?? item['movieId']),
@@ -692,9 +693,9 @@ LidarrQueueSnapshots lidarrQueueSnapshotsOf(
 /// The Sonarr queue of one named connection, indexed by series, episode and
 /// season from one read. Empty id means the lens.
 ///
-/// Degrades to a **failed** snapshot, never an empty one: see
-/// [_loadArrQueueSnapshot]. Invalidate this family, not the series index
-/// derived from it, to read the queue again.
+/// Degrades to a **failed** snapshot, never an empty one, or to the last
+/// answer kept as stale: see [_loadArrQueueSnapshot]. Invalidate this family,
+/// not the series index derived from it, to read the queue again.
 final sonarrQueueSnapshotsForProvider =
     FutureProvider.family<SonarrQueueSnapshots, String>((
       ref,
@@ -705,12 +706,15 @@ final sonarrQueueSnapshotsForProvider =
           : ref.watch(sonarrServiceForProvider(instanceId));
       try {
         final page = await service.getQueuePage();
-        return SonarrQueueSnapshots.fromQueueItems(
+        return _lastSonarrQueue[service] = SonarrQueueSnapshots.fromQueueItems(
           page.records,
           cutShort: page.cutShort,
         );
       } catch (error) {
-        return SonarrQueueSnapshots.failed(error);
+        // The last answer, stale, over a refresh that failed: see
+        // [_lastArrQueue].
+        return _lastSonarrQueue[service]?.staleAfter(error) ??
+            SonarrQueueSnapshots.failed(error);
       }
     });
 
@@ -790,6 +794,19 @@ final lidarrQueueSnapshotsForProvider =
 Future<LidarrQueueSnapshots> _loadLidarrQueueSnapshots(
   LidarrService service,
 ) async {
+  try {
+    return _lastLidarrQueue[service] = await _readLidarrQueueSnapshots(service);
+  } catch (error) {
+    // Failed, not empty, and the last answer kept as stale when there was
+    // one: see [_loadArrQueueSnapshot].
+    return _lastLidarrQueue[service]?.staleAfter(error) ??
+        LidarrQueueSnapshots.failed(error);
+  }
+}
+
+Future<LidarrQueueSnapshots> _readLidarrQueueSnapshots(
+  LidarrService service,
+) async {
   int? directArtistId(Map<String, dynamic> item) => intOrNull(
     mapOrNull(item['artist'])?['id'] ??
         mapOrNull(item['album'])?['artistId'] ??
@@ -798,96 +815,89 @@ Future<LidarrQueueSnapshots> _loadLidarrQueueSnapshots(
   int? albumIdOf(Map<String, dynamic> item) =>
       intOrNull(mapOrNull(item['album'])?['id'] ?? item['albumId']);
 
-  try {
-    final page = await service.getQueuePage();
-    final queueItems = page.records
-        .whereType<Map>()
-        .map(stringKeyMap)
+  final page = await service.getQueuePage();
+  final queueItems = page.records
+      .whereType<Map>()
+      .map(stringKeyMap)
+      .toList(growable: false);
+  if (queueItems.isEmpty && !page.cutShort) {
+    return LidarrQueueSnapshots.empty;
+  }
+
+  // Only records that do not already name their artist are worth the album
+  // lookup below, which costs one request per artist.
+  final unresolvedAlbumIds = <int>{};
+  for (final item in queueItems) {
+    final artistId = directArtistId(item);
+    if (artistId != null && artistId > 0) continue;
+
+    final albumId = albumIdOf(item);
+    if (albumId != null && albumId > 0) {
+      unresolvedAlbumIds.add(albumId);
+    }
+  }
+
+  final albumToArtist = <int, int>{};
+  if (unresolvedAlbumIds.isNotEmpty) {
+    final pending = {...unresolvedAlbumIds};
+    final candidates = (await service.getArtists())
+        .where((artist) => artist.albumCount > 0)
+        .take(_lidarrAlbumLookupCap)
         .toList(growable: false);
-    if (queueItems.isEmpty && !page.cutShort) {
-      return LidarrQueueSnapshots.empty;
-    }
 
-    // Only records that do not already name their artist are worth the album
-    // lookup below, which costs one request per artist.
-    final unresolvedAlbumIds = <int>{};
-    for (final item in queueItems) {
-      final artistId = directArtistId(item);
-      if (artistId != null && artistId > 0) continue;
+    for (
+      var start = 0;
+      start < candidates.length && pending.isNotEmpty;
+      start += _lidarrAlbumLookupConcurrency
+    ) {
+      final batch = candidates.skip(start).take(_lidarrAlbumLookupConcurrency);
+      final fetched = await Future.wait(
+        batch.map((artist) async {
+          try {
+            return (
+              artist: artist.id,
+              albums: await service.getAlbums(artist.id),
+            );
+          } catch (_) {
+            // One artist that will not answer must not abandon the rest of
+            // the batch.
+            return (artist: artist.id, albums: const <LidarrAlbum>[]);
+          }
+        }),
+      );
 
-      final albumId = albumIdOf(item);
-      if (albumId != null && albumId > 0) {
-        unresolvedAlbumIds.add(albumId);
-      }
-    }
-
-    final albumToArtist = <int, int>{};
-    if (unresolvedAlbumIds.isNotEmpty) {
-      final pending = {...unresolvedAlbumIds};
-      final candidates = (await service.getArtists())
-          .where((artist) => artist.albumCount > 0)
-          .take(_lidarrAlbumLookupCap)
-          .toList(growable: false);
-
-      for (
-        var start = 0;
-        start < candidates.length && pending.isNotEmpty;
-        start += _lidarrAlbumLookupConcurrency
-      ) {
-        final batch = candidates
-            .skip(start)
-            .take(_lidarrAlbumLookupConcurrency);
-        final fetched = await Future.wait(
-          batch.map((artist) async {
-            try {
-              return (
-                artist: artist.id,
-                albums: await service.getAlbums(artist.id),
-              );
-            } catch (_) {
-              // One artist that will not answer must not abandon the rest of
-              // the batch.
-              return (artist: artist.id, albums: const <LidarrAlbum>[]);
-            }
-          }),
-        );
-
-        for (final result in fetched) {
-          for (final album in result.albums) {
-            if (pending.remove(album.id)) {
-              albumToArtist[album.id] = result.artist;
-            }
+      for (final result in fetched) {
+        for (final album in result.albums) {
+          if (pending.remove(album.id)) {
+            albumToArtist[album.id] = result.artist;
           }
         }
       }
     }
-
-    return LidarrQueueSnapshots(
-      byArtist: ArrQueueSnapshot.fromQueueItems(
-        queueItems,
-        cutShort: page.cutShort,
-        idsFor: (item) {
-          final direct = directArtistId(item);
-          if (direct != null && direct > 0) return [direct];
-
-          final albumId = albumIdOf(item);
-          final resolved = albumId == null ? null : albumToArtist[albumId];
-          return resolved == null ? const <int>[] : [resolved];
-        },
-      ),
-      byAlbum: ArrQueueSnapshot.fromQueueItems(
-        queueItems,
-        cutShort: page.cutShort,
-        idsFor: (item) {
-          final albumId = albumIdOf(item);
-          return albumId == null ? const <int>[] : [albumId];
-        },
-      ),
-    );
-  } catch (error) {
-    // Failed, not empty: see [_loadArrQueueSnapshot].
-    return LidarrQueueSnapshots.failed(error);
   }
+
+  return LidarrQueueSnapshots(
+    byArtist: ArrQueueSnapshot.fromQueueItems(
+      queueItems,
+      cutShort: page.cutShort,
+      idsFor: (item) {
+        final direct = directArtistId(item);
+        if (direct != null && direct > 0) return [direct];
+
+        final albumId = albumIdOf(item);
+        final resolved = albumId == null ? null : albumToArtist[albumId];
+        return resolved == null ? const <int>[] : [resolved];
+      },
+    ),
+    byAlbum: ArrQueueSnapshot.fromQueueItems(
+      queueItems,
+      cutShort: page.cutShort,
+      idsFor: (item) {
+        final albumId = albumIdOf(item);
+        return albumId == null ? const <int>[] : [albumId];
+      },
+    ),
+  );
 }
 
 /// How many items the merged Recently Added rail shows.
@@ -2331,21 +2341,51 @@ int? parseClockDuration(String? value) {
 /// downloading read `Missing`. A walk that stopped short says so too
 /// ([ArrQueueSnapshot.cutShort]), for the same reason: an id missing from the
 /// rows it read may be in the rows it did not.
+///
+/// A refresh that fails after [client] has answered once degrades to that
+/// answer instead, kept as stale ([ArrQueueSnapshot.staleAfter]): see
+/// [_lastArrQueue]. Only a first read that fails is the failed snapshot.
 Future<ArrQueueSnapshot> _loadArrQueueSnapshot(
+  Object client,
   Future<ArrRecordPage> Function() loadPage,
   Iterable<int?> Function(Map<String, dynamic> item) idsFor,
 ) async {
   try {
     final page = await loadPage();
-    return ArrQueueSnapshot.fromQueueItems(
+    return _lastArrQueue[client] = ArrQueueSnapshot.fromQueueItems(
       page.records,
       idsFor: (item) => idsFor(item).whereType<int>(),
       cutShort: page.cutShort,
     );
   } catch (error) {
-    return ArrQueueSnapshot.failed(error);
+    return _lastArrQueue[client]?.staleAfter(error) ??
+        ArrQueueSnapshot.failed(error);
   }
 }
+
+/// The last queue each client answered with, so a refresh that fails keeps
+/// it rather than throwing it away.
+///
+/// A queue refresh that failed used to replace the reading with a failed
+/// snapshot: every badge went `Unknown` and the download a page was showing
+/// a minute ago disappeared from it. The reading stays now, stale, and the
+/// page says how old it is.
+///
+/// Keyed on the client, and weakly. A connection whose address or key
+/// changes gets a new client and starts with nothing kept, which is the
+/// point: the ids in the old answer may be another server's. A client that
+/// goes away takes its answer with it.
+final Expando<ArrQueueSnapshot> _lastArrQueue = Expando('last queue answer');
+
+/// [_lastArrQueue] for Sonarr's three indexes of one queue.
+final Expando<SonarrQueueSnapshots> _lastSonarrQueue = Expando(
+  'last Sonarr queue answer',
+);
+
+/// [_lastArrQueue] for Lidarr's two indexes of one queue.
+final Expando<LidarrQueueSnapshots> _lastLidarrQueue = Expando(
+  'last Lidarr queue answer',
+);
 
 /// One \*arr's queue as in-flight items. Throws when the queue cannot be read:
 /// the caller keeps the failure, so a dark arr is named rather than counted as

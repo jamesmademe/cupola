@@ -28,4 +28,11 @@ class LidarrQueueSnapshots {
     byArtist: ArrQueueSnapshot.failed(error),
     byAlbum: ArrQueueSnapshot.failed(error),
   );
+
+  /// This reading kept, both ways, after a later read failed with [error]:
+  /// see [ArrQueueSnapshot.staleAfter].
+  LidarrQueueSnapshots staleAfter(Object? error) => LidarrQueueSnapshots(
+    byArtist: byArtist.staleAfter(error),
+    byAlbum: byAlbum.staleAfter(error),
+  );
 }

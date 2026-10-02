@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/presentation/series_detail_provider.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -327,6 +328,44 @@ void main() {
       // The 18 grabs Sonarr will not place on its own outrank the two still
       // downloading.
       expect(_badge(tester).label, 'Import blocked');
+
+      await harness.unmount(tester);
+    });
+  });
+
+  group('a queue refresh that fails', () {
+    testWidgets('keeps the downloads it held, and says how old they are', (
+      tester,
+    ) async {
+      var failing = false;
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        const SeriesDetailScreen(seriesId: 1, heroTag: 'series-1'),
+        routes: (network) => network.on(
+          WorldIds.sonarr,
+          'GET',
+          '/api/v3/queue',
+          (_) => failing
+              ? NetworkReply.json({'message': 'boom'}, status: 500)
+              : null,
+        ),
+      );
+      expect(_badge(tester).label, 'Import blocked');
+
+      failing = true;
+      _container(tester).invalidate(sonarrQueueSnapshotsForProvider);
+      await harness.settle(tester);
+
+      // It used to drop to "Partial", the downloads gone from the page.
+      expect(_badge(tester).label, 'Import blocked');
+      expect(
+        find.text(
+          "Sonarr's queue answered with an error, so the downloads shown are "
+          'as they were just now.',
+        ),
+        findsOneWidget,
+      );
 
       await harness.unmount(tester);
     });

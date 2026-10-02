@@ -16,6 +16,7 @@ import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/lidarr_status.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
+import 'package:cupola/features/music/domain/lidarr_queue_snapshots.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/presentation/music_detail_provider.dart';
 import 'package:cupola/features/music/presentation/music_detail_view_model.dart';
@@ -26,6 +27,7 @@ import 'package:cupola/features/release_search/presentation/release_search_entry
 import 'package:cupola/features/release_search/presentation/widgets/release_search_status_card.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -164,7 +166,49 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         albumsAsync,
         queues.byAlbum,
         artist.id > 0 ? artist.id : widget.artistId,
+        band: _staleQueueLine(
+          queues,
+          instanceId,
+          artistId: artist.id,
+          albums: albumsAsync.value ?? const [],
+        ),
       ),
+    );
+  }
+
+  /// A quiet line over a queue kept stale ([ArrQueueSnapshot.isStale]) that
+  /// still shows this artist or one of its albums in flight: the badges keep
+  /// the downloads its last answer held, and the line says how old they are,
+  /// so a page that still shows them does not pass them off as current.
+  Widget? _staleQueueLine(
+    LidarrQueueSnapshots queues,
+    String instanceId, {
+    required int artistId,
+    required List<LidarrAlbum> albums,
+  }) {
+    final shown =
+        queues.byArtist.entryFor(artistId) != null ||
+        albums.any((album) => queues.byAlbum.entryFor(album.id) != null);
+    if (!queues.byArtist.isStale || !shown) return null;
+    final name = ref.watch(
+      currentSettingsProvider.select(
+        (s) => s.connectionTitle(instanceId, ServiceKey.lidarr),
+      ),
+    );
+    return InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.lidarr,
+        queues.byArtist.error,
+        subject: "$name's queue",
+        consequence:
+            'the downloads shown are as they were '
+            '${queueReadingAge(queues.byArtist)}',
+      ),
+      error: queues.byArtist.error,
+      service: ServiceKey.lidarr,
+      instanceId: instanceId,
+      onRetry: () =>
+          ref.invalidate(lidarrQueueSnapshotsForProvider(instanceId)),
     );
   }
 
@@ -243,8 +287,9 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     ServiceInstance? connection,
     AsyncValue<List<LidarrAlbum>> albumsAsync,
     ArrQueueSnapshot albumQueue,
-    int artistId,
-  ) {
+    int artistId, {
+    Widget? band,
+  }) {
     final accent = ServiceKey.lidarr.accent;
 
     // Decision 25 — the profile is edited where it is read, not from the deck's
@@ -276,6 +321,9 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       // here (there is no cast and no collection for a musician), so the side
       // track is the encyclopaedia and nothing else.
       sideTrack: const {'Overview', 'Details', 'Scores', 'Genres'},
+      // The stale queue's line, in the slot the Radarr and Sonarr pages give
+      // theirs.
+      band: band,
       deck: viewModel.isInLibrary
           ? LibraryDetailActions(
               service: ServiceKey.lidarr,

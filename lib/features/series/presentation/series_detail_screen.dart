@@ -230,6 +230,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                 instanceId,
                 inLibrary: viewModel.isInLibrary,
                 status: status,
+                seriesId: series.id,
               ),
       ),
     );
@@ -268,18 +269,22 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
   ///
   /// Drawn when the queue did not answer, never while it is still being read
   /// and never over a walk that was only cut short: see the movie screen.
+  /// Over a stale queue that still shows this series in flight, the line says
+  /// how old the downloads shown are, the episode rows' included.
   Widget? _queueUnknown(
     ArrQueueSnapshot queue,
     String instanceId, {
     required bool inLibrary,
     required MediaStatusInfo status,
+    required int seriesId,
   }) {
     if (queue.answered || queue.error == null || !inLibrary) return null;
+    final kept = queue.isStale && queue.entryFor(seriesId) != null;
     final onDisk = switch (status.availability) {
       MediaAvailability.available || MediaAvailability.upgradable => true,
       _ => false,
     };
-    if (onDisk || status.isInPipeline) return null;
+    if (!kept && (onDisk || status.isInPipeline)) return null;
     final name = ref.watch(
       currentSettingsProvider.select(
         (s) => s.connectionTitle(instanceId, ServiceKey.sonarr),
@@ -290,7 +295,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         ServiceKey.sonarr,
         queue.error,
         subject: "$name's queue",
-        consequence: 'this page cannot tell whether any of it is downloading',
+        consequence: kept
+            ? 'the downloads shown are as they were ${queueReadingAge(queue)}'
+            : 'this page cannot tell whether any of it is downloading',
       ),
       error: queue.error,
       service: ServiceKey.sonarr,
