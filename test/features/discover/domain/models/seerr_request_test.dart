@@ -235,4 +235,66 @@ void main() {
       );
     });
   });
+
+  group('SeerrRequest.copy', () {
+    // A media row as Seerr sends it inside a request: both copies held, the
+    // standard one on server 0 and the 4K one on server 1.
+    const media = {
+      'id': 12,
+      'tmdbId': 133701,
+      'mediaType': 'movie',
+      'status': 5,
+      'status4k': 5,
+      'serviceId': 0,
+      'serviceId4k': 1,
+      'externalServiceId': 41,
+      'externalServiceId4k': 7,
+    };
+
+    SeerrRequest request({required bool is4k, Map<String, dynamic>? with_}) =>
+        SeerrRequest.fromJson({
+          'id': 6,
+          'status': 2,
+          'type': 'movie',
+          'is4k': is4k,
+          'serverId': is4k ? 1 : 0,
+          'profileId': 4,
+          'createdAt': '2026-09-01T10:00:00Z',
+          'media': with_ ?? media,
+        });
+
+    test('a 4K request names the 4K copy, on the 4K server', () {
+      final copy = request(is4k: true).copy!;
+
+      expect(copy.is4k, isTrue);
+      expect(copy.externalId, 7);
+      expect(copy.serverId, 1);
+    });
+
+    test('a standard request names the standard copy', () {
+      final copy = request(is4k: false).copy!;
+
+      expect(copy.is4k, isFalse);
+      expect(copy.externalId, 41);
+      expect(copy.serverId, 0);
+    });
+
+    test('no copy while no arr holds the one asked for', () {
+      expect(
+        request(
+          is4k: true,
+          with_: const {'id': 12, 'externalServiceId': 41, 'serviceId': 0},
+        ).copy,
+        isNull,
+      );
+    });
+
+    test('the copies survive the title being filled in', () {
+      final filled = request(is4k: true).copyWith(
+        media: request(is4k: true).media!.copyWith(title: 'Tears of Steel'),
+      );
+
+      expect(filled.copy?.externalId, 7);
+    });
+  });
 }

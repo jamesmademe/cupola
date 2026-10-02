@@ -1,4 +1,5 @@
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/discover/domain/seerr_numbering.dart';
 
 export 'package:cupola/features/discover/domain/seerr_numbering.dart';
@@ -134,6 +135,15 @@ class SeerrRequest {
   final List<int>? tags;
   final bool canRemove;
   final RequestedBy? requestedBy;
+
+  /// The copy this request is about, on the arr that holds it: its id there
+  /// and Seerr's id of that server, the 4K copy for a 4K request. Null while
+  /// no arr holds that copy yet.
+  ///
+  /// Not the media's `externalServiceId` alone, which is the standard copy's
+  /// id: read for a 4K request, it names another movie, on another server.
+  SeerrMediaCopy? get copy =>
+      media?.copies.where((copy) => copy.is4k == is4k).firstOrNull;
 
   const SeerrRequest({
     required this.id,
@@ -363,6 +373,11 @@ class RequestMedia {
   final String? mediaType;
   final String? posterPath;
 
+  /// The copies an arr holds for Seerr, the standard one first: each with
+  /// its id on the arr and Seerr's id of the server (`externalServiceId` and
+  /// `serviceId`, `externalServiceId4k` and `serviceId4k`).
+  final List<SeerrMediaCopy> copies;
+
   const RequestMedia({
     this.id,
     this.title,
@@ -375,6 +390,7 @@ class RequestMedia {
     this.externalServiceId,
     this.mediaType,
     this.posterPath,
+    this.copies = const [],
   });
 
   factory RequestMedia.fromJson(
@@ -415,6 +431,7 @@ class RequestMedia {
       externalServiceId: externalServiceId,
       mediaType: mediaType,
       posterPath: posterPath,
+      copies: SeerrMediaCopy.fromMediaInfo(json),
     );
   }
 
@@ -431,6 +448,7 @@ class RequestMedia {
       externalServiceId: externalServiceId,
       mediaType: mediaType,
       posterPath: posterPath ?? this.posterPath,
+      copies: copies,
     );
   }
 }
