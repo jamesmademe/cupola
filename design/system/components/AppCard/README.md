@@ -26,6 +26,14 @@ Ignored when the card has no `onTap`.
 
 The child, and for a tappable card a `semanticLabel` (the card speaks one sentence — `AppCard`/`SettingsCard` are the reference for composing it), plus optional `semanticValue` and `semanticHint`. `excludeChildSemantics` hides the child's own nodes behind that label; leave it off when `child` holds a control of its own (a popup menu, a delete button) and wrap only the parts the label already speaks in `ExcludeSemantics` at the call site.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- The four containers: filled, outlined, surface outlined, elevated.
+- Tappable and lit (`accentColor`), a grid cell's fraction of the glow, `pressFeedback: scale`.
+- Text at 200%: the four containers, the elevated one tappable and lit.
+
 ## Do / don't
 
 - Do reach for `.elevated` only when the card has earned it — flat (`.filled`) is the default, and a shadow is a claim about depth.

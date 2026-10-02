@@ -17,6 +17,14 @@ The label, optionally a tone and an icon, and `surface` when the chip is not on 
 
 Plain text; the chip is never a button.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `TagChip` with and without an icon, `GenreChip`, and `surface:` on a card container.
+- Text at 200%.
+- A long label in a 200pt room, for both chips.
+
 ## Do / don't
 
 - Do pass the ground the chip lands on so its ink is measured against it.

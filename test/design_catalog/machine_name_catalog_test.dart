@@ -101,6 +101,23 @@ void main() {
         width: 560,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · .release and .file, then .fileLead and '
+        '.releaseInFull, on a 358pt phone at twice the reading size',
+        (_) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            MachineName.release(_release),
+            SizedBox(height: AppSpacing.sm),
+            MachineName.file(_file),
+            SizedBox(height: AppSpacing.sm),
+            MachineName.fileLead(_renamed),
+            MachineName.releaseInFull(_scene, caption: 'Released as'),
+          ],
+        ),
+        width: 358,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

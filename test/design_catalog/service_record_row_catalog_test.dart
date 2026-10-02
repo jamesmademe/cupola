@@ -131,6 +131,13 @@ void main() {
         width: 390,
       ),
       CatalogScene(
+        'Text at 200% · the four task rows at twice the reading size, the '
+        'trailing figure wrapping before it ellipsises',
+        (_) => _list(_tasks),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
         'On the desktop · the same row across a wider list',
         (_) => _list(_tasks.take(2).toList()),
         width: 720,

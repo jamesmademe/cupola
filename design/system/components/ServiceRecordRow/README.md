@@ -19,6 +19,16 @@ Rendered from `lib/core/widgets/service_record_row.dart` by `test/design_catalog
 
 The row is one container node speaking `semanticLabel`; icon, title, detail and trailing are excluded beneath it. Compose the sentence so it carries what the colour carries ("Extract chapter images, Failed, Started 3 h ago, 4 min, The file could not be read"), and spell out dotted detail lines as a spoken list.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Tasks in each tone: running (blue), failed (amber), completed (green), idle (neutral).
+- Users and playlists: administrator (primary), disabled (neutral), smart playlist (blue).
+- Long text: a title on two lines, a detail on three, a trailing figure that yields.
+- Text at 200%: the four task rows.
+- The desktop: the same row across a wider list.
+
 ## Do / don't
 
 - Do follow the five-arm tone rule: a running task is blue (`info`), a failed one amber (`warning`), a completed one green (`success`), an idle one neutral. `primary` marks a role (an administrator), not a state.

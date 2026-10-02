@@ -107,6 +107,34 @@ void main() {
           ),
         ),
       ),
+      CatalogScene(
+        'Text at 200% · the four containers, the elevated one tappable and '
+        'lit, at twice the reading size',
+        (_) => Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            AppCard.filled(child: _tile('Nosferatu', 'Filled · flat panel')),
+            AppCard.outlined(
+              child: _tile('Metropolis', 'Outlined · transparent'),
+            ),
+            AppCard.surfaceOutlined(
+              child: _tile(
+                'The Cabinet of Dr. Caligari',
+                'Surface outlined · outline-variant',
+              ),
+            ),
+            AppCard.elevated(
+              onTap: () {},
+              accentColor: AppColors.lamp,
+              semanticLabel: 'Sherlock Jr.',
+              child: _tile('Sherlock Jr.', 'Elevated · tappable · lit'),
+            ),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

@@ -64,6 +64,38 @@ void main() {
           ),
         ),
       ),
+      CatalogScene(
+        'Text at 200% · tags and genres at twice the reading size',
+        (_) => const Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            TagChip(text: '3 seasons', color: _sonarr, icon: Icons.tv_rounded),
+            TagChip(text: '4K'),
+            GenreChip(genre: 'Drama'),
+            GenreChip(genre: 'Science Fiction'),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'A long label · a TagChip and a GenreChip with a title wider than a '
+        '200pt room',
+        (_) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TagChip(
+              text: 'Remux 2160p Dolby Vision HDR10 Atmos Hybrid Proper',
+              color: _sonarr,
+              icon: Icons.tv_rounded,
+            ),
+            SizedBox(height: 12),
+            GenreChip(genre: 'Science Fiction, Fantasy and Horror'),
+          ],
+        ),
+        width: 200,
+      ),
     ],
   );
 }

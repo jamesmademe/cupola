@@ -41,6 +41,14 @@ The name, exactly as the service returned it, and in full the `caption` when the
 - **In a row the name is not part of the row's sentence.** Read aloud it is unlistenable and it repeats the title. The text is excluded and the component contributes one custom action, *Copy file name* or *Copy release name*, which merges into the row's node: the row still speaks one sentence and offers the copy. A host must therefore not wrap it in `ExcludeSemantics`, or the action goes too.
 - **In full (lead or secondary) the name is read whole**, as its own node: the label is the caption (*Released as*) or *File name* / *Release name*, the value is the name, and the node carries the same custom action. The copy button is a sibling node, named by its tooltip.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `.release` and `.file` under a title, on a 320pt phone and a 400pt desktop row.
+- `.fileLead` with `.releaseInFull`, on a 358pt phone and a 560pt desktop.
+- Text at 200%: the four forms on a 358pt phone.
+
 ## Do / don't
 
 - Do put it under the title of a row about a copy, and nowhere else.

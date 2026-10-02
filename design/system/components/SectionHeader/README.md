@@ -17,6 +17,14 @@ A sentence-case title (`Needs attention`, `Pool health`, `Array disks`), an opti
 
 The whole header is one node: `header: true`, plus `button: true` when tappable. Title, subtitle and a non-interactive trailing are excluded and folded into one composed label; an interactive `.action` trailing keeps its own node.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Tappable with a chevron, with a subtitle and no chevron, `SectionHeader.action` with a trailing control.
+- A long title at 160% and the action row stacked at 150%.
+- Text at 200%: the tappable header, the subtitled one and the one with an action.
+
 ## Do / don't
 
 - Do keep titles in sentence case.

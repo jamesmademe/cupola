@@ -70,6 +70,35 @@ void main() {
         ),
         width: 300,
       ),
+      CatalogScene(
+        'Text at 200% · the tappable header and the one with an action: the '
+        'title wraps between words, and the trailing control takes its own '
+        'full-width line',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionHeader(
+              title: 'Requested and awaiting release',
+              onTap: () {},
+            ),
+            const SizedBox(height: 12),
+            const SectionHeader(
+              title: 'Pool health',
+              subtitle: '3 pools · 1 degraded',
+            ),
+            const SizedBox(height: 12),
+            SectionHeader.action(
+              title: 'Custom formats',
+              trailing: FilledButton.tonal(
+                onPressed: () {},
+                child: const Text('New'),
+              ),
+            ),
+          ],
+        ),
+        width: 360,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }
