@@ -46,9 +46,11 @@ class ContentCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     final card = Container(
+      // A poster glows with its light (brand book, `shadow.poster`; the lamp
+      // until the light is derived). It cast the older `level2` shadow ink.
       decoration: BoxDecoration(
         borderRadius: AppRadius.borderRadiusMd,
-        boxShadow: AppElevation.level2(colorScheme),
+        boxShadow: AppElevation.poster(colorScheme),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(

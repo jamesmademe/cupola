@@ -128,9 +128,11 @@ class MediaPosterCard extends StatelessWidget {
       return child;
     }
 
-    // Match ContentCard's resting elevation so the shared-element flight
-    // doesn't "pop" a different shadow mid-transition.
-    final heroChild = content(AppElevation.level2(colorScheme));
+    // A poster glows with its light (brand book, `shadow.poster`; the lamp
+    // until the light is derived), as ContentCard does, so the shared-element
+    // flight does not "pop" a different shadow mid-transition. It cast the
+    // older `level2` shadow ink.
+    final heroChild = content(AppElevation.poster(colorScheme));
 
     return Hero(
       tag: heroTag,
@@ -148,13 +150,13 @@ class MediaPosterCard extends StatelessWidget {
               return Material(
                 type: MaterialType.transparency,
                 child: content(
-                  AppElevation.level2(colorScheme),
+                  AppElevation.poster(colorScheme),
                   decodeBox: fromBox,
                 ),
               );
             }
             // "Pick up / set down": the shadow deepens to level3 mid-flight
-            // and settles back to level2, so the poster reads as physically
+            // and settles back to the glow, so the poster reads as physically
             // lifted off one surface and placed on the other. Symmetric, so
             // push and pop flights both work.
             return AnimatedBuilder(
@@ -163,7 +165,7 @@ class MediaPosterCard extends StatelessWidget {
                 final lift = 1 - (2 * animation.value - 1).abs();
                 final scheme = Theme.of(flightContext).colorScheme;
                 final shadow = BoxShadow.lerpList(
-                  AppElevation.level2(scheme),
+                  AppElevation.poster(scheme),
                   AppElevation.level3(scheme),
                   Curves.easeOut.transform(lift),
                 )!;
