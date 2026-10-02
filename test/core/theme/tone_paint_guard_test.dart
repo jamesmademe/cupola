@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../test_helpers/code_scan.dart';
 
-/// The tone rule's second half: **no tone is painted from its raw constant.**
+/// The tone rule's second half: **no tone is painted from its raw constant, and
+/// none through a scheme role that is one.**
 ///
 /// `AppColors.success`, `warning`, `error` and `info` (and the two containers)
 /// are the dark room's tone bytes. They are right on the dark ground and wrong
@@ -15,9 +16,17 @@ import '../../test_helpers/code_scan.dart';
 /// and looks fine until the light theme: the Close hover was a salmon fill under
 /// a white glyph, a chip's wash the dark room's pale blue.
 ///
+/// The green tone is also a scheme role, `colorScheme.tertiary` (with its
+/// `on` and container siblings), so the rule has a second door: painting with
+/// the role is painting a status, and it did, on chips and a glyph that stated
+/// none (a download client, an indexer, a series, a season number). A status
+/// that does want green says so through `statusToneColor(colorScheme,
+/// StatusTone.success, surface:)`; anything else takes an ink.
+///
 /// A source scan because the regression is one plausible line in a diff:
 /// `color: AppColors.info` reads as a decision, and nothing about it says which
-/// room it was made in. It reads `lib/` through `code_scan.dart`, so a doc
+/// room it was made in, and `colorScheme.tertiary` reads as a theme colour. It
+/// reads `lib/` through `code_scan.dart`, so a doc
 /// comment that names the constant to forbid it (a dozen do) is not a use.
 ///
 /// Nothing is exempt by file. The files that define the constants (`theme.dart`)
@@ -41,7 +50,19 @@ void main() {
     }
   });
 
-  test('no tone is painted from its raw AppColors constant', () {
+  test('the tertiary role is still the green tone, in both rooms', () {
+    // The second door exists because of this line of the tokens. If the role
+    // stopped being a tone, the guard on it would hold a name for nothing.
+    final tokens = File(
+      'lib/core/generated/design_tokens.g.dart',
+    ).readAsStringSync();
+    expect(
+      RegExp(r'colorTertiary = colorToneGreen;').allMatches(tokens).length,
+      2,
+    );
+  });
+
+  test('no tone is painted raw, from AppColors or the tertiary role', () {
     final offenders = [
       for (final hit in _hits(files))
         if (!_isAllowed(hit)) '${hit.where}  ${hit.line}',
@@ -50,11 +71,13 @@ void main() {
       offenders,
       isEmpty,
       reason:
-          'A raw tone constant is the dark room\'s byte. Resolve it for the '
-          'room and the ground it lands on: statusToneColor(colorScheme, tone, '
-          'surface:) for an ink, statusToneFill(colorScheme, tone) for a fill, '
-          'ServiceTheme.onTint / foregroundOn for an ink on a tint. A use that '
-          'is not a status goes in _allowed with its reason.',
+          'A raw tone constant is the dark room\'s byte, and colorScheme.tertiary '
+          'is the green tone. Resolve a status for the room and the ground it '
+          'lands on: statusToneColor(colorScheme, tone, surface:) for an ink, '
+          'statusToneFill(colorScheme, tone) for a fill, ServiceTheme.onTint / '
+          'foregroundOn for an ink on a tint. Something that states no status '
+          'takes an ink (onSurface, onSurfaceVariant) or a plain TagChip. A '
+          'use that is neither goes in _allowed with its reason.',
     );
   });
 
@@ -86,6 +109,15 @@ final f = 'AppColors.info';
 final g = AppColors.errorContainerHigh;
 final h = AppColors.lamp;
 final i = AppColors.warningInk;
+final j = colorScheme.tertiary;
+final k = Theme.of(context).colorScheme.onTertiaryContainer;
+final l = scheme.tertiaryContainer.withValues(alpha: 0.2);
+final m = colorScheme.onTertiary;
+final n = base.copyWith(tertiary: c);
+final o = colorScheme.tertiaryFixed;
+final p = colorScheme.secondary;
+// final q = colorScheme.tertiary;
+final r = 'colorScheme.tertiary';
 ''';
       final found = _hitsIn('lib/zz_planted.dart', codeOf(planted));
       expect(found.map((hit) => hit.line), [
@@ -94,6 +126,10 @@ final i = AppColors.warningInk;
         'const b = [AppColors.info, AppColors.warning];',
         r"final c = '${AppColors.success}';",
         'final d = AppColors.successContainer;',
+        'final j = colorScheme.tertiary;',
+        'final k = Theme.of(context).colorScheme.onTertiaryContainer;',
+        'final l = scheme.tertiaryContainer.withValues(alpha: 0.2);',
+        'final m = colorScheme.onTertiary;',
       ]);
     });
   });
@@ -109,7 +145,18 @@ const _constants = [
   'errorContainer',
 ];
 
-final _raw = RegExp('\\bAppColors\\.(${_constants.join('|')})\\b');
+/// The green tone as a scheme role, and its siblings.
+const _roles = [
+  'tertiary',
+  'onTertiary',
+  'tertiaryContainer',
+  'onTertiaryContainer',
+];
+
+final _raw = RegExp(
+  '\\bAppColors\\.(${_constants.join('|')})\\b'
+  '|\\.(${_roles.join('|')})\\b',
+);
 
 /// One raw use: where, and the line as written (comments blanked, trimmed).
 typedef _Hit = ({String path, int number, String line});
