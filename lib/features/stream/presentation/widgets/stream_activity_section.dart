@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -284,12 +285,19 @@ class _IdleFeed extends StatelessWidget {
   }
 }
 
-/// Which media server stopped answering.
+/// Which media servers could not be read, and why, in the classification's
+/// words and tone.
 ///
-/// Keeps its **presence** as the signal and spends the error tone on one glyph, per
+/// Keeps its **presence** as the signal and spends the tone on one glyph, per
 /// the Quiet Alarm Rule: a home server being down for an afternoon is normal for
 /// this product, and alarm chrome for a normal condition trains the user to ignore
 /// it.
+///
+/// Red is for a server that did not answer and nothing else. Those are named
+/// together in one red line; every other failure (a refused token, a gateway
+/// in front, a certificate) is its own amber line, worded by
+/// `failureHeadline`. It used to say "did not answer", in red, for all of
+/// them, which sent the user to check a server that had just refused them.
 class _OfflineNote extends StatelessWidget {
   const _OfflineNote({required this.offline});
 
@@ -297,34 +305,89 @@ class _OfflineNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // By connection, named the way the rows name it: with two Jellyfin,
-    // "Jellyfin did not answer" over the other one's sessions says nothing.
-    final message = servicesAlertBandMessage([
-      for (final source in offline) source.title,
-    ]);
+    final silent = [
+      for (final source in offline)
+        if (failureDidNotAnswer(classifyConnectionFailure(source.error)))
+          source,
+    ];
+    final faults = [
+      for (final source in offline)
+        if (!silent.contains(source))
+          describeFailureOf(
+            source.service,
+            source.error,
+            subject: source.title,
+          ),
+    ];
 
     return Semantics(
       liveRegion: true,
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(
-            Icons.cloud_off_rounded,
-            size: 16,
-            // Unreachable is the one thing red means; walked, not raw.
-            color: statusToneColor(theme.colorScheme, StatusTone.error),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+          if (silent.isNotEmpty)
+            // By connection, named the way the rows name it: with two
+            // Jellyfin, "Jellyfin did not answer" over the other one's
+            // sessions says nothing.
+            _FailureLine(
+              icon: failureIcon(ServiceFailureReason.unreachable),
+              tone: failureTone(ServiceFailureReason.unreachable),
+              message: servicesAlertBandMessage([
+                for (final source in silent) source.title,
+              ]),
             ),
-          ),
+          for (final (index, fault) in faults.indexed) ...[
+            if (silent.isNotEmpty || index > 0)
+              const SizedBox(height: AppSpacing.sm),
+            _FailureLine(
+              icon: fault.icon,
+              tone: fault.tone,
+              // A sentence, ended like the red line's.
+              message: '${fault.headline}.',
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// One line of [_OfflineNote]: a glyph in the failure's tone, the sentence in
+/// the secondary ink.
+class _FailureLine extends StatelessWidget {
+  const _FailureLine({
+    required this.icon,
+    required this.tone,
+    required this.message,
+  });
+
+  final IconData icon;
+  final StatusTone tone;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        ExcludeSemantics(
+          child: Icon(
+            icon,
+            size: 16,
+            // Walked, not raw: the glyph alone carries the tone.
+            color: statusToneColor(theme.colorScheme, tone),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            message,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

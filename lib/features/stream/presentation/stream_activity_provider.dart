@@ -25,11 +25,14 @@ typedef StreamActivityRow = ({
   StreamSession session,
 });
 
-/// A media server connection that did not answer, as the note names it.
+/// A media server connection whose sessions could not be read, as the note
+/// names it, and the failure, which the note classifies: a server that did
+/// not answer and one that refused the token are said differently.
 typedef StreamOfflineSource = ({
   ServiceKey service,
   String instanceId,
   String title,
+  Object error,
 });
 
 /// One connection of a media server.
@@ -212,6 +215,7 @@ final streamActivityOfflineProvider = FutureProvider<List<StreamOfflineSource>>(
             connection.name,
             joiner: ' ',
           ),
+          error: error,
         ));
       }
     }
