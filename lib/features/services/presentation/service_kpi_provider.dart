@@ -499,6 +499,10 @@ String _notAnswering(ServiceKey service, Object? error) =>
 /// Plex token is refused who is watching, a household member's Jellyfin token
 /// the library list. Both are configuration, not faults, so the rest of the
 /// rail still says what the token could read.
+///
+/// [sessionsNote] on sessions that did answer says whose they are: a
+/// household member's Jellyfin token sees only its own playback, and a count
+/// of it must not read as the server's.
 Future<List<ServiceKpi>> _streamKpis(
   Future<List<StreamSession>>? sessionsFuture,
   Future<List<StreamLibrary>>? librariesFuture, {
@@ -519,15 +523,19 @@ Future<List<ServiceKpi>> _streamKpis(
   final transcodes = sessions?.where((s) => s.playMethod.isTranscode).length;
 
   return [
-    _figure(
-      label: 'Streams',
-      value: sessions == null ? null : '${sessions.length}',
-      icon: Icons.play_circle_outline_rounded,
-      tone: sessions == null
-          ? null
-          : _activityIf(sessions.isNotEmpty && transcodes == 0),
-      note: sessionsNote,
-    ),
+    sessions == null
+        ? ServiceKpi.unavailable(
+            label: 'Streams',
+            icon: Icons.play_circle_outline_rounded,
+            note: sessionsNote,
+          )
+        : ServiceKpi(
+            label: 'Streams',
+            value: '${sessions.length}',
+            icon: Icons.play_circle_outline_rounded,
+            tone: _activityIf(sessions.isNotEmpty && transcodes == 0),
+            note: sessionsNote,
+          ),
     _figure(
       label: 'Transcodes',
       value: transcodes == null ? null : '$transcodes',
@@ -551,6 +559,9 @@ const _ownerOnlyNote = 'owner only';
 
 /// What a figure out of a household member's Jellyfin token's reach says.
 const _adminOnlyNote = 'admin only';
+
+/// What a count of only a household member's own playback says.
+const _yoursOnlyNote = 'yours only';
 
 /// What a failed read failed with, or null when it answered.
 Future<Object?> _failureOf(Future<Object?> read) =>
@@ -582,7 +593,8 @@ Future<List<ServiceKpi>> _plexKpis(
 /// Jellyfin's figures.
 ///
 /// A library list refused to a household member's token, which [kind] says
-/// it is, reads `—`; its own playback still counts, as its Now playing says.
+/// it is, reads `—`; its own playback still counts, and says it is its own,
+/// as its Now playing does.
 /// Any other failure takes the rail, as before.
 Future<List<ServiceKpi>> _jellyfinKpis(
   Future<List<StreamSession>> sessions,
@@ -603,7 +615,12 @@ Future<List<ServiceKpi>> _jellyfinKpis(
       member = false;
     }
     if (!member) rethrow;
-    return _streamKpis(sessions, null, librariesNote: _adminOnlyNote);
+    return _streamKpis(
+      sessions,
+      null,
+      sessionsNote: _yoursOnlyNote,
+      librariesNote: _adminOnlyNote,
+    );
   }
 }
 

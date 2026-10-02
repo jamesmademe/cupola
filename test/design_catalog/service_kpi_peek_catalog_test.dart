@@ -58,6 +58,39 @@ const _radarrSilent = [
   ServiceKpi.unavailable(label: 'Queue', icon: Icons.download_rounded),
 ];
 
+/// Jellyfin on a household member's token: its own playback counts and says
+/// so, and the library list it is refused reads a dash.
+const _jellyfinMember = [
+  ServiceKpi(
+    label: 'Streams',
+    value: '1',
+    icon: Icons.play_circle_outline_rounded,
+    tone: StatusTone.info,
+    note: 'yours only',
+  ),
+  ServiceKpi(label: 'Transcodes', value: '0', icon: Icons.memory_rounded),
+  ServiceKpi.unavailable(
+    label: 'Libraries',
+    icon: Icons.video_library_outlined,
+    note: 'admin only',
+  ),
+];
+
+/// Plex on a shared account's token: who is watching is the owner's to see.
+const _plexShared = [
+  ServiceKpi.unavailable(
+    label: 'Streams',
+    icon: Icons.play_circle_outline_rounded,
+    note: 'owner only',
+  ),
+  ServiceKpi.unavailable(label: 'Transcodes', icon: Icons.memory_rounded),
+  ServiceKpi(
+    label: 'Libraries',
+    value: '4',
+    icon: Icons.video_library_outlined,
+  ),
+];
+
 /// qBittorrent: bytes moving is activity (info), not a fault.
 const _qbittorrent = [
   ServiceKpi(label: 'Active', value: '4', icon: Icons.bolt_rounded),
@@ -136,6 +169,20 @@ void main() {
         'an em dash in the secondary ink, the note in place of the label',
         const AsyncValue.data(_radarrSilent),
         ServiceKey.radarr,
+      ),
+      _scene(
+        'A narrower token, Jellyfin · a household member\'s own playback says '
+        'yours only in place of its label; the library list it is refused '
+        'reads a dash, admin only',
+        const AsyncValue.data(_jellyfinMember),
+        ServiceKey.jellyfin,
+      ),
+      _scene(
+        'A narrower token, Plex · a shared account is refused who is '
+        'watching: owner only on the first card it empties, the libraries '
+        'still count',
+        const AsyncValue.data(_plexShared),
+        ServiceKey.plex,
       ),
       _scene(
         'Source failed · one card replaces the rail; a failure nobody can '

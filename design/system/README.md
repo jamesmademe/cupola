@@ -223,7 +223,7 @@ Pages read across services — a Media page shows one title through Seerr, Jelly
 | **a · Not set up** | Cupola has no address for it and nothing else knows it. | One dimmed, tappable row per surface that opens the service's setup form — or nothing, where the row is detail. | `Not set up` · `Set up Seerr` |
 | **b · Known through another service** | Not set up in Cupola, but Seerr (or Prowlarr, Bazarr) knows it. | That service's claim, attributed, with one quiet way to set it up, prefilled from it. | `through Seerr` · `Add Sonarr to Cupola · key found` · `address found · paste its key` |
 | **c · Did not answer** | Set up, and nothing replied. The only red on any screen. | Who and since when, the last known value under it with its time, `Retry`. | `Did not answer since 20:41` · `Retry` |
-| **d · Not allowed** | A read-only key, a non-admin token, or a requester looking. | The write stays, dimmed, with the service's own reason. | `This TrueNAS key can read` · `Nothing changed` · `Your streams` |
+| **d · Not allowed** | A read-only key, a non-admin token, or a requester looking. | The write stays, dimmed, with the service's own reason. | `This TrueNAS key can read` · `Nothing changed` · `yours only` |
 | **e · More than one** | Several instances of one service: Radarr and Radarr 4K. | Every row, figure and action names its instance. | `Radarr 4K · 2160p Remux` · `Goes to Radarr 4K` |
 | **f · Not verified** | Jellyfin or Plex has something with that title, but its ids do not match. | Nothing: no row, no link, no Play. | — |
 
@@ -271,7 +271,7 @@ A credential can work and still not be allowed to write: an Unraid or TrueNAS ke
 - **Every write stays on the page**, dimmed but tappable, with the service's own reason (*This TrueNAS key can read. Changing anything here needs a key whose user holds a write role.*); its toast leads to that connection's settings. A write the service refused says `Nothing changed`.
 - **Settings** names the scope beside the connection: `Answering · read-only key` (or `view-only account`, or `shared account` for Plex).
 - A Plex token of an account the owner shared the server with reads the libraries and is refused who is watching. Now playing and Activity say so in blue, *Only the owner of this Plex server sees what's playing.*, never a refusal and never `Did not answer`; nothing is dimmed, because the sessions it cannot read are never drawn.
-- A Jellyfin account that is not an administrator sees `Your streams` and a calm note on the tabs it cannot read, naming what they need — never an error.
+- A Jellyfin account that is not an administrator sees only its own playback and says so: *Showing only this account's playback* under Now playing, `yours only` under the Streams figure (the label stays `Streams`, so Home's stack card keeps its words), and `admin only` under a Libraries figure that reads `—`. The tabs it cannot read get a calm note naming what they need — never an error.
 
 ## Accessibility
 

@@ -20,6 +20,7 @@ The rule is the app's tone rule. A backlog figure (Missing, Waiting for approval
 
 - **Loading** — four skeleton cards, 100 wide with no shadow: a 44 × 16 and a 64 × 9 shimmer line, 6 apart.
 - **Unavailable figure** — `ServiceKpi.unavailable`: the figure is an em dash in `onSurfaceVariant`, the glyph goes `onSurfaceVariant`, and the note replaces the label — the service and the classified reason, *Radarr · Did not answer*, *Radarr · Refused the key*. The rail keeps the same cards, so a reader sees which figure is missing. Never `0`.
+- **Narrower token** — a media server's token that may read only part of what the rail counts. The figures it cannot read are unavailable cards with the reason on the first of them: `owner only` (a shared account's Plex, refused who is watching), `admin only` (a household member's Jellyfin, refused the library list). A figure it reads only in part counts and says whose it is in place of its label: `1` · `yours only` (that member's own playback). Never the server's total.
 - **Source failed** — one unavailable card replaces the rail: glyph `remove_rounded`, label *Figures*, note the classified reason (`failureLabel`): *Did not answer* only when nothing answered, *Refused the key*, *Timed out*, *Did not complete* otherwise.
 - **Not configured** (an error containing `not configured`) or **no figures** — the rail collapses to nothing; the page below answers for it.
 

@@ -67,14 +67,16 @@ void main() {
   });
 
   test('P2+J, a household member\'s Jellyfin: the libraries read "—", admin '
-      'only, and her own playback counts', () async {
+      'only, and her own playback counts as hers', () async {
     final harness = await ProfileHarness.start(Profiles.p2WithJellyfin);
     final figures = await _figures(harness, ServiceKey.jellyfin);
 
     expect(figures['Libraries']!.value, ServiceKpi.unavailableValue);
     expect(figures['Libraries']!.note, 'admin only');
-    // Anna watching Sintel on the living room TV.
+    // Anna watching Sintel on the living room TV: hers, and said to be,
+    // so it never reads as the server's total.
     expect(figures['Streams']!.value, '1');
+    expect(figures['Streams']!.note, 'yours only');
     expect(figures['Transcodes']!.value, '0');
   });
 
@@ -96,8 +98,10 @@ void main() {
     expect(cabin['Libraries']!.value, ServiceKpi.unavailableValue);
     expect(cabin['Libraries']!.note, 'admin only');
     expect(cabin['Streams']!.value, '1');
+    expect(cabin['Streams']!.note, 'yours only');
 
     final home = await _figures(harness, ServiceKey.jellyfin);
     expect(home['Libraries']!.value, '4');
+    expect(home['Streams']!.note, isNull);
   });
 }
