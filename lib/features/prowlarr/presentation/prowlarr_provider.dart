@@ -79,6 +79,40 @@ final prowlarrIndexersProvider = FutureProvider<List<ProwlarrIndexer>>((
   return ref.watch(prowlarrServiceProvider).getIndexers();
 }, retry: noProviderRetry);
 
+/// [prowlarrIndexersProvider] for one named connection, whatever the lens is
+/// on.
+///
+/// The lens's own id, and the empty one, read that provider: the lens is asked
+/// once, and what invalidates it reaches this too. Another id asks its own
+/// server. What Home's failing indexers are read and tested through, since
+/// an indexer id is one server's.
+final prowlarrIndexersForProvider =
+    FutureProvider.family<List<ProwlarrIndexer>, String>((ref, instanceId) {
+      if (_readsLens(ref, instanceId)) {
+        return ref.watch(prowlarrIndexersProvider.future);
+      }
+      return ref.watch(prowlarrServiceForProvider(instanceId)).getIndexers();
+    }, retry: noProviderRetry);
+
+/// [prowlarrIndexerStatusProvider] for one named connection: see
+/// [prowlarrIndexersForProvider].
+final prowlarrIndexerStatusForProvider =
+    FutureProvider.family<List<ProwlarrIndexerStatus>, String>((
+      ref,
+      instanceId,
+    ) {
+      if (_readsLens(ref, instanceId)) {
+        return ref.watch(prowlarrIndexerStatusProvider.future);
+      }
+      return ref
+          .watch(prowlarrServiceForProvider(instanceId))
+          .getIndexerStatus();
+    }, retry: noProviderRetry);
+
+bool _readsLens(Ref ref, String instanceId) =>
+    instanceId.isEmpty ||
+    instanceId == ref.watch(activeInstanceProvider(ServiceKey.prowlarr))?.id;
+
 /// How far back the indexer readout reaches.
 ///
 /// The Overview labels its Queries / Grabs / Fails figures as the last day's

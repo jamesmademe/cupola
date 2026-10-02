@@ -137,7 +137,12 @@ test's description. Seerr's own states are `SeerrBehaviour`s
 test that adds one with `withConnection`: World B's Readarr, NZBGet, Unraid
 and NPM, a second Jellyfin and a second Seerr at the cabin
 (`jellyfinCabin`, `seerrCabin`, both labelled `Cabin`) beside the unnamed
-ones at home, and a second Lidarr (`lidarrVinyl`, labelled `Vinyl`).
+ones at home, a second Lidarr (`lidarrVinyl`, labelled `Vinyl`), a second
+Prowlarr and a second Dockge on `tower` (`prowlarrTower`, `dockgeTower`, both
+labelled `Tower`, the Dockge running the first one's stacks), and a second
+Nginx Proxy Manager on `nas` (`npmNas`, labelled `Home`). Their Home decisions
+act on one server each. `network.rpcCalls` names a Dockge command relayed
+through `agent` as `agent:<command>` (`agent:startStack`).
 
 The arrs answer `/parse?title=` from the world: Radarr reads a release of a
 world film (`Tears.of.Steel.2012.2160p.WEB`) and names the film when it holds

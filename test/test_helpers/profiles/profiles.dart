@@ -184,6 +184,42 @@ abstract final class WorldConnections {
     label: WorldPeople.friend,
   ).withSeerrAccount(WorldSeerrUsers.operatorAtFriend);
 
+  /// A second Prowlarr, on `tower`, named by the user: in no profile, for a
+  /// test that adds it beside the first. It numbers its indexers from one
+  /// like the first, so the same id names an indexer on each.
+  static final prowlarrTower = _api(
+    WorldIds.prowlarrTower,
+    ServiceKey.prowlarr,
+    WorldHosts.prowlarrTower,
+    label: 'Tower',
+  );
+
+  /// A second Dockge, on `tower`, named by the user: in no profile. It runs
+  /// the same three stacks as the first, `immich` exited on each.
+  static final dockgeTower = ProfileConnection(
+    ServiceInstance(
+      id: WorldIds.dockgeTower,
+      service: ServiceKey.dockge,
+      url: WorldHosts.dockgeTower,
+      label: 'Tower',
+      username: 'admin',
+      credential: worldKey(WorldIds.dockgeTower),
+    ),
+  );
+
+  /// A second Nginx Proxy Manager, on `nas`, named by the user: in no
+  /// profile, for a test that adds it beside World B's.
+  static final npmNas = ProfileConnection(
+    ServiceInstance(
+      id: WorldIds.npmNas,
+      service: ServiceKey.nginxProxyManager,
+      url: WorldHosts.npmNas,
+      label: 'Home',
+      username: 'admin',
+      credential: worldKey(WorldIds.npmNas),
+    ),
+  );
+
   // World B, on `tower`: in no profile, for a test that adds one with
   // `ConfigProfile.withConnection` — the NPM and Unraid read-only cases.
   static final readarr = _api(

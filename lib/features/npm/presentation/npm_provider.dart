@@ -71,6 +71,21 @@ final npmCertificatesProvider = FutureProvider<List<NpmCertificate>>((
   return ref.watch(npmClientProvider).certificates();
 }, retry: noProviderRetry);
 
+/// [npmCertificatesProvider] for one named connection, whatever the lens is
+/// on. The lens's own id, and the empty one, read that provider, so the lens
+/// is asked once; another id asks its own server. What Home's expiring
+/// certificates are read through, one source per connection.
+final npmCertificatesForProvider =
+    FutureProvider.family<List<NpmCertificate>, String>((ref, instanceId) {
+      final lens = ref.watch(
+        activeInstanceProvider(ServiceKey.nginxProxyManager),
+      );
+      if (instanceId.isEmpty || instanceId == lens?.id) {
+        return ref.watch(npmCertificatesProvider.future);
+      }
+      return ref.watch(npmClientForProvider(instanceId)).certificates();
+    }, retry: noProviderRetry);
+
 final npmAccessListsProvider = FutureProvider<List<NpmAccessList>>((ref) async {
   return ref.watch(npmClientProvider).accessLists();
 }, retry: noProviderRetry);

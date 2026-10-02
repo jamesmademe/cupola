@@ -229,20 +229,6 @@ typedef _ServiceConnection = ({
   String session,
 });
 
-/// The connection key for whichever instance of [service] is currently being
-/// read.
-///
-/// Two watches, both narrow. Keying on the *first* instance instead would leave
-/// every derived fetch stale the moment the lens moved: the clients underneath
-/// are lens-aware, so they would go to the new server while the key that decides
-/// whether to refetch still described the old one.
-_ServiceConnection _watchConnection(Ref ref, ServiceKey service) {
-  final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
-  return ref.watch(
-    currentSettingsProvider.select((s) => _connectionOfInstance(s, instanceId)),
-  );
-}
-
 /// One configured connection a merged Home region reads, and what its rows
 /// and its coverage are stamped with.
 ///
@@ -2723,23 +2709,26 @@ final dashboardDecisionSourceProvider =
           // Every Seerr, each answering for itself: a request waiting on the
           // second one is waiting on the user as much as one on the first.
           return _pendingRequestDecisions(ref);
+        // Every connection of each, each answering for itself, like the
+        // requests: a failing indexer on the second Prowlarr needs somebody as
+        // much as one on the first, and its Test has to reach that Prowlarr.
         case DecisionSource.indexers:
-          return _decisionsFrom(
+          return _decisionsOnEveryConnection(
             ref,
             ServiceKey.prowlarr,
-            () => _failingIndexerDecisions(ref),
+            (source) => _failingIndexerDecisions(ref, source),
           );
         case DecisionSource.stacks:
-          return _decisionsFrom(
+          return _decisionsOnEveryConnection(
             ref,
             ServiceKey.dockge,
-            () => _stoppedStackDecisions(ref),
+            (source) => _stoppedStackDecisions(ref, source),
           );
         case DecisionSource.certificates:
-          return _decisionsFrom(
+          return _decisionsOnEveryConnection(
             ref,
             ServiceKey.nginxProxyManager,
-            () => _expiringCertificateDecisions(ref),
+            (source) => _expiringCertificateDecisions(ref, source),
           );
         case DecisionSource.queue:
           // Not gated on one service: the faults come from whichever of eight
@@ -2764,30 +2753,60 @@ final dashboardDecisionSourceProvider =
       }
     }, retry: noProviderRetry);
 
-Future<DashboardDecisions> _decisionsFrom(
+/// One source's decisions, read on every configured connection of [service].
+///
+/// They used to be read through the lens alone, because their controls (Test,
+/// Start, Renew) called the lens: a stack that exited on the second Dockge
+/// never reached Home. Each connection is its own source now, as each Seerr
+/// is for the requests: one that fails is named under the region and takes
+/// only its own decisions with it, and every decision carries the connection
+/// it came off, so its control acts on that server.
+Future<DashboardDecisions> _decisionsOnEveryConnection(
   Ref ref,
   ServiceKey service,
-  Future<List<DashboardDecision>> Function() load,
+  Future<List<DashboardDecision>> Function(_MergeConnection source) load,
 ) async {
-  if (!_watchConnection(ref, service).configured) {
+  Future<DashboardDecisions> from(_MergeConnection source) async {
+    try {
+      return (
+        decisions: await load(source),
+        coverage: SourceCoverage.answeredBy(
+          service,
+          instanceId: source.instanceId,
+          name: source.name,
+        ),
+      );
+    } catch (error) {
+      // Degrades to no decisions — a region that answers "what needs me" must
+      // not itself become the thing that needs you — but says who failed.
+      return (
+        decisions: const <DashboardDecision>[],
+        coverage: SourceCoverage.failure(
+          service,
+          error,
+          instanceId: source.instanceId,
+          name: source.name,
+        ),
+      );
+    }
+  }
+
+  final sources = _watchMergeConnections(ref, service);
+  if (sources.isEmpty) {
     return (
       decisions: const <DashboardDecision>[],
       coverage: SourceCoverage.none,
     );
   }
-  try {
-    return (
-      decisions: await load(),
-      coverage: SourceCoverage.answeredBy(service),
-    );
-  } catch (error) {
-    // Degrades to no decisions — a region that answers "what needs me" must
-    // not itself become the thing that needs you — but says who failed.
-    return (
-      decisions: const <DashboardDecision>[],
-      coverage: SourceCoverage.failure(service, error),
-    );
-  }
+  final results = await Future.wait([
+    for (final source in sources) from(source),
+  ]);
+  return (
+    decisions: results
+        .expand((result) => result.decisions)
+        .toList(growable: false),
+    coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
+  );
 }
 
 /// Everything waiting on a human, from every source, merged and ranked as each
@@ -2935,12 +2954,15 @@ String _seerrRequestRoute(SeerrRequest request) {
   );
 }
 
-Future<List<DashboardDecision>> _failingIndexerDecisions(Ref ref) async {
+Future<List<DashboardDecision>> _failingIndexerDecisions(
+  Ref ref,
+  _MergeConnection source,
+) async {
   // `/indexerstatus` returns only the indexers with an active problem, so this
   // list *is* the fault list — no filtering, and no counting against the total.
   final results = await Future.wait([
-    ref.watch(prowlarrIndexerStatusProvider.future),
-    ref.watch(prowlarrIndexersProvider.future),
+    ref.watch(prowlarrIndexerStatusForProvider(source.instanceId).future),
+    ref.watch(prowlarrIndexersForProvider(source.instanceId).future),
   ]);
   final statuses = results[0] as List<ProwlarrIndexerStatus>;
   final indexers = results[1] as List<ProwlarrIndexer>;
@@ -2950,14 +2972,20 @@ Future<List<DashboardDecision>> _failingIndexerDecisions(Ref ref) async {
     for (final status in statuses)
       DashboardDecision(
         kind: DecisionKind.failingIndexer,
-        id: 'prowlarr-${status.indexerId}',
+        // With the connection: two Prowlarr both number their indexers from
+        // one.
+        id: 'prowlarr-${source.instanceId}-${status.indexerId}',
         service: ServiceKey.prowlarr,
         title: names[status.indexerId] ?? 'Indexer ${status.indexerId}',
         detail: joinDisplayParts([
           'Failing',
-          ServiceKey.prowlarr.title,
+          // Which Prowlarr, once there are two to tell apart.
+          serviceWithConnection(ServiceKey.prowlarr, source.name, joiner: ' '),
           status.disabledTill == null ? null : 'disabled for now',
         ]),
+        instanceId: source.instanceId,
+        connectionName: source.name,
+        actionInstanceId: source.instanceId,
         // The *first* failure, not the most recent one: an indexer that has been
         // failing since breakfast outranks one that failed a minute ago, and the
         // most recent failure of a long outage is always a minute ago.
@@ -2970,8 +2998,18 @@ Future<List<DashboardDecision>> _failingIndexerDecisions(Ref ref) async {
   ];
 }
 
-Future<List<DashboardDecision>> _stoppedStackDecisions(Ref ref) async {
-  final stacks = await ref.watch(dockgeStackListProvider.future);
+Future<List<DashboardDecision>> _stoppedStackDecisions(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  // The lens reads the live list the Dockge pages read, through the agent
+  // they are looking at. Another connection is read once, through the hub of
+  // its own login, which is where its Start goes too.
+  final stacks = source.isLens
+      ? await ref.watch(dockgeStackListProvider.future)
+      : await ref
+            .watch(dockgeServiceForProvider(source.instanceId))
+            .fetchStacks();
   return [
     for (final stack in stacks)
       // `exited` only. A stack that is `inactive` was never started and a stack
@@ -2981,10 +3019,16 @@ Future<List<DashboardDecision>> _stoppedStackDecisions(Ref ref) async {
       if (stack.status == DockgeStackStatus.exited)
         DashboardDecision(
           kind: DecisionKind.stoppedStack,
-          id: 'dockge-${stack.endpoint}-${stack.name}',
+          id: 'dockge-${source.instanceId}-${stack.endpoint}-${stack.name}',
           service: ServiceKey.dockge,
           title: stack.name,
-          detail: joinDisplayParts(['Stack stopped', ServiceKey.dockge.title]),
+          detail: joinDisplayParts([
+            'Stack stopped',
+            serviceWithConnection(ServiceKey.dockge, source.name, joiner: ' '),
+          ]),
+          instanceId: source.instanceId,
+          connectionName: source.name,
+          actionInstanceId: source.instanceId,
           // Dockge dates nothing: its stack list carries a status and a name and
           // no timestamp at all. Undated sorts last inside its kind rather than
           // inheriting "just now", which would put every stopped stack above
@@ -2995,15 +3039,20 @@ Future<List<DashboardDecision>> _stoppedStackDecisions(Ref ref) async {
   ];
 }
 
-Future<List<DashboardDecision>> _expiringCertificateDecisions(Ref ref) async {
-  final certificates = await ref.watch(npmCertificatesProvider.future);
+Future<List<DashboardDecision>> _expiringCertificateDecisions(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  final certificates = await ref.watch(
+    npmCertificatesForProvider(source.instanceId).future,
+  );
   final now = DateTime.now();
   return [
     for (final certificate in certificates)
       if (certificate.isExpiringSoon(now))
         DashboardDecision(
           kind: DecisionKind.expiringCertificate,
-          id: 'npm-cert-${certificate.id}',
+          id: 'npm-cert-${source.instanceId}-${certificate.id}',
           service: ServiceKey.nginxProxyManager,
           title: certificate.domainNames.isEmpty
               ? certificate.niceName
@@ -3013,11 +3062,22 @@ Future<List<DashboardDecision>> _expiringCertificateDecisions(Ref ref) async {
           // It drops the service's name: beside "Open certificates", which is
           // wider than Renew, any longer line lost its last words to the
           // ellipsis on a 390pt phone, and the glyph already names the service.
+          // Which of two it is on stays, by the connection's own name alone.
           detail: joinDisplayParts([
             _certificateExpiry(certificate, now),
-            if (certificate.isLetsEncrypt) ServiceKey.nginxProxyManager.title,
+            if (certificate.isLetsEncrypt)
+              serviceWithConnection(
+                ServiceKey.nginxProxyManager,
+                source.name,
+                joiner: ' ',
+              )
+            else
+              source.name,
           ]),
           renewable: certificate.isLetsEncrypt,
+          instanceId: source.instanceId,
+          connectionName: source.name,
+          actionInstanceId: source.instanceId,
           // The expiry date, standing in for "when did this start needing me".
           // Ordering by it puts the certificate closest to lapsing first, which
           // is what "oldest first" means for a deadline.

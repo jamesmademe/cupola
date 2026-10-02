@@ -411,7 +411,8 @@ class ProfileNetwork {
   /// that failed ([NetworkRequest.dialRefused]).
   final List<NetworkRequest> requests = [];
 
-  /// Every TrueNAS JSON-RPC call, as `connectionId → method`, in order.
+  /// Every TrueNAS JSON-RPC call, as `connectionId → method`, in order, and
+  /// every Dockge Socket.IO event, a relayed one as `agent:<command>`.
   final List<(String, String)> rpcCalls = [];
 
   /// The requests no behaviour, route or canned answer covered (served 404).

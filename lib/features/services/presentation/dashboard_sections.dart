@@ -47,6 +47,7 @@ import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
@@ -780,9 +781,15 @@ class _DecisionRow extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: AppCard.surfaceOutlined(
         key: ValueKey('decision-${decision.id}'),
-        onTap: () {
+        onTap: () async {
           final route = decision.route;
           if (route == null) return;
+          // A page that reads the lens opens on the connection the row came
+          // off: see [DecisionKindRank.opensUnderLens].
+          if (decision.kind.opensUnderLens) {
+            await _bringUnderLens(ref, decision.service, decision.instanceId);
+            if (!context.mounted) return;
+          }
           context.push(route);
         },
         semanticLabel: decision.title,
@@ -1002,14 +1009,7 @@ Future<void> _runDecision(
       // is brought under the lens first: with two qBittorrent, "Open in
       // qBittorrent" on the seedbox's stall opened the one at home.
       final target = decision.actionTarget;
-      final connection = decision.actionInstanceId;
-      if (connection.isNotEmpty &&
-          connection != ref.read(activeInstanceProvider(target))?.id &&
-          ref.read(currentSettingsProvider).instanceById(connection) != null) {
-        await ref
-            .read(activeInstancesProvider.notifier)
-            .select(target, connection);
-      }
+      await _bringUnderLens(ref, target, decision.actionInstanceId);
       if (!context.mounted) return;
       context.go(ServiceRoutes.forService(target));
     case DecisionKind.importBlocked:
@@ -1040,26 +1040,80 @@ Future<void> _runDecision(
         ),
       );
     case DecisionKind.failingIndexer:
+      // On the Prowlarr the indexer failed on: an indexer id is one
+      // server's, and the lens's list would test another indexer, or none.
       final id = decision.actionId;
       if (id == null) return;
-      final indexer = await ref.read(prowlarrIndexerByIdProvider(id).future);
+      final indexers = await ref.read(
+        prowlarrIndexersForProvider(decision.instanceId).future,
+      );
+      final indexer = indexers.where((each) => each.id == id).firstOrNull;
       if (!context.mounted || indexer == null) return;
-      await testIndexerFlow(context, ref, indexer);
+      await testIndexerFlow(
+        context,
+        ref,
+        indexer,
+        instanceId: decision.instanceId,
+      );
     case DecisionKind.stoppedStack:
+      // The lens's stack through the lensed client, which reaches the agent
+      // the list was read through; another connection's through its own.
+      final lens = ref.read(activeInstanceProvider(ServiceKey.dockge))?.id;
+      final elsewhere =
+          decision.instanceId.isNotEmpty && decision.instanceId != lens;
       await runDockgeStackAction(
         context,
         ref,
         (client) => client.startStack(decision.title),
         '${decision.title} started',
         'Could not start ${decision.title}',
-        // The stack source reads the list, so dropping the list is enough.
-        invalidate: [dockgeStackListProvider],
+        // The lens's stacks are the live list, so dropping it is enough;
+        // another connection's are read once, by the source itself.
+        invalidate: [
+          dockgeStackListProvider,
+          if (elsewhere) dashboardDecisionSourceProvider(DecisionSource.stacks),
+        ],
+        client: elsewhere
+            ? ref.read(dockgeClientForProvider(decision.instanceId))
+            : null,
       );
     case DecisionKind.expiringCertificate:
       // The Certificates tab, where Renew and its confirmation are, and where
       // an uploaded certificate is listed for replacing: the service's root
-      // is its Overview, which offers no writes at all.
+      // is its Overview, which offers no writes at all. It reads the lens, so
+      // the certificate's own NPM is brought under it first.
+      await _bringUnderLens(
+        ref,
+        ServiceKey.nginxProxyManager,
+        decision.instanceId,
+      );
+      if (!context.mounted) return;
       context.go(ServiceRoutes.npmCertificates);
+  }
+}
+
+/// Brings connection [instanceId] of [service] under the lens, for a page that
+/// reads the lens and takes no `?i=`.
+///
+/// Nothing for the lens itself, for an empty id, or for a connection since
+/// removed. A Dockge connection opens on its hub: the agent the lens was
+/// looking through belongs to the connection it leaves, and a decision read
+/// off another connection was read off its hub.
+Future<void> _bringUnderLens(
+  WidgetRef ref,
+  ServiceKey service,
+  String instanceId,
+) async {
+  if (instanceId.isEmpty ||
+      instanceId == ref.read(activeInstanceProvider(service))?.id ||
+      ref.read(currentSettingsProvider).instanceById(instanceId) == null) {
+    return;
+  }
+  await ref.read(activeInstancesProvider.notifier).select(service, instanceId);
+  if (service == ServiceKey.dockge) {
+    ref
+        .read(dockgeSelectedAgentProvider.notifier)
+        .select(DockgeAgent.local.endpoint);
   }
 }
 

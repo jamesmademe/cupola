@@ -267,7 +267,13 @@ class DockgePeer extends WebSocketPeer {
     final ackId = body.substring(0, bracket);
     final args = jsonDecode(body.substring(bracket)) as List<dynamic>;
     final event = '${args.first}';
-    context.network.rpcCalls.add((context.server.id, event));
+    final command = event == 'agent' && args.length > 2 ? '${args[2]}' : '';
+    // A relayed command by its own name, `agent:startStack`, so a test can
+    // tell a write from the list it reads.
+    context.network.rpcCalls.add((
+      context.server.id,
+      command.isEmpty ? event : 'agent:$command',
+    ));
     switch (event) {
       case 'login':
         if (context.behaviour == ConnectionBehaviour.refusesKey) {
@@ -277,7 +283,6 @@ class DockgePeer extends WebSocketPeer {
         _ack(ackId, {'ok': true, 'token': 'world-dockge-token'});
         _emit('stackList', _stackList);
       case 'agent':
-        final command = args.length > 2 ? '${args[2]}' : '';
         final write = !const {
           'requestStackList',
           'getStack',

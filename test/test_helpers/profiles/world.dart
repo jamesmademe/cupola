@@ -47,6 +47,13 @@ abstract final class WorldHosts {
   /// account of his own. P9's second Seerr.
   static const seerrFriend = 'https://seerr.example.net';
 
+  /// A second Prowlarr and a second Dockge on `tower`, and a second Nginx
+  /// Proxy Manager on `nas`: in no profile, for a test that adds one beside
+  /// the first, two of a service whose Home decisions act on one server.
+  static const prowlarrTower = 'http://tower.home.arpa:9696';
+  static const dockgeTower = 'http://tower.home.arpa:5001';
+  static const npmNas = 'http://nas.home.arpa:81';
+
   // World B.
   static const readarr = 'http://tower.home.arpa:8787';
   static const nzbget = 'http://tower.home.arpa:6789';
@@ -108,6 +115,9 @@ abstract final class WorldIds {
   static const seerrCabin = 'seerr-cabin001';
   static const lidarrVinyl = 'lidarr-vinyl01';
   static const seerrFriend = 'seerr-sara001';
+  static const prowlarrTower = 'prowlarr-tower1';
+  static const dockgeTower = 'dockge-tower01';
+  static const npmNas = 'npm-nas000001';
 }
 
 /// The credential a world connection is configured with, and the one the

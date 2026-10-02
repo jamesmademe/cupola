@@ -159,6 +159,20 @@ extension DecisionKindRank on DecisionKind {
   /// row: faults are amber, backlog is neutral, and red is left to a connection
   /// that did not answer.
   bool get isFault => this != DecisionKind.pendingRequest;
+
+  /// Whether what this kind's row and control open reads the lens, with no
+  /// `?i=` to name a connection: Prowlarr's indexer page, a Dockge stack, NPM's
+  /// certificates. A decision off another connection brings that connection
+  /// under the lens before it opens one, as a stall does for its client.
+  bool get opensUnderLens => switch (this) {
+    DecisionKind.failingIndexer ||
+    DecisionKind.stoppedStack ||
+    DecisionKind.expiringCertificate => true,
+    DecisionKind.stalledDownload ||
+    DecisionKind.importBlocked ||
+    DecisionKind.failedImport ||
+    DecisionKind.pendingRequest => false,
+  };
 }
 
 /// One thing waiting on a decision, already reduced to what the row paints.

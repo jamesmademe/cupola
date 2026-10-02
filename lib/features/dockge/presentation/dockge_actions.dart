@@ -13,6 +13,10 @@ import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 ///
 /// Returns `true` when the action completed without throwing so callers can
 /// chain follow-up work (popping a screen, clearing state) only on success.
+///
+/// [client] is the connection the action belongs to, when it is not the one
+/// the lens is on: Home's Start on a stack that exited on the second Dockge
+/// has to reach that Dockge.
 Future<bool> runDockgeAction(
   BuildContext context,
   WidgetRef ref, {
@@ -20,12 +24,14 @@ Future<bool> runDockgeAction(
   String? successMessage,
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
+  DockgeClient? client,
 }) async {
-  // The *lensed* client: an action fired while the lens is on an agent has to
-  // reach that agent, and `dockgeClientProvider` is always the hub.
-  final client = ref.read(dockgeLensedClientProvider);
+  // The *lensed* client by default: an action fired while the lens is on an
+  // agent has to reach that agent, and `dockgeClientProvider` is always the
+  // hub.
+  final DockgeClient target = client ?? ref.read(dockgeLensedClientProvider);
   try {
-    await action(client);
+    await action(target);
     for (final provider in invalidate) {
       ref.invalidate(provider);
     }
@@ -53,6 +59,7 @@ Future<bool> runDockgeStackAction(
   String failure, {
   List<ProviderOrFamily> invalidate = const [],
   void Function()? onSuccess,
+  DockgeClient? client,
 }) async {
   final ok = await runDockgeAction(
     context,
@@ -61,6 +68,7 @@ Future<bool> runDockgeStackAction(
     successMessage: success,
     failureMessage: failure,
     invalidate: invalidate,
+    client: client,
   );
   if (ok && onSuccess != null) onSuccess();
   return ok;

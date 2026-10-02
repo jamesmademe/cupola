@@ -128,19 +128,30 @@ Future<void> toggleIndexerFlow(
 }
 
 /// Tests one saved indexer against its tracker.
+///
+/// On the Prowlarr [instanceId] names, the lens when it names none: an
+/// indexer is one server's, and Home lists the failing indexers of every
+/// Prowlarr.
 Future<void> testIndexerFlow(
   BuildContext context,
   WidgetRef ref,
-  ProwlarrIndexer indexer,
-) async {
+  ProwlarrIndexer indexer, {
+  String instanceId = '',
+}) async {
   await runServiceAction(
     context,
     ref,
-    action: () =>
-        ref.read(prowlarrServiceProvider).testIndexer(indexer.toPayload()),
+    action: () => ref
+        .read(prowlarrServiceForProvider(instanceId))
+        .testIndexer(indexer.toPayload()),
     successMessage: '${indexer.name ?? 'Indexer'} answered',
     failureMessage: 'Test failed for ${indexer.name ?? 'the indexer'}',
-    invalidate: [prowlarrIndexerStatusProvider, prowlarrHealthProvider],
+    invalidate: [
+      prowlarrIndexerStatusProvider,
+      prowlarrHealthProvider,
+      // Each connection's own read, which the lens's collapses onto.
+      prowlarrIndexerStatusForProvider,
+    ],
   );
 }
 
