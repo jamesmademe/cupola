@@ -132,9 +132,16 @@ Future<AppConfirmResult> showAppConfirmDialog({
                     onChanged: (v) =>
                         setState(() => values[opt.key] = v ?? false),
                     title: Text(opt.label),
+                    // The secondary ink, as every subtitle: `bodySmall`
+                    // alone carried the primary ink.
                     subtitle: opt.subtitle == null
                         ? null
-                        : Text(opt.subtitle!, style: theme.textTheme.bodySmall),
+                        : Text(
+                            opt.subtitle!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
                     contentPadding: EdgeInsets.zero,
                     controlAffinity: ListTileControlAffinity.leading,
                   ),
