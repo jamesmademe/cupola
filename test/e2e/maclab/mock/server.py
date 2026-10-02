@@ -5,6 +5,13 @@ vendor container is not available. They are not a replacement for certification
 against a real TrueNAS or Unraid host; the response shapes are the contract
 fixtures used by Cupola's clients and are suitable for repeatable UI/error
 passes.
+
+The TrueNAS mock speaks TLS only, like a TrueNAS that revokes an API key sent
+over a cleartext socket, with the self-signed certificate that
+test/e2e/maclab/truenas_cert.sh keeps in the lab's state directory. It reads
+the certificate for every connection, so one made again is served without a
+restart. With `--healthcheck` this file performs a TLS handshake against the
+running mock and exits 0 or 1, which is what the Compose healthcheck runs.
 """
 
 from __future__ import annotations
@@ -15,16 +22,29 @@ import json
 import os
 import socket
 import socketserver
+import ssl
 import struct
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
 API_KEY = os.environ.get("MOCK_API_KEY", "test-key")
 MODE = os.environ.get("MOCK_MODE", "unraid").lower()
+TLS_CERT = os.environ.get("MOCK_TLS_CERT", "/certs/truenas.crt")
+TLS_KEY = os.environ.get("MOCK_TLS_KEY", "/certs/truenas.key")
+TRUENAS_PORT = 8460
 
 
 def json_bytes(value: object) -> bytes:
     return json.dumps(value, separators=(",", ":")).encode("utf-8")
+
+
+def tls_context() -> ssl.SSLContext:
+    """A server context over the certificate as it is on disk right now."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.load_cert_chain(TLS_CERT, TLS_KEY)
+    return context
 
 
 def truenas_result(method: str, params: list[object]) -> object:
@@ -82,18 +102,39 @@ class WebSocketConnection:
             header = bytes([0x81, 127]) + struct.pack("!Q", length)
         self.sock.sendall(header + payload)
 
+    def read_exact(self, size: int) -> bytes | None:
+        # A TLS socket returns what is left of one record, which can be fewer
+        # bytes than asked for, so every read here loops until it has them all.
+        data = bytearray()
+        while len(data) < size:
+            chunk = self.sock.recv(size - len(data))
+            if not chunk:
+                return None
+            data.extend(chunk)
+        return bytes(data)
+
     def read_frame(self) -> tuple[int, bytes] | None:
-        header = self.sock.recv(2)
-        if len(header) < 2:
+        header = self.read_exact(2)
+        if header is None:
             return None
         opcode = header[0] & 0x0F
         masked = bool(header[1] & 0x80)
         length = header[1] & 0x7F
         if length == 126:
-            length = struct.unpack("!H", self.sock.recv(2))[0]
+            extended = self.read_exact(2)
+            if extended is None:
+                return None
+            length = struct.unpack("!H", extended)[0]
         elif length == 127:
-            length = struct.unpack("!Q", self.sock.recv(8))[0]
-        mask = self.sock.recv(4) if masked else b""
+            extended = self.read_exact(8)
+            if extended is None:
+                return None
+            length = struct.unpack("!Q", extended)[0]
+        mask = b""
+        if masked:
+            mask = self.read_exact(4)
+            if mask is None:
+                return None
         data = bytearray()
         while len(data) < length:
             chunk = self.sock.recv(length - len(data))
@@ -108,9 +149,22 @@ class WebSocketConnection:
 
 class TrueNasHandler(socketserver.BaseRequestHandler):
     def handle(self) -> None:
+        # The handshake runs here, on the connection's own thread: a client that
+        # stalls in it holds only itself. One that refuses the certificate, or
+        # connects to look at it and leaves (the healthcheck, the app's
+        # certificate probe), ends the connection with an error and nothing
+        # more: ssl.SSLError is an OSError, so one clause says it all.
+        try:
+            connection = tls_context().wrap_socket(self.request, server_side=True)
+            with connection:
+                self.serve(connection)
+        except OSError:
+            return
+
+    def serve(self, sock: ssl.SSLSocket) -> None:
         request = b""
         while b"\r\n\r\n" not in request:
-            chunk = self.request.recv(4096)
+            chunk = sock.recv(4096)
             if not chunk:
                 return
             request += chunk
@@ -132,8 +186,8 @@ class TrueNasHandler(socketserver.BaseRequestHandler):
             "Connection: Upgrade\r\n"
             f"Sec-WebSocket-Accept: {accept}\r\n\r\n"
         ).encode("latin1")
-        self.request.sendall(response)
-        connection = WebSocketConnection(self.request)
+        sock.sendall(response)
+        connection = WebSocketConnection(sock)
         while True:
             frame = connection.read_frame()
             if frame is None:
@@ -221,9 +275,38 @@ class UnraidHandler(BaseHTTPRequestHandler):
         return
 
 
+def healthcheck() -> int:
+    """Exit status for the Compose healthcheck: does the mock finish a TLS handshake?"""
+    if MODE != "truenas":
+        return 1
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    # The certificate is self-signed on purpose and this only asks whether the
+    # server answers a handshake, so nothing is verified.
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    try:
+        with socket.create_connection(("127.0.0.1", TRUENAS_PORT), timeout=3) as plain:
+            with context.wrap_socket(plain):
+                return 0
+    except OSError:
+        return 1
+
+
 def main() -> None:
+    if "--healthcheck" in sys.argv[1:]:
+        sys.exit(healthcheck())
     if MODE == "truenas":
-        server = socketserver.ThreadingTCPServer(("0.0.0.0", 8460), TrueNasHandler)
+        # Fail at start, loudly, when the certificate is not where the lab keeps
+        # it: a mock that cannot do TLS is worse than one that is not running,
+        # since the app refuses to talk to anything else.
+        try:
+            tls_context()
+        except (ssl.SSLError, OSError) as error:
+            sys.exit(
+                f"The TrueNAS mock needs a TLS certificate at {TLS_CERT} and its key at "
+                f"{TLS_KEY} ({error}). Make them with test/e2e/maclab/truenas_cert.sh."
+            )
+        server = socketserver.ThreadingTCPServer(("0.0.0.0", TRUENAS_PORT), TrueNasHandler)
     else:
         server = ThreadingHTTPServer(("0.0.0.0", 8480), UnraidHandler)
     try:

@@ -9,6 +9,10 @@
 #     -f docker-compose.maclab.yml \
 #     --profile core --profile downloads --profile media --profile infra \
 #     --profile protocol-mocks up -d --wait
+#
+# The TrueNAS mock serves TLS and needs its self-signed certificate in the state
+# directory first: test/e2e/maclab/bootstrap.sh makes it, or run
+# test/e2e/maclab/truenas_cert.sh on its own.
 services:
   seerr:
     # Seerr v3.4.1, linux/arm64 manifest pinned for a reproducible lab.
@@ -297,10 +301,17 @@ services:
     environment:
       MOCK_MODE: truenas
       MOCK_API_KEY: test-key
+      MOCK_TLS_CERT: /certs/truenas.crt
+      MOCK_TLS_KEY: /certs/truenas.key
+    volumes:
+      # The self-signed certificate test/e2e/maclab/truenas_cert.sh makes: the
+      # app refuses a TrueNAS that is not https://. A directory, not two files,
+      # so a certificate made again replaces what the mock reads.
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/truenas:/certs:ro"
     ports:
       - "127.0.0.1:8460:8460"
     healthcheck:
-      test: [CMD-SHELL, "python3 -c 'import socket; s=socket.create_connection((\"127.0.0.1\",8460), 1); s.close()'"]
+      test: [CMD, python3, /app/server.py, --healthcheck]
       interval: 5s
       timeout: 5s
       retries: 20

@@ -87,7 +87,7 @@ server for the token-rejection check.
 | Plex | http://127.0.0.1:32400 | local auth disabled in the disposable image | REST/XML-or-JSON |
 | Dockge | http://127.0.0.1:5001 | disposable account provisioned by bootstrap | Socket.IO |
 | Nginx Proxy Manager | http://127.0.0.1:8181 | admin@example.com / changeme | REST + JWT |
-| TrueNAS fixture | ws://127.0.0.1:8460 | test-key | WebSocket JSON-RPC |
+| TrueNAS fixture | wss://127.0.0.1:8460 (self-signed; the app saves https://127.0.0.1:8460) | test-key | WebSocket JSON-RPC over TLS |
 | Unraid fixture | http://127.0.0.1:8480/graphql | test-key | GraphQL |
 
 qBittorrent 5.1 validates the Host/Origin port, so the full lab uses host
@@ -102,6 +102,33 @@ Dockge deliberately has no Docker socket mounted. Login, Socket.IO session and
 read-only stack discovery are safe to test. Terminal and stack-mutating
 capabilities require a separately approved disposable Docker socket/proxy and
 are not silently granted by this compose file.
+
+The TrueNAS fixture speaks TLS and nothing else, because Cupola refuses to dial
+a TrueNAS address that is not https:// (TrueNAS 25.04 and later revoke an API key
+that arrives in cleartext). Its certificate is self-signed, made once by
+test/e2e/maclab/truenas_cert.sh (bootstrap.sh runs it before it starts the
+containers) with `localhost` and `127.0.0.1` as names, and kept with the rest of
+the lab's disposable state in `state/truenas/`; it is never committed. Cupola
+trusts it the way a person does, by its fingerprint: the SHA-256 of the
+certificate's DER encoding as 64 lowercase hex digits, without colons, the form
+`certFingerprint` compares and `SettingsModel.trustedCertificates` stores under
+the origin `https://127.0.0.1:8460`. The bootstrap writes it to the credentials
+file as `CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT`. A lab started before this
+existed gets the certificate, the credentials entry and a mock that serves it
+without a reset (the other credentials are left as they are):
+
+~~~bash
+export CUPOLA_MACLAB_STATE_DIR="$PWD/.ai/scratch/zz_maclab/state"
+test/e2e/maclab/truenas_cert.sh credentials
+docker compose -p cupola-maclab -f docker-compose.maclab.yml \
+  --profile core up -d --build --wait truenas-mock
+~~~
+
+The mock reads the certificate for every connection: a certificate made again
+(delete the two files in `state/truenas/`, not the directory, which a running
+container keeps hold of, and run the script with `credentials`) is served at
+once, and every fingerprint saved before it is then refused as an untrusted
+certificate, which is how a rotated certificate reads in the app.
 
 TrueNAS and Unraid are deterministic transport fixtures, not vendor-certified
 servers. They reproduce the JSON shapes, authentication and framing used by

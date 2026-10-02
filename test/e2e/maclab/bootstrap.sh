@@ -99,6 +99,12 @@ install_seed \
   "$script_dir/seed/downloads/cupola-test.nzb" \
   "$state_dir/cupola-test.nzb"
 
+# The TrueNAS mock serves TLS, because the app refuses an address that is not
+# https://. Its self-signed certificate is made once and kept in the state
+# directory, so the container finds it at start; the app trusts it by the
+# fingerprint written to the credentials below.
+truenas_cert_fingerprint="$("$script_dir/truenas_cert.sh" --state-dir "$state_dir" fingerprint)"
+
 printf 'Starting Compose project %s...\n' "$project"
 "${compose[@]}" "${profiles[@]}" up -d --wait
 
@@ -247,6 +253,7 @@ umask 077
   printf 'CUPOLA_MACLAB_DOCKGE_USERNAME=cupola\n'
   printf 'CUPOLA_MACLAB_DOCKGE_PASSWORD=cupola-pass\n'
   printf 'CUPOLA_MACLAB_PLEX_TOKEN=test-token\n'
+  printf 'CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT=%s\n' "$truenas_cert_fingerprint"
 } >"$credentials"
 chmod 600 "$credentials"
 
@@ -281,7 +288,7 @@ printf '  Jellyfin           http://127.0.0.1:8096\n'
 printf '  Plex               http://127.0.0.1:32400\n'
 printf '  Dockge             http://127.0.0.1:5001\n'
 printf '  Nginx Proxy Manager http://127.0.0.1:8181\n'
-printf '  TrueNAS mock       ws://127.0.0.1:8460\n'
+printf '  TrueNAS mock       wss://127.0.0.1:8460 (self-signed; pin CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT)\n'
 printf '  Unraid mock        http://127.0.0.1:8480/graphql\n'
 
 if [[ ! -f "$state_dir/dockge/dockge.db" ]]; then
