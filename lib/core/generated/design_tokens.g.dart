@@ -1207,6 +1207,14 @@ abstract final class DesignTokensDark {
   /// A progress track.
   static const Color colorFillTrack = Color(0x1FFFFFFF);
 
+  /// A skeleton block at rest: 8% white, so it reads on the ground, a slab and
+  /// a lit header alike.
+  static const Color colorFillSkeleton = Color(0x14FFFFFF);
+
+  /// The band that sweeps a skeleton: brighter than the block, like light
+  /// passing over it.
+  static const Color colorFillSkeletonGlint = Color(0x24FFFFFF);
+
   // color.ink
   /// Primary text and the ink button.
   static const Color colorInkPrimary = Color(0xFFF7F6F2);
@@ -1465,6 +1473,14 @@ abstract final class DesignTokensLight {
 
   /// A progress track (derived: 12% ink).
   static const Color colorFillTrack = Color(0x1F16151A);
+
+  /// A skeleton block at rest: 8% ink, so it reads on the ground, a slab and a
+  /// lit header alike.
+  static const Color colorFillSkeleton = Color(0x1416151A);
+
+  /// The band that sweeps a skeleton: brighter than the block, like light
+  /// passing over it.
+  static const Color colorFillSkeletonGlint = Color(0x8CFFFFFF);
 
   // color.ink
   /// Primary text and the ink button.

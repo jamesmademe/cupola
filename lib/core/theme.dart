@@ -323,6 +323,8 @@ class CupolaRoom extends ThemeExtension<CupolaRoom> {
     required this.fillControl,
     required this.fillStrong,
     required this.fillTrack,
+    required this.fillSkeleton,
+    required this.fillSkeletonGlint,
     required this.ink,
     required this.inkSecondary,
     required this.inkTertiary,
@@ -380,6 +382,12 @@ class CupolaRoom extends ThemeExtension<CupolaRoom> {
   final Color fillStrong;
   final Color fillTrack;
 
+  /// A skeleton block at rest, and the band that sweeps it: an alpha of the
+  /// room's ink and a brighter one, so the block reads on any ground and the
+  /// sweep passes as light, in both rooms.
+  final Color fillSkeleton;
+  final Color fillSkeletonGlint;
+
   /// Primary text and the ink button.
   final Color ink;
   final Color inkSecondary;
@@ -419,6 +427,8 @@ class CupolaRoom extends ThemeExtension<CupolaRoom> {
     fillControl: DesignTokensDark.colorFillControl,
     fillStrong: DesignTokensDark.colorFillStrong,
     fillTrack: DesignTokensDark.colorFillTrack,
+    fillSkeleton: DesignTokensDark.colorFillSkeleton,
+    fillSkeletonGlint: DesignTokensDark.colorFillSkeletonGlint,
     ink: DesignTokensDark.colorInkPrimary,
     inkSecondary: DesignTokensDark.colorInkSecondary,
     inkTertiary: DesignTokensDark.colorInkTertiary,
@@ -453,6 +463,8 @@ class CupolaRoom extends ThemeExtension<CupolaRoom> {
     fillControl: DesignTokensLight.colorFillControl,
     fillStrong: DesignTokensLight.colorFillStrong,
     fillTrack: DesignTokensLight.colorFillTrack,
+    fillSkeleton: DesignTokensLight.colorFillSkeleton,
+    fillSkeletonGlint: DesignTokensLight.colorFillSkeletonGlint,
     ink: DesignTokensLight.colorInkPrimary,
     inkSecondary: DesignTokensLight.colorInkSecondary,
     inkTertiary: DesignTokensLight.colorInkTertiary,
@@ -487,7 +499,7 @@ class CupolaRoom extends ThemeExtension<CupolaRoom> {
     focus, fillQuiet, fillControl, fillStrong, fillTrack, ink, inkSecondary,
     inkTertiary, inkDisabled, onInk, toneGreen, toneGreenDot, toneAmber,
     toneAmberInk, toneAmberFill, toneAmberWash, toneRed, toneRedDot, toneBlue,
-    toneNeutral, lamp,
+    toneNeutral, lamp, fillSkeleton, fillSkeletonGlint,
   ];
 
   factory CupolaRoom._fromList(List<Color> c) => CupolaRoom(
@@ -522,6 +534,8 @@ class CupolaRoom extends ThemeExtension<CupolaRoom> {
     toneBlue: c[28],
     toneNeutral: c[29],
     lamp: c[30],
+    fillSkeleton: c[31],
+    fillSkeletonGlint: c[32],
   );
 
   @override

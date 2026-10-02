@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A shimmer loading placeholder effect following Material Design 3.
 ///
@@ -82,9 +83,13 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final baseColor = colorScheme.surfaceContainerHigh;
-    final highlightColor = colorScheme.surfaceContainer;
+    // An alpha of the room's ink, and a brighter band: the block reads on the
+    // ground, a slab or a lit header, and the sweep passes as light. It was
+    // two opaque surface roles, the dark room's highlight darker than its
+    // base (a shadow sweeping) and the day room's base 1.01:1 on the ground.
+    final room = CupolaRoom.of(context);
+    final baseColor = room.fillSkeleton;
+    final highlightColor = room.fillSkeletonGlint;
 
     // Reduce Motion: this is an indefinitely repeating sweep, the single most
     // persistent animation in the app. Fall back to the flat base colour, which

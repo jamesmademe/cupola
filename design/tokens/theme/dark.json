@@ -79,6 +79,16 @@
         "$type": "color",
         "$value": "#FFFFFF1F",
         "$description": "A progress track."
+      },
+      "skeleton": {
+        "$type": "color",
+        "$value": "#FFFFFF14",
+        "$description": "A skeleton block at rest: 8% white, so it reads on the ground, a slab and a lit header alike."
+      },
+      "skeleton-glint": {
+        "$type": "color",
+        "$value": "#FFFFFF24",
+        "$description": "The band that sweeps a skeleton: brighter than the block, like light passing over it."
       }
     },
     "ink": {
