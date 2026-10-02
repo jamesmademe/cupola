@@ -11,7 +11,14 @@
 /// catalog asserts nothing: its job is to show what the code draws, so that a
 /// reader never has to trust a re-drawing of it. Its one guarantee is that it
 /// compiles, which is what makes a renamed parameter or a dropped variant fail
-/// loudly instead of leaving a stale picture behind.
+/// loudly instead of leaving a stale picture behind. One thing it does report:
+/// a scene that overflows is drawn anyway, with Flutter's stripe over the
+/// overflow, and the line that says by how much and where lands in
+/// `<platform>.<theme>.findings.txt` beside the sheet and in the test output
+/// (`catalog finding · …`), so a size that breaks a widget is read, not buried.
+///
+/// Every card is drawn at the default reading size and, in at least one scene,
+/// at twice it (`CatalogScene.textScale`); the guard beside this file holds that.
 ///
 /// Rendering is deterministic on one machine (byte-identical across runs) but
 /// not across hosts, which is why the images are built, not committed.
@@ -74,6 +81,7 @@ class CatalogScene {
     this.height,
     this.platform = CatalogPlatform.phone,
     this.overrides = const [],
+    this.textScale = 1,
   });
 
   /// What the scene shows — the constructor or variant, and the state. Written
@@ -95,7 +103,20 @@ class CatalogScene {
   /// providers derived from an overridden one see the override too — a nested
   /// `ProviderScope` would replace only the providers it names.
   final List<Override> overrides;
+
+  /// The reading size the scene is drawn at: the system's text scale, as a
+  /// person who raised it in Settings has it. 1 is the default size; 2 is the
+  /// largest size the catalog holds every card to ([catalogTextScale]).
+  final double textScale;
 }
+
+/// The reading size every card has to be seen at at least once: twice the
+/// default. A label that fits at 1 and clips, overflows or collides at 2 is
+/// the commonest defect a resting-state sheet hides, so each card declares a
+/// scene with `textScale: catalogTextScale` and
+/// `test/design_catalog/catalog_scenes_guard_test.dart` fails when one does
+/// not.
+const catalogTextScale = 2.0;
 
 /// Artwork a scene can show. The URLs are served from
 /// `design/system/assets/Imagery/` through the app's own image cache seam, so
@@ -269,6 +290,19 @@ Future<void> _render(
   // to hand the flag back before the test body ends: the painting invariants
   // are checked before any tear-down runs.
   debugDisableShadows = false;
+  // A scene that overflows is a finding, not a failure: the sheet still draws
+  // (with Flutter's yellow and black stripe over the overflow), and the line is
+  // written beside it. Any other error is the test's to fail.
+  final findings = <String>[];
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    final finding = _overflowFinding(details);
+    if (finding == null) {
+      previousOnError?.call(details);
+    } else if (!findings.contains(finding)) {
+      findings.add(finding);
+    }
+  };
   try {
     await _paint(
       tester,
@@ -281,8 +315,36 @@ Future<void> _render(
       overrides,
     );
   } finally {
+    FlutterError.onError = previousOnError;
     debugDisableShadows = true;
   }
+  final file = io.File(
+    '$catalogOutput/$card/${platform.name}.$themeName.findings.txt',
+  );
+  if (findings.isEmpty) {
+    if (file.existsSync()) file.deleteSync();
+    return;
+  }
+  file.writeAsStringSync('${findings.join('\n')}\n');
+  for (final finding in findings) {
+    debugPrint(
+      'catalog finding · $card · ${platform.name}.$themeName · $finding',
+    );
+  }
+}
+
+/// The one-line account of a RenderFlex overflow ("A RenderFlex overflowed by
+/// 24 pixels on the right", then the widget at fault and the line that built
+/// it), or null for any other error.
+String? _overflowFinding(FlutterErrorDetails details) {
+  final text = details.exceptionAsString();
+  if (!text.contains('overflowed by')) return null;
+  final lines = text.split('\n');
+  final cause = lines.indexWhere((l) => l.contains('error-causing widget'));
+  final where = cause >= 0 && cause + 1 < lines.length
+      ? lines[cause + 1].trim()
+      : '';
+  return where.isEmpty ? lines.first : '${lines.first} · $where';
 }
 
 Future<void> _paint(
@@ -396,14 +458,19 @@ class _Sheet extends StatelessWidget {
               child: SizedBox(
                 width: scene.width,
                 height: scene.height,
-                child: scene.width == null
+                child: scene.width == null && scene.textScale == 1
                     ? Builder(builder: scene.build)
                     : MediaQuery(
                         data: media.copyWith(
-                          size: Size(
-                            scene.width!,
-                            scene.height ?? media.size.height,
-                          ),
+                          size: scene.width == null
+                              ? media.size
+                              : Size(
+                                  scene.width!,
+                                  scene.height ?? media.size.height,
+                                ),
+                          textScaler: scene.textScale == 1
+                              ? media.textScaler
+                              : TextScaler.linear(scene.textScale),
                         ),
                         child: Builder(builder: scene.build),
                       ),
