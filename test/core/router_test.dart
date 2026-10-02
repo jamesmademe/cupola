@@ -275,19 +275,30 @@ void main() {
       },
     );
 
-    testWidgets('unknown service settings routes fall back to seerr', (
-      tester,
-    ) async {
+    testWidgets('an unknown service\'s settings land on the connections, '
+        'never on another service\'s form', (tester) async {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
       router.go('/settings/service/not-a-service');
       await tester.pumpAndSettle();
 
+      // It used to open Seerr's form under a link that named something else.
+      expect(find.byType(ServiceSettingsScreen), findsNothing);
+      expect(find.byType(SettingsConnectionsScreen), findsOneWidget);
+      expect(router.state.uri.toString(), ServiceRoutes.settingsConnections);
+    });
+
+    testWidgets('Seerr\'s former name still opens its form', (tester) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go('/settings/service/jellyseerr');
+      await tester.pumpAndSettle();
+
       final screen = tester.widget<ServiceSettingsScreen>(
         find.byType(ServiceSettingsScreen),
       );
-
       expect(screen.service, ServiceKey.seerr);
       // The page prints the service's name alone: "Seerr Settings" is the name
       // of Seerr's own configuration, which is a different page from the form

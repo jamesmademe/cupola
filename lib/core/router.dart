@@ -2852,30 +2852,52 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       ),
       _page('region', (state) => const SettingsRegionScreen()),
       _page('certificates', (state) => const TrustedCertificatesScreen()),
-      _page('service/:service', (state) {
-        final serviceParam = state.pathParameters['service'];
-        // Accept 'jellyseerr' as a legacy alias for 'seerr'.
-        final normalizedParam = serviceParam == 'jellyseerr'
-            ? 'seerr'
-            : serviceParam;
-        final service = ServiceKey.values.firstWhere(
-          (s) => s.routeParam == normalizedParam,
-          orElse: () => ServiceKey.seerr,
-        );
-        // Query rather than a path segment: a connection is a parameter of
-        // the form, not a level of the hierarchy, and threading a segment
-        // through would have every nested settings route grow one it never
-        // reads.
-        return ServiceSettingsScreen(
-          service: service,
-          instanceId: state.uri.queryParameters['i'],
-          isNew: state.uri.queryParameters['new'] == '1',
-          initialAccess: AccessKind.byName(state.uri.queryParameters['access']),
-        );
-      }),
+      _page(
+        'service/:service',
+        (state) {
+          // Query rather than a path segment: a connection is a parameter of
+          // the form, not a level of the hierarchy, and threading a segment
+          // through would have every nested settings route grow one it never
+          // reads.
+          return ServiceSettingsScreen(
+            service: _settingsServiceOf(state)!,
+            instanceId: state.uri.queryParameters['i'],
+            isNew: state.uri.queryParameters['new'] == '1',
+            initialAccess: AccessKind.byName(
+              state.uri.queryParameters['access'],
+            ),
+          );
+        },
+        // A service the app does not know is no service's form. It used to
+        // open Seerr's, under a link that named something else; it lands on
+        // the list of connections instead, where every one of them is.
+        redirect: (context, state) => _settingsServiceOf(state) == null
+            ? ServiceRoutes.settingsConnections
+            : null,
+      ),
     ],
   ),
 };
+
+/// The service a `/settings/service/<param>` location names, or null when it
+/// names none. `jellyseerr` is Seerr's former name.
+ServiceKey? _settingsServiceOf(GoRouterState state) {
+  final param = state.pathParameters['service'];
+  final normalized = param == 'jellyseerr' ? 'seerr' : param;
+  for (final service in ServiceKey.values) {
+    if (service.routeParam == normalized) return service;
+  }
+  return null;
+}
+
+/// The kind of activity an `/activity/<type>` location names, or null.
+ServiceType? _activityTypeOf(GoRouterState state) {
+  final name = state.pathParameters['type'];
+  for (final type in ServiceType.values) {
+    if (type.name == name) return type;
+  }
+  return null;
+}
 
 /// Rewrites a pre-rename `/services…` location onto `/dashboard…`.
 ///
@@ -3017,12 +3039,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       // shell, and unchanged by the migration.
       GoRoute(
         path: '/activity/:type',
+        // A kind of activity the app does not know is not the movies'. It used
+        // to open Radarr's, under a link that named something else; it lands
+        // on Activity itself instead.
+        redirect: (context, state) =>
+            _activityTypeOf(state) == null ? '/activity' : null,
         builder: (context, state) {
-          final typeStr = state.pathParameters['type']!;
-          final type = ServiceType.values.firstWhere(
-            (e) => e.name == typeStr,
-            orElse: () => ServiceType.movies,
-          );
+          final type = _activityTypeOf(state)!;
           // `?i=` reaches the requests branch only, because that is the only
           // branch that honours it: the \*arr tabs under here read their queue
           // through the lens from top to bottom, and handing them a connection
