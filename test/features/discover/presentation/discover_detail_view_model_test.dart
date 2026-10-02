@@ -67,7 +67,7 @@ void main() {
       expect(viewModel.genresList, ['Action', 'Drama']);
       expect(viewModel.year, '2024');
       // Seerr's `123min` now speaks the same voice as Radarr's page.
-      expect(viewModel.runtimeStr, '2h 3m');
+      expect(viewModel.runtimeStr, '2\u00A0h 3\u00A0min');
       expect(viewModel.studios, ['Studio A', 'Studio B', 'Studio C']);
       expect(viewModel.voteAverage, 7.4);
       expect(viewModel.voteCount, 240);
@@ -168,7 +168,7 @@ void main() {
         'episodeRunTime': ['45', 50],
       });
 
-      expect(viewModel.runtimeStr, '45m');
+      expect(viewModel.runtimeStr, '45\u00A0min');
     });
 
     test('bills one cast tile per person, not per role', () {

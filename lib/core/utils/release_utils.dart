@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 
 /// Term separator for the title query. Hoisted out of [filterAndSortReleases]
 /// because that function runs on every keystroke of the interactive-search
@@ -196,11 +197,11 @@ String formatReleaseSize(int bytes) => formatBytes(bytes);
 /// Formats age in minutes into a human-readable string.
 ///
 /// Examples:
-/// - 30 -> "30m"
-/// - 120 -> "2h"
-/// - 2880 -> "2d"
+/// - 30 -> "30 min"
+/// - 120 -> "2 h"
+/// - 2880 -> "2 d"
 String formatReleaseAge(int minutes) {
-  if (minutes < 60) return '${minutes}m';
-  if (minutes < 1440) return '${(minutes / 60).round()}h';
-  return '${(minutes / 1440).round()}d';
+  if (minutes < 60) return withUnit(minutes, 'min');
+  if (minutes < 1440) return withUnit((minutes / 60).round(), 'h');
+  return withUnit((minutes / 1440).round(), 'd');
 }

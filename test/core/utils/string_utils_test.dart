@@ -65,18 +65,18 @@ void main() {
   group('formatRuntimeMinutes', () {
     test('speaks hours and minutes', () {
       // Radarr shipped `127 min`, Seerr `173min`.
-      expect(formatRuntimeMinutes(127), '2h 7m');
-      expect(formatRuntimeMinutes(173), '2h 53m');
+      expect(formatRuntimeMinutes(127), '2\u00A0h 7\u00A0min');
+      expect(formatRuntimeMinutes(173), '2\u00A0h 53\u00A0min');
     });
 
     test('drops the hour under an hour', () {
-      expect(formatRuntimeMinutes(47), '47m');
-      expect(formatRuntimeMinutes(1), '1m');
+      expect(formatRuntimeMinutes(47), '47\u00A0min');
+      expect(formatRuntimeMinutes(1), '1\u00A0min');
     });
 
     test('drops the minutes on a whole hour', () {
-      expect(formatRuntimeMinutes(120), '2h');
-      expect(formatRuntimeMinutes(60), '1h');
+      expect(formatRuntimeMinutes(120), '2\u00A0h');
+      expect(formatRuntimeMinutes(60), '1\u00A0h');
     });
 
     test('reports nothing for a runtime the service does not have', () {

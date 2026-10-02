@@ -146,7 +146,7 @@ void main() {
 
       expect(find.text('14 releases'), findsOneWidget);
       // Never a bare `27:00`, which would be indistinguishable from elapsed.
-      expect(find.text('27m'), findsOneWidget);
+      expect(find.text('27\u00A0min'), findsOneWidget);
     });
 
     testWidgets('zero releases states the answer without a count', (

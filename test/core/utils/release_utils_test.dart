@@ -42,12 +42,12 @@ void main() {
 
   group('formatReleaseAge', () {
     const cases = {
-      0: '0m',
-      30: '30m',
-      60: '1h',
-      120: '2h',
-      1440: '1d',
-      2880: '2d',
+      0: '0\u00A0min',
+      30: '30\u00A0min',
+      60: '1\u00A0h',
+      120: '2\u00A0h',
+      1440: '1\u00A0d',
+      2880: '2\u00A0d',
     };
     for (final entry in cases.entries) {
       test('${entry.key}min -> ${entry.value}', () {

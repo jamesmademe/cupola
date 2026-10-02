@@ -42,7 +42,7 @@ MediaDetailView _detailView() {
         info: MediaStatusInfo(availability: MediaAvailability.available),
       ),
       title: _kTitle,
-      metadataItems: ['2001', '2h 58m', 'PG-13'],
+      metadataItems: ['2001', '2\u00A0h 58\u00A0min', 'PG-13'],
       tags: [
         GenreChip(genre: 'Adventure'),
         GenreChip(genre: 'Fantasy'),

@@ -113,6 +113,9 @@ void main() {
       expect(formatTimeLeft(180), '3\u00A0min left');
       expect(formatTimeLeft(7800), '2\u00A0h 10\u00A0min left');
       expect(formatTimeLeft(7200), '2\u00A0h left');
+      // A day or more keeps its hours: `3 d left` was a day short of the truth.
+      expect(formatTimeLeft(3 * 86400 + 4 * 3600), '3\u00A0d 4\u00A0h left');
+      expect(formatTimeLeft(2 * 86400), '2\u00A0d left');
     });
 
     test('no estimate is —', () {

@@ -1,3 +1,5 @@
+import 'package:cupola/core/utils/duration_format.dart';
+
 /// Formats an ISO-8601 date string to `YYYY-MM-DD`.
 ///
 /// Returns the original string if parsing fails.
@@ -84,13 +86,7 @@ String? formatMediumDateOrNull(String? isoDate) {
 /// is dropped by the metadata line and the fact grid alike.
 String formatRuntimeMinutes(int minutes) {
   if (minutes <= 0) return '';
-
-  final hours = minutes ~/ 60;
-  final remainder = minutes % 60;
-
-  if (hours == 0) return '${remainder}m';
-  if (remainder == 0) return '${hours}h';
-  return '${hours}h ${remainder}m';
+  return formatTimeSpan(Duration(minutes: minutes));
 }
 
 /// Caps a service-supplied title so it can be interpolated into a sheet header

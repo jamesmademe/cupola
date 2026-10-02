@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
-import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
@@ -334,12 +334,5 @@ String? _taskDuration(JellyfinScheduledTask task) {
   final end = task.lastEndedAt;
   if (start == null || end == null || end.isBefore(start)) return null;
   final duration = end.difference(start);
-  if (duration.inHours > 0) {
-    final minutes = duration.inMinutes.remainder(60);
-    return minutes == 0
-        ? withUnit(duration.inHours, 'h')
-        : '${withUnit(duration.inHours, 'h')} ${withUnit(minutes, 'min')}';
-  }
-  if (duration.inMinutes > 0) return withUnit(duration.inMinutes, 'min');
-  return withUnit(duration.inSeconds, 's');
+  return formatTimeSpan(duration);
 }

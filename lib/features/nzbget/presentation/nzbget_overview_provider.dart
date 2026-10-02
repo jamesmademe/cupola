@@ -42,8 +42,8 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart'
     show joinDisplayParts;
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
-import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
@@ -285,15 +285,12 @@ String? nzbgetEtaLabel({
   final seconds = (remainingMegabytes * 1024 * 1024) / rateBytesPerSecond;
   if (seconds < 60) return 'about a minute';
   final minutes = (seconds / 60).round();
-  if (minutes < 60) return 'about ${withUnit(minutes, 'min')}';
   final hours = minutes ~/ 60;
-  final rest = minutes % 60;
   if (hours >= 24) {
     final days = (hours / 24).round();
     return days == 1 ? 'about a day' : 'about $days days';
   }
-  final h = withUnit(hours, 'h');
-  return rest == 0 ? 'about $h' : 'about $h ${withUnit(rest, 'min')}';
+  return 'about ${formatTimeSpan(Duration(minutes: minutes))}';
 }
 
 /// Builds the Queue region from one `listgroups` answer and, when it answered,

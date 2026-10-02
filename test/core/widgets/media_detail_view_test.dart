@@ -59,7 +59,7 @@ MediaDetailView _detailView({
     staggerSections: staggerSections,
     posterRow: MediaDetailPosterRow(
       title: _kTitle,
-      metadataItems: const ['2h 16m', '1999'],
+      metadataItems: const ['2\u00A0h 16\u00A0min', '1999'],
       posterCard: MediaPosterCard(heroTag: heroTag),
     ),
     body: body ?? _fillerBody(),

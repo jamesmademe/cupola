@@ -180,7 +180,7 @@ void main() {
       );
       expect(line.metadataItems, contains('R'));
       // One voice for runtime, shared with the Radarr page: not `136min`.
-      expect(line.metadataItems, contains('2h 16m'));
+      expect(line.metadataItems, contains('2\u00A0h 16\u00A0min'));
     });
 
     testWidgets('a show gets a lazy Seasons sliver in region 3', (

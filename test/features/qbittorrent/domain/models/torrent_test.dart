@@ -264,12 +264,12 @@ void main() {
       expect(build(state: 'stoppedUP').etaFormatted, '');
       expect(build(state: 'stopped').etaFormatted, '');
       expect(build(eta: 8640000).etaFormatted, '∞');
-      expect(build(eta: 0).etaFormatted, '0m');
-      expect(build(eta: 90).etaFormatted, '1m');
-      expect(build(eta: 3600).etaFormatted, '1h 0m');
-      expect(build(eta: 3660).etaFormatted, '1h 1m');
-      expect(build(eta: 86400).etaFormatted, '1d 0h');
-      expect(build(eta: 90000).etaFormatted, '1d 1h');
+      expect(build(eta: 0).etaFormatted, '0\u00A0s');
+      expect(build(eta: 90).etaFormatted, '1\u00A0min');
+      expect(build(eta: 3600).etaFormatted, '1\u00A0h');
+      expect(build(eta: 3660).etaFormatted, '1\u00A0h 1\u00A0min');
+      expect(build(eta: 86400).etaFormatted, '1\u00A0d');
+      expect(build(eta: 90000).etaFormatted, '1\u00A0d 1\u00A0h');
     });
 
     test('trackerDomain strips www. prefix', () {

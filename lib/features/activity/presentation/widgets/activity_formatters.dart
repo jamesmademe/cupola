@@ -1,5 +1,6 @@
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, mapOrNull, stringOrNull;
 import 'package:cupola/core/utils/episode_code.dart';
@@ -46,16 +47,17 @@ String formatActivityDuration(String? value) {
   final parts = value.split(':');
   if (parts.length != 3) return value;
 
-  final hours = int.tryParse(parts[0]) ?? 0;
+  // `[d.]hh:mm:ss[.fffffff]`: Sonarr and Radarr put the days in front of the hours
+  // behind a dot once a wait passes a day (`1.02:03:04`).
+  final head = parts[0].split('.');
+  final days = head.length == 2 ? int.tryParse(head.first) ?? 0 : 0;
+  final hours = int.tryParse(head.last) ?? 0;
   final minutes = int.tryParse(parts[1]) ?? 0;
   final seconds = int.tryParse(parts[2].split('.').first) ?? 0;
-  final labels = <String>[];
 
-  if (hours > 0) labels.add('${hours}h');
-  if (minutes > 0) labels.add('${minutes}m');
-  if (hours == 0 && minutes == 0) labels.add('${seconds}s');
-
-  return labels.join(' ');
+  return formatTimeSpan(
+    Duration(days: days, hours: hours, minutes: minutes, seconds: seconds),
+  );
 }
 
 String formatRelativeActivityDate(String? isoDate, {DateTime? now}) {

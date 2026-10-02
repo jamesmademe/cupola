@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
@@ -401,7 +402,7 @@ class _StatsSection extends ConsumerWidget {
               const SizedBox(width: AppSpacing.sm),
               _StatTile(
                 label: 'Resp',
-                value: '${stat.averageResponseTime}ms',
+                value: withUnit(stat.averageResponseTime, 'ms'),
                 icon: Icons.timer_outlined,
               ),
             ],

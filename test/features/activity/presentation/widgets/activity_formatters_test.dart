@@ -64,4 +64,31 @@ void main() {
       expect(formatActivityTimeOnly('yesterday'), 'yesterday');
     });
   });
+
+  group('formatActivityDuration', () {
+    test('reads an *arr timeleft in the brand book units', () {
+      expect(formatActivityDuration('00:12:40'), '12\u00A0min');
+      expect(formatActivityDuration('12:05:00'), '12\u00A0h 5\u00A0min');
+      expect(formatActivityDuration('02:00:00'), '2\u00A0h');
+      expect(formatActivityDuration('00:00:48'), '48\u00A0s');
+      expect(formatActivityDuration('00:00:00'), '0\u00A0s');
+    });
+
+    test('reads the days an *arr puts in front of the hours', () {
+      // `1.02:03:04` is one day, two hours: it used to read `3m`, because the
+      // hours field did not parse.
+      expect(formatActivityDuration('1.02:03:04'), '1\u00A0d 2\u00A0h');
+      expect(formatActivityDuration('3.00:10:00'), '3\u00A0d');
+    });
+
+    test('ignores the fractional seconds an *arr appends', () {
+      expect(formatActivityDuration('00:00:48.1234567'), '48\u00A0s');
+    });
+
+    test('an absent timeleft is an em dash, and a stranger passes through', () {
+      expect(formatActivityDuration(null), '—');
+      expect(formatActivityDuration('  '), '—');
+      expect(formatActivityDuration('soon'), 'soon');
+    });
+  });
 }

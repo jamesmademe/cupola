@@ -56,8 +56,9 @@ String formatSpeed(int bytesPerSecond) => bytesPerSecond <= 0
 ///
 /// Returns `''` for `seconds <= 0` so callers can decide what "empty" means
 /// (e.g. `—` for never-seen, or just an empty cell for freshly added). For
-/// positive inputs renders as `'Xd HH:MM:SS'` (omitting the day prefix when
-/// `d == 0`). Matches the shape the qBittorrent WebUI uses on the General tab.
+/// positive inputs renders as `'X d HH:MM:SS'` (omitting the day prefix when
+/// `d == 0`), the clock form of the qBittorrent WebUI's General tab with the
+/// day count in the brand book's unit (`3 d 04:05:06`).
 String formatDuration(int seconds) {
   if (seconds <= 0) return '';
   final d = seconds ~/ 86400;
@@ -67,7 +68,7 @@ String formatDuration(int seconds) {
   final hh = h.toString().padLeft(2, '0');
   final mm = m.toString().padLeft(2, '0');
   final ss = s.toString().padLeft(2, '0');
-  if (d > 0) return '${d}d $hh:$mm:$ss';
+  if (d > 0) return '${withUnit(d, 'd')} $hh:$mm:$ss';
   return '$hh:$mm:$ss';
 }
 

@@ -500,7 +500,7 @@ void main() {
         );
         expect(failure.kind, ReleaseSearchFailureKind.gatewayTimeout);
         expect(failure.retryIsHarmful, isTrue);
-        expect(failure.headline, contains('1:02'));
+        expect(failure.headline, contains('1\u00A0min 2\u00A0s'));
         expect(failure.detail, contains('nginx'));
       },
     );

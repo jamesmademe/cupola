@@ -23,8 +23,8 @@ library;
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
-import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 
@@ -114,24 +114,15 @@ String formatDoneOfTotal({int? doneBytes, int? totalBytes}) {
   return formatBytesOfTotal(doneBytes, totalBytes);
 }
 
-/// `3 min left`, `2 h 10 min left`, `48 s left` — or `—` when nobody knows.
+/// `3 min left`, `2 h 10 min left`, `3 d 4 h left`, `48 s left` — or `—` when
+/// nobody knows. The span is `formatTimeSpan`'s.
 ///
 /// Never seconds above a minute, and never a bare number: "3" in a row of
 /// figures is not a duration. qBittorrent reports 8 640 000 for "no estimate",
 /// which is filtered by the caller rather than printed as a hundred days.
 String formatTimeLeft(int? seconds) {
   if (seconds == null || seconds < 0) return kAbsentFigure;
-  if (seconds < 60) return '${withUnit(seconds, 's')} left';
-  final minutes = seconds ~/ 60;
-  if (minutes < 60) return '${withUnit(minutes, 'min')} left';
-  final hours = minutes ~/ 60;
-  final rest = minutes % 60;
-  if (hours < 24) {
-    final h = withUnit(hours, 'h');
-    return rest == 0 ? '$h left' : '$h ${withUnit(rest, 'min')} left';
-  }
-  final days = hours ~/ 24;
-  return '${withUnit(days, 'd')} left';
+  return '${formatTimeSpan(Duration(seconds: seconds))} left';
 }
 
 /// The whole row line: `2160p · 14.0 of 15.2 GB · 3 min left · qBittorrent`.

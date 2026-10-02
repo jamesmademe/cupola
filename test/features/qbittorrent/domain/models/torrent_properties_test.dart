@@ -299,12 +299,15 @@ void main() {
         // The getter naming intentionally mirrors the qB WebUI: "Time active"
         // reads `time_elapsed`; "Seeded for" reads `seeding_time`. Both are
         // formatted via the shared `formatDuration` so the screen renders
-        // "1d 02:00:00" consistently with how `lastActivityFormatted` is
+        // "1 d 02:00:00" consistently with how `lastActivityFormatted` is
         // rendered elsewhere.
         expect(build(timeElapsed: 0).timeActiveFormatted, '');
         expect(build(timeElapsed: -5).timeActiveFormatted, '');
         expect(build(timeElapsed: 65).timeActiveFormatted, '00:01:05');
-        expect(build(timeElapsed: 93600).timeActiveFormatted, '1d 02:00:00');
+        expect(
+          build(timeElapsed: 93600).timeActiveFormatted,
+          '1\u00A0d 02:00:00',
+        );
 
         expect(build(seedingTime: 0).seededForFormatted, '');
         expect(build(seedingTime: 3600).seededForFormatted, '01:00:00');
@@ -396,12 +399,12 @@ void main() {
       );
     });
 
-    test('reannounceFormatted shows —s for non-positive, <N>s otherwise', () {
+    test('reannounceFormatted shows — for non-positive, <N> s otherwise', () {
       // Reannounce is the countdown until the next tracker announce; qB
       // uses 0 (or -1) for "never" / "not applicable".
-      expect(build(reannounceSeconds: 0).reannounceFormatted, '—s');
-      expect(build(reannounceSeconds: -1).reannounceFormatted, '—s');
-      expect(build(reannounceSeconds: 30).reannounceFormatted, '30s');
+      expect(build(reannounceSeconds: 0).reannounceFormatted, '—');
+      expect(build(reannounceSeconds: -1).reannounceFormatted, '—');
+      expect(build(reannounceSeconds: 30).reannounceFormatted, '30\u00A0s');
     });
   });
 }

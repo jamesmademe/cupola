@@ -112,7 +112,7 @@ void main() {
       expect(find.text('1.0\u00A0GB'), findsOneWidget);
       expect(find.text('42'), findsOneWidget);
       expect(find.text('Bluray-1080p'), findsOneWidget);
-      expect(find.text('2d'), findsOneWidget);
+      expect(find.text('2\u00A0d'), findsOneWidget);
       expect(find.text('+0'), findsOneWidget);
       expect(find.text('CF'), findsOneWidget);
     });
@@ -381,13 +381,13 @@ void main() {
 
     testWidgets('formats ages across minutes, hours, and days', (tester) async {
       await _pumpReleaseItem(tester, release: buildRelease(ageMinutes: 30));
-      expect(find.text('30m'), findsOneWidget);
+      expect(find.text('30\u00A0min'), findsOneWidget);
 
       await _pumpReleaseItem(tester, release: buildRelease(ageMinutes: 120));
-      expect(find.text('2h'), findsOneWidget);
+      expect(find.text('2\u00A0h'), findsOneWidget);
 
       await _pumpReleaseItem(tester, release: buildRelease(ageMinutes: 4320));
-      expect(find.text('3d'), findsOneWidget);
+      expect(find.text('3\u00A0d'), findsOneWidget);
     });
   });
 }

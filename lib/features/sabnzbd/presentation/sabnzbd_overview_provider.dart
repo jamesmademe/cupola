@@ -60,6 +60,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
@@ -200,17 +201,10 @@ Duration? sabnzbdParseTimeLeft(String? raw) {
 String? sabnzbdEtaLabel(Duration? remaining) {
   if (remaining == null || remaining <= Duration.zero) return null;
 
-  final days = remaining.inDays;
-  final hours = remaining.inHours % 24;
-  final minutes = remaining.inMinutes % 60;
-
-  final d = withUnit(days, 'd');
-  final h = withUnit(hours, 'h');
-  final min = withUnit(minutes, 'min');
-  if (days > 0) return hours > 0 ? '$d $h' : d;
-  if (hours > 0) return minutes > 0 ? '$h $min' : h;
-  if (minutes > 0) return min;
-  return '< ${withUnit(1, 'min')}';
+  if (remaining < const Duration(minutes: 1)) {
+    return '< ${withUnit(1, 'min')}';
+  }
+  return formatTimeSpan(remaining);
 }
 
 /// The ETA readout, and the one figure on this page that is routinely absent.

@@ -287,7 +287,7 @@ void main() {
       expect(row.tone, StatusTone.info);
       expect(
         row.detail,
-        'movies · 15.0\u00A0GB · 8.0\u00A0MB/s down · 3m left',
+        'movies · 15.0\u00A0GB · 8.0\u00A0MB/s down · 3\u00A0min left',
       );
     });
 

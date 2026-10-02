@@ -45,7 +45,7 @@ MediaDetailView _detailView({Widget? posterCard}) => MediaDetailView(
       info: MediaStatusInfo(availability: MediaAvailability.available),
     ),
     title: _kTitle,
-    metadataItems: const ['2001', '2h 58m'],
+    metadataItems: const ['2001', '2\u00A0h 58\u00A0min'],
     tags: const [GenreChip(genre: 'Fantasy')],
   ),
   body: const MediaDetailBody(
@@ -197,7 +197,7 @@ void main() {
                 ),
               ),
               title: _kTitle,
-              metadataItems: ['2001', '2h 58m'],
+              metadataItems: ['2001', '2\u00A0h 58\u00A0min'],
               tags: [GenreChip(genre: 'Fantasy')],
             ),
           ),

@@ -67,6 +67,52 @@ void main() {
     );
   });
 
+  test('no copy in lib/ glues a time unit to its figure (12m, 1h 5m, 4m)', () {
+    // The brand book's vocabulary is `12 min`, `2 h 30 min`, `48 s`, `3 d`:
+    // `formatTimeSpan` in duration_format.dart writes it. A compact `12m` is a
+    // second spelling, and one cell could read `4.4 GB · 12m left`.
+    final offenders = [
+      for (final file in files)
+        for (final literal in copyOf(file.path, file.readAsStringSync()))
+          if (_gluedUnit.hasMatch(literal.prose) && !_isGluedAllowed(literal))
+            '${literal.path}:${literal.line}  "${literal.prose}"',
+    ];
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'A span is `formatTimeSpan(Duration)` (or `withUnit(figure, unit)` '
+          'for one figure): `12 min`, `2 h 30 min`, never `12m` or `1h 5m`. A '
+          'literal that is not a duration goes in _gluedAllowed with its '
+          'reason.',
+    );
+  });
+
+  test('the glued-unit scan catches a compact span; a plural reads the same', () {
+    const planted = r'''
+final a = '${m}m left';
+final b = '${h}h ${m}m';
+final c = '4m 30s';
+final d = '${d}d';
+final e = '${ms}ms';
+final f = '12 min left';
+final g = withUnit(m, 'min');
+final h = 'about ${x} minutes';
+final i = '${noun}s';
+final j = 'load 1m';
+final k = '404s';
+''';
+    expect(
+      [
+        for (final literal in copyOf('lib/zz_planted.dart', planted))
+          if (_gluedUnit.hasMatch(literal.prose)) literal.line,
+      ],
+      [1, 2, 3, 4, 5, 9, 10, 11],
+      reason:
+          'a figure straight against d, h, m, ms or s; a plural is allow-listed',
+    );
+  });
+
   test('no source line carries an invisible no-break space', () {
     // A no-break space typed into a file is indistinguishable from a space in
     // every editor and diff; it is `unitSpace` or an escape, so it can be seen.
@@ -158,7 +204,7 @@ final q = '$count s'
 
   test('every allow-list entry still matches something', () {
     final unused = [
-      for (final entry in _allowed)
+      for (final entry in [..._allowed, ..._gluedAllowed])
         if (!File(entry.file).existsSync() ||
             !copyOf(
               entry.file,
@@ -181,6 +227,40 @@ final _plainSpaced = RegExp('[0-9$copyHole] $_unit(?![A-Za-z0-9])');
 
 /// A figure and a no-break space before a unit symbol: the shape it asks for.
 final _figureUnitSpaced = RegExp('[0-9]\u00A0$_unit');
+
+/// A figure (a digit, or an interpolation) straight against a time unit symbol:
+/// the compact spelling the brand book's vocabulary replaces.
+final _gluedUnit = RegExp('[0-9$copyHole](?:d|h|m|ms|min|s)(?![A-Za-z0-9])');
+
+/// Literals that end in a unit-looking letter and are not a duration, each with
+/// the reason.
+const _gluedAllowed = <({String file, String literal, String reason})>[
+  (
+    file: 'lib/core/utils/string_utils.dart',
+    literal: '${copyHole}s',
+    reason: 'the plural s of countLabel: a noun, not seconds',
+  ),
+  (
+    file: 'lib/features/music/presentation/lidarr_overview_provider.dart',
+    literal: '${copyHole}s',
+    reason: 'the plural s of a noun in lidarrCountLabel, not seconds',
+  ),
+  (
+    file:
+        'lib/features/truenas/presentation/dashboard/truenas_dashboard_screen.dart',
+    literal: 'load 1m',
+    reason: 'the name of the one-minute load average, a caption and not a span',
+  ),
+  (
+    file: 'lib/features/npm/presentation/npm_screen.dart',
+    literal: 'Redirections, 404s and streams',
+    reason: 'the plural of an HTTP status, not seconds',
+  ),
+];
+
+bool _isGluedAllowed(CopyLiteral literal) => _gluedAllowed.any(
+  (entry) => entry.file == literal.path && entry.literal == literal.prose,
+);
 
 /// Literals that put a plain space between a figure and a unit symbol for a
 /// reason that is not a measurement shown to a person, each with the reason.

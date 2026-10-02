@@ -1,5 +1,6 @@
 import 'parse_utils.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 
 enum TorrentState {
@@ -216,12 +217,7 @@ class Torrent {
       return '';
     }
     if (eta >= 8640000) return '∞';
-    final d = eta ~/ 86400;
-    final h = (eta % 86400) ~/ 3600;
-    final m = (eta % 3600) ~/ 60;
-    if (d > 0) return '${d}d ${h}h';
-    if (h > 0) return '${h}h ${m}m';
-    return '${m}m';
+    return formatTimeSpan(Duration(seconds: eta));
   }
 
   String get progressFormatted => formatPercent(progress * 100, decimals: 1);

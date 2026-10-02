@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/network/answer_guard.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
@@ -508,10 +509,4 @@ String? _gatewayFrom(Response<dynamic>? response) {
 String _serviceWord(String? gateway) =>
     gateway == null ? 'The service' : 'The service behind $gateway';
 
-String _readable(Duration d) {
-  if (d.inMinutes == 0) return '${d.inSeconds}s';
-  final seconds = d.inSeconds % 60;
-  return seconds == 0
-      ? '${d.inMinutes}m'
-      : '${d.inMinutes}:${seconds.toString().padLeft(2, '0')}';
-}
+String _readable(Duration d) => formatTimeSpan(d, seconds: true);

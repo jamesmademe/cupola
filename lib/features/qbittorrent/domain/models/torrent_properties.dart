@@ -1,4 +1,5 @@
 import 'parse_utils.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 
 /// Per-torrent detail payload from `/api/v2/torrents/properties`.
 ///
@@ -143,8 +144,9 @@ class TorrentProperties {
       ? '$nbConnections / $nbConnectionsLimit'
       : '$nbConnections';
 
-  /// Reannounce countdown. `0` (and negative) render as `'—s'` to match the
-  /// WebUI's discrete "never" state; otherwise `'<N>s'`.
+  /// Reannounce countdown. `0` (and negative) render as the placeholder of a
+  /// figure there is none of, `—`, to match the WebUI's discrete "never" state;
+  /// otherwise `'<N> s'`.
   String get reannounceFormatted =>
-      reannounceSeconds <= 0 ? '—s' : '${reannounceSeconds}s';
+      reannounceSeconds <= 0 ? '—' : withUnit(reannounceSeconds, 's');
 }

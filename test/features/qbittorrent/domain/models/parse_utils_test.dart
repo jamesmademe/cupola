@@ -157,9 +157,12 @@ void main() {
     });
 
     test('prepends day count when >= 1 day', () {
-      expect(formatDuration(86400), '1d 00:00:00');
-      expect(formatDuration(90000), '1d 01:00:00');
-      expect(formatDuration(2 * 86400 + 3 * 3600 + 4 * 60 + 5), '2d 03:04:05');
+      expect(formatDuration(86400), '1\u00A0d 00:00:00');
+      expect(formatDuration(90000), '1\u00A0d 01:00:00');
+      expect(
+        formatDuration(2 * 86400 + 3 * 3600 + 4 * 60 + 5),
+        '2\u00A0d 03:04:05',
+      );
     });
   });
 
@@ -206,7 +209,7 @@ void main() {
 
     test('positive defers to formatDuration', () {
       expect(formatRelativeSeconds(90), '00:01:30');
-      expect(formatRelativeSeconds(2 * 86400), '2d 00:00:00');
+      expect(formatRelativeSeconds(2 * 86400), '2\u00A0d 00:00:00');
     });
   });
 }

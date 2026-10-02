@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/release_search/domain/release_search_headroom.dart';
@@ -260,11 +261,5 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
     return spans;
   }
 
-  String _short(Duration d) {
-    if (d.inMinutes == 0) return '${d.inSeconds}s';
-    final seconds = d.inSeconds % 60;
-    return seconds == 0
-        ? '${d.inMinutes}m'
-        : '${d.inMinutes}:${seconds.toString().padLeft(2, '0')}';
-  }
+  String _short(Duration d) => formatTimeSpan(d, seconds: true);
 }

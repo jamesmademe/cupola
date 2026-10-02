@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
@@ -177,9 +178,8 @@ class _StateRow extends StatelessWidget {
   /// for duration but epoch seconds for dates).
   static String? _runtimeLabel(int? ms) {
     if (ms == null || ms <= 0) return null;
-    final minutes = (ms / 60000).round();
-    if (minutes < 60) return '${minutes}m';
-    return '${minutes ~/ 60}h ${minutes % 60}m';
+    final label = formatRuntimeMinutes((ms / 60000).round());
+    return label.isEmpty ? null : label;
   }
 }
 
