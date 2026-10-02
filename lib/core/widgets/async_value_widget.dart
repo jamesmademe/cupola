@@ -8,7 +8,9 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// A widget that handles AsyncValue states with premium, consistent styling.
 ///
 /// Shows loading, error, empty, or data states based on the [AsyncValue].
-/// - loading  → [skeleton] (or a centred spinner if none given)
+/// - loading  → [skeleton] (or a centred spinner if none given), only while
+///              there is nothing to show: a reload or a refresh over data
+///              keeps the data
 /// - error, with a retained previous value → the data it had, at full ink,
 ///              under a [FaultBand.unreachable] (see below) — also while the
 ///              provider is reloading or retrying over that error
@@ -58,6 +60,17 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// cold open keeps the spinner through a retry: with nothing retained, the
 /// loading state is the honest one while a blip heals itself, which is what
 /// Riverpod's default retry is left on for.
+///
+/// ## Why a reload over data does not draw the loading state either
+///
+/// A reload is the provider building again because something it watches
+/// changed: the source it derives from was read again, a setting it reads was
+/// written, the lens moved. It used to skip its loading state only over a
+/// failure, so over a healthy readout every one of those emptied the page to
+/// a skeleton and filled it again: a pull on a list whose figures are derived
+/// from it blanked the figures, for an answer that was on screen a moment
+/// before. Whatever there is stays until the new answer replaces it, as it
+/// does under a refresh.
 class AsyncValueWidget<T> extends StatelessWidget {
   final AsyncValue<T> value;
   final Widget Function(T data) data;
@@ -138,9 +151,10 @@ class AsyncValueWidget<T> extends StatelessWidget {
     }
     return value.when(
       // A refresh (an invalidate, a poll tick) already skips its loading state
-      // by default; this extends the same to a reload or a retry, but only over
-      // a failure that has a retained readout to show. See the class doc.
-      skipLoadingOnReload: value.hasValue && value.hasError,
+      // by default; this extends the same to a reload or a retry whenever
+      // there is a readout to keep, data or a failure over data. See the
+      // class doc.
+      skipLoadingOnReload: value.hasValue,
       data: _data,
       loading: _loading,
       error: (e, stack) {

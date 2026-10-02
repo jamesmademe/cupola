@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -117,6 +118,58 @@ void main() {
       ),
       findsNothing,
     );
+  });
+
+  // A reload is the provider building again because something it watches
+  // changed. Over a healthy readout it used to empty the page to a skeleton
+  // until the new answer came back. Driven through real providers: a figure
+  // derived from a source that changes under it.
+  testWidgets('a reload over data keeps the data until the new answer', (
+    tester,
+  ) async {
+    final source = NotifierProvider<_Count, int>(_Count.new);
+    var pending = Completer<void>()..complete();
+    final derived = FutureProvider<String>((ref) async {
+      final count = ref.watch(source);
+      await pending.future;
+      return '$count pools';
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: Consumer(
+              builder: (context, ref, _) => AsyncValueWidget<String>(
+                value: ref.watch(derived),
+                serviceName: 'TrueNAS',
+                onRetry: () => ref.invalidate(derived),
+                skeleton: const Text('skeleton'),
+                data: (data) => Text(data),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('2 pools'), findsOneWidget);
+
+    pending = Completer<void>();
+    container.read(source.notifier).bump();
+    await tester.pump();
+
+    expect(container.read(derived).isReloading, isTrue);
+    expect(find.text('2 pools'), findsOneWidget);
+    expect(find.text('skeleton'), findsNothing);
+
+    pending.complete();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('3 pools'), findsOneWidget);
   });
 
   testWidgets('a cold failure still gets the full-page leaf', (tester) async {
@@ -334,4 +387,11 @@ void main() {
       expect(asked, 1);
     });
   });
+}
+
+class _Count extends Notifier<int> {
+  @override
+  int build() => 2;
+
+  void bump() => state++;
 }
