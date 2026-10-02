@@ -80,21 +80,14 @@ class StatusBadge extends StatelessWidget {
         );
 
     final accentColor = statusToneColor(colorScheme, info.tone);
-    final backgroundColor = compact
-        ? accentColor.withValues(alpha: 0.9)
-        : cupolaColors.statusBadgeBackground;
-    final borderColor = compact
-        ? accentColor
-        : cupolaColors.statusBadgeForeground.withValues(alpha: 0.12);
-    // A compact badge fills with the tone colour, so its foreground must be
-    // chosen from that colour's luminance: white on the success green or the
-    // warning amber measures ~2.2:1, well below AA.
-    final onAccentColor = ServiceTheme.foregroundOn(
-      accentColor.withValues(alpha: 1),
+    // Compact or not, the badge is the plate with the tone on its glyph: only
+    // an amber fault's remedy is filled with a tone (brand book, *The tone
+    // rule*). The compact one was the tone at 90%, a fill on every poster.
+    final backgroundColor = cupolaColors.statusBadgeBackground;
+    final borderColor = cupolaColors.statusBadgeForeground.withValues(
+      alpha: 0.12,
     );
-    final textColor = compact
-        ? onAccentColor
-        : cupolaColors.statusBadgeForeground;
+    final textColor = cupolaColors.statusBadgeForeground;
 
     if (iconOnly) {
       return _spoken(
@@ -124,7 +117,7 @@ class StatusBadge extends StatelessWidget {
       );
     }
 
-    final foreground = compact ? onAccentColor : accentColor;
+    final foreground = accentColor;
     final percentText = _percentText;
     final animate = _animated && !MediaQuery.disableAnimationsOf(context);
 

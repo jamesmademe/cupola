@@ -7,7 +7,7 @@ Rendered from `lib/core/widgets/status_badge.dart` by `test/design_catalog/statu
 ## Variants
 
 - **Full** (`StatusBadge(info:)`) — `surface` at 80% (`opacityStatusBadge`) with a 1px `on-surface` 12% border, `radius-sm`, padding `space-xs` × `space-sm`. A 12px glyph in the tone colour, `space-xs`, the label in `label-small` at 600 in `on-surface`, then an optional tabular percentage (glued, `62%`, through `formatPercent`: nearest whole percent, never `100%` while the transfer is still copying). While bytes are moving the glyph becomes a 12px determinate ring (2px stroke, track at 25% of the tone).
-- **Compact** (`compact: true`) — poster overlay: filled with the tone colour at 90%, 1px border in the tone, padding `space-xs` × 2px. A 10px glyph and, when known, the percentage (2px apart). The ink is `foregroundOn(tone)`, never white by default.
+- **Compact** (`compact: true`) — poster overlay: the default badge's plate and edge, padding `space-xs` × 2px. A 10px glyph in the tone and, when known, the percentage in the plate's ink (2px apart). Never a tone fill: only an amber fault's remedy is filled (brand book, *The tone rule*); it used to be the tone at 90%.
 - **Icon only** (`iconOnly: true`) — an 8px tone dot with a 1.5px `shadow` ring at 35%, so it survives artwork of its own tone.
 - **Animated** (`StatusBadge.animated`) — for the detail hero only. A new status cross-fades glyph, label and percentage together (`durationSm`, emphasized curve); the ring sweeps to each new value (`durationMd`, standard curve). No colour is tweened. Renders exactly like Full under Reduce Motion.
 
