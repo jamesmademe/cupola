@@ -42,32 +42,31 @@ GlobalActivityItem _transfer(
   ),
 );
 
+// What the pane draws under a title is `GlobalActivityItem.subtitle`: the
+// release a movie came as, and for an episode its code, its title and the
+// release. The size, rate and time left live on the Activity table's Details
+// cell and never in this pane.
 final _queue = [
   _transfer(
-    ServiceKey.qbittorrent,
-    'Nosferatu.1922.1080p.BluRay.x264',
-    '5.3 GB of 7.5 GB · 12.4 MB/s · 3 min',
+    ServiceKey.radarr,
+    'Nosferatu (1922)',
+    'Nosferatu.1922.1080p.BluRay.x264-GROUP',
     0.71,
   ),
   _transfer(
-    ServiceKey.qbittorrent,
-    'Metropolis.1927.1080p.BluRay.x264',
-    '1.8 GB of 10.0 GB · 0 B/s · stuck',
+    ServiceKey.radarr,
+    'Metropolis (1927)',
+    'Metropolis.1927.1080p.BluRay.x264-GROUP',
     0.18,
     stalled: true,
   ),
   _transfer(
-    ServiceKey.sabnzbd,
-    'The.Cabinet.of.Dr.Caligari.1920.720p.BluRay.x264',
-    '2.2 GB of 4.1 GB · 38.0 MB/s · 1 min',
+    ServiceKey.sonarr,
+    'Severance',
+    "S2 E5 · Trojan's Horse · Severance.S02E05.1080p.WEB-DL-GROUP",
     0.54,
   ),
-  _transfer(
-    ServiceKey.radarr,
-    'Sherlock Jr.',
-    'Queued · waiting for the client',
-    0,
-  ),
+  _transfer(ServiceKey.lidarr, 'Diamond Jubilee', 'Cindy Lee', 0),
 ];
 
 GlobalActivityItem _finished(String title, StatusTone tone) =>
