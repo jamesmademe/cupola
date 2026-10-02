@@ -62,6 +62,15 @@ final requestsForProvider = FutureProvider.family<List<SeerrRequest>, String>((
   return ref.watch(seerrServiceForProvider(instanceId)).getRequests();
 }, retry: noProviderRetry);
 
+/// The requests of one named connection still in motion: waiting for
+/// approval, being processed, or failed ([SeerrService.getActiveRequests]).
+/// What Activity's Now reads, where it used to read [requestsForProvider],
+/// every request the server ever held. Empty id means the lens.
+final activeRequestsForProvider =
+    FutureProvider.family<List<SeerrRequest>, String>((ref, instanceId) {
+      return ref.watch(seerrServiceForProvider(instanceId)).getActiveRequests();
+    }, retry: noProviderRetry);
+
 /// Whether the lens's Seerr has a server that takes 4K requests of [arr]
 /// (Radarr or Sonarr), from the list the request sheet reads
 /// (`/api/v1/service/radarr|sonarr`, which a requester may read too).

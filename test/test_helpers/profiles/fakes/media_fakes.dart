@@ -430,11 +430,28 @@ class SeerrFake extends ServiceFake {
           final filter = r.query['filter'];
           int? mediaStatus(JsonMap q) =>
               (q['media'] as JsonMap?)?['status'] as int?;
+          // The status of the copy the request asked for: a 4K request
+          // reads the title's 4K status, as Seerr's own filter does.
+          int? requestedStatus(JsonMap q) =>
+              (q['media'] as JsonMap?)?[q['is4k'] == true
+                      ? 'status4k'
+                      : 'status']
+                  as int?;
           final filtered = switch (filter) {
             'pending' => rows.where((q) => q['status'] == 1).toList(),
             'approved' => rows.where((q) => q['status'] == 2).toList(),
-            'processing' => rows.where((q) => mediaStatus(q) == 3).toList(),
+            // Seerr's own reading: approved, and the title not yet
+            // available (unknown, pending, processing, partly available).
+            'processing' =>
+              rows
+                  .where(
+                    (q) =>
+                        q['status'] == 2 &&
+                        const {null, 1, 2, 3, 4}.contains(requestedStatus(q)),
+                  )
+                  .toList(),
             'available' => rows.where((q) => mediaStatus(q) == 5).toList(),
+            'failed' => rows.where((q) => q['status'] == 4).toList(),
             _ => rows,
           };
           return NetworkReply.json(_page(r, filtered));

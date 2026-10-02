@@ -42,8 +42,11 @@ void main() {
         ...settingsOverrides,
         if (seerrService != null)
           seerrServiceProvider.overrideWith((ref) => seerrService),
-        if (requests != null)
+        if (requests != null) ...[
           requestsProvider.overrideWith((ref) async => requests),
+          // Now reads the requests in motion, which Seerr filters itself.
+          activeRequestsForProvider.overrideWith((ref, id) async => requests),
+        ],
         if (radarrService != null)
           radarrServiceProvider.overrideWith((ref) => radarrService),
         if (sonarrService != null)

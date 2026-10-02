@@ -1966,4 +1966,6 @@ class _ScrollableState extends StatelessWidget {
 void _invalidateRequests(WidgetRef ref) {
   ref.invalidate(requestsProvider);
   ref.invalidate(requestsForProvider);
+  // And the requests Now reads, which are Seerr's in-motion filters.
+  ref.invalidate(activeRequestsForProvider);
 }

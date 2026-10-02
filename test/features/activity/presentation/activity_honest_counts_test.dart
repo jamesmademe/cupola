@@ -494,8 +494,15 @@ void main() {
     ) async {
       final handle = tester.ensureSemantics();
       final harness = await ProfileHarness.start(Profiles.p2);
-      // 120 requests in pages of 50; the second page fails.
+      // 120 requests being processed, in pages of 50; the second page
+      // fails. Now asks for nothing else, and the other filters hold none.
       harness.network.on(WorldIds.seerr, 'GET', '/api/v1/request', (request) {
+        if (request.query['filter'] != 'processing') {
+          return NetworkReply.json({
+            'pageInfo': {'pages': 0, 'pageSize': 50, 'results': 0},
+            'results': <Object>[],
+          });
+        }
         final skip = int.tryParse(request.query['skip'] ?? '') ?? 0;
         if (skip == 50) {
           return NetworkReply.json({'message': 'boom'}, status: 500);

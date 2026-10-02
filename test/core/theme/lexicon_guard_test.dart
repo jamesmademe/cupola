@@ -316,6 +316,13 @@ final _never = <String, RegExp>{
 /// The words that stay, each with the reason it is not the banned state.
 const _allowed = <({String file, String literal, String reason})>[
   (
+    file: 'lib/features/discover/data/seerr_service.dart',
+    literal: 'pending',
+    reason:
+        "the name of Seerr's own request filter, sent as `filter=pending` "
+        'on the wire; never shown',
+  ),
+  (
     file: 'lib/features/unraid/presentation/unraid_screen.dart',
     literal: 'paused',
     reason:

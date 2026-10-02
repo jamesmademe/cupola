@@ -384,6 +384,7 @@ class ActivityActions {
     if (invalidateRequests) {
       ref.invalidate(requestsProvider);
       ref.invalidate(requestsForProvider);
+      ref.invalidate(activeRequestsForProvider);
     }
     ref.read(activityRefreshVersionProvider.notifier).state++;
   }

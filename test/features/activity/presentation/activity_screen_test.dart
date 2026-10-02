@@ -151,8 +151,8 @@ void main() {
           // the two disagree in a way production cannot — and the feed, which
           // now resolves a connection per row, read the empty half.
           ...await settingsScopeOverrides(configured: activityServiceKeys),
-          requestsProvider.overrideWith(
-            (ref) async => const [
+          seerrServiceProvider.overrideWith(
+            (ref) => _RequestsSeerrService(const [
               SeerrRequest(
                 id: 1,
                 status: RequestStatus.approved,
@@ -161,9 +161,8 @@ void main() {
                 type: 'tv',
                 requestedBy: RequestedBy(id: 1, displayName: 'sarah'),
               ),
-            ],
+            ]),
           ),
-          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
           radarrServiceProvider.overrideWith(
             (ref) => _ActivityRadarrService(
               queue: const [
@@ -832,8 +831,8 @@ void main() {
           // the two disagree in a way production cannot — and the feed, which
           // now resolves a connection per row, read the empty half.
           ...await settingsScopeOverrides(configured: activityServiceKeys),
-          requestsProvider.overrideWith(
-            (ref) async => const [
+          seerrServiceProvider.overrideWith(
+            (ref) => _RequestsSeerrService(const [
               SeerrRequest(
                 id: 1,
                 status: RequestStatus.approved,
@@ -842,9 +841,8 @@ void main() {
                 type: 'tv',
                 requestedBy: RequestedBy(id: 1, displayName: 'sarah'),
               ),
-            ],
+            ]),
           ),
-          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
           radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
           sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
           lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
@@ -1041,3 +1039,14 @@ class _SelectSearchingProbe extends Notifier<void> {
 final _selectSearchingProbe = NotifierProvider<_SelectSearchingProbe, void>(
   _SelectSearchingProbe.new,
 );
+
+/// A Seerr holding [requests], which Now reads through the in-motion filters
+/// the shared fake answers.
+class _RequestsSeerrService extends FakeSeerrService {
+  _RequestsSeerrService(this.requests);
+
+  final List<SeerrRequest> requests;
+
+  @override
+  Future<List<SeerrRequest>> getRequests() async => requests;
+}

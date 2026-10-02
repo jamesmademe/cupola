@@ -411,7 +411,57 @@ class SeerrService {
     // Asked beside the pages rather than before them: a page waits for it
     // only to decode its rows, never to be sent.
     final numberingRead = numbering();
-    final first = await _requestPage(0, numbering: numberingRead);
+    final walk = await _walkRequests('all', numbering: numberingRead);
+    return SeerrRequestList(
+      await _hydrateRequests(walk.items),
+      total: walk.total,
+      isPartial: walk.isPartial,
+    );
+  }
+
+  /// The requests still in motion: waiting for approval, being processed, or
+  /// failed. What Activity's Now lists.
+  ///
+  /// Asked of Seerr by its own filters rather than read off [getRequests]:
+  /// Now used to page the whole history, every request ever made, and
+  /// hydrate each one, to show the handful still moving, and it listed
+  /// requests delivered two years ago under "Downloading". Same contract as
+  /// [getRequests]: throws when a first page does not come back, and says
+  /// when a later one went missing; [SeerrRequestList.total] is the sum of
+  /// Seerr's own counts, or null when one of them did not say.
+  Future<List<SeerrRequest>> getActiveRequests() async {
+    final numberingRead = numbering();
+    final walks = await Future.wait([
+      for (final filter in activeRequestFilters)
+        _walkRequests(filter, numbering: numberingRead),
+    ]);
+    final seen = <int>{};
+    final items = [
+      for (final walk in walks)
+        for (final request in walk.items)
+          if (seen.add(request.id)) request,
+    ];
+    final totals = [for (final walk in walks) walk.total];
+    return SeerrRequestList(
+      await _hydrateRequests(items),
+      total: totals.contains(null)
+          ? null
+          : totals.fold<int>(0, (sum, total) => sum + total!),
+      isPartial: walks.any((walk) => walk.isPartial),
+    );
+  }
+
+  /// Seerr's own filters for a request still in motion: waiting for a
+  /// decision, approved and being fetched, or failed and needing one.
+  static const activeRequestFilters = ['pending', 'processing', 'failed'];
+
+  /// Every page of the requests [filter] selects, the first one throwing.
+  Future<({List<SeerrRequest> items, int? total, bool isPartial})>
+  _walkRequests(
+    String filter, {
+    required Future<SeerrNumbering?> numbering,
+  }) async {
+    final first = await _requestPage(0, numbering: numbering, filter: filter);
     final total = first.total;
     final all = <SeerrRequest>[...first.items];
     var isPartial = false;
@@ -426,7 +476,7 @@ class SeerrService {
           skip < total;
           skip += _requestPageSize
         )
-          _requestPageSafely(skip, numbering: numberingRead),
+          _requestPageSafely(skip, numbering: numbering, filter: filter),
       ]);
       for (final page in pages) {
         if (page == null) {
@@ -436,17 +486,13 @@ class SeerrService {
         all.addAll(page.items);
       }
     }
-
-    return SeerrRequestList(
-      await _hydrateRequests(all),
-      total: total,
-      isPartial: isPartial,
-    );
+    return (items: all, total: total, isPartial: isPartial);
   }
 
   Future<({List<SeerrRequest> items, int? total})> _requestPage(
     int skip, {
     required Future<SeerrNumbering?> numbering,
+    String filter = 'all',
   }) async {
     final response = await _client.get(
       '/api/v1/request',
@@ -454,7 +500,7 @@ class SeerrService {
         'take': _requestPageSize,
         'skip': skip,
         'sort': 'added',
-        'filter': 'all',
+        'filter': filter,
       },
     );
     final data = response.data as Map<String, dynamic>;
@@ -484,9 +530,10 @@ class SeerrService {
   Future<({List<SeerrRequest> items, int? total})?> _requestPageSafely(
     int skip, {
     required Future<SeerrNumbering?> numbering,
+    String filter = 'all',
   }) async {
     try {
-      return await _requestPage(skip, numbering: numbering);
+      return await _requestPage(skip, numbering: numbering, filter: filter);
     } catch (_) {
       return null;
     }

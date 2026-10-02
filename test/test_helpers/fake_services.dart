@@ -488,6 +488,10 @@ class FakeSeerrService extends SeerrService {
   @override
   Future<List<SeerrRequest>> getRequests() async => const [];
 
+  @override
+  Future<List<SeerrRequest>> getActiveRequests() async =>
+      seerrRequestsInMotion(await getRequests());
+
   // Filters on the issue's own `status`, the way the server does: the filter
   // is what is *asked for*, and a record carries what it is.
   @override
@@ -567,3 +571,25 @@ const Map<String, dynamic> _defaultTvDetails = {
   'credits': {'cast': [], 'crew': []},
   'keywords': [],
 };
+
+/// The requests Seerr's in-motion filters (`SeerrService.activeRequestFilters`:
+/// `pending`, `processing`, `failed`) select, for a fake that holds a list and
+/// answers `getActiveRequests` the way the server would. Seerr's `processing`
+/// is an approved request whose title is not yet available (unknown, pending,
+/// processing or partly available).
+List<SeerrRequest> seerrRequestsInMotion(List<SeerrRequest> requests) => [
+  for (final request in requests)
+    if (request.status == RequestStatus.pendingApproval ||
+        request.status == RequestStatus.failed ||
+        (request.status == RequestStatus.approved &&
+            const {
+              null,
+              SeerrMediaAvailability.unknown,
+              SeerrMediaAvailability.pending,
+              SeerrMediaAvailability.processing,
+              SeerrMediaAvailability.partiallyAvailable,
+            }.contains(
+              request.is4k ? request.media?.status4k : request.media?.status,
+            )))
+      request,
+];

@@ -647,11 +647,16 @@ final globalQueueItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   );
 });
 
-/// "Now" bucket: active downloads (queue) plus current Seerr requests, so
-/// requests remain first-class in the unified view.
+/// "Now" bucket: active downloads (queue) plus the Seerr requests still in
+/// motion (waiting for approval, being processed, failed), so requests remain
+/// first-class in the unified view.
+///
+/// Only those requests: it used to merge every request each Seerr ever held,
+/// paged and hydrated in full, and listed ones delivered years ago under
+/// Downloading. Read through Seerr's own filters ([activeRequestsForProvider]).
 ///
 /// Watches both versions: the poll tick (queues only, requests served from the
-/// `requestsProvider` cache) and the manual refresh version (everything fresh,
+/// provider's cache) and the manual refresh version (everything fresh,
 /// requests invalidated by the pull).
 final globalNowItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
@@ -659,7 +664,7 @@ final globalNowItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   final clients = _readClients(ref);
   return _mergeJoined(
     await Future.wait([
-      ..._loadRequestResults(ref),
+      ..._loadRequestResults(ref, inMotion: true),
       ..._loadArrResults(ref, GlobalActivityKind.queue),
     ]),
     await clients,
@@ -1377,7 +1382,12 @@ ActivityFeed _merge(
 /// blanks its sibling's list nor makes its sibling's empty list look like an
 /// outage. That distinction only exists because `SeerrService.getRequests`
 /// stopped turning an outage into `[]`.
-List<Future<ActivityServiceResult>> _loadRequestResults(Ref ref) {
+/// [inMotion] reads only the requests still in motion
+/// ([activeRequestsForProvider]), for Now; otherwise every request.
+List<Future<ActivityServiceResult>> _loadRequestResults(
+  Ref ref, {
+  bool inMotion = false,
+}) {
   final settings = ref.read(settingsProvider);
   if (!settings.isServiceConfigured(ServiceKey.seerr)) {
     return [
@@ -1386,14 +1396,15 @@ List<Future<ActivityServiceResult>> _loadRequestResults(Ref ref) {
   }
   return [
     for (final connection in activitySeerrConnections(settings))
-      _loadRequestConnection(ref, connection),
+      _loadRequestConnection(ref, connection, inMotion: inMotion),
   ];
 }
 
 Future<ActivityServiceResult> _loadRequestConnection(
   Ref ref,
-  ActivityConnection connection,
-) async {
+  ActivityConnection connection, {
+  required bool inMotion,
+}) async {
   // Who asked, only where this connection may see everyone's requests, and
   // never in the requester's app.
   final names = ref
@@ -1401,7 +1412,9 @@ Future<ActivityServiceResult> _loadRequestConnection(
       .showsRequesterNames;
   try {
     final requests = await ref.read(
-      requestsForProvider(connection.instanceId).future,
+      (inMotion ? activeRequestsForProvider : requestsForProvider)(
+        connection.instanceId,
+      ).future,
     );
     // Seerr's own count, from `pageInfo.results`, and never the length of
     // what arrived. `getRequests` absorbs a later page that fails, so the

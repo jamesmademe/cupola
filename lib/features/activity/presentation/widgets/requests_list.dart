@@ -454,5 +454,6 @@ class _RequestCard extends ConsumerWidget {
     // of the same list for the next reader.
     ref.invalidate(requestsProvider);
     ref.invalidate(requestsForProvider);
+    ref.invalidate(activeRequestsForProvider);
   }
 }
