@@ -7,9 +7,10 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 ## Anatomy
 
 - A line, not a card: no fill, no border. Padding `AppSpacing.xs` top and bottom, `AppSpacing.lg` leading, `AppSpacing.sm` trailing; glyph-to-text gap `AppSpacing.sm`.
-- Glyph 16px, the only coloured thing on the line (**the presence rule**). Its tone is walked against `colorScheme.surface` through `statusToneColor`, because with no fill behind it the glyph is the whole signal.
-- Sentence in `textTheme.bodySmall`, coloured `onSurfaceVariant`, filling the row.
-- Verbs are `TextButton`s in `colorScheme.primary` — never red — with `minimumSize: Size(56, 44)`, `AppSpacing.sm` horizontal padding and standard density, pinned. The one exception is an amber fault's remedy, the one fill a fault gets: the compact amber fill (`remedyFillStyle(compact: true)`: `tone.amber-fill` under `tone.amber-ink`, 56 × 44, padding `space-md`), `space-xs` from the sentence.
+- Glyph 16px, the only coloured thing on the line (**the presence rule**), centred on the sentence's first line. Its tone is walked against `colorScheme.surface` through `statusToneColor`, because with no fill behind it the glyph is the whole signal.
+- Sentence in `textTheme.bodySmall`, coloured `onSurfaceVariant`, filling what the verbs leave.
+- **Beside or under.** The verbs sit beside the sentence, centred on it, while the sentence keeps sixteen of its own em (about thirty characters a line); once it would not, they go under it, at the sentence's start, `space-xs` below, and wrap if even that is too narrow. The measure is in the sentence's own type, so text at 200% on a phone always puts them under; at 100% on a 390pt phone one or two short verbs stay beside, and a long remedy with Retry goes under. The verbs are `space-xs` apart and `space-xs` from the sentence.
+- Verbs are `TextButton`s in `colorScheme.primary` — never red — with `minimumSize: Size(56, 44)`, `AppSpacing.sm` horizontal padding and standard density, pinned. The one exception is an amber fault's remedy, the one fill a fault gets: the compact amber fill (`remedyFillStyle(compact: true)`: `tone.amber-fill` under `tone.amber-ink`, 56 × 44, padding `space-md`).
 
 ## Variants
 
@@ -39,7 +40,8 @@ The band is one container node (`Semantics(container: true, explicitChildNodes: 
 Each sheet is drawn in the dark and the light room.
 
 - `.unreachable` with and without an age, `.fault` for a refused key, a qBittorrent sign-in, Cloudflare Access and a server error, `.section`, `.partial`, `.stale` (6 min and just now), `.offlinePush`.
-- Text at 200% on a 390pt phone: `.unreachable`, `.fault` with its remedy, and `.partial` with `.stale`.
+- A 390pt phone at 100%: two short verbs and one stay beside, a remedy with Retry goes under.
+- Text at 200% on a 390pt phone: `.unreachable`, `.fault` with its remedy, and `.partial` with `.stale`, every verb under its sentence.
 
 ## Do / don't
 

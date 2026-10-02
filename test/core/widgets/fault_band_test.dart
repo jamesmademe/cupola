@@ -396,4 +396,78 @@ void main() {
       expect(filled('Retry'), findsOneWidget);
     });
   });
+
+  // The sentence keeps sixteen of its own em beside the verbs, or the verbs go
+  // under it. It used to shrink to a column of two letters at 200%.
+  group('the verbs beside the sentence, or under it', () {
+    Future<void> phone(WidgetTester tester, Widget band, {double scale = 1}) {
+      tester.view.physicalSize = const Size(390, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      return tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
+          ),
+          home: Scaffold(body: Column(children: [band])),
+        ),
+      );
+    }
+
+    bool under(WidgetTester tester, String message, String verb) =>
+        tester.getTopLeft(find.text(verb)).dy >=
+        tester.getBottomLeft(find.text(message)).dy;
+
+    const sentence =
+        'Seerr returned 50 of 300 users; later pages are unavailable.';
+
+    testWidgets('one short verb stays beside on a phone', (tester) async {
+      await phone(tester, FaultBand.partial(message: sentence, onRetry: () {}));
+      expect(under(tester, sentence, 'Retry'), isFalse);
+      expect(
+        tester.getTopLeft(find.text('Retry')).dx,
+        greaterThan(tester.getTopRight(find.text(sentence)).dx),
+      );
+    });
+
+    testWidgets('a long remedy goes under, at the sentence\'s start', (
+      tester,
+    ) async {
+      await phone(
+        tester,
+        FaultBand.fault(
+          serviceName: 'qBittorrent',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+        ),
+      );
+      final message = find.textContaining('refused the sign-in');
+      final remedy = find.ancestor(
+        of: find.text('Sign in again'),
+        matching: find.byType(FilledButton),
+      );
+      expect(
+        tester.getTopLeft(remedy).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(message).dy),
+      );
+      expect(tester.getTopLeft(remedy).dx, tester.getTopLeft(message).dx);
+    });
+
+    testWidgets('at 200% every verb goes under, and the sentence keeps the '
+        'whole width', (tester) async {
+      await phone(
+        tester,
+        FaultBand.partial(message: sentence, onRetry: () {}),
+        scale: 2,
+      );
+      expect(under(tester, sentence, 'Retry'), isTrue);
+      // A line of the sentence, not a column of letters.
+      expect(tester.getSize(find.text(sentence)).width, greaterThan(300));
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

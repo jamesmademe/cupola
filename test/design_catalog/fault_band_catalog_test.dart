@@ -122,6 +122,34 @@ void main() {
         ),
       ),
       CatalogScene(
+        'A 390pt phone · the verbs stay beside the sentence while it keeps '
+        'sixteen of its em, and go under it once it would not',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FaultBand.unreachable(
+              serviceName: 'TrueNAS',
+              since: const Duration(minutes: 6),
+              onRetry: () {},
+              onOpenSettings: () {},
+            ),
+            const SizedBox(height: 12),
+            FaultBand.fault(
+              serviceName: 'qBittorrent',
+              reason: ServiceFailureReason.unauthorized,
+              onRetry: () {},
+            ),
+            const SizedBox(height: 12),
+            FaultBand.partial(
+              message:
+                  'Seerr returned 50 of 300 users; later pages are unavailable.',
+              onRetry: () {},
+            ),
+          ],
+        ),
+        width: 390,
+      ),
+      CatalogScene(
         'Text at 200% · .unreachable with its age, Retry and Settings on a '
         '390pt phone',
         (_) => FaultBand.unreachable(
@@ -134,8 +162,8 @@ void main() {
         textScale: catalogTextScale,
       ),
       CatalogScene(
-        'Text at 200% · .fault, a refused key: the remedy in the amber fill '
-        'and Settings on a 390pt phone',
+        'Text at 200% · .fault, a refused key: the remedy in the amber fill, '
+        'which opens the form, on a 390pt phone',
         (_) => FaultBand.fault(
           serviceName: 'Radarr',
           reason: ServiceFailureReason.unauthorized,
