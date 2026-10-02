@@ -91,6 +91,40 @@ class BazarrService {
     return _parsePaged(response.data, BazarrMovie.fromJson, start: start);
   }
 
+  /// The series Bazarr follows under [sonarrSeriesId], or null when it
+  /// follows none.
+  ///
+  /// Asked by id (`seriesid[]`), which `/api/series` has taken since Bazarr
+  /// 1.0: the detail page used to walk the whole library, 500 series a page,
+  /// to find one. The row is still matched here, so a Bazarr that ignored
+  /// the filter would answer right, only slower. Throws when Bazarr does not
+  /// answer.
+  Future<BazarrSeries?> getSeriesById(int sonarrSeriesId) async {
+    final response = await client.get(
+      '/api/series',
+      queryParameters: {'seriesid[]': sonarrSeriesId},
+    );
+    final page = _parsePaged(response.data, BazarrSeries.fromJson);
+    for (final series in page.data) {
+      if (series.sonarrSeriesId == sonarrSeriesId) return series;
+    }
+    return null;
+  }
+
+  /// The movie Bazarr follows under [radarrId], or null. Asked by id
+  /// (`radarrid[]`); see [getSeriesById].
+  Future<BazarrMovie?> getMovieById(int radarrId) async {
+    final response = await client.get(
+      '/api/movies',
+      queryParameters: {'radarrid[]': radarrId},
+    );
+    final page = _parsePaged(response.data, BazarrMovie.fromJson);
+    for (final movie in page.data) {
+      if (movie.radarrId == radarrId) return movie;
+    }
+    return null;
+  }
+
   /// Client-side search across the Bazarr library.
   ///
   /// Bazarr exposes no search endpoint, so matching happens here, against a
@@ -201,6 +235,80 @@ class BazarrService {
       queryParameters: {'start': start, 'length': length},
     );
     return _parsePaged(response.data, BazarrWantedItem.fromJson, start: start);
+  }
+
+  /// The episodes of one series that want subtitles, as Bazarr's Wanted
+  /// lists them.
+  ///
+  /// `/api/episodes/wanted` filters by episode, never by series, so this asks
+  /// for the series' episodes first (`/api/episodes?seriesid[]=`), keeps
+  /// those missing a subtitle, and asks Wanted for those ids only, which
+  /// leaves Bazarr's own exclusions (monitored, tags, series type) to Bazarr.
+  /// Two reads bounded by the series, where the detail page used to walk the
+  /// whole Wanted list. The ids go in chunks, so a long series never makes a
+  /// URL a proxy refuses. Throws when Bazarr does not answer.
+  Future<List<BazarrWantedItem>> getWantedEpisodesForSeries(
+    int sonarrSeriesId,
+  ) async {
+    final response = await client.get(
+      '/api/episodes',
+      queryParameters: {'seriesid[]': sonarrSeriesId},
+    );
+    final episodes = mapOrNull(response.data)?['data'];
+    final missing = <int>[
+      if (episodes is List)
+        for (final episode in episodes.whereType<Map>())
+          if (_wantsSubtitles(episode)) ?intOrNull(episode['sonarrEpisodeId']),
+    ];
+    if (missing.isEmpty) return const [];
+    final pages = await Future.wait([
+      for (var i = 0; i < missing.length; i += _wantedIdChunk)
+        client.get(
+          '/api/episodes/wanted',
+          queryParameters: {
+            'episodeid[]': ListParam<int>(
+              missing.sublist(
+                i,
+                i + _wantedIdChunk < missing.length
+                    ? i + _wantedIdChunk
+                    : missing.length,
+              ),
+              ListFormat.multi,
+            ),
+          },
+        ),
+    ]);
+    return [
+      for (final page in pages)
+        for (final item in _parsePaged(
+          page.data,
+          BazarrWantedItem.fromJson,
+        ).data)
+          if (item.sonarrSeriesId == sonarrSeriesId) item,
+    ];
+  }
+
+  /// Episode ids per Wanted read: about 2 KB of query string.
+  static const _wantedIdChunk = 100;
+
+  static bool _wantsSubtitles(Map<dynamic, dynamic> episode) {
+    final missing = episode['missing_subtitles'];
+    return missing is List && missing.isNotEmpty;
+  }
+
+  /// The Wanted entry of the movie Bazarr follows under [radarrId], or null
+  /// when it wants nothing for it. Asked by id (`radarrid[]`), which
+  /// `/api/movies/wanted` takes; see [getSeriesById].
+  Future<BazarrWantedItem?> getWantedMovieById(int radarrId) async {
+    final response = await client.get(
+      '/api/movies/wanted',
+      queryParameters: {'radarrid[]': radarrId},
+    );
+    final page = _parsePaged(response.data, BazarrWantedItem.fromJson);
+    for (final item in page.data) {
+      if (item.radarrId == radarrId) return item;
+    }
+    return null;
   }
 
   /// Paged list of missing movie subtitles.

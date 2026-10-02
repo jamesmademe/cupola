@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/widgets.dart';
-import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_series_detail_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
@@ -78,22 +77,17 @@ class _CountingBazarrService extends FakeBazarrService {
   int getSeriesCalls = 0;
 
   @override
-  Future<BazarrPagedResult<BazarrSeries>> getSeries({
-    int start = 0,
-    int length = 50,
-  }) {
+  Future<BazarrSeries?> getSeriesById(int sonarrSeriesId) {
     getSeriesCalls++;
-    return super.getSeries(start: start, length: length);
+    return super.getSeriesById(sonarrSeriesId);
   }
 }
 
 /// Bazarr's series lookup fails; its wanted list still answers.
 class _SeriesLookupFails extends FakeBazarrService {
   @override
-  Future<BazarrPagedResult<BazarrSeries>> getSeries({
-    int start = 0,
-    int length = 50,
-  }) => Future.error(Exception('boom'));
+  Future<BazarrSeries?> getSeriesById(int sonarrSeriesId) =>
+      Future.error(Exception('boom'));
 }
 
 void main() {

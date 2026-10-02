@@ -6,8 +6,6 @@ import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-const int _lookupPageSize = 500;
-
 const int _defaultDashboardPageSize = 20;
 
 enum BazarrHistorySource { episodes, movies }
@@ -118,10 +116,8 @@ final bazarrHistoryPageProvider = FutureProvider.autoDispose
       // of silence before the band it already draws can appear.
     }, retry: noProviderRetry);
 
-/// Fetch a single [BazarrSeries] by Sonarr series id.
-///
-/// Bazarr does not expose a `/api/series/:id` endpoint, so this provider walks
-/// the paged list and returns the first match.
+/// The [BazarrSeries] Bazarr follows under a Sonarr series id, asked by id
+/// ([BazarrService.getSeriesById]).
 ///
 /// `noProviderRetry`, like the three lookups below it and the Radarr and Sonarr
 /// detail reads: these back the two detail pages and nothing else, both offer
@@ -133,76 +129,36 @@ final bazarrSeriesByIdProvider = FutureProvider.family<BazarrSeries?, int>((
   sonarrSeriesId,
 ) async {
   if (sonarrSeriesId <= 0) return null;
-  final service = ref.watch(bazarrServiceProvider);
-  var start = 0;
-  while (true) {
-    final page = await service.getSeries(start: start, length: _lookupPageSize);
-    for (final s in page.data) {
-      if (s.sonarrSeriesId == sonarrSeriesId) return s;
-    }
-    if (!page.hasMore) return null;
-    start += page.data.length;
-  }
+  return ref.watch(bazarrServiceProvider).getSeriesById(sonarrSeriesId);
 }, retry: noProviderRetry);
 
-/// Fetch a single [BazarrMovie] by Radarr id. See [bazarrSeriesByIdProvider]
-/// for the retry policy.
+/// The [BazarrMovie] Bazarr follows under a Radarr id, asked by id. See
+/// [bazarrSeriesByIdProvider] for the retry policy.
 final bazarrMovieByIdProvider = FutureProvider.family<BazarrMovie?, int>((
   ref,
   radarrId,
 ) async {
   if (radarrId <= 0) return null;
-  final service = ref.watch(bazarrServiceProvider);
-  var start = 0;
-  while (true) {
-    final page = await service.getMovies(start: start, length: _lookupPageSize);
-    for (final m in page.data) {
-      if (m.radarrId == radarrId) return m;
-    }
-    if (!page.hasMore) return null;
-    start += page.data.length;
-  }
+  return ref.watch(bazarrServiceProvider).getMovieById(radarrId);
 }, retry: noProviderRetry);
 
-/// Fetch all wanted items of a series (or empty if not in wanted list).
+/// The wanted episodes of one series (empty when it wants nothing), read for
+/// that series alone ([BazarrService.getWantedEpisodesForSeries]).
 final bazarrWantedEpisodesForSeriesProvider =
     FutureProvider.family<List<BazarrWantedItem>, int>((
       ref,
       sonarrSeriesId,
     ) async {
       if (sonarrSeriesId <= 0) return const [];
-      final service = ref.watch(bazarrServiceProvider);
-      final result = <BazarrWantedItem>[];
-      var start = 0;
-      while (true) {
-        final page = await service.getWantedEpisodes(
-          start: start,
-          length: _lookupPageSize,
-        );
-        for (final item in page.data) {
-          if (item.sonarrSeriesId == sonarrSeriesId) result.add(item);
-        }
-        if (!page.hasMore) break;
-        start += page.data.length;
-      }
-      return result;
+      return ref
+          .watch(bazarrServiceProvider)
+          .getWantedEpisodesForSeries(sonarrSeriesId);
     }, retry: noProviderRetry);
 
-/// Fetch the wanted movie entry for a Radarr id (or empty if not wanted).
+/// The Wanted entry for a Radarr id (null when the movie wants nothing),
+/// asked by id.
 final bazarrWantedMovieByIdProvider =
     FutureProvider.family<BazarrWantedItem?, int>((ref, radarrId) async {
       if (radarrId <= 0) return null;
-      final service = ref.watch(bazarrServiceProvider);
-      var start = 0;
-      while (true) {
-        final page = await service.getWantedMovies(
-          start: start,
-          length: _lookupPageSize,
-        );
-        for (final item in page.data) {
-          if (item.radarrId == radarrId) return item;
-        }
-        if (!page.hasMore) return null;
-        start += page.data.length;
-      }
+      return ref.watch(bazarrServiceProvider).getWantedMovieById(radarrId);
     }, retry: noProviderRetry);

@@ -1046,49 +1046,123 @@ class BazarrFake extends ServiceFake {
       case '/api/system/languages/profiles':
         return NetworkReply.json(const <Object?>[]);
       case '/api/movies/wanted':
-        return NetworkReply.json({
-          'data': [
-            {
-              'title': 'Tears of Steel',
-              'radarrId': 5,
-              'missing_subtitles': [
-                {'name': 'German', 'code2': 'de', 'code3': 'deu'},
-              ],
-              'sceneName': 'Tears.of.Steel.2012.1080p',
-            },
-          ],
-          'total': 8,
-        });
+        final rows = [
+          {
+            'title': WorldTitles.tearsOfSteel.title,
+            'radarrId': _tearsOfSteel,
+            'missing_subtitles': _german,
+            'sceneName': 'Tears.of.Steel.2012.1080p',
+          },
+        ];
+        final ids = _ids(r, 'radarrid[]');
+        if (ids == null) return NetworkReply.json({'data': rows, 'total': 8});
+        return _rows([
+          for (final row in rows)
+            if (ids.contains(row['radarrId'])) row,
+        ]);
       case '/api/episodes/wanted'
           when !c.profile.bazarrFollows.contains(ServiceKey.sonarr):
         return NetworkReply.json({'data': const <Object?>[], 'total': 0});
       case '/api/episodes/wanted':
-        return NetworkReply.json({
-          'data': [
-            for (var e = 1; e <= 3; e++)
-              {
-                'seriesTitle': 'Cosmos Laundromat',
-                'episode_number': '2x0$e',
-                'episodeTitle': 'Episode $e',
-                'sonarrSeriesId': 1,
-                'sonarrEpisodeId': 1010 + e,
-                'missing_subtitles': [
-                  {'name': 'Italian', 'code2': 'it', 'code3': 'ita'},
-                ],
-              },
-          ],
-          'total': 49,
-        });
+        final rows = [
+          for (var e = 1; e <= 3; e++)
+            {
+              'seriesTitle': WorldTitles.cosmosLaundromat.title,
+              'episode_number': '2x0$e',
+              'episodeTitle': 'Episode $e',
+              'sonarrSeriesId': _cosmosLaundromat,
+              'sonarrEpisodeId': 1010 + e,
+              'missing_subtitles': _italian,
+            },
+        ];
+        // Wanted filters by episode, never by series.
+        final ids = _ids(r, 'episodeid[]');
+        if (ids == null) return NetworkReply.json({'data': rows, 'total': 49});
+        return _rows([
+          for (final row in rows)
+            if (ids.contains(row['sonarrEpisodeId'])) row,
+        ]);
       case '/api/movies/history':
       case '/api/episodes/history':
         return NetworkReply.json({'data': const <Object?>[], 'total': 0});
+      // By id, the one title each page of the world opens; the whole
+      // library is not modelled and reads empty.
       case '/api/movies':
+        final ids = _ids(r, 'radarrid[]');
+        return _rows([
+          if (ids != null && ids.contains(_tearsOfSteel))
+            {
+              'radarrId': _tearsOfSteel,
+              'title': WorldTitles.tearsOfSteel.title,
+              'year': WorldTitles.tearsOfSteel.year,
+              'monitored': true,
+              'missing_subtitles': _german,
+              'subtitles': const <Object?>[],
+            },
+        ]);
       case '/api/series':
+        final ids = _ids(r, 'seriesid[]');
+        return _rows([
+          if (ids != null &&
+              ids.contains(_cosmosLaundromat) &&
+              c.profile.bazarrFollows.contains(ServiceKey.sonarr))
+            {
+              'sonarrSeriesId': _cosmosLaundromat,
+              'title': WorldTitles.cosmosLaundromat.title,
+              'year': WorldTitles.cosmosLaundromat.year,
+              'monitored': true,
+              'episodeMissingCount': 3,
+              'episodeFileCount': 4,
+            },
+        ]);
       case '/api/episodes':
-        return NetworkReply.json({'data': const <Object?>[], 'total': 0});
+        // Bazarr refuses this read without an id.
+        final ids = _ids(r, 'seriesid[]');
+        if (ids == null) {
+          return NetworkReply.json(
+            'Series or Episode ID not provided',
+            status: 404,
+          );
+        }
+        return _rows([
+          if (ids.contains(_cosmosLaundromat) &&
+              c.profile.bazarrFollows.contains(ServiceKey.sonarr))
+            for (var e = 1; e <= 4; e++)
+              {
+                'sonarrSeriesId': _cosmosLaundromat,
+                'sonarrEpisodeId': 1010 + e,
+                'season': 2,
+                'episode': e,
+                'title': 'Episode $e',
+                'monitored': true,
+                // The fourth has its subtitles.
+                'missing_subtitles': e < 4 ? _italian : const <Object?>[],
+              },
+        ]);
     }
     return null;
   }
+
+  /// The Radarr and Sonarr ids Bazarr follows the world's titles under.
+  static const _tearsOfSteel = 5;
+  static const _cosmosLaundromat = 1;
+
+  static const _german = [
+    {'name': 'German', 'code2': 'de', 'code3': 'deu'},
+  ];
+  static const _italian = [
+    {'name': 'Italian', 'code2': 'it', 'code3': 'ita'},
+  ];
+
+  /// The ids a `name[]` filter asked for, or null when it asked for none.
+  static Set<int>? _ids(NetworkRequest r, String name) {
+    final values = r.uri.queryParametersAll[name];
+    if (values == null || values.isEmpty) return null;
+    return {for (final v in values) ?int.tryParse(v)};
+  }
+
+  static NetworkReply _rows(List<Map<String, Object?>> rows) =>
+      NetworkReply.json({'data': rows, 'total': rows.length});
 }
 
 // === Shared builders =======================================================

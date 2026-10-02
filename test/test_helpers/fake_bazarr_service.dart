@@ -38,10 +38,10 @@ class FakeBazarrService extends BazarrService {
   BazarrPagedResult<Map<String, dynamic>> moviesHistoryResult =
       const BazarrPagedResult(data: [], total: 0);
 
-  /// Override the result returned by the by-id lookup providers. The fake
-  /// service returns this value without paging when [seriesByIdOverride] or
-  /// [movieByIdOverride] is non-null; otherwise the [seriesResult] /
-  /// [moviesResult] is paged through like in production.
+  /// What the by-id lookups find: [seriesByIdOverride] or
+  /// [movieByIdOverride] when set, otherwise the row of [seriesResult] /
+  /// [moviesResult] with that id, as Bazarr's `seriesid[]`/`radarrid[]`
+  /// filter would answer.
   BazarrSeries? seriesByIdOverride;
   BazarrMovie? movieByIdOverride;
   List<BazarrWantedItem> wantedEpisodesForSeriesResult = const [];
@@ -111,6 +111,60 @@ class FakeBazarrService extends BazarrService {
       );
     }
     return moviesResult;
+  }
+
+  @override
+  Future<BazarrSeries?> getSeriesById(int sonarrSeriesId) async {
+    if (throwOnCall != null) throw throwOnCall!;
+    final rows = seriesByIdOverride != null
+        ? [seriesByIdOverride!]
+        : seriesResult.data;
+    for (final series in rows) {
+      if (series.sonarrSeriesId == sonarrSeriesId) return series;
+    }
+    return null;
+  }
+
+  @override
+  Future<BazarrMovie?> getMovieById(int radarrId) async {
+    if (throwOnCall != null) throw throwOnCall!;
+    final rows = movieByIdOverride != null
+        ? [movieByIdOverride!]
+        : moviesResult.data;
+    for (final movie in rows) {
+      if (movie.radarrId == radarrId) return movie;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<BazarrWantedItem>> getWantedEpisodesForSeries(
+    int sonarrSeriesId,
+  ) async {
+    wantedEpisodesCalls++;
+    if (throwOnCall != null) throw throwOnCall!;
+    if (throwOnWanted != null) throw throwOnWanted!;
+    final rows = wantedEpisodesForSeriesResult.isNotEmpty
+        ? wantedEpisodesForSeriesResult
+        : wantedEpisodesResult.data;
+    return [
+      for (final item in rows)
+        if (item.sonarrSeriesId == sonarrSeriesId) item,
+    ];
+  }
+
+  @override
+  Future<BazarrWantedItem?> getWantedMovieById(int radarrId) async {
+    wantedMoviesCalls++;
+    if (throwOnCall != null) throw throwOnCall!;
+    if (throwOnWanted != null) throw throwOnWanted!;
+    final rows = wantedMovieByIdOverride != null
+        ? [wantedMovieByIdOverride!]
+        : wantedMoviesResult.data;
+    for (final item in rows) {
+      if (item.radarrId == radarrId) return item;
+    }
+    return null;
   }
 
   @override
