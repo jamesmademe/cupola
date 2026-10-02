@@ -407,6 +407,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       accessHeaders: accessHeaders,
     );
     bool accepted;
+    String? version;
     try {
       // `/System/Info` — the authenticated twin of the public probe. Swallows
       // its own errors and answers false for all of them, which is why the
@@ -414,12 +415,27 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       accepted = await client.verifyCredential().timeout(
         const Duration(seconds: 6),
       );
+      // The version is a second read, the Dashboard probe's own (`Version` on
+      // the anonymous endpoint), and like TrueNAS's it is not allowed to change
+      // the verdict: a server that accepted the key is connected whether or not
+      // it names itself, and `probeVersion` answers null rather than throwing.
+      if (accepted) {
+        version = await client.probeVersion().timeout(
+          const Duration(seconds: 4),
+          onTimeout: () => null,
+        );
+      }
     } catch (e) {
       return ServiceDiagnosis.failed(e);
     } finally {
       client.close();
     }
-    if (accepted) return const ServiceDiagnosis.connected();
+    if (accepted) {
+      final named = version?.trim();
+      return named == null || named.isEmpty
+          ? const ServiceDiagnosis.connected()
+          : ServiceDiagnosis.connectedAs(named);
+    }
     return _explainCredentialRefusal(
       service,
       url: urlTrimmed,

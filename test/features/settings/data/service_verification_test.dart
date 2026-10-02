@@ -78,6 +78,73 @@ void main() {
       expect(diagnosis.status, ServiceConnectionStatus.connected);
     });
 
+    test('an accepted key names the version the server reports', () async {
+      // The test connection used to say "connected" and nothing else, where the
+      // Dashboard's probe names `Version`. Jellyfin spells it with a capital.
+      final server = _FakeServer({
+        '/System/Info': _Reply(200, body: '{"Version":"10.9.11"}'),
+        '/System/Info/Public': _Reply(
+          200,
+          body: '{"Version":"10.9.11","ServerName":"Home"}',
+        ),
+      });
+
+      final diagnosis = await server.run(
+        () => diagnoseCredentials(
+          ServiceKey.jellyfin,
+          url: 'https://jelly.local:8096',
+          apiKey: 'jf-key',
+        ),
+      );
+
+      expect(diagnosis.status, ServiceConnectionStatus.connected);
+      expect(diagnosis.serverVersion, '10.9.11');
+    });
+
+    test(
+      'a household member\'s token connects, with the public version',
+      () async {
+        // A 403 from `/System/Info` is a valid token without the administrator's
+        // reads: still connected, and the version comes from the anonymous read.
+        final server = _FakeServer({
+          '/System/Info': _Reply(403),
+          '/System/Info/Public': _Reply(200, body: '{"Version":"10.10.3"}'),
+        });
+
+        final diagnosis = await server.run(
+          () => diagnoseCredentials(
+            ServiceKey.jellyfin,
+            url: 'https://jelly.local:8096',
+            apiKey: 'member-token',
+          ),
+        );
+
+        expect(diagnosis.status, ServiceConnectionStatus.connected);
+        expect(diagnosis.serverVersion, '10.10.3');
+      },
+    );
+
+    test(
+      'a version that cannot be read does not unsettle the verdict',
+      () async {
+        final server = _FakeServer({
+          '/System/Info': _Reply(200, body: '{"Version":"10.9.11"}'),
+          '/System/Info/Public': _Reply(503),
+        });
+
+        final diagnosis = await server.run(
+          () => diagnoseCredentials(
+            ServiceKey.jellyfin,
+            url: 'https://jelly.local:8096',
+            apiKey: 'jf-key',
+          ),
+        );
+
+        expect(diagnosis.status, ServiceConnectionStatus.connected);
+        expect(diagnosis.serverVersion, isNull);
+      },
+    );
+
     test('a server that is not answering is not blamed on the key', () async {
       // Everything fails, credential-free endpoint included, so "the key was
       // rejected" would send the user to rotate a key that was never involved.
