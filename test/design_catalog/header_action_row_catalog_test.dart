@@ -284,14 +284,6 @@ Widget _buttonStates() => const Wrap(
 
 void _noop() {}
 
-/// The scene at a large reading size.
-Widget _atReadingSize(double scale, Widget child) => Builder(
-  builder: (context) => MediaQuery(
-    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
-    child: child,
-  ),
-);
-
 List<CatalogScene> _bands(CatalogPlatform platform, double width) => [
   CatalogScene(
     'Primary + two discs · Radarr, Automatic search · the ink fill with the '
@@ -447,8 +439,28 @@ void main() {
       CatalogScene(
         'At 2× reading size · the captions and the primary label clamp at 1.6× '
         'and wrap; the measure does not grow',
-        (_) => _atReadingSize(2, _partlyHeldSeries()),
+        (_) => _partlyHeldSeries(),
         width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'At 2× reading size · the library band: the primary label and the '
+        'consequence sentence take the lines they need, the discs keep 48pt',
+        (_) => _primaryBand(
+          service: ServiceKey.radarr,
+          label: 'Automatic search',
+          icon: Icons.saved_search_rounded,
+          consequence: 'Radarr is hunting a release for this title.',
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'At 2× reading size · the Seerr deck with Open dimmed: four captions '
+        'wrap under their squares, dimmed and still tappable',
+        (_) => _seerrDeck(),
+        width: 390,
+        textScale: catalogTextScale,
       ),
       ..._bands(CatalogPlatform.desktop, 560),
     ],

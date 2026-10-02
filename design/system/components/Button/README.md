@@ -30,6 +30,19 @@ The label (sentence case, a verb) and an optional leading icon (Material Icons R
 
 Material's button node. A gated button keeps `enabled: true` and adds a hint (*requires qBittorrent*, *requires a read-write key*), annotated on the content inside the button.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room, on the phone and on the desktop.
+
+- Resting: filled with a leading icon, outlined and text.
+- Floating: `FloatingActionButton` and `.extended`.
+- Gated: the three buttons with label and glyph at 38%, container kept.
+- Remedy: regular and compact, beside `Retry` in ink.
+- `onPressed: null`: Material's disabled filled and outlined.
+- A long label: each button grows to a second line instead of clipping.
+- Text at 200%: every kind, the gated one and the remedy, at twice the reading size.
+- Focused (desktop sheet): the filled button holding keyboard focus; focus is global to a render, so one control holds it per sheet.
+
 ## Do / don't
 
 - Do keep a 44pt minimum target wherever a finger can reach; never add `VisualDensity.compact` — it silently cancels `minimumSize`.

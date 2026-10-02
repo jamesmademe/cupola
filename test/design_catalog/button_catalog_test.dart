@@ -134,6 +134,75 @@ List<CatalogScene> _scenes(CatalogPlatform platform) => [
     ),
     platform: platform,
   ),
+  CatalogScene(
+    'A long label · the button grows to hold it on a second line, 44 high at '
+    'the least, never a fixed height that clips',
+    (_) => Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.search_rounded),
+          label: const Text('Search every monitored episode in this season'),
+        ),
+        OutlinedButton(
+          onPressed: () {},
+          child: const Text('Open the release in the download client'),
+        ),
+        TextButton(
+          onPressed: () {},
+          child: const Text('Open the movie in Radarr to change its quality'),
+        ),
+      ],
+    ),
+    width: 300,
+    platform: platform,
+  ),
+  CatalogScene(
+    'Text at 200% · filled, outlined, text, the gated one and the amber '
+    'remedy: every label wraps or grows the button, none clips',
+    (_) => Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.download_rounded),
+          label: const Text('Grab'),
+        ),
+        OutlinedButton(
+          onPressed: () {},
+          child: const Text('Interactive search'),
+        ),
+        TextButton(onPressed: () {}, child: const Text('Open in qBittorrent')),
+        _gated(
+          (onPressed, annotate) => FilledButton.icon(
+            onPressed: onPressed,
+            icon: annotate(const Icon(Icons.play_arrow_rounded)),
+            label: annotate(const Text('Start')),
+          ),
+        ),
+        Builder(
+          builder: (context) => FilledButton(
+            onPressed: () {},
+            style: remedyFillStyle(context),
+            child: const Text('Paste the key again'),
+          ),
+        ),
+        Builder(
+          builder: (context) => FilledButton(
+            onPressed: () {},
+            style: remedyFillStyle(context, compact: true),
+            child: const Text('Retry'),
+          ),
+        ),
+      ],
+    ),
+    width: 390,
+    textScale: catalogTextScale,
+    platform: platform,
+  ),
 ];
 
 void main() {
@@ -141,6 +210,25 @@ void main() {
     'Button',
     scenes: [
       for (final platform in CatalogPlatform.values) ..._scenes(platform),
+      // Focus is global to a render, so one scene holds it, on the desktop,
+      // where the keyboard is the pointer and the ring is drawn.
+      CatalogScene(
+        'Focused (keyboard) · the filled button with focus: the theme\'s own '
+        'focus overlay on the ink fill; one control holds focus per sheet',
+        (_) => Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            FilledButton(
+              autofocus: true,
+              onPressed: () {},
+              child: const Text('Grab'),
+            ),
+            OutlinedButton(onPressed: () {}, child: const Text('Search')),
+          ],
+        ),
+        platform: CatalogPlatform.desktop,
+      ),
     ],
   );
 }

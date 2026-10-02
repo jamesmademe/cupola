@@ -60,6 +60,15 @@ Discs carry their name on the icon (`More actions`, `Interactive search`). A `He
 
 The controls, their callbacks, the busy and confirmed flags, and the consequence sentence.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the bands also on the desktop.
+
+- The library band: primary with two discs, busy, confirmed, withheld (two tonal buttons), nothing to promote.
+- The Seerr deck: nothing requested, a series partly on disk, available, on disk in HD with a 4K server, requested, failed, blocklisted.
+- `HeaderActionButton`: idle, busy, confirmed, `onPressed: null`, a long caption.
+- Text at 200%: the partly held series deck, the library band, and the deck with Open dimmed.
+
 ## Do / don't
 
 - Do keep every control at 48 and the busy controls in place.

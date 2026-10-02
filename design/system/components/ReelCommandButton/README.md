@@ -30,6 +30,15 @@ The spoken name is pinned to the settled label — `busyLabel` while busy, `labe
 
 `ReelLine` is the same roll for a line of text or a live figure: it rolls only while the text fits one line and falls back to a plain `Text` with the caller's `fallbackMaxLines` otherwise. Presets: `figure` (18 ms stagger, no bounce, never a colour flash), `word` (22 ms), `command`, `waiting`.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room, on the phone and on the desktop.
+
+- Rest, waiting (disabled, dots rolling), answered, failed and settled, `onPressed: null`.
+- Reduce Motion while waiting; `busyLabel: null`; the finish step's button.
+- A long label: the slot holds the widest label it will roll to.
+- Text at 200%: rest, waiting and disabled, the slot measured at the reading size.
+
 ## Do / don't
 
 - Do list every label the button can show in `slotLabels`, or the button resizes on the transition the slot exists to absorb.

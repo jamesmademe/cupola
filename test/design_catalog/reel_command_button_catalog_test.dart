@@ -123,6 +123,36 @@ void main() {
           onPressed: () async {},
         ),
       ),
+      CatalogScene(
+        'A long label · the slot holds the widest label it will roll to '
+        '(Continue to the next service), so the resting one sits centred in '
+        'it and nothing clips on a 280pt measure',
+        (_) => ReelCommandButton(
+          label: 'Test every connection',
+          busyLabel: 'Testing every connection',
+          failureLabel: 'Test every connection again',
+          slotLabels: const ['Continue to the next service'],
+          onPressed: _forever,
+        ),
+        width: 280,
+      ),
+      CatalogScene(
+        'Text at 200% · rest and waiting: the slot measures the widest label '
+        'at the reading size, so the button grows with it and the roll keeps '
+        'its width',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _test(),
+            const SizedBox(height: 12),
+            _Pressed(child: _test()),
+            const SizedBox(height: 12),
+            _test(enabled: false),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
       ..._scenes(CatalogPlatform.desktop),
     ],
   );

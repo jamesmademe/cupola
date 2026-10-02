@@ -37,6 +37,14 @@ The target `ServiceKey` (or `service`, `connectionId` and `resource`), the acces
 
 One node per control: button, enabled, the name, and the hint. A cross-service jump publishes *requires &lt;Service&gt;* in both states; a capability gate publishes its hint only while blocked. The cell excludes its child's semantics, so `label` is required even when the child shows text. Annotate the button's **content**, never wrap the button in `Semantics(hint:)` — that annotation lands on a node the screen reader never focuses.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Each shape enabled and blocked: the cell around a glyph, the builder around a header button and a text button, the capability icon, switch, filled button and menu label (read-write, read-only and not yet checked keys), and the role-gated Manage (live, dimmed, absent).
+- The toast a blocked tap raises: a cross-service jump, a read-only key, permissions unknown.
+- Text at 200%: the blocked shapes together, and the toast with its action moved under the sentence.
+
 ## Do / don't
 
 - Do use a builder shape for anything that is already a button; wrapping a Material button in the cell nests a button inside a button.

@@ -214,6 +214,7 @@ CatalogScene _toastScene(
   String message,
   String action, {
   double height = 104,
+  double textScale = 1,
 }) => CatalogScene(
   caption,
   (_) => ScaffoldMessenger(
@@ -224,6 +225,7 @@ CatalogScene _toastScene(
   ),
   width: 390,
   height: height,
+  textScale: textScale,
 );
 
 void main() {
@@ -319,6 +321,36 @@ void main() {
           ),
           _labelled('absent', _manage(const Absent())),
         ]),
+      ),
+      CatalogScene(
+        'Text at 200% · a cross-service button, a gated icon, a gated switch, '
+        'a gated save and a dimmed Manage: the label grows, the dim stays on '
+        'the foreground only, the target never shrinks',
+        (_) => _row([
+          _labelled('Radarr set up', _openIn(ServiceKey.radarr)),
+          _labelled('Sonarr not set up', _openIn(ServiceKey.sonarr)),
+          _labelled(
+            'qBittorrent not set up',
+            _openTransfer(ServiceKey.qbittorrent),
+          ),
+          _labelled('read-only', _vmButton(_readOnly)),
+          _labelled('read-only', _toggle(_readOnly)),
+          _labelled('not an admin', _save(_readOnly)),
+          _labelled(
+            'dimmed',
+            _manage(const Dimmed("Your account on Seerr can't manage media.")),
+          ),
+        ]),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      _toastScene(
+        'Blocked tap at 200% · the sentence takes the lines it needs and the '
+            'action moves under it',
+        'This Unraid key can\'t start or stop VMs.',
+        ServiceKey.unraid.capabilityFixLabel,
+        height: 260,
+        textScale: catalogTextScale,
       ),
       _toastScene(
         'Blocked tap on a cross-service jump · the caller\'s sentence, one '
