@@ -1,3 +1,7 @@
+import 'dart:io' show InternetAddress;
+
+import 'package:cupola/core/network/local_network_target.dart';
+
 class UrlUtils {
   /// [host] as it goes into a sentence: never broken after one of its
   /// hyphens.
@@ -256,40 +260,20 @@ class UrlUtils {
     }
   }
 
-  /// Hosts for which cleartext HTTP is a normal, supported home-lab setup.
+  /// Hosts for which cleartext HTTP is a normal, supported home-lab setup:
+  /// loopback, where nothing crosses a network, and every host the local
+  /// network verdict (`localNetworkHostVerdict`) knows is local.
+  ///
+  /// One answer to "is this host on the local network", shared with the
+  /// local-network permission, so the address field never warns "off your
+  /// local network" for a host the permission treats as local
+  /// (`nas.home.arpa`, `nas.internal`, a bare `nas`). Carrier NAT (100.64/10,
+  /// Tailscale's range) is not local there and is not here either.
   static bool _isPrivateHost(String host) {
-    final h = host.toLowerCase();
-    if (h == 'localhost' || h.endsWith('.local') || h.endsWith('.lan')) {
-      return true;
-    }
-    final v4 = RegExp(
-      r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$',
-    ).firstMatch(h);
-    if (v4 != null) {
-      final a = int.parse(v4.group(1)!);
-      final b = int.parse(v4.group(2)!);
-      // 127/8 loopback, 10/8, 192.168/16, 172.16/12, 169.254/16 link-local.
-      if (a == 127 || a == 10) return true;
-      if (a == 192 && b == 168) return true;
-      if (a == 172 && b >= 16 && b <= 31) return true;
-      if (a == 169 && b == 254) return true;
-      return false;
-    }
-    // Only an actual IPv6 literal gets the IPv6 treatment, and a DNS name can
-    // never contain a colon. Prefix-matching the text instead classified
-    // `fdn.example.com` and `fe80s.example.com` as local, so the cleartext
-    // warning stayed silent while the API key travelled unencrypted to a
-    // public host.
-    if (!h.contains(':')) return false;
-    final v6 = _parseIpv6(h);
-    if (v6 == null) return false;
-    // ::1 loopback.
-    if (v6.take(15).every((b) => b == 0) && v6[15] == 1) return true;
-    // fc00::/7 unique-local.
-    if ((v6[0] & 0xFE) == 0xFC) return true;
-    // fe80::/10 link-local.
-    if (v6[0] == 0xFE && (v6[1] & 0xC0) == 0x80) return true;
-    return false;
+    final bare = host.replaceAll('[', '').replaceAll(']', '').toLowerCase();
+    if (bare == 'localhost') return true;
+    if (InternetAddress.tryParse(bare)?.isLoopback ?? false) return true;
+    return localNetworkHostVerdict(bare) == true;
   }
 
   /// Warns when [rawUrl] would send credentials in cleartext to a host outside

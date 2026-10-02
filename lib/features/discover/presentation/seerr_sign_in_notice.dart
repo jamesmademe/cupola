@@ -1,9 +1,6 @@
-import 'dart:io' show InternetAddress;
-
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/core/network/local_network_target.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
@@ -270,18 +267,12 @@ class SeerrSignInNotice {
 }
 
 /// Whether a password sent to [url] would cross a network in the clear: an
-/// `http://` address on a host this device cannot tell is on the local
-/// network (`localNetworkHostVerdict`). Loopback is never a crossing.
+/// `http://` address off the local network, the same verdict the address
+/// field warns on (`UrlUtils.cleartextWarning`).
 ///
 /// Before a password goes there, [SeerrSignInNotice.notEncrypted] asks.
-bool passwordTravelsInClear(String url) {
-  final uri = Uri.tryParse(UrlUtils.normalizeBaseUrl(url));
-  if (uri == null || uri.scheme != 'http') return false;
-  final host = uri.host;
-  if (host == 'localhost') return false;
-  if (InternetAddress.tryParse(host)?.isLoopback ?? false) return false;
-  return localNetworkHostVerdict(host) != true;
-}
+bool passwordTravelsInClear(String url) =>
+    UrlUtils.cleartextWarning(UrlUtils.normalizeBaseUrl(url)) != null;
 
 /// Whether [error] is something other than Seerr answering: another service
 /// at the port, a web page, an address where Seerr's status route is not
