@@ -431,7 +431,7 @@ class _LibraryGrid extends StatelessWidget {
             child: TextButton.icon(
               onPressed: fetchNextPage,
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Couldn’t load more · Retry'),
+              label: const Text('Could not load more · Retry'),
             ),
           ),
         ),

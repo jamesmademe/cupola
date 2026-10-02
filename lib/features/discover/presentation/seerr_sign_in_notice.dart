@@ -136,14 +136,14 @@ class SeerrSignInNotice {
       SeerrRefusal.mediaServerUnreachable => SeerrSignInNotice._(
         SeerrSignInNoticeKind.mediaServerUnreachable,
         tone: StatusTone.warning,
-        title: "The server couldn't reach $mediaServer",
+        title: "The server could not reach $mediaServer",
         sentence: 'It may be back in a moment.',
         retryHelps: true,
       ),
       SeerrRefusal.plexCheckFailed => const SeerrSignInNotice._(
         SeerrSignInNoticeKind.plexCheckFailed,
         tone: StatusTone.warning,
-        title: "The server couldn't check your Plex account",
+        title: "The server could not check your Plex account",
         sentence: 'It may be back in a moment.',
         retryHelps: true,
       ),
@@ -219,7 +219,7 @@ class SeerrSignInNotice {
     SeerrSignInNoticeKind.plexDidNotAnswer,
     tone: StatusTone.error,
     title: 'Plex did not answer',
-    sentence: "Cupola couldn't reach plex.tv from this device.",
+    sentence: "Cupola could not reach plex.tv from this device.",
     retryHelps: true,
   );
 

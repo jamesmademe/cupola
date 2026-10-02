@@ -84,7 +84,7 @@ Future<bool> _openMovieInService({
 
     SnackBarHelper.error(
       context,
-      "Couldn't open this in Radarr.",
+      "Could not open this in Radarr.",
       detail: error,
     );
     return false;
@@ -138,7 +138,7 @@ Future<bool> _openSeriesInService({
 
     SnackBarHelper.error(
       context,
-      "Couldn't open this in Sonarr.",
+      "Could not open this in Sonarr.",
       detail: error,
     );
     return false;

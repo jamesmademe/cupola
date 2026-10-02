@@ -14,7 +14,7 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// ```dart
 /// SnackBarHelper.success(context, 'Settings saved');
 /// SnackBarHelper.info(context, 'Coming soon!');
-/// SnackBarHelper.error(context, "Couldn't delete this movie from Radarr.", detail: e);
+/// SnackBarHelper.error(context, "Could not delete this movie from Radarr.", detail: e);
 /// ```
 class SnackBarHelper {
   SnackBarHelper._();
@@ -118,7 +118,7 @@ class SnackBarHelper {
   ///
   /// Pass the caught object as [detail] rather than interpolating it into
   /// [message]: `'Search failed: $e'` puts a stack-trace fragment where a
-  /// sentence belongs, while `error(context, "Couldn't start a search in
+  /// sentence belongs, while `error(context, "Could not start a search in
   /// Radarr.", detail: e)` leads with what the user needs and demotes the
   /// diagnostic to its own line — the same two-register shape `AppErrorState`
   /// uses.

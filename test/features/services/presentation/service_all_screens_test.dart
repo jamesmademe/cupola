@@ -172,7 +172,7 @@ void main() {
       // diagnostic the server actually sent, demoted to its own line by
       // `SnackBarHelper`'s `detail:` contract rather than interpolated into it.
       expect(
-        find.textContaining("Couldn't delete the request."),
+        find.textContaining("Could not delete the request."),
         findsOneWidget,
       );
       expect(find.textContaining('HTTP 403'), findsOneWidget);

@@ -308,6 +308,14 @@ const _allowed = <({String file, String literal, String reason})>[
     literal: 'online',
     reason: "Dockge's own agent status, the wire default the model parses",
   ),
+  (
+    file: 'lib/features/stream/presentation/stream_library_screen.dart',
+    literal: 'Could not load more · Retry',
+    reason:
+        'the footer of a grid that did load, under the rows already fetched, '
+        'naming the next page: not a screen failing whole, which is what '
+        "the classification's headline is for",
+  ),
 ];
 
 bool _isAllowed(CopyLiteral literal) {

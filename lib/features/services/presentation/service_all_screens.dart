@@ -520,8 +520,8 @@ class _RequestListRow extends ConsumerWidget {
       SnackBarHelper.error(
         context,
         cancels
-            ? "Couldn't cancel the request. ${Lexicon.nothingChanged}"
-            : "Couldn't delete the request.",
+            ? "Could not cancel the request. ${Lexicon.nothingChanged}"
+            : "Could not delete the request.",
         detail: ref.read(roleGateProvider('')).faultVoice == FaultVoice.brief
             ? null
             : error,

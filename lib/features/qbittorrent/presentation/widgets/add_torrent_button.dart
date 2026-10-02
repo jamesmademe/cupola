@@ -253,7 +253,7 @@ class _AddTorrentFormState extends ConsumerState<_AddTorrentForm> {
                 if (context.mounted) {
                   SnackBarHelper.error(
                     context,
-                    "Couldn't add the torrent.",
+                    "Could not add the torrent.",
                     detail: e,
                   );
                 }

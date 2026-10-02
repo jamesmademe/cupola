@@ -417,7 +417,7 @@ void main() {
     final notice = SeerrSignInNotice.plexDidNotAnswer;
     expect(notice.tone, StatusTone.error);
     expect(notice.title, 'Plex did not answer');
-    expect(notice.sentence, "Cupola couldn't reach plex.tv from this device.");
+    expect(notice.sentence, "Cupola could not reach plex.tv from this device.");
     expect(notice.retryHelps, isTrue);
   });
 

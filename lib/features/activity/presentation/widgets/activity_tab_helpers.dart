@@ -67,7 +67,7 @@ Future<void> runWantedAutoSearch(
     if (!context.mounted) return;
     SnackBarHelper.error(
       context,
-      "Couldn't start a search in ${_serviceName(serviceType)}.",
+      "Could not start a search in ${_serviceName(serviceType)}.",
       detail: error,
     );
   }

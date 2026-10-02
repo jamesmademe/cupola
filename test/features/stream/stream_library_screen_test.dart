@@ -413,7 +413,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(StreamPosterTile), findsOneWidget);
-      expect(find.textContaining('Couldn’t load more'), findsOneWidget);
+      expect(find.textContaining('Could not load more'), findsOneWidget);
     });
 
     testWidgets('no viewer names the setting instead of claiming empty', (

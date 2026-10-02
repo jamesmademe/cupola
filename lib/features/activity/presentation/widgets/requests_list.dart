@@ -396,8 +396,8 @@ class _RequestCard extends ConsumerWidget {
           .deleteRequest(request.id),
       successMessage: cancels ? 'Request cancelled' : 'Request deleted',
       failureMessage: cancels
-          ? "Couldn't cancel the request"
-          : "Couldn't delete the request",
+          ? "Could not cancel the request"
+          : "Could not delete the request",
     );
   }
 

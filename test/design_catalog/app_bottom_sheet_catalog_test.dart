@@ -210,7 +210,7 @@ void main() {
         'No title, no accent · handle and body only',
         () => const AppBottomSheet(
           child: Text(
-            'Cupola couldn\'t reach Radarr, so this movie was not deleted.',
+            'Cupola could not reach Radarr, so this movie was not deleted.',
           ),
         ),
         height: 160,

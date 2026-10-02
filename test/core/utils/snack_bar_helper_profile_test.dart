@@ -29,7 +29,7 @@ void main() {
                   context,
                   ref,
                   action: (qb) => qb.pauseTorrents(const ['abc']),
-                  failureMessage: "Couldn't stop this torrent.",
+                  failureMessage: "Could not stop this torrent.",
                 ),
                 child: const Text('go'),
               ),

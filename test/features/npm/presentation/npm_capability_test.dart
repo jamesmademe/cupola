@@ -44,7 +44,7 @@ void main() {
       final answered = copy.bannerFor(const CapabilityGrant.readOnly(), {});
       final unanswered = copy.bannerFor(const CapabilityGrant.unanswered(), {});
       expect(answered, contains('view-only'));
-      expect(unanswered, contains('couldn\'t check'));
+      expect(unanswered, contains('could not check'));
       expect(answered, isNot(unanswered));
     });
 

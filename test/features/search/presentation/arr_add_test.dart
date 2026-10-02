@@ -118,7 +118,7 @@ void main() {
     // Named, because "the add failed" is useless when two Radarr are on
     // screen — and not swallowed, which is D13's lesson.
     expect(
-      find.textContaining("Couldn't add Dune to Radarr · Away"),
+      find.textContaining("Could not add Dune to Radarr · Away"),
       findsOneWidget,
     );
     // The row did not lie about the outcome.

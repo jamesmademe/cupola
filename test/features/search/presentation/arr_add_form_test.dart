@@ -323,7 +323,7 @@ void main() {
 
     final error = await notifier.submit(_severance);
 
-    expect(error, "Couldn't add Severance to Sonarr · Away.");
+    expect(error, "Could not add Severance to Sonarr · Away.");
     final state = container.read(arrAddFormProvider(args));
     expect(state.errorDetail, 'the form is not filled in');
     expect(state.isSubmitting, isFalse);

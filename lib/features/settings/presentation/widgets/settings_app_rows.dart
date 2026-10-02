@@ -151,7 +151,7 @@ class SettingsResetAppDataRow extends ConsumerWidget {
       await markOnboardingIncomplete(ref);
     } catch (e) {
       if (!context.mounted) return;
-      SnackBarHelper.error(context, "Couldn't reset app data.", detail: e);
+      SnackBarHelper.error(context, "Could not reset app data.", detail: e);
     }
   }
 }

@@ -212,7 +212,7 @@ void main() {
       // Nobody watching is the majority state on a home server and the normal
       // daily condition, so it must not read as a failure.
       expect(find.text('Nobody is watching right now'), findsOneWidget);
-      expect(find.textContaining('Couldn\'t load'), findsNothing);
+      expect(find.textContaining('Could not load'), findsNothing);
     });
 
     testWidgets('never prints an aggregate outbound total', (tester) async {

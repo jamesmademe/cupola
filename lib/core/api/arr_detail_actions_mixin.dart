@@ -89,7 +89,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't change monitoring in $serviceName.",
+        "Could not change monitoring in $serviceName.",
         detail: e,
       );
     } finally {
@@ -149,7 +149,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
       if (!mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't change the quality profile in $serviceName.",
+        "Could not change the quality profile in $serviceName.",
         detail: e,
       );
     }
@@ -201,7 +201,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't delete this $subject from $serviceName.",
+        "Could not delete this $subject from $serviceName.",
         detail: e,
       );
     } finally {
@@ -232,7 +232,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't start a search in $serviceName.",
+        "Could not start a search in $serviceName.",
         detail: e,
       );
     } finally {

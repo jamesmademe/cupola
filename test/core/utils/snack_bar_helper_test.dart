@@ -90,7 +90,7 @@ void main() {
         tester,
         (context) => SnackBarHelper.error(
           context,
-          "Couldn't start a search in Radarr.",
+          "Could not start a search in Radarr.",
           detail: Exception('404 Not Found'),
         ),
       );
@@ -99,7 +99,7 @@ void main() {
       // first thing read aloud has to be the thing the user can act on.
       expect(
         _snackText(tester),
-        "Couldn't start a search in Radarr.\n404 Not Found",
+        "Could not start a search in Radarr.\n404 Not Found",
       );
     });
 
@@ -170,7 +170,7 @@ void main() {
           tester,
           (context) => SnackBarHelper.error(
             context,
-            "Couldn't change monitoring in Radarr.",
+            "Could not change monitoring in Radarr.",
             detail: _status(401),
           ),
           theme: theme,
@@ -196,7 +196,7 @@ void main() {
           tester,
           (context) => SnackBarHelper.error(
             context,
-            "Couldn't change monitoring in Radarr.",
+            "Could not change monitoring in Radarr.",
             detail: DioException.connectionError(
               requestOptions: RequestOptions(path: '/api/v3/movie'),
               reason: 'Connection refused',
@@ -289,7 +289,7 @@ void main() {
         tester,
         (context) => SnackBarHelper.error(
           context,
-          "Couldn't delete this movie from Radarr.",
+          "Could not delete this movie from Radarr.",
           detail: DioException(
             requestOptions: RequestOptions(path: '/api/v3/movie/1'),
             type: DioExceptionType.badResponse,
@@ -304,7 +304,7 @@ void main() {
 
       expect(
         _snackText(tester),
-        "Couldn't delete this movie from Radarr.\nMovie not found",
+        "Could not delete this movie from Radarr.\nMovie not found",
       );
     });
   });

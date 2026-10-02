@@ -206,7 +206,7 @@ abstract final class Lexicon {
   /// A request that failed for a reason the requester cannot act on: what
   /// did not happen, and that nothing half happened.
   static String couldNotAskFor(String? title) =>
-      "Couldn't ask for ${title ?? 'this title'}. Nothing was sent.";
+      "Could not ask for ${title ?? 'this title'}. Nothing was sent.";
 
   /// A film's three dated events, as every screen that dates one names them:
   /// the calendar's `Sprite Fright · on digital` and the Radarr home's Coming

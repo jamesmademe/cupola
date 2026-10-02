@@ -716,7 +716,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't change the series type in Sonarr.",
+        "Could not change the series type in Sonarr.",
         detail: e,
       );
     } finally {
@@ -773,7 +773,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't start a search for Season $seasonNumber in Sonarr.",
+        "Could not start a search for Season $seasonNumber in Sonarr.",
         detail: e,
       );
     } finally {
@@ -810,7 +810,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't start a search for this episode.",
+        "Could not start a search for this episode.",
         detail: e,
       );
     } finally {

@@ -82,7 +82,7 @@ class CapabilityCopy {
 
   /// The unanswered banner, for any scoped service.
   static String unansweredBanner(ServiceKey service) =>
-      'Cupola couldn\'t check what this ${service.title} '
+      'Cupola could not check what this ${service.title} '
       '${service.capabilityCredentialNoun} may change, so changes are held '
       'back until it can. Reads are unaffected.';
 
@@ -92,7 +92,7 @@ class CapabilityCopy {
 
   /// The toast a dimmed control raises while the probe could not ask.
   static String unansweredToast(ServiceKey service) =>
-      'Cupola couldn\'t check this ${service.capabilityCredentialNoun}\'s '
+      'Cupola could not check this ${service.capabilityCredentialNoun}\'s '
       'permissions, so it\'s holding changes back.';
 }
 

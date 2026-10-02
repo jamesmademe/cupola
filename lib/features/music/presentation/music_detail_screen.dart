@@ -506,7 +506,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't start a search for this album.",
+        "Could not start a search for this album.",
         detail: e,
       );
     } finally {

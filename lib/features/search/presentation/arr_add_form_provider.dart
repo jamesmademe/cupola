@@ -382,7 +382,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
       _emit(state.copyWith(isSubmitting: false));
       return null;
     } catch (error) {
-      final message = "Couldn't add ${request.title} to $connectionName.";
+      final message = "Could not add ${request.title} to $connectionName.";
       _emit(
         state.copyWith(
           isSubmitting: false,
@@ -402,7 +402,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
   /// Reports a post that was never attempted, in the same two registers a
   /// failed one uses, so the caller cannot mistake it for success.
   String _refuse(ArrAddRequest request, String detail) {
-    final message = "Couldn't add ${request.title} to $connectionName.";
+    final message = "Could not add ${request.title} to $connectionName.";
     _emit(
       state.copyWith(isSubmitting: false, error: message, errorDetail: detail),
     );

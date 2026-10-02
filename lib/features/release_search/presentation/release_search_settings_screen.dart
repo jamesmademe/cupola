@@ -506,7 +506,7 @@ class _NotifyRow extends StatelessWidget {
     }
     final names = foregroundOnlyServices.map((s) => s.title).join(', ');
     return 'Only when Cupola is not in front of you, for $names, that '
-        "includes a search stopping because it couldn't keep running in the "
+        "includes a search stopping because it could not keep running in the "
         'background';
   }
 
