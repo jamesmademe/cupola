@@ -101,10 +101,14 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Swipe up to open the Portal',
-                          style: theme.textTheme.labelLarge?.weight(
-                            FontWeight.w600,
+                        // Flexible: at 200% the hint wraps inside the mark
+                        // rather than running 53pt out of the screen.
+                        Flexible(
+                          child: Text(
+                            'Swipe up to open the Portal',
+                            style: theme.textTheme.labelLarge?.weight(
+                              FontWeight.w600,
+                            ),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.xs),
