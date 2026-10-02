@@ -236,6 +236,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           if (mounted) _portal.handleRouteChanged();
         });
       } else if (pathMoved &&
+          // Only where a Portal is drawn: on a rail or in the window shell
+          // there is no Portal to have gone through, so a manual switch there
+          // is no evidence of need for one, and the count outlives the window
+          // (it is persisted) to coach a phone that never saw it.
+          _portalDrawn(context) &&
           // Spelled out rather than left to the arithmetic: a lens moving with
           // the path unchanged cannot satisfy the two tests below, but the
           // journey being counted is a *journey*, and it should say so.

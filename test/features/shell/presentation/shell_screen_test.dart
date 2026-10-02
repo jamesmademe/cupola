@@ -969,6 +969,48 @@ void main() {
     });
   });
 
+  // The coach mark's evidence of need: a switch from the Dashboard to a service
+  // that went round the Portal. Counted only where a Portal is drawn.
+  group('the Portal coach mark\'s journeys', () {
+    testWidgets('a Dashboard to service switch on the phone is one', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+      expect(harness.container.read(portalHintsProvider).manualJourneys, 0);
+
+      harness.router.go('/dashboard/radarr');
+      await tester.pumpAndSettle();
+
+      expect(find.text('ServiceDashboard'), findsOneWidget);
+      expect(harness.container.read(portalHintsProvider).manualJourneys, 1);
+    });
+
+    testWidgets('the same switch beside a rail is not, there is no Portal', (
+      tester,
+    ) async {
+      // The count is persisted and the window is not: a wide window that
+      // counted its own navigation would hand the coach mark to a phone that
+      // never lacked the Portal.
+      final harness = await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: _railViewport,
+      );
+      expect(find.byType(NavigationRail), findsOneWidget);
+
+      harness.router.go('/dashboard/radarr');
+      await tester.pumpAndSettle();
+
+      expect(find.text('ServiceDashboard'), findsOneWidget);
+      expect(harness.container.read(portalHintsProvider).manualJourneys, 0);
+    });
+  });
+
   // The single-animation half of the story above, asked of the machine rather
   // than of the tree: the tree only shows that it ended closed.
   group('ServicePortalController', () {
