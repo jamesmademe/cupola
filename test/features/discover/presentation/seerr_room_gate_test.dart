@@ -195,6 +195,11 @@ void main() {
         await tester.tap(find.byTooltip('Resolve issue'));
         await tester.pumpAndSettle();
         expect(find.text('Resolve this issue?'), findsOneWidget);
+        await tester.tap(find.text('Resolve issue'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Issue resolved'), findsOneWidget);
+        expect(resolveCalls(harness), hasLength(1));
 
         await harness.unmount(tester);
       });

@@ -753,6 +753,28 @@ class SeerrFake extends ServiceFake {
       }
       return const NetworkReply(204);
     }
+    // `issue.ts:326-372`: past the route's MANAGE_ISSUES or CREATE_ISSUES
+    // (`_needOf` in `seerr_sessions.dart`), anybody else's issue wants MANAGE_ISSUES, else a 401.
+    // The world has one issue, Anna's.
+    final status = RegExp(
+      r'^/api/v1/issue/(\d+)/(open|resolved)$',
+    ).firstMatch(path);
+    if (r.method == 'POST' && status != null) {
+      if (status.group(1) != '1') return seerrError(404, 'Issue not found.');
+      if (caller != null &&
+          !caller.byKey &&
+          !caller.has(SeerrPermission.manageIssues) &&
+          caller.user.id != WorldSeerrUsers.anna.id) {
+        return seerrError(
+          401,
+          'You do not have permission to modify this issue.',
+        );
+      }
+      return NetworkReply.json({
+        'id': 1,
+        'status': status.group(2) == 'resolved' ? 2 : 1,
+      });
+    }
     if (r.method == 'DELETE' && path.startsWith('/api/v1/')) {
       return const NetworkReply(204);
     }
