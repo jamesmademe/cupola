@@ -33,7 +33,9 @@ class ServiceConnectionRow extends ConsumerWidget {
     final url = settings.urlFor(service);
     final host = service.extractHost(url) ?? url;
 
-    if (!settings.isServiceConfigured(service)) {
+    // A Seerr account that signed out has a connection: its row reads signed
+    // out from the diagnosis below, never `Not set up`.
+    if (!settings.hasServiceConnection(service)) {
       final presentation = describeConnection(
         service,
         status: ServiceConnectionStatus.notConfigured,

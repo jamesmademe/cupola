@@ -30,7 +30,7 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
-import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -62,11 +62,9 @@ class SeerrOverviewScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.seerr),
-      ),
-    );
+    // The lens's Seerr, which this page reads: a signed-out one reads signed
+    // out before anything is asked of it.
+    final configured = watchSeerrConfigured(ref);
 
     return AmbientScaffold(
       accent: ServiceKey.seerr.accent,

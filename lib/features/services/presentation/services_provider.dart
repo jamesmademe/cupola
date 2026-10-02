@@ -337,6 +337,15 @@ Future<ServiceSummary> _loadServiceSummary(
   final service = instance.service;
   final host = service.extractHost(instance.url) ?? '';
   if (!instance.isConfigured) {
+    // Signed out is not a dark box: nothing was asked, and the one step left
+    // is the person's own. Read as the ended session, blue.
+    if (instance.isSignedOut) {
+      return ServiceSummary.failed(
+        service,
+        host: host,
+        error: const SeerrSessionEnded(),
+      );
+    }
     return _offlineSummary(service, host: host);
   }
 

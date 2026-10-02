@@ -9,7 +9,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class SeerrIssuesScreen extends ConsumerStatefulWidget {
@@ -26,9 +26,9 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!ref
-        .watch(currentSettingsProvider)
-        .isServiceConfigured(ServiceKey.seerr)) {
+    // The lens's Seerr, which these pages read: a signed-out one reads signed
+    // out before anything is asked of it.
+    if (!watchSeerrConfigured(ref)) {
       return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
     }
     final issues = ref.watch(seerrIssuesProvider(_filter));
@@ -116,9 +116,9 @@ class SeerrUsersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref
-        .watch(currentSettingsProvider)
-        .isServiceConfigured(ServiceKey.seerr)) {
+    // The lens's Seerr, which these pages read: a signed-out one reads signed
+    // out before anything is asked of it.
+    if (!watchSeerrConfigured(ref)) {
       return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
     }
     final users = ref.watch(seerrUsersProvider);

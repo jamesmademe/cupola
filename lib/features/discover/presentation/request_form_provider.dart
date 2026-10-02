@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
@@ -220,8 +222,12 @@ class RequestFormState {
 /// A failed read of the request sheet's lists, as the sheet says it: the
 /// classified headline, never the exception.
 String _loadFailure(Object error) =>
-    '${describeFailureOf(ServiceKey.seerr, error).headline}. '
-    'The request cannot be sent until it does.';
+    classifyConnectionFailure(error) == ServiceFailureReason.sessionEnded
+    // Nothing to wait for: the person signs in again.
+    ? '${describeFailureOf(ServiceKey.seerr, error).headline}, so the '
+          'request cannot be sent.'
+    : '${describeFailureOf(ServiceKey.seerr, error).headline}. '
+          'The request cannot be sent until it does.';
 
 final requestFormProvider = NotifierProvider.autoDispose
     .family<RequestFormNotifier, RequestFormState, RequestFormArgs>(
@@ -353,6 +359,13 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
         errorReason: classifyConnectionFailure(error),
       );
     }
+  }
+
+  /// Reads Seerr's servers again, after its connection changed: signed in
+  /// again, say.
+  void reload() {
+    state = const RequestFormState();
+    unawaited(_loadServers());
   }
 
   void selectServer(int serverId) {

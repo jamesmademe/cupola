@@ -50,8 +50,14 @@ class StackHealth {
     required this.checking,
     required this.notSetUp,
     this.faulted = 0,
+    this.signedOut = 0,
     this.checkedAt,
   });
+
+  /// Services whose only connection is a Seerr account that signed out. Set
+  /// up, so never among [notSetUp]; asked nothing, so not in [configured]
+  /// either; and not a fault: the person's step.
+  final int signedOut;
 
   /// Services that answered, with at least one connection answering with a
   /// refusal or a fault — a refused key, a 5xx — and none dark. Counted inside
@@ -107,6 +113,7 @@ class StackHealth {
     // Ahead of "not set up" because a probe in flight is about to change the
     // headline and an unconfigured service never will.
     if (checking > 0) '$checking checking',
+    if (signedOut > 0) '$signedOut signed out',
     if (notSetUp > 0) '$notSetUp not set up',
   ];
 
@@ -195,6 +202,7 @@ StackServiceState foldServiceState({
 StackHealth stackHealthFrom({
   required Iterable<StackServiceState> states,
   required int registrySize,
+  int signedOut = 0,
   DateTime? checkedAt,
 }) {
   var answering = 0;
@@ -232,7 +240,8 @@ StackHealth stackHealthFrom({
     faulted: faulted,
     unreachable: unreachable,
     checking: checking,
-    notSetUp: registrySize - configured,
+    signedOut: signedOut,
+    notSetUp: registrySize - configured - signedOut,
     checkedAt: checkedAt,
   );
 }
@@ -328,6 +337,13 @@ class StackHealthNotifier extends Notifier<StackHealth> {
     return stackHealthFrom(
       states: states,
       registrySize: ServiceKey.values.length,
+      signedOut: ServiceKey.values
+          .where(
+            (service) =>
+                !settings.isServiceConfigured(service) &&
+                settings.hasServiceConnection(service),
+          )
+          .length,
       checkedAt: _checkedAt,
     );
   }

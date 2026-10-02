@@ -48,8 +48,10 @@ class DashboardScreen extends ConsumerWidget {
     });
 
     final settings = ref.watch(currentSettingsProvider);
+    // A Seerr account that signed out is a connection somebody set up: the
+    // stack is not empty, it has a step to take.
     final allUnconfigured = ServiceKey.values.every(
-      (s) => !settings.isServiceConfigured(s),
+      (s) => !settings.hasServiceConnection(s),
     );
 
     return RefreshOnReturn(

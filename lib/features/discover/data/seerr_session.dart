@@ -166,7 +166,7 @@ final seerrClientFactoryProvider = Provider<SeerrClientFactory>(
 ///
 /// Throws `Exception('Seerr not configured')`, which `AsyncValueWidget`
 /// turns into its placeholder, as `watchApiClient` does for the other
-/// services.
+/// services; for an account that signed out, [SeerrSessionEnded].
 ApiClient watchSeerrClient(
   Ref ref, {
   String? instanceId,
@@ -178,6 +178,12 @@ ApiClient watchSeerrClient(
     instanceId: instanceId,
   );
   if (!transport.configured) {
+    // A signed-out account is not a Seerr nobody set up: it fails as the
+    // ended session it is, blue, with `Sign in again` as its way back.
+    final named = ref
+        .read(currentSettingsProvider)
+        .instanceById(transport.instanceId);
+    if (named?.isSignedOut ?? false) throw const SeerrSessionEnded();
     throw Exception('${ServiceKey.seerr.title} not configured');
   }
   // Read, not watched: the transport above is the key the client is rebuilt

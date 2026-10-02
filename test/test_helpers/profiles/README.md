@@ -52,6 +52,9 @@ Profiles can be varied:
 - `withSeerrPermissions(mask)` gives every Seerr account of the profile
   another permission mask: 4K, auto-approval, REQUEST_ADVANCED. Build the
   mask from `SeerrPermission` values.
+- `withSeerrSignedOut(id)` signs a Seerr account connection out: its
+  account stays on the instance with no session, the way the app keeps one
+  whose session ended.
 - `withSeerrRelease(SeerrRelease.overseerr)` puts another release behind
   Seerr, at one connection with `instanceId:` or at all of them.
 - `withDownloads([download])` adds downloads to the world: a torrent in

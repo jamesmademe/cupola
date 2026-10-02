@@ -117,7 +117,7 @@ class ConnectionsSummaryCard extends ConsumerWidget {
     final states = <ServiceKey, ConnectionPresentation>{};
     final notSetUp = <ServiceKey>[];
     for (final service in ServiceKey.values) {
-      if (!settings.isServiceConfigured(service)) {
+      if (!settings.hasServiceConnection(service)) {
         notSetUp.add(service);
         continue;
       }

@@ -168,8 +168,14 @@ class SettingsModel {
   /// every provenance chip across the app before that connection had an address
   /// — announcing a fold the user could not yet use, and naming the new slot by
   /// its id because it had no label yet either.
+  ///
+  /// A Seerr account that signed out still counts: it is one of the
+  /// connections, and the lens may rest on it.
   bool hasMultipleInstances(ServiceKey service) =>
-      configuredInstancesOf(service).length > 1;
+      instancesOf(service)
+          .where((instance) => instance.isConfigured || instance.isSignedOut)
+          .length >
+      1;
 
   /// Returns a copy with [instance] written in: replacing the entry with the
   /// same id, or appended when there is none.
@@ -416,6 +422,31 @@ class SettingsModel {
   /// Whether any instance of [service] is set up enough to talk to.
   bool isServiceConfigured(ServiceKey service) =>
       instancesOf(service).any((instance) => instance.isConfigured);
+
+  /// Whether [service] has a connection somebody set up: one it can talk to,
+  /// or a Seerr account that signed out and keeps its address and login.
+  ///
+  /// The question a `Set up X` door asks, where [isServiceConfigured] is the
+  /// one a provider asks: a signed-out Seerr is not set up enough to talk to,
+  /// and it is not a service nobody set up either.
+  bool hasServiceConnection(ServiceKey service) => instancesOf(
+    service,
+  ).any((instance) => instance.isConfigured || instance.isSignedOut);
+
+  /// The signed-out Seerr account a screen of [service] stands on in place
+  /// of a configured connection, or null.
+  ///
+  /// [lensId]'s connection when it names one of [service]'s and that one is
+  /// signed out; otherwise, when no connection of [service] is configured, the
+  /// first signed-out one. Such a screen reads signed out, with its way back
+  /// (`Sign in again`), never `Set up Seerr`.
+  ServiceInstance? signedOutConnectionOf(ServiceKey service, {String? lensId}) {
+    final instances = instancesOf(service);
+    final lens = instances.where((i) => i.id == lensId).firstOrNull;
+    if (lens != null) return lens.isSignedOut ? lens : null;
+    if (instances.any((instance) => instance.isConfigured)) return null;
+    return instances.where((instance) => instance.isSignedOut).firstOrNull;
+  }
 
   /// Returns a copy with [service]'s per-server extras cleared.
   ///

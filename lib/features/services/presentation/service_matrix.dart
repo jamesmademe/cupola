@@ -196,8 +196,9 @@ class ServiceMatrix extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
+    // A Seerr account that signed out is part of the stack: its cell says so.
     final configured = ServiceKey.values
-        .where(settings.isServiceConfigured)
+        .where(settings.hasServiceConnection)
         .toList(growable: false);
 
     if (configured.isEmpty) return const SizedBox.shrink();
@@ -372,7 +373,7 @@ class _DomainBand extends ConsumerWidget {
 
     for (final subject in subjects) {
       final service = subject.service;
-      if (!settings.isServiceConfigured(service)) {
+      if (!settings.hasServiceConnection(service)) {
         notSetUp++;
         continue;
       }
@@ -381,6 +382,12 @@ class _DomainBand extends ConsumerWidget {
       final folded = ref.watch(foldedServiceHealthProvider(service));
       final summary = ref.watch(serviceSummaryProvider(service));
       final reachability = serviceReachabilityOf(summary);
+
+      // Signed out is the person's step, not a fault to look at.
+      if (_failureOf(summary) == ServiceFailureReason.sessionEnded) {
+        qualifiers.add('${service.title} signed out');
+        continue;
+      }
 
       if (folded.total > 1 &&
           folded.offline > 0 &&
@@ -643,7 +650,9 @@ class ServiceMatrixCell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final instanceId = this.instanceId;
     final settings = ref.watch(currentSettingsProvider);
-    final configured = settings.isServiceConfigured(service);
+    // A Seerr account that signed out has a connection: its cell reads signed
+    // out, from the probe, rather than offering to set up what is set up.
+    final configured = settings.hasServiceConnection(service);
 
     // A service nobody has set up is a cell that says so and leads to the one
     // screen that can change it. It is not a fault, so it is drawn dimmed rather
@@ -904,6 +913,9 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
     final surface = answered
         ? colorScheme.surfaceContainer
         : colorScheme.surfaceContainerLow;
+    // The tone of a fault-shaped state, from its cause: amber for a fault,
+    // blue for a Seerr account that signed out, which is the person's step.
+    final faultTone = failureTone(failure ?? ServiceFailureReason.unknown);
 
     // A folded cell counts rather than naming a state. "Did not answer" on a
     // Radarr with three connections and one dark is false in both directions:
@@ -1007,12 +1019,14 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
             service: service,
             displayName: displayName,
             reachability: reachability,
+            faultTone: faultTone,
             surface: surface,
             instanceCount: instanceCount,
           ),
           if (role == ServiceMatrixRole.readout)
             _CellLiveLine(
               reachability: reachability,
+              faultTone: faultTone,
               signals: signals,
               signalsFailed: signalsFailed,
               statusLabel: statusLabel,
@@ -1043,6 +1057,7 @@ class _CellIdentity extends StatelessWidget {
     required this.displayName,
     required this.reachability,
     required this.surface,
+    this.faultTone = StatusTone.warning,
     this.instanceCount,
   });
 
@@ -1055,6 +1070,9 @@ class _CellIdentity extends StatelessWidget {
   final ServiceReachability reachability;
   final Color surface;
   final int? instanceCount;
+
+  /// The tone of a fault on this cell: see [_ReachabilityPip.faultTone].
+  final StatusTone faultTone;
 
   @override
   Widget build(BuildContext context) {
@@ -1114,7 +1132,7 @@ class _CellIdentity extends StatelessWidget {
         // every cell of almost every open, which is how a mark stops being read.
         if (reachability != ServiceReachability.online) ...[
           const SizedBox(width: AppSpacing.xs),
-          _ReachabilityPip(reachability: reachability),
+          _ReachabilityPip(reachability: reachability, faultTone: faultTone),
         ],
       ],
     );
@@ -1123,9 +1141,15 @@ class _CellIdentity extends StatelessWidget {
 
 /// A tone-coloured dot. See [_CellIdentity] for when it appears at all.
 class _ReachabilityPip extends StatelessWidget {
-  const _ReachabilityPip({required this.reachability});
+  const _ReachabilityPip({
+    required this.reachability,
+    this.faultTone = StatusTone.warning,
+  });
 
   final ServiceReachability reachability;
+
+  /// Amber for a fault; blue for a Seerr account that signed out.
+  final StatusTone faultTone;
 
   /// 8pt, matching `components.status-dot` — the token this app uses everywhere
   /// a bare dot carries state.
@@ -1150,11 +1174,10 @@ class _ReachabilityPip extends StatelessWidget {
         colorScheme,
         StatusTone.neutral,
       ),
-      // It answered and said no, or answered broken: a fault, amber.
-      ServiceReachability.fault => statusToneColor(
-        colorScheme,
-        StatusTone.warning,
-      ),
+      // It answered and said no, or answered broken: a fault, amber. A
+      // Seerr account that signed out is the one fault-shaped state that is
+      // not one: blue, as the classification says.
+      ServiceReachability.fault => statusToneColor(colorScheme, faultTone),
       ServiceReachability.offline => statusToneColor(
         colorScheme,
         StatusTone.error,
@@ -1190,9 +1213,13 @@ class _CellLiveLine extends StatelessWidget {
     this.signalsFailed = false,
     required this.statusLabel,
     required this.surface,
+    this.faultTone = StatusTone.warning,
   });
 
   final ServiceReachability reachability;
+
+  /// Amber for a fault; blue for a Seerr account that signed out.
+  final StatusTone faultTone;
   final ServiceSignalPair? signals;
   final bool signalsFailed;
   final String statusLabel;
@@ -1229,7 +1256,7 @@ class _CellLiveLine extends StatelessWidget {
           // not answer is red.
           color: statusToneColor(colorScheme, switch (reachability) {
             ServiceReachability.checking => StatusTone.neutral,
-            ServiceReachability.fault => StatusTone.warning,
+            ServiceReachability.fault => faultTone,
             _ => StatusTone.error,
           }, surface: surface),
         ),

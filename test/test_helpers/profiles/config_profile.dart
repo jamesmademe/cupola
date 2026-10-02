@@ -443,6 +443,12 @@ class ProfileConnection {
     ),
   );
 
+  /// A copy whose Seerr account is signed out: the account kept on the
+  /// instance, its session gone, as the app keeps a connection whose session
+  /// ended.
+  ProfileConnection signedOut() =>
+      _copy(instance: instance.copyWith(account: instance.account!.signedOut));
+
   /// A copy answered by Seerr [release].
   ProfileConnection withSeerrRelease(SeerrRelease release) =>
       _copy(seerrRelease: release);
@@ -936,6 +942,17 @@ class ConfigProfile {
           },
       ],
       seerrRequester: seerrRequester?.withPermissions(permissions),
+    );
+  }
+
+  /// A copy where the Seerr account of [instanceId] is signed out: set up,
+  /// with no session.
+  ConfigProfile withSeerrSignedOut(String instanceId) {
+    connection(instanceId);
+    return _copy(
+      connections: [
+        for (final c in connections) c.id == instanceId ? c.signedOut() : c,
+      ],
     );
   }
 

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/request_form_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Bottom sheet for selecting quality profile and submitting request to Seerr.
 ///
@@ -42,6 +45,16 @@ class RequestBottomSheet extends ConsumerWidget {
       children: [
         if (state.isLoading)
           const Center(child: CircularProgressIndicator())
+        else if (state.error != null &&
+            state.errorReason == ServiceFailureReason.sessionEnded)
+          // Signed out of Seerr: blue, the person's step, with the way back
+          // into the connection's form. Never amber, never Retry.
+          InlineErrorRetry(
+            message: state.error!,
+            error: const ClassifiedFailure(ServiceFailureReason.sessionEnded),
+            service: ServiceKey.seerr,
+            onRetry: notifier.reload,
+          )
         else if (state.error != null)
           // Red only for a load nothing answered; a refusal, a failure that
           // did answer, or a Seerr with no server to send to is amber. The

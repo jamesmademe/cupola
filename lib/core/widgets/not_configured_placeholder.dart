@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Shown where a service has no address or credentials stored yet.
@@ -60,6 +65,53 @@ class NotConfiguredPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final key = _resolved;
+    // A Seerr account whose session ended is set up, and signed out: it reads
+    // so, blue, with the way back into its own form, never `Set up Seerr`.
+    // Only inside a ProviderScope, which the app always has: a bare test of
+    // this widget has no settings to read.
+    if (key == ServiceKey.seerr && _scoped(context)) {
+      return Consumer(
+        builder: (context, ref, _) {
+          const seerr = ServiceKey.seerr;
+          final signedOut = _signedOutSeerr(ref);
+          if (signedOut == null) return _notSetUp(context, seerr);
+          return AppErrorState(
+            service: seerr,
+            instanceId: signedOut.id,
+            error: const ClassifiedFailure(ServiceFailureReason.sessionEnded),
+          );
+        },
+      );
+    }
+    return _notSetUp(context, key);
+  }
+
+  static bool _scoped(BuildContext context) {
+    try {
+      ProviderScope.containerOf(context, listen: false);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The signed-out Seerr connection this screen stands on, or null. A scope
+  /// with no settings in it (a test that overrides something else) has none.
+  static ServiceInstance? _signedOutSeerr(WidgetRef ref) {
+    try {
+      final lensId = ref.watch(activeInstanceProvider(ServiceKey.seerr))?.id;
+      return ref.watch(
+        currentSettingsProvider.select(
+          (settings) =>
+              settings.signedOutConnectionOf(ServiceKey.seerr, lensId: lensId),
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _notSetUp(BuildContext context, ServiceKey? key) {
     return AppEmptyState(
       icon: Icons.settings_outlined,
       // The same voice as the rest of the app's connection states, which say a

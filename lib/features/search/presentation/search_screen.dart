@@ -1152,8 +1152,10 @@ class _SearchEmptyState extends ConsumerWidget {
         .where(settings.isServiceConfigured)
         .toList(growable: false);
     final hasAny = searchable.isNotEmpty;
+    // Never `Set up Seerr` for a Seerr account that signed out: it is set
+    // up, and its way back is signing in.
     final notSetUp = globalSearchServices
-        .where((service) => !settings.isServiceConfigured(service))
+        .where((service) => !settings.hasServiceConnection(service))
         .toList(growable: false);
 
     return ListView(

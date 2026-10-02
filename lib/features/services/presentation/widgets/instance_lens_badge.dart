@@ -121,9 +121,15 @@ Future<void> _showLensSheet(
   // app at nothing — and `select` writes to disk, so the app would come back up
   // that way at the next cold start, showing a NotConfiguredPlaceholder with
   // the working connection two centimetres away in the same sheet.
-  final instances = ref
-      .read(currentSettingsProvider)
-      .configuredInstancesOf(service);
+  //
+  // A Seerr account that signed out is not nothing: it has its address and a
+  // way back, and its row says `Signed out`. Leaving it out would hide the
+  // connection the lens may well be resting on.
+  final instances = [
+    for (final instance
+        in ref.read(currentSettingsProvider).instancesOf(service))
+      if (instance.isConfigured || instance.isSignedOut) instance,
+  ];
   final activeId = ref.read(activeInstanceProvider(service))?.id;
 
   return AppBottomSheet.show<void>(

@@ -82,6 +82,23 @@ void main() {
       expect(health.headline, '2 of 3 answering');
     });
 
+    test('a Seerr signed out is neither configured nor not set up', () {
+      final health = stackHealthFrom(
+        states: const [StackServiceState.answering],
+        registrySize: 17,
+        signedOut: 1,
+      );
+
+      expect(health.configured, 1);
+      expect(health.notSetUp, 15);
+      expect(
+        health.sentence,
+        '1 of 1 answering · 1 signed out · 15 not set up',
+      );
+      // The person's step, not a fault.
+      expect(health.allClear, isTrue);
+    });
+
     test('the qualifiers are in reading order and omitted at zero', () {
       final health = stackHealthFrom(
         states: const [

@@ -38,18 +38,8 @@ class _Browser implements BrowserOpener {
 
 /// [profile]'s Seerr connection signed out: its account kept, its session
 /// gone.
-ConfigProfile _signedOut(ConfigProfile profile) {
-  final seerr = profile.connection(WorldIds.seerr);
-  return profile.withConnection(
-    ProfileConnection(
-      seerr.instance.copyWith(account: seerr.instance.account!.signedOut),
-      behaviour: seerr.behaviour,
-      seerrAccount: seerr.seerrAccount,
-      seerrRelease: seerr.seerrRelease,
-      seerrMediaServer: seerr.seerrMediaServer,
-    ),
-  );
-}
+ConfigProfile _signedOut(ConfigProfile profile) =>
+    profile.withSeerrSignedOut(WorldIds.seerr);
 
 Future<(ProfileHarness, ProviderContainer, _Browser)> _pumpForm(
   WidgetTester tester,

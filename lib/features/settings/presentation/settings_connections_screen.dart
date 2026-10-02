@@ -30,11 +30,13 @@ class SettingsConnectionsScreen extends ConsumerWidget {
     final settings = ref.watch(currentSettingsProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
+    // A Seerr account that signed out is among the connections, not among
+    // the services to set up.
     final configured = ServiceKey.values
-        .where(settings.isServiceConfigured)
+        .where(settings.hasServiceConnection)
         .toList(growable: false);
     final available = ServiceKey.values
-        .where((service) => !settings.isServiceConfigured(service))
+        .where((service) => !settings.hasServiceConnection(service))
         .toList(growable: false);
 
     return AmbientScaffold(
