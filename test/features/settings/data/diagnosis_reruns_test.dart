@@ -10,6 +10,8 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -115,5 +117,60 @@ void main() {
       serviceDiagnosisProvider(ServiceKey.nzbget).future,
     );
     expect(after.isConfigured, isTrue);
+  });
+
+  test('a Seerr account is tested again when its session moves, and only '
+      'its service', () async {
+    const friend = WorldIds.seerrFriend;
+    final harness = await ProfileHarness.start(Profiles.p9);
+    final container = harness.container();
+    final accounts = container.read(seerrAccountsProvider);
+    container.listen(instanceDiagnosisProvider(friend), (_, _) {});
+    await _readAll(container);
+    final session = harness.network.seerrSessionOf(friend);
+    // Every service but Seerr, whose row folds both its connections.
+    int otherServices() =>
+        _traffic(harness) -
+        _trafficTo(harness, WorldIds.seerr) -
+        _trafficTo(harness, friend);
+    final elsewhere = otherServices();
+    Future<ServiceDiagnosis> friendNow() =>
+        container.read(instanceDiagnosisProvider(friend).future);
+    expect((await friendNow()).isConnected, isTrue);
+
+    // New permissions are what /auth/me said, not what it is asked with.
+    final asked = _trafficTo(harness, friend);
+    await accounts.recordWhoAmI(friend, {'permissions': 32 | 128});
+    await _readAll(container);
+    expect(_trafficTo(harness, friend), asked);
+
+    // The session ends: it reads signed out, asking nothing.
+    await accounts.sessionEnded(friend);
+    expect((await friendNow()).reason, ServiceFailureReason.sessionEnded);
+    expect(
+      (await container.read(
+        serviceDiagnosisProvider(ServiceKey.seerr).future,
+      )).reason,
+      ServiceFailureReason.sessionEnded,
+    );
+
+    // Signed in again: tested again, and answering.
+    final signedOut = container
+        .read(currentSettingsProvider)
+        .instanceById(friend)!;
+    final beforeSignIn = _trafficTo(harness, friend);
+    await accounts.signedIn(
+      signedOut,
+      signedOut.account!.copyWith(session: session),
+    );
+    expect((await friendNow()).isConnected, isTrue);
+    expect(_trafficTo(harness, friend), greaterThan(beforeSignIn));
+
+    // Signed out from the form: signed out again.
+    await accounts.signOut(friend);
+    expect((await friendNow()).reason, ServiceFailureReason.sessionEnded);
+
+    await _readAll(container);
+    expect(otherServices(), elsewhere, reason: 'no other service was asked');
   });
 }

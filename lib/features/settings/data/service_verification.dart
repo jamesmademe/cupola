@@ -16,6 +16,7 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dar
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_status_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -948,6 +949,23 @@ String connectionFailureMessage(
   }
 }
 
+/// [instance] as far as asking it goes. A Seerr account is asked with its
+/// session: signing in, signing out and an ended session move it, while the
+/// permissions and the time `/auth/me` last answered are what it said, not
+/// what it is asked with, and reading them again must not test it again.
+ServiceInstance? _askedWith(ServiceInstance? instance) {
+  final account = instance?.account;
+  if (instance == null || account == null) return instance;
+  return instance.copyWith(
+    account: SeerrAccountSignIn(
+      kind: account.kind,
+      login: account.login,
+      userId: account.userId,
+      session: account.session,
+    ),
+  );
+}
+
 /// What one saved connection's verdict is read from: the connection itself,
 /// the certificate pinned for its origin, and the install's Plex client id.
 ///
@@ -965,7 +983,7 @@ typedef _DiagnosisInputs = ({
 _DiagnosisInputs _diagnosisInputs(SettingsModel settings, String instanceId) {
   final instance = settings.instanceById(instanceId);
   return (
-    instance: instance,
+    instance: _askedWith(instance),
     pin: instance == null ? null : settings.pinForUrl(instance.url),
     plexClientId: settings.plexClientId,
   );
