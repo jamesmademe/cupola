@@ -41,9 +41,28 @@ ReadarrService _readarrService(Ref ref, {required String? instanceId}) {
 /// library in one request, so there is nothing partial to show beside a
 /// failure. `noProviderRetry` for the reason `moviesProvider` gives: the rail
 /// above reads the same library that way, and a Retry is the user's call.
+///
+/// The one read of the lens's library: `readarrKpiLibraryProvider` is a name
+/// for it.
 final readarrAuthorsProvider = FutureProvider<List<ReadarrAuthor>>((ref) async {
   return ref.watch(readarrServiceProvider).getAuthorsOrThrow();
 }, retry: noProviderRetry);
+
+/// [readarrAuthorsProvider] for one named connection, whatever the lens is on: the library
+/// a second Readarr holds. The lens's own id, and the empty one, read [readarrAuthorsProvider],
+/// so a connection's library is downloaded once a session whichever surface
+/// asks first. What Home's fold reads for a connection that is not the lens;
+/// it used to download that library again every time Home was rebuilt.
+final readarrAuthorsForProvider =
+    FutureProvider.family<List<ReadarrAuthor>, String>((ref, instanceId) {
+      final lens = ref.watch(activeInstanceProvider(ServiceKey.readarr))?.id;
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(readarrAuthorsProvider.future);
+      }
+      return ref
+          .watch(readarrServiceForProvider(instanceId))
+          .getAuthorsOrThrow();
+    }, retry: noProviderRetry);
 
 /// Current download queue, with a failed fetch allowed to reach the caller.
 ///

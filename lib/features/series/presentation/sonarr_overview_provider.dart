@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
@@ -36,6 +37,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_formatter
     show formatRelativeDateTime;
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 /// How far ahead the week window looks.
@@ -186,42 +188,18 @@ SonarrAiringWeek sonarrAiringWeek(
 
 /// The library, read so that a failure is still a failure when it arrives.
 ///
-/// **Not [seriesProvider]**, and the duplication is deliberate. That provider
-/// read `getSeries`, which degrades to `[]`, so an unreachable, mis-keyed or
-/// 500-ing Sonarr resolved it *successfully* with an empty library — and this
-/// screen then printed "next 7 days · 0 series" over "Nothing airing this
-/// week", directly beneath an identity band whose own probe already read
-/// Unreachable. Two contradictory claims on one screenful, and the confident
-/// one was the fabricated zero. [sonarrCanReportAirings] cannot catch it: a
-/// failed fetch and an empty library are the same `[]` by the time it runs.
-///
-/// The cost is one extra `GET /series` per session on this tab. The rail above
-/// no longer reads `seriesProvider` — it was printing the same fabricated zeros
-/// — but it does not share *this* provider either, and deliberately: it awaits
-/// its library inside a `catch`, so its own source carries
-/// `retry: noProviderRetry`, while this one keeps the default retry because the
-/// Overview watches it as an `AsyncValue` and a blip should heal itself. One
-/// provider cannot hold both policies. `seriesProvider`, behind the wall, now
-/// reads `getSeriesOrThrow` too, with the rail's `noProviderRetry`.
-///
-/// Plain, not `autoDispose`, matching [seriesProvider]: the library is a
-/// session-scoped read, and a per-visit refetch of the whole library is exactly
-/// what the extra request above must not become. Pull-to-refresh invalidates it
-/// explicitly.
-final sonarrOverviewSeriesProvider = FutureProvider<List<SonarrSeries>>((
-  ref,
-) async {
-  return ref.watch(sonarrServiceProvider).getSeriesOrThrow();
-});
+/// **[seriesProvider] itself.** It was a second copy of the same request,
+/// kept apart for its default retry, and with the KPI rail's a third: the
+/// series list was downloaded up to three times a session. One read now,
+/// `noProviderRetry` like the wall and the rail, so a blip is the user's
+/// Retry. Pull-to-refresh invalidates it explicitly.
+final sonarrOverviewSeriesProvider = seriesProvider;
 
 /// The week, from the library.
 ///
-/// No `retry:` override, and that is deliberate rather than an omission: the
-/// source ([sonarrOverviewSeriesProvider]) carries none either, and nothing
-/// awaits this inside a `try` that exists to degrade — the failure lands on an
-/// `AsyncValueWidget` that renders it with a Retry. See
-/// `lib/core/providers/provider_retry.dart`; the rule that bites is the reverse
-/// one, a derivation *dropping* a `noProviderRetry` its source carried.
+/// `noProviderRetry`, because its source ([sonarrOverviewSeriesProvider])
+/// carries it: a derivation that dropped it would retry, one step down, what
+/// the source refused. See `lib/core/providers/provider_retry.dart`.
 ///
 /// That Retry is reachable now, which it was not while the source swallowed its
 /// own failure into `[]` — and it has to invalidate the source too, not only
@@ -232,7 +210,7 @@ final sonarrAiringWeekProvider = FutureProvider.autoDispose<SonarrAiringWeek>((
 ) async {
   final series = await ref.watch(sonarrOverviewSeriesProvider.future);
   return sonarrAiringWeek(series, now: DateTime.now());
-});
+}, retry: noProviderRetry);
 
 // ─── Needs attention ────────────────────────────────────────────────────────
 

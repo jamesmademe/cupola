@@ -28,6 +28,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
@@ -161,24 +162,19 @@ List<LidarrArtist> lidarrRecentlyAdded(
 
 /// The artist list, read so that a failure is still a failure when it arrives.
 ///
-/// **Not [musicProvider]**, whose `getArtists` degrades to `[]`: a dark Lidarr
-/// resolved it successfully and Recently added read "Nothing added yet" under
-/// an identity band that already said Unreachable. The same split
-/// `sonarrOverviewSeriesProvider` makes; `musicProvider` keeps its degradation
-/// for the browse grid. Plain, with the default retry, for the reasons given
-/// there. Pull-to-refresh and the section's Retry invalidate it.
-final lidarrOverviewArtistsProvider = FutureProvider<List<LidarrArtist>>((
-  ref,
-) async {
-  return ref.watch(lidarrServiceProvider).getArtistsOrThrow();
-});
+/// **[musicProvider] itself**, which reads `getArtistsOrThrow`: one read of
+/// the library a session, shared with the wall and the KPI rail, as
+/// `sonarrOverviewSeriesProvider` is. `noProviderRetry`, so a blip is the
+/// user's Retry. Pull-to-refresh and the section's Retry invalidate it.
+final lidarrOverviewArtistsProvider = musicProvider;
 
 /// The newest arrivals, off [lidarrOverviewArtistsProvider].
 final lidarrRecentlyAddedProvider =
     FutureProvider.autoDispose<List<LidarrArtist>>((ref) async {
       final artists = await ref.watch(lidarrOverviewArtistsProvider.future);
       return lidarrRecentlyAdded(artists);
-    });
+      // Its source carries the flag, so this does.
+    }, retry: noProviderRetry);
 
 // ─── Needs attention ────────────────────────────────────────────────────────
 

@@ -294,12 +294,10 @@ void main() {
       series: [_series(id: 1, title: 'Severance')],
     );
     await _pump(tester, service: service);
-    // Two, not one: the KPI rail above reads its own non-swallowing copy of the
-    // library (`sonarrKpiLibraryProvider`) rather than the browse grid's
-    // swallowing one, so that a dark Sonarr prints "—" on the rail instead of
-    // "Series 0". Two readers of `getSeriesOrThrow`, and the pull has to move
-    // both of them.
-    expect(service.libraryCalls, 2);
+    // One: the KPI rail, the week and the wall share one read of the library.
+    // It used to be two here, the rail's copy and the Overview's, both of the
+    // same `getSeriesOrThrow`.
+    expect(service.libraryCalls, 1);
 
     // Driven through the indicator's own state rather than a fling: the page is
     // one tall scroll view with a horizontal rail inside it, and what is under
@@ -309,7 +307,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(service.libraryCalls, 4);
+    // Read again once, not twice.
+    expect(service.libraryCalls, 2);
   });
 
   testWidgets('nothing overflows at an accessibility reading size', (

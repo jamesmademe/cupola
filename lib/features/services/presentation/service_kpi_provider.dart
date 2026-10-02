@@ -18,11 +18,9 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
-import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
@@ -31,6 +29,8 @@ import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
+import 'package:cupola/features/music/presentation/music_provider.dart';
+import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
@@ -135,47 +135,60 @@ final serviceKpiProvider = FutureProvider.autoDispose
 /// [ServiceKey], so a service added there cannot be missing here.
 ///
 /// The per-connection readers behind [serviceKpiForProvider] ask their client
-/// directly and hold nothing, so invalidating that family is already a re-ask.
-List<ProviderOrFamily> serviceKpiSources(
-  ServiceKey service,
-) => switch (service) {
-  // The family behind the snapshot, not the lens wrapper alone: that one
-  // only resolves the lens and re-watches its family member, which keeps
-  // the answer it already had.
-  ServiceKey.radarr => [
-    radarrKpiLibraryProvider,
-    radarrQueueSnapshotProvider,
-    radarrQueueSnapshotForProvider,
-  ],
-  ServiceKey.sonarr => [sonarrKpiLibraryProvider],
-  ServiceKey.lidarr => [lidarrKpiLibraryProvider, lidarrAlbumKeysForProvider],
-  ServiceKey.readarr => [readarrKpiLibraryProvider, readarrQueueProvider],
-  ServiceKey.qbittorrent => [allTorrentsProvider],
-  ServiceKey.seerr => [requestsProvider],
-  ServiceKey.bazarr => [bazarrBadgesProvider],
-  ServiceKey.truenas => [truenasDashboardProvider],
-  ServiceKey.dockge => [dockgeStackListProvider],
-  ServiceKey.prowlarr => [
-    prowlarrIndexersProvider,
-    prowlarrIndexerStatsProvider,
-  ],
-  ServiceKey.sabnzbd => [sabnzbdQueueProvider, sabnzbdServerStatsProvider],
-  ServiceKey.nzbget => [nzbgetStatusProvider, nzbgetQueueProvider],
-  ServiceKey.unraid => [unraidArrayProvider, unraidDockerProvider],
-  ServiceKey.transmission => [
-    transmissionStatsProvider,
-    transmissionTorrentsProvider,
-  ],
-  ServiceKey.nginxProxyManager => [
-    npmProxyHostsProvider,
-    npmCertificatesProvider,
-  ],
-  ServiceKey.jellyfin => [
-    jellyfinStrictSessionsProvider,
-    jellyfinStrictLibrariesProvider,
-  ],
-  ServiceKey.plex => [plexStrictSessionsProvider, plexStrictLibrariesProvider],
-};
+/// directly, except the arrs' libraries, which are read once a session per
+/// connection ([moviesForProvider] and its siblings) and listed here with the
+/// lens's.
+List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
+    switch (service) {
+      // The family behind the snapshot, not the lens wrapper alone: that one
+      // only resolves the lens and re-watches its family member, which keeps
+      // the answer it already had.
+      ServiceKey.radarr => [
+        radarrKpiLibraryProvider,
+        moviesForProvider,
+        radarrQueueSnapshotProvider,
+        radarrQueueSnapshotForProvider,
+      ],
+      ServiceKey.sonarr => [sonarrKpiLibraryProvider, seriesForProvider],
+      ServiceKey.lidarr => [
+        lidarrKpiLibraryProvider,
+        musicForProvider,
+        lidarrAlbumKeysForProvider,
+      ],
+      ServiceKey.readarr => [
+        readarrKpiLibraryProvider,
+        readarrAuthorsForProvider,
+        readarrQueueProvider,
+      ],
+      ServiceKey.qbittorrent => [allTorrentsProvider],
+      ServiceKey.seerr => [requestsProvider],
+      ServiceKey.bazarr => [bazarrBadgesProvider],
+      ServiceKey.truenas => [truenasDashboardProvider],
+      ServiceKey.dockge => [dockgeStackListProvider],
+      ServiceKey.prowlarr => [
+        prowlarrIndexersProvider,
+        prowlarrIndexerStatsProvider,
+      ],
+      ServiceKey.sabnzbd => [sabnzbdQueueProvider, sabnzbdServerStatsProvider],
+      ServiceKey.nzbget => [nzbgetStatusProvider, nzbgetQueueProvider],
+      ServiceKey.unraid => [unraidArrayProvider, unraidDockerProvider],
+      ServiceKey.transmission => [
+        transmissionStatsProvider,
+        transmissionTorrentsProvider,
+      ],
+      ServiceKey.nginxProxyManager => [
+        npmProxyHostsProvider,
+        npmCertificatesProvider,
+      ],
+      ServiceKey.jellyfin => [
+        jellyfinStrictSessionsProvider,
+        jellyfinStrictLibrariesProvider,
+      ],
+      ServiceKey.plex => [
+        plexStrictSessionsProvider,
+        plexStrictLibrariesProvider,
+      ],
+    };
 
 /// What a service page's pull-to-refresh has to re-ask: its reachability probe
 /// and every source its KPI rail reads.
@@ -672,9 +685,13 @@ Future<List<ServiceKpi>> _plexKpisFor(Ref ref, String instanceId) {
 /// rail sitting in its skeleton state instead of saying so. Measured: the four
 /// tests for this timed out at thirty seconds each before the policy went on.
 /// See `lib/core/providers/provider_retry.dart`.
-final radarrKpiLibraryProvider = FutureProvider<List<RadarrMovie>>((ref) {
-  return ref.watch(radarrServiceProvider).getMoviesOrThrow();
-}, retry: noProviderRetry);
+///
+/// **[moviesProvider] itself.** The wall, this rail, Home's card and the
+/// Overview each made the same `GET /movie`, the heaviest answer the app asks
+/// for, and the Home paid for it at every cold open on top of the screens that
+/// followed. They share one read now; all of them already carried this
+/// retry policy, so nothing about how a failure settles changed.
+final radarrKpiLibraryProvider = moviesProvider;
 
 /// The Sonarr library. See [radarrKpiLibraryProvider].
 ///
@@ -683,19 +700,16 @@ final radarrKpiLibraryProvider = FutureProvider<List<RadarrMovie>>((ref) {
 /// purpose, because the Overview watches it as an `AsyncValue` and wants the
 /// blip to heal itself. This one is *awaited* in a `catch`, and the two
 /// policies cannot both hold on one provider.
-final sonarrKpiLibraryProvider = FutureProvider<List<SonarrSeries>>((ref) {
-  return ref.watch(sonarrServiceProvider).getSeriesOrThrow();
-}, retry: noProviderRetry);
+///
+/// **[seriesProvider] itself**, as the Radarr rail is the wall's.
+final sonarrKpiLibraryProvider = seriesProvider;
 
-/// The Lidarr library. See [radarrKpiLibraryProvider].
-final lidarrKpiLibraryProvider = FutureProvider<List<LidarrArtist>>((ref) {
-  return ref.watch(lidarrServiceProvider).getArtistsOrThrow();
-}, retry: noProviderRetry);
+/// The Lidarr library: [musicProvider] itself. See [radarrKpiLibraryProvider].
+final lidarrKpiLibraryProvider = musicProvider;
 
-/// The Readarr library. See [radarrKpiLibraryProvider].
-final readarrKpiLibraryProvider = FutureProvider<List<ReadarrAuthor>>((ref) {
-  return ref.watch(readarrServiceProvider).getAuthorsOrThrow();
-}, retry: noProviderRetry);
+/// The Readarr library: [readarrAuthorsProvider] itself. See
+/// [radarrKpiLibraryProvider].
+final readarrKpiLibraryProvider = readarrAuthorsProvider;
 
 Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
   final List<RadarrMovie> movies;
@@ -725,9 +739,10 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
 Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
   final List<RadarrMovie> movies;
   try {
-    movies = await ref
-        .watch(radarrServiceForProvider(instanceId))
-        .getMoviesOrThrow();
+    // The connection's one library read, cached for the session like the
+    // lens's: the fold is `autoDispose` and runs again each time Home is
+    // rebuilt, and read off the service it downloaded the library each time.
+    movies = await ref.watch(moviesForProvider(instanceId).future);
   } catch (error) {
     return _radarrKpisFrom(
       null,
@@ -821,7 +836,7 @@ Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
 Future<List<ServiceKpi>> _sonarrKpisFor(Ref ref, String instanceId) async {
   try {
     return _sonarrKpisFrom(
-      await ref.watch(sonarrServiceForProvider(instanceId)).getSeriesOrThrow(),
+      await ref.watch(seriesForProvider(instanceId).future),
     );
   } catch (error) {
     return _sonarrKpisFrom(null, note: _notAnswering(ServiceKey.sonarr, error));
@@ -889,7 +904,7 @@ Future<List<ServiceKpi>> _lidarrKpis(Ref ref) async {
 Future<List<ServiceKpi>> _lidarrKpisFor(Ref ref, String instanceId) async {
   try {
     return _lidarrKpisFrom(
-      await ref.watch(lidarrServiceForProvider(instanceId)).getArtistsOrThrow(),
+      await ref.watch(musicForProvider(instanceId).future),
     );
   } catch (error) {
     return _lidarrKpisFrom(null, note: _notAnswering(ServiceKey.lidarr, error));
@@ -1290,13 +1305,15 @@ Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
   // is attached at construction, which is what keeps either failure from
   // escaping as an unhandled async error while the other is still in flight.
   Object? authorsError;
-  final authorsFuture = service.getAuthorsOrThrow().then<List<ReadarrAuthor>?>(
-    (value) => value,
-    onError: (Object error) {
-      authorsError = error;
-      return null;
-    },
-  );
+  final authorsFuture = ref
+      .watch(readarrAuthorsForProvider(instanceId).future)
+      .then<List<ReadarrAuthor>?>(
+        (value) => value,
+        onError: (Object error) {
+          authorsError = error;
+          return null;
+        },
+      );
   Object? queueError;
   final queueFuture = service.getQueuePage().then<ArrRecordPage?>(
     (value) => value,

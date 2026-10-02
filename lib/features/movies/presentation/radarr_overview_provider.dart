@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
@@ -134,21 +135,12 @@ List<RadarrUpcomingRelease> radarrUpcomingReleases(
 
 /// The library, read so that a failure is still a failure when it arrives.
 ///
-/// **Not [moviesProvider]**, for the reason `sonarrOverviewSeriesProvider`
-/// gives: that provider reads `getMovies`, which degrades to `[]`, so a dark
-/// Radarr resolved it successfully with an empty library and this screen
-/// printed "next 7 days · 0 releases" over "Nothing releasing this week",
-/// under an identity band that already read Unreachable. `moviesProvider`
-/// keeps its degradation for the browse grid.
-///
-/// Plain, not `autoDispose`, like the library it mirrors; the default retry
-/// stays, because the sections watch it as an `AsyncValue` and a blip should
-/// heal itself. Pull-to-refresh and the sections' Retry invalidate it.
-final radarrOverviewMoviesProvider = FutureProvider<List<RadarrMovie>>((
-  ref,
-) async {
-  return ref.watch(radarrServiceProvider).getMoviesOrThrow();
-});
+/// **[moviesProvider] itself**, which reads `getMoviesOrThrow` now: this was
+/// a second copy of the same request, and with the KPI rail's a third, so the
+/// heaviest answer the app asks for was downloaded up to three times a
+/// session. One read, `noProviderRetry` like the wall and the rail: a blip is
+/// the user's Retry. Pull-to-refresh and the sections' Retry invalidate it.
+final radarrOverviewMoviesProvider = moviesProvider;
 
 /// Everything Radarr will release in the next [radarrComingUpDays] days.
 ///
@@ -160,7 +152,8 @@ final radarrComingUpProvider =
     FutureProvider.autoDispose<List<RadarrUpcomingRelease>>((ref) async {
       final movies = await ref.watch(radarrOverviewMoviesProvider.future);
       return radarrUpcomingReleases(movies, now: DateTime.now());
-    });
+      // Its source carries the flag, so this does: see `provider_retry.dart`.
+    }, retry: noProviderRetry);
 
 // ─── Recently added ─────────────────────────────────────────────────────────
 
@@ -186,7 +179,7 @@ final radarrRecentlyAddedProvider =
     FutureProvider.autoDispose<List<RadarrMovie>>((ref) async {
       final movies = await ref.watch(radarrOverviewMoviesProvider.future);
       return radarrRecentlyAdded(movies);
-    });
+    }, retry: noProviderRetry);
 
 // ─── Needs attention ────────────────────────────────────────────────────────
 
