@@ -117,10 +117,14 @@ void main() {
 
       expect(signIn.statusCode, 200);
       // The route selects four columns: the answer carries the entity's
-      // `permissions: 0`, whatever the account holds.
-      expect(signIn.data['id'], anna.id);
-      expect(signIn.data['permissions'], 0);
-      expect(signIn.data, isNot(contains('email')));
+      // `permissions: 0`, whatever the account holds (Seerr 3.4.1, live).
+      expect(signIn.data, {
+        'permissions': 0,
+        'warnings': const <String>[],
+        'id': anna.id,
+        'requestCount': 0,
+        'displayName': anna.email,
+      });
       final cookie = client.setCookieLine('connect.sid')!;
       expect(cookie, startsWith('connect.sid=s%3A'));
       expect(cookie, contains('; Path=/; Expires='));
@@ -171,12 +175,12 @@ void main() {
         '/api/v1/auth/jellyfin/quickconnect/check?secret=$secret',
       );
       expect(waiting.data, {'authenticated': false});
-      // Nobody approved it yet.
+      // Nobody approved it yet: Jellyfin's 404, relayed.
       final early = await client.post(
         '/api/v1/auth/jellyfin/quickconnect/authenticate',
         {'secret': secret},
       );
-      expect(early.statusCode, 401);
+      expect(early.statusCode, 404);
       expect(early.data, {'message': 'INVALID_CREDENTIALS'});
 
       harness.network.approveQuickConnect(WorldIds.seerr, code);
@@ -193,6 +197,16 @@ void main() {
       expect(client.cookies, contains('connect.sid'));
       final me = await client.get('/api/v1/auth/me');
       expect(me.data['displayName'], WorldPeople.anna);
+
+      // Approved, the code signs in again, with a session of its own.
+      final first = client.cookies['connect.sid'];
+      client.cookies.remove('connect.sid');
+      final again = await client.post(
+        '/api/v1/auth/jellyfin/quickconnect/authenticate',
+        {'secret': secret},
+      );
+      expect(again.statusCode, 200);
+      expect(client.cookies['connect.sid'], allOf(isNotNull, isNot(first)));
     });
 
     test('Plex: a PIN on plex.tv, claimed, then its token to Seerr', () async {
@@ -842,6 +856,13 @@ void main() {
 
       expect(initiate.statusCode, 500);
       expect(initiate.data, {'message': 'Failed to initiate quick connect.'});
+
+      // A code asked for before it was turned off is checked in vain.
+      final check = await client.get(
+        '/api/v1/auth/jellyfin/quickconnect/check?secret=${'A' * 64}',
+      );
+      expect(check.statusCode, 401);
+      expect(check.data, {'message': 'Failed to check Quick Connect status'});
     });
 
     test('notInitialized: nothing to sign in to, and a Plex sign-in would '

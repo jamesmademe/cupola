@@ -235,11 +235,17 @@ ended session (`sessionExpired`) emptied from the settings and read as
 signed out. `withSeerrPermissions` changes the instance's saved permissions
 with the server's.
 
-Not verified against a live server, and marked where they are written: the
-answers Seerr only relays (Jellyfin's Quick Connect refusals and its 10-minute
-timeout, plex.tv's create status, `expiresIn`, its 404, 400 and 401 bodies),
-the `404` an older release answers for a route it does not have, and the
-four-column user of the local sign-in.
+Checked against Seerr 3.4.1 on Jellyfin 12.1 in the macOS lab
+(`test/e2e/maclab_requester_e2e_test.dart`, see `test/e2e/README.md`): the
+validator's 401 for a request with no credential, the four-column user of the
+local sign-in, the session store's expiry 30 days after the last use, and
+Jellyfin's Quick Connect as Seerr relays it (an unapproved `authenticate`
+answers 404, an approved code signs in again, an unknown or timed-out code
+checks 404 after nine to ten minutes, and with Jellyfin's Quick Connect off
+`initiate` answers 500 and every check 401, while `/settings/public` says
+nothing). Not verified against a live server, and marked where they are
+written: plex.tv's create status, `expiresIn`, its 404, 400 and 401 bodies,
+and the `404` an older release answers for a route it does not have.
 
 ## Traps
 

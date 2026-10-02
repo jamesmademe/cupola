@@ -35,7 +35,8 @@ import 'media_fakes.dart' show JellyfinFake;
 const seerrSessionLifetime = Duration(days: 30);
 
 /// How long a Quick Connect code waits to be approved. Jellyfin's own
-/// timeout, not Seerr's: not verified here.
+/// timeout, not Seerr's: Jellyfin 12.1 behind Seerr 3.4.1 still knew a code
+/// after nine minutes and no longer after ten (live).
 const seerrQuickConnectLifetime = Duration(minutes: 10);
 
 /// The session a Seerr connection [serverId] signed in with an account
@@ -115,7 +116,7 @@ class SeerrQuickConnectCode {
   /// Who approved it from a signed-in Jellyfin app, or null while it waits.
   WorldSeerrUser? approvedBy;
 
-  /// Set once `authenticate` has used it.
+  /// Set once `authenticate` has used it. Used, it still signs in.
   bool spent = false;
 }
 
@@ -906,14 +907,14 @@ NetworkReply _local(NetworkRequest r, ServerContext c, SeerrSetup setup) {
   if (user == null) return seerrError(403, 'Access denied.');
   // The route selects four columns (id, email, password, plexId) and filters
   // the email out, so the user it sends carries the entity's defaults:
-  // `permissions: 0` whatever the account holds, and the email as its name.
-  // `/auth/me` is where the account is read. Read from the source, not
-  // confirmed against a live server.
+  // `permissions: 0` whatever the account holds, no requests, and the email
+  // as its name. `/auth/me` is where the account is read. Seerr 3.4.1, live.
   return _signedIn(r, setup, user, {
-    'id': user.id,
-    'displayName': user.email,
     'permissions': 0,
     'warnings': const <String>[],
+    'id': user.id,
+    'requestCount': 0,
+    'displayName': user.email,
   });
 }
 
@@ -1014,7 +1015,8 @@ NetworkReply _quickConnectInitiate(NetworkRequest r, SeerrSetup setup) {
     return seerrError(403, 'Quick Connect is only supported by Jellyfin.');
   }
   // Jellyfin refuses `/QuickConnect/Initiate` when its Quick Connect is off,
-  // and the route's catch answers. Jellyfin's side is not verified here.
+  // and the route's catch answers (Seerr 3.4.1 on Jellyfin 12.1, live).
+  // `/settings/public` does not say Jellyfin turned it off.
   if (!setup.quickConnectOn) {
     return seerrError(500, 'Failed to initiate quick connect.');
   }
@@ -1034,9 +1036,15 @@ NetworkReply _quickConnectCheck(NetworkRequest r, SeerrSetup setup) {
   if (!_quickConnectSecret.hasMatch(secret)) {
     return seerrError(400, 'Invalid secret format');
   }
+  // With its Quick Connect off, Jellyfin answers every check 401, and Seerr
+  // relays the status (live, as below).
+  if (!setup.quickConnectOn) {
+    return seerrError(401, 'Failed to check Quick Connect status');
+  }
   final request = setup.state.quickConnect(secret);
   // Jellyfin answers an unknown or timed-out secret with 404, relayed with
-  // its status. Not verified here.
+  // its status (Seerr 3.4.1 on Jellyfin 12.1, live: a code lives between nine
+  // and ten minutes).
   if (request == null) {
     return seerrError(404, 'Failed to check Quick Connect status');
   }
@@ -1066,10 +1074,12 @@ NetworkReply _quickConnectAuthenticate(
   }
   final request = setup.state.quickConnect(secret);
   final approvedBy = request?.approvedBy;
-  // Jellyfin refuses a secret nobody approved; its status is relayed with
-  // `INVALID_CREDENTIALS`. The 401 is Jellyfin's, not verified here.
-  if (request == null || approvedBy == null || request.spent) {
-    return seerrError(401, 'INVALID_CREDENTIALS');
+  // Jellyfin refuses a secret nobody approved, and Seerr relays it with its
+  // status as `INVALID_CREDENTIALS`: a 404 (Seerr 3.4.1 on Jellyfin 12.1,
+  // live). An approved secret signs in again for as long as Jellyfin keeps
+  // it, each time with a new session.
+  if (request == null || approvedBy == null) {
+    return seerrError(404, 'INVALID_CREDENTIALS');
   }
   request.spent = true;
   final user = setup.users.where((u) => u.id == approvedBy.id).firstOrNull;
