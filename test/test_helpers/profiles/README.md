@@ -167,7 +167,11 @@ The fake Seerr answers whoever calls it as Seerr v3.5.0 does
   approve, decline, retry and the `/media` writes want MANAGE_REQUESTS; the
   admin's `/user` writes and a user's `settings/permissions` MANAGE_USERS; the
   issue list one of the issue permissions. Refused, they answer `403 {status:
-  403, error: 'You do not have permission to access this endpoint'}`.
+  403, error: 'You do not have permission to access this endpoint'}`. A
+  request with neither the key's header nor a `connect.sid` cookie never gets
+  that far: Seerr's request validator answers it first, `401 {message:
+  "cookie 'connect.sid' required", errors}`, `POST /auth/logout` included
+  (Seerr 3.4.1, live).
 - **A user's own settings.** `/user/{id}/settings/*` and the push
   subscriptions want user `{id}` or MANAGE_USERS, and linking a Plex or
   Jellyfin account user `{id}` only (`isOwnProfileOrAdmin`, `isOwnProfile`);

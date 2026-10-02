@@ -357,21 +357,43 @@ void main() {
   });
 
   group('is refused correctly', () {
-    test('nobody: the permission check\'s own body', () async {
+    test('nothing at all: the request validator answers first', () async {
       final (_, client) = await _start(Profiles.p2);
 
       final requests = await client.get('/api/v1/request');
       final me = await client.get('/api/v1/auth/me');
+      final logout = await client.post('/api/v1/auth/logout');
       final status = await client.get('/api/v1/status');
 
-      expect(requests.statusCode, 403);
-      expect(requests.data, _endpointBody);
-      expect(_verdict(requests), SeerrRefusal.endpointRefused);
-      expect(me.data, _endpointBody);
-      expect(_verdict(me), SeerrRefusal.sessionEnded);
+      // Seerr 3.4.1, live: neither the key's header nor a session cookie, and
+      // the OpenAPI validator refuses before the permission check is asked.
+      for (final refused in [requests, me, logout]) {
+        expect(refused.statusCode, 401);
+        expect(refused.data['message'], "cookie 'connect.sid' required");
+      }
       // The public routes answer anyone.
       expect(status.statusCode, 200);
     });
+
+    test(
+      'a session Seerr does not know: the permission check\'s body',
+      () async {
+        final (_, client) = await _start(Profiles.p2);
+        client.cookies['connect.sid'] = 's%3Aunknown.signature';
+
+        final requests = await client.get('/api/v1/request');
+        final me = await client.get('/api/v1/auth/me');
+        final logout = await client.post('/api/v1/auth/logout');
+
+        expect(requests.statusCode, 403);
+        expect(requests.data, _endpointBody);
+        expect(_verdict(requests), SeerrRefusal.endpointRefused);
+        expect(me.data, _endpointBody);
+        expect(_verdict(me), SeerrRefusal.sessionEnded);
+        // Signing out asks for no permission: it answers the same either way.
+        expect(logout.statusCode, 200);
+      },
+    );
 
     test('a key Seerr does not know reads as nobody', () async {
       final (_, client) = await _start(Profiles.p2);

@@ -226,6 +226,10 @@ ApiClient watchSeerrClient(
 ///   ([SeerrSessionEnded], [SeerrSessionEvents.onSessionEnded]); answered,
 ///   the account lacks the permission ([SeerrRefused],
 ///   [SeerrSessionEvents.onWhoAmI] with its current permissions).
+/// - Once the session ended, every later request goes without it, and Seerr
+///   answers those with a 401 of its own before any permission is checked:
+///   the same ended session ([SeerrSessionEnded]), with nothing to ask
+///   `/auth/me`.
 ///
 /// The CSRF cookie is [SeerrCsrfInterceptor]'s, in both ways in.
 class SeerrSessionInterceptor extends Interceptor {
@@ -270,6 +274,12 @@ class SeerrSessionInterceptor extends Interceptor {
         options.extra[_whoAmIExtra] == true ||
         _signInRoute.hasMatch(options.uri.path)) {
       handler.next(err);
+      return;
+    }
+    if (_cameWithoutSession(response)) {
+      // Nothing to ask `/auth/me` with: the session is already gone.
+      _ended();
+      handler.next(_withVerdict(err, const SeerrSessionEnded()));
       return;
     }
     final refusal = classifySeerrRefusal(
@@ -325,6 +335,19 @@ class SeerrSessionInterceptor extends Interceptor {
     } finally {
       _whoAmI = null;
     }
+  }
+
+  /// Whether [response] is Seerr's answer to a request that carried neither
+  /// a session nor the key: its OpenAPI validator's own 401, ahead of the
+  /// permission check's 403 (Seerr 3.4.1, live). An account sends no session
+  /// once its session ended, so every request after the one that found out
+  /// meets this, and it is the same ended session, never a refused
+  /// credential.
+  static bool _cameWithoutSession(Response response) {
+    final data = response.data;
+    return response.statusCode == 401 &&
+        data is Map &&
+        data['message'] == "cookie '$_sessionCookie' required";
   }
 
   void _ended() {

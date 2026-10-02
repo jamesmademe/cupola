@@ -668,10 +668,29 @@ NetworkReply? seerrGate(
     );
   }
 
+  // The OpenAPI request validator, after the session and ahead of every
+  // route: a route the spec secures wants the key's header or the session's
+  // cookie to be there at all, and answers a request with neither itself, in
+  // its own 401, before `isAuthenticated` is asked. Its `errors[].path` is
+  // the spec's route template; the request's own path stands in for it here.
+  final need = _needOf(request, isPublic: isPublic);
+  final noCredential =
+      (request.headers['x-api-key'] ?? '').isEmpty &&
+      (requestCookies(request)['connect.sid'] ?? '').isEmpty;
+  if (noCredential && (need is! _Public || _isLogout(request))) {
+    _visits[request] = _Visit(null, cookies);
+    const message = "cookie 'connect.sid' required";
+    return NetworkReply.json({
+      'message': message,
+      'errors': [
+        {'path': request.path, 'message': message},
+      ],
+    }, status: 401);
+  }
+
   final caller = _identify(request, setup);
   _visits[request] = _Visit(caller, cookies);
 
-  final need = _needOf(request, isPublic: isPublic);
   if (need is _Public) return null;
   if (caller == null) return seerrEndpointRefused();
   switch (need) {
@@ -695,6 +714,11 @@ NetworkReply? seerrGate(
   }
   return null;
 }
+
+/// `POST /auth/logout`: no permission asked, but secured in the spec, so the
+/// validator wants a session cookie or the key's header there too.
+bool _isLogout(NetworkRequest request) =>
+    request.method == 'POST' && request.path == '/api/v1/auth/logout';
 
 /// Where csurf looks for the token: the body's or the query's `_csrf`, then
 /// four headers (`build/cjs/index.js:52`).

@@ -392,9 +392,21 @@ void main() {
         ['GET /api/v1/request', 'GET /api/v1/auth/me'],
       );
 
-      // Said once per session, however many requests meet it.
-      await _failure(() => client.get('/api/v1/request'));
+      // Said once per session, however many requests meet it. The next one
+      // goes without the session it no longer has, and Seerr's validator
+      // answers that itself, with a 401 of its own: still an ended session,
+      // never a refused credential, and nothing to ask /auth/me.
+      final again = await _failure(() => client.get('/api/v1/request'));
+      expect((again as DioException).response?.statusCode, 401);
+      expect(again.error, isA<SeerrSessionEnded>());
+      expect(seerrRefusalOf(again), SeerrRefusal.sessionEnded);
+      expect(
+        classifyConnectionFailure(again),
+        ServiceFailureReason.sessionEnded,
+      );
+      expect(isPermissionRefusal(again), isFalse);
       expect(ended, 1);
+      expect(harness.network.requestsTo(WorldIds.seerr), hasLength(3));
     });
 
     test('/auth/me refused on its own is an ended session too', () async {
