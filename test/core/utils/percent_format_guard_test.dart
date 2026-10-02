@@ -17,7 +17,8 @@ import '../../test_helpers/copy_scan.dart';
 ///    interpolation) straight in front of a `%` in a literal is a percentage
 ///    assembled by hand. `formatPercent` and `wholePercent` are the way.
 ///  * **No space between a figure and its sign**, plain or no-break: `62%`,
-///    never `62 %` or `62\u00A0%`.
+///    never `62 %` or `62\u00A0%`. The brand book, its cards and the motion
+///    cards are held to the same spelling.
 ///
 /// What it cannot see: a percentage whose sign is joined from two places
 /// (`'$value' + sign`), or a figure that was already formatted elsewhere with
@@ -77,6 +78,25 @@ void main() {
     );
   });
 
+  test('the brand book, its cards and its motion cards glue the sign too', () {
+    final docs = Directory('design')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where(
+          (file) => file.path.endsWith('.md') || file.path.endsWith('.html'),
+        );
+    final offenders = [
+      for (final file in docs)
+        for (final (index, line) in file.readAsLinesSync().indexed)
+          if (_spacedInDocs.hasMatch(line)) '${file.path}:${index + 1}',
+    ];
+    expect(
+      offenders,
+      isEmpty,
+      reason: 'A percentage in the design docs is `62%`, glued.',
+    );
+  });
+
   test('the scan catches a hand-built percentage and passes comments over', () {
     const planted = r'''
 final a = '${(p * 100).round()}%';
@@ -132,6 +152,10 @@ final _built = RegExp('[0-9$copyHole]%');
 
 /// A figure, a plain or no-break space, then the sign.
 final _spaced = RegExp('[0-9$copyHole][ \u00A0]%');
+
+/// The same in the design docs, where the figure is a digit and the no-break
+/// space may be an entity.
+final _spacedInDocs = RegExp(r'[0-9](?: |\u00A0|&nbsp;|&#160;)%');
 
 /// Literals that carry a `%` after a figure for a reason that is not a
 /// percentage shown to a person, each with the reason.

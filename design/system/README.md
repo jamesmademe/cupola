@@ -40,7 +40,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Radarr is not at this address` | amber | Something answered, and it is not the service: the probe checks who answered as well as that something did. Its sentence names who: `Sonarr answered at nas.home.arpa:7878, not Radarr` (a wrong port), `A web page answered at radarr.example.com instead of Radarr` (a proxy's page, a missing base path: the same words whichever request met it, the probe, the connection test or a library), or `Something answered at radarr.example.com, but it isn't Radarr` (an answer that is not the service's). The last two are followed, when the address has no path, by `If Radarr sits under a path, add it: https://radarr.example.com/radarr`. The remedy is `Check the address`. Home, the connection test and the library say the same words. `Radarr answered with something Cupola cannot read` is kept for a body that is not a page and does not decode. |
 | `—` | — | The source did not answer. A figure never reads `0` because a request failed. The dash is this placeholder and nothing else: copy never breaks a sentence with it (a full stop, a colon, a comma or ` · ` instead), and a range takes the en dash, `S2 E4–E5`. |
 | `Needs you` | amber | The group of faults and approvals waiting for the operator: `3 faults · 2 requests`. |
-| `Stuck` | amber | Nothing has arrived for a while: `Big Buck Bunny is stuck at 47 %` · `nothing for 3 h`. |
+| `Stuck` | amber | Nothing has arrived for a while: `Big Buck Bunny is stuck at 47%` · `nothing for 3 h`. |
 | `Failed` | amber | It ended and cannot finish by itself. |
 | `Stopped` | neutral | Someone stopped it on purpose. Not a fault, never "stuck". |
 | `Missing` · `Wanted` · `Cutoff unmet` · `Not aired` · `Not out yet` | neutral | The backlog: released and not on disk, still looked for, below its profile, not yet out. |
@@ -61,11 +61,11 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 
 ### Formats
 
-Dates `Tue 29 Sep` (a year only when it is another year) · times 24 h, `21:00` · ages `12 min ago`, `2 h ago` · estimates `ready around 21:10`, `about 9 h left` · sizes in binary units labelled `KB`, `MB`, `GB` as the services' own screens show them, one decimal and whole from 100 up in a unit, bytes whole (`512 B`, `1.2 GB`, `152 GB`, `120 of 152 GB`, `31.2 of 43.6 TB`; one rule in `lib/core/utils/byte_format.dart`, held by `test/core/utils/byte_format_test.dart`) · speeds the same, `4.2 MB/s`, `120 MB/s`, `↓ 22.4 MB/s ↑ 1.1 MB/s` · percent with a space, `62 %` · counts with a comma and "of" for a part, `1,240 albums`, `12 of 12 answering` · ranges with an en dash and no spaces, `S2 E6–E10` · episodes `S2 E3`, never padded, spelled in one place (`lib/core/utils/episode_code.dart`, held by `test/core/utils/episode_code_guard_test.dart`) · ratings each by its source, never averaged, `TMDB 6.6 · IMDb 6.7` · facts joined by a middle dot between spaces, `Cupola 1.0.0 · Apache-2.0` · a path with an arrow, `Radarr → qBittorrent` · machine strings exactly as returned, in mono. Between a number and its unit goes a no-break space, so `62 %` never splits.
+Dates `Tue 29 Sep` (a year only when it is another year) · times 24 h, `21:00` · ages `12 min ago`, `2 h ago` · estimates `ready around 21:10`, `about 9 h left` · sizes in binary units labelled `KB`, `MB`, `GB` as the services' own screens show them, one decimal and whole from 100 up in a unit, bytes whole (`512 B`, `1.2 GB`, `152 GB`, `120 of 152 GB`, `31.2 of 43.6 TB`; one rule in `lib/core/utils/byte_format.dart`, held by `test/core/utils/byte_format_test.dart`) · speeds the same, `4.2 MB/s`, `120 MB/s`, `↓ 22.4 MB/s ↑ 1.1 MB/s` · percent with a space, `62%` · counts with a comma and "of" for a part, `1,240 albums`, `12 of 12 answering` · ranges with an en dash and no spaces, `S2 E6–E10` · episodes `S2 E3`, never padded, spelled in one place (`lib/core/utils/episode_code.dart`, held by `test/core/utils/episode_code_guard_test.dart`) · ratings each by its source, never averaged, `TMDB 6.6 · IMDb 6.7` · facts joined by a middle dot between spaces, `Cupola 1.0.0 · Apache-2.0` · a path with an arrow, `Radarr → qBittorrent` · machine strings exactly as returned, in mono. Between a number and its unit goes a no-break space, so `62%` never splits.
 
 ### The requester
 
-A requester has a Seerr account and nothing else. Their screens say what will happen to a request, never how: `Waiting for approval` · `Downloading 62 % · ready around 21:10` · `On its way` (Seerr cannot see the download) · `Finishing on the server` · `Ready to watch` · `On the server since 12 Sep`. They never read a service name (Jellyfin and Plex excepted — they watch in them), a fault, or a figure they cannot act on; when the server does not answer they get one line with its time and `Retry`. **Today** a Seerr connection can sign in with a household member's own account from its form (`Sign in with` · `An account`), and the app reaches Seerr as that account; there is no requester mode yet; **Direction:** it arrives with its own tab bar.
+A requester has a Seerr account and nothing else. Their screens say what will happen to a request, never how: `Waiting for approval` · `Downloading 62% · ready around 21:10` · `On its way` (Seerr cannot see the download) · `Finishing on the server` · `Ready to watch` · `On the server since 12 Sep`. They never read a service name (Jellyfin and Plex excepted — they watch in them), a fault, or a figure they cannot act on; when the server does not answer they get one line with its time and `Retry`. **Today** a Seerr connection can sign in with a household member's own account from its form (`Sign in with` · `An account`), and the app reaches Seerr as that account; there is no requester mode yet; **Direction:** it arrives with its own tab bar.
 
 ## Colour
 
@@ -82,11 +82,11 @@ A near-black room, lit from the content. Dark is the primary theme; light is **t
 | `enamel` | `#1A1A1F` | `#FFFFFF` | Floating bars only (tab bar, rail, compact bar, selection bar), at `opacity.glass-surface` 0.95. |
 | `menu` | `#1D1D24` | `#FFFFFF` | Popovers. The day room lifts menus by shadow, not by tone. |
 | `toast` | `#202028` | `#16151A` | The toast (`inverse-surface`); in the day room the ink reversed. |
-| `scrim` | ground at 70 % | ink at 40 % | Behind a sheet or dialog. |
+| `scrim` | ground at 70% | ink at 40% | Behind a sheet or dialog. |
 
-**Ink** is four steps and never more: `ink.primary` (`#F7F6F2` · `#16151A`) for text and the ink button; `ink.secondary` (white 72 % · ink 70 %; flat `on-surface-variant`); `ink.tertiary` (white 60 % · ink 65 %; flat `dim-text`), which still clears 4.5:1 on a slab and 5.4:1 on paper; `ink.disabled` (38 %) for disabled controls only. `ink.on-ink` is the label on the ink button and on any bright fill. Tertiary text in code is `CupolaThemeColors.of(context).dimText`, never `AppColors.onSurfaceDimDark`, which is the dark value in both themes.
+**Ink** is four steps and never more: `ink.primary` (`#F7F6F2` · `#16151A`) for text and the ink button; `ink.secondary` (white 72% · ink 70%; flat `on-surface-variant`); `ink.tertiary` (white 60% · ink 65%; flat `dim-text`), which still clears 4.5:1 on a slab and 5.4:1 on paper; `ink.disabled` (38%) for disabled controls only. `ink.on-ink` is the label on the ink button and on any bright fill. Tertiary text in code is `CupolaThemeColors.of(context).dimText`, never `AppColors.onSurfaceDimDark`, which is the dark value in both themes.
 
-**Lines and fills.** `line.hair` (white 7 % · black 6 %) is a slab's edge and a divider; `line.edge` (10 %) a control's edge and a field at rest; `line.focus` (the secondary ink) the focus ring and a focused field. `fill.quiet` (6 % · 5 %) under chips at rest, fields and the segmented track; `fill.control` (8 %) under ghost and icon buttons; `fill.strong` (12 %) the selected tab pill and a switch track at rest; `fill.track` (12 %) a progress track. **The interactive colour is the ink**: `primary` is `ink.primary` in both rooms, so a selected chip, a selected segment and the ink button are ink fills with `on-ink` labels.
+**Lines and fills.** `line.hair` (white 7% · black 6%) is a slab's edge and a divider; `line.edge` (10%) a control's edge and a field at rest; `line.focus` (the secondary ink) the focus ring and a focused field. `fill.quiet` (6% · 5%) under chips at rest, fields and the segmented track; `fill.control` (8%) under ghost and icon buttons; `fill.strong` (12%) the selected tab pill and a switch track at rest; `fill.track` (12%) a progress track. **The interactive colour is the ink**: `primary` is `ink.primary` in both rooms, so a selected chip, a selected segment and the ink button are ink fills with `on-ink` labels.
 
 ### The five tones
 
@@ -98,11 +98,11 @@ A closed set: nothing outside state borrows a tone (**The Closed Tone Rule**). E
 | **Amber** `tone.amber` | `#F7C23A` | `#8F5E00` | a **fault**: failing, stuck, errored, stopped unexpectedly, expiring, answered but refused | the backlog, anything stopped on purpose |
 | **Red** `tone.red` | `#FF8A7A`, dot `#FF6B5B` | `#B8322A` | **did not answer — unreachable, and nothing else** | a failed download, a missing file, a rejected release, a refused key, a destructive action |
 | **Blue** `tone.blue` | `#9DB8FF` | `#2F5BD3` | queued, in progress, informational, waiting on someone | — |
-| **Neutral** `tone.neutral` | white 72 %, hollow dot | ink 65 % | the **backlog**: missing, wanted, cutoff unmet, not aired, not out yet, deliberately stopped, deleted | — |
+| **Neutral** `tone.neutral` | white 72%, hollow dot | ink 65% | the **backlog**: missing, wanted, cutoff unmet, not aired, not out yet, deliberately stopped, deleted | — |
 
 - **Painting the backlog amber is the commonest way this breaks.** In a media stack a list of things to fetch is the resting state, not damage. Only an unexpected stop is amber.
 - **Green is quiet.** In a status line and on a poster mark the dot carries green and the words stay in secondary ink, because healthy is the normal condition. Blue, amber and red colour their words.
-- **Only amber has a fill, and only on the remedy of a fault**: `tone.amber-fill` under `tone.amber-ink` `#2A1E00` (day: `#F2B531`). A fault chip may sit on `tone.amber-wash` (12 % · 18 %).
+- **Only amber has a fill, and only on the remedy of a fault**: `tone.amber-fill` under `tone.amber-ink` `#2A1E00` (day: `#F2B531`). A fault chip may sit on `tone.amber-wash` (12% · 18%).
 - **A destructive action is never red.** A delete, a stop, a reset is a neutral control whose verb says exactly what will happen; if it cannot be undone, one neutral sentence says so (*This cannot be undone.*). No red fill, glyph or banner, on the confirmation or on the button that opens it. A destructive row may sit apart and carry a firmer haptic; it never changes colour. `test/core/theme/neutral_destructive_test.dart` holds this: no button style or dialog in `lib/` is built with red, no delete control is red, and every confirm label is a verb with its object.
 - **Fill byte versus ink.** The tone bytes are fills — dots, bars, washes — and a fill keeps its byte. As text, a tone goes through `statusToneColor(scheme, tone, surface:, tintAlpha:)`, which walks it until it clears 4.5:1 on the ground it actually lands on, wash included. The dark room's tones clear the bar untouched; only paper walks. Never paint `AppColors.success/warning/error/info` or a room tone as text directly. `test/core/theme_light_contrast_test.dart` measures every ink on every surface in both themes, keeps each fill on its own byte, and keeps the recovery ink off the red; `test/core/widgets/accent_ink_contrast_test.dart` measures the shared widgets against the composite they sit on.
 - **The Luminance Rule.** A label on an opaque fill takes `ServiceTheme.foregroundOn(fill)` — white or `ink-on-bright`, whichever measures higher. `test/core/theme_test.dart` holds every filled scheme pair to it, and holds tertiary and secondary text to AA in both rooms.
@@ -127,7 +127,7 @@ Each service keeps its accent in the registry (`ServiceKey.brandAccent`, `color.
 
 Three families, all OFL and bundled, so the type is the same on all five platforms.
 
-- **Bricolage Grotesque** (`type.family.display`; `opsz` 12–96, `wdth` 75–100, `wght` 200–800) — titles, section headings and figures. Voiced, and used sparingly. Its default instance is 96 pt ExtraBold at full width, so **every role sets all three axes**: `wght`, `wdth`, and `opsz` equal to the size (`AppTheme.variations`). Flutter never applies an optical size by itself. The narrow widths (90–96 %) are the voice: they fit *Cosmos Laundromat* on one line at 42.
+- **Bricolage Grotesque** (`type.family.display`; `opsz` 12–96, `wdth` 75–100, `wght` 200–800) — titles, section headings and figures. Voiced, and used sparingly. Its default instance is 96 pt ExtraBold at full width, so **every role sets all three axes**: `wght`, `wdth`, and `opsz` equal to the size (`AppTheme.variations`). Flutter never applies an optical size by itself. The narrow widths (90–96%) are the voice: they fit *Cosmos Laundromat* on one line at 42.
 - **Onest** (`type.family.text`, `wght` 100–900) — everything read that is not a title or a figure. It has tabular figures.
 - **Geist Mono** (`type.family.mono`, `wght` 100–900) — machine strings only: release names, paths, hashes, keys, logs, the terminal, exactly as returned, and the legend of a physical key (`⌘K`), with a slashed zero. Figures are never mono: a size, a rate, a percentage, a clock or a count takes `.tabular` in the text face, and `test/core/theme/mono_face_guard_test.dart` fails on a figure in mono and lists every use of the face. Never the bare `monospace` alias, which is proportional on Apple platforms.
 
@@ -135,13 +135,13 @@ Geist Mono and Apple Symbols follow in every fallback list and carry the glyphs 
 
 | Role `type.role.*` | Face | Size / line | Weight · width | Material slot or helper | Use |
 |---|---|---|---|---|---|
-| `figure-hero` | Bricolage | 44 / 44 | 600 · 90 % | `displayLarge` | One hero readout per room. |
-| `media` | Bricolage | 42 / 41 | 600 · 90 % | `displayMedium` | A title on its Media page. |
-| `screen` | Bricolage | 36 / 36 | 600 · 92 % | `displaySmall`, `headlineLarge` | Tab-root titles. |
-| `room` | Bricolage | 30 / 31 | 600 · 92 % | `headlineMedium` | Pushed screens and service rooms. |
-| `feature` | Bricolage | 26 / 27 | 600 · 92 % | `headlineSmall` | A featured title, a sheet title. |
-| `section` | Bricolage | 21 / 24 | 600 · 96 % | `titleLarge`, `subtitle`, `panelHeader` | Section headings, the app-bar title. |
-| `figure` · `figure-s` | Bricolage | 24 / 24 · 20 / 20 | 600 · 92 % | `AppType.figure`, `figureSmall` | KPI figures; times and figures in rows. |
+| `figure-hero` | Bricolage | 44 / 44 | 600 · 90% | `displayLarge` | One hero readout per room. |
+| `media` | Bricolage | 42 / 41 | 600 · 90% | `displayMedium` | A title on its Media page. |
+| `screen` | Bricolage | 36 / 36 | 600 · 92% | `displaySmall`, `headlineLarge` | Tab-root titles. |
+| `room` | Bricolage | 30 / 31 | 600 · 92% | `headlineMedium` | Pushed screens and service rooms. |
+| `feature` | Bricolage | 26 / 27 | 600 · 92% | `headlineSmall` | A featured title, a sheet title. |
+| `section` | Bricolage | 21 / 24 | 600 · 96% | `titleLarge`, `subtitle`, `panelHeader` | Section headings, the app-bar title. |
+| `figure` · `figure-s` | Bricolage | 24 / 24 · 20 / 20 | 600 · 92% | `AppType.figure`, `figureSmall` | KPI figures; times and figures in rows. |
 | `body` | Onest | 15 / 22 | 400 | `bodyLarge`, `bodyMedium` | Paragraphs, input text. |
 | `button` · `row` · `label` | Onest | 16 / 20 · 15 / 20 · 14 / 18 | 600 | `titleMedium` · `rowTitle` · `labelLarge` | The primary button; a row that is a name; small buttons, links, chips. |
 | `meta` · `caption` | Onest | 13 / 18 · 12 / 16 | 500 | `bodySmall`, `data` · `labelMedium` | Secondary lines and the answer in a row; captions, badges. |
@@ -189,7 +189,7 @@ The room is lit from the title, not from a lamp above, so it is flat: slabs, gro
 - `shadow.float` — the bar, menus, toasts: 0 10 30. The floating bar adds a 1 px edge light (`shadow.glass`).
 - `shadow.sheet` — a sheet, cast upwards: 0 −12 40.
 - `level-2` and `level-3` remain for the older call sites: the poster geometry in the shadow ink, and the float. Each layer's opacity is per theme; the day room's shadows are ink, not black.
-- **The No-Blur-Under-Scroll Rule.** Nothing blurs the content behind it: a live blur cost 15–25 ms per scroll frame on a mid-range Android phone. Floating bars are lit enamel — `room.enamel` at 0.95 — and heroes deepen a gradient scrim (`opacity.hero-scrim-rest` 0.85 → `hero-scrim-deep` 0.35) instead. **Direction:** the enamel carries a 14 % sheen of the room's light.
+- **The No-Blur-Under-Scroll Rule.** Nothing blurs the content behind it: a live blur cost 15–25 ms per scroll frame on a mid-range Android phone. Floating bars are lit enamel — `room.enamel` at 0.95 — and heroes deepen a gradient scrim (`opacity.hero-scrim-rest` 0.85 → `hero-scrim-deep` 0.35) instead. **Direction:** the enamel carries a 14% sheen of the room's light.
 
 ## Motion
 
