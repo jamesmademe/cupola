@@ -74,7 +74,7 @@ class AppSheetHeader extends StatelessWidget {
               size: 20,
               color: ServiceTheme.onTint(
                 accentColor,
-                surface: colorScheme.surfaceContainer,
+                surface: CupolaRoom.of(context).raised,
                 tintAlpha: 0.14,
               ),
             ),
@@ -129,7 +129,7 @@ class AppSheetHeader extends StatelessWidget {
 /// Premium bottom-sheet container used across the app.
 ///
 /// Provides one canonical chrome: drag handle, optional [AppSheetHeader],
-/// top radius [AppRadius.lg], [AppElevation.level3], an optional service-accent
+/// the room's raised step, top radius [AppRadius.sheet], [AppElevation.sheet], an optional service-accent
 /// glow behind the header, safe-area handling and keyboard avoidance.
 ///
 /// Use [AppBottomSheet.show] for min-content forms/pickers, or
@@ -222,17 +222,23 @@ class AppBottomSheet extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      // The brand book's sheet: the raised step of the room, `radius.sheet`
+      // (30) at the top and `shadow.sheet` cast upwards. It drew the slab's
+      // step at 16 under `level3`.
+      // Continuous corners, the theme's own sheet shape.
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainer,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.lg),
+        decoration: ShapeDecoration(
+          color: CupolaRoom.of(context).raised,
+          shape: const RoundedSuperellipseBorder(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppRadius.sheet),
+            ),
           ),
-          boxShadow: AppElevation.level3(colorScheme),
+          shadows: AppElevation.sheet(colorScheme),
         ),
-        child: ClipRRect(
+        child: ClipRSuperellipse(
           borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.lg),
+            top: Radius.circular(AppRadius.sheet),
           ),
           child: Stack(
             children: [
