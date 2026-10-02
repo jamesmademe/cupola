@@ -2925,13 +2925,14 @@ Future<List<DashboardDecision>> _expiringCertificateDecisions(Ref ref) async {
           title: certificate.domainNames.isEmpty
               ? certificate.niceName
               : certificate.domainNames.first,
-          // An uploaded certificate does not renew, so the row says what
-          // will: replacing it, in Nginx Proxy Manager.
+          // An uploaded certificate does not renew: the row names it as one,
+          // so a control without Renew reads as the truth rather than a gap.
+          // It drops the service's name: beside "Open certificates", which is
+          // wider than Renew, any longer line lost its last words to the
+          // ellipsis on a 390pt phone, and the glyph already names the service.
           detail: joinDisplayParts([
             _certificateExpiry(certificate, now),
-            certificate.isLetsEncrypt
-                ? ServiceKey.nginxProxyManager.title
-                : 'replace it in ${ServiceKey.nginxProxyManager.title}',
+            if (certificate.isLetsEncrypt) ServiceKey.nginxProxyManager.title,
           ]),
           renewable: certificate.isLetsEncrypt,
           // The expiry date, standing in for "when did this start needing me".
@@ -2944,13 +2945,16 @@ Future<List<DashboardDecision>> _expiringCertificateDecisions(Ref ref) async {
 }
 
 String _certificateExpiry(NpmCertificate certificate, DateTime now) {
+  final noun = certificate.isLetsEncrypt
+      ? 'Certificate'
+      : 'Uploaded certificate';
   final expiresOn = certificate.expiresOn;
-  if (expiresOn == null) return 'Certificate expiring';
+  if (expiresOn == null) return '$noun expiring';
   final days = expiresOn.difference(now).inDays;
-  if (days < 0) return 'Certificate expired';
-  if (days == 0) return 'Certificate expires today';
-  if (days == 1) return 'Certificate expires tomorrow';
-  return 'Certificate expires in $days days';
+  if (days < 0) return '$noun expired';
+  if (days == 0) return '$noun expires today';
+  if (days == 1) return '$noun expires tomorrow';
+  return '$noun expires in $days days';
 }
 
 /// The decision a faulted transfer becomes, by what its fault is.

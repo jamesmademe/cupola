@@ -89,17 +89,13 @@ Finder _inDecisions(Finder matching) => find.descendant(
 );
 
 void main() {
-  testWidgets('an uploaded certificate: the row says to replace it, and the '
+  testWidgets('an uploaded certificate: the row names it as uploaded, and the '
       'control opens the certificates without the word Renew', (tester) async {
     final (harness, opened) = await _pumpHome(tester, provider: 'other');
 
     expect(_inDecisions(find.text('nas.example.net')), findsOneWidget);
     expect(
-      _inDecisions(
-        find.text(
-          'Certificate expires in 5 days · replace it in Nginx Proxy Manager',
-        ),
-      ),
+      _inDecisions(find.text('Uploaded certificate expires in 5 days')),
       findsOneWidget,
     );
     expect(_inDecisions(find.textContaining('Renew')), findsNothing);
