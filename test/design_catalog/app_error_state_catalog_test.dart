@@ -231,7 +231,7 @@ void main() {
         width: 320,
       ),
       CatalogScene(
-        "AppErrorState, in the requester's app · her session ended: You were "
+        "AppErrorState, in the requester's app · their session ended: You were "
         'signed out, blue, and Sign in again in the ink fill',
         (_) => AppErrorState(
           service: ServiceKey.seerr,
