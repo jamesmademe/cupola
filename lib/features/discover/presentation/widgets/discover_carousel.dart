@@ -7,7 +7,9 @@ import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -38,7 +40,9 @@ class DiscoverCarousel extends StatelessWidget {
 
   final VoidCallback? onSeeAll;
 
-  /// Asks for this row again after it failed.
+  /// Asks for this row again after it failed. Without one, a failure is
+  /// said with no Retry beside it: a Retry with nothing behind it would be a
+  /// control that fails.
   final VoidCallback? onRetry;
 
   static const double _posterWidth = 104;
@@ -66,15 +70,21 @@ class DiscoverCarousel extends StatelessWidget {
         if (error.toString().contains('not configured')) {
           return const SizedBox.shrink();
         }
+        final message =
+            '${describeFailureOf(ServiceKey.seerr, error).headline}, '
+            'so this row is missing.';
+        final retry = onRetry;
         return _shell(
-          child: InlineErrorRetry(
-            message:
-                '${describeFailureOf(ServiceKey.seerr, error).headline}, '
-                'so this row is missing.',
-            error: error,
-            service: ServiceKey.seerr,
-            onRetry: onRetry ?? () {},
-          ),
+          child: retry != null
+              ? InlineErrorRetry(
+                  message: message,
+                  error: error,
+                  service: ServiceKey.seerr,
+                  onRetry: retry,
+                )
+              : failureDidNotAnswer(classifyConnectionFailure(error))
+              ? FaultNote.unreachable(message: message)
+              : FaultNote.fault(message: message),
           // The skeleton's height is the rail's; the line is not a rail, and
           // the page should not hold a poster-sized gap under it.
           compact: true,

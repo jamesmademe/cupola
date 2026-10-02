@@ -330,6 +330,7 @@ void main() {
           value: AsyncValue.loading(),
           serviceName: 'Radarr',
           skeleton: SizedBox(width: 100, height: 100),
+          onRetry: _noRetry,
           data: _neverBuilt,
         ),
       );
@@ -344,6 +345,7 @@ void main() {
           value: AsyncValue.loading(),
           serviceName: 'Radarr',
           loadingLabel: 'Searching for releases',
+          onRetry: _noRetry,
           data: _neverBuilt,
         ),
       );
@@ -367,3 +369,6 @@ void main() {
 
 Widget _neverBuilt(int _) =>
     throw StateError('data builder must not run while loading');
+
+/// Nothing to retry: these states are never a failure.
+void _noRetry() {}

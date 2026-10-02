@@ -160,6 +160,7 @@ void main() {
           body: AsyncValueWidget<List<String>>(
             value: failed,
             serviceName: 'TrueNAS',
+            onRetry: () {},
             isEmpty: (data) => data.isEmpty,
             data: (data) => Text(data.join()),
           ),

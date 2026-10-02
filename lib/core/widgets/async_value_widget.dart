@@ -12,7 +12,7 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// - error, with a retained previous value → the data it had, at full ink,
 ///              under a [FaultBand.unreachable] (see below) — also while the
 ///              provider is reloading or retrying over that error
-/// - error    → [AppErrorState] with a retry button when [onRetry] is set
+/// - error    → [AppErrorState] with a retry button
 ///              (the "not configured" case still routes to [NotConfiguredPlaceholder])
 /// - error from a client closed under the read ([isClosedClientFailure]) →
 ///              not an error: the retained value, or the loading state, while
@@ -70,7 +70,12 @@ class AsyncValueWidget<T> extends StatelessWidget {
   final Widget? skeleton;
 
   /// Called to retry after an error (wired to `ref.invalidate(...)`).
-  final VoidCallback? onRetry;
+  ///
+  /// Required, because every failure this draws offers Retry. It used to be
+  /// optional, and the band over a retained readout was handed `() {}` when it
+  /// was left out: a Retry that did nothing, a control that fails in the
+  /// user's hand.
+  final VoidCallback onRetry;
 
   /// Optional predicate identifying an "empty" data result.
   final bool Function(T data)? isEmpty;
@@ -93,7 +98,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
     required this.serviceName,
     this.loadingWidget,
     this.skeleton,
-    this.onRetry,
+    required this.onRetry,
     this.isEmpty,
     this.emptyBuilder,
     this.loadingLabel,
@@ -165,14 +170,14 @@ class AsyncValueWidget<T> extends StatelessWidget {
                   // time yet, and the band drops the span rather than
                   // inventing one. When that notifier lands this is where it
                   // is plumbed in.
-                  onRetry: onRetry ?? () {},
+                  onRetry: onRetry,
                 )
               else
                 FaultBand.fault(
                   serviceName: serviceName,
                   reason: reason,
                   gateway: accessGatewayOf(e),
-                  onRetry: onRetry ?? () {},
+                  onRetry: onRetry,
                 ),
               // Full ink, unchanged. This is the whole point of the branch.
               Flexible(child: data(lastKnown)),
