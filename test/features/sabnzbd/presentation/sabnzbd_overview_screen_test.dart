@@ -229,7 +229,7 @@ void main() {
     // as at 95%, which is exactly what a listener cannot see the bar for.
     expect(
       find.semantics.byLabel(
-        'Dune.Part.Two.2024.2160p, 72% downloaded, '
+        'Dune.Part.Two.2024.2160p, 72 percent downloaded, '
         'downloading, 1.0\u00A0GB left of 4.0\u00A0GB, 2\u00A0min, movies',
       ),
       findsOneWidget,

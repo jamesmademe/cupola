@@ -10,7 +10,7 @@ void main() {
           percent: 75,
           warning: null,
         ),
-        '75% downloaded, Movie, Furiosa.2024.2160p.WEB-DL-GROUP',
+        '75 percent downloaded, Movie, Furiosa.2024.2160p.WEB-DL-GROUP',
       );
     });
 
@@ -23,7 +23,7 @@ void main() {
           percent: 40,
           warning: 'Download stalled',
         ),
-        'Download stalled, 40% downloaded, Movie',
+        'Download stalled, 40 percent downloaded, Movie',
       );
     });
 

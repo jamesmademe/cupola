@@ -13,9 +13,11 @@ import 'package:cupola/core/utils/percent_format.dart';
 ///
 /// Delegates to [joinDisplayParts] — the same trimming and empty-dropping the
 /// visible strings already get, with a separator meant for the ear rather than
-/// the eye.
-String joinSpokenParts(Iterable<String?> parts) =>
-    joinDisplayParts(parts, separator: ', ');
+/// the eye. A part that arrives as a visible figure (`62%`) is spelled out
+/// (`62 percent`) on the way: units are words in anything a screen reader says.
+String joinSpokenParts(Iterable<String?> parts) => joinDisplayParts([
+  for (final part in parts) part == null ? null : spokenPercents(part),
+], separator: ', ');
 
 /// Re-separates a visually dot-joined string for speech.
 ///
@@ -272,6 +274,6 @@ String downloadRowValue({
   required String? warning,
 }) => joinSpokenParts([
   warning,
-  percent == null ? null : '${formatPercent(percent)} downloaded',
+  percent == null ? null : '${spokenPercent(percent)} downloaded',
   spokenFromDotted(subtitle),
 ]);

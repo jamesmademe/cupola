@@ -31,6 +31,14 @@
 ///
 /// [wholePercent] is the same rule as an `int`, for a caller that keeps the
 /// number (a status that also speaks it, or compares it).
+///
+/// **Spoken, units are words: `62 percent`.** A screen reader gets
+/// [spokenPercent], the same figure under the same rule with the sign spelled
+/// out, in American English: never `62%` in a semantics label, never `per cent`.
+/// [spokenPercents] does it for a sentence that was composed from visible
+/// strings, so a row that says `Dune, 62%, 3 min left` speaks `Dune, 62
+/// percent, 3 min left`. `test/core/utils/spoken_percent_guard_test.dart` holds
+/// both.
 library;
 
 import 'dart:math' as math;
@@ -61,12 +69,40 @@ int wholePercent(num percent) {
 String formatPercent(num percent, {int decimals = 0}) {
   final value = percent.toDouble();
   if (!value.isFinite) return '—';
-  if (decimals <= 0) return '${wholePercent(value)}$percentSign';
+  return '${_figure(value, decimals)}$percentSign';
+}
+
+/// [percent] as a screen reader should say it: `62 percent`, `62.5 percent`.
+///
+/// The same figure as [formatPercent] under the same rule (so the ear and the
+/// eye never disagree), with the sign spelled out. A figure that is not a
+/// number is `no percentage`, never `zero percent`.
+String spokenPercent(num percent, {int decimals = 0}) {
+  final value = percent.toDouble();
+  if (!value.isFinite) return 'no percentage';
+  return '${_figure(value, decimals)} percent';
+}
+
+/// [text] with every glued percentage spelled out: `62%` is `62 percent` and
+/// `62.5%` is `62.5 percent`.
+///
+/// For a spoken sentence composed from visible strings (a row's title, its
+/// detail and its trailing figure joined for the ear), where the visible
+/// figure arrives already formatted. A percentage that is still a number goes
+/// through [spokenPercent] instead.
+String spokenPercents(String text) =>
+    text.replaceAllMapped(_gluedPercent, (match) => '${match[1]} percent');
+
+final RegExp _gluedPercent = RegExp(r'(\d+(?:\.\d+)?)%');
+
+/// The figure under the rule, without its sign.
+String _figure(double value, int decimals) {
+  if (decimals <= 0) return '${wholePercent(value)}';
 
   final scale = math.pow(10, decimals).toDouble();
   var shown = (value * scale).round() / scale;
   if (shown >= 100 && value < 100 - _noise) shown = 100 - 1 / scale;
-  // `-0.04` rounds to `-0.0`, which prints as `-0.0%`.
+  // `-0.04` rounds to `-0.0`, which prints as `-0.0`.
   if (shown == 0) shown = 0;
-  return '${shown.toStringAsFixed(decimals)}$percentSign';
+  return shown.toStringAsFixed(decimals);
 }

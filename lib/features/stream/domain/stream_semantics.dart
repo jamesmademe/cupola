@@ -13,9 +13,11 @@
 library;
 
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
-String _join(Iterable<String?> parts) =>
-    joinDisplayParts(parts, separator: ', ');
+String _join(Iterable<String?> parts) => joinDisplayParts([
+  for (final part in parts) part == null ? null : spokenPercents(part),
+], separator: ', ');
 
 /// What one session card announces.
 ///

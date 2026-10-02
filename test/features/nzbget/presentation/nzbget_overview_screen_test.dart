@@ -99,7 +99,7 @@ void main() {
 
     expect(
       find.semantics.byLabel(
-        'Silo.S03E01.2160p.WEB-DL, tv, downloading, 4.8\u00A0GB, 56%',
+        'Silo.S03E01.2160p.WEB-DL, tv, downloading, 4.8\u00A0GB, 56 percent',
       ),
       findsOneWidget,
     );

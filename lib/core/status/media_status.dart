@@ -237,7 +237,7 @@ class MediaStatusInfo {
     final percent = progressPercent;
     return [
       label,
-      if (percent != null) '$percent percent',
+      if (percent != null) spokenPercent(percent),
       if (hasWarning) 'warning',
     ].join(', ');
   }

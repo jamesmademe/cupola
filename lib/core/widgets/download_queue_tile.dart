@@ -345,8 +345,8 @@ class DownloadQueueTile extends StatelessWidget {
 
   /// The row as one sentence, in the order a person would say it.
   ///
-  /// The state comes before the percentage because "paused, 63 per cent" and
-  /// "63 per cent, paused" answer different questions, and the first word is the
+  /// The state comes before the percentage because "paused, 63 percent" and
+  /// "63 percent, paused" answer different questions, and the first word is the
   /// one a screen-reader user hears before they decide to keep listening. The
   /// metrics are appended because they are the only figures not already in the
   /// subtitle, and dropping them would make the spoken row poorer than the drawn
@@ -354,7 +354,7 @@ class DownloadQueueTile extends StatelessWidget {
   String get _spokenLabel => [
     title,
     ?statusLabel,
-    percentage == null ? 'progress unavailable' : '$percentage per cent',
+    percentage == null ? 'progress unavailable' : spokenPercent(percentage!),
     _subtitleLine,
     for (final metric in metrics) metric.spoken ?? metric.label,
   ].join(', ');

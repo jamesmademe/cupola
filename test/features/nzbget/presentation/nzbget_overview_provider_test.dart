@@ -232,7 +232,7 @@ void main() {
       expect(row.detail, 'tv · downloading · 4.8\u00A0GB');
       expect(
         row.spoken,
-        'Silo.S03E01.2160p.WEB-DL, tv, downloading, 4.8\u00A0GB, 56%',
+        'Silo.S03E01.2160p.WEB-DL, tv, downloading, 4.8\u00A0GB, 56 percent',
       );
     });
   });

@@ -364,7 +364,7 @@ void main() {
         line: '2160p · 3\u00A0min left · qBittorrent',
         percent: 92,
       ),
-      '92% done, 2160p, 3\u00A0min left, qBittorrent',
+      '92 percent done, 2160p, 3\u00A0min left, qBittorrent',
     );
   });
 }

@@ -152,6 +152,24 @@ void main() {
       );
     });
 
+    test('speaks the progress it was handed as words, never a % sign', () {
+      final spoken = streamSessionValue(
+        userName: base['userName']!,
+        title: base['title']!,
+        subtitle: null,
+        playMethodLabel: 'Direct play',
+        transcodeReason: null,
+        deviceLabel: base['deviceLabel']!,
+        progressLabel: '34% in',
+        bitrateLabel: null,
+        bitrateIsNominal: false,
+        isPaused: false,
+      );
+
+      expect(spoken, contains('34 percent in'));
+      expect(spoken, isNot(contains('%')));
+    });
+
     test('hedges a nominal rate and states a measured one plainly', () {
       String rateIn({required bool nominal}) => streamSessionValue(
         userName: base['userName']!,

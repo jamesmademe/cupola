@@ -111,7 +111,7 @@ void main() {
     // four fragments a screen reader walks separately.
     expect(
       find.semantics.byLabel(
-        'Stuck, The.Zone.of.Interest.2023, 18%, idle 42\u00A0min, 3 seeds',
+        'Stuck, The.Zone.of.Interest.2023, 18 percent, idle 42\u00A0min, 3 seeds',
       ),
       findsOneWidget,
     );

@@ -240,6 +240,6 @@ String inFlightEmptyLabel({
 /// reads as "middle dot" or drops, so the ear gets the same facts with the comma
 /// both readers treat as a short pause.
 String inFlightRowValue({required String line, required int? percent}) => [
-  if (percent != null) '${formatPercent(percent)} done',
+  if (percent != null) '${spokenPercent(percent)} done',
   ...line.split('·').map((part) => part.trim()).where((p) => p.isNotEmpty),
 ].join(', ');

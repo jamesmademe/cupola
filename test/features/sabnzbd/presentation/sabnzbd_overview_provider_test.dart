@@ -323,7 +323,7 @@ void main() {
       );
       expect(
         row.spoken,
-        'Dune.Part.Two.2024.2160p, 72% downloaded, downloading, '
+        'Dune.Part.Two.2024.2160p, 72 percent downloaded, downloading, '
         '1.0\u00A0GB left of 4.0\u00A0GB, 2\u00A0min, movies',
       );
     });
@@ -401,7 +401,7 @@ void main() {
 
       expect(
         row.spoken,
-        'Severance.S02E05, 0% downloaded, queued, 1.0\u00A0GB left, tv',
+        'Severance.S02E05, 0 percent downloaded, queued, 1.0\u00A0GB left, tv',
       );
       expect(row.spoken, isNot(contains('·')));
     });

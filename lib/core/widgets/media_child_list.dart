@@ -162,7 +162,7 @@ class MediaChildTile extends StatelessWidget {
     final spokenLabel = <String>[
       if (ordinalLabel != null) ordinalLabel! else ?ordinal,
       title,
-      ...facts,
+      ...facts.map(spokenPercents),
     ].where((part) => part.trim().isNotEmpty).join(', ');
 
     return AppCard.filled(

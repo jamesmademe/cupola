@@ -109,7 +109,7 @@ class StreamPosterTile extends ConsumerWidget {
     final parts = <String>[];
     final progress = item.resumeProgress;
     if (progress != null) {
-      parts.add('${formatPercent(progress * 100)} watched');
+      parts.add('${spokenPercent(progress * 100)} watched');
     } else if (item.isPlayed) {
       parts.add('Watched');
     }

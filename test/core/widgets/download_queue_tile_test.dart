@@ -20,7 +20,7 @@ void main() {
       // The plate that serves every Usenet client had no semantics container at
       // all, so a screen reader walked it as a filename, a bare numeral, and a
       // counting-down line with nothing tying them together — and read "63"
-      // where a person would say "63 per cent".
+      // where a person would say "63 percent".
       final handle = tester.ensureSemantics();
 
       await tester.pumpWidget(
@@ -37,7 +37,7 @@ void main() {
 
       expect(
         find.bySemanticsLabel(
-          'Dune.Part.Two.2024.2160p.WEB-DL-GROUP, 63 per cent, '
+          'Dune.Part.Two.2024.2160p.WEB-DL-GROUP, 63 percent, '
           'Downloading · movies · 2.1\u00A0GB left',
         ),
         findsOneWidget,

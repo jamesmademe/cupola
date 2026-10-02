@@ -226,7 +226,7 @@ void main() {
 
       expect(
         rows.single.spoken,
-        'Stuck, Dune.Part.Two, 18%, idle 42\u00A0min, 3 seeds',
+        'Stuck, Dune.Part.Two, 18 percent, idle 42\u00A0min, 3 seeds',
       );
       expect(rows.single.spoken, isNot(contains('·')));
     });
