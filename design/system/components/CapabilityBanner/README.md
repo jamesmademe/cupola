@@ -20,7 +20,7 @@ Rendered from `lib/core/widgets/capability_banner.dart` (`CapabilityBanner`, `Ca
 |---|---|---|
 | The service answered (`answered`) | The feature's `CapabilityCopy.answered` — what the key can do, then what it cannot: *This Unraid key can read. Starting and stopping VMs needs a key with write access to VMs.* A page gating several resources with a `partial` credential names only what it cannot change *there*. | The service's `capabilityFixLabel` — `Update the key`, or `Change account` for Nginx Proxy Manager, whose credential is a role on an account |
 | A write was refused earlier (`refused`) | *Unraid refused a change from this key. It can still read; changes need write access to VMs.* | Same as above |
-| Cupola could not ask (`unanswered`) | *Cupola couldn't check what this TrueNAS key may change, so changes are held back until it can. Reads are unaffected.* | *Check again* — re-runs the probe |
+| Cupola could not ask (`unanswered`) | *Cupola could not check what this TrueNAS key may change, so changes are held back until it can. Reads are unaffected.* | *Check again* — re-runs the probe |
 
 The slot renders nothing (`SizedBox.shrink()`) for a read-write credential, an unprobed connection (`CapabilityScope.unknown` stays live on purpose), or a page whose own `resources` this credential may write.
 
