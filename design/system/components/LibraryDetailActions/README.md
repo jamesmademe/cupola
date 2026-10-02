@@ -26,3 +26,12 @@ The consumer provides `service`, the resolved `status`, `mediaTitle`, `isMonitor
 Semantics: disc glyphs carry the accessible name (*Interactive search*, *More actions*); the busy spinner keeps the action's label and the confirmed glyph announces *<label> complete*. Sheet rows speak their label once; a selected profile row adds the value *Selected*.
 
 Do: map every in-flight flag onto `isBusy`; set a destructive row apart by where it sits — below the divider, last — and by its `mediumImpact` haptic. Don't: add a quality-profile control to the band — a detail edits in place, on its value row; don't paint anything red but unreachability — a destructive row takes the same `onSurface` label and `onSurfaceVariant` glyph as every other row.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the band also on the desktop.
+
+- Each rung of the ladder: missing, upgradable, missing and unmonitored, import blocked, downloading, failed, available, busy, confirmed.
+- Sonarr partial, Lidarr not released, only Delete wired, nothing wired.
+- The quality profile sheet body, `MediaSearchPopupMenu` idle, searching and open.
+- Text at 200%: missing, failed, available and downloading.

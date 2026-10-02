@@ -16,3 +16,10 @@ The consumer provides a `MediaDetailBody` of slots, each with a sentence-case `l
 Semantics: each label is one header node speaking the original-case label and count (*Seasons, 41 of 45 on disk*); a trailing control keeps its own node. An editable value row is one button: name, value, then the caller's `hint` (*Changes it on Radarr*). On two tracks a screen reader walks the main track, then the side track.
 
 Do: pass labels in sentence case (`'Missing subtitles'`), declare `sideTrack` per slot, and omit an empty slot entirely. Don't: pad a slot yourself, put a sliver in `.box`, or pass a pre-uppercased label — it is read out shouting.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the body also in a 1280 desktop window.
+
+- The Radarr and Sonarr pages on a phone, with a fault band over the page, the section labels in each form, the value row editable, unanswered and read-only.
+- Text at 200%: the Radarr page, the labels and the value rows.

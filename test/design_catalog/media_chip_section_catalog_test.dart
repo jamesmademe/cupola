@@ -86,6 +86,38 @@ void main() {
         ),
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · genres, keywords and tags on the phone column: the '
+        'chips grow with the label and wrap onto more runs',
+        (_) => _column(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const MediaChipSection.neutral(values: _genres),
+              const SizedBox(height: 16),
+              const MediaChipSection.neutral(values: _keywords),
+              const SizedBox(height: 16),
+              MediaChipSection.accented(
+                values: const ['4k', 'family', 'watchlist'],
+                accent: ServiceKey.radarr.accent,
+              ),
+            ],
+          ),
+        ),
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'A long value · a keyword wider than the phone column',
+        (_) => _column(
+          const MediaChipSection.neutral(
+            values: [
+              'adaptation of a nineteenth century gothic novel set in the '
+                  'carpathian mountains',
+              'vampire',
+            ],
+          ),
+        ),
+      ),
     ],
   );
 }

@@ -15,6 +15,13 @@ The consumer provides `ratings` (`RatingSource`: name, icon, value, votes) — a
 
 Each pill is one node, not a button — *IMDb rating 8.6 out of 10*, value *512300 votes*; `/100` is spoken *out of 100*, `%` *percent*, an unrecognised denominator spoken as written.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Four sources on their own scales, one source, no accent, an unreleased source dropped, `MediaMetadataLine`.
+- Text at 200%: the four sources and the fact line.
+
 ## Do / don't
 
 - Do pass the page accent (the lamp) so the row matches the rest of the page: monochrome.

@@ -18,3 +18,11 @@ The consumer provides `groups` (`id`, `shortLabel` like `S3` or `Sp`, `label`, r
 Semantics: a row is one button named *ordinalLabel, title, facts* (*Episode 7, A Scandal in Bohemia, Feb 15, 1921, Missing*) with the status's `semanticLabel` as its value; the ordinal, texts and badge are silenced, and `trailing` keeps its own node. `ordinalLabel: ''` drops the ordinal from the name (the picker sheet does, since its title already says *Season 3*). Pills are buttons with a selected state. The summary is one node, *label, summary*. The toggle's name carries the noun (*Show fewer episodes*).
 
 Do: resolve the status in the feature's domain layer, pass a status word in `facts` for anything not available, and sort the groups before passing them. Don't: build the list in a `Column` — it is a sliver so a 250-episode season builds only the rows on screen — or pad the slot it sits in.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the sliver also on the desktop.
+
+- Three seasons collapsed to eight and expanded, eight containers, no containers, a loading, failed and empty override, a season whose status waits on the queue.
+- `MediaChildTile.stacked` for Lidarr albums, `.numbered` with no status, a two-line title and a stalled row.
+- Text at 150% (the rail ends in the picker) and at 200%: a season group, the album rows and the loose episodes.

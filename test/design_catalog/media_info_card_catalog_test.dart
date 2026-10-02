@@ -166,6 +166,39 @@ void main() {
         ),
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · Radarr Details on a phone, the long label and value, '
+        'and the file section, at twice the reading size',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _hosted(MediaInfoCard(rows: [_profileRow()], groups: _details)),
+            const SizedBox(height: 16),
+            _hosted(
+              const MediaInfoCard(
+                groups: [
+                  MediaInfoGroup(
+                    title: 'Original title in the language of production',
+                    child: Text('Nosferatu, eine Symphonie des Grauens'),
+                  ),
+                  MediaInfoGroup(title: 'Studio', child: Text('Prana-Film')),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: 358,
+              child: FileInfoSection.file(
+                fileName: 'Nosferatu (1922) Bluray-2160p.mkv',
+                releasedAs: 'Nosferatu.1922.2160p.BluRay.x265-GROUP',
+                path: '/data/media/movies/Nosferatu (1922)',
+                accent: ServiceKey.radarr.accent,
+              ),
+            ),
+          ],
+        ),
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

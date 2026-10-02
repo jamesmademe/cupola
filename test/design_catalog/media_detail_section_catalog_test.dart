@@ -385,6 +385,35 @@ void main() {
         height: 1000,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · the Radarr page on a phone: the deck, the manifest, '
+        'the synopsis and the reference at twice the reading size',
+        (_) => _row([_phone(_radarrPage(), height: 1400)]),
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · MediaDetailSectionLabel in each form and '
+        'MediaDetailValueRow editable, unanswered and read-only',
+        (context) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _labels(context),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: 358,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _profileRow(ServiceKey.radarr),
+                  _profileRow(ServiceKey.radarr, value: null),
+                  _profileRow(ServiceKey.radarr, editable: false),
+                ],
+              ),
+            ),
+          ],
+        ),
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

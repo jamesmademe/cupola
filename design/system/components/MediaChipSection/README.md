@@ -13,3 +13,11 @@ The consumer provides `values` and, for `.accented`, the page `accent` (asserted
 Semantics: each chip is plain text and reads as its text; chips are metadata, not controls, and carry no button role.
 
 Do: use `.accented` only for real Radarr, Sonarr or Bazarr tags. Don't: call genres *Tags* — in this domain a tag targets release profiles and import lists, so the label would assert something false about the server.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the column also on the desktop.
+
+- `.neutral` genres and wrapping keywords, `.accented` Radarr, Sonarr and Bazarr tags.
+- A keyword wider than the phone column.
+- Text at 200%: genres, keywords and tags.

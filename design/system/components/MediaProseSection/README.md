@@ -15,3 +15,10 @@ The consumer provides `text` and optionally `maxLines`.
 Semantics: the paragraph reads as text; the control is a button labelled with its visible words.
 
 Do: let the spine own the label and the gutter, and pass the paragraph as the service wrote it. Don't: set a line height on the role, or bound the text with a fixed height — it grows downward with reading size like a paragraph.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the section also on the desktop.
+
+- Clamped at six lines and expanded, a short overview, `maxLines: 3`, a wide track expanded.
+- Text at 150% and at 200%, collapsed and expanded.

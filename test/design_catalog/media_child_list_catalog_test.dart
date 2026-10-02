@@ -425,6 +425,31 @@ void main() {
         (_) => _column(_groups(_seasons), width: 720, height: 640),
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · a season group with two episodes, the Lidarr album '
+        'rows and the loose episodes, at twice the reading size',
+        (_) => _row([
+          _column(
+            _groups(_seasons, count: (group) => group.id == 1 ? 2 : 0),
+            height: 700,
+          ),
+          SizedBox(
+            width: 390,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _albums(),
+            ),
+          ),
+          SizedBox(
+            width: 390,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _loose(),
+            ),
+          ),
+        ]),
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

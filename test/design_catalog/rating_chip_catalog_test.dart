@@ -1,6 +1,7 @@
 @Tags(['catalog'])
 library;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/rating_source.dart';
@@ -65,6 +66,40 @@ void main() {
         (_) => const MediaMetadataLine(
           items: ['1922', '1\u00A0h 34\u00A0min', 'Horror'],
         ),
+      ),
+      CatalogScene(
+        'Text at 200% · the four sources and the fact line on a 390pt phone: '
+        'the pills wrap onto more runs',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RatingChipsRow(
+              accent: ServiceKey.radarr.accent,
+              ratings: legibleRatings(const [
+                RatingSource(
+                  name: 'imdb',
+                  value: 8.6,
+                  votes: 512300,
+                  icon: 'imdb',
+                ),
+                RatingSource(
+                  name: 'tmdb',
+                  value: 8.2,
+                  votes: 5120,
+                  icon: 'tmdb',
+                ),
+                RatingSource(name: 'mc', value: 79, votes: 0, icon: 'mc'),
+                RatingSource(name: 'ro', value: 92, votes: 0, icon: 'ro'),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            const MediaMetadataLine(
+              items: ['1922', '1\u00A0h 34\u00A0min', 'Horror'],
+            ),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
       ),
     ],
   );

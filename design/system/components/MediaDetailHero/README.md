@@ -20,3 +20,10 @@ The consumer provides, on `MediaDetailView`: `posterRow` (a `MediaDetailPosterRo
 Semantics: exactly one title is spoken at a time — the hero title and the bar title are both headers and hand off on the same `barReveal ≥ 0.5` threshold. The poster is excluded (the title beside it names the region). Reduce Motion flattens parallax, stretch, poster scale, the route settle and the poster row's exit push; scrim, bar and glow still track the finger, because they are a remap of the finger's own position.
 
 Do: pass the page's service accent (the lamp) and its own fallback glyph. Don't: wrap the poster row in an `Opacity` (it is a Hero source), or add a blur behind the bar.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the hero also on the desktop.
+
+- Expanded, under a 47pt safe area, mid-collapse, collapsed; a long title; no backdrop with a poster, no backdrop and no poster; the circular artist row; `MediaDetailLoadingView`.
+- Text at 200%: expanded with a long title, collapsed, and the loading view.

@@ -322,6 +322,55 @@ void main() {
         height: 160,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · expanded, a long title: the stage grows with the '
+        'reading size, the title takes its two lines, the metadata one',
+        (_) => _page(
+          accent: ServiceKey.radarr.accent,
+          backdropUrl: CatalogArt.backdrop,
+          title: 'The Cabinet of Dr. Caligari',
+          posterRow: _radarrRow(
+            tag: 'j',
+            title:
+                'The Cabinet of Dr. Caligari: A Restoration of the Original '
+                'Tinted Print',
+            status: const MediaStatusInfo(
+              availability: MediaAvailability.available,
+            ),
+            chip: '1 file',
+            metadata: const [
+              '1920',
+              '1\u00A0h 16\u00A0min',
+              'Not Rated',
+              'Expressionism',
+            ],
+          ),
+        ),
+        width: 390,
+        height: 520,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · collapsed: the glass bar with the centred title',
+        (_) => _page(
+          accent: ServiceKey.radarr.accent,
+          backdropUrl: CatalogArt.backdrop,
+          title: 'Nosferatu',
+          offset: 1200,
+          posterRow: _radarrRow(tag: 'k'),
+        ),
+        width: 390,
+        height: 260,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · MediaDetailLoadingView: the shimmer header at the '
+        'geometry the loaded page takes',
+        (_) => MediaDetailLoadingView(accent: ServiceKey.radarr.accent),
+        width: 390,
+        height: 520,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

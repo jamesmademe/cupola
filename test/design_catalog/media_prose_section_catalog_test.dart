@@ -128,6 +128,15 @@ void main() {
         ),
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'MediaProseSection · 2× reading size, collapsed then expanded · '
+        'bounded by lines, so it grows downward and keeps its Show more',
+        (_) => _pair([
+          _slot(358, const MediaProseSection(text: _overview)),
+          _slot(358, const _Pressed(child: MediaProseSection(text: _overview))),
+        ]),
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

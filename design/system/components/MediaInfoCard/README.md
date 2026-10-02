@@ -19,3 +19,10 @@ The consumer provides `groups` (`MediaInfoGroup(title:, child:)`, the child usua
 Semantics: `FileInfoSection.file` is three nodes, each read whole after its label: *File name*, the file; *Released as*, the release; *Library path*, the folder. Each name carries the copy action and has its copy button beside it. `FileInfoSection.folder` is one node reading the path, after its slot's heading; the titled folder row and the missing hint are one node each (*Library path, path*; the hint's two lines). Grid cells read label then value in order. An editable value row is one button named by its label, with the current value as its value and `hint` as its hint; a read-only row is plain text.
 
 Do: keep edits on rows above the grid. Don't: put a control in a grid cell — half a column wide and labelled by the grid, it would be announced by its value alone.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the card also on the desktop side track.
+
+- The Details card with an editable row, a read-only row, a value that matches no option, a 360pt phone that folds to one column, a long label and value, `MediaFactsList`, `FileInfoSection`.
+- Text at 200%: Details, a long label and value, and the file section.

@@ -301,6 +301,48 @@ void main() {
         width: 728,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · Missing: the promoted ink button, the visible disc '
+        'and the overflow, with the sentence under them',
+        (_) => _radarr(
+          const MediaStatusInfo(availability: MediaAvailability.missing),
+        ),
+        width: phone,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · Failed: what the service reported quoted in the '
+        'sentence',
+        (_) => _radarr(
+          const MediaStatusInfo(
+            pipeline: MediaPipeline.failed,
+            detail: 'Download client reported the release as corrupt',
+          ),
+        ),
+        width: phone,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · Available: the two labelled secondaries share the '
+        'width',
+        (_) => _radarr(
+          const MediaStatusInfo(availability: MediaAvailability.available),
+        ),
+        width: phone,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · Downloading: Open queue promoted, the percentage in '
+        'the sentence',
+        (_) => _radarr(
+          const MediaStatusInfo(
+            pipeline: MediaPipeline.downloading,
+            progress: 0.42,
+          ),
+        ),
+        width: phone,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }
