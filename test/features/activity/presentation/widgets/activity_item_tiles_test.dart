@@ -233,6 +233,66 @@ void main() {
       expect(find.text('Cool Movie'), findsOneWidget);
     });
 
+    // Dates read `Wed 1 May 2024` (a year only when it is another year), never
+    // the sortable `2024-05-01`: the chip and the line above it.
+    testWidgets('a movie\'s release date is in the brand book\'s voice', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: WantedItemTile(
+              item: {
+                'title': 'Cool Movie',
+                'inCinemas': '2024-05-01T00:00:00Z',
+              },
+              serviceType: ServiceType.movies,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Release Wed 1 May 2024'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(TagChip),
+          matching: find.text('Wed 1 May 2024'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('2024-05-01'), findsNothing);
+    });
+
+    testWidgets('an episode\'s air date chip is in the brand book\'s voice', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: WantedItemTile(
+              item: {
+                'title': 'Pilot',
+                'seasonNumber': 1,
+                'episodeNumber': 1,
+                'airDateUtc': '2024-05-01T00:00:00Z',
+                'series': {'title': 'Breaking Bad'},
+              },
+              serviceType: ServiceType.series,
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(TagChip),
+          matching: find.text('Wed 1 May 2024'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('2024-05-01'), findsNothing);
+    });
+
     testWidgets('renders search popup when callbacks provided', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

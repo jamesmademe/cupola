@@ -1233,7 +1233,10 @@ List<Widget> _buildWantedChips(
     if (quality != null)
       TagChip(surface: colorScheme.surfaceContainer, text: quality),
     if (showDateChip && date != null)
-      TagChip(surface: colorScheme.surfaceContainer, text: formatIsoDate(date)),
+      TagChip(
+        surface: colorScheme.surfaceContainer,
+        text: formatShortDate(date),
+      ),
   ];
 }
 

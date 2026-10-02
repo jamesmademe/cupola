@@ -58,6 +58,43 @@ String formatMediumDate(String isoDate) {
   return '${_shortMonthNames[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
 }
 
+const List<String> _weekdayNames = [
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+  'Sun',
+];
+
+/// Formats an ISO-8601 date as `Tue 29 Sep`, and as `Tue 29 Sep 2025` when it
+/// is not in [now]'s year: the brand book's date, a year only when it is
+/// another year.
+///
+/// A row that says *when* a thing is due or was released speaks this voice. It
+/// sits beside [formatIsoDate], the sortable `YYYY-MM-DD` of the dense feed
+/// rows that pair a date with a clock time, and [formatMediumDate], the
+/// `Jul 17, 2026` of the detail grids; it answers the question the other two
+/// do not, which is where in the week a date falls.
+///
+/// The day is the one the string states: the components of the parsed value,
+/// with no shift into the reader's timezone, so a release dated the 29th reads
+/// the 29th everywhere. [now] is for tests; it defaults to the clock. Returns
+/// the input unchanged when it cannot be parsed, like its siblings. English
+/// names are hard-coded for the reason [formatMediumDate] gives.
+String formatShortDate(String isoDate, {DateTime? now}) {
+  final parsed = DateTime.tryParse(isoDate.trim());
+  if (parsed == null) return isoDate;
+
+  final weekday = _weekdayNames[parsed.weekday - 1];
+  final month = _shortMonthNames[parsed.month - 1];
+  final day = '$weekday ${parsed.day} $month';
+  return parsed.year == (now ?? DateTime.now()).year
+      ? day
+      : '$day ${parsed.year}';
+}
+
 /// [formatMediumDate] for a nullable field, answering null rather than echoing
 /// something unparseable back.
 ///

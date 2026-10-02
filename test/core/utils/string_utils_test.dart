@@ -37,6 +37,63 @@ void main() {
     });
   });
 
+  group('formatShortDate', () {
+    // 2026-10-02 is a Friday; 29 Sep 2026 is the Tuesday the brand book draws.
+    final now = DateTime(2026, 10, 2);
+
+    test('is the brand book\'s date: weekday, day, month', () {
+      expect(formatShortDate('2026-09-29', now: now), 'Tue 29 Sep');
+    });
+
+    test('names every weekday and does not pad a single-digit day', () {
+      expect(
+        [
+          for (final day in const [
+            '2026-09-28',
+            '2026-09-29',
+            '2026-09-30',
+            '2026-10-01',
+            '2026-10-02',
+            '2026-10-03',
+            '2026-10-04',
+          ])
+            formatShortDate(day, now: now),
+        ],
+        [
+          'Mon 28 Sep',
+          'Tue 29 Sep',
+          'Wed 30 Sep',
+          'Thu 1 Oct',
+          'Fri 2 Oct',
+          'Sat 3 Oct',
+          'Sun 4 Oct',
+        ],
+      );
+    });
+
+    test('carries the year only when it is another year', () {
+      expect(formatShortDate('2025-09-29', now: now), 'Mon 29 Sep 2025');
+      expect(formatShortDate('2027-01-01', now: now), 'Fri 1 Jan 2027');
+      expect(formatShortDate('2026-01-01', now: now), 'Thu 1 Jan');
+    });
+
+    test('reads the day the string states, whatever the clock or the zone', () {
+      expect(formatShortDate('2026-09-29T00:00:00Z', now: now), 'Tue 29 Sep');
+      expect(formatShortDate('2026-09-29T23:30:00Z', now: now), 'Tue 29 Sep');
+      expect(formatShortDate('2026-09-29T08:00:00', now: now), 'Tue 29 Sep');
+    });
+
+    test('is never the sortable form', () {
+      expect(formatShortDate('2026-09-29', now: now), isNot(contains('2026-')));
+    });
+
+    test('returns what the service said when it cannot be parsed', () {
+      expect(formatShortDate('not a date', now: now), 'not a date');
+      expect(formatShortDate('2019-05', now: now), '2019-05');
+      expect(formatShortDate('', now: now), '');
+    });
+  });
+
   group('formatMediumDateOrNull', () {
     test('speaks the same prose as formatMediumDate', () {
       // The whole point of the nullable variant is that a child row and the

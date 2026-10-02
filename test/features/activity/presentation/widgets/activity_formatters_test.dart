@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/utils/release_utils.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 
 void main() {
@@ -89,6 +90,22 @@ void main() {
       expect(formatActivityDuration(null), '—');
       expect(formatActivityDuration('  '), '—');
       expect(formatActivityDuration('soon'), 'soon');
+    });
+  });
+
+  group('wantedSubtitle', () {
+    test('a movie\'s release date is the brand book\'s, not the ISO stamp', () {
+      // 1 May 2024 was a Wednesday, and 2024 is another year.
+      expect(
+        wantedSubtitle({
+          'inCinemas': '2024-05-01T00:00:00Z',
+        }, ServiceType.movies),
+        'Release Wed 1 May 2024',
+      );
+    });
+
+    test('says nothing for a movie with no date', () {
+      expect(wantedSubtitle({}, ServiceType.movies), isNull);
     });
   });
 }

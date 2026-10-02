@@ -12,7 +12,8 @@ import 'package:cupola/features/activity/domain/service_type.dart';
 
 export 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, stringOrNull;
-export 'package:cupola/core/utils/string_utils.dart' show formatIsoDate;
+export 'package:cupola/core/utils/string_utils.dart'
+    show formatIsoDate, formatShortDate;
 // The status resolvers moved to the domain layer; re-exported so the existing
 // presentation call sites keep one import.
 export 'package:cupola/features/activity/domain/global_activity_status.dart'
@@ -434,7 +435,7 @@ String? wantedSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
       final date = stringOrNull(
         item['airDateUtc'] ?? item['digitalRelease'] ?? item['inCinemas'],
       );
-      return date == null ? null : 'Release ${formatIsoDate(date)}';
+      return date == null ? null : 'Release ${formatShortDate(date)}';
     case ServiceType.music:
       return stringOrNull(asActivityMap(item['artist'])?['artistName']);
     case ServiceType.series:
