@@ -71,8 +71,8 @@ class FloatingNavDestination {
 class FloatingNavBarMetrics {
   FloatingNavBarMetrics._();
 
-  /// Height of the nav bar at the default reading size.
-  static const double barHeight = 60.0;
+  /// Height of the nav bar at the default reading size: `size.tabbar`.
+  static const double barHeight = DesignTokens.sizeTabbar;
 
   /// Top padding above the nav bar.
   static const double topPadding = AppSpacing.sm; // 8dp

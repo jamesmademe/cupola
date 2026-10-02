@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/floating_bottom_nav_bar.dart` by `test/design_ca
 
 ## The bar
 
-- Height `FloatingNavBarMetrics.barHeight` (60) at the default reading size, growing to fit its pill at larger ones. Outer padding `AppSpacing.lg` at the sides, `AppSpacing.sm` above, `AppSpacing.xs` plus the bottom safe area below.
+- Height `FloatingNavBarMetrics.barHeight` (62, `size.tabbar`) at the default reading size, growing to fit its pill at larger ones. Outer padding `AppSpacing.lg` at the sides, `AppSpacing.sm` above, `AppSpacing.xs` plus the bottom safe area below.
 - The surface is only as wide as its items want — the widest selected pill plus 52pt per other item and the gaps — centred, and never wider than the space it is given.
 - `AppRadius.borderRadiusXl` (30), `CupolaThemeColors.glassSurface` fill (the enamel step, `#1A1A1F`, at 95% dark / white at 95% light — a semi-opaque tint, deliberately not a backdrop blur, because every screen scrolls under it), `AppElevation.glass` shadow, a 1px border (white at 12% on dark, `outline` at 85% on light), 6pt inner padding.
 
