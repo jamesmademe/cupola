@@ -1188,12 +1188,20 @@ class AppTheme {
       ),
 
       // Chip: a pill at rest on the quiet fill with an edge; selected is the
-      // ink fill.
+      // ink fill. The label's colour follows the state (the chip resolves the
+      // colour, not the style): a FilterChip reads only `labelStyle`, so a
+      // plain colour painted a selected one's label in the ink of its fill.
       chipTheme: ChipThemeData(
         backgroundColor: room.fillQuiet,
         selectedColor: colorScheme.primary,
         checkmarkColor: colorScheme.onPrimary,
-        labelStyle: labelLarge.copyWith(color: colorScheme.onSurface),
+        labelStyle: labelLarge.copyWith(
+          color: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? colorScheme.onPrimary
+                : colorScheme.onSurface,
+          ),
+        ),
         secondaryLabelStyle: labelLarge.copyWith(color: colorScheme.onPrimary),
         side: BorderSide(color: room.edge),
         shape: const StadiumBorder(),
