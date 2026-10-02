@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -329,15 +330,15 @@ class SettingsService {
     await _prefs.remove(_kInstanceRoster);
     await _prefs.remove(_kActiveInstances);
 
-    // A primary's access, for the install whose roster lost a write: the
-    // roster is what the loop above walked.
+    // A primary's access and Seerr account, for the install whose roster
+    // lost a write: the roster is what the loop above walked.
     for (final service in ServiceKey.values) {
-      await _prefs.remove(
-        ServiceInstance(
-          id: ServiceInstance.primaryIdFor(service),
-          service: service,
-        ).accessStorageKey,
+      final primary = ServiceInstance(
+        id: ServiceInstance.primaryIdFor(service),
+        service: service,
       );
+      await _prefs.remove(primary.accessStorageKey);
+      await _prefs.remove(primary.accountStorageKey);
     }
 
     for (final storageKeys in _serviceStorageKeys.values) {
@@ -428,12 +429,15 @@ class SettingsService {
     final roster = _readRoster();
     final extras = await _loadExtraInstances(roster);
     final ordered = _ordered([...model.instances, ...extras], roster);
-    // Each connection's access, from the keys its id derives: one pass for the
-    // primaries and the extras alike, since neither path above knows of it.
+    // Each connection's access and Seerr account, from the keys its id
+    // derives: one pass for the primaries and the extras alike, since neither
+    // path above knows of them.
     return model.copyWith(
       instances: List.unmodifiable([
         for (final instance in ordered)
-          instance.copyWith(access: await _loadAccess(instance)),
+          await _withAccount(
+            instance.copyWith(access: await _loadAccess(instance)),
+          ),
       ]),
     );
   }
@@ -833,6 +837,7 @@ class SettingsService {
       await _writeOrRemove(instance.usernameStorageKey, instance.username);
       await _writeOrRemove(instance.viewerIdStorageKey, instance.viewerId);
       await _saveAccess(instance);
+      await _saveAccount(instance);
     }
 
     final live = {for (final instance in settings.instances) instance.id};
@@ -891,6 +896,83 @@ class SettingsService {
     if (instance.service == ServiceKey.qbittorrent) {
       await _secureStore.delete(key: qbittorrentRefusalKey(instance.id));
     }
+    // A removed Seerr connection must not leave a live session in the
+    // keychain.
+    await _saveAccount(instance.copyWith(clearAccount: true));
+  }
+
+  // === Seerr accounts ======================================================
+  //
+  // A Seerr connection signed in with an account keeps its kind, login, user
+  // id, name and last permissions in `SharedPreferences` under
+  // `<id>_account`, as JSON, and the session alone in secure storage under
+  // `secure_<id>_session`. No password and no Plex token, ever. A connection
+  // without `<id>_account` signs in with its key, as every connection did
+  // before accounts: no migration.
+
+  /// Writes [instance]'s account, or removes it and its session when it has
+  /// none.
+  Future<void> _saveAccount(ServiceInstance instance) async {
+    final account = instance.account;
+    if (account == null) {
+      await _prefs.remove(instance.accountStorageKey);
+      await _secureStore.delete(key: instance.sessionStorageKey);
+      return;
+    }
+    await _prefs.setString(
+      instance.accountStorageKey,
+      jsonEncode({
+        'kind': account.kind.name,
+        'login': account.login,
+        'userId': account.userId,
+        'displayName': account.displayName,
+        'permissions': account.permissions,
+        if (account.checkedAt case final checkedAt?)
+          'checkedAt': checkedAt.toUtc().toIso8601String(),
+      }),
+    );
+    if (account.session.isEmpty) {
+      await _secureStore.delete(key: instance.sessionStorageKey);
+    } else {
+      await _secureStore.write(
+        key: instance.sessionStorageKey,
+        value: account.session,
+      );
+    }
+  }
+
+  /// [instance] with its stored Seerr account, when it has one. An account
+  /// that does not parse (a kind a later build wrote, an edit by hand) costs
+  /// the account and never the connection; a key stored beside an account is
+  /// dropped, because a connection is one or the other.
+  Future<ServiceInstance> _withAccount(ServiceInstance instance) async {
+    if (instance.service != ServiceKey.seerr) return instance;
+    final raw = _prefs.getString(instance.accountStorageKey);
+    if (raw == null || raw.isEmpty) return instance;
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return instance;
+    }
+    if (decoded is! Map) return instance;
+    final kind = SeerrAccountKind.byName(decoded['kind'] as String?);
+    if (kind == null) return instance;
+    String text(Object? value) => value is String ? value : '';
+    int number(Object? value) => value is int ? value : 0;
+    final checkedAt = decoded['checkedAt'];
+    return instance.copyWith(
+      credential: '',
+      account: SeerrAccountSignIn(
+        kind: kind,
+        login: text(decoded['login']),
+        userId: number(decoded['userId']),
+        displayName: text(decoded['displayName']),
+        permissions: number(decoded['permissions']),
+        checkedAt: checkedAt is String ? DateTime.tryParse(checkedAt) : null,
+        session: await _loadApiKey(instance.sessionStorageKey),
+      ),
+    );
   }
 
   /// Where the qBittorrent sign-in refused for connection [id] is kept in

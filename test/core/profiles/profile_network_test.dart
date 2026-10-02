@@ -288,8 +288,10 @@ void main() {
     });
 
     test('Seerr refuses with 403 behind a public status route', () async {
+      // The household's Seerr, reached with the key: P2 signs in with an
+      // account, which a refused key does not touch.
       final harness = await ProfileHarness.start(
-        Profiles.p2.withBehaviour(
+        Profiles.p1.withBehaviour(
           WorldIds.seerr,
           ConnectionBehaviour.refusesKey,
         ),

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -75,6 +76,17 @@ class ServiceInstance {
   /// removing the connection removes them.
   final ConnectionAccess access;
 
+  /// Seerr only: the household member's own account this connection signs in
+  /// with, or null for the instance's API key in [credential].
+  ///
+  /// A connection is one or the other, never both: with an account the
+  /// credential is empty. Its non-secret half (the kind, the login, the name,
+  /// the last permissions) is stored beside the address
+  /// ([accountStorageKey]) and its session in secure storage
+  /// ([sessionStorageKey]). An account whose session is empty is signed out:
+  /// everything but the session is kept, so signing in again is one step.
+  final SeerrAccountSignIn? account;
+
   const ServiceInstance({
     required this.id,
     required this.service,
@@ -84,7 +96,15 @@ class ServiceInstance {
     this.username = '',
     this.viewerId = '',
     this.access = const NoAccess(),
-  });
+    this.account,
+  }) : assert(
+         account == null || service == ServiceKey.seerr,
+         'only a Seerr connection signs in with an account',
+       ),
+       assert(
+         account == null || credential == '',
+         'a Seerr connection is a key or an account, never both',
+       );
 
   /// The id the first instance of [service] takes. See the class doc.
   static String primaryIdFor(ServiceKey service) => service.routeParam;
@@ -148,14 +168,34 @@ class ServiceInstance {
   String accessHeaderStorageKey(int index) =>
       'secure_${id}_access_header_$index';
 
+  /// Where the non-secret half of [account] lives in `SharedPreferences`, as
+  /// JSON. Absent for a connection that signs in with its key, which is also
+  /// what every install before accounts reads: nothing to migrate.
+  String get accountStorageKey => '${id}_account';
+
+  /// Where [account]'s session lives in secure storage.
+  String get sessionStorageKey => 'secure_${id}_session';
+
+  /// How this Seerr connection signs in: its [account], or its API key.
+  SeerrSignIn get seerrSignIn => account ?? SeerrApiKeySignIn(credential);
+
+  /// Whether this is a Seerr account that holds no session: signed out.
+  bool get isSignedOut => account != null && !account!.isSignedIn;
+
   /// Whether this instance is set up enough to be worth talking to.
   ///
   /// A credential-authenticated service can legitimately run with no auth at
   /// all behind a reverse proxy, so only the address is strictly required
   /// there. Which services those are is the registry's answer, never a list
   /// repeated at the call site.
+  ///
+  /// A Seerr account is set up while it holds a session: signed out, it keeps
+  /// its address and its login and reads as not set up until it signs in
+  /// again.
   bool get isConfigured {
     if (!service.usesApiKey) return url.isNotEmpty;
+    final account = this.account;
+    if (account != null) return url.isNotEmpty && account.isSignedIn;
     return url.isNotEmpty && credential.isNotEmpty;
   }
 
@@ -174,6 +214,8 @@ class ServiceInstance {
   String get displayTitle =>
       label.isEmpty ? service.title : '${service.title} · $label';
 
+  /// [clearAccount] takes the account off, back to the key; setting an
+  /// [account] is the other way.
   ServiceInstance copyWith({
     String? label,
     String? url,
@@ -181,6 +223,8 @@ class ServiceInstance {
     String? username,
     String? viewerId,
     ConnectionAccess? access,
+    SeerrAccountSignIn? account,
+    bool clearAccount = false,
   }) {
     return ServiceInstance(
       id: id,
@@ -191,6 +235,7 @@ class ServiceInstance {
       username: username ?? this.username,
       viewerId: viewerId ?? this.viewerId,
       access: access ?? this.access,
+      account: clearAccount ? null : account ?? this.account,
     );
   }
 
@@ -204,7 +249,8 @@ class ServiceInstance {
         other.credential == credential &&
         other.username == username &&
         other.viewerId == viewerId &&
-        other.access == access;
+        other.access == access &&
+        other.account == account;
   }
 
   @override
@@ -217,11 +263,14 @@ class ServiceInstance {
     username,
     viewerId,
     access,
+    account,
   );
 
-  /// The kind of access only, never its values.
+  /// The kind of access only, never its values; an account by its kind and
+  /// name, never its session.
   @override
   String toString() =>
       'ServiceInstance($id, ${service.name}, label: "$label", url: "$url", '
-      'access: ${access.kind.name})';
+      'access: ${access.kind.name}'
+      '${account == null ? '' : ', account: $account'})';
 }

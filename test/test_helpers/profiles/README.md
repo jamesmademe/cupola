@@ -179,9 +179,10 @@ The fake Seerr answers whoever calls it as Seerr v3.5.0 does
   (`WorldSeerrUsers`) can sign in every way; the secrets are fakes derived
   from the name (`world-anna-password`, `world-anna-plex-token`).
 - **The saved session.** A connection with a `seerrAccount` starts with a
-  live session: `network.seerrSessionOf(id)` is the cookie value the app would
-  have saved. A session lives 30 days after its last use on the network clock;
-  `POST /auth/logout` ends it.
+  live session: `network.seerrSessionOf(id)` is the cookie value the app saved,
+  the same one its instance carries (`worldSeerrSessionOf(id)`). A session
+  lives 30 days after its last use on the network clock; `POST /auth/logout`
+  ends it.
 - **Quick Connect.** `network.approveQuickConnect(id, code)` is the person
   approving the code from a Jellyfin app; a code times out after 10 minutes.
 - **plex.tv.** `https://plex.tv` answers `POST /api/v2/pins?strong=true`
@@ -201,14 +202,14 @@ The fake Seerr answers whoever calls it as Seerr v3.5.0 does
   `mediaServerType`, the 4K flags (a default 4K server in `seerrKnows`),
   `localLogin` and `mediaServerLogin` laid over them.
 
-**What the app holds today.** `ServiceInstance` has no account yet, and a
-Seerr connection without a credential reads as not set up. So every account
-connection (P2's, P2-J's, P2-P's, Sara's in P9) still carries the server's
-key in its credential slot, and the app, which signs in with a key only,
-reaches those servers as the admin. The account side is on the network for a
-client that signs in or sends the saved session. When the app learns to sign
-in, the account connections drop the key and the saved session goes where the
-app keeps its sessions.
+**What the app holds.** Every account connection (P2's, P2-J's, P2-P's,
+Sara's in P9) carries its account on its instance (`ServiceInstance.account`)
+and no key: the kind, the login, the user id, the name, the permissions, and
+the saved session. So the app reaches those servers as the account: its own
+requests only, the operator's routes refused with the real body, and an
+ended session (`sessionExpired`) emptied from the settings and read as
+signed out. `withSeerrPermissions` changes the instance's saved permissions
+with the server's.
 
 Not verified against a live server, and marked where they are written: the
 answers Seerr only relays (Jellyfin's Quick Connect refusals and its 10-minute

@@ -283,6 +283,7 @@ class CapabilityScopeNotifier extends Notifier<Map<String, CapabilityGrant>> {
                 instance.url,
                 instance.credential,
                 instance.username,
+                instance.account?.session,
               ),
           },
         ),

@@ -14,6 +14,8 @@
 /// check (`server/middleware/auth.ts`).
 library;
 
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +23,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -88,9 +91,9 @@ class SeerrSessionEvents {
 /// in front ([ServiceInstance.access]). Redirects stay on the configured
 /// origin, so the cookie never leaves the host.
 ///
-/// [signIn] overrides the instance's own way in: the sign-in sequences pass
-/// the account being signed in. Without it the instance's credential is the
-/// API key.
+/// [signIn] overrides the instance's own way in
+/// ([ServiceInstance.seerrSignIn]): the sign-in sequences pass the account
+/// being signed in.
 ///
 /// `test/features/discover/data/seerr_client_guard_test.dart` holds that no
 /// Seerr client is born anywhere else.
@@ -101,7 +104,7 @@ ApiClient seerrClientFor(
   SeerrSessionEvents events = const SeerrSessionEvents(),
 }) {
   assert(instance.service == ServiceKey.seerr, 'not a Seerr connection');
-  final way = signIn ?? SeerrApiKeySignIn(instance.credential);
+  final way = signIn ?? instance.seerrSignIn;
   final accessHeaders = instance.access.headers();
   return switch (way) {
     SeerrApiKeySignIn(:final key) => ApiClient(
@@ -124,6 +127,22 @@ ApiClient seerrClientFor(
   };
 }
 
+/// What a client of connection [connectionId] reports about its saved
+/// account: an ended session is emptied in storage, and the permissions
+/// `/auth/me` answered are written back. Fire and forget: a request never
+/// waits on the settings write, and a container with no storage behind it (a
+/// test that overrides the settings alone) loses the write, not the request.
+SeerrSessionEvents seerrAccountEvents(Ref ref, String connectionId) {
+  final accounts = ref.read(seerrAccountsProvider);
+  void quietly(Future<void> Function() write) =>
+      unawaited(write().catchError((Object _) {}));
+  return SeerrSessionEvents(
+    onSessionEnded: () => quietly(() => accounts.sessionEnded(connectionId)),
+    onWhoAmI: (whoAmI) =>
+        quietly(() => accounts.recordWhoAmI(connectionId, whoAmI)),
+  );
+}
+
 /// [seerrClientFor] as a value a test can replace: the Dashboard probe builds
 /// its throwaway Seerr client through this.
 typedef SeerrClientFactory =
@@ -138,8 +157,12 @@ final seerrClientFactoryProvider = Provider<SeerrClientFactory>(
 );
 
 /// The Seerr client of the connection [instanceId] names, or of the lens when
-/// it names none, rebuilt when its address, credential, pinned certificate or
-/// access changes, and closed when the provider goes.
+/// it names none, rebuilt when its address, key, session, pinned certificate
+/// or access changes, and closed when the provider goes.
+///
+/// [events] defaults to the saved account's own: an ended session is
+/// emptied in storage ([SeerrAccounts.sessionEnded]), and the permissions an
+/// `/auth/me` answered are written back ([SeerrAccounts.recordWhoAmI]).
 ///
 /// Throws `Exception('Seerr not configured')`, which `AsyncValueWidget`
 /// turns into its placeholder, as `watchApiClient` does for the other
@@ -147,7 +170,7 @@ final seerrClientFactoryProvider = Provider<SeerrClientFactory>(
 ApiClient watchSeerrClient(
   Ref ref, {
   String? instanceId,
-  SeerrSessionEvents events = const SeerrSessionEvents(),
+  SeerrSessionEvents? events,
 }) {
   final transport = watchTransport(
     ref,
@@ -157,16 +180,22 @@ ApiClient watchSeerrClient(
   if (!transport.configured) {
     throw Exception('${ServiceKey.seerr.title} not configured');
   }
+  // Read, not watched: the transport above is the key the client is rebuilt
+  // on, and an account's permissions moving must not rebuild it.
+  final instance = ref
+      .read(currentSettingsProvider)
+      .instanceById(transport.instanceId);
   final client = seerrClientFor(
-    ServiceInstance(
-      id: transport.instanceId,
-      service: ServiceKey.seerr,
-      url: transport.url,
-      credential: transport.apiKey,
-      access: transport.access,
-    ),
+    instance ??
+        ServiceInstance(
+          id: transport.instanceId,
+          service: ServiceKey.seerr,
+          url: transport.url,
+          credential: transport.apiKey,
+          access: transport.access,
+        ),
     pinnedCertFingerprint: transport.pin,
-    events: events,
+    events: events ?? seerrAccountEvents(ref, transport.instanceId),
   );
   ref.onDispose(client.close);
   return client;

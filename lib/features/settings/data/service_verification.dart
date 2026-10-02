@@ -316,7 +316,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
   }
 
   if (service == ServiceKey.seerr) {
-    final client = seerrClientFor(
+    return diagnoseSeerr(
       ServiceInstance(
         id: '',
         service: service,
@@ -324,20 +324,8 @@ Future<ServiceDiagnosis> diagnoseCredentials(
         credential: apiKey.trim(),
         access: access,
       ),
-      pinnedCertFingerprint: pin,
+      pin: pin,
     );
-    try {
-      await SeerrService(
-        client,
-      ).testConnection().timeout(const Duration(seconds: 5));
-      // Then who answered, read the way the Dashboard's probe reads it.
-      await readServiceStatus(client, service, url: urlTrimmed);
-      return const ServiceDiagnosis.connected();
-    } catch (e) {
-      return ServiceDiagnosis.failed(e);
-    } finally {
-      client.close();
-    }
   }
 
   if (service == ServiceKey.sabnzbd) {
@@ -476,6 +464,30 @@ Future<ServiceDiagnosis> diagnoseCredentials(
     pin: pin,
     accessHeaders: accessHeaders,
   );
+}
+
+/// Tests a Seerr connection the way the Dashboard's probe reads it: one
+/// authenticated request, because `/status` is public and would read any key
+/// as answering, then who answered.
+///
+/// [instance] signs in its own way, the key or an account's session
+/// (`seerrClientFor`); [pin] is the certificate trusted for its origin.
+Future<ServiceDiagnosis> diagnoseSeerr(
+  ServiceInstance instance, {
+  String? pin,
+}) async {
+  final client = seerrClientFor(instance, pinnedCertFingerprint: pin);
+  try {
+    await SeerrService(
+      client,
+    ).testConnection().timeout(const Duration(seconds: 5));
+    await readServiceStatus(client, ServiceKey.seerr, url: instance.url.trim());
+    return const ServiceDiagnosis.connected();
+  } catch (e) {
+    return ServiceDiagnosis.failed(e);
+  } finally {
+    client.close();
+  }
 }
 
 /// The envelope every single-call probe above shares: run it under this
@@ -655,6 +667,10 @@ Future<ServiceDiagnosis> diagnoseInstance(
     return Future.value(const ServiceDiagnosis.notConfigured());
   }
   final service = instance.service;
+  // An account has no key to hand over: the connection signs in its own way.
+  if (service == ServiceKey.seerr && instance.account != null) {
+    return diagnoseSeerr(instance, pin: settings.pinForUrl(instance.url));
+  }
   return diagnoseCredentials(
     service,
     url: instance.url,

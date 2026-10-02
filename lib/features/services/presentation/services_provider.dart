@@ -217,6 +217,9 @@ typedef _ServiceConnection = ({
   String username,
   String? certFingerprint,
   ConnectionAccess access,
+
+  /// A Seerr account's session: signing in again probes again.
+  String session,
 });
 
 /// The connection key for whichever instance of [service] is currently being
@@ -289,6 +292,7 @@ _ServiceConnection _connectionOfInstance(
       username: '',
       certFingerprint: null,
       access: const NoAccess(),
+      session: '',
     );
   }
   return (
@@ -298,6 +302,7 @@ _ServiceConnection _connectionOfInstance(
     username: instance.username,
     certFingerprint: settings.pinForUrl(instance.url),
     access: instance.access,
+    session: instance.account?.session ?? '',
   );
 }
 
@@ -543,6 +548,8 @@ Future<String?> _loadVersion(
     final client = ref.watch(seerrClientFactoryProvider)(
       instance,
       pinnedCertFingerprint: settings.pinForUrl(url),
+      // A session the probe finds ended is emptied, as any request's is.
+      events: seerrAccountEvents(ref, instance.id),
     );
     try {
       // Seerr's status endpoint is public. Probe one authenticated request

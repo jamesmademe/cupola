@@ -10,9 +10,11 @@ import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -484,6 +486,76 @@ void main() {
         expect(text, isNot(contains(session)));
         expect(text, isNot(contains('connect.sid')));
       }
+    });
+  });
+
+  group('the account a connection saved', () {
+    test('the app reaches Seerr as Anna: her session, no key', () async {
+      final harness = await ProfileHarness.start(Profiles.p2);
+      final container = harness.container(retry: (_, _) => null);
+
+      final requests = await container.read(seerrServiceProvider).getRequests();
+
+      // Her own requests only: the server read her session, not a key.
+      expect(requests.map((request) => request.requestedBy?.id).toSet(), {
+        WorldSeerrUsers.annaLocal.id,
+      });
+      final sent = harness.network.requestsTo(WorldIds.seerr);
+      expect(sent, isNotEmpty);
+      for (final request in sent) {
+        expect(request.headers.containsKey('x-api-key'), isFalse);
+        expect(
+          _cookie(request, 'connect.sid'),
+          harness.network.seerrSessionOf(WorldIds.seerr),
+        );
+      }
+    });
+
+    test(
+      'an ended session is emptied, and the connection signed out',
+      () async {
+        final profile = Profiles.p2.withBehaviour(
+          WorldIds.seerr,
+          ConnectionBehaviour.sessionExpired,
+        );
+        final harness = await ProfileHarness.start(profile);
+        final container = harness.container(retry: (_, _) => null);
+
+        final error = await _failure(
+          () => container.read(seerrServiceProvider).testConnection(),
+        );
+        // The write to the settings is not awaited by the request.
+        await Future<void>.delayed(Duration.zero);
+
+        expect(
+          classifyConnectionFailure(error),
+          ServiceFailureReason.sessionEnded,
+        );
+        final seerr = container
+            .read(currentSettingsProvider)
+            .instanceById(WorldIds.seerr)!;
+        expect(seerr.account?.session, isEmpty);
+        expect(seerr.account?.displayName, WorldPeople.anna);
+        expect(seerr.isConfigured, isFalse);
+      },
+    );
+
+    test('a refusal /auth/me answers writes the permissions back', () async {
+      final harness = await ProfileHarness.start(Profiles.p2);
+      final container = harness.container(retry: (_, _) => null);
+
+      await _failure(
+        () => container.read(seerrServiceProvider).approveRequest(1),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      final account = container
+          .read(currentSettingsProvider)
+          .instanceById(WorldIds.seerr)!
+          .account!;
+      expect(account.permissions, 32);
+      expect(account.checkedAt, isNotNull);
+      expect(account.isSignedIn, isTrue);
     });
   });
 

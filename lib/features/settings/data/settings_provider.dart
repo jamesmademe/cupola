@@ -59,6 +59,12 @@ typedef ServiceTransport = ({
   /// every request. Part of the key, so a client rebuilds when it changes.
   ConnectionAccess access,
 
+  /// A Seerr account's session, empty for every other connection. Part of
+  /// the key, so signing in again rebuilds the client and what it answered;
+  /// the account's permissions are not, because reading them again must not
+  /// cut a request in flight.
+  String session,
+
   /// Which connection this transport describes. Not used to reach the server —
   /// it is here so a client rebuilds when the lens moves to a *different*
   /// instance that happens to share an address, which is a real shape while
@@ -162,6 +168,7 @@ ServiceTransport watchTransport(
           username: '',
           pin: null,
           access: const NoAccess(),
+          session: '',
           instanceId: '',
         );
       }
@@ -172,6 +179,7 @@ ServiceTransport watchTransport(
         username: instance.username,
         pin: s.pinForUrl(instance.url),
         access: instance.access,
+        session: instance.account?.session ?? '',
         instanceId: instance.id,
       );
     }),

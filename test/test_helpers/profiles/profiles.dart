@@ -301,9 +301,9 @@ abstract final class Profiles {
   ///
   /// The network answers her account as Seerr does: `/auth/local` with her
   /// email and password, a session cookie, `/auth/me` as her, her own
-  /// requests only, and 403 on the operator's routes. The connection still
-  /// carries the server's key for the app, which signs in with a key only;
-  /// see `ProfileConnection.seerrAccount`.
+  /// requests only, and 403 on the operator's routes. The connection carries
+  /// her account and its saved session, no key, so the app reaches the server
+  /// as her; see `ProfileConnection.seerrAccount`.
   static final p2 = ConfigProfile(
     id: 'P2',
     title: 'Requester',

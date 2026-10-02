@@ -1,9 +1,11 @@
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import 'fakes/seerr_sessions.dart' show worldSeerrSessionOf;
 import 'world.dart';
 
 /// The six ways one household's configuration differs from another's, as the
@@ -385,14 +387,11 @@ class ProfileConnection {
   /// Seerr only: the account this connection is signed in to Seerr as, or
   /// null for the server's API key.
   ///
-  /// The network starts with a live session for it
-  /// (`ProfileNetwork.seerrSessionOf`), the one the app would have saved when
-  /// the account signed in. The instance still carries the server's key in
-  /// its credential slot: `ServiceInstance` has no account yet, and without a
-  /// credential the app reads Seerr as not set up. So the app, which signs in
-  /// with a key only, still reaches this server as the operator; a client
-  /// that signs in as the account, or sends its session, is answered as the
-  /// account.
+  /// The instance carries it as the app saves it ([withSeerrAccount]): no
+  /// key, the account's kind, login, id, name and permissions, and the
+  /// session the network starts with for it ([worldSeerrSessionOf],
+  /// `ProfileNetwork.seerrSessionOf`). So the app reaches this server as the
+  /// account, with its own requests only and the operator's routes refused.
   final WorldSeerrUser? seerrAccount;
 
   /// Seerr only: which release answers here, and so what `/api/v1/status` and
@@ -414,9 +413,32 @@ class ProfileConnection {
 
   ProfileConnection withLatency(Duration latency) => _copy(latency: latency);
 
-  /// A copy signed in to Seerr as [account].
-  ProfileConnection withSeerrAccount(WorldSeerrUser account) =>
-      _copy(seerrAccount: account);
+  /// A copy signed in to Seerr as [account]: the instance drops the key and
+  /// carries the account with the session the network starts with.
+  ProfileConnection withSeerrAccount(WorldSeerrUser account) => _copy(
+    seerrAccount: account,
+    instance: instance.copyWith(
+      credential: '',
+      account: SeerrAccountSignIn(
+        kind: switch (account.kind) {
+          WorldSeerrUserType.local => SeerrAccountKind.local,
+          WorldSeerrUserType.jellyfin => SeerrAccountKind.jellyfin,
+          WorldSeerrUserType.emby => SeerrAccountKind.emby,
+          WorldSeerrUserType.plex => SeerrAccountKind.plex,
+        },
+        login: switch (account.kind) {
+          WorldSeerrUserType.local => account.email,
+          WorldSeerrUserType.jellyfin ||
+          WorldSeerrUserType.emby => account.login,
+          WorldSeerrUserType.plex => '',
+        },
+        userId: account.id,
+        displayName: account.displayName,
+        session: worldSeerrSessionOf(instance.id),
+        permissions: account.permissions,
+      ),
+    ),
+  );
 
   /// A copy answered by Seerr [release].
   ProfileConnection withSeerrRelease(SeerrRelease release) =>
@@ -753,8 +775,7 @@ class ConfigProfile {
   /// The same account the profile's Seerr connection is signed in as
   /// ([ProfileConnection.seerrAccount]): the network answers a client signed
   /// in as her the way Seerr would, her own requests only and the admin routes
-  /// refused. The app itself still reaches Seerr with the key, see
-  /// [ProfileConnection.seerrAccount].
+  /// refused, and the app reaches it as her.
   final WorldSeerrUser? seerrRequester;
 
   /// Pinned certificates by TLS origin. The fake network presents no

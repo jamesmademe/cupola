@@ -38,6 +38,33 @@ const seerrSessionLifetime = Duration(days: 30);
 /// timeout, not Seerr's: not verified here.
 const seerrQuickConnectLifetime = Duration(minutes: 10);
 
+/// The session a Seerr connection [serverId] signed in with an account
+/// starts with, as the app saved it: the `connect.sid` value, URL encoded.
+///
+/// The same value the connection's instance carries
+/// (`ProfileConnection.withSeerrAccount`) and the network opens when it is
+/// built ([openSavedSeerrSessions]), so the app and the fake meet on it with
+/// nothing passed between them.
+String worldSeerrSessionOf(String serverId) {
+  final id = _savedSessionId(serverId);
+  return Uri.encodeComponent('s:$id.${_signatureOf(serverId, id)}');
+}
+
+String _savedSessionId(String serverId) => base64Url
+    .encode(sha256.convert(utf8.encode('$serverId/saved-session')).bytes)
+    .replaceAll('=', '')
+    .substring(0, 32);
+
+/// express-session's signature of session [id] on server [serverId].
+String _signatureOf(String serverId, String id) => base64
+    .encode(
+      Hmac(
+        sha256,
+        utf8.encode('world-$serverId-session-secret'),
+      ).convert(utf8.encode(id)).bytes,
+    )
+    .replaceAll(RegExp(r'=+$'), '');
+
 /// The body `isAuthenticated` refuses with (`server/middleware/auth.ts`):
 /// no caller, or a caller without the route's permission.
 NetworkReply seerrEndpointRefused() => NetworkReply.json({
@@ -286,14 +313,19 @@ class SeerrServerState {
         .replaceAll('=', '');
   }
 
-  String _sign(String id) => base64
-      .encode(
-        Hmac(
-          sha256,
-          utf8.encode('world-$serverId-session-secret'),
-        ).convert(utf8.encode(id)).bytes,
-      )
-      .replaceAll(RegExp(r'=+$'), '');
+  String _sign(String id) => _signatureOf(serverId, id);
+
+  /// The session the connection's account starts with, under the id
+  /// [worldSeerrSessionOf] names: live, or already over when [expired].
+  SeerrSession openSaved(int userId, {bool expired = false}) {
+    final session = SeerrSession._(
+      _savedSessionId(serverId),
+      userId,
+      expired ? _now : _now.add(seerrSessionLifetime),
+    );
+    _sessions[session.id] = session;
+    return session;
+  }
 
   /// A new session for [userId], or [userId] written into [over], which is
   /// what a sign-in over a live session does.
@@ -355,7 +387,11 @@ class SeerrServerState {
 
   /// A token for [secret] in csurf's own form, `<salt>-<hash>`.
   String csrfTokenFor(String secret) {
-    final salt = _mint('salt').substring(0, 8);
+    // Alphanumeric, as csurf's `rndm(8)` is: a base64url salt can hold the
+    // `-` the token is split on, and then no token of it verifies.
+    final salt = _mint(
+      'salt',
+    ).replaceAll(RegExp('[^A-Za-z0-9]'), '').substring(0, 8);
     return '$salt-${_csrfHash(salt, secret)}';
   }
 
@@ -421,8 +457,9 @@ void openSavedSeerrSessions(ProfileNetwork network) {
         network.profile.behaviourOf(connection.id) ==
         ConnectionBehaviour.sessionExpired;
     state.savedSession = state.cookieValueOf(
-      state.open(account.id, expired: expired),
+      state.openSaved(account.id, expired: expired),
     );
+    assert(state.savedSession == worldSeerrSessionOf(connection.id));
   }
 }
 

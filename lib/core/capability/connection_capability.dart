@@ -76,6 +76,7 @@ final connectionCapabilityProvider =
                   username: instance.username,
                   pin: settings.pinForUrl(instance.url),
                   access: instance.access,
+                  session: instance.account?.session ?? '',
                 );
               }),
             )
