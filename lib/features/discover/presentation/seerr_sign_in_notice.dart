@@ -88,7 +88,7 @@ class SeerrSignInNotice {
         SeerrSignInNoticeKind.didNotAnswer,
         tone: StatusTone.error,
         title: 'Seerr did not answer',
-        sentence: 'Nothing replied at $host from this phone.',
+        sentence: 'Nothing replied at $host from this device.',
         retryHelps: true,
       );
     }
@@ -222,7 +222,7 @@ class SeerrSignInNotice {
     SeerrSignInNoticeKind.plexDidNotAnswer,
     tone: StatusTone.error,
     title: 'Plex did not answer',
-    sentence: "Cupola couldn't reach plex.tv from this phone.",
+    sentence: "Cupola couldn't reach plex.tv from this device.",
     retryHelps: true,
   );
 

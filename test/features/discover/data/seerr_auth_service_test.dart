@@ -146,7 +146,7 @@ void main() {
       expect(notice.title, 'Seerr did not answer');
       expect(
         notice.sentence,
-        'Nothing replied at nas.home.arpa:5055 from this phone.',
+        'Nothing replied at nas.home.arpa:5055 from this device.',
       );
       expect(notice.retryHelps, isTrue);
     });
@@ -411,6 +411,14 @@ void main() {
           .map((r) => '${r.method} ${r.path}'),
       ['POST /api/v1/auth/logout'],
     );
+  });
+
+  test('plex.tv not answering is red, and names this device', () {
+    final notice = SeerrSignInNotice.plexDidNotAnswer;
+    expect(notice.tone, StatusTone.error);
+    expect(notice.title, 'Plex did not answer');
+    expect(notice.sentence, "Cupola couldn't reach plex.tv from this device.");
+    expect(notice.retryHelps, isTrue);
   });
 
   test('a sign-in turned off since the methods were read redraws them', () {

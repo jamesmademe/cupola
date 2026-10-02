@@ -411,7 +411,7 @@ void main() {
 
     expect(find.text('Seerr did not answer'), findsOneWidget);
     expect(
-      find.text('Nothing replied at nas.home.arpa:5055 from this phone.'),
+      find.text('Nothing replied at nas.home.arpa:5055 from this device.'),
       findsOneWidget,
     );
     expect(find.text('Retry'), findsOneWidget);
