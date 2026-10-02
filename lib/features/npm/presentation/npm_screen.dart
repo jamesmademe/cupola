@@ -194,8 +194,8 @@ void _invalidate(WidgetRef ref, NpmSection section) {
   ref.invalidate(serviceSummaryProvider(ServiceKey.nginxProxyManager));
 }
 
-/// `25 · reachability checked for 8 of 23 enabled`, and nothing before either
-/// answers.
+/// `25 · reachability checked from this device for 8 of 23 enabled`, and
+/// nothing before either answers.
 String? _proxyHostSubtitle(
   List<NpmProxyHost>? hosts,
   NpmUpstreamReport? report,
@@ -285,10 +285,10 @@ class _NpmSection extends ConsumerWidget {
       SectionHeader(
         title: 'Proxy hosts',
         showChevron: false,
-        // "25 · reachability checked for 8 of 23 enabled" — the coverage is
-        // drawn because the Upstream column is partial by design. Without it a
-        // column that answered for eight rows and stayed blank for fifteen
-        // would read as fifteen healthy hosts.
+        // "25 · reachability checked from this device for 8 of 23 enabled" —
+        // the coverage is drawn because the Upstream column is partial by
+        // design. Without it a column that answered for eight rows and stayed
+        // blank for fifteen would read as fifteen healthy hosts.
         subtitle: _proxyHostSubtitle(
           hostsAsync.asData?.value,
           ref.watch(npmUpstreamReportProvider).asData?.value,

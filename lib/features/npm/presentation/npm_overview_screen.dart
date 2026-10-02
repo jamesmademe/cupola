@@ -63,8 +63,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// The upstream probe is partial **by design** — eight hosts of however many
 /// the box fronts. Every region here that reports anything derived from it
-/// prints `reachability checked for 8 of 23 enabled` beside the figure, and a
-/// host with no verdict contributes no clause to its row. That last word is not
+/// prints `reachability checked from this device for 8 of 23 enabled` beside
+/// the figure, and a host with no verdict contributes no clause to its row. That last word is not
 /// padding: the probe never opens a socket for a disabled host, so its total is
 /// a narrower population than the host count printed beside it, and unnamed the
 /// pair reads as two hosts having gone missing in between. See `npm_overview_provider.dart`
@@ -264,9 +264,10 @@ class _ProxyHostsSection extends ConsumerWidget {
     return ServiceOverviewSection(
       service: ServiceKey.nginxProxyManager,
       title: 'Proxy hosts',
-      // `25 · reachability checked for 8 of 23 enabled`. The second half is
-      // the difference between a partial probe and silent green ticks, and its
-      // last word is what keeps the two counts from contradicting each other.
+      // `25 · reachability checked from this device for 8 of 23 enabled`. The
+      // second half is the difference between a partial probe and silent green
+      // ticks, and its last word is what keeps the two counts from
+      // contradicting each other.
       subtitle: npmProxyHostsSubtitle(hosts.asData?.value, report),
       destination: ServiceTab.proxyHosts,
       child: AsyncValueWidget<List<NpmProxyHost>>(
