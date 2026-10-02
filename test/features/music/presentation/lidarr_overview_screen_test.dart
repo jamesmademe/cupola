@@ -270,7 +270,10 @@ void main() {
       ),
     );
 
-    expect(find.semantics.byLabel('/data/music, 1.8 TB free'), findsOneWidget);
+    expect(
+      find.semantics.byLabel('/data/music, 1.8\u00A0TB free'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('nothing overflows at an accessibility reading size', (

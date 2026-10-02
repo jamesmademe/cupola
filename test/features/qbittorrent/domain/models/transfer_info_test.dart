@@ -74,8 +74,8 @@ void main() {
         upRateLimit: 0,
         altSpeedEnabled: false,
       );
-      expect(info.dlSpeedFormatted, '0 B/s');
-      expect(info.upSpeedFormatted, '0 B/s');
+      expect(info.dlSpeedFormatted, '0\u00A0B/s');
+      expect(info.upSpeedFormatted, '0\u00A0B/s');
     });
 
     test('non-zero speeds render with units', () {
@@ -88,8 +88,8 @@ void main() {
         upRateLimit: 0,
         altSpeedEnabled: false,
       );
-      expect(info.dlSpeedFormatted, '52.0 MB/s');
-      expect(info.upSpeedFormatted, '1.0 KB/s');
+      expect(info.dlSpeedFormatted, '52.0\u00A0MB/s');
+      expect(info.upSpeedFormatted, '1.0\u00A0KB/s');
     });
   });
 }

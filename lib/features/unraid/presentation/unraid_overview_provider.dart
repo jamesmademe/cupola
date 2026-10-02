@@ -33,6 +33,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
@@ -188,8 +189,8 @@ String? unraidCapacityLabel(UnraidArray array) {
 
   final usedLabel = formatBytes(used);
   final totalLabel = formatBytes(total);
-  final usedUnit = usedLabel.split(' ').last;
-  final totalUnit = totalLabel.split(' ').last;
+  final usedUnit = usedLabel.split(unitSpace).last;
+  final totalUnit = totalLabel.split(unitSpace).last;
   if (usedUnit == totalUnit) {
     return '${usedLabel.substring(0, usedLabel.length - usedUnit.length - 1)} '
         'of $totalLabel';
@@ -275,7 +276,8 @@ class UnraidArrayDigest {
     stateLabel,
     capacityLabel,
     if (diskCount != null) diskCount == 1 ? '1 disk' : '$diskCount disks',
-    if (warmCount > 0) '$warmCount above ${UnraidDisk.warmThresholdCelsius} °C',
+    if (warmCount > 0)
+      '$warmCount above ${withUnit(UnraidDisk.warmThresholdCelsius, '°C')}',
     if (faultCount > 0) '$faultCount slot${faultCount == 1 ? '' : 's'} flagged',
   ]);
 }
@@ -338,8 +340,10 @@ final unraidOverviewArrayProvider =
 /// board spells it (`47 °C`), and the word replaces the figure entirely rather
 /// than standing beside an em dash — we know exactly why the figure is missing,
 /// and saying so is better than saying nothing.
-String unraidDiskReading(UnraidDisk disk) =>
-    disk.spunDown ? 'spun down' : '${disk.temp} °C';
+String unraidDiskReading(UnraidDisk disk) {
+  final temp = disk.temp;
+  return temp == null ? 'spun down' : withUnit(temp, '°C');
+}
 
 /// The disk row as one sentence.
 ///

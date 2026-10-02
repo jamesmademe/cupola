@@ -27,7 +27,7 @@ void main() {
         host(
           const DownloadQueueTile(
             title: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
-            subtitle: 'Downloading · movies · 2.1 GB left',
+            subtitle: 'Downloading · movies · 2.1\u00A0GB left',
             progress: 0.63,
             percentage: 63,
             accent: Colors.teal,
@@ -38,7 +38,7 @@ void main() {
       expect(
         find.bySemanticsLabel(
           'Dune.Part.Two.2024.2160p.WEB-DL-GROUP, 63 per cent, '
-          'Downloading · movies · 2.1 GB left',
+          'Downloading · movies · 2.1\u00A0GB left',
         ),
         findsOneWidget,
       );
@@ -302,7 +302,7 @@ void main() {
           home: Scaffold(
             body: DownloadQueueTile(
               title: 'Dune.2021.2160p',
-              subtitle: '12 min left · 1.2 GB remaining',
+              subtitle: '12\u00A0min left · 1.2\u00A0GB remaining',
               progress: 0.63,
               percentage: 63,
               accent: AppColors.sabnzbd,
@@ -319,8 +319,8 @@ void main() {
       // there is a dead connection.
       await pump(tester, sampleAge: const Duration(minutes: 4));
 
-      expect(find.textContaining('12 min left'), findsNothing);
-      expect(find.text('as of 4 min ago'), findsOneWidget);
+      expect(find.textContaining('12\u00A0min left'), findsNothing);
+      expect(find.text('as of 4\u00A0min ago'), findsOneWidget);
     });
 
     testWidgets('the bar keeps its position and loses its colour', (
@@ -340,7 +340,10 @@ void main() {
     testWidgets('a current row is untouched', (tester) async {
       await pump(tester);
 
-      expect(find.text('12 min left · 1.2 GB remaining'), findsOneWidget);
+      expect(
+        find.text('12\u00A0min left · 1.2\u00A0GB remaining'),
+        findsOneWidget,
+      );
       final bar = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
@@ -363,7 +366,10 @@ void main() {
       final handle = tester.ensureSemantics();
       await pump(tester, sampleAge: const Duration(minutes: 4));
 
-      expect(find.bySemanticsLabel(RegExp('as of 4 min ago')), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('as of 4\u00A0min ago')),
+        findsOneWidget,
+      );
       handle.dispose();
     });
   });

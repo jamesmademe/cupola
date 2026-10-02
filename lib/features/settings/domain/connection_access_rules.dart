@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
@@ -108,7 +109,8 @@ bool exceedsAccessHeadersLimit(List<AccessHeader> entries) {
 }
 
 /// The line under a header list past [kAccessHeadersLimit].
-const kAccessHeadersTooLarge = 'These headers come to more than 8 KB';
+const kAccessHeadersTooLarge =
+    'These headers come to more than 8${unitSpace}KB';
 
 /// What is wrong with a proxy username, or null.
 String? proxyUsernameProblem(String username) {

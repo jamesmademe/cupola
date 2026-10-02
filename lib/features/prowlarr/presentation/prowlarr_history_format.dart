@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
@@ -88,7 +89,7 @@ String prowlarrRelativeTime(String iso) {
   if (parsed == null) return iso;
   final diff = DateTime.now().toUtc().difference(parsed.toUtc());
   if (diff.inSeconds < 60) return 'just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-  if (diff.inHours < 24) return '${diff.inHours} h ago';
+  if (diff.inMinutes < 60) return '${withUnit(diff.inMinutes, 'min')} ago';
+  if (diff.inHours < 24) return '${withUnit(diff.inHours, 'h')} ago';
   return '${diff.inDays} ${diff.inDays == 1 ? 'day' : 'days'} ago';
 }

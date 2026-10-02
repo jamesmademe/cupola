@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -182,7 +183,7 @@ class _ReleaseSearchSettingsScreenState
                   icon: Icons.schedule_rounded,
                   title: 'Give up after',
                   subtitle: 'Above every common proxy ceiling on purpose',
-                  value: '${settings.timeout.inMinutes} min',
+                  value: withUnit(settings.timeout.inMinutes, 'min'),
                   range:
                       '${ReleaseSearchSettings.minTimeout.inMinutes}'
                       '–${ReleaseSearchSettings.maxTimeout.inMinutes}',

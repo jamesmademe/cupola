@@ -19,16 +19,16 @@ void main() {
     });
 
     test('minutes up to an hour', () {
-      expect(formatDurationAge(const Duration(minutes: 1)), '1 min ago');
-      expect(formatDurationAge(const Duration(minutes: 59)), '59 min ago');
+      expect(formatDurationAge(const Duration(minutes: 1)), '1\u00A0min ago');
+      expect(formatDurationAge(const Duration(minutes: 59)), '59\u00A0min ago');
     });
 
     test('an hour and beyond reads in hours, and never in days', () {
       // A reading eleven hours old is not "yesterday", it is broken, and
       // rounding it to a day would turn a failure into a habit.
-      expect(formatDurationAge(const Duration(minutes: 60)), '1 h ago');
-      expect(formatDurationAge(const Duration(hours: 11)), '11 h ago');
-      expect(formatDurationAge(const Duration(hours: 40)), '40 h ago');
+      expect(formatDurationAge(const Duration(minutes: 60)), '1\u00A0h ago');
+      expect(formatDurationAge(const Duration(hours: 11)), '11\u00A0h ago');
+      expect(formatDurationAge(const Duration(hours: 40)), '40\u00A0h ago');
     });
   });
 
@@ -47,7 +47,7 @@ void main() {
       final now = DateTime(2026, 9, 16, 12);
       expect(
         formatSampleAge(now.subtract(const Duration(minutes: 6)), now: now),
-        '6 min ago',
+        '6\u00A0min ago',
       );
     });
   });

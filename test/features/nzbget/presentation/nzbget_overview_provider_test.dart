@@ -78,7 +78,7 @@ void main() {
       // The board's own pair: 2.1 GB still to fetch at 3.1 MB/s.
       expect(
         nzbgetEtaLabel(remainingMegabytes: 2150, rateBytesPerSecond: 3100000),
-        'about 12 min',
+        'about 12\u00A0min',
       );
     });
 
@@ -89,11 +89,11 @@ void main() {
       );
       expect(
         nzbgetEtaLabel(remainingMegabytes: 9000, rateBytesPerSecond: 1048576),
-        'about 2 h 30 min',
+        'about 2\u00A0h 30\u00A0min',
       );
       expect(
         nzbgetEtaLabel(remainingMegabytes: 7200, rateBytesPerSecond: 1048576),
-        'about 2 h',
+        'about 2\u00A0h',
       );
       expect(
         nzbgetEtaLabel(remainingMegabytes: 180000, rateBytesPerSecond: 1048576),
@@ -122,7 +122,7 @@ void main() {
       expect(section.total, 3);
       expect(
         section.subtitle,
-        '1 downloading · 1 post-processing · 2.1 GB left · about 12 min',
+        '1 downloading · 1 post-processing · 2.1\u00A0GB left · about 12\u00A0min',
       );
     });
 
@@ -215,7 +215,7 @@ void main() {
       expect(row.percentLabel, isNull);
       // The size the server *did* report still prints — it is a fact, and the
       // only one of the two that was answered.
-      expect(row.detail, 'tv · downloading · 4.8 GB');
+      expect(row.detail, 'tv · downloading · 4.8\u00A0GB');
     });
 
     test('a row is one sentence, with the dots read as commas', () {
@@ -229,10 +229,10 @@ void main() {
       );
 
       expect(row.percentLabel, '56%');
-      expect(row.detail, 'tv · downloading · 4.8 GB');
+      expect(row.detail, 'tv · downloading · 4.8\u00A0GB');
       expect(
         row.spoken,
-        'Silo.S03E01.2160p.WEB-DL, tv, downloading, 4.8 GB, 56%',
+        'Silo.S03E01.2160p.WEB-DL, tv, downloading, 4.8\u00A0GB, 56%',
       );
     });
   });
@@ -421,10 +421,10 @@ void main() {
 
       final row = section.rows.single;
       expect(row.headline, 'Sugar.S02E01.1080p.WEB-DL · failed');
-      expect(row.detail, 'par repair · tv · 3 h ago');
+      expect(row.detail, 'par repair · tv · 3\u00A0h ago');
       expect(
         row.spoken,
-        'Sugar.S02E01.1080p.WEB-DL, failed, par repair, tv, 3 h ago',
+        'Sugar.S02E01.1080p.WEB-DL, failed, par repair, tv, 3\u00A0h ago',
       );
     });
 

@@ -53,56 +53,59 @@ void main() {
     });
 
     test('formats bytes as whole things', () {
-      expect(formatSize(512), '512 B');
+      expect(formatSize(512), '512\u00A0B');
     });
 
     test('formats kilobytes', () {
-      expect(formatSize(2048), '2.0 KB');
+      expect(formatSize(2048), '2.0\u00A0KB');
     });
 
     test('formats megabytes', () {
-      expect(formatSize(5 * 1024 * 1024), '5.0 MB');
+      expect(formatSize(5 * 1024 * 1024), '5.0\u00A0MB');
     });
 
     test('formats gigabytes', () {
-      expect(formatSize(2 * 1024 * 1024 * 1024), '2.0 GB');
+      expect(formatSize(2 * 1024 * 1024 * 1024), '2.0\u00A0GB');
     });
 
     test('formats terabytes', () {
-      expect(formatSize(1024 * 1024 * 1024 * 1024), '1.0 TB');
+      expect(formatSize(1024 * 1024 * 1024 * 1024), '1.0\u00A0TB');
     });
 
     test('keeps a tenth of a terabyte', () {
       // TrueNAS pools go through this formatter too, and "46 TB" for a 45.5 TB
       // pool would lose the figure the storage screen exists to show.
-      expect(formatSize((45.5 * 1024 * 1024 * 1024 * 1024).round()), '45.5 TB');
+      expect(
+        formatSize((45.5 * 1024 * 1024 * 1024 * 1024).round()),
+        '45.5\u00A0TB',
+      );
     });
 
     test('climbs past TB instead of stopping there', () {
-      expect(formatSize(1024 * 1024 * 1024 * 1024 * 1024), '1.0 PB');
+      expect(formatSize(1024 * 1024 * 1024 * 1024 * 1024), '1.0\u00A0PB');
     });
   });
 
   group('formatSpeed', () {
     test('returns 0 B/s for non-positive values', () {
-      expect(formatSpeed(0), '0 B/s');
-      expect(formatSpeed(-1), '0 B/s');
+      expect(formatSpeed(0), '0\u00A0B/s');
+      expect(formatSpeed(-1), '0\u00A0B/s');
     });
 
     test('formats KB/s', () {
-      expect(formatSpeed(2048), '2.0 KB/s');
+      expect(formatSpeed(2048), '2.0\u00A0KB/s');
     });
 
     test('reads the one ladder, matching the other services KPI cells', () {
       // SABnzbd and NZBGet render their rates from the same ladder, and all
       // three land in the same /services grid.
-      expect(formatSpeed(52 * 1024 * 1024), '52.0 MB/s');
-      expect(formatSpeed(120 * 1024 * 1024), '120 MB/s');
-      expect(formatSpeed(512), '512 B/s');
+      expect(formatSpeed(52 * 1024 * 1024), '52.0\u00A0MB/s');
+      expect(formatSpeed(120 * 1024 * 1024), '120\u00A0MB/s');
+      expect(formatSpeed(512), '512\u00A0B/s');
     });
 
     test('formats GB/s', () {
-      expect(formatSpeed(3 * 1024 * 1024 * 1024), '3.0 GB/s');
+      expect(formatSpeed(3 * 1024 * 1024 * 1024), '3.0\u00A0GB/s');
     });
   });
 
@@ -171,8 +174,8 @@ void main() {
     });
 
     test('positive defers to formatSpeed', () {
-      expect(formatLimit(2048), '2.0 KB/s');
-      expect(formatLimit(5 * 1024 * 1024), '5.0 MB/s');
+      expect(formatLimit(2048), '2.0\u00A0KB/s');
+      expect(formatLimit(5 * 1024 * 1024), '5.0\u00A0MB/s');
     });
   });
 

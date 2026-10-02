@@ -274,11 +274,11 @@ void main() {
     });
 
     test('an enforced limit prints the API unit it was set in', () {
-      expect(transmissionLimitLabel(4096, enabled: true), '4096 KB/s');
+      expect(transmissionLimitLabel(4096, enabled: true), '4096\u00A0KB/s');
     });
 
     test('an enforced zero says what it does', () {
-      expect(transmissionLimitLabel(0, enabled: true), 'Stopped (0 KB/s)');
+      expect(transmissionLimitLabel(0, enabled: true), 'Stopped (0\u00A0KB/s)');
     });
   });
 
@@ -336,7 +336,7 @@ void main() {
         freeSpaceBytes: 2 * 1024 * 1024 * 1024 * 1024,
       ).firstWhere((f) => f.label == 'Free space');
 
-      expect(free.value, '2.0 TB');
+      expect(free.value, '2.0\u00A0TB');
     });
 
     test('a daemon that named no download directory says so', () {
@@ -481,7 +481,7 @@ void main() {
         ),
       ], now: now);
 
-      expect(items.single.detail, '1.0 GB · 2 h ago · seeding');
+      expect(items.single.detail, '1.0\u00A0GB · 2\u00A0h ago · seeding');
     });
 
     test('a ratio Transmission did not report reads an em dash', () {
@@ -522,7 +522,7 @@ void main() {
 
       expect(
         item.spoken,
-        'Andor.S02E02.1080p.WEB-DL, 1.0 GB, 2 h ago, seeding, ratio 2.60',
+        'Andor.S02E02.1080p.WEB-DL, 1.0\u00A0GB, 2\u00A0h ago, seeding, ratio 2.60',
       );
       // `·` is decoration: iOS reads it as "middle dot" or drops it depending
       // on the user's punctuation verbosity, and neither is what the row meant.
@@ -563,7 +563,10 @@ void main() {
       final facts = await container.read(
         transmissionSessionFactsProvider.future,
       );
-      expect(facts.firstWhere((f) => f.label == 'Free space').value, '2.0 TB');
+      expect(
+        facts.firstWhere((f) => f.label == 'Free space').value,
+        '2.0\u00A0TB',
+      );
     });
 
     test('a daemon that named no directory is never asked', () async {
@@ -617,7 +620,7 @@ void main() {
         transmissionSessionFactsProvider.future,
       );
       final free = facts.firstWhere((f) => f.label == 'Free space');
-      expect(free.value, '0 B');
+      expect(free.value, '0\u00A0B');
       // A fault, and the only one this region can carry: the disk stopped
       // being able to take a download, which is not a setting anybody chose.
       expect(free.tone, StatusTone.warning);

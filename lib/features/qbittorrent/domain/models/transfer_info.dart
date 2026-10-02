@@ -1,4 +1,5 @@
 import 'parse_utils.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 
 class TransferInfo {
   final int dlSpeed;
@@ -37,12 +38,12 @@ class TransferInfo {
   }
 
   String get dlSpeedFormatted {
-    if (dlSpeed <= 0) return '0 B/s';
+    if (dlSpeed <= 0) return withUnit(0, 'B/s');
     return formatSpeed(dlSpeed);
   }
 
   String get upSpeedFormatted {
-    if (upSpeed <= 0) return '0 B/s';
+    if (upSpeed <= 0) return withUnit(0, 'B/s');
     return formatSpeed(upSpeed);
   }
 }

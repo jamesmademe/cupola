@@ -360,7 +360,7 @@ void main() {
       expect(faults.single.kind, RadarrAttentionKind.importFailed);
       expect(faults.single.headline, 'Import failed · Nickel Boys');
       expect(faults.single.detail, contains('Radarr could not match the file'));
-      expect(faults.single.detail, contains('2 h ago'));
+      expect(faults.single.detail, contains('2\u00A0h ago'));
     });
 
     test('reads a stalled grab, and a stall is never an import fault', () {

@@ -11,6 +11,7 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
@@ -863,7 +864,7 @@ class _ActionsTab extends ConsumerWidget {
     final bytes = result.bytesPerSecond!;
     final label = bytes == 0
         ? 'cleared'
-        : '${(bytes / 1024).toStringAsFixed(0)} KB/s';
+        : withUnit((bytes / 1024).toStringAsFixed(0), 'KB/s');
     await runTorrentAction(
       context,
       ref,

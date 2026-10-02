@@ -108,16 +108,16 @@ void main() {
     });
 
     test('reads in the unit media servers and routers actually use', () {
-      expect(formatStreamBitrate(24305112), '24 Mbps');
-      expect(formatStreamBitrate(8400000), '8.4 Mbps');
-      expect(formatStreamBitrate(320000), '320 kbps');
+      expect(formatStreamBitrate(24305112), '24\u00A0Mbps');
+      expect(formatStreamBitrate(8400000), '8.4\u00A0Mbps');
+      expect(formatStreamBitrate(320000), '320\u00A0kbps');
     });
 
     test('crosses its thresholds without a gap', () {
-      expect(formatStreamBitrate(999999), '1000 kbps');
-      expect(formatStreamBitrate(1000000), '1.0 Mbps');
-      expect(formatStreamBitrate(9990000), '10.0 Mbps');
-      expect(formatStreamBitrate(10000000), '10 Mbps');
+      expect(formatStreamBitrate(999999), '1000\u00A0kbps');
+      expect(formatStreamBitrate(1000000), '1.0\u00A0Mbps');
+      expect(formatStreamBitrate(9990000), '10.0\u00A0Mbps');
+      expect(formatStreamBitrate(10000000), '10\u00A0Mbps');
     });
   });
 
@@ -137,7 +137,7 @@ void main() {
         transcodeReason: "client can't decode HEVC",
         deviceLabel: base['deviceLabel']!,
         progressLabel: '34% in',
-        bitrateLabel: '8.4 Mbps',
+        bitrateLabel: '8.4\u00A0Mbps',
         bitrateIsNominal: false,
         isPaused: false,
       );
@@ -161,14 +161,14 @@ void main() {
         transcodeReason: null,
         deviceLabel: base['deviceLabel']!,
         progressLabel: null,
-        bitrateLabel: '24 Mbps',
+        bitrateLabel: '24\u00A0Mbps',
         bitrateIsNominal: nominal,
         isPaused: false,
       );
 
       // A direct play's figure is the file's own bitrate, not throughput the
       // server measured. Saying it plainly would assert egress no API reported.
-      expect(rateIn(nominal: true), contains('about 24 Mbps'));
+      expect(rateIn(nominal: true), contains('about 24\u00A0Mbps'));
       expect(rateIn(nominal: false), isNot(contains('about')));
     });
 

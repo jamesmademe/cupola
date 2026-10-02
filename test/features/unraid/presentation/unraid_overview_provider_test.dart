@@ -105,7 +105,7 @@ void main() {
             total: 10 * 1024 * 1024 * 1024 * 1024,
           ),
         ),
-        '5.0 of 10.0 TB',
+        '5.0 of 10.0\u00A0TB',
       );
     });
 
@@ -118,7 +118,7 @@ void main() {
             total: 10 * 1024 * 1024 * 1024 * 1024,
           ),
         ),
-        '800 GB of 10.0 TB',
+        '800\u00A0GB of 10.0\u00A0TB',
       );
     });
 
@@ -174,7 +174,7 @@ void main() {
       expect(digest.faultCount, 1);
       expect(
         digest.headline,
-        'started · 5 disks · 1 above 45 °C · 1 slot flagged',
+        'started · 5 disks · 1 above 45\u00A0°C · 1 slot flagged',
       );
     });
 
@@ -192,7 +192,7 @@ void main() {
       // No "0 above 45 °C": a sentence about a problem where there is none is
       // the most expensive kind of noise on a page that exists to say what
       // needs a decision.
-      expect(digest.headline, 'started · 5.0 of 10.0 TB · 1 disk');
+      expect(digest.headline, 'started · 5.0 of 10.0\u00A0TB · 1 disk');
     });
 
     test('a drive that is both flagged and warm is named as flagged', () {
@@ -262,7 +262,7 @@ void main() {
     test('a row speaks one sentence with the unit said, not glyphed', () {
       const warm = UnraidDisk(name: 'disk1', status: 'DISK_OK', temp: 47);
 
-      expect(unraidDiskReading(warm), '47 °C');
+      expect(unraidDiskReading(warm), '47\u00A0°C');
       expect(unraidDiskSpoken(warm), 'disk1, DISK_OK, 47 degrees');
     });
   });

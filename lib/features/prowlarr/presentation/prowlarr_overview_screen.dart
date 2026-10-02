@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_animation.dart';
 
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 
 import 'package:cupola/features/prowlarr/presentation/prowlarr_overview_provider.dart';
@@ -177,7 +178,7 @@ class _IndexersSection extends ConsumerWidget {
       // day's queries and nothing else on the row says so.
       subtitle: total == null
           ? '—'
-          : '$total · by queries, last ${prowlarrStatsWindow.inHours} h',
+          : '$total · by queries, last ${withUnit(prowlarrStatsWindow.inHours, 'h')}',
       destination: ServiceTab.indexers,
       child: AsyncValueWidget<ProwlarrOverviewSection>(
         value: section,

@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 
 int parseInt(dynamic v) {
   if (v is int) return v;
@@ -47,8 +48,9 @@ String formatSize(int bytes) => bytes <= 0 ? '—' : formatBytes(bytes);
 /// SABnzbd's and NZBGet's, and two services' download speeds rendering to
 /// different precision in adjacent cells is the exact defect the shared
 /// formatter exists to prevent.
-String formatSpeed(int bytesPerSecond) =>
-    bytesPerSecond <= 0 ? '0 B/s' : formatBytesPerSecond(bytesPerSecond);
+String formatSpeed(int bytesPerSecond) => bytesPerSecond <= 0
+    ? withUnit(0, 'B/s')
+    : formatBytesPerSecond(bytesPerSecond);
 
 /// Human-readable duration.
 ///

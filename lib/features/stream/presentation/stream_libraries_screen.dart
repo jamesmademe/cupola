@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_admin_placeholder.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
@@ -332,7 +333,9 @@ class _LibraryRow extends StatelessWidget {
       final days = elapsed.inDays;
       return 'Scanned $days ${days == 1 ? 'day' : 'days'} ago';
     }
-    if (elapsed.inHours >= 1) return 'Scanned ${elapsed.inHours} h ago';
+    if (elapsed.inHours >= 1) {
+      return 'Scanned ${withUnit(elapsed.inHours, 'h')} ago';
+    }
     return 'Scanned just now';
   }
 }

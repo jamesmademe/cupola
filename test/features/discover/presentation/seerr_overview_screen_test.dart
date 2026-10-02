@@ -99,7 +99,7 @@ void main() {
     );
 
     expect(
-      find.semantics.byLabel('Severance, Season 2, nadia, 4 h ago, TV'),
+      find.semantics.byLabel('Severance, Season 2, nadia, 4\u00A0h ago, TV'),
       findsOneWidget,
     );
   });

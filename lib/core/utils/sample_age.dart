@@ -23,6 +23,8 @@
 /// into a habit.
 library;
 
+import 'package:cupola/core/utils/unit_space.dart';
+
 /// The age of [sampledAt] as of [now], bucketed: `just now`, `N min ago`,
 /// `N h ago`.
 ///
@@ -38,8 +40,8 @@ String formatSampleAge(DateTime sampledAt, {DateTime? now}) {
 String formatDurationAge(Duration elapsed) {
   final minutes = elapsed.inMinutes;
   if (minutes < 1) return 'just now';
-  if (minutes < 60) return '$minutes min ago';
-  return '${minutes ~/ 60} h ago';
+  if (minutes < 60) return '${withUnit(minutes, 'min')} ago';
+  return '${withUnit(minutes ~/ 60, 'h')} ago';
 }
 
 /// The same age as a *span*, for a sentence that reads "no response for …"

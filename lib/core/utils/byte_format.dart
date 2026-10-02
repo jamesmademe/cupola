@@ -33,6 +33,10 @@
 ///  * **Promotion happens after rounding**, so 1023.96 KB prints `1.0 MB`
 ///    rather than the self-contradicting `1024.0 KB` or `1024 KB`.
 ///  * **A rate follows the same rule** with `/s` appended.
+///  * **A no-break space between the figure and the unit** (`4.4 GB`,
+///    `4.2 MB/s`, `120 of 152 GB`), `unitSpace`, so a figure never splits from
+///    its unit across two lines. Whoever takes a label apart splits on
+///    `unitSpace`, not on a plain space.
 ///
 /// A fixed decimal count with no edge is what produced both `1500 MB` and
 /// `2048.00 GB` in the copies this replaces; the edge and the promotion are
@@ -44,6 +48,8 @@
 /// convert what an API reports into bytes. [formatBytesOfTotal] is the one
 /// extra shape, for a progress pair, and takes its digits from the same rule.
 library;
+
+import 'package:cupola/core/utils/unit_space.dart';
 
 const List<String> _units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
@@ -85,10 +91,12 @@ String formatKilobytesPerSecond(num kilobytesPerSecond) =>
 /// know one of them prints its own placeholder instead of calling this.
 String formatBytesOfTotal(num done, num total) {
   final totalText = _ladder(total.toDouble());
-  if (totalText.unit == 0) return '${done.round()} of ${totalText.text} B';
+  if (totalText.unit == 0) {
+    return '${done.round()} of ${withUnit(totalText.text, 'B')}';
+  }
   final scale = _pow1024(totalText.unit);
   final doneText = _scaled(done.toDouble() / scale);
-  return '$doneText of ${totalText.text} ${_units[totalText.unit]}';
+  return '$doneText of ${withUnit(totalText.text, _units[totalText.unit])}';
 }
 
 String _format(double value, String suffix) {
@@ -97,7 +105,7 @@ String _format(double value, String suffix) {
   if (!magnitude.isFinite) return '—';
 
   final rung = _ladder(magnitude);
-  return '$sign${rung.text} ${_units[rung.unit]}$suffix';
+  return '$sign${withUnit(rung.text, '${_units[rung.unit]}$suffix')}';
 }
 
 /// The unit [magnitude] lands on, and its text on that unit.

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
@@ -129,7 +130,7 @@ class _FeedRow extends StatelessWidget {
         ? 'No category'
         : feed.category.trim();
     final interval = feed.intervalMinutes > 0
-        ? 'Every ${feed.intervalMinutes} min'
+        ? 'Every ${withUnit(feed.intervalMinutes, 'min')}'
         : 'Manual refresh';
     return _NzbgetRow(
       icon: Icons.rss_feed_rounded,

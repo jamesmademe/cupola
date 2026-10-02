@@ -459,7 +459,7 @@ void main() {
       expect(job.doneBytes, _gb);
       expect(
         formatDoneOfTotal(doneBytes: job.doneBytes, totalBytes: job.totalBytes),
-        '1.0 of 4.0 GB',
+        '1.0 of 4.0\u00A0GB',
       );
     });
 

@@ -65,7 +65,7 @@ List<CopyLiteral> copyOf(String path, String source) {
       }
       final c = s[i];
       if (!raw && c == r'\') {
-        // ` `, `\u{1F4A5}` and `\x41` are the character they name: a
+        // `\u00A0`, `\u{1F4A5}` and `\x41` are the character they name: a
         // no-break space written as an escape must read as one here.
         final unicode = _unicodeEscape.matchAsPrefix(s, i);
         if (unicode != null) {

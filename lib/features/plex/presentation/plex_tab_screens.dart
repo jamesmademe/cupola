@@ -8,6 +8,7 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
@@ -390,9 +391,9 @@ String? _durationLabel(int? milliseconds) {
   if (duration.inHours > 0) {
     final minutes = duration.inMinutes.remainder(60);
     return minutes == 0
-        ? '${duration.inHours} h'
-        : '${duration.inHours} h $minutes min';
+        ? withUnit(duration.inHours, 'h')
+        : '${withUnit(duration.inHours, 'h')} ${withUnit(minutes, 'min')}';
   }
-  if (duration.inMinutes > 0) return '${duration.inMinutes} min';
-  return '${duration.inSeconds} s';
+  if (duration.inMinutes > 0) return withUnit(duration.inMinutes, 'min');
+  return withUnit(duration.inSeconds, 's');
 }

@@ -61,6 +61,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -203,10 +204,13 @@ String? sabnzbdEtaLabel(Duration? remaining) {
   final hours = remaining.inHours % 24;
   final minutes = remaining.inMinutes % 60;
 
-  if (days > 0) return hours > 0 ? '$days d $hours h' : '$days d';
-  if (hours > 0) return minutes > 0 ? '$hours h $minutes min' : '$hours h';
-  if (minutes > 0) return '$minutes min';
-  return '< 1 min';
+  final d = withUnit(days, 'd');
+  final h = withUnit(hours, 'h');
+  final min = withUnit(minutes, 'min');
+  if (days > 0) return hours > 0 ? '$d $h' : d;
+  if (hours > 0) return minutes > 0 ? '$h $min' : h;
+  if (minutes > 0) return min;
+  return '< ${withUnit(1, 'min')}';
 }
 
 /// The ETA readout, and the one figure on this page that is routinely absent.

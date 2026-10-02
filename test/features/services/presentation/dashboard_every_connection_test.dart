@@ -91,7 +91,7 @@ void main() {
       _within(
         ServicesInFlightSection,
         find.text(
-          'Radarr 4K · Bluray-2160p · 2.9 of 9.4 GB · 6 min left · SABnzbd',
+          'Radarr 4K · Bluray-2160p · 2.9 of 9.4\u00A0GB · 6\u00A0min left · SABnzbd',
         ),
       ),
       findsOne,
@@ -100,7 +100,7 @@ void main() {
     // never mono, which is for machine strings only.
     final line = tester.widget<Text>(
       find.text(
-        'Radarr 4K · Bluray-2160p · 2.9 of 9.4 GB · 6 min left · SABnzbd',
+        'Radarr 4K · Bluray-2160p · 2.9 of 9.4\u00A0GB · 6\u00A0min left · SABnzbd',
       ),
     );
     expect(line.style?.fontFamily, isNot(DesignTokens.typeFamilyMono));

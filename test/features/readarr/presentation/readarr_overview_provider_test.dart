@@ -153,7 +153,7 @@ void main() {
       expect(items.single.kind, ReadarrAttentionKind.importFailed);
       expect(items.single.tone, StatusTone.warning);
       expect(items.single.headline, 'Import failed · Orbital');
-      expect(items.single.detail, 'epub could not be matched · 3 h ago');
+      expect(items.single.detail, 'epub could not be matched · 3\u00A0h ago');
     });
 
     test('a stalled transfer wins over the import arm it also matches', () {
@@ -353,7 +353,7 @@ void main() {
       // Binary units, as `byte_format.dart` fixed for the whole app: 902 GB
       // on the wire is 840 GB on screen, and that is the figure Readarr's own
       // web UI prints beside it.
-      expect(folders.single.freeLabel, '840 GB free');
+      expect(folders.single.freeLabel, '840\u00A0GB free');
     });
 
     test('drops a record that cannot name what it reports on', () {
@@ -423,7 +423,7 @@ void main() {
       expect(entries.single.event, 'Imported');
       expect(entries.single.tone, StatusTone.success);
       expect(entries.single.detail, startsWith('epub · '));
-      expect(entries.single.detail, endsWith('2 h ago'));
+      expect(entries.single.detail, endsWith('2\u00A0h ago'));
       expect(entries.single.spoken, startsWith('James, Imported, epub, '));
     });
 

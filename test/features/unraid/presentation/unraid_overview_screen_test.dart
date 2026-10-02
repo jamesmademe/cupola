@@ -86,7 +86,7 @@ void main() {
     // The rule the Array tab already states, and this page must not contradict
     // it: a slot Unraid reads no temperature from is asleep, not at zero.
     expect(find.text('spun down'), findsOneWidget);
-    expect(find.textContaining('0 °C'), findsNothing);
+    expect(find.textContaining('0\u00A0°C'), findsNothing);
     // One node for the whole row, with the unit said rather than glyphed — not
     // three fragments a screen reader walks separately.
     expect(
@@ -112,7 +112,7 @@ void main() {
     final array = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Array'),
     );
-    expect(array.subtitle, 'started · 1 disk · 1 above 45 °C');
+    expect(array.subtitle, 'started · 1 disk · 1 above 45\u00A0°C');
 
     // …and the deliberate stop is counted as backlog, in the plain census. It
     // is never called a failure: painting a stop the user chose the same amber

@@ -172,7 +172,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('4.9 GB'), findsOneWidget);
+      expect(find.textContaining('4.9\u00A0GB'), findsOneWidget);
     });
   });
 }

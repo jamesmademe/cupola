@@ -223,7 +223,7 @@ void main() {
       );
       final band = tester.widget<FaultBand>(find.byType(FaultBand));
       expect(band.tone, StatusTone.warning);
-      expect(find.textContaining('4 min ago'), findsOneWidget);
+      expect(find.textContaining('4\u00A0min ago'), findsOneWidget);
     });
 
     testWidgets('stale offers no dismiss and no second action', (tester) async {

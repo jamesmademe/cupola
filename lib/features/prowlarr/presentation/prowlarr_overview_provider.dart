@@ -22,6 +22,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
@@ -198,7 +199,7 @@ String prowlarrIndexerDetail(
     null,
   stat == null || stat.numberOfQueries == 0
       ? prowlarrNoSample
-      : '${stat.averageResponseTime} ms',
+      : withUnit(stat.averageResponseTime, 'ms'),
 ]);
 
 /// The indexer table, ordered by the window's query count, busiest first.

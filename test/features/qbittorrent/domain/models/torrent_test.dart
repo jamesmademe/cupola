@@ -247,14 +247,14 @@ void main() {
 
     test('sizeFormatted shows em-dash when zero', () {
       expect(build(size: 0).sizeFormatted, '—');
-      expect(build(size: 1024).sizeFormatted, '1.0 KB');
+      expect(build(size: 1024).sizeFormatted, '1.0\u00A0KB');
     });
 
     test('dlSpeedFormatted and upSpeedFormatted', () {
       expect(build(dl: 0).dlSpeedFormatted, '0');
-      expect(build(dl: 2048).dlSpeedFormatted, '2.0 KB/s');
+      expect(build(dl: 2048).dlSpeedFormatted, '2.0\u00A0KB/s');
       expect(build(up: 0).upSpeedFormatted, '0');
-      expect(build(up: 1024).upSpeedFormatted, '1.0 KB/s');
+      expect(build(up: 1024).upSpeedFormatted, '1.0\u00A0KB/s');
     });
 
     test('etaFormatted', () {

@@ -90,7 +90,7 @@ void main() {
     );
 
     expect(find.text('today · 6 completed · 1 failed'), findsOneWidget);
-    expect(find.text('2 jobs · 1.0 GB'), findsOneWidget);
+    expect(find.text('2 jobs · 1.0\u00A0GB'), findsOneWidget);
   });
 
   testWidgets('a header over a cut page states a floor, not a day', (
@@ -151,7 +151,7 @@ void main() {
 
       // Stated, because pausing is the user's own decision — the one fact the
       // readout band cannot show now that Speed reads a legitimate 0 B/s.
-      expect(find.text('1 job · 1.0 GB · stopped'), findsOneWidget);
+      expect(find.text('1 job · 1.0\u00A0GB · stopped'), findsOneWidget);
     },
   );
 
@@ -169,8 +169,8 @@ void main() {
       find.semantics.byLabel('ETA: unavailable, queue stopped'),
       findsOneWidget,
     );
-    expect(find.text('0 min'), findsNothing);
-    expect(find.text('7 min'), findsNothing);
+    expect(find.text('0\u00A0min'), findsNothing);
+    expect(find.text('7\u00A0min'), findsNothing);
   });
 
   testWidgets('a failed history row is one sentence, not four fragments', (
@@ -230,7 +230,7 @@ void main() {
     expect(
       find.semantics.byLabel(
         'Dune.Part.Two.2024.2160p, 72% downloaded, '
-        'downloading, 1.0 GB left of 4.0 GB, 2 min, movies',
+        'downloading, 1.0\u00A0GB left of 4.0\u00A0GB, 2\u00A0min, movies',
       ),
       findsOneWidget,
     );

@@ -25,7 +25,7 @@ void main() {
           doneBytes: 14 * 1024 * 1024 * 1024,
           totalBytes: 15 * 1024 * 1024 * 1024,
         ),
-        '14.0 of 15.0 GB',
+        '14.0 of 15.0\u00A0GB',
       );
     });
 
@@ -35,7 +35,10 @@ void main() {
       expect(formatDoneOfTotal(doneBytes: null, totalBytes: 100), '—');
       expect(formatDoneOfTotal(doneBytes: 100, totalBytes: null), '—');
       expect(formatDoneOfTotal(doneBytes: null, totalBytes: null), '—');
-      expect(formatDoneOfTotal(doneBytes: null, totalBytes: 100), isNot('0 B'));
+      expect(
+        formatDoneOfTotal(doneBytes: null, totalBytes: 100),
+        isNot('0\u00A0B'),
+      );
     });
 
     test(
@@ -44,14 +47,14 @@ void main() {
         const gib = 1024 * 1024 * 1024;
         expect(
           formatDoneOfTotal(doneBytes: gib, totalBytes: 4 * gib),
-          '1.0 of 4.0 GB',
+          '1.0 of 4.0\u00A0GB',
         );
         expect(
           formatDoneOfTotal(
             doneBytes: 2 * gib,
             totalBytes: (9.4 * gib).round(),
           ),
-          '2.0 of 9.4 GB',
+          '2.0 of 9.4\u00A0GB',
         );
       },
     );
@@ -60,7 +63,7 @@ void main() {
       const gib = 1024 * 1024 * 1024;
       expect(
         formatDoneOfTotal(doneBytes: 120 * gib, totalBytes: 152 * gib),
-        '120 of 152 GB',
+        '120 of 152\u00A0GB',
       );
       // Each half follows the shared rule on its own: the done figure still
       // has its tenth while it is under 100, and loses it at 100.
@@ -69,14 +72,14 @@ void main() {
           doneBytes: (5.2 * gib).round(),
           totalBytes: 152 * gib,
         ),
-        '5.2 of 152 GB',
+        '5.2 of 152\u00A0GB',
       );
       expect(
         formatDoneOfTotal(
           doneBytes: (99.96 * gib).round(),
           totalBytes: 152 * gib,
         ),
-        '100 of 152 GB',
+        '100 of 152\u00A0GB',
       );
     });
 
@@ -84,14 +87,14 @@ void main() {
       const gib = 1024 * 1024 * 1024;
       expect(
         formatDoneOfTotal(doneBytes: (0.4 * gib).round(), totalBytes: 4 * gib),
-        '0.4 of 4.0 GB',
+        '0.4 of 4.0\u00A0GB',
       );
     });
 
     test('bytes stay whole', () {
       expect(
         formatDoneOfTotal(doneBytes: 300, totalBytes: 512),
-        '300 of 512 B',
+        '300 of 512\u00A0B',
       );
     });
 
@@ -99,17 +102,17 @@ void main() {
       // The counterweight: zero *reported* is a fact, and must not be hidden.
       expect(
         formatDoneOfTotal(doneBytes: 0, totalBytes: 2 * 1024 * 1024 * 1024),
-        '0.0 of 2.0 GB',
+        '0.0 of 2.0\u00A0GB',
       );
     });
   });
 
   group('time left', () {
     test('never prints seconds above a minute, and never a bare number', () {
-      expect(formatTimeLeft(48), '48 s left');
-      expect(formatTimeLeft(180), '3 min left');
-      expect(formatTimeLeft(7800), '2 h 10 min left');
-      expect(formatTimeLeft(7200), '2 h left');
+      expect(formatTimeLeft(48), '48\u00A0s left');
+      expect(formatTimeLeft(180), '3\u00A0min left');
+      expect(formatTimeLeft(7800), '2\u00A0h 10\u00A0min left');
+      expect(formatTimeLeft(7200), '2\u00A0h left');
     });
 
     test('no estimate is —', () {
@@ -128,7 +131,7 @@ void main() {
           etaSeconds: 180,
           client: 'qBittorrent',
         ),
-        '2160p · 14.0 of 15.0 GB · 3 min left · qBittorrent',
+        '2160p · 14.0 of 15.0\u00A0GB · 3\u00A0min left · qBittorrent',
       );
     });
 
@@ -154,7 +157,7 @@ void main() {
           rateBytesPerSecond: 16 * 1024 * 1024,
           clients: 2,
         ),
-        '2 downloading · 16.0 MB/s across 2 clients',
+        '2 downloading · 16.0\u00A0MB/s across 2 clients',
       );
     });
 
@@ -354,8 +357,11 @@ void main() {
 
   test('the spoken row re-separates the dots and leads with progress', () {
     expect(
-      inFlightRowValue(line: '2160p · 3 min left · qBittorrent', percent: 92),
-      '92% done, 2160p, 3 min left, qBittorrent',
+      inFlightRowValue(
+        line: '2160p · 3\u00A0min left · qBittorrent',
+        percent: 92,
+      ),
+      '92% done, 2160p, 3\u00A0min left, qBittorrent',
     );
   });
 }

@@ -227,7 +227,7 @@ void main() {
       // Neither server reports measured throughput, so summing the two rows and
       // presenting 20 Mbps as the box's egress would be a fabricated figure. The
       // per-session values are shown; no total exists anywhere on the page.
-      expect(find.textContaining('20 Mbps'), findsNothing);
+      expect(find.textContaining('20\u00A0Mbps'), findsNothing);
       expect(find.byType(StreamSessionCard), findsNWidgets(2));
     });
 
@@ -238,8 +238,8 @@ void main() {
 
       // "~" carries the same hedge the spoken form says as "about": this is the
       // file's own bitrate, not what is on the wire.
-      expect(find.text('~8.4 Mbps'), findsOneWidget);
-      expect(find.text('8.4 Mbps'), findsNothing);
+      expect(find.text('~8.4\u00A0Mbps'), findsOneWidget);
+      expect(find.text('8.4\u00A0Mbps'), findsNothing);
     });
 
     testWidgets('a transcode names why, in the warning tone', (tester) async {

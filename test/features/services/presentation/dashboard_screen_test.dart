@@ -655,7 +655,7 @@ void main() {
       expect(line, contains('—'));
       // A count nobody was able to take is not zero, and `0 B` would say the
       // transfer has not started.
-      expect(line, isNot(contains('0 B')));
+      expect(line, isNot(contains('0\u00A0B')));
     });
 
     testWidgets('the eyebrow sums the rate once per client', (tester) async {
@@ -671,7 +671,10 @@ void main() {
 
       // Both rows belong to the same client, which reported 1 MB/s for its whole
       // queue — not 2.
-      expect(find.textContaining('1.0 MB/s across 1 client'), findsOneWidget);
+      expect(
+        find.textContaining('1.0\u00A0MB/s across 1 client'),
+        findsOneWidget,
+      );
     });
   });
 

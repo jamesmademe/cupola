@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -221,7 +222,7 @@ class _IndexerStatsRow extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '${stat.averageResponseTime} ms average response',
+                      '${withUnit(stat.averageResponseTime, 'ms')} average response',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: CupolaThemeColors.of(context).dimText,
                       ),

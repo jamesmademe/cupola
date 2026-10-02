@@ -23,9 +23,9 @@ void main() {
         'mb': '3000.0',
       });
 
-      expect(slot.sizeLeftLabel, '1.5 GB');
-      expect(slot.sizeLabel, '2.9 GB');
-      expect(slot.sizeProgressLabel, '1.5 GB left of 2.9 GB');
+      expect(slot.sizeLeftLabel, '1.5\u00A0GB');
+      expect(slot.sizeLabel, '2.9\u00A0GB');
+      expect(slot.sizeProgressLabel, '1.5\u00A0GB left of 2.9\u00A0GB');
     });
 
     test('reads the server locale separator, like every other figure here', () {
@@ -36,7 +36,7 @@ void main() {
         'mb': '2048,0',
       });
 
-      expect(slot.sizeProgressLabel, '1.0 GB left of 2.0 GB');
+      expect(slot.sizeProgressLabel, '1.0\u00A0GB left of 2.0\u00A0GB');
     });
 
     test('a slot with no `mb` drops the clause rather than inventing one', () {
@@ -47,10 +47,10 @@ void main() {
 
       expect(slot.mb, isNull);
       expect(slot.sizeLabel, isNull);
-      expect(slot.sizeProgressLabel, '1.0 GB left');
+      expect(slot.sizeProgressLabel, '1.0\u00A0GB left');
       expect(slot.sizeProgressLabel, isNot(contains('of')));
       expect(slot.sizeProgressLabel, isNot(contains('—')));
-      expect(slot.sizeProgressLabel, isNot(contains('0 B')));
+      expect(slot.sizeProgressLabel, isNot(contains('0\u00A0B')));
     });
 
     test('a zero or unreadable total is the same absence as a missing one', () {
@@ -63,7 +63,11 @@ void main() {
           'mb': total,
         });
         expect(slot.mb, isNull, reason: 'mb: $total');
-        expect(slot.sizeProgressLabel, '1.0 GB left', reason: 'mb: $total');
+        expect(
+          slot.sizeProgressLabel,
+          '1.0\u00A0GB left',
+          reason: 'mb: $total',
+        );
       }
     });
 
@@ -75,7 +79,7 @@ void main() {
         'mb': '2048.0',
       });
 
-      expect(slot.sizeProgressLabel, '0 B left of 2.0 GB');
+      expect(slot.sizeProgressLabel, '0\u00A0B left of 2.0\u00A0GB');
     });
 
     test('the total does not become a second progress figure', () {

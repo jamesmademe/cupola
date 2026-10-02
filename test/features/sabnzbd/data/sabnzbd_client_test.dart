@@ -38,8 +38,8 @@ void main() {
       expect(queue.paused, isFalse);
       expect(queue.slots, hasLength(1));
       expect(queue.slots.first.percentage, 50);
-      expect(queue.speedLabel, '2.0 MB/s');
-      expect(queue.sizeLeftLabel, '1.5 GB');
+      expect(queue.speedLabel, '2.0\u00A0MB/s');
+      expect(queue.sizeLeftLabel, '1.5\u00A0GB');
     });
 
     test('getHistory parses completed and failed slots', () async {
@@ -136,7 +136,7 @@ void main() {
 
       expect(adapter.lastUri!.queryParameters['mode'], 'server_stats');
       expect(stats.total, 5497558138880);
-      expect(stats.totalLabel, '5.0 TB');
+      expect(stats.totalLabel, '5.0\u00A0TB');
     });
 
     test('getServers reads only the servers config section', () async {

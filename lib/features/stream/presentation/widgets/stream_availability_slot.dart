@@ -6,6 +6,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/media_detail_slot.dart';
@@ -230,7 +231,7 @@ class _StreamAvailabilityCard extends StatelessWidget {
     final offset = item.resumeOffsetMs;
     if (item.isInProgress && offset != null) {
       final minutes = (offset / 60000).round();
-      return minutes < 1 ? 'Just started' : '$minutes min in';
+      return minutes < 1 ? 'Just started' : '${withUnit(minutes, 'min')} in';
     }
     if (item.isPlayed) return 'Watched';
     final unplayed = item.unplayedChildCount;

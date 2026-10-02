@@ -90,7 +90,7 @@ void main() {
     await _pump(tester, freeSpace: null);
 
     expect(find.text('Free space · —'), findsOneWidget);
-    expect(find.text('0 B'), findsNothing);
+    expect(find.text('0\u00A0B'), findsNothing);
     // Spoken as one sentence, with the path still attached: a free-space figure
     // with no path is a number about an unnamed disk.
     expect(find.semantics.byLabel('Free space, —, /downloads'), findsOneWidget);
@@ -102,7 +102,7 @@ void main() {
     await _pump(tester, freeSpace: 2 * 1024 * 1024 * 1024 * 1024);
 
     expect(
-      find.semantics.byLabel('Free space, 2.0 TB, /downloads'),
+      find.semantics.byLabel('Free space, 2.0\u00A0TB, /downloads'),
       findsOneWidget,
     );
   });
@@ -112,7 +112,7 @@ void main() {
 
     expect(
       find.semantics.byLabel(
-        RegExp(r'^Past\.Lives\.2023, 6\.0 GB, .+, seeding, ratio 1\.40$'),
+        RegExp(r'^Past\.Lives\.2023, 6\.0\u00A0GB, .+, seeding, ratio 1\.40$'),
       ),
       findsOneWidget,
     );
@@ -165,7 +165,7 @@ void main() {
         .where((row) => row.title.contains(' · '))
         .toList();
 
-    expect(find.text('Download limit · 4096 KB/s'), findsOneWidget);
+    expect(find.text('Download limit · 4096\u00A0KB/s'), findsOneWidget);
     expect(find.text('Upload limit · Not limited'), findsOneWidget);
     expect(sessionRows, hasLength(4));
     for (final row in sessionRows) {

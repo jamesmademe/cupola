@@ -89,9 +89,9 @@ void main() {
         expect(formatImportBytes(size), formatBytes(size));
       }
 
-      expect(formatImportBytes(512), '512 B');
-      expect(formatImportBytes(5 * 1024 * 1024 * 1024), '5.0 GB');
-      expect(formatImportBytes(2199023255552), '2.0 TB');
+      expect(formatImportBytes(512), '512\u00A0B');
+      expect(formatImportBytes(5 * 1024 * 1024 * 1024), '5.0\u00A0GB');
+      expect(formatImportBytes(2199023255552), '2.0\u00A0TB');
     });
   });
 
@@ -138,7 +138,7 @@ void main() {
         '4 of 7 selected',
         '1 re-import',
         '1 needs an identity',
-        '1.0 KB',
+        '1.0\u00A0KB',
       ]);
     });
 

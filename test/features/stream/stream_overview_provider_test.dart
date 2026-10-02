@@ -17,11 +17,11 @@ void main() {
     test('reads in the shared relative vocabulary', () {
       expect(
         streamScanAgeLabel(now.subtract(const Duration(minutes: 20)), now: now),
-        '20 min ago',
+        '20\u00A0min ago',
       );
       expect(
         streamScanAgeLabel(now.subtract(const Duration(hours: 2)), now: now),
-        '2 h ago',
+        '2\u00A0h ago',
       );
       expect(
         streamScanAgeLabel(now.subtract(const Duration(days: 2)), now: now),
@@ -146,7 +146,7 @@ void main() {
         ),
       ], now: now);
 
-      expect(rows.single.detail, 'Scanned 2 h ago');
+      expect(rows.single.detail, 'Scanned 2\u00A0h ago');
       expect(rows.single.kind, StreamShelfKind.atRest);
     });
 

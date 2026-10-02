@@ -111,7 +111,7 @@ void main() {
     // four fragments a screen reader walks separately.
     expect(
       find.semantics.byLabel(
-        'Stuck, The.Zone.of.Interest.2023, 18%, idle 42 min, 3 seeds',
+        'Stuck, The.Zone.of.Interest.2023, 18%, idle 42\u00A0min, 3 seeds',
       ),
       findsOneWidget,
     );
@@ -204,11 +204,11 @@ void main() {
     // `/transfer/info` answered, and its answer was zero. An em dash here would
     // claim the call failed while five rows beside it prove it did not.
     expect(
-      find.semantics.byLabel('Downloaded this session, 0 B'),
+      find.semantics.byLabel('Downloaded this session, 0\u00A0B'),
       findsOneWidget,
     );
     expect(
-      find.semantics.byLabel('Uploaded this session, 0 B'),
+      find.semantics.byLabel('Uploaded this session, 0\u00A0B'),
       findsOneWidget,
     );
   });
@@ -225,7 +225,7 @@ void main() {
     final row = tester.widget<ServiceOverviewRow>(
       find.widgetWithText(ServiceOverviewRow, 'Downloaded this session'),
     );
-    expect(row.title, '1.0 MB');
+    expect(row.title, '1.0\u00A0MB');
     expect(row.detail, 'Downloaded this session');
     expect(row.trailing, isNull);
   });

@@ -111,18 +111,21 @@ void main() {
 
   group('sabnzbdEtaLabel', () {
     test('keeps two units at most', () {
-      expect(sabnzbdEtaLabel(const Duration(minutes: 7)), '7 min');
+      expect(sabnzbdEtaLabel(const Duration(minutes: 7)), '7\u00A0min');
       expect(
         sabnzbdEtaLabel(const Duration(hours: 2, minutes: 5)),
-        '2 h 5 min',
+        '2\u00A0h 5\u00A0min',
       );
-      expect(sabnzbdEtaLabel(const Duration(hours: 2)), '2 h');
-      expect(sabnzbdEtaLabel(const Duration(days: 1, hours: 4)), '1 d 4 h');
-      expect(sabnzbdEtaLabel(const Duration(days: 2)), '2 d');
+      expect(sabnzbdEtaLabel(const Duration(hours: 2)), '2\u00A0h');
+      expect(
+        sabnzbdEtaLabel(const Duration(days: 1, hours: 4)),
+        '1\u00A0d 4\u00A0h',
+      );
+      expect(sabnzbdEtaLabel(const Duration(days: 2)), '2\u00A0d');
     });
 
     test('never prints a bare zero', () {
-      expect(sabnzbdEtaLabel(const Duration(seconds: 30)), '< 1 min');
+      expect(sabnzbdEtaLabel(const Duration(seconds: 30)), '< 1\u00A0min');
       expect(sabnzbdEtaLabel(Duration.zero), isNull);
       expect(sabnzbdEtaLabel(null), isNull);
     });
@@ -136,7 +139,7 @@ void main() {
       final kpi = eta(
         _queue(kbPerSec: 2048, timeLeft: '0:07:00', slots: [_slot()]),
       );
-      expect(kpi.value, '7 min');
+      expect(kpi.value, '7\u00A0min');
       expect(kpi.isUnavailable, isFalse);
     });
 
@@ -181,7 +184,7 @@ void main() {
         _queue(paused: true, kbPerSec: 0),
       );
       final speed = readouts.firstWhere((kpi) => kpi.label == 'Speed');
-      expect(speed.value, '0 B/s');
+      expect(speed.value, '0\u00A0B/s');
       // …and it wears no tone, because nothing is moving to report.
       expect(speed.tone, isNull);
       expect(readouts.firstWhere((kpi) => kpi.label == 'Queue').value, '0');
@@ -285,7 +288,10 @@ void main() {
       ).rows.single;
 
       expect(row.name, 'Dune.Part.Two.2024.2160p');
-      expect(row.detail, 'downloading · 1.0 GB left · 2 min · movies');
+      expect(
+        row.detail,
+        'downloading · 1.0\u00A0GB left · 2\u00A0min · movies',
+      );
       expect(row.percentLabel, '72%');
       expect(row.tone, StatusTone.info);
       expect(row.isFault, isFalse);
@@ -313,12 +319,12 @@ void main() {
 
       expect(
         row.detail,
-        'downloading · 1.0 GB left of 4.0 GB · 2 min · movies',
+        'downloading · 1.0\u00A0GB left of 4.0\u00A0GB · 2\u00A0min · movies',
       );
       expect(
         row.spoken,
         'Dune.Part.Two.2024.2160p, 72% downloaded, downloading, '
-        '1.0 GB left of 4.0 GB, 2 min, movies',
+        '1.0\u00A0GB left of 4.0\u00A0GB, 2\u00A0min, movies',
       );
     });
 
@@ -330,10 +336,10 @@ void main() {
         _queue(slots: [_slot(status: 'Downloading', mbLeft: 1024)]),
       ).rows.single;
 
-      expect(row.detail, 'downloading · 1.0 GB left · 5 min');
+      expect(row.detail, 'downloading · 1.0\u00A0GB left · 5\u00A0min');
       expect(row.detail, isNot(contains('of')));
       expect(row.detail, isNot(contains('—')));
-      expect(row.detail, isNot(contains('0 B')));
+      expect(row.detail, isNot(contains('0\u00A0B')));
     });
 
     test('a queued job shows 0% and no invented estimate', () {
@@ -350,7 +356,7 @@ void main() {
       ).rows.single;
 
       expect(row.percentLabel, '0%');
-      expect(row.detail, 'queued · 1.0 GB left');
+      expect(row.detail, 'queued · 1.0\u00A0GB left');
       expect(row.detail, isNot(contains('—')));
     });
 
@@ -373,7 +379,7 @@ void main() {
       final section = sabnzbdQueuePreview(
         _queue(paused: true, mbLeft: 1024, slots: [_slot()]),
       );
-      expect(section.sizeLeftLabel, '1.0 GB');
+      expect(section.sizeLeftLabel, '1.0\u00A0GB');
       expect(section.paused, isTrue);
     });
 
@@ -395,7 +401,7 @@ void main() {
 
       expect(
         row.spoken,
-        'Severance.S02E05, 0% downloaded, queued, 1.0 GB left, tv',
+        'Severance.S02E05, 0% downloaded, queued, 1.0\u00A0GB left, tv',
       );
       expect(row.spoken, isNot(contains('·')));
     });
@@ -541,7 +547,7 @@ void main() {
 
       expect(entry.failed, isTrue);
       expect(entry.event, 'failed');
-      expect(entry.detail, 'missing 14 articles · 1 h ago · movies');
+      expect(entry.detail, 'missing 14 articles · 1\u00A0h ago · movies');
     });
 
     test('a completed row is spoken as one sentence', () {
@@ -557,7 +563,7 @@ void main() {
       expect(entry.failed, isFalse);
       expect(
         entry.spoken,
-        'Andor.S02E02.1080p.WEB-DL, completed, 1.0 GB, 2 h ago, tv',
+        'Andor.S02E02.1080p.WEB-DL, completed, 1.0\u00A0GB, 2\u00A0h ago, tv',
       );
       expect(entry.spoken, isNot(contains('·')));
     });

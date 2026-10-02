@@ -83,11 +83,11 @@ void main() {
 
     expect(
       find.semantics.byLabel(
-        'Broken release, Failed, movies, 0 B, completion time unavailable, Missing articles',
+        'Broken release, Failed, movies, 0\u00A0B, completion time unavailable, Missing articles',
       ),
       findsOneWidget,
     );
-    expect(find.textContaining('0 B'), findsOneWidget);
+    expect(find.textContaining('0\u00A0B'), findsOneWidget);
     expect(find.textContaining('· — · Missing articles'), findsOneWidget);
 
     final icon = tester.widget<Icon>(find.byIcon(Icons.error_outline_rounded));
@@ -177,7 +177,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(AppErrorState), findsNothing);
-    expect(find.text('0 B'), findsNothing);
+    expect(find.text('0\u00A0B'), findsNothing);
   });
 
   testWidgets('reported zero volume remains zero rather than unavailable', (
@@ -192,7 +192,7 @@ void main() {
       ],
     );
 
-    expect(find.text('0 B'), findsNWidgets(4));
+    expect(find.text('0\u00A0B'), findsNWidgets(4));
     expect(
       find.textContaining('the transfer volume is not shown'),
       findsNothing,

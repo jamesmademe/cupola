@@ -65,7 +65,7 @@ void main() {
     );
 
     test('sizeFormatted', () {
-      expect(file.sizeFormatted, '2.0 MB');
+      expect(file.sizeFormatted, '2.0\u00A0MB');
     });
 
     test('progressFormatted is single-decimal percent', () {

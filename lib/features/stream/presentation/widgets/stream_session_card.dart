@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/percent_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
@@ -366,7 +367,7 @@ class _ProgressBar extends StatelessWidget {
 String? formatStreamBitrate(int? bitsPerSecond) {
   if (bitsPerSecond == null || bitsPerSecond <= 0) return null;
   final mbps = bitsPerSecond / 1000000;
-  if (mbps >= 10) return '${mbps.round()} Mbps';
-  if (mbps >= 1) return '${mbps.toStringAsFixed(1)} Mbps';
-  return '${(bitsPerSecond / 1000).round()} kbps';
+  if (mbps >= 10) return withUnit(mbps.round(), 'Mbps');
+  if (mbps >= 1) return withUnit(mbps.toStringAsFixed(1), 'Mbps');
+  return withUnit((bitsPerSecond / 1000).round(), 'kbps');
 }

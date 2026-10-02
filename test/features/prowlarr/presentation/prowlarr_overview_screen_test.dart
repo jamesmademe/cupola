@@ -68,7 +68,7 @@ void main() {
     );
 
     // The rows carry a day's query counts, so the heading says which day.
-    expect(find.text('1 · by queries, last 24 h'), findsOneWidget);
+    expect(find.text('1 · by queries, last 24\u00A0h'), findsOneWidget);
   });
 
   testWidgets('the identity block says Answering, never Online', (

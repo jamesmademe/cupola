@@ -54,7 +54,7 @@ void main() {
           ),
           now: now,
         ),
-        'marco · 4 h ago · Movie · 4K',
+        'marco · 4\u00A0h ago · Movie · 4K',
       );
     });
 
@@ -77,8 +77,8 @@ void main() {
         now: now,
       );
 
-      expect(age(const Duration(minutes: 59)), '59 min ago · Movie');
-      expect(age(const Duration(minutes: 60)), '1 h ago · Movie');
+      expect(age(const Duration(minutes: 59)), '59\u00A0min ago · Movie');
+      expect(age(const Duration(minutes: 60)), '1\u00A0h ago · Movie');
     });
   });
 

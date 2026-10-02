@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
@@ -239,8 +240,8 @@ class ReadarrHistoryTile extends StatelessWidget {
 String _relativeTime(DateTime date) {
   final diff = DateTime.now().difference(date);
   if (diff.inMinutes < 1) return 'just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-  if (diff.inHours < 24) return '${diff.inHours} h ago';
+  if (diff.inMinutes < 60) return '${withUnit(diff.inMinutes, 'min')} ago';
+  if (diff.inHours < 24) return '${withUnit(diff.inHours, 'h')} ago';
   if (diff.inDays < 30) {
     return '${diff.inDays} ${diff.inDays == 1 ? 'day' : 'days'} ago';
   }

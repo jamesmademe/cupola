@@ -36,6 +36,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/sample_age.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
@@ -261,8 +262,8 @@ String transmissionLimitLabel(int kbPerSec, {required bool enabled}) {
   // A limit of zero *is* enforced by Transmission and means "stop": worth
   // saying in words, because "0 KB/s" beside a running download reads as a
   // rendering bug rather than as the cause.
-  if (kbPerSec <= 0) return 'Stopped (0 KB/s)';
-  return '$kbPerSec KB/s';
+  if (kbPerSec <= 0) return 'Stopped (${withUnit(0, 'KB/s')})';
+  return withUnit(kbPerSec, 'KB/s');
 }
 
 /// The Session region's rows, from what `session-get` and `free-space`

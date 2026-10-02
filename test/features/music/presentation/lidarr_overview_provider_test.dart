@@ -335,7 +335,7 @@ void main() {
         complete: false,
       );
 
-      expect(entries.single.detail, startsWith('FLAC · 1.1 GB'));
+      expect(entries.single.detail, startsWith('FLAC · 1.1\u00A0GB'));
     });
 
     test('different events on one album stay different rows', () {
@@ -412,7 +412,7 @@ void main() {
 
       expect(
         entries.single.spoken,
-        'Alvvays, Blue Rev, Retagged, FLAC, 1 h ago',
+        'Alvvays, Blue Rev, Retagged, FLAC, 1\u00A0h ago',
       );
     });
 

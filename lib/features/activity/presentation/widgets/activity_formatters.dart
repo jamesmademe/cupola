@@ -5,6 +5,7 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart'
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 
@@ -81,15 +82,17 @@ String formatRelativeDateTime(DateTime date, {DateTime? now}) {
   final delta = isFuture ? local.difference(reference) : difference;
 
   if (delta < const Duration(minutes: 1)) {
-    return isFuture ? 'in < 1 min' : 'just now';
+    return isFuture ? 'in < ${withUnit(1, 'min')}' : 'just now';
   }
   if (delta < const Duration(hours: 1)) {
     final minutes = delta.inMinutes;
-    return isFuture ? 'in $minutes min' : '$minutes min ago';
+    final age = withUnit(minutes, 'min');
+    return isFuture ? 'in $age' : '$age ago';
   }
   if (delta < const Duration(days: 1)) {
     final hours = delta.inHours;
-    return isFuture ? 'in $hours h' : '$hours h ago';
+    final age = withUnit(hours, 'h');
+    return isFuture ? 'in $age' : '$age ago';
   }
   if (delta < const Duration(days: 7)) {
     final days = delta.inDays;

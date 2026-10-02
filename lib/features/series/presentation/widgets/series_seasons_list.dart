@@ -6,6 +6,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart' show badgeOverQueue;
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_season.dart';
@@ -273,7 +274,7 @@ class SeriesSeasonsList extends StatelessWidget {
     // Runtime only stands in for a missing air date: on a series it is the same
     // number on every row, so printing it beside the date is noise.
     if (airDate == null && runtime != null && runtime > 0) {
-      facts.add('$runtime min');
+      facts.add(withUnit(runtime, 'min'));
     }
 
     final statusWord = status == null ? null : mediaStatusWord(status);

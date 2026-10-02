@@ -42,6 +42,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
@@ -155,8 +156,10 @@ String? qbittorrentIdleLabel(int lastActivity, {required DateTime now}) {
   ).toLocal();
   final delta = now.toLocal().difference(since);
   if (delta.isNegative || delta < const Duration(minutes: 1)) return null;
-  if (delta < const Duration(hours: 1)) return '${delta.inMinutes} min';
-  if (delta < const Duration(days: 1)) return '${delta.inHours} h';
+  if (delta < const Duration(hours: 1)) {
+    return withUnit(delta.inMinutes, 'min');
+  }
+  if (delta < const Duration(days: 1)) return withUnit(delta.inHours, 'h');
   final days = delta.inDays;
   return days == 1 ? '1 day' : '$days days';
 }

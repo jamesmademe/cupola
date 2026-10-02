@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/release_search/data/release_search_transport.dart';
@@ -274,7 +275,7 @@ class _BackgroundSearchSummaryCard extends ConsumerWidget {
 
     final caps =
         '${settings.concurrency} at a time · give up after '
-        '${settings.timeout.inMinutes} min';
+        '${withUnit(settings.timeout.inMinutes, 'min')}';
 
     return _SummaryCard(
       label: 'Background search',

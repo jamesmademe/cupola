@@ -109,7 +109,7 @@ void main() {
 
       expect(find.text('My.Movie.2024.1080p'), findsOneWidget);
       expect(find.text('NZBgeek'), findsOneWidget);
-      expect(find.text('1.0 GB'), findsOneWidget);
+      expect(find.text('1.0\u00A0GB'), findsOneWidget);
       expect(find.text('42'), findsOneWidget);
       expect(find.text('Bluray-1080p'), findsOneWidget);
       expect(find.text('2d'), findsOneWidget);
@@ -361,22 +361,22 @@ void main() {
 
     testWidgets('formats file sizes across units', (tester) async {
       await _pumpReleaseItem(tester, release: buildRelease(size: 500));
-      expect(find.text('500 B'), findsOneWidget);
+      expect(find.text('500\u00A0B'), findsOneWidget);
 
       // One decimal on every rung above bytes, from the shared
       // formatter — the row used to carry its own ladder that printed one
       // decimal at KB/MB, two at GB, and never reached TB at all.
       await _pumpReleaseItem(tester, release: buildRelease(size: 1536));
-      expect(find.text('1.5 KB'), findsOneWidget);
+      expect(find.text('1.5\u00A0KB'), findsOneWidget);
 
       await _pumpReleaseItem(tester, release: buildRelease(size: 5242880));
-      expect(find.text('5.0 MB'), findsOneWidget);
+      expect(find.text('5.0\u00A0MB'), findsOneWidget);
 
       await _pumpReleaseItem(
         tester,
         release: buildRelease(size: 2199023255552),
       );
-      expect(find.text('2.0 TB'), findsOneWidget);
+      expect(find.text('2.0\u00A0TB'), findsOneWidget);
     });
 
     testWidgets('formats ages across minutes, hours, and days', (tester) async {

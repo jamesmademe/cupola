@@ -151,7 +151,7 @@ void main() {
       expect(items.single.kind, SonarrAttentionKind.stalled);
       expect(items.single.headline, 'Stuck · Andor S2 E3');
       expect(items.single.detail, contains('qBittorrent'));
-      expect(items.single.detail, contains('3 h ago'));
+      expect(items.single.detail, contains('3\u00A0h ago'));
     });
 
     test('a failed import names the season pack that failed', () {
@@ -382,7 +382,7 @@ void main() {
       expect(entry.event, 'Imported');
       expect(entry.tone, StatusTone.success);
       expect(entry.detail, contains('WEB-DL 1080p'));
-      expect(entry.detail, contains('40 min ago'));
+      expect(entry.detail, contains('40\u00A0min ago'));
       // One sentence for the ear, with the layout's dots turned into commas.
       expect(entry.spoken, startsWith('Severance S2 E4, Imported, '));
       expect(entry.spoken, isNot(contains('·')));

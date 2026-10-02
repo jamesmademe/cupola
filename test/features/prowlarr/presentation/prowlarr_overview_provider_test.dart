@@ -69,11 +69,11 @@ void main() {
       expect(row.headline, 'Nyaa');
       expect(
         row.detail,
-        'failing · disabled until 15:40 · last failed 12 min ago',
+        'failing · disabled until 15:40 · last failed 12\u00A0min ago',
       );
       expect(
         row.spoken,
-        'Nyaa, failing, disabled until 15:40, last failed 12 min ago',
+        'Nyaa, failing, disabled until 15:40, last failed 12\u00A0min ago',
       );
     });
 
@@ -159,7 +159,7 @@ void main() {
       final row = section.rows.single;
       expect(row.detail, 'torrent · private · —');
       expect(row.trailing, '—');
-      expect(row.detail, isNot(contains('0 ms')));
+      expect(row.detail, isNot(contains('0\u00A0ms')));
     });
 
     test('a failing indexer is amber, a healthy one neutral', () {
@@ -234,7 +234,7 @@ void main() {
       ], now: now);
 
       expect(rows.first.tone, StatusTone.success);
-      expect(rows.first.detail, 'TorrentLeech · 4 min ago');
+      expect(rows.first.detail, 'TorrentLeech · 4\u00A0min ago');
       expect(rows.last.tone, StatusTone.warning);
       expect(rows.last.headline, 'Severance · query failed');
     });

@@ -44,12 +44,12 @@ void main() {
         now: now,
       );
 
-      expect(at(const Duration(minutes: 1)), '1 min');
-      expect(at(const Duration(minutes: 42)), '42 min');
+      expect(at(const Duration(minutes: 1)), '1\u00A0min');
+      expect(at(const Duration(minutes: 42)), '42\u00A0min');
       // The boundary lands on the hour, not a minute either side.
-      expect(at(const Duration(minutes: 59)), '59 min');
-      expect(at(const Duration(minutes: 60)), '1 h');
-      expect(at(const Duration(hours: 23)), '23 h');
+      expect(at(const Duration(minutes: 59)), '59\u00A0min');
+      expect(at(const Duration(minutes: 60)), '1\u00A0h');
+      expect(at(const Duration(hours: 23)), '23\u00A0h');
       expect(at(const Duration(hours: 24)), '1 day');
       expect(at(const Duration(days: 3)), '3 days');
     });
@@ -137,7 +137,7 @@ void main() {
       final row = rows.single;
       expect(row.tone, StatusTone.warning);
       expect(row.headline, 'Stuck · The.Zone.of.Interest.2023');
-      expect(row.detail, '18% · idle 42 min · 3 seeds');
+      expect(row.detail, '18% · idle 42\u00A0min · 3 seeds');
     });
 
     test('zero seeds is stated: it is the reason, not a missing figure', () {
@@ -226,7 +226,7 @@ void main() {
 
       expect(
         rows.single.spoken,
-        'Stuck, Dune.Part.Two, 18%, idle 42 min, 3 seeds',
+        'Stuck, Dune.Part.Two, 18%, idle 42\u00A0min, 3 seeds',
       );
       expect(rows.single.spoken, isNot(contains('·')));
     });
@@ -285,7 +285,10 @@ void main() {
       final row = rows.single;
       expect(row.percent, '92%');
       expect(row.tone, StatusTone.info);
-      expect(row.detail, 'movies · 15.0 GB · 8.0 MB/s down · 3m left');
+      expect(
+        row.detail,
+        'movies · 15.0\u00A0GB · 8.0\u00A0MB/s down · 3m left',
+      );
     });
 
     test('a seeding row is GREEN — complete, not in flight', () {
@@ -302,7 +305,10 @@ void main() {
       ]);
 
       expect(rows.single.tone, StatusTone.success);
-      expect(rows.single.detail, 'movies · 9.0 GB · 240 KB/s up · ratio 3.20');
+      expect(
+        rows.single.detail,
+        'movies · 9.0\u00A0GB · 240\u00A0KB/s up · ratio 3.20',
+      );
     });
 
     test('an unknowable ETA is left unsaid, never rendered as ∞', () {
@@ -322,7 +328,7 @@ void main() {
       ]);
 
       expect(rows.single.detail, contains('—'));
-      expect(rows.single.detail, isNot(contains('0 B')));
+      expect(rows.single.detail, isNot(contains('0\u00A0B')));
     });
 
     test('the preview cap holds', () {
@@ -414,7 +420,7 @@ void main() {
       final rows = qbittorrentCategoryRows([
         _torrent(category: 'movies', size: 1024 * 1024),
       ]);
-      expect(rows.single.spoken, 'movies, 1 torrent, 1.0 MB');
+      expect(rows.single.spoken, 'movies, 1 torrent, 1.0\u00A0MB');
     });
 
     test('the cap holds', () {
@@ -435,7 +441,7 @@ void main() {
     });
 
     test('a real limit renders as a rate', () {
-      expect(qbittorrentGlobalLimitLabel(20 * 1024 * 1024), '20.0 MB/s');
+      expect(qbittorrentGlobalLimitLabel(20 * 1024 * 1024), '20.0\u00A0MB/s');
     });
   });
 
@@ -476,12 +482,12 @@ void main() {
         'Alternative limits',
       ]);
       expect(facts.map((f) => f.value), [
-        '1.0 MB',
-        '2.0 MB',
+        '1.0\u00A0MB',
+        '2.0\u00A0MB',
         '2.00',
         // The global sentinel, not a throttle to nothing.
         'no limit',
-        '5.0 MB/s',
+        '5.0\u00A0MB/s',
         'off',
       ]);
       // Free space, DHT nodes and the listen port are on /sync/maindata, which
@@ -497,10 +503,10 @@ void main() {
       // zero bytes. A session counter is not a size: a daemon restarted ten
       // minutes ago has genuinely moved nothing, and `/transfer/info` answered
       // to say so.
-      expect(qbittorrentSessionTotalLabel(0), '0 B');
-      expect(qbittorrentSessionTotalLabel(1024 * 1024), '1.0 MB');
+      expect(qbittorrentSessionTotalLabel(0), '0\u00A0B');
+      expect(qbittorrentSessionTotalLabel(1024 * 1024), '1.0\u00A0MB');
       // Defensive only; no qB version is known to send one.
-      expect(qbittorrentSessionTotalLabel(-1), '0 B');
+      expect(qbittorrentSessionTotalLabel(-1), '0\u00A0B');
 
       final facts = qbittorrentSessionFacts(
         const TransferInfo(
@@ -516,11 +522,11 @@ void main() {
 
       expect(
         facts.firstWhere((f) => f.label == 'Downloaded this session').value,
-        '0 B',
+        '0\u00A0B',
       );
       expect(
         facts.firstWhere((f) => f.label == 'Uploaded this session').value,
-        '0 B',
+        '0\u00A0B',
       );
     });
 

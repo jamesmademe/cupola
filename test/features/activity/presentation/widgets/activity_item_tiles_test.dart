@@ -328,7 +328,7 @@ void main() {
       );
 
       expect(find.text('HD-1080p'), findsOneWidget);
-      expect(find.text('7.5 GB'), findsOneWidget);
+      expect(find.text('7.5\u00A0GB'), findsOneWidget);
       expect(find.textContaining('Release 2026-04-03'), findsNothing);
       expect(find.text('Released'), findsNothing);
     });
@@ -655,7 +655,7 @@ void main() {
                   serviceType: ServiceType.movies,
                   title: 'Dune: Part Two',
                   subtitle: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
-                  figures: '7.5 GB · 12m left',
+                  figures: '7.5\u00A0GB · 12m left',
                   instanceLabel: '4K',
                   status: MediaStatusInfo(
                     pipeline: MediaPipeline.downloading,
@@ -680,7 +680,7 @@ void main() {
           await tester.pumpWidget(host(1200));
           await tester.pumpAndSettle();
 
-          expect(find.text('7.5 GB · 12m left'), findsOneWidget);
+          expect(find.text('7.5\u00A0GB · 12m left'), findsOneWidget);
           // The release is not lost — it moved to where prose belongs, under
           // the title.
           expect(
@@ -706,7 +706,7 @@ void main() {
           expect(find.text('Dune: Part Two'), findsOneWidget);
 
           // And the cells that only pay for themselves with room are gone.
-          expect(find.text('7.5 GB · 12m left'), findsNothing);
+          expect(find.text('7.5\u00A0GB · 12m left'), findsNothing);
           // Never the connection: with two Radarr interleaved in one group,
           // a row that drops its name is a row that cannot say which server
           // it is about, to the eye or the ear.

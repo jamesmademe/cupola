@@ -97,7 +97,7 @@ List<(int, String)> _offences(String source) => [
 const _allowed = <({String file, String excerpt, String reason})>[
   (
     file: 'lib/features/qbittorrent/presentation/torrent_detail_screen.dart',
-    excerpt: "'\${(bytes / 1024).toStringAsFixed(0)} KB/s'",
+    excerpt: "withUnit((bytes / 1024).toStringAsFixed(0), 'KB/s')",
     reason:
         'the snack bar repeats the limit the user just typed, in the KB/s '
         'they typed it in: a setting echoed back, not a measurement',

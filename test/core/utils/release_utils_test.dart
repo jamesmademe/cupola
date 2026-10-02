@@ -7,18 +7,18 @@ void main() {
     // up), whole bytes, and every rung up to PB. The old private copy spent one
     // decimal at KB/MB and two at GB, and had no rung above GB at all.
     const cases = {
-      0: '0 B',
-      512: '512 B',
-      1024: '1.0 KB',
-      1536: '1.5 KB',
-      1048576: '1.0 MB',
-      1073741824: '1.0 GB',
-      2147483648: '2.0 GB',
+      0: '0\u00A0B',
+      512: '512\u00A0B',
+      1024: '1.0\u00A0KB',
+      1536: '1.5\u00A0KB',
+      1048576: '1.0\u00A0MB',
+      1073741824: '1.0\u00A0GB',
+      2147483648: '2.0\u00A0GB',
       // Resolution where releases are actually compared: two candidates a few
       // hundred MB apart stay distinguishable.
-      4700000000: '4.4 GB',
-      27917287424: '26.0 GB',
-      837000000: '798 MB',
+      4700000000: '4.4\u00A0GB',
+      27917287424: '26.0\u00A0GB',
+      837000000: '798\u00A0MB',
     };
     for (final entry in cases.entries) {
       test('${entry.key} -> ${entry.value}', () {
@@ -30,13 +30,13 @@ void main() {
       // The reason a release size is on screen: choosing between two. They
       // have to read as two figures, not as one rounded `4 GB`.
       const gib = 1024 * 1024 * 1024;
-      expect(formatReleaseSize((4.3 * gib).round()), '4.3 GB');
-      expect(formatReleaseSize((4.4 * gib).round()), '4.4 GB');
+      expect(formatReleaseSize((4.3 * gib).round()), '4.3\u00A0GB');
+      expect(formatReleaseSize((4.4 * gib).round()), '4.4\u00A0GB');
     });
 
     test('a season pack past a terabyte promotes instead of printing GB', () {
       // The private copy bottomed out at GB and rendered this as "2048.00 GB".
-      expect(formatReleaseSize(2199023255552), '2.0 TB');
+      expect(formatReleaseSize(2199023255552), '2.0\u00A0TB');
     });
   });
 

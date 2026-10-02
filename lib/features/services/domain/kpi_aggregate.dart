@@ -39,6 +39,7 @@ import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 
 /// Folds the KPI lists of every connection of one service into one list.
 ///
@@ -198,10 +199,10 @@ String? _sharedNote(List<ServiceKpi> terms) {
 
 /// `2.0 MB/s` back into bytes per second, or null if it is not a rate.
 ///
-/// Deliberately anchored to what `formatBytesPerSecond` prints — one space, the
-/// binary ladder, the `/s` suffix — rather than to anything more forgiving: a
-/// loose parser here would quietly start adding up strings that only look like
-/// rates.
+/// Deliberately anchored to what `formatBytesPerSecond` prints — one no-break
+/// space, the binary ladder, the `/s` suffix — rather than to anything more
+/// forgiving: a loose parser here would quietly start adding up strings that
+/// only look like rates.
 double? _bytesPerSecond(String value) {
   final match = _rate.firstMatch(value);
   if (match == null) return null;
@@ -217,4 +218,6 @@ double? _bytesPerSecond(String value) {
 
 const List<String> _rateUnits = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
-final RegExp _rate = RegExp(r'^(-?\d+(?:\.\d+)?) (B|KB|MB|GB|TB|PB)/s$');
+final RegExp _rate = RegExp(
+  '^(-?\\d+(?:\\.\\d+)?)$unitSpace(B|KB|MB|GB|TB|PB)/s\$',
+);

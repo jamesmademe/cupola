@@ -24,6 +24,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 
@@ -120,16 +121,17 @@ String formatDoneOfTotal({int? doneBytes, int? totalBytes}) {
 /// which is filtered by the caller rather than printed as a hundred days.
 String formatTimeLeft(int? seconds) {
   if (seconds == null || seconds < 0) return kAbsentFigure;
-  if (seconds < 60) return '$seconds s left';
+  if (seconds < 60) return '${withUnit(seconds, 's')} left';
   final minutes = seconds ~/ 60;
-  if (minutes < 60) return '$minutes min left';
+  if (minutes < 60) return '${withUnit(minutes, 'min')} left';
   final hours = minutes ~/ 60;
   final rest = minutes % 60;
   if (hours < 24) {
-    return rest == 0 ? '$hours h left' : '$hours h $rest min left';
+    final h = withUnit(hours, 'h');
+    return rest == 0 ? '$h left' : '$h ${withUnit(rest, 'min')} left';
   }
   final days = hours ~/ 24;
-  return '$days d left';
+  return '${withUnit(days, 'd')} left';
 }
 
 /// The whole row line: `2160p · 14.0 of 15.2 GB · 3 min left · qBittorrent`.
