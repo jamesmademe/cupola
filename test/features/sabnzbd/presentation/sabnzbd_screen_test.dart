@@ -262,7 +262,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Downloading · 0:12:30 · 1.0\u00A0GB left of 4.0\u00A0GB'),
+      find.text('Downloading · 12\u00A0min · 1.0\u00A0GB left of 4.0\u00A0GB'),
       findsOneWidget,
     );
   });
@@ -290,7 +290,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Downloading · 0:12:30 · 1.0\u00A0GB left'),
+      find.text('Downloading · 12\u00A0min · 1.0\u00A0GB left'),
       findsOneWidget,
     );
     expect(find.textContaining('of 0\u00A0B'), findsNothing);

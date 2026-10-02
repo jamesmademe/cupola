@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_actions.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
@@ -375,7 +376,8 @@ class _QueueTile extends ConsumerWidget {
       // `SabnzbdQueueSlot.sizeProgressLabel`.
       subtitle: <String>[
         if (slot.status.isNotEmpty) slot.status,
-        if (slot.timeLeft.isNotEmpty) slot.timeLeft,
+        // SABnzbd's `0:12:00`, as every span in the app reads: `12 min`.
+        ?sabnzbdEtaLabel(sabnzbdParseTimeLeft(slot.timeLeft)),
         slot.sizeProgressLabel,
       ].join(' · '),
       progress: slot.progress,

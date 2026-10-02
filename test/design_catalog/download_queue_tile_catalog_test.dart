@@ -226,7 +226,7 @@ void main() {
         (_) => _column([
           DownloadQueueTile(
             title: 'Metropolis.1927.1080p.BluRay.x264-GROUP',
-            subtitle: 'Downloading · 0:12:00 · 1.2 GB left of 3.4 GB',
+            subtitle: 'Downloading · 12\u00A0min · 1.2\u00A0GB left of 3.4\u00A0GB',
             progress: 0.65,
             percentage: 65,
             accent: ServiceKey.sabnzbd.accent,
@@ -330,7 +330,7 @@ void main() {
           ),
           DownloadQueueTile(
             title: 'Metropolis.1927.1080p.BluRay.x264-GROUP',
-            subtitle: 'Downloading · 0:12:00 · 1.2 GB left of 3.4 GB',
+            subtitle: 'Downloading · 12\u00A0min · 1.2\u00A0GB left of 3.4\u00A0GB',
             progress: 0.65,
             percentage: 65,
             accent: ServiceKey.sabnzbd.accent,
