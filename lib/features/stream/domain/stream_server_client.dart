@@ -121,9 +121,11 @@ abstract interface class StreamServerClient {
   /// Plex — which is why it has no shared default: null asks each client for the
   /// number that suits its own endpoint.
   ///
-  /// Degrades to `[]` like every other read. That is distinct from a list of
-  /// empty groups: no groups means the question could not be asked, empty groups
-  /// mean it was asked and nothing matched.
+  /// **Throws when the server did not answer or answered with a failure**, so
+  /// the one surface that asks (a global search lane) can say which, in its
+  /// tone. Any list is an answer: empty groups, or none, mean the server was
+  /// asked and nothing matched. It used to degrade to `[]`, which the lane
+  /// could only read as a request that did not complete.
   Future<List<StreamSearchGroup>> search(
     String query, {
     int? limit,
@@ -184,6 +186,9 @@ abstract interface class StreamServerClient {
   });
 
   /// The children of a series, season or album.
+  ///
+  /// Throws on a remote failure: an empty list is an item with nothing
+  /// inside, which is what the item page says of it.
   Future<List<StreamItem>> getChildren(
     String itemId, {
     String? viewerId,
@@ -250,6 +255,7 @@ abstract interface class StreamServerClient {
   /// Household members whose watch state can be read.
   ///
   /// Returns a single-entry list on Plex — see [StreamLibraryLens.isPerViewer].
+  /// Throws on a remote failure: an empty list is a server with nobody on it.
   Future<List<StreamViewer>> getViewers();
 
   /// Resolve artwork for an item or session poster path.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -145,7 +147,12 @@ Future<void> _pumpPlexNowPlaying(
       overrides: [
         currentSettingsProvider.overrideWith((ref) => _plexConfigured),
         plexSessionsProvider.overrideWith((ref) async => sessions),
-        plexCapabilitiesProvider.overrideWith((ref) async => capabilities),
+        // Null is a sheet that has not answered yet.
+        plexCapabilitiesProvider.overrideWith(
+          (ref) => capabilities == null
+              ? Completer<PlexServerCapabilities>().future
+              : Future.value(capabilities),
+        ),
       ],
       child: MaterialApp(home: _nowPlayingHost(ServiceKey.plex)),
     ),

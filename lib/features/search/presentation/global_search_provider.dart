@@ -431,21 +431,11 @@ Future<GlobalSearchServiceResults> _loadStreamLeg({
     leg: leg,
     cancelToken: cancelToken,
     loadItems: () async {
+      // `StreamServerClient.search` throws when the server did not answer, with
+      // the failure it had, so the lane says who and why in its own tone, as
+      // the arr lanes do. Any list it returns is an answer, and an empty one is
+      // "0 results".
       final groups = await client.search(query, cancelToken: cancelToken);
-      // `StreamServerClient.search` degrades to `[]` rather than throwing, and
-      // its contract makes that shape mean one specific thing: **no groups at
-      // all is "the question could not be asked"**, while a list of empty
-      // groups is "asked, and nothing matched". Without this throw a media
-      // server that is switched off would report "0 results" in the same words
-      // a working one uses for a query it does not hold — which is the exact
-      // confusion the per-connection fan-out exists to end. The reason is
-      // coarser than the arr legs' (`reportFailure: true` carries the real one
-      // up), so this lands on a request that did not complete rather than on
-      // "did not answer": a fault the user can retry, and not a claim about
-      // why.
-      if (groups.isEmpty) {
-        throw const _StreamSearchUnanswered();
-      }
       return [
         for (final group in groups)
           for (final item in group.items) (group: group, item: item),
@@ -454,18 +444,6 @@ Future<GlobalSearchServiceResults> _loadStreamLeg({
     toResult: (row, index) =>
         _streamResult(row.item, row.group, leg.instance, client, index),
   );
-}
-
-/// Thrown when a media server's search came back with no bands at all.
-///
-/// A type rather than a bare `Exception` so the intent survives a stack trace:
-/// this is the client's documented "could not ask" shape being re-raised, not a
-/// parse failure.
-class _StreamSearchUnanswered implements Exception {
-  const _StreamSearchUnanswered();
-
-  @override
-  String toString() => 'the server did not answer the search';
 }
 
 Future<GlobalSearchServiceResults> _loadLeg<T>({

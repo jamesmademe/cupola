@@ -523,21 +523,16 @@ class _ServerSection extends ConsumerWidget {
       // No link: every fact here is a connection setting, and Plex's bar has no
       // tab that owns them — a link named after a tab that does not exist is a
       // promise the app cannot keep.
-      child: AsyncValueWidget<PlexServerCapabilities?>(
+      // A Plex that did not answer is the failure, in its words and tone: the
+      // sheet used to come back null for any failure, and this section read
+      // a dark server as one that "did not describe itself".
+      child: AsyncValueWidget<PlexServerCapabilities>(
         value: capabilities,
         serviceName: 'Plex',
         loadingLabel: 'Loading what the server says about itself',
         onRetry: () => ref.invalidate(plexCapabilitiesProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        // Null is not "no data to show": `getCapabilities` answers null when the
-        // response could not be read at all, which is a different fact from a
-        // response that simply omitted a field.
-        isEmpty: (value) => value == null,
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.dns_outlined,
-          label: 'The server did not describe itself',
-        ),
-        data: (value) => _ServerRows(capabilities: value!),
+        data: (value) => _ServerRows(capabilities: value),
       ),
     );
   }

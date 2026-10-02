@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
@@ -705,15 +706,18 @@ void main() {
     });
 
     test(
-      'a server that could not be asked is not a server holding nothing',
+      'a server that did not answer says so, never that it holds nothing',
       () async {
-        // `StreamServerClient.search` degrades to `[]` instead of throwing, and
-        // its contract makes the shape carry the meaning: no bands at all means
-        // the question never landed. Read as an answer it would put "0 results"
-        // on a media server that is switched off — the one confusion the
-        // per-connection fan-out exists to end.
+        // `StreamServerClient.search` throws what it failed with. It used to
+        // degrade to no bands at all, which the lane could only read as a
+        // request that did not complete: amber, for a server switched off.
         final container = streamContainer(
-          jellyfin: _ScriptedStreamServer(const []),
+          jellyfin: _ScriptedStreamServer.failing(
+            DioException.connectionError(
+              requestOptions: RequestOptions(path: '/Search/Hints'),
+              reason: 'Connection refused',
+            ),
+          ),
           plex: _ScriptedStreamServer(const []),
         );
         addTearDown(container.dispose);
@@ -725,8 +729,27 @@ void main() {
         expect(lane.state, isNot(SearchLaneState.answered));
         expect(lane.hasFault, isTrue);
         expect(lane.state.canRetry, isTrue);
+        expect(lane.state.tone, StatusTone.error);
       },
     );
+
+    test('a server that answered with no bands holds nothing', () async {
+      // Plex may answer a query it holds nothing for with no hubs at all.
+      // That is an answer, "0 results", never a fault.
+      final container = streamContainer(
+        jellyfin: _ScriptedStreamServer(const []),
+        plex: _ScriptedStreamServer(const []),
+      );
+      addTearDown(container.dispose);
+      container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+      final lanes = await _settledLanes(container);
+      final lane = lanes.firstWhere((l) => l.service == ServiceKey.plex);
+
+      expect(lane.state, SearchLaneState.answered);
+      expect(lane.results, isEmpty);
+      expect(lane.hasFault, isFalse);
+    });
 
     test('bands that came back empty are an answer, and say so', () async {
       // The other half of the same contract: bands present but empty mean the
@@ -1014,9 +1037,13 @@ StreamSearchGroup _band(
 /// row, `imageFor` — so `noSuchMethod` covers the other eleven futures rather
 /// than the test pretending to implement a media server.
 class _ScriptedStreamServer implements StreamServerClient {
-  _ScriptedStreamServer(this.groups);
+  _ScriptedStreamServer(this.groups) : failure = null;
+
+  /// A server whose search fails with [failure], as the clients throw it.
+  _ScriptedStreamServer.failing(Object this.failure) : groups = const [];
 
   final List<StreamSearchGroup> groups;
+  final Object? failure;
   final List<String> queries = [];
 
   @override
@@ -1026,6 +1053,8 @@ class _ScriptedStreamServer implements StreamServerClient {
     CancelToken? cancelToken,
   }) async {
     queries.add(query);
+    final failure = this.failure;
+    if (failure != null) throw failure;
     return groups;
   }
 

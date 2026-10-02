@@ -44,8 +44,7 @@ class _DarkStreamServer implements StreamServerClient {
 
 class _DarkPlex implements PlexClient {
   @override
-  Future<PlexServerCapabilities?> getCapabilities() async =>
-      throw _refused('/');
+  Future<PlexServerCapabilities> getCapabilities() async => throw _refused('/');
 
   @override
   Future<List<StreamLibrary>> getLibraries({CancelToken? cancelToken}) async =>

@@ -92,7 +92,7 @@ final plexServerProvider = Provider<StreamServerClient>((ref) {
 
 /// `GET /` — friendly name, version, and the Plex Pass flag that decides whether
 /// a "stop stream" affordance is offered at all.
-final plexCapabilitiesProvider = FutureProvider<PlexServerCapabilities?>((
+final plexCapabilitiesProvider = FutureProvider<PlexServerCapabilities>((
   ref,
 ) async {
   return ref.watch(plexClientProvider).getCapabilities();
@@ -107,7 +107,7 @@ final plexCapabilitiesProvider = FutureProvider<PlexServerCapabilities?>((
 /// Activity share one answer; another connection is asked on its own, because
 /// Plex Pass and the owner's scope are per server.
 final plexCapabilitiesForProvider =
-    FutureProvider.family<PlexServerCapabilities?, String>((
+    FutureProvider.family<PlexServerCapabilities, String>((
       ref,
       instanceId,
     ) async {

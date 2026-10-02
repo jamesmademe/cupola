@@ -354,7 +354,10 @@ Future<void> _pump(
           return libraries;
         }),
         plexOnDeckProvider.overrideWith((ref) async => onDeck),
-        plexCapabilitiesProvider.overrideWith((ref) async => capabilities),
+        // A sheet that answered, by default one that sends no flags.
+        plexCapabilitiesProvider.overrideWith(
+          (ref) async => capabilities ?? _capabilities(),
+        ),
         // The reachability probe the identity line reads.
         serviceSummaryProvider.overrideWith(
           (ref, key) async => ServiceSummary(

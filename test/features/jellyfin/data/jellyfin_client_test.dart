@@ -494,11 +494,14 @@ void main() {
       expect(adapter.callCount, 0);
     });
 
-    test('a failure is no bands at all, not six empty ones', () async {
+    test('a failure throws, never no bands at all', () async {
       final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
-      // The distinction the page renders: no groups means the question could not
-      // be asked; empty groups mean it was asked and nothing matched.
-      expect(await _client(adapter).search('inter'), isEmpty);
+      // The lane says who failed and why, in its own tone: no bands at all
+      // could only be read as a request that did not complete.
+      await expectLater(
+        _client(adapter).search('inter'),
+        throwsA(isA<DioException>()),
+      );
     });
   });
 
@@ -1221,7 +1224,8 @@ void main() {
       expect(await client.probeVersion(), isNull);
       expect(await client.verifyCredential(), isFalse);
       expect(await client.getItem(_movieId), isNull);
-      expect(await client.getChildren(_seriesId), isEmpty);
+      // No surface reads this list; the browse reads `getLibraryPage`, which
+      // says a page failed.
       expect(
         await client.getLibraryItems(
           libraryId: _moviesLibraryId,
@@ -1235,6 +1239,15 @@ void main() {
           lens: StreamLibraryLens.continueWatching,
         ),
         isEmpty,
+      );
+    });
+
+    test('the contents of an item throw, never "Nothing inside"', () async {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
+
+      await expectLater(
+        _client(adapter).getChildren(_seriesId),
+        throwsA(isA<DioException>()),
       );
     });
 

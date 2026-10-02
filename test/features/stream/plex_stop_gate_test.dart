@@ -156,13 +156,13 @@ void main() {
   group('a sheet that has not answered yet', () {
     // Pinned above the network: the sheet is held open for the whole test,
     // which a canned reply cannot do.
-    List<Override> holdSheet(Completer<PlexServerCapabilities?> sheet) => [
+    List<Override> holdSheet(Completer<PlexServerCapabilities> sheet) => [
       plexCapabilitiesProvider.overrideWith((ref) => sheet.future),
     ];
 
     testWidgets('Activity offers Stop, and keeps it once the sheet says the '
         'server has Plex Pass', (tester) async {
-      final sheet = Completer<PlexServerCapabilities?>();
+      final sheet = Completer<PlexServerCapabilities>();
       final harness = await _start(overrides: holdSheet(sheet));
       await _pumpActivity(tester, harness);
 
@@ -181,7 +181,7 @@ void main() {
     });
 
     testWidgets('Now playing offers Stop', (tester) async {
-      final sheet = Completer<PlexServerCapabilities?>();
+      final sheet = Completer<PlexServerCapabilities>();
       final harness = await _start(overrides: holdSheet(sheet));
       await _pumpNowPlaying(tester, harness);
 

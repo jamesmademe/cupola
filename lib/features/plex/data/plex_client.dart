@@ -461,12 +461,13 @@ class PlexClient implements StreamServerClient {
 
   /// `GET /` — friendly name, version, and the Plex Pass flag that decides
   /// whether stopping a stream is even offered.
-  Future<PlexServerCapabilities?> getCapabilities() async {
-    try {
-      return PlexServerCapabilities.fromMediaContainer(await _container('/'));
-    } catch (_) {
-      return null;
-    }
+  ///
+  /// Throws on a remote failure. It used to answer null for any failure, and
+  /// the Overview's Server section read a Plex that did not answer as one
+  /// that "did not describe itself", and [getViewers] as a server with nobody
+  /// on it.
+  Future<PlexServerCapabilities> getCapabilities() async {
+    return PlexServerCapabilities.fromMediaContainer(await _container('/'));
   }
 
   // ---------------------------------------------------------------------------
@@ -576,7 +577,14 @@ class PlexClient implements StreamServerClient {
       // and is refused this (community-reported; Plex does not document it).
       // Ask the server about the one cause it can confirm, and never claim the
       // token is fine, because for a non-owner it is exactly the problem.
-      final capabilities = await getCapabilities();
+      // Only a cause the server can confirm: a sheet that does not answer
+      // now leaves the general refusal below.
+      PlexServerCapabilities? capabilities;
+      try {
+        capabilities = await getCapabilities();
+      } catch (_) {
+        capabilities = null;
+      }
       if (capabilities?.myPlexSubscription == false) {
         return const PlexException(
           'Stopping a stream is a Plex Pass feature, and this server does not '
@@ -949,15 +957,13 @@ class PlexClient implements StreamServerClient {
     String? viewerId,
     CancelToken? cancelToken,
   }) async {
-    try {
-      final container = await _container(
-        '/library/metadata/${_pathSegment(itemId)}/children',
-        cancelToken: cancelToken,
-      );
-      return _itemsFrom(container['Metadata'] ?? container['Directory']);
-    } catch (_) {
-      return const [];
-    }
+    // Not caught: a read that failed throws, so the item's Contents say the
+    // server did not answer, with a Retry, rather than "Nothing inside".
+    final container = await _container(
+      '/library/metadata/${_pathSegment(itemId)}/children',
+      cancelToken: cancelToken,
+    );
+    return _itemsFrom(container['Metadata'] ?? container['Directory']);
   }
 
   /// The household members whose watch state can be read: exactly one, always.
@@ -974,10 +980,12 @@ class PlexClient implements StreamServerClient {
   /// `GET /` rather than `/accounts` on purpose: `/accounts` is admin-only in
   /// practice, so a non-admin token would get nothing at all from it, while `/`
   /// answers for any valid token.
+  ///
+  /// Throws on a remote failure, like Jellyfin's: an empty list would be a
+  /// server that answered with nobody on it.
   @override
   Future<List<StreamViewer>> getViewers() async {
     final capabilities = await getCapabilities();
-    if (capabilities == null) return const [];
     // **`friendlyName` is not a fallback here, and used to be one.**
     // `friendlyName` is what the owner called the *box* — "tower", "basement
     // NAS" — so a server not linked to plex.tv produced a viewer named after a
@@ -1056,20 +1064,17 @@ class PlexClient implements StreamServerClient {
   }) async {
     final term = query.trim();
     if (term.isEmpty) return const [];
-    try {
-      final container = await _container(
-        '/hubs/search',
-        queryParameters: {
-          'query': term,
-          'limit': limit ?? kPlexSearchHubLimit,
-          'includeExternalMedia': 0,
-        },
-        cancelToken: cancelToken,
-      );
-      return _groupsFromHubs(container);
-    } catch (_) {
-      return const [];
-    }
+    // Not caught: see `JellyfinClient.search`.
+    final container = await _container(
+      '/hubs/search',
+      queryParameters: {
+        'query': term,
+        'limit': limit ?? kPlexSearchHubLimit,
+        'includeExternalMedia': 0,
+      },
+      cancelToken: cancelToken,
+    );
+    return _groupsFromHubs(container);
   }
 
   // ---------------------------------------------------------------------------

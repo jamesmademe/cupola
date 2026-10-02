@@ -405,7 +405,7 @@ void main() {
       );
       final capabilities = await _client(adapter).getCapabilities();
 
-      expect(capabilities!.friendlyName, 'basement-nas');
+      expect(capabilities.friendlyName, 'basement-nas');
       expect(capabilities.myPlexUsername, 'matt');
       expect(capabilities.myPlexSubscription, isTrue);
       expect(capabilities.canTerminateSessions, isTrue);
@@ -1609,10 +1609,20 @@ void main() {
 
       expect(await client.probeVersion(), isNull);
       expect(await client.getIdentity(), isNull);
-      expect(await client.getCapabilities(), isNull);
-      // A whole surface each — Now playing, the shelf, On deck — so a dark
-      // server is a failure there, never "Nobody is watching" or "Nothing
-      // part-watched".
+      // A whole surface each — Now playing, the shelf, On deck, the Server
+      // section, an item's contents, a search lane — so a dark server is a
+      // failure there, never "Nobody is watching", "Nothing part-watched",
+      // "The server did not describe itself", "Nothing inside" or 0 results.
+      await expectLater(
+        client.getCapabilities(),
+        throwsA(isA<PlexException>()),
+      );
+      await expectLater(client.getViewers(), throwsA(isA<PlexException>()));
+      await expectLater(
+        client.getChildren('41000'),
+        throwsA(isA<PlexException>()),
+      );
+      await expectLater(client.search('inter'), throwsA(isA<PlexException>()));
       await expectLater(client.getSessions(), throwsA(isA<PlexException>()));
       await expectLater(client.getLibraries(), throwsA(isA<PlexException>()));
       await expectLater(
@@ -1627,10 +1637,7 @@ void main() {
         client.getLibrariesOrThrow(),
         throwsA(isA<PlexException>()),
       );
-      expect(await client.getViewers(), isEmpty);
-      expect(await client.getChildren('41000'), isEmpty);
       expect(await client.getItem('20418'), isNull);
-      expect(await client.search('inter'), isEmpty);
       expect(await client.getLibraryItemCount('1'), isNull);
 
       // Null, not an empty page: an empty page is a claim about the library
@@ -1695,7 +1702,10 @@ void main() {
         client.getSessions(cancelToken: token),
         throwsA(isA<PlexException>()),
       );
-      expect(await client.search('inter', cancelToken: token), isEmpty);
+      await expectLater(
+        client.search('inter', cancelToken: token),
+        throwsA(isA<PlexException>()),
+      );
     });
   });
   group('findByExternalId', () {

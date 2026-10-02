@@ -566,37 +566,34 @@ class JellyfinClient implements StreamServerClient {
     final term = query.trim();
     if (term.isEmpty) return const [];
 
-    List<Map<String, dynamic>> hints;
-    try {
-      final response = await _api.get(
-        '/Search/Hints',
-        queryParameters: {
-          'searchTerm': term,
-          'limit': limit ?? kJellyfinSearchLimit,
-          'includeMedia': true,
-          'includePeople': true,
-          // Left off on purpose: a studio or an artist row opens nothing in this
-          // app, and a hit that cannot be tapped is noise in a five-row answer.
-          'includeStudios': false,
-          'includeArtists': false,
-        },
-        cancelToken: cancelToken,
-      );
-      final data = response.data;
-      // `SearchHints` on every build; the bare array is the reverse-proxy shape
-      // the item pager already tolerates.
-      final raw = data is Map ? data['SearchHints'] : data;
-      hints = raw is! List
-          ? const []
-          : raw
-                .whereType<Map>()
-                .map((hint) => hint.cast<String, dynamic>())
-                .toList(growable: false);
-    } catch (_) {
-      // The read convention: a failed search is no groups, not zero pills — zero
-      // pills would assert that the server answered and holds nothing.
-      return const [];
-    }
+    // Not caught: a search that failed throws, with what it failed with, so
+    // the lane says who did not answer or what refused, in its own tone. It
+    // used to come back as no groups, which the lane could only call a request
+    // that did not complete, amber, for a server that was switched off.
+    final response = await _api.get(
+      '/Search/Hints',
+      queryParameters: {
+        'searchTerm': term,
+        'limit': limit ?? kJellyfinSearchLimit,
+        'includeMedia': true,
+        'includePeople': true,
+        // Left off on purpose: a studio or an artist row opens nothing in this
+        // app, and a hit that cannot be tapped is noise in a five-row answer.
+        'includeStudios': false,
+        'includeArtists': false,
+      },
+      cancelToken: cancelToken,
+    );
+    final data = response.data;
+    // `SearchHints` on every build; the bare array is the reverse-proxy shape
+    // the item pager already tolerates.
+    final raw = data is Map ? data['SearchHints'] : data;
+    final List<Map<String, dynamic>> hints = raw is! List
+        ? const []
+        : raw
+              .whereType<Map>()
+              .map((hint) => hint.cast<String, dynamic>())
+              .toList(growable: false);
 
     // **Bucketed on the raw `Type`, before mapping, and that ordering is not an
     // optimisation.** `StreamItemKind` folds `Person`, `Book`, `MusicArtist` and
@@ -770,7 +767,9 @@ class JellyfinClient implements StreamServerClient {
     final userId = _resolveViewerId(viewerId);
     if (userId == null) return const [];
 
-    try {
+    // Not caught: a read that failed throws, so the item's Contents say the
+    // server did not answer, with a Retry, rather than "Nothing inside".
+    {
       // The interface takes an id and nothing else, so that a detail route can be
       // reached from a deep link — which means the kind has to be discovered
       // here. It cannot be inferred from the id (every id is a GUID) and the
@@ -827,8 +826,6 @@ class JellyfinClient implements StreamServerClient {
           // A leaf. No request at all rather than one that returns an empty page.
           return const [];
       }
-    } catch (_) {
-      return const [];
     }
   }
 
