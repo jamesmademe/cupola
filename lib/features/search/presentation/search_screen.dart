@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
@@ -318,18 +319,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The brand book's chip, the same for every service: selected is the ink fill with the
-    // on-ink label, the rest an ink wash with the primary ink. A service's
-    // colour per chip made the strip a legend of hues with nothing to decode —
-    // the chip names the service in words.
-    final effectiveColor = Theme.of(context).colorScheme.primary;
-    // The radius *is* the selection: 12 at rest, the pill at 20 when chosen.
-    // Both were hardcoded to 20, which spent the one shape reserved for a
-    // selected affordance on every chip in the strip and left selection to be
-    // carried by fill alone.
-    final radius = selected
-        ? AppRadius.borderRadiusPill
-        : AppRadius.borderRadiusMd;
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
       child: Semantics(
@@ -338,37 +328,66 @@ class _FilterChip extends StatelessWidget {
         label: label,
         onTap: onTap,
         child: ExcludeSemantics(
-          child: InkWell(
+          child: _SearchChip(
             onTap: onTap,
-            borderRadius: radius,
-            child: Container(
-              decoration: BoxDecoration(
-                color: selected
-                    ? effectiveColor
-                    : effectiveColor.withValues(alpha: 0.12),
-                borderRadius: radius,
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium
-                    ?.weight(FontWeight.w600)
-                    .copyWith(
-                      // Measured against the fill, and against the wash over
-                      // the page when unselected.
-                      color: selected
-                          ? ServiceTheme.foregroundOn(effectiveColor)
-                          : ServiceTheme.onTint(
-                              effectiveColor,
-                              surface: Theme.of(context).colorScheme.surface,
-                              tintAlpha: 0.12,
-                            ),
-                    ),
+            selected: selected,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.weight(FontWeight.w600)
+                  .copyWith(
+                    color: selected
+                        ? colorScheme.onPrimary
+                        : colorScheme.onSurface,
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The brand book's chip, the same for every service and for a recent query:
+/// a pill drawn at `size.chip` 36 inside the finger's 44, on the quiet fill
+/// with its edge at rest and the ink fill when chosen. The corner is the
+/// pill's in both states: selection is carried by fill and ink, never by the
+/// corner. The filter used to turn its 12 corner into the pill when chosen,
+/// and both chips were 32 tall with no target around them (APP-27).
+class _SearchChip extends StatelessWidget {
+  const _SearchChip({
+    required this.onTap,
+    required this.child,
+    this.selected = false,
+  });
+
+  final VoidCallback onTap;
+  final Widget child;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final room = CupolaRoom.of(context);
+    return PressableScale(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: DesignTokens.sizeTouch),
+        child: Center(
+          heightFactor: 1,
+          widthFactor: 1,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: DesignTokens.sizeChip),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: selected ? colorScheme.primary : room.fillQuiet,
+              borderRadius: AppRadius.borderRadiusPill,
+              border: Border.all(
+                color: selected ? colorScheme.primary : room.edge,
               ),
             ),
+            child: child,
           ),
         ),
       ),
@@ -1339,37 +1358,34 @@ class _RecentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return InkWell(
+    return Semantics(
+      button: true,
+      label: label,
       onTap: onTap,
-      // Md, not the pill: a recent query is never in a selected state, and the
-      // pill radius is reserved for the shape that says "chosen".
-      borderRadius: AppRadius.borderRadiusMd,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHigh,
-          borderRadius: AppRadius.borderRadiusMd,
-          border: Border.all(color: colorScheme.outlineVariant),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.history_rounded,
-              size: 14,
-              color: colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: colorScheme.onSurface),
-            ),
-          ],
+      child: ExcludeSemantics(
+        child: _SearchChip(
+          onTap: onTap,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.history_rounded,
+                size: 14,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
