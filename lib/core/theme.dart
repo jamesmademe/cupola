@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/focus_ring.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 
 /// Builds a [TextStyle] for one role of the type system.
@@ -1141,6 +1142,13 @@ class AppTheme {
           side: side ?? BorderSide.none,
         );
 
+    // A button's shape, with the keyboard's focus ring outside it while
+    // focused (`line.focus`, brand book *Lines and fills*).
+    final controlShape = focusRingShape(
+      corners(AppRadius.control),
+      ring: room.focus,
+    );
+
     // The fault tone, as a field's refusal draws it: a field that answered
     // and refused is a fault, amber — red is reserved for unreachable.
     final Color fault = room.toneAmber;
@@ -1235,12 +1243,11 @@ class AppTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           textStyle: buttonLabel,
-          shape: corners(AppRadius.control),
           padding: const EdgeInsets.symmetric(
             horizontal: DesignTokens.spaceLg,
             vertical: DesignTokens.spaceMd,
           ),
-        ),
+        ).copyWith(shape: controlShape),
       ),
 
       // OutlinedButton: the ghost button, on the control fill with an edge.
@@ -1252,12 +1259,11 @@ class AppTheme {
           backgroundColor: room.fillControl,
           textStyle: buttonLabel,
           side: BorderSide(color: room.edge),
-          shape: corners(AppRadius.control),
           padding: const EdgeInsets.symmetric(
             horizontal: DesignTokens.spaceLg,
             vertical: DesignTokens.spaceMd,
           ),
-        ),
+        ).copyWith(shape: controlShape),
       ),
 
       // TextButton
@@ -1267,8 +1273,7 @@ class AppTheme {
           minimumSize: const Size(64, DesignTokens.sizeButtonM),
           foregroundColor: colorScheme.primary,
           textStyle: labelLarge,
-          shape: corners(AppRadius.control),
-        ),
+        ).copyWith(shape: controlShape),
       ),
 
       // FloatingActionButton: the ink button. A screen's one floating action is
@@ -1280,9 +1285,12 @@ class AppTheme {
       ),
 
       // IconButton: the same floor. Compact density shrank a bare icon button
-      // to 32pt on the desktop.
-      iconButtonTheme: const IconButtonThemeData(
-        style: ButtonStyle(visualDensity: VisualDensity.standard),
+      // to 32pt on the desktop. Its shape is Material's stadium, ringed.
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          visualDensity: VisualDensity.standard,
+          shape: focusRingShape(const StadiumBorder(), ring: room.focus),
+        ),
       ),
 
       // SegmentedButton: the selected segment is the ink fill.

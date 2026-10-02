@@ -13,6 +13,10 @@ Rendered from `lib/core/theme.dart` (`filledButtonTheme`, `outlinedButtonTheme`,
 - **Remedy** — the one fill a fault gets: an amber fault's remedy (*Paste the key again*, *Check the address*, or *Retry* where retrying is the fix) in `tone.amber-fill` under `tone.amber-ink` (`remedyFillStyle` in `lib/core/widgets/failure_remedy.dart`), the theme's radius and label, 44 high at standard density. `compact: true` is the fault line's control: 56 wide at minimum, padding `space-md`. Retry beside a red line is never this: it is the ghost (outlined) in a centred state and text in ink on a line. `test/core/widgets/failure_remedy_test.dart` measures the ink on the fill in both rooms.
 - **Gated** — any of the three handed through `CrossServiceAction.builder` or `CapabilityGatedAction.builder`: the label and glyph drain to 38%, the container, border and target stay at full strength, and the button stays pressable. A tap raises the toast whose action is the fix.
 
+## Focus
+
+A button holding keyboard focus is ringed: a 2pt stroke in `line.focus` (the secondary ink), 2pt outside the shape and concentric with it (`FocusRingBorder` in `lib/core/focus_ring.dart`, resolved on `WidgetState.focused` by the filled, outlined, text and icon-button themes). Outside and apart, because on the edge of the ink button the secondary ink would vanish into the ink; the theme's focus overlay still shades the fill. A tap never focuses a button, so only a keyboard (a desktop, a tablet with one) ever draws it. A button whose own style sets `shape` takes no ring: give it the theme's.
+
 ## Size
 
 The theme sets a 44 minimum height (`size.button-m`); the padding is `space-md` above and below the row role's 20pt line, which lands on the same 44. The three button themes and the icon-button theme pin `VisualDensity.standard`: the desktop's default compact density would take 8 off each, so buttons paint the same height on every platform and only the tap target differs. A bare `IconButton` is 40 on a desktop, padded to 48 on a phone.
@@ -41,7 +45,7 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 - `onPressed: null`: Material's disabled filled and outlined.
 - A long label: each button grows to a second line instead of clipping.
 - Text at 200%: every kind, the gated one and the remedy, at twice the reading size.
-- Focused (desktop sheet): the filled button holding keyboard focus; focus is global to a render, so one control holds it per sheet.
+- Focused (desktop sheet): the filled button holding keyboard focus, ringed; focus is global to a render, so one control holds it per sheet.
 
 ## Do / don't
 

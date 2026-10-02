@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/features/shell/domain/screen_search.dart';
 
@@ -140,10 +141,15 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
           backgroundColor: WidgetStateProperty.all(
             colorScheme.surfaceContainer,
           ),
-          shape: WidgetStateProperty.all(
-            RoundedRectangleBorder(
+          // A focused field's edge is `line.focus`, as every focused field's
+          // is (`inputDecorationTheme`): the keyboard's place is never only a
+          // caret.
+          shape: WidgetStateProperty.resolveWith(
+            (states) => RoundedRectangleBorder(
               borderRadius: AppRadius.borderRadiusMd,
-              side: BorderSide(color: colorScheme.outlineVariant),
+              side: states.contains(WidgetState.focused)
+                  ? BorderSide(color: CupolaRoom.of(context).focus, width: 1.5)
+                  : BorderSide(color: colorScheme.outlineVariant),
             ),
           ),
           constraints: const BoxConstraints(minHeight: 52),

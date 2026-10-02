@@ -213,8 +213,9 @@ void main() {
       // Focus is global to a render, so one scene holds it, on the desktop,
       // where the keyboard is the pointer and the ring is drawn.
       CatalogScene(
-        'Focused (keyboard) · the filled button with focus: the theme\'s own '
-        'focus overlay on the ink fill; one control holds focus per sheet',
+        'Focused (keyboard) · the filled button with focus: the ring in '
+        'line.focus 2pt outside it, over the theme\'s focus overlay; one '
+        'control holds focus per sheet',
         (_) => Wrap(
           spacing: 12,
           runSpacing: 12,
