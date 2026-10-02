@@ -855,6 +855,75 @@ class ProwlarrFake extends ArrFake {
     'Harbor Newz': 5,
   };
 
+  /// One application as `GET /api/v1/applications` sends it: an
+  /// `ApplicationResource` whose fields are the implementation's settings
+  /// (`Applications/Radarr/RadarrSettings.cs`: `prowlarrUrl`, `baseUrl`,
+  /// `apiKey`, `syncCategories`), the key masked as `ClientSchema/
+  /// SchemaBuilder.cs` masks every `ApiKey` field. Under `withDockerHostnames`
+  /// both addresses are the containers'.
+  static JsonMap _application(
+    int id,
+    String name, {
+    required String baseUrl,
+    required bool docker,
+  }) {
+    final implementation = name.split(' ').first;
+    return {
+      'id': id,
+      'name': name,
+      'syncLevel': 'fullSync',
+      'fields': [
+        {
+          'order': 0,
+          'name': 'prowlarrUrl',
+          'label': 'Prowlarr Server',
+          'value': docker ? WorldContainers.prowlarr : WorldHosts.prowlarr,
+          'type': 'textbox',
+          'advanced': false,
+          'privacy': 'normal',
+          'isFloat': false,
+        },
+        {
+          'order': 1,
+          'name': 'baseUrl',
+          'label': '$implementation Server',
+          'value': baseUrl,
+          'type': 'textbox',
+          'advanced': false,
+          'privacy': 'normal',
+          'isFloat': false,
+        },
+        {
+          'order': 2,
+          'name': 'apiKey',
+          'label': 'API Key',
+          'value': '********',
+          'type': 'textbox',
+          'advanced': false,
+          'privacy': 'apiKey',
+          'isFloat': false,
+        },
+        {
+          'order': 5,
+          'name': 'syncCategories',
+          'label': 'Sync Categories',
+          'value': const [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060],
+          'type': 'select',
+          'advanced': true,
+          'privacy': 'normal',
+          'isFloat': false,
+        },
+      ],
+      'implementationName': implementation,
+      'implementation': implementation,
+      'configContract': '${implementation}Settings',
+      'infoLink':
+          'https://wiki.servarr.com/prowlarr/supported#'
+          '${implementation.toLowerCase()}',
+      'tags': const <Object?>[],
+    };
+  }
+
   @override
   NetworkReply? own(NetworkRequest r, ServerContext c) {
     if (r.method != 'GET') return null;
@@ -895,22 +964,20 @@ class ProwlarrFake extends ArrFake {
         });
       case '/api/v1/applications':
         return NetworkReply.json([
-          for (final (i, (name, url)) in const [
-            ('Radarr', WorldHosts.radarr),
-            ('Radarr 4K', WorldHosts.radarr4k),
-            ('Sonarr', WorldHosts.sonarr),
-            ('Lidarr', WorldHosts.lidarr),
+          for (final (i, (name, id, url)) in const [
+            ('Radarr', WorldIds.radarr, WorldHosts.radarr),
+            ('Radarr 4K', WorldIds.radarr4k, WorldHosts.radarr4k),
+            ('Sonarr', WorldIds.sonarr, WorldHosts.sonarr),
+            ('Lidarr', WorldIds.lidarr, WorldHosts.lidarr),
           ].indexed)
-            {
-              'id': i + 1,
-              'name': name,
-              'syncLevel': 'fullSync',
-              'implementation': name.split(' ').first,
-              'fields': [
-                {'name': 'baseUrl', 'value': url},
-                {'name': 'apiKey', 'value': '********'},
-              ],
-            },
+            _application(
+              i + 1,
+              name,
+              docker: c.profile.dockerHostnames,
+              baseUrl: c.profile.dockerHostnames
+                  ? WorldContainers.of(id) ?? url
+                  : url,
+            ),
         ]);
       case '/api/v1/appprofile':
         return NetworkReply.json([

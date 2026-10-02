@@ -67,8 +67,9 @@ Profiles can be varied:
   network: Seerr's settings name each arr by its container
   (`WorldContainers`: `http://radarr:7878`, and `http://radarr-4k:7878` for
   the Radarr this device reaches at `nas.home.arpa:7879`), with the address
-  a browser opens it at as its `externalUrl`. The servers still answer at
-  their own addresses; nothing answers at a container name.
+  a browser opens it at as its `externalUrl`, and Prowlarr's applications
+  name both each arr and Prowlarr itself by container. The servers still
+  answer at their own addresses; nothing answers at a container name.
 - `withFullDisk(id)` fills a download client's disk. SABnzbd answers its
   queue paused, as it pauses itself on a full disk, with 0.42 GB free in its
   download folder and every slot reporting its job's own status. NZBGet
@@ -141,6 +142,11 @@ The arrs answer `/parse?title=` from the world: Radarr reads a release of a
 world film (`Tears.of.Steel.2012.2160p.WEB`) and names the film when it holds
 it, Sonarr a release of a world series with its `S02E04`; any other name, and
 Lidarr's every name, comes back unread (the title echoed alone).
+
+Prowlarr answers `/applications` with the world's Radarr, Radarr 4K, Sonarr
+and Lidarr in its `ApplicationResource` shape: `prowlarrUrl` and `baseUrl`
+fields, and the key masked as `********`, as Prowlarr masks every key it
+reports.
 
 Names, hosts (`nas.home.arpa`) and titles come from the design brief's
 world (`world.dart`). Rows are built in Dart because they join across

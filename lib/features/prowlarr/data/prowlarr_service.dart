@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/domain/prowlarr_known_application.dart';
 
 /// Service for interacting with the Prowlarr API (v1).
 ///
@@ -186,6 +187,25 @@ class ProwlarrService {
   /// Applications synced by Prowlarr (Radarr/Sonarr/Lidarr…).
   Future<List<ProwlarrProviderResource>> getApplications() =>
       getProviders(ProwlarrProviderKind.application);
+
+  /// The applications Prowlarr knows, each with the address Prowlarr reaches
+  /// it at and how it names Prowlarr back: `GET /api/v1/applications`.
+  ///
+  /// Never their keys: Prowlarr masks them, see [ProwlarrKnownApplication].
+  /// An empty list means Prowlarr answered with none; a failure throws, and so
+  /// does an answer that is not a list, rather than reading as none.
+  Future<List<ProwlarrKnownApplication>> knownApplications() async {
+    final response = await client.get('/api/v1/applications');
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException(
+        'Prowlarr answered without an application list',
+      );
+    }
+    return List.unmodifiable(
+      jsonObjects(data, ProwlarrKnownApplication.fromJson),
+    );
+  }
 
   /// Adds or updates a sync profile.
   Future<ProwlarrAppProfile> saveAppProfile(
