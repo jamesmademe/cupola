@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
-import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
@@ -181,53 +180,33 @@ void main() {
     });
 
     group('getSeriesByTvdbId', () {
-      test('finds series when TVDB ID matches', () async {
-        final service = _TestSonarrService([
-          _series(
-            id: 1,
-            title: 'Series 1',
-            tvdbId: 11111,
-            year: 2023,
-            runtime: 45,
-            genres: const ['Drama'],
-          ),
-          _series(
-            id: 2,
-            title: 'Series 2',
-            tvdbId: 22222,
-            year: 2020,
-            runtime: 60,
-            genres: const ['Comedy'],
-          ),
-        ]);
+      test('asks Sonarr for the one series, never the whole library', () async {
+        final client = FakeApiClient()
+          ..getResponseData = [
+            {'id': 1, 'title': 'Series 1', 'tvdbId': 11111},
+          ];
 
-        final found = await service.getSeriesByTvdbId(11111);
-        expect(found, isNotNull);
-        expect(found!.id, 1);
-        expect(found.title, 'Series 1');
+        final found = await SonarrService(client).getSeriesByTvdbId(11111);
+
+        expect(found?.id, 1);
+        expect(client.lastGetPath, '/api/v3/series');
+        expect(client.lastGetQueryParameters, {'tvdbId': 11111});
       });
 
-      test('returns null when TVDB ID not found', () async {
-        final service = _TestSonarrService([
-          _series(
-            id: 1,
-            title: 'Series 1',
-            tvdbId: 11111,
-            year: 2023,
-            runtime: 45,
-            genres: const ['Drama'],
-          ),
-        ]);
+      test('an empty answer is a series Sonarr does not hold', () async {
+        final client = FakeApiClient()..getResponseData = const <Object?>[];
 
-        final found = await service.getSeriesByTvdbId(99999);
-        expect(found, isNull);
+        expect(await SonarrService(client).getSeriesByTvdbId(11111), isNull);
       });
 
-      test('handles empty library', () async {
-        final service = _TestSonarrService(const []);
+      test('a failure travels: it is not "not in the library"', () async {
+        final client = FakeApiClient()
+          ..getException = Exception('connection refused');
 
-        final found = await service.getSeriesByTvdbId(11111);
-        expect(found, isNull);
+        await expectLater(
+          SonarrService(client).getSeriesByTvdbId(11111),
+          throwsA(isA<Exception>()),
+        );
       });
     });
 
@@ -373,38 +352,4 @@ void main() {
       });
     });
   });
-}
-
-class _TestSonarrService extends SonarrService {
-  _TestSonarrService(this._series) : super(ApiClient(baseUrl: '', apiKey: ''));
-
-  final List<SonarrSeries> _series;
-
-  @override
-  Future<List<SonarrSeries>> getSeries() async => _series;
-}
-
-SonarrSeries _series({
-  required int id,
-  required String title,
-  required int tvdbId,
-  required int year,
-  required int runtime,
-  required List<String> genres,
-}) {
-  return SonarrSeries(
-    id: id,
-    title: title,
-    sortTitle: title.toLowerCase(),
-    status: 'continuing',
-    overview: 'A test series',
-    path: '/tv/${title.toLowerCase()}',
-    monitored: true,
-    year: year,
-    images: const [],
-    tvdbId: tvdbId,
-    runtime: runtime,
-    genres: genres,
-    seasons: const [],
-  );
 }

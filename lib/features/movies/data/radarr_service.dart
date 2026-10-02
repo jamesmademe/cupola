@@ -242,15 +242,29 @@ class RadarrService with ArrActivityMixin {
     return fetchRootFolders();
   }
 
-  /// Finds a movie in the library by its TMDB ID.
-  /// Returns null if not found in the library.
+  /// Finds a movie in the library by its TMDB ID, or null when Radarr holds
+  /// none.
+  ///
+  /// Asks Radarr for that one film (`GET /api/v3/movie?tmdbId=`). It used to
+  /// download the whole library to find one id for a Discover page, and to
+  /// answer a Radarr that did not answer with null, which every caller read as
+  /// "not in the library". A failure now travels: it is not an answer.
   Future<RadarrMovie?> getMovieByTmdbId(int tmdbId) async {
-    try {
-      final movies = await getMovies();
-      return movies.where((m) => m.tmdbId == tmdbId).firstOrNull;
-    } catch (_) {
-      return null;
+    final response = await client.get(
+      '/api/v3/movie',
+      queryParameters: {'tmdbId': tmdbId},
+    );
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Radarr answered without a movie list');
     }
+    // Matched here as well: a Radarr that ignored the filter answers with its
+    // whole library, and the first row of that is not this film.
+    for (final item in data.whereType<Map>()) {
+      final movie = RadarrMovie.fromJson(item.cast<String, dynamic>());
+      if (movie.tmdbId == tmdbId) return movie;
+    }
+    return null;
   }
 
   /// Fetches all quality profiles.

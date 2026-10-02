@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
-import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 
@@ -136,51 +135,45 @@ void main() {
     });
 
     group('getMovieByTmdbId', () {
-      test('finds movie when TMDB ID matches', () async {
-        final service = _TestRadarrService([
-          _movie(
-            id: 1,
-            title: 'Movie 1',
-            tmdbId: 12345,
-            year: 2023,
-            runtime: 120,
-          ),
-          _movie(
-            id: 2,
-            title: 'Movie 2',
-            tmdbId: 67890,
-            year: 2024,
-            runtime: 90,
-          ),
-        ]);
+      test('asks Radarr for the one film, never the whole library', () async {
+        final client = FakeApiClient()
+          ..getResponseData = [
+            {'id': 1, 'title': 'Movie 1', 'tmdbId': 12345},
+          ];
 
-        final found = await service.getMovieByTmdbId(12345);
+        final found = await RadarrService(client).getMovieByTmdbId(12345);
 
-        expect(found, isNotNull);
         expect(found?.id, 1);
-        expect(found?.title, 'Movie 1');
+        expect(client.lastGetPath, '/api/v3/movie');
+        expect(client.lastGetQueryParameters, {'tmdbId': 12345});
       });
 
-      test('returns null when TMDB ID not found', () async {
-        final service = _TestRadarrService([
-          _movie(
-            id: 1,
-            title: 'Movie 1',
-            tmdbId: 12345,
-            year: 2023,
-            runtime: 120,
-          ),
-        ]);
+      test('an empty answer is a film Radarr does not hold', () async {
+        final client = FakeApiClient()..getResponseData = const <Object?>[];
 
-        final found = await service.getMovieByTmdbId(99999);
-        expect(found, isNull);
+        expect(await RadarrService(client).getMovieByTmdbId(12345), isNull);
       });
 
-      test('handles empty library', () async {
-        final service = _TestRadarrService(const []);
+      test('a Radarr that ignored the filter still answers only for the '
+          'film asked about', () async {
+        final client = FakeApiClient()
+          ..getResponseData = [
+            {'id': 1, 'title': 'Movie 1', 'tmdbId': 67890},
+            {'id': 2, 'title': 'Movie 2', 'tmdbId': 12345},
+          ];
 
-        final found = await service.getMovieByTmdbId(12345);
-        expect(found, isNull);
+        final found = await RadarrService(client).getMovieByTmdbId(12345);
+        expect(found?.id, 2);
+      });
+
+      test('a failure travels: it is not "not in the library"', () async {
+        final client = FakeApiClient()
+          ..getException = Exception('connection refused');
+
+        await expectLater(
+          RadarrService(client).getMovieByTmdbId(12345),
+          throwsA(isA<Exception>()),
+        );
       });
     });
 
@@ -273,36 +266,4 @@ void main() {
       });
     });
   });
-}
-
-class _TestRadarrService extends RadarrService {
-  _TestRadarrService(this._movies) : super(ApiClient(baseUrl: '', apiKey: ''));
-
-  final List<RadarrMovie> _movies;
-
-  @override
-  Future<List<RadarrMovie>> getMovies() async => _movies;
-}
-
-RadarrMovie _movie({
-  required int id,
-  required String title,
-  required int tmdbId,
-  required int year,
-  required int runtime,
-}) {
-  return RadarrMovie(
-    id: id,
-    title: title,
-    sortTitle: title.toLowerCase(),
-    sizeOnDisk: 0,
-    status: 'released',
-    hasFile: true,
-    monitored: true,
-    year: year,
-    images: const [],
-    tmdbId: tmdbId,
-    runtime: runtime,
-    genres: const [],
-  );
 }

@@ -297,15 +297,26 @@ class SonarrService with ArrActivityMixin {
     return fetchRootFolders();
   }
 
-  /// Finds a series in the library by its TVDB ID.
-  /// Returns null if not found in the library.
+  /// Finds a series in the library by its TVDB ID, or null when Sonarr holds
+  /// none.
+  ///
+  /// Asks Sonarr for that one series (`GET /api/v3/series?tvdbId=`) rather than
+  /// the whole library, and lets a failure travel: see
+  /// `RadarrService.getMovieByTmdbId`.
   Future<SonarrSeries?> getSeriesByTvdbId(int tvdbId) async {
-    try {
-      final series = await getSeries();
-      return series.where((s) => s.tvdbId == tvdbId).firstOrNull;
-    } catch (_) {
-      return null;
+    final response = await client.get(
+      '/api/v3/series',
+      queryParameters: {'tvdbId': tvdbId},
+    );
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Sonarr answered without a series list');
     }
+    for (final item in data.whereType<Map>()) {
+      final series = SonarrSeries.fromJson(item.cast<String, dynamic>());
+      if (series.tvdbId == tvdbId) return series;
+    }
+    return null;
   }
 
   /// Fetches all quality profiles.

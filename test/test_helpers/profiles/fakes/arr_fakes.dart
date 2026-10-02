@@ -680,7 +680,14 @@ class SonarrFake extends ArrFake {
   @override
   NetworkReply? own(NetworkRequest r, ServerContext c) {
     if (r.method == 'GET' && r.path == '/api/v3/series') {
-      return NetworkReply.json(series(c));
+      // `?tvdbId=` filters, as Sonarr's own route does.
+      final tvdb = r.query['tvdbId'];
+      final all = series(c);
+      return NetworkReply.json(
+        tvdb == null
+            ? all
+            : all.where((s) => '${s['tvdbId']}' == tvdb).toList(),
+      );
     }
     final one = RegExp(r'^/api/v3/series/(\d+)$').firstMatch(r.path);
     if (r.method == 'GET' && one != null) {
