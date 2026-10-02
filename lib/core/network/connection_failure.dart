@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderException;
 
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -374,13 +375,17 @@ String? connectionFailureDetail(Object? error) {
 }
 
 /// The failure a [ParallelWaitError] stands in front of — the first of the
-/// requests that failed — or [error] itself.
+/// requests that failed — or the one a Riverpod [ProviderException] wraps, or
+/// [error] itself.
 ///
 /// `(a, b).wait` does not rethrow what failed: it throws a `ParallelWaitError`
 /// holding every outcome, which no reason can be read from. Without this a
 /// Radarr that did not answer its profile and folder reads — the add sheet's
 /// load — classified as a failure nobody can attribute, and never as silence.
 Object? unwrapFailure(Object? error) {
+  // A provider read while in error rethrows its failure wrapped: the cause is
+  // the one inside (a client provider that refused to build, say).
+  if (error is ProviderException) return unwrapFailure(error.exception);
   if (error is! ParallelWaitError) return error;
   final Object? errors = error.errors;
   final Iterable<Object?> outcomes = switch (errors) {

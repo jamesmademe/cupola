@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
@@ -517,6 +518,37 @@ void main() {
         isNull,
       );
     });
+  });
+
+  test('a failure a provider rethrows is classified by its cause', () {
+    // A client provider that refused to build, read by another while in
+    // error: Riverpod rethrows it wrapped, and the wrapper alone said
+    // nothing, so every such failure read as one nobody could attribute.
+    final client = Provider<Object>(
+      (ref) => throw DioException(
+        requestOptions: RequestOptions(path: '/api/v3/movie'),
+        type: DioExceptionType.badResponse,
+        response: Response<dynamic>(
+          requestOptions: RequestOptions(path: '/api/v3/movie'),
+          statusCode: 401,
+        ),
+      ),
+    );
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    Object? failure;
+    try {
+      container.read(client);
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure, isNot(isA<DioException>()));
+    expect(
+      classifyConnectionFailure(failure),
+      ServiceFailureReason.unauthorized,
+    );
+    expect(unwrapFailure(failure), isA<DioException>());
   });
 
   group('a parallel wait', () {
