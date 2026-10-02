@@ -210,6 +210,91 @@ void main() {
     expect(find.text('Blocklist preference updated'), findsOneWidget);
   });
 
+  group('the number dialog owns its controller', () {
+    // A `showDialog` future completes as the route pops, well before the exit
+    // transition ends. A controller disposed after that `await` was gone while
+    // the field was still on screen fading out.
+    Future<TextEditingController> openPeerPort(
+      WidgetTester tester,
+      _RecordingClient client,
+    ) async {
+      await _pump(
+        tester,
+        screen: const TransmissionSessionScreen(),
+        overrides: [
+          transmissionClientProvider.overrideWith((ref) => client),
+          transmissionSessionProvider.overrideWith((ref) async => _session()),
+        ],
+      );
+      await tester.tap(find.text('Peer port'));
+      await tester.pumpAndSettle();
+      return tester
+          .widget<TextField>(
+            find.byKey(const ValueKey('transmission-session-number-field')),
+          )
+          .controller!;
+    }
+
+    bool isDisposed(TextEditingController controller) {
+      try {
+        controller.addListener(() {});
+        return false;
+      } on FlutterError {
+        return true;
+      }
+    }
+
+    for (final (label, tapped, saves) in const [
+      ('Save', 'Save', true),
+      ('Cancel', 'Cancel', false),
+    ]) {
+      testWidgets('$label leaves the field alive until the route is gone', (
+        tester,
+      ) async {
+        final client = _RecordingClient();
+        final controller = await openPeerPort(tester, client);
+        await tester.enterText(
+          find.byKey(const ValueKey('transmission-session-number-field')),
+          '6881',
+        );
+
+        await tester.tap(find.text(tapped));
+        // The route has popped and is fading out: the field is still drawn.
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(
+          find.byKey(const ValueKey('transmission-session-number-field')),
+          findsOneWidget,
+        );
+        expect(isDisposed(controller), isFalse);
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('transmission-session-number-field')),
+          findsNothing,
+        );
+        expect(isDisposed(controller), isTrue);
+        expect(client.sessionWrites, saves ? hasLength(1) : isEmpty);
+      });
+    }
+
+    testWidgets('a value out of range keeps the dialog and says so', (
+      tester,
+    ) async {
+      final client = _RecordingClient();
+      await openPeerPort(tester, client);
+      await tester.enterText(
+        find.byKey(const ValueKey('transmission-session-number-field')),
+        '70000',
+      );
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter a value in range'), findsOneWidget);
+      expect(client.sessionWrites, isEmpty);
+    });
+  });
+
   testWidgets('session failure renders Retry rather than fabricated values', (
     tester,
   ) async {

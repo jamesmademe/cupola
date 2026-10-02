@@ -1041,55 +1041,92 @@ Future<T?> _showNumberDialog<T extends num>(
   required bool Function(T value) valid,
   required String range,
   bool decimal = false,
-}) async {
-  final controller = TextEditingController(text: current);
-  String? error;
-  final result = await showDialog<T>(
+}) {
+  return showDialog<T>(
     context: context,
-    builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          key: const ValueKey('transmission-session-number-field'),
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-          decoration: InputDecoration(
-            labelText: title,
-            helperText: 'Accepted range: $range',
-            errorText: error,
-          ),
-          onSubmitted: (_) {
-            final value = parse(controller.text.trim());
-            if (value != null && valid(value)) {
-              Navigator.of(dialogContext).pop(value);
-            } else {
-              setDialogState(() => error = 'Enter a value in range');
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = parse(controller.text.trim());
-              if (value == null || !valid(value)) {
-                setDialogState(() => error = 'Enter a value in range');
-                return;
-              }
-              Navigator.of(dialogContext).pop(value);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+    builder: (_) => _NumberDialog<T>(
+      title: title,
+      current: current,
+      parse: parse,
+      valid: valid,
+      range: range,
+      decimal: decimal,
     ),
   );
-  controller.dispose();
-  return result;
+}
+
+/// A number field with Cancel and Save, for one session preference.
+///
+/// The controller lives in this [State]: a `showDialog` future completes as the
+/// route pops, well before the exit transition ends, so a controller disposed
+/// after that `await` was gone while the field was still on screen fading out.
+class _NumberDialog<T extends num> extends StatefulWidget {
+  const _NumberDialog({
+    required this.title,
+    required this.current,
+    required this.parse,
+    required this.valid,
+    required this.range,
+    required this.decimal,
+  });
+
+  final String title;
+  final String current;
+  final T? Function(String value) parse;
+  final bool Function(T value) valid;
+  final String range;
+  final bool decimal;
+
+  @override
+  State<_NumberDialog<T>> createState() => _NumberDialogState<T>();
+}
+
+class _NumberDialogState<T extends num> extends State<_NumberDialog<T>> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.current,
+  );
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = widget.parse(_controller.text.trim());
+    if (value == null || !widget.valid(value)) {
+      setState(() => _error = 'Enter a value in range');
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        key: const ValueKey('transmission-session-number-field'),
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.numberWithOptions(decimal: widget.decimal),
+        decoration: InputDecoration(
+          labelText: widget.title,
+          helperText: 'Accepted range: ${widget.range}',
+          errorText: _error,
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Save')),
+      ],
+    );
+  }
 }
 
 String _displayEncryption(String value) {
