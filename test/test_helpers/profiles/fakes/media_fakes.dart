@@ -310,6 +310,18 @@ class SeerrFake extends ServiceFake {
     };
   }
 
+  /// A person among the trending titles, as TMDB's `/trending/all` sends one
+  /// through Seerr: `mediaType: person`, a name and what she is known for.
+  static const JsonMap _trendingPerson = {
+    'id': 1234567,
+    'mediaType': 'person',
+    'name': 'Elena Varga',
+    'profilePath': null,
+    'adult': false,
+    'popularity': 88.2,
+    'knownFor': <Object?>[],
+  };
+
   static JsonMap _discoverPage(List<WorldTitle> titles) => {
     'page': 1,
     'totalPages': 1,
@@ -514,6 +526,16 @@ class SeerrFake extends ServiceFake {
             for (final s in _known(c, ServiceKey.sonarr)) _knownService(s),
           ]);
         case '/api/v1/discover/trending':
+          // TMDB's trending, which Seerr relays, mixes people in with the
+          // titles: one leads the list, as she does when she is in the news.
+          final page = _discoverPage([
+            for (final t in WorldTitles.all)
+              if (!t.isSeries) t,
+          ]);
+          return NetworkReply.json({
+            ...page,
+            'results': [_trendingPerson, ...page['results']! as List],
+          });
         case '/api/v1/discover/movies':
         case '/api/v1/discover/movies/upcoming':
           return NetworkReply.json(

@@ -149,6 +149,9 @@ world film (`Tears.of.Steel.2012.2160p.WEB`) and names the film when it holds
 it, Sonarr a release of a world series with its `S02E04`; any other name, and
 Lidarr's every name, comes back unread (the title echoed alone).
 
+Seerr's `/discover/trending` leads with a person (`mediaType: person`,
+Elena Varga) before the world's films, as TMDB's trending mixes people in.
+
 Prowlarr answers `/applications` with the world's Radarr, Radarr 4K, Sonarr
 and Lidarr in its `ApplicationResource` shape: `prowlarrUrl` and `baseUrl`
 fields, and the key masked as `********`, as Prowlarr masks every key it

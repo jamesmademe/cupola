@@ -817,7 +817,22 @@ class SeerrService {
       path,
       queryParameters: {'page': page, 'genre': ?genre, 'sortBy': ?sortBy},
     );
-    return _mapPreviews(_resultsOf(response.data), forcedMediaType);
+    // Every rail this reads is a rail of titles, and trending is TMDB's,
+    // which mixes people in with them. A person kept here opened as the movie
+    // her id happens to name, and led the featured banner when she trended
+    // first.
+    return _mapPreviews(
+      _resultsOf(response.data).where(_isTitle).toList(growable: false),
+      forcedMediaType,
+    );
+  }
+
+  /// Whether one discover result is a film or a series rather than a person.
+  static bool _isTitle(Object? result) {
+    final type = result is Map
+        ? result['mediaType'] ?? result['media_type']
+        : null;
+    return type != 'person';
   }
 
   /// The `results` array of a Seerr list response, or a [FormatException] —
