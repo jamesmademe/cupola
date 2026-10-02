@@ -72,7 +72,8 @@ void main() {
           'Copy here uses a word the brand book bans. Use the lexicon '
           '(StateWord, Lexicon, failureLabel/failureHeadline): Answering · '
           'Did not answer · Not set up · Set up X · Retry · Stuck · Stopped · '
-          'Waiting for approval. A word that is not the banned state goes in '
+          'Waiting for approval · Could not (never the contraction). A word '
+          'that is not the banned state goes in '
           '_allowed with its reason.',
     );
   });
@@ -158,6 +159,31 @@ void main() {
     ];
     expect(prose, ['Refresh the list and try again.', 'try', 'again']);
     expect(_never['Try again → Retry']!.hasMatch(prose.first), isTrue);
+  });
+
+  test('a contracted "could not" fails through the same lexer, a comment '
+      'does not', () {
+    // The app writes the phrase out: a straight or a curly apostrophe, in
+    // either case, inside a literal is the contraction this entry bans.
+    const planted = r"""
+final a = 'Cupola couldn\'t reach it';
+final b = "Couldn't add $title";
+final c = 'Couldn’t load more';
+// Couldn't, in a comment, is not copy.
+final d = 'Could not add it';
+final e = "The server couldn't check $it";
+""";
+    final caught = [
+      for (final literal in copyOf('lib/zz_planted.dart', planted))
+        if (_never["Couldn't → Could not"]!.hasMatch(literal.prose))
+          literal.prose,
+    ];
+    expect(caught, [
+      "Cupola couldn't reach it",
+      "Couldn't add $copyHole",
+      'Couldn’t load more',
+      "The server couldn't check $copyHole",
+    ]);
   });
 
   test('there is no uppercase voice', () {
@@ -251,8 +277,9 @@ final _never = <String, RegExp>{
   ),
   'Snooze → Keep waiting': RegExp(r'\bsnooze', caseSensitive: false),
   'a bare Delete': RegExp(r'^Delete$'),
-  "Couldn't load X → the classification's headline": RegExp(
-    r"\b(couldn't|could not|failed to) load\b",
+  "Couldn't → Could not": RegExp(r"\bcouldn['’]t\b", caseSensitive: false),
+  'Could not load X → the classification\'s headline': RegExp(
+    r'\b(could not|failed to) load\b',
     caseSensitive: false,
   ),
 };
