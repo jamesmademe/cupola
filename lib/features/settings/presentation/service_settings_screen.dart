@@ -1855,8 +1855,10 @@ class _SavedConnectionStatus extends ConsumerWidget {
 
     // "Answering · read-only key": a credential that reads and may not write
     // is a fact about this connection worth stating where it is replaced.
-    // Asked only once the connection answers, and only of the three services
-    // whose one credential can be narrower than their writes.
+    // Asked only once the connection answers, and only of the services whose
+    // one credential can be narrower than their writes
+    // ([ServiceKeyExtension.hasScopedCredential]: Unraid, TrueNAS, Nginx Proxy
+    // Manager and Plex).
     final qualifier =
         diagnosis.status == ServiceConnectionStatus.connected &&
             service.hasScopedCredential
