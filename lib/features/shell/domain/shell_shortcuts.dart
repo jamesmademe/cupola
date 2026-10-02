@@ -61,7 +61,8 @@ abstract final class AppModifier {
       SingleActivator(key, alt: true);
 }
 
-/// Open the command deck — the desktop `⌘K` panel, the phone's Portal.
+/// Open the command deck, the desktop `⌘K` panel. The phone's Portal is not
+/// this: a drag on the navigation bar opens it, and it has no shortcut.
 class OpenCommandDeckIntent extends Intent {
   const OpenCommandDeckIntent();
 }

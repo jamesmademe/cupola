@@ -4,8 +4,9 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 
 /// A small, sentence-case section label used to head a group of services that
-/// belong to the same [ServiceDomain]. Shared by the Home dashboard, Settings
-/// and onboarding so the domain grouping reads identically everywhere.
+/// belong to the same [ServiceDomain]. Today its one caller is the Connections
+/// list in Settings; it stays in core so any other list grouped by domain reads
+/// the same way.
 class DomainSectionHeader extends StatelessWidget {
   const DomainSectionHeader({
     super.key,

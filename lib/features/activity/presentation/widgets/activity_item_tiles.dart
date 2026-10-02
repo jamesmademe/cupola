@@ -603,13 +603,10 @@ class GlobalActivityItemTile extends ConsumerWidget {
       GlobalActivityKind.queue => [
         // The rescue fast-path: a stuck download's row can jump straight into
         // manual import with the download's own output folder pre-seeded.
-        // Offered only for the connection the lens is on, which is a gap
-        // rather than a rule: `manualImportLocation` carries a service and no
-        // connection, and every screen in the import flow resolves through the
-        // lens. Sending a row from the other Radarr there would browse the
-        // wrong server's filesystem and import into it — so the affordance is
-        // withheld rather than made to lie. Restoring it needs `?i=` on the
-        // import routes, which is that feature's work, not this one's.
+        // Offered for a row off either connection of a service: the wizard is
+        // bound to the row's own connection through `?i=` (see
+        // [canManualImportFrom] and [openManualImportFrom]), so the lens does
+        // not decide which server's filesystem it browses.
         if (canManualImport) _RowAction.manualImport,
         _RowAction.blocklistAndRetry,
         _RowAction.removeFromQueue,

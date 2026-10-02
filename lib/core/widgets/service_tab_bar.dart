@@ -330,10 +330,10 @@ class _Tab extends StatelessWidget {
           child: ConstrainedBox(
             // The floor for a touch target, even for a two-letter label.
             constraints: const BoxConstraints(minWidth: 44),
-            // A Stack rather than a Column so the rule can span exactly the
-            // label's own width: inside a horizontally scrolling list there is no
-            // width to inherit, so a rule asking for one would be asking for
-            // infinity.
+            // A Stack rather than a Column so the selected pill can span exactly
+            // the label's own width: inside a horizontally scrolling list there
+            // is no width to inherit, so a mark asking for one would be asking
+            // for infinity.
             child: Stack(
               alignment: Alignment.center,
               children: [

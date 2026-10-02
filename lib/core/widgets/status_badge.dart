@@ -109,10 +109,10 @@ class StatusBadge extends StatelessWidget {
             // directly on arbitrary poster artwork in a dense row, and without a
             // ring a tone-coloured dot can land on artwork of its own tone and
             // vanish. `colorScheme.shadow` is the token for exactly this ink
-            // (`Colors.black` in both schemes, so nothing painted changes) and
-            // keeps the file inside the no-raw-`Colors` rule; the back button
-            // that used to be cited as the earned exception here no longer holds
-            // one.
+            // (black in the dark scheme, the primary ink on paper, as every
+            // other shadow in the room) and keeps the file inside the
+            // no-raw-`Colors` rule; the back button that used to be cited as the
+            // earned exception here no longer holds one.
             boxShadow: [
               BoxShadow(
                 color: colorScheme.shadow.withValues(alpha: 0.35),

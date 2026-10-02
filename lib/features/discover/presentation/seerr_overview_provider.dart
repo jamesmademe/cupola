@@ -47,7 +47,7 @@ class SeerrOverviewRow {
   /// re-deriving anything.
   final SeerrRequest request;
 
-  /// `Severance — Season 2`.
+  /// `Severance, Season 2`.
   final String headline;
 
   /// `nadia · 4 h ago · TV · 4K`, as far as the record carried them.

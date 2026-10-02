@@ -100,7 +100,7 @@ class _Glow extends StatelessWidget {
           gradient: AppGradients.ambientBackground(scheme, accent: accent),
         ),
         child: DecoratedBox(
-          // Fainter secondary glow bottom-right for depth.
+          // Secondary glow bottom-right for depth, as strong as the first.
           decoration: BoxDecoration(
             gradient: AppGradients.ambientBackground(
               scheme,
