@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../test_helpers/code_scan.dart';
 
 /// Type goes through a role: **no bare `TextStyle(fontSize:)`, no
-/// `copyWith(fontWeight:)`.**
+/// `copyWith(fontWeight:)`, no `copyWith(fontSize:)`.**
 ///
 /// The three bundled families are each one variable file, registered once.
 /// Flutter resolves `fontWeight` against that single face without touching an
@@ -12,6 +12,8 @@ import '../../test_helpers/code_scan.dart';
 /// that is 96pt ExtraBold at full width. `copyWith(fontWeight:)` is the same
 /// trap from the other side: it moves `fontWeight` and leaves `fontVariations`
 /// pointing at the old weight, so the glyphs keep the weight they had.
+/// `copyWith(fontSize:)` leaves the optical-size axis where the role set it,
+/// so a display role resized that way is drawn for the wrong size.
 ///
 /// The way out is a `textTheme` role, `AppType.*` or one of
 /// `AppTheme.chrome/subtitle/panelHeader/rowTitle/data`, then `.weight()`,
@@ -23,7 +25,7 @@ import '../../test_helpers/code_scan.dart';
 /// It reads `lib/` through `code_scan.dart` and fails on:
 ///
 ///  * a `TextStyle(` call that names `fontSize` or `fontWeight`, and
-///  * a `copyWith(` call that names `fontWeight`,
+///  * a `copyWith(` call that names `fontWeight` or `fontSize`,
 ///
 /// anywhere outside `lib/core/theme*`, which is where the roles are built and
 /// `.weight()` is written. A `TextStyle(` that names neither (a decoration, a
@@ -39,7 +41,8 @@ void main() {
       if (call.names('fontSize') || call.names('fontWeight'))
         '${call.where}  TextStyle(${call.named.keys.where(_axes.contains).join(', ')}:)',
     for (final call in callsOf(path, code, copyWith))
-      if (call.names('fontWeight')) '${call.where}  copyWith(fontWeight:)',
+      if (call.names('fontSize') || call.names('fontWeight'))
+        '${call.where}  copyWith(${call.named.keys.where(_axes.contains).join(', ')}:)',
   ];
 
   test('lib/ has style calls to scan, and the theme is where they live', () {
@@ -72,8 +75,9 @@ void main() {
       offenders,
       isEmpty,
       reason:
-          'A bare TextStyle(fontSize:) or copyWith(fontWeight:) renders the '
-          "variable font's default instance. Take a textTheme role, AppType.* "
+          'A bare TextStyle(fontSize:) renders the variable font\'s default '
+          'instance, and copyWith(fontWeight:) or copyWith(fontSize:) leaves '
+          'an axis where the role set it. Take a textTheme role, AppType.* '
           'or AppTheme.chrome/subtitle/panelHeader/rowTitle/data, then '
           '.weight(FontWeight.wNNN), never above 600.',
     );
@@ -96,11 +100,15 @@ final f = base.weight(FontWeight.w600).copyWith(color: c);
 final h = 'TextStyle(fontSize: 12)';
 final i = DefaultTextStyle(fontSize: 12);
 final j = base.copyWith(fontFamily: f, shadows: [Shadow(fontSize: 1)]);
+final k = base.copyWith(fontSize: 14);
+final l = base.copyWith(color: c, fontSize: 14, fontWeight: w);
 ''';
       expect(offendersIn('lib/zz_planted.dart', codeOf(planted)), [
         'lib/zz_planted.dart:1  TextStyle(fontSize:)',
         'lib/zz_planted.dart:2  TextStyle(fontWeight:)',
         'lib/zz_planted.dart:3  copyWith(fontWeight:)',
+        'lib/zz_planted.dart:15  copyWith(fontSize:)',
+        'lib/zz_planted.dart:16  copyWith(fontSize, fontWeight:)',
       ]);
     });
   });
