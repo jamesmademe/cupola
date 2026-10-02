@@ -18,6 +18,13 @@ The `label` (the domain's `label`, as written), an optional `trailing` widget (m
 
 One header container whose label is the word as drawn — *Media*; the drawn text is excluded beneath it. The trailing widget stays audible as its own node.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; Settings › Connections also on the desktop.
+
+- The four domains, a header with a trailing widget, Settings › Connections with its padding.
+- Text at 200%: the domains, the trailing widget and Connections.
+
 ## Do / don't
 
 - Do let a domain with nothing to list draw no header — the host skips the group, header and all.

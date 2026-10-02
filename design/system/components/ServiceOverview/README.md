@@ -16,6 +16,13 @@ Rendered from `lib/core/widgets/service_overview.dart`, as `lib/features/movies/
 
 Nothing takes a colour: callers pass the `ServiceKey`, so a hue can never become text. `serviceOverviewInk(service, colorScheme)` — the secondary ink — is the one public way to ink a page's own marks the same way. Each row speaks one sentence with `·` turned into commas and silences its parts; the identity speaks *Radarr, host, version, Answering[, lens]*; a linked header speaks its title and subtitle with the hint *opens the Radarr Calendar tab*. A screen checks `isServiceConfigured` before any section is built and otherwise shows `NotConfiguredPlaceholder.forService`.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the desktop window with two connections.
+
+- `RadarrOverviewScreen`: loaded, the library timed out (amber, figures read a dash), did not answer (red), loading.
+- Text at 200%: loaded, and the library timed out.
+
 ## Do / don't
 
 - Do pass the `ServiceKey` and let the furniture resolve every ink; never hand it a colour.

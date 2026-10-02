@@ -185,6 +185,22 @@ void main() {
         height: 560,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · Radarr service home on touch: the 56pt service band '
+        'and the 44pt tab bar over the lit room, the content at twice the '
+        'reading size',
+        (_) => _phone(_radarrHome()),
+        width: 390,
+        height: 760,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · AmbientScaffold(appBar: GlassAppBar): the TrueNAS hub',
+        (_) => _phone(_truenasHub()),
+        width: 390,
+        height: 560,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

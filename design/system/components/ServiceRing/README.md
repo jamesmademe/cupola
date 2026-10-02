@@ -17,6 +17,13 @@ The ring speaks one sentence and excludes everything beneath it: *8 of 17 chosen
 
 The same file carries `OnePunchline`, the claim beside the ring on onboarding: *A Cupola over / your lab.* in `displayMedium` (42, w600) at 1.10 leading unless a `style` is passed, all in `onSurface`: the display face and the line break carry the claim, not a hue (it used to set *Cupola* in the brand indigo and the second line in a section cyan). It speaks the sentence once.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the onboarding ring also on the desktop.
+
+- Mid-walk with Prowlarr active, nothing set up, a settled stack with one service silent, the active service in each state, the entrance and compact ring, `OnePunchline`.
+- `serviceRingDiameter` at 160% and, with the punchline, at 200%.
+
 ## Do / don't
 
 - Do keep the ring monochrome — ink nodes, lamp halos; nothing on the ring borrows a status tone or a brand colour.

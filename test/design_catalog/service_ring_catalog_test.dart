@@ -139,6 +139,24 @@ void main() {
         ),
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'serviceRingDiameter at a 2× reading size, with the punchline: the '
+        'ring shrinks to give the text its room',
+        (context) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Builder(
+              builder: (context) => ServiceRing(
+                states: _midWalk,
+                diameter: serviceRingDiameter(context, preferred: 268),
+              ),
+            ),
+            const OnePunchline(),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

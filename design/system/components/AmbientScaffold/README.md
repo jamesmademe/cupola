@@ -18,6 +18,13 @@ Rendered from `lib/core/widgets/ambient_scaffold.dart`, `ambient_background.dart
 
 `body`, the `accent` (the room's light: a `ServiceKey` accent, which is the lamp, never a status tone) and optionally `appBar`, `floatingActionButton`, `bottomNavigationBar`, `extendBodyBehindAppBar`, `resizeToAvoidBottomInset` and the content-well settings.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the home also on the desktop.
+
+- Radarr's service home on touch with its two glass bands, the TrueNAS hub with `GlassAppBar`, `AmbientBackground` alone with and without an accent.
+- Text at 200%: the Radarr home and the TrueNAS hub.
+
 ## Do / don't
 
 - Do let the room carry only its light — the lamp until a title's light is derived; status tones never light a room, and neither does a service's brand colour.

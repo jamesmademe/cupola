@@ -418,6 +418,33 @@ void main() {
         height: 940,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · RadarrOverviewScreen loaded: identity, readouts and '
+        'the sections at twice the reading size',
+        (_) => _radarr(
+          _ScriptedRadarr(),
+          const RadarrOverviewScreen(topPadding: 0),
+        ),
+        width: 390,
+        height: 1600,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · RadarrOverviewScreen, the library timed out: the amber '
+        'failure and the figures that read a dash',
+        (_) => _radarr(
+          _ScriptedRadarr(
+            libraryFailure: DioException(
+              requestOptions: RequestOptions(path: '/api/v3/movie'),
+              type: DioExceptionType.receiveTimeout,
+            ),
+          ),
+          const RadarrOverviewScreen(topPadding: 0),
+        ),
+        width: 390,
+        height: 1800,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

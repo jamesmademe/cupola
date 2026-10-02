@@ -116,6 +116,26 @@ void main() {
         width: 640,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · the four domains, a header with a trailing widget and '
+        'Settings › Connections, at twice the reading size',
+        (context) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _allDomains(context),
+            DomainSectionHeader(
+              label: 'Downloads',
+              trailing: Text(
+                '2 connected',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ),
+            _connections(context),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }
