@@ -206,8 +206,8 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       const CatalogScene(
-        'CommandDeck · nothing matched · one dim line, and the footer keeps '
-        'teaching the keys',
+        'CommandDeck · nothing matched · one row offers the global search with '
+        'the word, and the footer keeps teaching the keys',
         _nothing,
         width: width,
         height: 220,
