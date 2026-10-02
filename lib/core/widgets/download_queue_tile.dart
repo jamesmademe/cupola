@@ -5,6 +5,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/beside_or_below.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 
@@ -87,11 +88,6 @@ class DownloadQueueTile extends StatelessWidget {
   /// applied here rather than re-argued per client.
   final StatusTone statusTone;
 
-  /// The widest the state chip may grow, as a share of the title line (title,
-  /// chip and percentage). Past it the label ellipsises, so the title always
-  /// keeps the larger part of the line.
-  static const double chipMaxFraction = 0.4;
-
   /// The bottom figure row — transfer rates, ratios, whatever the client
   /// measures. Empty on the Usenet pair, which says everything it has in
   /// [subtitle].
@@ -134,6 +130,10 @@ class DownloadQueueTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final titleStyle = theme.textTheme.bodyMedium!.weight(FontWeight.w600);
+    final titleEm = MediaQuery.textScalerOf(
+      context,
+    ).scale(titleStyle.fontSize ?? 14);
     final colorScheme = theme.colorScheme;
     // The ground everything on this row is measured against. The plate paints
     // `surface` when idle and an 8% accent tint when selected; the tint is thin
@@ -209,42 +209,35 @@ class DownloadQueueTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ExcludeSemantics(
-                          child: LayoutBuilder(
-                            builder: (context, line) => Row(
+                          // The title keeps ten of its own em beside the chip
+                          // and the figure, or they go under it at the
+                          // trailing edge: a long state label, or any label
+                          // at a large text size, used to leave the name six
+                          // letters and the chip "Downloa…".
+                          child: BesideOrBelow(
+                            gap: AppSpacing.sm,
+                            minLead: 10 * titleEm,
+                            lead: Text(
+                              title,
+                              style: titleStyle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: theme.textTheme.bodyMedium!.weight(
-                                      FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
                                 if (statusLabel != null) ...[
-                                  const SizedBox(width: AppSpacing.sm),
-                                  // The title is the one flexible child;
-                                  // the chip keeps its natural width up to
-                                  // a cap, so a long state label (or any
-                                  // label at a large text scale) ellipsises
-                                  // instead of overflowing or starving the
-                                  // title. A Flexible here split the free
-                                  // width in half and ellipsised names
-                                  // beside empty space.
-                                  ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth:
-                                          line.maxWidth *
-                                          DownloadQueueTile.chipMaxFraction,
-                                    ),
+                                  // Flexible: under the title, a label longer
+                                  // than the whole line ellipsises rather than
+                                  // pushing the figure out.
+                                  Flexible(
                                     child: _StatusChip(
                                       label: statusLabel!,
                                       tone: statusTone,
                                     ),
                                   ),
+                                  const SizedBox(width: AppSpacing.sm),
                                 ],
-                                const SizedBox(width: AppSpacing.sm),
                                 Text(
                                   percentage == null
                                       ? '—'

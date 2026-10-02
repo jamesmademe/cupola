@@ -252,9 +252,9 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'Long name and long state label · the name takes the free width, '
-        'the chip keeps its own up to a 40% cap, and both ellipsise before '
-        'anything overflows',
+        'Long name and long state label · the name keeps ten of its em '
+        'beside the chip and the figure, or they go under it; nothing '
+        'overflows',
         (_) => DownloadQueueTile(
           title:
               'The.Cabinet.of.Dr.Caligari.1920.Restored.Tinted.1080p.BluRay.'

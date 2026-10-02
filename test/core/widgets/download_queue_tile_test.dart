@@ -260,10 +260,10 @@ void main() {
       expect(chip.left - title.right, lessThan(AppSpacing.sm + 7 + 1));
     });
 
-    testWidgets('a long state label is capped instead of starving the title', (
-      tester,
-    ) async {
+    testWidgets('a long state label goes under the title instead of '
+        'starving it', (tester) async {
       const label = 'Error: tracker returned an unregistered torrent';
+      const name = 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP';
       await tester.pumpWidget(
         host(
           const Align(
@@ -271,7 +271,7 @@ void main() {
             child: SizedBox(
               width: 390,
               child: DownloadQueueTile(
-                title: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
+                title: name,
                 subtitle: 'Errored · movies',
                 statusLabel: label,
                 statusTone: StatusTone.warning,
@@ -284,13 +284,15 @@ void main() {
         ),
       );
 
-      final tile = tester.getRect(find.byType(DownloadQueueTile));
-      final line = tile.width - 2 * (AppSpacing.lg + AppSpacing.md);
-      final chipText = tester.getRect(find.text(label));
+      final title = tester.getRect(find.text(name));
+      final chip = tester.getRect(find.text(label));
+      // The title keeps the line; the chip and the figure follow under it.
+      expect(chip.top, greaterThanOrEqualTo(title.bottom));
       expect(
-        chipText.width,
-        lessThanOrEqualTo(line * DownloadQueueTile.chipMaxFraction),
+        tester.getRect(find.text('63%')).top,
+        greaterThanOrEqualTo(title.bottom),
       );
+      expect(title.width, greaterThan(10 * 14));
       expect(tester.takeException(), isNull);
     });
   });
