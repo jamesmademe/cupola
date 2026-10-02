@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
@@ -20,6 +23,12 @@ class _QuietClient extends DockgeClient {
   /// The lifecycle commands that reached the client, in order.
   final sent = <String>[];
 
+  /// What the pane's terminal receives: a test pushes a line here.
+  final output = StreamController<DockgeTerminalOutput>.broadcast();
+
+  @override
+  Stream<DockgeTerminalOutput> get terminalOutput => output.stream;
+
   @override
   Future<void> joinCombinedTerminal(String stackName) async {}
 
@@ -37,8 +46,9 @@ class _QuietClient extends DockgeClient {
   Future<void> deleteStack(String name) async => sent.add('delete');
 }
 
-Future<_QuietClient> _pump(WidgetTester tester) async {
+Future<_QuietClient> _pump(WidgetTester tester, {ThemeData? theme}) async {
   final client = _QuietClient();
+  addTearDown(client.output.close);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -56,7 +66,10 @@ Future<_QuietClient> _pump(WidgetTester tester) async {
           (ref, name) async => const <DockgeServiceStatus>[],
         ),
       ],
-      child: const MaterialApp(home: DockgeStackDetailScreen(name: 'immich')),
+      child: MaterialApp(
+        theme: theme,
+        home: const DockgeStackDetailScreen(name: 'immich'),
+      ),
     ),
   );
   await tester.pump();
@@ -165,5 +178,42 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
       expect(client.sent, ['start']);
     });
+  });
+
+  // The terminal sits on the plate's well, which is dark in both themes, so its
+  // text is the plate's ink and never the theme's. The hint used to read the
+  // theme's dim ink, 3.3:1 on the well in the light theme.
+  group('the terminal reads in the plate\'s ink', () {
+    for (final theme in [AppTheme.darkTheme(), AppTheme.lightTheme()]) {
+      final room = theme.brightness.name;
+
+      testWidgets('the empty hint is the plate\'s dim ink ($room)', (
+        tester,
+      ) async {
+        await _pump(tester, theme: theme);
+
+        final hint = tester.widget<Text>(
+          find.text('No output yet. Run an action to see logs.'),
+        );
+        expect(hint.style!.color, AppColors.plateDimInk);
+      });
+
+      testWidgets('the log is the plate\'s primary ink ($room)', (
+        tester,
+      ) async {
+        final client = await _pump(tester, theme: theme);
+
+        client.output.add(
+          DockgeTerminalOutput(
+            client.combinedTerminalName('immich'),
+            'container started\n',
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 150));
+
+        final log = tester.widget<SelectableText>(find.byType(SelectableText));
+        expect(log.style!.color, AppColors.plateInk);
+      });
+    }
   });
 }

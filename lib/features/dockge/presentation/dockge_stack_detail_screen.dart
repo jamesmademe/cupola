@@ -573,12 +573,13 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
               ? Center(
                   child: Text(
                     'No output yet. Run an action to see logs.',
-                    // Pinned dark like the log body beside it: this panel is
-                    // dark in both themes, and the theme-derived dim tone
-                    // measured 3.73:1 on it in light mode. The dark dim tone
-                    // clears AA at 5.30:1.
+                    // The plate's own secondary ink, like the log body's beside
+                    // it: this panel is the plate's well, dark in both themes,
+                    // so the theme's dim ink does not apply. It measured 3.3:1
+                    // on the well in the light theme; the plate's measures
+                    // 7.3:1.
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: CupolaThemeColors.of(context).dimText,
+                      color: AppColors.plateDimInk,
                     ),
                   ),
                 )
@@ -590,10 +591,11 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
                     // `.mono` rather than the 'monospace' alias that silently
                     // falls back to a proportional face on iOS/macOS.
                     // `bodySmall`'s 1.40 leading is what keeps a dense tail
-                    // scannable. The panel behind it is permanently dark, so
-                    // the foreground stays on the dark-theme variant tone.
+                    // scannable. The panel behind it is the plate's well,
+                    // dark in both themes, so the text is the plate's primary
+                    // ink and not a theme ink.
                     style: Theme.of(context).textTheme.bodySmall!.mono.copyWith(
-                      color: AppColors.onSurfaceVariantDark,
+                      color: AppColors.plateInk,
                     ),
                   ),
                 ),
