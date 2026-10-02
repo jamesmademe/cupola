@@ -56,7 +56,7 @@ class MoviesScreen extends ConsumerWidget {
 
     return MediaBrowseScaffold<RadarrMovie>(
       title: 'Movies',
-      searchHint: 'Search movies...',
+      searchHint: 'Search movies',
       activityRoute: '/activity/movies',
       navigationSection: NavigationSection.dashboard,
       serviceName: 'Radarr',

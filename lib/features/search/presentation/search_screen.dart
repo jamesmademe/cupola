@@ -118,7 +118,7 @@ class SearchScreen extends ConsumerWidget {
           SearchBarHeader(
             key: ValueKey(resetVersion),
             initialQuery: query,
-            hintText: 'Movies, shows, artists...',
+            hintText: 'Movies, series, artists',
             onQueryChanged: (value) {
               ref.read(globalSearchQueryProvider.notifier).state = value;
             },

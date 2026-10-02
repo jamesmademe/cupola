@@ -38,10 +38,10 @@ extension ManualImportServiceCopy on ServiceKey {
 
   String get manualImportSearchHint {
     return switch (this) {
-      ServiceKey.radarr => 'Search movie...',
-      ServiceKey.sonarr => 'Search series...',
-      ServiceKey.lidarr => 'Search artist...',
-      _ => 'Search...',
+      ServiceKey.radarr => 'Search movie',
+      ServiceKey.sonarr => 'Search series',
+      ServiceKey.lidarr => 'Search artist',
+      _ => 'Search',
     };
   }
 }

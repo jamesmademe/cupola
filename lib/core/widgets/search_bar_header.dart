@@ -30,7 +30,7 @@ class SearchBarHeader extends StatefulWidget {
   const SearchBarHeader({
     super.key,
     required this.onQueryChanged,
-    this.hintText = 'Search...',
+    this.hintText = 'Search',
     this.initialQuery,
     this.debounceDuration = const Duration(milliseconds: 400),
     this.autofocus = false,

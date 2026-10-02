@@ -2,7 +2,7 @@
 
 The always-visible search field at the top of a browsable screen: a monochrome magnifier and a clear button once there is a query.
 
-Rendered from `lib/core/widgets/search_bar_header.dart` (a Material 3 `SearchBar`) by `test/design_catalog/search_bar_header_catalog_test.dart`. Hints are the callers' real strings: *Search movies and series* (Seerr Discover), *Search torrents...* (qBittorrent), *Movies, shows, artists...* (Search tab), *Search movies...* / *Search TV series...* / *Search artists...* (the library screens); the default is *Search...*.
+Rendered from `lib/core/widgets/search_bar_header.dart` (a Material 3 `SearchBar`) by `test/design_catalog/search_bar_header_catalog_test.dart`. Hints are the callers' real strings: *Search movies and series* (Seerr Discover), *Search torrents* (qBittorrent), *Movies, series, artists* (Search tab), *Search movies* / *Search series* / *Search artists* (the library screens); the default is *Search*. No hint ends in an ellipsis.
 
 - Outer padding `AppSpacing.sm` top, `AppSpacing.lg` sides, `AppSpacing.lg` bottom.
 - Field: minimum height 52, `surfaceContainer` fill, 1px `outlineVariant` side, `AppRadius.borderRadiusMd` (14) — the control radius; the theme's own text fields take the 16 field radius — elevation 0, horizontal padding `AppSpacing.sm`.
@@ -31,6 +31,6 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 
 ## Do / don't
 
-- Do let the hint say what is searched (*Search artists...*); the glyph says nothing about whose search it is.
+- Do let the hint say what is searched (*Search artists*); the glyph says nothing about whose search it is.
 - Don't round the field into a pill — that is the metadata shape.
 - Don't debounce again in the caller; the value arrives settled.

@@ -85,7 +85,7 @@ class MusicScreen extends ConsumerWidget {
 
     return MediaBrowseScaffold<LidarrArtist>(
       title: 'Music',
-      searchHint: 'Search artists...',
+      searchHint: 'Search artists',
       activityRoute: '/activity/music',
       navigationSection: NavigationSection.dashboard,
       serviceName: 'Lidarr',

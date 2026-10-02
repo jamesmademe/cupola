@@ -306,6 +306,7 @@ final _never = <String, RegExp>{
   'a bare Delete': RegExp(r'^Delete$'),
   "Couldn't → Could not": RegExp(r"\bcouldn['’]t\b", caseSensitive: false),
   'Failed to → Could not': RegExp(r'\bfailed to\b', caseSensitive: false),
+  'Three dots at the end → no ellipsis': RegExp(r'\.\.\.$'),
   'Could not load X → the classification\'s headline': RegExp(
     r'\b(could not|failed to) load\b',
     caseSensitive: false,
@@ -362,6 +363,19 @@ const _allowed = <({String file, String literal, String reason})>[
     file: 'lib/features/dockge/domain/models/dockge_agent.dart',
     literal: 'online',
     reason: "Dockge's own agent status, the wire default the model parses",
+  ),
+  (
+    file:
+        'lib/features/qbittorrent/presentation/widgets/add_torrent_button.dart',
+    literal: 'magnet:?xt=urn:btih:...',
+    reason: 'the shape of a magnet link, a format example and not a sentence',
+  ),
+  (
+    file: 'lib/core/widgets/reel_command_button.dart',
+    literal: '$copyHole...',
+    reason:
+        'a width candidate the button measures its slot on: the busy label '
+        'with the full set of trailing dots the waiting animation draws',
   ),
   (
     file: 'lib/features/stream/presentation/stream_library_screen.dart',

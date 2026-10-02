@@ -84,7 +84,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
                 ),
                 SliverToBoxAdapter(
                   child: SearchBarHeader(
-                    hintText: 'Search torrents...',
+                    hintText: 'Search torrents',
                     onQueryChanged: (query) {
                       ref.read(torrentSearchQueryProvider.notifier).state =
                           query;
