@@ -178,7 +178,7 @@ void main() {
     testWidgets('shows activity button', (tester) async {
       await tester.pumpWidget(_buildTestApp());
 
-      expect(find.byIcon(Icons.history), findsOneWidget);
+      expect(find.byIcon(Icons.history_rounded), findsOneWidget);
     });
 
     testWidgets('shows grouped browse content and filters by default', (
@@ -220,7 +220,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
     });
 
     testWidgets(
@@ -273,7 +273,7 @@ void main() {
         await tester.pump();
         await tester.pumpAndSettle();
 
-        expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
 
         tappedItem = null;
         tappedHeroTag = null;
@@ -594,7 +594,7 @@ void main() {
         await tester.pump();
         await tester.pumpAndSettle();
 
-        expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
         expect(libraryLoadCount, 1);
 
         container
@@ -606,7 +606,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(container.read(searchQueryProvider), '');
-        expect(find.byIcon(Icons.arrow_back), findsNothing);
+        expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
         expect(libraryLoadCount, 2);
       },
     );

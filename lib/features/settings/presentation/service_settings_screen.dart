@@ -1668,7 +1668,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                 tooltip: _revealApiKey ? 'Hide API key' : 'Show API key',
               ),
               IconButton(
-                icon: const Icon(Icons.copy),
+                icon: const Icon(Icons.copy_rounded),
                 onPressed: _copyApiKey,
                 tooltip: 'Copy API key',
               ),

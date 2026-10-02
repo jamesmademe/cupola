@@ -103,7 +103,11 @@ class _CastTile extends StatelessWidget {
             )
           : null,
       child: imageUrl == null
-          ? Icon(Icons.person, size: 28, color: colorScheme.onSurfaceVariant)
+          ? Icon(
+              Icons.person_rounded,
+              size: 28,
+              color: colorScheme.onSurfaceVariant,
+            )
           : null,
     );
     if (tappable) {

@@ -248,7 +248,7 @@ class AppLifecycleControl extends ConsumerWidget {
           icon: Icon(
             app.isRunning
                 ? Icons.stop_circle_outlined
-                : Icons.play_circle_outline,
+                : Icons.play_circle_outline_rounded,
             color: app.isRunning
                 ? null
                 : statusToneColor(

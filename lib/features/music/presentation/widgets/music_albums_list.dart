@@ -337,7 +337,7 @@ class _AlbumPlaceholder extends StatelessWidget {
       width: _AlbumArtwork._width,
       height: _AlbumArtwork._height,
       color: colorScheme.surfaceContainerHighest,
-      child: Icon(Icons.album, color: colorScheme.outline),
+      child: Icon(Icons.album_rounded, color: colorScheme.outline),
     );
   }
 }

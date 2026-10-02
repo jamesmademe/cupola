@@ -63,7 +63,7 @@ void _showVideosSheet(BuildContext context, List<RelatedVideo> videos) {
   AppBottomSheet.show<void>(
     context: context,
     title: 'Videos',
-    icon: Icons.play_circle_outline,
+    icon: Icons.play_circle_outline_rounded,
     builder: (sheetContext) => Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,

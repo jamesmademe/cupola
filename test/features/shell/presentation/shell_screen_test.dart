@@ -74,7 +74,7 @@ void main() {
       await _pumpShell(tester, initialLocation: '/settings');
 
       expect(find.text('SettingsPage'), findsOneWidget);
-      expect(find.byIcon(Icons.settings), findsOneWidget);
+      expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
       expect(find.byIcon(Icons.settings_outlined), findsNothing);
     });
 

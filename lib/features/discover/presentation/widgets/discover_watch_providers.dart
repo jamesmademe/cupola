@@ -128,13 +128,13 @@ class _WatchProviderTile extends StatelessWidget {
                       ),
                       fit: BoxFit.cover,
                       errorWidget: (context, url, error) => Icon(
-                        Icons.play_circle_outline,
+                        Icons.play_circle_outline_rounded,
                         size: 16,
                         color: colorScheme.onSurfaceVariant,
                       ),
                     )
                   : Icon(
-                      Icons.play_circle_outline,
+                      Icons.play_circle_outline_rounded,
                       size: 16,
                       color: colorScheme.onSurfaceVariant,
                     ),

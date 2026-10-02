@@ -452,7 +452,7 @@ class _MediaBrowseScaffoldState<T>
           ? GlassAppBar(
               leading: isSearching
                   ? IconButton(
-                      icon: const Icon(Icons.arrow_back),
+                      icon: const Icon(Icons.arrow_back_rounded),
                       onPressed: () {
                         ref.read(widget.searchQueryProvider.notifier).state =
                             '';
@@ -463,7 +463,7 @@ class _MediaBrowseScaffoldState<T>
               title: Text(widget.title),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.history),
+                  icon: const Icon(Icons.history_rounded),
                   onPressed: () => context.push(widget.activityRoute),
                   tooltip: 'Activity',
                 ),
@@ -1232,7 +1232,7 @@ class _BrowsePosterTile extends StatelessWidget {
           heroTag: heroTag,
           imageUrl: imageSource.url,
           imageHeaders: imageSource.headers,
-          fallbackIcon: Icons.person_outline,
+          fallbackIcon: Icons.person_outline_rounded,
         ),
       );
     }

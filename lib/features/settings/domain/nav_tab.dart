@@ -38,7 +38,7 @@ enum NavTab {
   settings(
     label: 'Settings',
     icon: Icons.settings_outlined,
-    selectedIcon: Icons.settings,
+    selectedIcon: Icons.settings_rounded,
     railIcon: Symbols.settings_rounded,
     routePath: '/settings',
   );

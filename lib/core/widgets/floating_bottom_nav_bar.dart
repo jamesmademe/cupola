@@ -165,7 +165,7 @@ class FloatingNavBarMetrics {
 ///   destinations: [
 ///     FloatingNavDestination(
 ///       icon: Icons.home_outlined,
-///       selectedIcon: Icons.home,
+///       selectedIcon: Icons.home_rounded,
 ///       label: 'Home',
 ///     ),
 ///   ],

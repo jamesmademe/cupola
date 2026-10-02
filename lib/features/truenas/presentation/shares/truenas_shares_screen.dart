@@ -99,7 +99,9 @@ class _ServiceStateBanner extends ConsumerWidget {
         child: Row(
           children: [
             Icon(
-              running ? Icons.check_circle_rounded : Icons.pause_circle_outline,
+              running
+                  ? Icons.check_circle_rounded
+                  : Icons.pause_circle_outline_rounded,
               size: 16,
               // A protocol nobody turned on is neutral: not running is the
               // normal state for two of the three on most servers.

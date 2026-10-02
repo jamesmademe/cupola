@@ -72,7 +72,7 @@ void main() {
       final scheme = AppTheme.darkTheme().colorScheme;
       for (final (index, selected, unselected) in const [
         (1, Icons.bolt_rounded, Icons.view_list_outlined),
-        (3, Icons.settings, Icons.search_outlined),
+        (3, Icons.settings_rounded, Icons.search_outlined),
       ]) {
         await _pumpNavBar(tester, selectedIndex: index);
 
@@ -505,7 +505,7 @@ Future<void> _pumpNavBar(
             ),
             FloatingNavDestination(
               icon: Icons.settings_outlined,
-              selectedIcon: Icons.settings,
+              selectedIcon: Icons.settings_rounded,
               label: 'Settings',
             ),
           ],

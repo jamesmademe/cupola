@@ -114,7 +114,7 @@ class _RequestCard extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      Icons.person_outline,
+                      Icons.person_outline_rounded,
                       size: 16,
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -204,7 +204,7 @@ class _RequestCard extends StatelessWidget {
             onPressed: onDelete,
             // Neutral: red means unreachable and nothing else, and the
             // confirmation says what goes.
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(Icons.delete_outline_rounded),
             color: colorScheme.onSurfaceVariant,
           ),
         ],
@@ -403,7 +403,7 @@ class _CopyControls extends StatelessWidget {
       Widget Function(Widget content) annotate,
     ) => OutlinedButton.icon(
       onPressed: onPressed,
-      icon: annotate(const Icon(Icons.open_in_new)),
+      icon: annotate(const Icon(Icons.open_in_new_rounded)),
       label: annotate(Text('Open in $name')),
     );
 
@@ -459,7 +459,7 @@ class _CopyControls extends StatelessWidget {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.delete_outline),
+                : const Icon(Icons.delete_outline_rounded),
             label: Text('Remove from $name'),
           ),
         ),

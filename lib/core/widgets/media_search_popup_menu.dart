@@ -14,7 +14,7 @@ class MediaSearchPopupMenu extends StatelessWidget {
   /// Whether to show a loading indicator instead of the menu.
   final bool isLoading;
 
-  /// Optional custom icon. Defaults to [Icons.search].
+  /// Optional custom icon. Defaults to [Icons.search_rounded].
   final IconData icon;
 
   /// Optional icon size. Defaults to 20.
@@ -28,7 +28,7 @@ class MediaSearchPopupMenu extends StatelessWidget {
     required this.onAutoSearch,
     required this.onInteractiveSearch,
     this.isLoading = false,
-    this.icon = Icons.search,
+    this.icon = Icons.search_rounded,
     this.iconSize = 20,
     this.tooltip = 'Search options',
   });
