@@ -29,7 +29,7 @@ void main() {
           (scheme) => scheme.surfaceContainer,
           Builder(
             builder: (context) => FaultNote.unreachable(
-              message: 'Failed to load servers: the connection timed out.',
+              message: 'Could not load servers: the connection timed out.',
               surface: Theme.of(context).colorScheme.surfaceContainer,
             ),
           ),
@@ -51,7 +51,7 @@ void main() {
       CatalogScene(
         '.unreachable · on the default surface, no surface passed',
         (_) => const FaultNote.unreachable(
-          message: 'Failed to load instances: the connection timed out.',
+          message: 'Could not load instances: the connection timed out.',
         ),
       ),
       CatalogScene(
@@ -73,7 +73,7 @@ void main() {
               (scheme) => scheme.surfaceContainer,
               Builder(
                 builder: (context) => FaultNote.unreachable(
-                  message: 'Failed to load servers: the connection timed out.',
+                  message: 'Could not load servers: the connection timed out.',
                   surface: Theme.of(context).colorScheme.surfaceContainer,
                 ),
               ),

@@ -81,7 +81,7 @@ void main() {
         (_) => FaultBand.section(
           message:
               'Radarr is answering. qBittorrent, the download client it '
-              'hands grabs to, is not — so the queue is missing from this '
+              'hands grabs to, is not, so the queue is missing from this '
               'page.',
           onRetry: () {},
         ),

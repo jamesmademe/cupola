@@ -214,7 +214,7 @@ Widget _scaffold(
 }) {
   return MediaBrowseScaffold<_Film>(
     title: title,
-    searchHint: 'Search movies...',
+    searchHint: 'Search movies',
     activityRoute: '/activity',
     navigationSection: NavigationSection.dashboard,
     serviceName: 'Radarr',

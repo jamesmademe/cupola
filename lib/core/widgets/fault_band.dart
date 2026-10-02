@@ -161,7 +161,7 @@ class FaultBand extends StatelessWidget {
   ///
   /// The sentence is the caller's because only the caller knows the
   /// relationship: *"Radarr is answering. qBittorrent, the download client it
-  /// hands grabs to, is not — so the queue is missing from this page."* names
+  /// hands grabs to, is not, so the queue is missing from this page."* names
   /// which figures are absent and why, which a generic string cannot. Pair it
   /// with `ServiceKpi.unavailable` so the figures that source owns read `—`.
   FaultBand.section({
