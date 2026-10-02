@@ -413,15 +413,16 @@ class _DeckFooter extends ConsumerWidget {
                 color: CupolaThemeColors.of(context).dimText,
               ).mono.tabular,
             ),
-          Text(
-            health.headline,
-            style: AppTheme.chrome(
-              context,
-              size: 11,
-              weight: FontWeight.w500,
-              color: CupolaThemeColors.of(context).dimText,
+          if (health.headline case final headline?)
+            Text(
+              headline,
+              style: AppTheme.chrome(
+                context,
+                size: 11,
+                weight: FontWeight.w500,
+                color: CupolaThemeColors.of(context).dimText,
+              ),
             ),
-          ),
         ],
       ),
     );

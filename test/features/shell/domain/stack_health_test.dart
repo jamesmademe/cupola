@@ -99,6 +99,19 @@ void main() {
       expect(health.allClear, isTrue);
     });
 
+    test('a stack whose only connection signed out counts no answering', () {
+      final health = stackHealthFrom(
+        states: const [],
+        registrySize: 17,
+        signedOut: 1,
+      );
+
+      expect(health.configured, 0);
+      expect(health.headline, isNull);
+      // Not "0 of 0 answering · 1 signed out · 16 not set up".
+      expect(health.sentence, '1 signed out · 16 not set up');
+    });
+
     test('the qualifiers are in reading order and omitted at zero', () {
       final health = stackHealthFrom(
         states: const [

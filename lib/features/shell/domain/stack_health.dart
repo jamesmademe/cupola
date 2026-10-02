@@ -100,7 +100,12 @@ class StackHealth {
   bool get allClear => unreachable == 0 && degraded == 0 && faulted == 0;
 
   /// `14 of 16 answering`, or `16 of 16 answering` when nothing is wrong.
-  String get headline => '$answering of $configured answering';
+  ///
+  /// Null when nothing set up is asked anything: a stack whose only connection
+  /// is a signed-out Seerr read "0 of 0 answering · 1 signed out", a figure
+  /// that counts nothing. The qualifiers then carry the line alone.
+  String? get headline =>
+      configured == 0 ? null : '$answering of $configured answering';
 
   /// The qualifiers that follow the headline, already in reading order and
   /// omitted when they are zero.
@@ -118,12 +123,12 @@ class StackHealth {
   ];
 
   /// The whole line, spoken and printed the same way.
-  String get sentence => [headline, ...qualifiers].join(' · ');
+  String get sentence => [?headline, ...qualifiers].join(' · ');
 
   /// The line with its age, which is what the Dashboard header draws.
   String sentenceAt(DateTime now) {
     final age = ageLabel(now);
-    return [headline, ...qualifiers, ?age].join(' · ');
+    return [?headline, ...qualifiers, ?age].join(' · ');
   }
 
   /// `refreshed just now`, `refreshed 6 minutes ago` — **never** seconds.
