@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 
@@ -21,6 +22,29 @@ Widget _gated(
 );
 
 List<CatalogScene> _scenes(CatalogPlatform platform) => [
+  CatalogScene(
+    'Primary · AppTheme.primaryButtonStyle: a page\'s one primary, full width '
+    'at button-l 52, radius.button 16, beside the theme\'s medium 44',
+    (_) => Builder(
+      builder: (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilledButton(
+            style: AppTheme.primaryButtonStyle(context),
+            onPressed: () {},
+            child: const Text('Submit request'),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton(onPressed: () {}, child: const Text('Grab')),
+          ),
+        ],
+      ),
+    ),
+    width: 390,
+    platform: platform,
+  ),
   CatalogScene(
     'FilledButton.icon · OutlinedButton · TextButton, as the theme draws them',
     (_) => Wrap(

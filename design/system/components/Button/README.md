@@ -46,6 +46,7 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 - `onPressed: null`: Material's disabled filled and outlined.
 - A long label: each button grows to a second line instead of clipping.
 - Text at 200%: every kind, the gated one and the remedy, at twice the reading size.
+- The primary (`AppTheme.primaryButtonStyle`) full width beside the theme's medium filled button, on both platforms.
 - Focused (desktop sheet): the filled button holding keyboard focus, ringed; focus is global to a render, so one control holds it per sheet.
 
 ## Do / don't
