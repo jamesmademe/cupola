@@ -494,6 +494,10 @@ class ProfileConnection {
 /// included) and `GET /api/v1/service/{radarr,sonarr}` (the request-sheet
 /// view the app reads today). The network also answers at [url], so a flow
 /// that sets a connection up from Seerr's knowledge finds a live server there.
+///
+/// Seerr's settings say where Seerr reaches the server: [url] by default,
+/// the address this device reaches it at too, and [containerUrl] under
+/// `ConfigProfile.withDockerHostnames`, a Compose name nothing here resolves.
 class SeerrKnownServer {
   const SeerrKnownServer({
     required this.seerrId,
@@ -501,6 +505,7 @@ class SeerrKnownServer {
     required this.name,
     required this.url,
     required this.apiKey,
+    this.containerUrl,
     this.is4k = false,
     this.isDefault = false,
     this.activeProfileId = 1,
@@ -520,6 +525,10 @@ class SeerrKnownServer {
   final String name;
   final String url;
   final String apiKey;
+
+  /// Where Seerr reaches the server across the household's Docker network
+  /// (`WorldContainers`), or null for a server that is not in a container.
+  final String? containerUrl;
   final bool is4k;
   final bool isDefault;
   final int activeProfileId;
@@ -527,6 +536,12 @@ class SeerrKnownServer {
   final String activeDirectory;
 
   Uri get uri => Uri.parse(url);
+
+  /// The address Seerr's settings hold for the server: [containerUrl] when
+  /// the stack names its arrs by container and this one has a container
+  /// name, [url] otherwise.
+  Uri seenBySeerr({required bool dockerHostnames}) =>
+      Uri.parse(dockerHostnames ? containerUrl ?? url : url);
 }
 
 /// What kind of account a Seerr user is: its `userType`
@@ -751,6 +766,7 @@ class ConfigProfile {
     this.extraDownloads = const [],
     this.fullDisks = const {},
     this.pausedQueues = const {},
+    this.dockerHostnames = false,
   });
 
   /// `P1` … `P9`, as the inventory numbers them.
@@ -812,6 +828,13 @@ class ConfigProfile {
   /// The usenet clients (connection ids) whose download queue somebody
   /// paused, with plenty of room left. See [withPausedQueue].
   final Set<String> pausedQueues;
+
+  /// The household runs its arrs, Seerr and Prowlarr on one Docker network,
+  /// and Seerr's settings and Prowlarr's applications name each arr the way
+  /// the containers reach one another: `http://radarr:7878`
+  /// ([WorldContainers]). False by default: they name the addresses this
+  /// device reaches too. See [withDockerHostnames].
+  final bool dockerHostnames;
 
   /// Every download of this profile's world.
   List<WorldDownload> get downloads => [
@@ -922,6 +945,14 @@ class ConfigProfile {
   /// A copy with the device at [place].
   ConfigProfile at(NetworkPlace place) => _copy(place: place);
 
+  /// A copy where Seerr's settings and Prowlarr's applications name the
+  /// arrs by their Docker container ([WorldContainers]), as a stack in one
+  /// Compose file does: `http://radarr:7878`, and `http://radarr-4k:7878`
+  /// for the Radarr this device reaches at `nas.home.arpa:7879`. The servers
+  /// still answer at their own addresses; nothing answers at a container
+  /// name.
+  ConfigProfile withDockerHostnames() => _copy(dockerHostnames: true);
+
   /// A copy where every Seerr account of the profile holds [permissions]:
   /// the requester and each connection's [ProfileConnection.seerrAccount].
   /// For 4K (`1024`), auto-approval (`128`), REQUEST_ADVANCED (`8192`) and the
@@ -988,6 +1019,7 @@ class ConfigProfile {
     List<WorldDownload>? extraDownloads,
     Set<String>? fullDisks,
     Set<String>? pausedQueues,
+    bool? dockerHostnames,
   }) => ConfigProfile(
     id: id,
     title: title,
@@ -1004,6 +1036,7 @@ class ConfigProfile {
     extraDownloads: extraDownloads ?? this.extraDownloads,
     fullDisks: fullDisks ?? this.fullDisks,
     pausedQueues: pausedQueues ?? this.pausedQueues,
+    dockerHostnames: dockerHostnames ?? this.dockerHostnames,
   );
 
   @override

@@ -54,6 +54,37 @@ abstract final class WorldHosts {
   static const npm = 'http://tower.home.arpa:81';
 }
 
+/// The arrs as the containers beside them reach them on the household's
+/// Docker network: the Compose service name and the port the app listens on
+/// inside its container. What Seerr's settings and Prowlarr's applications
+/// hold under `ConfigProfile.withDockerHostnames`, and nothing this device
+/// can dial.
+///
+/// Radarr 4K is Radarr's second container: it listens on 7878 inside, like
+/// the first, and Docker publishes it on 7879 (behind TLS) outside. So
+/// "Seerr's own host with the port Seerr knows" is `nas.home.arpa:7878`,
+/// where the first Radarr answers.
+abstract final class WorldContainers {
+  static const radarr = 'http://radarr:7878';
+  static const radarr4k = 'http://radarr-4k:7878';
+  static const sonarr = 'http://sonarr:8989';
+  static const sonarrAnime = 'http://sonarr-anime:8989';
+  static const lidarr = 'http://lidarr:8686';
+  static const prowlarr = 'http://prowlarr:9696';
+
+  /// The container address of connection [connectionId], or null for a
+  /// connection that is not one of the arrs above.
+  static String? of(String connectionId) => switch (connectionId) {
+    WorldIds.radarr => radarr,
+    WorldIds.radarr4k => radarr4k,
+    WorldIds.sonarr => sonarr,
+    WorldIds.sonarrAnime => sonarrAnime,
+    WorldIds.lidarr => lidarr,
+    WorldIds.prowlarr => prowlarr,
+    _ => null,
+  };
+}
+
 /// Connection ids. The first of a service takes the service's own route
 /// param, as `ServiceInstance.mintId` hands it out; a second takes
 /// `<param>-<7 chars>`, the minted shape.

@@ -326,8 +326,16 @@ class SeerrFake extends ServiceFake {
     ],
   };
 
-  static JsonMap _knownSettings(SeerrKnownServer s) {
-    final uri = s.uri;
+  /// One server as `GET /settings/radarr|sonarr` sends it: Seerr's
+  /// `RadarrSettings` or `SonarrSettings` (`server/lib/settings/index.ts`),
+  /// the key in the clear, as the route returns `settings.radarr` whole.
+  ///
+  /// The address is where Seerr reaches the server: its container under
+  /// `withDockerHostnames`, and then `externalUrl` holds the address a
+  /// browser opens it at, as an admin of such a stack sets it.
+  static JsonMap _knownSettings(SeerrKnownServer s, ServerContext c) {
+    final docker = c.profile.dockerHostnames && s.containerUrl != null;
+    final uri = s.seenBySeerr(dockerHostnames: docker);
     return {
       'id': s.seerrId,
       'name': s.name,
@@ -339,15 +347,22 @@ class SeerrFake extends ServiceFake {
       'activeProfileId': s.activeProfileId,
       'activeProfileName': s.activeProfileName,
       'activeDirectory': s.activeDirectory,
+      'tags': const <Object?>[],
       'is4k': s.is4k,
       'isDefault': s.isDefault,
-      'externalUrl': '',
+      'externalUrl': docker ? s.url : '',
       'syncEnabled': true,
       'preventSearch': false,
+      'tagRequests': false,
+      'overrideRule': const <Object?>[],
       if (s.service == ServiceKey.radarr) 'minimumAvailability': 'released',
-      if (s.service == ServiceKey.sonarr)
+      if (s.service == ServiceKey.sonarr) ...{
+        'seriesType': 'standard',
+        'animeSeriesType': 'anime',
         'activeAnimeProfileId': s.activeProfileId,
-      if (s.service == ServiceKey.sonarr) 'enableSeasonFolders': true,
+        'enableSeasonFolders': true,
+        'monitorNewItems': 'all',
+      },
     };
   }
 
@@ -484,11 +499,11 @@ class SeerrFake extends ServiceFake {
           });
         case '/api/v1/settings/radarr':
           return NetworkReply.json([
-            for (final s in _known(c, ServiceKey.radarr)) _knownSettings(s),
+            for (final s in _known(c, ServiceKey.radarr)) _knownSettings(s, c),
           ]);
         case '/api/v1/settings/sonarr':
           return NetworkReply.json([
-            for (final s in _known(c, ServiceKey.sonarr)) _knownSettings(s),
+            for (final s in _known(c, ServiceKey.sonarr)) _knownSettings(s, c),
           ]);
         case '/api/v1/service/radarr':
           return NetworkReply.json([

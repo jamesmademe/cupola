@@ -214,6 +214,7 @@ SeerrKnownServer _knows(
   name: name,
   url: url,
   apiKey: worldKey(connectionId),
+  containerUrl: WorldContainers.of(connectionId),
   is4k: is4k,
   isDefault: isDefault,
   activeProfileName: is4k ? 'Ultra-HD' : 'HD-1080p',

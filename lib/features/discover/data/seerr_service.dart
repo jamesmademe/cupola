@@ -10,6 +10,7 @@ import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
+import 'package:cupola/features/discover/domain/seerr_known_arr.dart';
 import 'package:cupola/features/discover/domain/seerr_quota.dart';
 import 'package:cupola/features/discover/domain/seerr_request_update.dart';
 import 'package:cupola/core/models/media_preview.dart';
@@ -615,6 +616,73 @@ class SeerrService {
       for (final raw in data)
         if (raw is Map)
           SeerrArrServer.fromSettingsJson(
+            raw.cast<String, dynamic>(),
+            service: arr,
+          ),
+    ];
+  }
+
+  /// The Radarr and Sonarr servers Seerr knows, each with the address Seerr
+  /// reaches it at and the key it reaches it with: Seerr's own settings
+  /// (`GET /api/v1/settings/radarr` and `/sonarr`), Radarr's first.
+  ///
+  /// Admin only. A household member's session, or any account without
+  /// ADMIN, gets [SeerrKnownArrsNotAllowed]: Seerr answered, and said no.
+  /// Never an empty list, which would claim Seerr knows nothing, and never a
+  /// failure, which would read as a server that did not answer. A surface
+  /// that holds the account's grant need not ask at all
+  /// (`SeerrAbility.readSettings`).
+  ///
+  /// The API key is user 1, an admin, so it always may: a refusal there is
+  /// the key refused, and throws as one. Every other failure throws too,
+  /// classified as any Seerr read is, an ended session included.
+  ///
+  /// The keys are secrets: see [SeerrKnownArr].
+  Future<SeerrKnownArrs> knownServers() async {
+    Future<({List<SeerrKnownArr>? servers, Object? error, StackTrace? stack})>
+    read(ServiceKey arr) async {
+      try {
+        return (servers: await _knownArrs(arr), error: null, stack: null);
+      } catch (error, stack) {
+        return (servers: null, error: error, stack: stack);
+      }
+    }
+
+    final reads = await Future.wait([
+      read(ServiceKey.radarr),
+      read(ServiceKey.sonarr),
+    ]);
+    // The session transport has already asked `/auth/me` and decided that
+    // the account lacks the permission, rather than that its session ended.
+    bool notAllowed(Object? error) =>
+        error is DioException && error.error is SeerrRefused;
+    if (reads.any((r) => notAllowed(r.error))) {
+      return const SeerrKnownArrsNotAllowed();
+    }
+    for (final r in reads) {
+      if (r.error case final error?) {
+        Error.throwWithStackTrace(error, r.stack ?? StackTrace.current);
+      }
+    }
+    return SeerrKnownArrsRead(
+      List.unmodifiable([for (final r in reads) ...?r.servers]),
+    );
+  }
+
+  Future<List<SeerrKnownArr>> _knownArrs(ServiceKey arr) async {
+    final response = await _client.get(
+      arr == ServiceKey.radarr
+          ? '/api/v1/settings/radarr'
+          : '/api/v1/settings/sonarr',
+    );
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Seerr answered without a server list');
+    }
+    return [
+      for (final raw in data)
+        if (raw is Map)
+          SeerrKnownArr.fromSettingsJson(
             raw.cast<String, dynamic>(),
             service: arr,
           ),

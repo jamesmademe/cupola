@@ -63,6 +63,12 @@ Profiles can be varied:
 - `withPausedQueue(id)` has somebody pause a usenet client's download
   queue, with plenty of room left: SABnzbd answers `paused` and NZBGet
   `DownloadPaused`.
+- `withDockerHostnames()` runs the arrs, Seerr and Prowlarr on one Docker
+  network: Seerr's settings name each arr by its container
+  (`WorldContainers`: `http://radarr:7878`, and `http://radarr-4k:7878` for
+  the Radarr this device reaches at `nas.home.arpa:7879`), with the address
+  a browser opens it at as its `externalUrl`. The servers still answer at
+  their own addresses; nothing answers at a container name.
 - `withFullDisk(id)` fills a download client's disk. SABnzbd answers its
   queue paused, as it pauses itself on a full disk, with 0.42 GB free in its
   download folder and every slot reporting its job's own status. NZBGet
@@ -199,6 +205,10 @@ The fake Seerr answers whoever calls it as Seerr v3.5.0 does
   `pumpWithProfile` ties it to the widget test's clock, and a test that pumps
   its own tree calls `network.followFakeTime(tester.binding)`. Raw `Dio` calls
   inside a widget test go through `tester.runAsync`.
+- **`/settings/radarr` and `/settings/sonarr`** answer the servers in
+  `seerrKnows` in Seerr's `RadarrSettings` and `SonarrSettings` shape
+  (`server/lib/settings/index.ts`), the key in the clear, as the route
+  returns them whole; ADMIN only, like every `/settings` route.
 - **`/status` and `/settings/public`** follow the connection's `SeerrRelease`
   (Jellyseerr 2.7.3 unless a profile says otherwise), from the recorded
   `test/fixtures/seerr/public_settings_*.json`, with `initialized`,
