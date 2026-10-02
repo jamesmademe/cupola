@@ -20,6 +20,15 @@ Rendered from `lib/core/widgets/search_bar_header.dart` (a Material 3 `SearchBar
 
 The field speaks as *Search*, hint *Type &lt;hintText&gt;*. The clear button is one node: button, *Clear search*, hint *Remove the current search query*.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room, on the phone and on the desktop.
+
+- Empty with a hint (Seerr Discover, qBittorrent, Lidarr), with a query, with a long query that scrolls inside the field.
+- `autofocus: true`: the field holding focus, on the phone and on the desktop.
+- A long hint on a 320pt phone, ellipsised inside the field.
+- Text at 200%: the hint and a query.
+
 ## Do / don't
 
 - Do let the hint say what is searched (*Search artists...*); the glyph says nothing about whose search it is.

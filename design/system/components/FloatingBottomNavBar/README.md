@@ -37,6 +37,15 @@ At `AppBreakpoints.touchRail` (840) and wider on a touch device, a `NavigationRa
 
 One node per item: button, selected state, and the label *Dashboard*, a new line, *Tab 1 of 4*. A badge joins the label as a sentence (*Activity, 3 finished searches to look at*); the painted count is excluded. A destination's custom semantics actions ride on its node: the phone shell gives the Dashboard tab *Open the Portal*, the reader's way to the switcher the drag opens. The rails carry none.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Each of the four destinations selected; a badge on Activity (3, and 9+ past nine).
+- A 320pt window, where the bar fills the width and the items tighten.
+- Over artwork, where the glass is a tint.
+- Text at 200%: Activity with a badge, and Search selected with 9+.
+
 ## Do / don't
 
 - Do keep the pill and the badge monochrome: the strong fill under the primary ink, the ink disc under the on-ink.

@@ -86,23 +86,15 @@ void main() {
       CatalogScene(
         'At 2× reading size · the label and the badge clamp at 1.3×, the bar '
         'grows to fit its pill and the badge to fit its count',
-        (context) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const TextScaler.linear(2)),
-          child: _bar(1, searchesWaiting: 3),
-        ),
+        (_) => _bar(1, searchesWaiting: 3),
         width: 390,
+        textScale: catalogTextScale,
       ),
       CatalogScene(
         'At 2× reading size, Search selected · 9+ on a compact item',
-        (context) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const TextScaler.linear(2)),
-          child: _bar(2, searchesWaiting: 12),
-        ),
+        (_) => _bar(2, searchesWaiting: 12),
         width: 390,
+        textScale: catalogTextScale,
       ),
     ],
   );

@@ -85,6 +85,36 @@ void main() {
         ),
         width: 320,
       ),
+      CatalogScene(
+        'Text at 200% · the scrolling row: the pills grow with the label and '
+        'the last one is reached by scrolling, never clipped',
+        (_) => SelectionPills<int>(
+          values: const [0, 1, 2, 3],
+          selected: 1,
+          labelBuilder: (i) =>
+              const ['Queue', 'History', 'Wanted', 'Calendar'][i],
+          onSelected: (_) {},
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Text at 200% · SelectionPills.wrap: the four Access choices take as '
+        'many lines as they need',
+        (_) => SelectionPills<int>.wrap(
+          values: const [0, 1, 2, 3],
+          selected: 1,
+          labelBuilder: (i) => const [
+            'None',
+            'Cloudflare Access',
+            'Password',
+            'Custom headers',
+          ][i],
+          onSelected: (_) {},
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

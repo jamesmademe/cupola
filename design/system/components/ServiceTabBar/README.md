@@ -33,6 +33,14 @@ Used on a desktop window 720 wide or more, for every tabbed service (TrueNAS dra
 
 The four *arr: `Overview · Library · Calendar · Queue · Wanted · History`. Seerr: `Overview · Requests · Issues · Discover · Users`. qBittorrent: `Overview · Queue · RSS`. Transmission: `Overview · Queue · Labels · Session`. Nginx Proxy Manager: `Overview · Proxy hosts · Certificates · Access lists · Audit log`. Every bar starts with Overview and holds at most six. TrueNAS has no bar: `tabsFor` returns null and nothing is drawn.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- `ServiceTabBar.header` on the desktop: Radarr with the instance lens, Transmission without.
+- `ServiceTabBar` on the phone: Radarr with Queue selected, Nginx Proxy Manager scrolling from the start.
+- Text at 200%: the phone bar and the desktop header.
+
 ## Do / don't
 
 - Do resolve any control placed on the header against `ServiceBandSurface.of(context)`, never bare `surface`.

@@ -79,6 +79,31 @@ void main() {
         width: 390,
       ),
       CatalogScene(
+        'ServiceTabBar · Radarr, Overview, at 200% · the bar is 44 high; its '
+        'pill and labels follow the reading size or the row scrolls, nothing '
+        'clips',
+        (_) => ServiceTabBar(
+          service: ServiceKey.radarr,
+          current: _tab(ServiceKey.radarr, 'Overview'),
+          onSelected: (_) {},
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'ServiceTabBar.header · Radarr, Overview, with the lens, at 200% · the '
+        'desktop header with the whole row at twice the reading size',
+        (_) => ServiceTabBar.header(
+          service: ServiceKey.radarr,
+          current: _tab(ServiceKey.radarr, 'Overview'),
+          onSelected: (_) {},
+          lens: const InstanceLensBadge(service: ServiceKey.radarr),
+        ),
+        width: 1280,
+        textScale: catalogTextScale,
+        platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
         'ServiceTabBar · Nginx Proxy Manager, Certificates · wider than the '
         'phone, so it scrolls from the start; TrueNAS draws no bar',
         (_) => ServiceTabBar(

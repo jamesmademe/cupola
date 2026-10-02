@@ -78,7 +78,46 @@ void main() {
         ),
         width: 390,
       ),
+      CatalogScene(
+        'Text at 200% · hint and query: the field grows with the text, the '
+        'magnifier and the clear button keep their places',
+        (_) => const Column(
+          children: [
+            SearchBarHeader(
+              hintText: 'Movies, shows, artists...',
+              onQueryChanged: _ignore,
+            ),
+            SearchBarHeader(
+              hintText: 'Movies, shows, artists...',
+              initialQuery: 'Nosferatu',
+              onQueryChanged: _ignore,
+            ),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Long hint · the longest hint any screen sets, on a 320pt phone: it '
+        'ellipsises inside the field rather than pushing the glyph out',
+        (_) => const SearchBarHeader(
+          hintText: 'Search every movie, series, artist and album...',
+          onQueryChanged: _ignore,
+        ),
+        width: 320,
+      ),
       ..._scenes(CatalogPlatform.desktop, 768),
+      CatalogScene(
+        'autofocus: true on the desktop · the field holding keyboard focus, '
+        'where the focus ring is read',
+        (_) => const SearchBarHeader(
+          hintText: 'Search movies...',
+          autofocus: true,
+          onQueryChanged: _ignore,
+        ),
+        width: 768,
+        platform: CatalogPlatform.desktop,
+      ),
     ],
   );
 }

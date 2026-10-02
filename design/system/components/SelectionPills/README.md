@@ -22,6 +22,14 @@ Rendered from `lib/core/widgets/selection_pills.dart` by `test/design_catalog/se
 
 Each pill is one `Semantics` node: `button: true`, `selected: <bool>`, labelled with the pill's text; the press animation and ripple are excluded from the tree so the control reads as one thing, not two.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Scrolling row: one selected, on a service page, a long label.
+- `SelectionPills.flush` in a host already on the gutter.
+- `SelectionPills.wrap` on a 320pt phone.
+
 ## Do / don't
 
 - Do use it for every "which view" choice, on a service page and an aggregate one alike: one selected language for the app.
