@@ -10,6 +10,7 @@ import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
+import 'package:cupola/features/discover/domain/seerr_quota.dart';
 import 'package:cupola/features/discover/domain/seerr_request_update.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -237,6 +238,15 @@ class SeerrService {
   /// and is far too expensive for a connection test or a health poll.
   Future<void> testConnection() async {
     await _client.get('/api/v1/request', queryParameters: authProbeQuery);
+  }
+
+  /// How much of its request quota user [userId] has left: an account asks
+  /// for its own (`GET /user/{id}/quota`).
+  Future<SeerrQuota> getQuota(int userId) async {
+    final response = await _client.get('/api/v1/user/$userId/quota');
+    final data = response.data;
+    if (data is! Map) throw const FormatException('Seerr sent no quota');
+    return SeerrQuota.fromJson(data.cast<String, dynamic>());
   }
 
   static const _adminPageSize = 50;

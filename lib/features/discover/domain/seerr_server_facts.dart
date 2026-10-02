@@ -160,6 +160,7 @@ final class SeerrServerFacts {
     this.partialRequestsEnabled = false,
     this.emailEnabled = false,
     this.jellyfinForgotPasswordUrl,
+    this.jellyfinServerName,
   });
 
   /// The facts in `/settings/public` ([json]), from a server whose `/status`
@@ -184,6 +185,7 @@ final class SeerrServerFacts {
       partialRequestsEnabled: json['partialRequestsEnabled'] == true,
       emailEnabled: json['emailEnabled'] == true,
       jellyfinForgotPasswordUrl: text(json['jellyfinForgotPasswordUrl']),
+      jellyfinServerName: text(json['jellyfinServerName']),
     );
   }
 
@@ -220,6 +222,10 @@ final class SeerrServerFacts {
   /// Where a Jellyfin user resets a password, when the operator set one.
   final String? jellyfinForgotPasswordUrl;
 
+  /// The name of the Jellyfin or Emby server the accounts come from, when the
+  /// server says: "Use the account you watch with on Casa."
+  final String? jellyfinServerName;
+
   /// What the server calls itself.
   String get title => applicationTitle ?? 'Seerr';
 
@@ -241,7 +247,8 @@ final class SeerrServerFacts {
       other.series4kEnabled == series4kEnabled &&
       other.partialRequestsEnabled == partialRequestsEnabled &&
       other.emailEnabled == emailEnabled &&
-      other.jellyfinForgotPasswordUrl == jellyfinForgotPasswordUrl;
+      other.jellyfinForgotPasswordUrl == jellyfinForgotPasswordUrl &&
+      other.jellyfinServerName == jellyfinServerName;
 
   @override
   int get hashCode => Object.hash(
@@ -255,6 +262,7 @@ final class SeerrServerFacts {
     partialRequestsEnabled,
     emailEnabled,
     jellyfinForgotPasswordUrl,
+    jellyfinServerName,
   );
 
   /// Names, flags and methods only: no address, the reset link included.

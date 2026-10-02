@@ -118,6 +118,13 @@ abstract final class Lexicon {
   /// The remedy of an ended session, and of a refused sign-in.
   static const signInAgain = 'Sign in again';
 
+  /// Who a Seerr connection is signed in as: `Signed in as Anna`. Never
+  /// `Connected as`.
+  static String signedInAs(String name) => 'Signed in as $name';
+
+  /// Ending an account's session, on the server and on this device.
+  static const signOut = 'Sign out';
+
   /// A film's three dated events, as every screen that dates one names them:
   /// the calendar's `Sprite Fright · on digital` and the Radarr home's Coming
   /// up, `on digital · monitored`. Coming up used to say `digital release`

@@ -39,6 +39,10 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_dialog.dart';
 import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
+import 'package:cupola/features/settings/presentation/widgets/seerr_account_fields.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
 
 /// One service's address and credentials, and the state of that connection.
 ///
@@ -99,7 +103,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// The Access row: what this connection presents to a gateway in front of
   /// the service. The same controller and row the first-run walk uses.
   late final ConnectionAccessController _access;
-  late final ConnectionAccess _initialAccess;
+  late ConnectionAccess _initialAccess;
+
+  /// Seerr only: how this connection signs in, the key or an account.
+  late SeerrSignInWith _signInWith;
+  late SeerrSignInWith _initialSignInWith;
+  final _urlFocus = FocusNode();
   final _accessKey = GlobalKey();
 
   /// The access the last test sent, which decides how its outcome is said.
@@ -170,6 +179,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     _labelController = TextEditingController(text: _target.label);
 
     _initialAccess = _target.access;
+    _signInWith = _initialSignInWith = _target.account == null
+        ? SeerrSignInWith.apiKey
+        : SeerrSignInWith.account;
     _access = ConnectionAccessController(
       service,
       initial: _target.access,
@@ -204,9 +216,36 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// form opened on Cloudflare Access by a remedy and left alone is not dirty.
   bool get _isDirty =>
       _access.access != _initialAccess ||
+      _signInWith != _initialSignInWith ||
       _controllers.entries.any(
         (entry) => entry.value.text != _initialValues[entry.key],
       );
+
+  /// Whether the form stands on an account rather than the key.
+  bool get _signsInWithAccount =>
+      service == ServiceKey.seerr && _signInWith == SeerrSignInWith.account;
+
+  /// The connection as this form stands, for signing in: the address in its
+  /// field, its access and its name, over what is saved.
+  ServiceInstance _formConnection() {
+    final live =
+        ref.read(currentSettingsProvider).instanceById(_target.id) ?? _target;
+    return live.copyWith(
+      url: UrlUtils.normalizeBaseUrl(_urlController.text),
+      access: _access.access,
+      label: _labelController.text.trim(),
+    );
+  }
+
+  /// An account signed in from this form saved the address, the access and
+  /// the name with it: they are no longer unsaved changes.
+  void _adoptSignedIn() {
+    _initialValues['url'] = _urlController.text;
+    _initialValues['label'] = _labelController.text;
+    _initialValues['apiKey'] = _apiKeyController.text;
+    _initialAccess = _access.access;
+    _initialSignInWith = SeerrSignInWith.account;
+  }
 
   /// Takes on a name this connection was given somewhere other than here.
   ///
@@ -255,6 +294,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     for (final controller in _controllers.values) {
       controller.removeListener(_onFieldChanged);
     }
+    _urlFocus.dispose();
     _urlController.dispose();
     _apiKeyController.dispose();
     _usernameController.dispose();
@@ -542,6 +582,22 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // chosen viewer, say, may have moved while this form was open and the
     // captured copy would put it back.
     final live = current.instanceById(_target.id) ?? _target;
+    if (service == ServiceKey.seerr) {
+      // A Seerr connection is the key or an account, never both. Choosing the
+      // key forgets the account; choosing an account keeps whatever is saved
+      // until an account signs in and takes the key's place.
+      return current.copyWithInstance(
+        _signsInWithAccount
+            ? live.copyWith(url: url, label: label, access: _access.access)
+            : live.copyWith(
+                url: url,
+                credential: apiKey,
+                label: label,
+                access: _access.access,
+                clearAccount: true,
+              ),
+      );
+    }
     return current.copyWithInstance(
       live.copyWith(
         url: url,
@@ -635,8 +691,19 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // status), offering a viewer picker bound to the first server, and showing
     // a Remove row for a connection that does not exist yet — its confirm
     // dialog removed nothing and simply popped the screen.
-    final isConfigured =
-        settings.instanceById(_target.id)?.isConfigured ?? false;
+    final saved = settings.instanceById(_target.id);
+    final isConfigured = saved?.isConfigured ?? false;
+    // A Seerr account whose session ended keeps its connection: it can be
+    // signed in again, or removed.
+    final isSignedOut = saved?.isSignedOut ?? false;
+    ref.listen(
+      currentSettingsProvider.select(
+        (s) => s.instanceById(_target.id)?.account?.session ?? '',
+      ),
+      (previous, next) {
+        if (next.isNotEmpty && next != previous) setState(_adoptSignedIn);
+      },
+    );
 
     return AmbientScaffold(
       // The room takes the colour of the service being worked on.
@@ -661,7 +728,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
-            _buildHeader(context, isConfigured: isConfigured),
+            _buildHeader(
+              context,
+              isConfigured: isConfigured,
+              isSignedOut: isSignedOut,
+            ),
             // Setup guidance is registry data, alongside the default port and
             // the credential breadcrumb this screen already reads from there.
             if (service.setupNote case final note?) ...[
@@ -680,7 +751,23 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             _buildUrlField(),
             _buildTrustedCertificateIndicator(settings),
             const SizedBox(height: AppSpacing.lg),
-            if (usesCredentials) _buildUsernameField() else _buildApiKeyField(),
+            if (service == ServiceKey.seerr) ...[
+              _buildSignInWithChoice(),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            if (_signsInWithAccount)
+              SeerrAccountFields(
+                connection: _formConnection,
+                certificateProber: widget.certificateProber,
+                onUseApiKey: () =>
+                    setState(() => _signInWith = SeerrSignInWith.apiKey),
+                onCheckAddress: _urlFocus.requestFocus,
+                onUseHttps: _useHttps,
+              )
+            else if (usesCredentials)
+              _buildUsernameField()
+            else
+              _buildApiKeyField(),
             if (usesCredentials) ...[
               const SizedBox(height: AppSpacing.lg),
               _buildPasswordField(),
@@ -696,7 +783,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-            _buildTestConnectionRow(context),
+            // An account not signed in yet has nothing to test: signing in
+            // is its test.
+            if (!_signsInWithAccount || (saved?.account?.isSignedIn ?? false))
+              _buildTestConnectionRow(context),
             if (_testResult != null) ...[
               const SizedBox(height: AppSpacing.md),
               _buildTestResult(context, _testResult!),
@@ -730,7 +820,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             ],
             const SizedBox(height: AppSpacing.xxl),
             _buildConnectionsSection(context, settings),
-            if (isConfigured) ...[
+            if (isConfigured || isSignedOut) ...[
               const SizedBox(height: AppSpacing.lg),
               _buildRemoveRow(context),
             ],
@@ -744,7 +834,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   ///
   /// Once the form is dirty the saved state no longer describes what is on
   /// screen, so it steps aside rather than contradicting the fields.
-  Widget _buildHeader(BuildContext context, {required bool isConfigured}) {
+  Widget _buildHeader(
+    BuildContext context, {
+    required bool isConfigured,
+    bool isSignedOut = false,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final serviceTheme = ServiceTheme.fromAccent(service.accent);
@@ -797,6 +891,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                   )
                 else if (isConfigured)
                   _SavedConnectionStatus(instanceId: _target.id)
+                else if (isSignedOut)
+                  _HeaderStatus(
+                    icon: Icons.logout_rounded,
+                    label: StateWord.signedOut.label,
+                    color: statusToneColor(
+                      colorScheme,
+                      StateWord.signedOut.tone!,
+                      surface: colorScheme.surfaceContainer,
+                    ),
+                  )
                 else
                   _HeaderStatus(
                     icon: Icons.add_link_rounded,
@@ -1358,6 +1462,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           hint: 'Enter the ${service.title} server address',
           child: TextFormField(
             controller: _urlController,
+            focusNode: _urlFocus,
             decoration: InputDecoration(
               labelText: 'Server URL',
               hintText: 'https://your-server:${service.defaultPort}',
@@ -1497,6 +1602,36 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     await ref.read(settingsProvider.notifier).updateSettings(updated);
     if (!mounted) return;
     SnackBarHelper.info(context, 'Certificate forgotten');
+  }
+
+  /// Seerr's choice between the instance's API key and an account of one's
+  /// own.
+  Widget _buildSignInWithChoice() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SettingsSectionLabel('Sign in with'),
+        const SizedBox(height: AppSpacing.sm),
+        SelectionPills<SeerrSignInWith>.wrap(
+          values: SeerrSignInWith.values,
+          selected: _signInWith,
+          labelBuilder: (choice) => choice.label,
+          onSelected: (choice) => setState(() {
+            _signInWith = choice;
+            _testResult = null;
+          }),
+        ),
+      ],
+    );
+  }
+
+  /// The same address over https, for an `http://` one off the local
+  /// network: a password is about to go.
+  void _useHttps() {
+    _urlController.text = _urlController.text.trim().replaceFirst(
+      RegExp('^http://', caseSensitive: false),
+      'https://',
+    );
   }
 
   Widget _buildApiKeyField() {

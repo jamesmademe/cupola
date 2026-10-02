@@ -339,6 +339,20 @@ void main() {
       );
     });
 
+    test('the media server the accounts come from is named when said', () {
+      expect(
+        SeerrServerFacts.fromPublicSettings(
+          _seerr({'jellyfinServerName': 'Casa'}),
+          version: '3.5.0',
+        ).jellyfinServerName,
+        'Casa',
+      );
+      expect(
+        SeerrServerFacts.fromPublicSettings(_seerr({})).jellyfinServerName,
+        isNull,
+      );
+    });
+
     test('a blank title falls back to Seerr', () {
       final facts = SeerrServerFacts.fromPublicSettings(
         _seerr({'applicationTitle': '  '}),

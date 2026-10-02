@@ -73,6 +73,10 @@ void main() {
 
 /// `file  opener` → why it passes no access of its own.
 const _exceptions = <String, String>{
+  'lib/features/discover/data/plex_tv_client.dart  guardedDio':
+      'plex.tv is the sign-in provider the person chose, not a connection: '
+      'no gateway of theirs stands in front of it, and a connection\'s '
+      'access must never travel to a third party.',
   'lib/features/dockge/data/dockge_client.dart  io':
       'Socket.IO takes its headers in the options it is handed, built two '
       'lines up with setExtraHeaders(accessHeaders); the connector it calls '

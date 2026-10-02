@@ -621,7 +621,12 @@ Future<ServiceDiagnosis> diagnoseService(
   SettingsModel settings, {
   Future<ServiceDiagnosis> Function(ServiceInstance instance)? diagnose,
 }) async {
-  final instances = settings.configuredInstancesOf(service);
+  // A Seerr account whose session ended is not set up, and still not a
+  // connection to forget: it reads signed out.
+  final instances = [
+    for (final instance in settings.instancesOf(service))
+      if (instance.isConfigured || instance.isSignedOut) instance,
+  ];
   if (instances.isEmpty) return const ServiceDiagnosis.notConfigured();
 
   final pending = [
@@ -663,6 +668,15 @@ Future<ServiceDiagnosis> diagnoseInstance(
   ServiceInstance instance,
   SettingsModel settings,
 ) {
+  // Signed out: nothing to ask the server, the person has a step to take.
+  if (instance.isSignedOut) {
+    return Future.value(
+      const ServiceDiagnosis(
+        ServiceConnectionStatus.disconnected,
+        ServiceFailureReason.sessionEnded,
+      ),
+    );
+  }
   if (!instance.isConfigured) {
     return Future.value(const ServiceDiagnosis.notConfigured());
   }
@@ -986,9 +1000,14 @@ final serviceDiagnosisProvider =
     FutureProvider.family<ServiceDiagnosis, ServiceKey>((ref, service) async {
       // Which connections, joined into a string because a fresh list never
       // compares equal; then each one's own inputs.
+      // A Seerr account that signed out is among them: it reads signed out.
       final ids = ref.watch(
         currentSettingsProvider.select(
-          (s) => s.configuredInstancesOf(service).map((i) => i.id).join(','),
+          (s) => s
+              .instancesOf(service)
+              .where((i) => i.isConfigured || i.isSignedOut)
+              .map((i) => i.id)
+              .join(','),
         ),
       );
       for (final id in ids.split(',')) {

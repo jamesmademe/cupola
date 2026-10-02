@@ -11,6 +11,7 @@ import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
+import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
@@ -121,6 +122,9 @@ class CupolaApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    // Each Seerr account's permissions, read again at start and when the
+    // app comes back with them stale.
+    ref.watch(seerrAccountKeeperProvider);
 
     // Keeps `CertTrustRegistry` in sync for the leaf image widgets that
     // cannot watch a provider themselves — see its doc for why. The `read`

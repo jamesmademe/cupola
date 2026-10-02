@@ -345,6 +345,9 @@ final class SeerrSignInDisabled extends SeerrBehaviour {
   String get label => 'sign-in turned off (${method.name})';
 }
 
+/// The install's `X-Plex-Client-Identifier` in every profile.
+const worldPlexClientId = 'world-plex-client-id';
+
 /// Where the device is, for [ProfileConnection.homeOnly].
 enum NetworkPlace { home, away }
 
@@ -815,6 +818,9 @@ class ConfigProfile {
     instances: [for (final c in connections) c.instance],
     trustedCertificates: trustedCertificates,
     region: 'IT',
+    // What every install mints once: the identifier plex.tv is asked a PIN
+    // with, and Plex knows Cupola by.
+    plexClientId: worldPlexClientId,
   );
 
   ProfileConnection connection(String instanceId) => connections.firstWhere(

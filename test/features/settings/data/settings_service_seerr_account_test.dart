@@ -9,7 +9,10 @@ import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -291,5 +294,24 @@ void main() {
 
       expect(container.read(capabilityScopeProvider)['seerr'], isNull);
     });
+  });
+
+  test('a signed-out connection reads signed out, not not set up', () async {
+    final settings = SettingsModel(
+      instances: [annasSeerr.copyWith(account: anna.signedOut)],
+    );
+
+    final diagnosis = await diagnoseService(ServiceKey.seerr, settings);
+
+    expect(diagnosis.isDisconnected, isTrue);
+    expect(diagnosis.reason, ServiceFailureReason.sessionEnded);
+    expect(
+      describeConnection(
+        ServiceKey.seerr,
+        status: diagnosis.status,
+        reason: diagnosis.reason,
+      ).label,
+      'Signed out',
+    );
   });
 }
