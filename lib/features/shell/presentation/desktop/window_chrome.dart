@@ -9,6 +9,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -545,8 +546,13 @@ class _CaptionButtonState extends State<_CaptionButton> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final size = widget.gnome ? 26.0 : 44.0;
+    // The room's own error, the one `onError` below is paired with: the dark
+    // room's byte under paper's white glyph measured about 2:1.
     final hoverColor = widget.danger
-        ? AppColors.error.withValues(alpha: widget.gnome ? 0.24 : 1.0)
+        ? statusToneFill(
+            colorScheme,
+            StatusTone.error,
+          ).withValues(alpha: widget.gnome ? 0.24 : 1.0)
         : colorScheme.onSurface.withValues(alpha: 0.08);
     return MouseRegion(
       cursor: SystemMouseCursors.click,

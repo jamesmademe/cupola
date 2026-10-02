@@ -428,6 +428,69 @@ void main() {
           scheme.onSurfaceVariant,
         );
       });
+
+      // The informational chips (a release's protocol, a wanted row's date) take
+      // the room's own blue through the tone helper. They used to take the dark
+      // room's blue raw, which on paper is a pale wash under an ink walked to
+      // another hue's lightness.
+      Future<void> pumpRow(WidgetTester tester, Widget row) =>
+          tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              home: Scaffold(body: row),
+            ),
+          );
+
+      Iterable<Color?> chipTones(WidgetTester tester) =>
+          tester.widgetList<TagChip>(find.byType(TagChip)).map((c) => c.color);
+
+      testWidgets('a queue row\'s protocol is the room\'s blue ($name)', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          const QueueItemTile(
+            item: {'title': 'Movie.2024.WEB-DL', 'protocol': 'torrent'},
+            serviceType: ServiceType.movies,
+          ),
+        );
+
+        expect(chipTones(tester), [statusToneFill(scheme, StatusTone.info)]);
+      });
+
+      testWidgets('a blocklist row\'s protocol is the room\'s blue ($name)', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          const BlocklistItemTile(
+            item: {'sourceTitle': 'Bad.Release', 'protocol': 'usenet'},
+            serviceType: ServiceType.movies,
+          ),
+        );
+
+        expect(chipTones(tester), [statusToneFill(scheme, StatusTone.info)]);
+      });
+
+      testWidgets('a wanted row\'s date is the room\'s blue ($name)', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          const WantedItemTile(
+            item: {
+              'title': 'Pilot',
+              'seasonNumber': 1,
+              'episodeNumber': 1,
+              'airDateUtc': '2024-05-01T00:00:00Z',
+              'series': {'title': 'Breaking Bad'},
+            },
+            serviceType: ServiceType.series,
+          ),
+        );
+
+        expect(chipTones(tester), [statusToneFill(scheme, StatusTone.info)]);
+      });
     }
   });
 

@@ -1158,7 +1158,7 @@ List<Widget> _buildQueueChips(
       TagChip(
         surface: colorScheme.surfaceContainer,
         text: protocol,
-        color: AppColors.info,
+        color: statusToneFill(colorScheme, StatusTone.info),
       ),
     if (downloadClient != null)
       TagChip(
@@ -1200,7 +1200,7 @@ List<Widget> _buildBlocklistChips(
       TagChip(
         surface: colorScheme.surfaceContainer,
         text: protocol,
-        color: AppColors.info,
+        color: statusToneFill(colorScheme, StatusTone.info),
       ),
     if (indexer != null)
       TagChip(
@@ -1254,7 +1254,7 @@ List<Widget> _buildWantedChips(
       TagChip(
         surface: colorScheme.surfaceContainer,
         text: formatIsoDate(date),
-        color: AppColors.info,
+        color: statusToneFill(colorScheme, StatusTone.info),
       ),
   ];
 }

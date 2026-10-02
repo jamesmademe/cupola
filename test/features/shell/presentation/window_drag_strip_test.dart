@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
 /// The strip above a screen the shell does not host — onboarding, and the flows
@@ -16,6 +19,7 @@ Future<void> _pump(
   WidgetTester tester, {
   Size size = const Size(1440, 900),
   List<String>? trail,
+  ThemeData? theme,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -23,6 +27,7 @@ Future<void> _pump(
 
   await tester.pumpWidget(
     MaterialApp(
+      theme: theme,
       home: Scaffold(
         body: Column(
           children: [
@@ -156,5 +161,44 @@ void main() {
         expect(find.text('Setup'), findsNothing);
       });
     });
+  });
+
+  // The Close button's hover is the room's own error, the one its `onError`
+  // glyph is paired with. It once painted the dark room's error byte raw, so on
+  // paper the glyph sat on a pale salmon fill it could not be read against.
+  group('the Close button hover', () {
+    for (final theme in [AppTheme.darkTheme(), AppTheme.lightTheme()]) {
+      final scheme = theme.colorScheme;
+      final room = theme.brightness.name;
+
+      testWidgets('is the $room room\'s error under its own glyph', (
+        tester,
+      ) async {
+        await _onPlatform(TargetPlatform.windows, () async {
+          await _pump(tester, theme: theme);
+          final close = find.widgetWithIcon(IconButton, Icons.close_rounded);
+
+          Color? fill() => tester
+              .widget<IconButton>(close)
+              .style!
+              .backgroundColor!
+              .resolve(const {});
+
+          final mouse = await tester.createGesture(
+            kind: PointerDeviceKind.mouse,
+          );
+          await mouse.addPointer(location: Offset.zero);
+          addTearDown(mouse.removePointer);
+          await mouse.moveTo(tester.getCenter(close));
+          await tester.pump();
+
+          expect(fill(), statusToneFill(scheme, StatusTone.error));
+          final glyph = tester.widget<Icon>(
+            find.descendant(of: close, matching: find.byType(Icon)),
+          );
+          expect(glyph.color, scheme.onError);
+        });
+      });
+    }
   });
 }
