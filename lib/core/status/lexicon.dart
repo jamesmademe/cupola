@@ -168,6 +168,20 @@ abstract final class Lexicon {
   static const signInToKeepAsking =
       'Sign in again to keep asking for movies and series.';
 
+  /// Taking back one's own request while it still waits for approval: the
+  /// same call as the operator's delete, named for what it is to its owner.
+  static const cancelRequest = 'Cancel request';
+
+  /// Seerr's 401 on cancelling a request that is no longer waiting.
+  static const noLongerCancellable =
+      "It was already approved, so it can't be cancelled here.";
+
+  /// After a write the requester asked for failed: nothing half happened.
+  static const nothingChanged = 'Nothing changed.';
+
+  /// The requester's list of requests, while it is empty.
+  static const yourRequestsAppearHere = 'Requests you make will appear here.';
+
   /// A request that failed for a reason the requester cannot act on: what
   /// did not happen, and that nothing half happened.
   static String couldNotAskFor(String? title) =>

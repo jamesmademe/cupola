@@ -85,3 +85,14 @@ SeerrServerFacts? _serverOf(Ref ref, String connectionId) {
   if (!signedIn) return null;
   return ref.watch(seerrServerFactsProvider(id)).value;
 }
+
+/// [roleGateProvider] without the server's facts, for a provider that builds
+/// rows: whether the operator's controls are drawn, and whether a row names
+/// who asked. Neither needs the server, and a list that is being read must
+/// not start a read of its own.
+final roleGateOfProvider = Provider.family<RoleGate, String>(
+  (ref, connectionId) => RoleGate(
+    audience: ref.watch(audienceProvider),
+    grant: ref.watch(seerrGrantProvider(connectionId)),
+  ),
+);

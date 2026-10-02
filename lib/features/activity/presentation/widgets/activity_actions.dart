@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -8,6 +9,7 @@ import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/seerr_approve_target_read.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -202,6 +204,7 @@ class ActivityActions {
     required String title,
     SeerrRequest? request,
   }) async {
+    if (!_decides(context, ref, instanceId)) return;
     // Captured before any wait: the approval outlives the control that
     // started it, and the notifier is the container's, not the widget's.
     final approvals = ref.read(seerrApprovalsInFlightProvider.notifier);
@@ -253,6 +256,21 @@ class ActivityActions {
     }
   }
 
+  /// Whether the Seerr [instanceId] names lets this app decide on its
+  /// requests, said on a toast when it does not: the account may not approve
+  /// there. Every Approve and Decline in the app comes through here, so a
+  /// control drawn before the account's permissions changed cannot send a
+  /// decision the server would refuse.
+  static bool _decides(BuildContext context, WidgetRef ref, String instanceId) {
+    final verdict = ref
+        .read(roleGateProvider(instanceId))
+        .operatorAction(SeerrAbility.approve);
+    if (verdict.acts) return true;
+    final reason = verdict.reason;
+    if (reason != null) SnackBarHelper.info(context, reason);
+    return false;
+  }
+
   /// What the approve confirmation says, read within one
   /// [seerrTargetReadLimit] ([readSeerrApproveTarget]).
   static Future<String> _approveConfirmation(
@@ -294,6 +312,7 @@ class ActivityActions {
     required int requestId,
     required String title,
   }) async {
+    if (!_decides(context, ref, instanceId)) return;
     final result = await showAppConfirmDialog(
       context: context,
       title: 'Decline this request?',

@@ -3,17 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -36,6 +39,12 @@ class SeerrDecisionsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The lens's Seerr. The requester decides nothing, so for her there is
+    // no section at all, and nothing is read for it.
+    final decide = ref
+        .watch(roleGateProvider(''))
+        .operatorAction(SeerrAbility.approve);
+    if (!decide.isDrawn) return const SizedBox.shrink();
     final decisions = ref.watch(seerrDecisionsProvider);
 
     return decisions.when(
@@ -124,7 +133,10 @@ class _DecisionRow extends ConsumerWidget {
     final title = media?.title ?? 'Unknown media';
     final year = media?.year;
     final heading = year == null || year.isEmpty ? title : '$title ($year)';
-    final requester = request.requestedBy?.displayName;
+    // Who asked, only where the lens's Seerr sees everyone's requests.
+    final requester = ref.watch(roleGateProvider('')).showsRequesterNames
+        ? request.requestedBy?.displayName
+        : null;
     final kind = request.type == 'tv' ? 'Series' : 'Movie';
     // '—' and never a fabricated date: `formatRelativeActivityDate` already
     // answers that way for a timestamp Seerr omitted.
@@ -287,32 +299,15 @@ class SeerrDecisionButton extends ConsumerWidget {
         ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant;
 
-    final glyph = Icon(
-      _isApprove ? Icons.check_rounded : Icons.close_rounded,
-      size: 20,
-    );
-    return IconButton(
-      // Busy at once while the approval reads where it goes and is sent: the
-      // ring takes the glyph's place and size, so the 44pt target does not
-      // move, and a second tap meanwhile does nothing.
-      icon: _isApprove
-          ? SeerrApprovalGlyph(
-              instanceId: instanceId,
-              requestId: request.id,
-              size: 20,
-              idle: glyph,
-            )
-          : glyph,
-      style: IconButton.styleFrom(
-        foregroundColor: foreground,
-        backgroundColor: _isApprove ? CupolaRoom.of(context).fillStrong : null,
-      ),
-      // Names which request. `tooltip` is also what `IconButton` publishes as
-      // the node's label, so this is the spoken name too.
-      tooltip: _isApprove
-          ? 'Approve request for $title'
-          : 'Decline request for $title',
-      onPressed: () => _isApprove
+    // The gate of the Seerr the request lives on: the pair is not drawn in
+    // the requester's app, and an account of the operator's that may not
+    // approve keeps it, dimmed, saying why on a tap.
+    final decide = ref
+        .watch(roleGateProvider(instanceId))
+        .operatorAction(SeerrAbility.approve);
+    return RoleGatedAction.builder(
+      verdict: decide,
+      onTap: () => _isApprove
           ? ActivityActions.approveRequest(
               context,
               ref,
@@ -328,6 +323,39 @@ class SeerrDecisionButton extends ConsumerWidget {
               requestId: request.id,
               title: title,
             ),
+      builder: (context, onPressed, annotate) {
+        final glyph = annotate(
+          Icon(
+            _isApprove ? Icons.check_rounded : Icons.close_rounded,
+            size: 20,
+          ),
+        );
+        return IconButton(
+          // Busy at once while the approval reads where it goes and is sent:
+          // the ring takes the glyph's place and size, so the 44pt target
+          // does not move, and a second tap meanwhile does nothing.
+          icon: _isApprove
+              ? SeerrApprovalGlyph(
+                  instanceId: instanceId,
+                  requestId: request.id,
+                  size: 20,
+                  idle: glyph,
+                )
+              : glyph,
+          style: IconButton.styleFrom(
+            foregroundColor: foreground,
+            backgroundColor: _isApprove
+                ? CupolaRoom.of(context).fillStrong
+                : null,
+          ),
+          // Names which request. `tooltip` is also what `IconButton`
+          // publishes as the node's label, so this is the spoken name too.
+          tooltip: _isApprove
+              ? 'Approve request for $title'
+              : 'Decline request for $title',
+          onPressed: onPressed,
+        );
+      },
     );
   }
 

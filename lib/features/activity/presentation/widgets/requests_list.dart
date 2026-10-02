@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -9,13 +12,17 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -104,15 +111,19 @@ class RequestsList extends ConsumerWidget {
         ),
         data: (requests) {
           if (requests.isEmpty) {
+            final namesSeerr = ref
+                .watch(roleGateProvider(instanceId))
+                .namesService(ServiceKey.seerr);
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
+              children: [
                 AppEmptyState(
                   icon: Icons.person_add_alt_1_rounded,
                   title: 'No requests yet',
-                  message:
-                      'Requests made in Seerr, by you or anyone you share it '
-                      'with, will appear here.',
+                  message: namesSeerr
+                      ? 'Requests made in Seerr, by you or anyone you share it '
+                            'with, will appear here.'
+                      : Lexicon.yourRequestsAppearHere,
                 ),
               ],
             );
@@ -146,6 +157,26 @@ class _RequestCard extends ConsumerWidget {
     final title = request.media?.title ?? 'Unknown';
     final year = request.media?.year;
     final heading = year == null || year.isEmpty ? title : '$title ($year)';
+    // The gate of the Seerr this card came off: the decision is the
+    // operator's, and taking a request back is everybody's only for their
+    // own that still waits.
+    final gate = ref.watch(roleGateProvider(instanceId));
+    final decide = gate.operatorAction(SeerrAbility.approve);
+    final waiting = request.status == RequestStatus.pendingApproval;
+    final own =
+        request.requestedBy?.id != null &&
+        request.requestedBy?.id == _accountUserId(ref);
+    final remove = gate.cancelAction(own: own, waitingForApproval: waiting);
+    // A key, or an account that manages requests, deletes any request; any
+    // other account only takes back its own, which it calls cancelling.
+    final cancels =
+        !(gate.grant?.mayCancelRequest(own: false, waitingForApproval: false) ??
+            true);
+    // The profile is a destination's, and only the one who may choose it
+    // reads it.
+    final showsProfile = gate
+        .operatorAction(SeerrAbility.chooseDestination)
+        .isDrawn;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -179,13 +210,21 @@ class _RequestCard extends ConsumerWidget {
                 ],
                 // Neutral, like Decline below: red means unreachable and
                 // nothing else, and each confirmation says what happens.
-                IconButton(
-                  tooltip: 'Delete request',
-                  icon: Icon(
-                    Icons.delete_outline_rounded,
-                    color: colorScheme.onSurfaceVariant,
+                RoleGatedAction.builder(
+                  verdict: remove,
+                  onTap: () => _delete(context, ref, cancels: cancels),
+                  builder: (context, onPressed, annotate) => IconButton(
+                    tooltip: cancels ? Lexicon.cancelRequest : 'Delete request',
+                    icon: annotate(
+                      Icon(
+                        cancels
+                            ? Icons.undo_rounded
+                            : Icons.delete_outline_rounded,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    onPressed: onPressed,
                   ),
-                  onPressed: () => _delete(context, ref),
                 ),
               ],
             ),
@@ -197,7 +236,7 @@ class _RequestCard extends ConsumerWidget {
               children: [
                 StatusBadge(info: resolveRequestStatus(request)),
                 Text(
-                  _metadataLine(),
+                  _metadataLine(showsProfile: showsProfile),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -214,31 +253,54 @@ class _RequestCard extends ConsumerWidget {
             // media availability overrides that getter, so a request still
             // waiting for approval reports "Available" as soon as the media
             // exists anywhere, and would lose the only action it needs.
-            if (request.status == RequestStatus.pendingApproval) ...[
+            //
+            // The requester's app has no decision to make here; an account
+            // of the operator's that may not approve keeps the pair, dimmed.
+            if (waiting && decide.isDrawn) ...[
               const SizedBox(height: AppSpacing.md),
               Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
                 children: [
-                  FilledButton.icon(
-                    onPressed: () => _approve(context, ref),
-                    // Busy at once, in the glyph's place, while the approval
-                    // reads where it goes and is sent.
-                    icon: SeerrApprovalGlyph(
-                      instanceId: instanceId,
-                      requestId: request.id,
-                      size: 18,
-                      idle: const Icon(
-                        Icons.check_circle_outline_rounded,
-                        size: 18,
-                      ),
-                    ),
-                    label: const Text('Approve'),
+                  RoleGatedAction.builder(
+                    verdict: decide,
+                    onTap: () => _approve(context, ref),
+                    builder: (context, onPressed, annotate) =>
+                        FilledButton.icon(
+                          onPressed: onPressed,
+                          // Busy at once, in the glyph's place, while the
+                          // approval reads where it goes and is sent.
+                          icon: SeerrApprovalGlyph(
+                            instanceId: instanceId,
+                            requestId: request.id,
+                            size: 18,
+                            idle: Opacity(
+                              opacity: decide.acts
+                                  ? 1
+                                  : GatedAffordance.dimmedOpacity,
+                              child: const Icon(
+                                Icons.check_circle_outline_rounded,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                          label: annotate(const Text('Approve')),
+                        ),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: () => _decline(context, ref),
-                    icon: const Icon(Icons.cancel_outlined, size: 18),
-                    label: const Text('Decline'),
+                  RoleGatedAction.builder(
+                    verdict: decide,
+                    onTap: () => _decline(context, ref),
+                    builder: (context, onPressed, annotate) =>
+                        OutlinedButton.icon(
+                          onPressed: onPressed,
+                          icon: Opacity(
+                            opacity: decide.acts
+                                ? 1
+                                : GatedAffordance.dimmedOpacity,
+                            child: const Icon(Icons.cancel_outlined, size: 18),
+                          ),
+                          label: annotate(const Text('Decline')),
+                        ),
                   ),
                 ],
               ),
@@ -251,7 +313,7 @@ class _RequestCard extends ConsumerWidget {
 
   /// One dot-separated line, the way every other row in the app states its
   /// metadata — rather than a stack of `label: value` pairs.
-  String _metadataLine() {
+  String _metadataLine({required bool showsProfile}) {
     final seasons = request.seasons
         ?.map((season) => season.seasonNumber)
         .join(', ');
@@ -263,7 +325,10 @@ class _RequestCard extends ConsumerWidget {
       request.type == 'tv' ? 'TV' : 'Movie',
       if (request.type == 'tv' && seasons != null && seasons.isNotEmpty)
         'Seasons $seasons',
-      request.profileName ?? request.profileId?.toString() ?? 'Default profile',
+      if (showsProfile)
+        request.profileName ??
+            request.profileId?.toString() ??
+            'Default profile',
       ?createdAt,
     ].join(' · ');
   }
@@ -303,13 +368,35 @@ class _RequestCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+  /// The account [instanceId] signs in with, by its Seerr user id; null for
+  /// the key.
+  int? _accountUserId(WidgetRef ref) {
+    final id = instanceId.isEmpty
+        ? ref.watch(activeInstanceProvider(ServiceKey.seerr))?.id
+        : instanceId;
+    if (id == null) return null;
+    return ref.watch(
+      currentSettingsProvider.select(
+        (s) => s.instanceById(id)?.account?.userId,
+      ),
+    );
+  }
+
+  /// Deletes the request, or, for an account that only takes back its own
+  /// ([cancels]), cancels it: the same call, which Seerr answers with a 401
+  /// once the request no longer waits.
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool cancels,
+  }) async {
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Delete request?',
+      title: cancels ? '${Lexicon.cancelRequest}?' : 'Delete request?',
       message: request.media?.title,
-      icon: Icons.delete_outline_rounded,
-      confirmLabel: 'Delete request',
+      icon: cancels ? Icons.undo_rounded : Icons.delete_outline_rounded,
+      confirmLabel: cancels ? Lexicon.cancelRequest : 'Delete request',
+      cancelLabel: cancels ? 'Keep it' : 'Cancel',
     );
 
     if (!result.confirmed || !context.mounted) return;
@@ -320,8 +407,10 @@ class _RequestCard extends ConsumerWidget {
       action: () => ref
           .read(seerrServiceForProvider(instanceId))
           .deleteRequest(request.id),
-      successMessage: 'Request deleted',
-      failureMessage: 'Could not delete the request',
+      successMessage: cancels ? 'Request cancelled' : 'Request deleted',
+      failureMessage: cancels
+          ? 'Could not cancel the request'
+          : 'Could not delete the request',
     );
   }
 
@@ -348,16 +437,30 @@ class _RequestCard extends ConsumerWidget {
     } on SeerrRequestConflict catch (conflict) {
       if (context.mounted) SnackBarHelper.error(context, '$conflict');
     } catch (error) {
-      // Why, in the classified words: "Seerr did not answer" only when
-      // nothing did; a refusal says it answered and that nothing changed.
-      if (context.mounted) {
+      if (!context.mounted) return;
+      // A request of one's own that was approved meanwhile: Seerr's own
+      // reason, and the list is stale, so it is read again below.
+      if (seerrRefusalOf(error) == SeerrRefusal.noLongerCancellable) {
+        SnackBarHelper.info(context, Lexicon.noLongerCancellable);
+      } else if (ref.read(roleGateProvider(instanceId)).faultVoice ==
+          FaultVoice.brief) {
+        // The requester reads what did not happen, and no service.
+        SnackBarHelper.error(
+          context,
+          '$failureMessage. ${Lexicon.nothingChanged}',
+          cause: error,
+        );
+        return;
+      } else {
+        // Why, in the classified words: "Seerr did not answer" only when
+        // nothing did; a refusal says it answered and that nothing changed.
         SnackBarHelper.error(
           context,
           '$failureMessage. ${writeFailureReason(ServiceKey.seerr, error)}',
           cause: error,
         );
+        return;
       }
-      return;
     }
     // The whole family, not this entry alone: the lens's own id collapses onto
     // the plain provider, so dropping one and not the other leaves a stale copy

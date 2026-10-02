@@ -8,8 +8,11 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../../test_helpers/fake_api_client.dart';
+import '../../../../test_helpers/settings_scope.dart';
 
 SeerrRequest _request({
   required int id,
@@ -58,7 +61,13 @@ Future<void> _pumpSection(
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: overrides,
+      overrides: [
+        ...overrides,
+        // The operator's key: the section he has always had.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices(const [ServiceKey.seerr]),
+        ),
+      ],
       child: MaterialApp(
         home: MediaQuery(
           data: MediaQueryData(textScaler: TextScaler.linear(textScale)),

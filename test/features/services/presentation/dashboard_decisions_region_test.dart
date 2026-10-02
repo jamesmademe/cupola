@@ -184,9 +184,9 @@ void main() {
     await harness.settle(tester);
 
     expect(_inDecisions(find.byType(FaultBand)), findsNothing);
-    // Anna's own account reads her own request only: Luca's Metropolis is
-    // not hers to see.
-    expect(_inDecisions(find.text('Charge')), findsOne);
+    // Anna decides nothing: her own waiting Charge is no decision of hers,
+    // and Luca's Metropolis is not hers to see.
+    expect(_inDecisions(find.text('Charge')), findsNothing);
     expect(_inDecisions(find.text('Metropolis')), findsNothing);
 
     await harness.unmount(tester);

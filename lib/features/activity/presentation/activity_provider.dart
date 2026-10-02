@@ -4,6 +4,7 @@ import 'package:cupola/core/lifecycle/gated_poll.dart'; // ignore: implementatio
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_names.dart';
@@ -1393,6 +1394,11 @@ Future<ActivityServiceResult> _loadRequestConnection(
   Ref ref,
   ActivityConnection connection,
 ) async {
+  // Who asked, only where this connection may see everyone's requests, and
+  // never in the requester's app.
+  final names = ref
+      .read(roleGateOfProvider(connection.instanceId))
+      .showsRequesterNames;
   try {
     final requests = await ref.read(
       requestsForProvider(connection.instanceId).future,
@@ -1411,7 +1417,7 @@ Future<ActivityServiceResult> _loadRequestConnection(
       instanceId: connection.instanceId,
       label: connection.label,
       items: requests
-          .map((request) => _requestItem(request, connection))
+          .map((request) => _requestItem(request, connection, namesWho: names))
           .toList(growable: false),
       total: total,
       incomplete: incomplete,
@@ -1550,10 +1556,11 @@ Future<ArrRecordPage> _loadPage(
 
 GlobalActivityItem _requestItem(
   SeerrRequest request,
-  ActivityConnection connection,
-) {
+  ActivityConnection connection, {
+  required bool namesWho,
+}) {
   final title = request.media?.title ?? 'Unknown request';
-  final requester = request.requestedBy?.displayName;
+  final requester = namesWho ? request.requestedBy?.displayName : null;
   final type = request.type == 'tv' ? 'Series' : 'Movie';
   return GlobalActivityItem(
     kind: GlobalActivityKind.request,

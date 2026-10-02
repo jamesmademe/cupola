@@ -27,6 +27,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -53,6 +54,7 @@ import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
@@ -863,34 +865,54 @@ class _DecisionControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (decision.kind == DecisionKind.pendingRequest) {
       final id = decision.actionId;
+      // The gate of the Seerr the request came off: an account of the
+      // operator's that may not approve there keeps the pair, dimmed.
+      final decide = ref
+          .watch(roleGateProvider(decision.instanceId))
+          .operatorAction(SeerrAbility.approve);
+      if (!decide.isDrawn) return const SizedBox.shrink();
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _RequestDecisionButton.approve(
-            title: decision.title,
-            onPressed: id == null
-                ? null
-                : () => ActivityActions.approveRequest(
-                    context,
-                    ref,
-                    // The Seerr the request came off: the region reads every
-                    // one, and a request id is per server.
-                    instanceId: decision.instanceId,
-                    requestId: id,
-                    title: decision.title,
-                  ),
+          RoleGatedAction.builder(
+            verdict: decide,
+            onTap: () {
+              if (id == null) return;
+              ActivityActions.approveRequest(
+                context,
+                ref,
+                // The Seerr the request came off: the region reads every
+                // one, and a request id is per server.
+                instanceId: decision.instanceId,
+                requestId: id,
+                title: decision.title,
+              );
+            },
+            builder: (context, onPressed, annotate) =>
+                _RequestDecisionButton.approve(
+                  title: decision.title,
+                  onPressed: id == null ? null : onPressed,
+                  annotate: annotate,
+                ),
           ),
-          _RequestDecisionButton.decline(
-            title: decision.title,
-            onPressed: id == null
-                ? null
-                : () => ActivityActions.declineRequest(
-                    context,
-                    ref,
-                    instanceId: decision.instanceId,
-                    requestId: id,
-                    title: decision.title,
-                  ),
+          RoleGatedAction.builder(
+            verdict: decide,
+            onTap: () {
+              if (id == null) return;
+              ActivityActions.declineRequest(
+                context,
+                ref,
+                instanceId: decision.instanceId,
+                requestId: id,
+                title: decision.title,
+              );
+            },
+            builder: (context, onPressed, annotate) =>
+                _RequestDecisionButton.decline(
+                  title: decision.title,
+                  onPressed: id == null ? null : onPressed,
+                  annotate: annotate,
+                ),
           ),
         ],
       );
@@ -1123,28 +1145,33 @@ class _RequestDecisionButton extends StatelessWidget {
     required this.tone,
     required this.title,
     required this.onPressed,
+    this.annotate,
   });
 
   const _RequestDecisionButton.approve({
     required String title,
     required VoidCallback? onPressed,
+    Widget Function(Widget content)? annotate,
   }) : this._(
          icon: Icons.check_rounded,
          verb: 'Approve',
          tone: StatusTone.success,
          title: title,
          onPressed: onPressed,
+         annotate: annotate,
        );
 
   const _RequestDecisionButton.decline({
     required String title,
     required VoidCallback? onPressed,
+    Widget Function(Widget content)? annotate,
   }) : this._(
          icon: Icons.close_rounded,
          verb: 'Decline',
          tone: StatusTone.error,
          title: title,
          onPressed: onPressed,
+         annotate: annotate,
        );
 
   final IconData icon;
@@ -1153,13 +1180,17 @@ class _RequestDecisionButton extends StatelessWidget {
   final String title;
   final VoidCallback? onPressed;
 
+  /// The gate's dim and hint, around the glyph: the button's own content.
+  final Widget Function(Widget content)? annotate;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    final glyph = Icon(icon, size: 20);
     return IconButton(
       onPressed: onPressed,
-      icon: Icon(icon, size: 20),
+      icon: annotate?.call(glyph) ?? glyph,
       // The tooltip is already this button's accessible name and three test
       // files assert on `find.byTooltip`, so it stays; the explicit label is
       // added rather than traded for it.

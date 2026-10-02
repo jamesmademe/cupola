@@ -5,12 +5,15 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart' as dynamic_utils;
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/connection_badge.dart';
+import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
@@ -21,6 +24,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_formatter
 import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpers.dart';
 import 'package:cupola/features/activity/presentation/widgets/detail_sheets.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -326,7 +330,14 @@ class GlobalActivityItemTile extends ConsumerWidget {
     // Resolved once here and handed to [_writeActions]; see
     // [canManualImportFrom] for the two gates.
     final canManualImport = canManualImportFrom(item);
-    final writeActions = _writeActions(canManualImport: canManualImport);
+    final writeActions = _writeActions(
+      canManualImport: canManualImport,
+      decide: item.kind == GlobalActivityKind.request
+          ? ref
+                .watch(roleGateProvider(item.instanceId))
+                .operatorAction(SeerrAbility.approve)
+          : const Live(),
+    );
     final icon = switch (item.kind) {
       GlobalActivityKind.request => Icons.person_add_alt_1_rounded,
       GlobalActivityKind.queue => Icons.downloading_rounded,
@@ -561,7 +572,14 @@ class GlobalActivityItemTile extends ConsumerWidget {
   /// whenever the record has no id to act on.
   ///
   /// [canManualImport] gates the manual-import fast path — see the switch.
-  List<_RowAction> _writeActions({required bool canManualImport}) {
+  ///
+  /// [decide] is what the gate of the request's Seerr says about approving
+  /// there: the pair is left out of the requester's app, and an account that
+  /// may not approve keeps it, dimmed, saying why when chosen.
+  List<_RowAction> _writeActions({
+    required bool canManualImport,
+    required GateVerdict decide,
+  }) {
     // Requests are checked before the `recordId` guard, not after: they are the
     // one kind that carries no \*arr record at all, so that guard would drop them
     // before they were ever considered.
@@ -571,7 +589,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
       // getter is overridden by media availability, so a request that is still
       // waiting for approval reports "Available" the moment the media exists
       // anywhere — and would silently lose the only action it needs.
-      if (request == null || request.status != RequestStatus.pendingApproval) {
+      if (request == null ||
+          request.status != RequestStatus.pendingApproval ||
+          !decide.isDrawn) {
         return const [];
       }
       return const [_RowAction.approveRequest, _RowAction.declineRequest];
@@ -722,6 +742,10 @@ enum _RowAction {
   final String label;
   final IconData icon;
   final bool destructive;
+
+  /// Approve or Decline: a decision on a Seerr request, which the gate of
+  /// that Seerr may dim.
+  bool get decidesRequest => this == approveRequest || this == declineRequest;
 }
 
 /// The same actions as buttons, for the detail sheet.
@@ -792,6 +816,7 @@ class _RowActionsMenu extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final blocked = _decisionBlockedReason(ref, item);
 
     return PopupMenuButton<_RowAction>(
       tooltip: 'Actions for ${item.title}',
@@ -801,7 +826,8 @@ class _RowActionsMenu extends ConsumerWidget {
         color: colorScheme.onSurfaceVariant,
       ),
       onSelected: (action) => _runRowAction(context, ref, item, action),
-      itemBuilder: (context) => _rowActionMenuItems(context, actions),
+      itemBuilder: (context) =>
+          _rowActionMenuItems(context, actions, blocked: blocked),
     );
   }
 }
@@ -813,10 +839,15 @@ class _RowActionsMenu extends ConsumerWidget {
 /// whole desktop layer: hover and right-click are accelerators, so every item
 /// here is also reachable from a control that is simply *there*, and a phone
 /// loses nothing by having no pointer.
+///
+/// [blocked] is why the account may not decide on a request, when it may
+/// not: Approve and Decline then stay, dimmed and hinted, and say it when
+/// chosen.
 List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
   BuildContext context,
-  List<_RowAction> actions,
-) {
+  List<_RowAction> actions, {
+  String? blocked,
+}) {
   final colorScheme = Theme.of(context).colorScheme;
   // One ink for every item, destructive or not: red means unreachable and
   // nothing else, and the confirmation each one opens says what it does.
@@ -834,11 +865,32 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
             // and painted the debug stripe over the menu. Wrapping rather
             // than ellipsising — a menu item that reads "Remove from
             // blockli…" is worse than one that takes two lines.
-            Flexible(child: Text(action.label)),
+            Flexible(
+              child: GatedAffordance.annotateFor(
+                enabled: blocked == null || !action.decidesRequest,
+                hint: action.decidesRequest ? blocked : null,
+                child: Text(action.label),
+              ),
+            ),
           ],
         ),
       ),
   ];
+}
+
+/// Why the account a request row came off may not approve or decline it, or
+/// null when it may (or the row is no request).
+///
+/// Watched while building; read, with [listen] false, from a callback.
+String? _decisionBlockedReason(
+  WidgetRef ref,
+  GlobalActivityItem item, {
+  bool listen = true,
+}) {
+  if (item.kind != GlobalActivityKind.request) return null;
+  final provider = roleGateProvider(item.instanceId);
+  final gate = listen ? ref.watch(provider) : ref.read(provider);
+  return gate.operatorAction(SeerrAbility.approve).reason;
 }
 
 /// Dispatches one [_RowAction] against [item].
@@ -1396,7 +1448,11 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
         Rect.fromPoints(globalPosition, globalPosition),
         Offset.zero & overlay.size,
       ),
-      items: _rowActionMenuItems(context, widget.actions),
+      items: _rowActionMenuItems(
+        context,
+        widget.actions,
+        blocked: _decisionBlockedReason(ref, widget.item, listen: false),
+      ),
     );
     if (action == null || !mounted) return;
     _runRowAction(context, ref, widget.item, action);
@@ -1409,9 +1465,14 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
   /// on a failed grab, `Approve request` on a pending request. Destructive
   /// actions are never promoted: a Remove that appears under the pointer on
   /// hover is a control the user did not ask to have within reach.
+  ///
+  /// Never a decision the account may not make: it stays in the menu, dimmed.
   _RowAction? get _primaryAction {
+    final blocked = _decisionBlockedReason(ref, widget.item) != null;
     for (final action in widget.actions) {
-      if (!action.destructive) return action;
+      if (action.destructive) continue;
+      if (blocked && action.decidesRequest) continue;
+      return action;
     }
     return null;
   }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -21,6 +22,7 @@ import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
@@ -2794,6 +2796,13 @@ final dashboardDecisionsProvider = Provider<DashboardDecisions>((ref) {
 /// row's Approve has to reach the Seerr that holds it.
 Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
   Future<DashboardDecisions> from(_MergeConnection source) async {
+    // The gate of this Seerr: a requester decides nothing, so her waiting
+    // requests are no decision of hers; an account of the operator's that
+    // may not approve keeps the row, its answers dimmed. Who asked is named
+    // only where the connection sees everyone's requests.
+    final gate = ref.watch(roleGateOfProvider(source.instanceId));
+    final decides = gate.operatorAction(SeerrAbility.approve).isDrawn;
+    final namesWho = gate.showsRequesterNames;
     try {
       final requests = await ref.watch(
         requestsForProvider(source.instanceId).future,
@@ -2805,7 +2814,7 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
             // `displayStatus` — a request for media that already exists
             // reports "Available" while nobody has approved it. See
             // `request_ordering.dart`.
-            if (isAwaitingApproval(request))
+            if (decides && isAwaitingApproval(request))
               DashboardDecision(
                 kind: DecisionKind.pendingRequest,
                 id: 'seerr-${source.instanceId}-${request.id}',
@@ -2819,7 +2828,7 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
                       source.name,
                       joiner: ' ',
                     ),
-                  request.requestedBy?.displayName,
+                  if (namesWho) request.requestedBy?.displayName,
                   request.type == 'tv' ? 'Series' : 'Movie',
                 ]),
                 occurredAt: parseAddedTimestamp(request.createdAt),

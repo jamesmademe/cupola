@@ -14,9 +14,11 @@ import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../../test_helpers/fake_services.dart';
+import '../../../../test_helpers/settings_scope.dart';
 
 void main() {
   group('QueueItemTile', () {
@@ -893,8 +895,13 @@ void main() {
 
     testWidgets('hides search menu for requests', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        ProviderScope(
+          overrides: [
+            currentSettingsProvider.overrideWith(
+              (ref) => settingsWithServices(const [ServiceKey.seerr]),
+            ),
+          ],
+          child: const MaterialApp(
             home: Scaffold(
               body: GlobalActivityItemTile(
                 item: GlobalActivityItem(
