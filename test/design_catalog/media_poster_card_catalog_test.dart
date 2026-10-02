@@ -181,6 +181,14 @@ void main() {
         height: 300,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'Text at 200% · MediaGrid on a 390 phone with its compact badges; '
+        'loaded, no URL, failed load',
+        (_) => _grid(),
+        width: 390,
+        height: 640,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

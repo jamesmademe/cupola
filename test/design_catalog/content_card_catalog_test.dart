@@ -171,6 +171,31 @@ void main() {
           ],
         ),
       ),
+      CatalogScene(
+        'Text at 200% · compact stalled and downloading badges over artwork, '
+        'in a 130pt cell',
+        (_) => Wrap(
+          spacing: 16,
+          children: [
+            _cell(
+              const ContentCard(imageUrl: CatalogArt.poster, badge: _stalled),
+            ),
+            _cell(
+              const ContentCard(
+                imageUrl: CatalogArt.poster,
+                badge: StatusBadge(
+                  info: MediaStatusInfo(
+                    pipeline: MediaPipeline.downloading,
+                    progress: 0.42,
+                  ),
+                  compact: true,
+                ),
+              ),
+            ),
+          ],
+        ),
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }

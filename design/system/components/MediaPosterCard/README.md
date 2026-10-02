@@ -15,4 +15,13 @@ The consumer provides `heroTag` (unique per visual position), `imageUrl`, option
 
 Semantics: in the detail hero the poster is wrapped in `ExcludeSemantics` by `MediaDetailPosterRow` — the same artwork is the backdrop and the title beside it names the region. In `MediaGrid`, when `titleExtractor` is given, each cell is one `PressableScale` button named by the title with the status's `semanticLabel` as its value (*Metropolis*, value *Downloading, 42 percent*), and the badge's own node is dropped; without a title the badge speaks for itself.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- The hero slot and a grid cell, two corner radii, and `.circular`.
+- No URL, a failed load and a music `fallbackIcon`.
+- `MediaGrid` on a 390 phone and a 720 desktop well.
+- Text at 200%: `MediaGrid` on a 390 phone.
+
 Do: size it from outside with a `SizedBox`, keep one hero tag per visual position, and route every Hero source through `flightOnUserGestures`. Don't: fade a poster Hero source (it would fly in from nothing), give it a second shadow level, or paint a missing poster in a theme surface.

@@ -31,7 +31,7 @@ void main() {
   /// Cards whose catalog test does not yet carry the scene. A card leaves this
   /// list the day it gains one, and the guard fails while it stays, so the list
   /// can only shrink.
-  const pending = {'ContentCard', 'MediaPosterCard'};
+  const pending = <String>{};
 
   final cards = [
     for (final entry in Directory(components).listSync())

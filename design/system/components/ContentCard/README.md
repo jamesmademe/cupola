@@ -14,4 +14,13 @@ The consumer provides `imageUrl` (required, nullable), optional `httpHeaders` an
 
 Semantics: the card publishes no label of its own. The enclosing tile names it — in `MediaGrid` one button named by the title with the status as its value — and passes `excludeFromSemantics: true` to the badge so the status is not read twice.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Artwork with a compact stalled badge, a downloading badge and an icon-only dot.
+- Artwork alone, and with `onTap`.
+- Loading, no URL and a failed load, with and without a badge.
+- Text at 200%: the compact badges over artwork.
+
 Do: let the tile own the tap and the spoken sentence, and keep the badge compact. Don't: add a second shadow level or a border — the flight between grid and hero relies on this exact `level-2`.
