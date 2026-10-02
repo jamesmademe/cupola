@@ -9,6 +9,9 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/reel_motion.dart';
@@ -25,6 +28,7 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
@@ -261,6 +265,8 @@ class _ServiceFilterChips extends ConsumerWidget {
     final services = globalSearchServices
         .where(settings.isServiceConfigured)
         .toList(growable: false);
+    // The requester's Seerr is filtered as `Requests`.
+    final gate = RoleGate(audience: ref.watch(audienceProvider));
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -279,7 +285,9 @@ class _ServiceFilterChips extends ConsumerWidget {
           ),
           for (final service in services)
             _FilterChip(
-              label: service.title,
+              label: gate.namesService(service)
+                  ? service.title
+                  : Lexicon.requestsLane,
               selected: selectedService == service,
               onTap: () => onSelected(service),
             ),
@@ -524,15 +532,18 @@ class _SearchResultsList extends ConsumerWidget {
 /// What a lane with no rows draws instead: two shimmer plates while it is
 /// still out, a fault card with its own Retry once it has stopped, and the
 /// "this library does not have it" line once it has answered.
-class _LaneBody extends StatelessWidget {
+class _LaneBody extends ConsumerWidget {
   final GlobalSearchServiceResults lane;
   final VoidCallback onRetry;
 
   const _LaneBody({required this.lane, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final named = ref
+        .watch(roleGateOfProvider(lane.instanceId))
+        .namesService(lane.service);
 
     if (lane.hasFault) {
       return _SearchLaneFault(lane: lane, onRetry: onRetry);
@@ -558,23 +569,28 @@ class _LaneBody extends StatelessWidget {
     // The second of the three empties: this library answered and does not have
     // it. It reads as a fact about the library precisely because a server that
     // did not answer never reaches this branch.
+    // The requester's lane is its heading, `Requests`, and says no more.
     return _SearchSectionMessage(
       icon: Icons.search_off_rounded,
-      text: 'No ${lane.laneTitle} results',
+      text: named ? 'No ${lane.laneTitle} results' : Lexicon.noResults,
       color: colorScheme.onSurfaceVariant,
     );
   }
 }
 
-class _SearchSectionHeader extends StatelessWidget {
+class _SearchSectionHeader extends ConsumerWidget {
   final GlobalSearchServiceResults lane;
 
   const _SearchSectionHeader({required this.lane});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final service = lane.service;
-    final chipless = lane.laneTitle == lane.instanceLabel;
+    // The requester's Seerr is `Requests`, with no mark and no chip: she
+    // never reads its name.
+    final gate = ref.watch(roleGateOfProvider(lane.instanceId));
+    final named = gate.namesService(service);
+    final chipless = !named || lane.laneTitle == lane.instanceLabel;
     // The mark and the connection badge are both the accent on its own 14%
     // wash over the page, so one walked ink serves both.
     final ink = ServiceTheme.onTint(
@@ -599,7 +615,11 @@ class _SearchSectionHeader extends StatelessWidget {
               color: service.accent.withValues(alpha: 0.14),
               borderRadius: AppRadius.borderRadiusSm,
             ),
-            child: Icon(service.icon, size: 14, color: ink),
+            child: Icon(
+              named ? service.icon : Icons.playlist_add_rounded,
+              size: 14,
+              color: ink,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
@@ -607,7 +627,11 @@ class _SearchSectionHeader extends StatelessWidget {
               // `Radarr 2` for a connection nobody named, whose name already
               // says the service: the heading is the name, with no chip
               // repeating it.
-              chipless ? lane.laneTitle : service.title,
+              !named
+                  ? lane.titleFor(gate)
+                  : chipless
+                  ? lane.laneTitle
+                  : service.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
@@ -723,15 +747,16 @@ class _LaneStateReadout extends StatelessWidget {
 /// in the amber fill when retrying is a fault's remedy (a search that timed
 /// out) and as text in ink beside a red lane. Each names its server for a
 /// screen reader, since up to seven of these share one screen.
-class _SearchLaneFault extends StatelessWidget {
+class _SearchLaneFault extends ConsumerWidget {
   final GlobalSearchServiceResults lane;
   final VoidCallback onRetry;
 
   const _SearchLaneFault({required this.lane, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final gate = ref.watch(roleGateOfProvider(lane.instanceId));
     final tone = statusToneColor(colorScheme, lane.state.tone);
     final remedy = lane.reason == null
         ? null
@@ -746,7 +771,7 @@ class _SearchLaneFault extends StatelessWidget {
       remedy: remedy,
       fault: lane.state.tone == StatusTone.warning,
       onRetry: onRetry,
-      subject: lane.laneTitle,
+      subject: lane.titleFor(gate),
     );
     final glyph = Icon(_glyph, size: 18, color: tone);
     final sentence = Text(
@@ -1152,6 +1177,19 @@ class _SearchEmptyState extends ConsumerWidget {
         .where(settings.isServiceConfigured)
         .toList(growable: false);
     final hasAny = searchable.isNotEmpty;
+    // The requester reads what she can find, never which service finds it:
+    // only the players she watches with are named.
+    final requester = ref.watch(audienceProvider) == Audience.requester;
+    if (requester && !hasAny) {
+      // Her Seerr is signed out: that, with the way back, and no list of
+      // services to set up.
+      return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
+    }
+    final players = [
+      for (final service in searchable)
+        if (service == ServiceKey.jellyfin || service == ServiceKey.plex)
+          service,
+    ];
     // Never `Set up Seerr` for a Seerr account that signed out: it is set
     // up, and its way back is signing in.
     final notSetUp = globalSearchServices
@@ -1169,7 +1207,9 @@ class _SearchEmptyState extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          hasAny
+          requester
+              ? Lexicon.searchToAsk
+              : hasAny
               ? 'Search across every service'
               : 'No searchable service is set up',
           textAlign: TextAlign.center,
@@ -1179,7 +1219,13 @@ class _SearchEmptyState extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          hasAny
+          requester
+              ? Lexicon.searchToAskHint(
+                  players.isEmpty
+                      ? null
+                      : _serviceList(players, conjunction: 'or'),
+                )
+              : hasAny
               ? 'Enter a title, show, or artist to query '
                     '${_serviceList(searchable)}.'
               // "or": any one of them is enough to search from here. It said

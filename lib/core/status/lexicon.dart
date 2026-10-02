@@ -179,6 +179,20 @@ abstract final class Lexicon {
   /// After a write the requester asked for failed: nothing half happened.
   static const nothingChanged = 'Nothing changed.';
 
+  /// The requester's Seerr, where its name would be: the global search's
+  /// lane and its filter.
+  static const requestsLane = 'Requests';
+
+  /// The requester's search, before a word is typed.
+  static const searchToAsk = 'Search movies and series';
+
+  /// What the requester's search finds: titles to ask for, and on [players]
+  /// (`Jellyfin`, `Jellyfin or Plex`) titles to watch.
+  static String searchToAskHint(String? players) => players == null
+      ? 'Enter a title to find something to ask for.'
+      : 'Enter a title to find something to ask for, or to watch on '
+            '$players.';
+
   /// The requester's list of requests, while it is empty.
   static const yourRequestsAppearHere = 'Requests you make will appear here.';
 

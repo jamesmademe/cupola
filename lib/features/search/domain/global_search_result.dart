@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -240,6 +242,12 @@ class GlobalSearchServiceResults {
   /// two of them, or `Radarr 2` for one the user never named, whose name
   /// already says the service.
   String get laneTitle => serviceWithConnection(service, instanceLabel);
+
+  /// What [gate] lets this lane be called on screen: [laneTitle] wherever the
+  /// service may be named, and `Requests` for the requester's Seerr, whose
+  /// name she never reads.
+  String titleFor(RoleGate gate) =>
+      gate.namesService(service) ? laneTitle : Lexicon.requestsLane;
 
   /// Whether the lane stopped short of an answer. Not "is red" — three of the
   /// four stopped states are amber.
