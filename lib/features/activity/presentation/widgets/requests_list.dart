@@ -397,7 +397,7 @@ class _RequestCard extends ConsumerWidget {
       successMessage: cancels ? 'Request cancelled' : 'Request deleted',
       failureMessage: cancels
           ? "Couldn't cancel the request"
-          : 'Could not delete the request',
+          : "Couldn't delete the request",
     );
   }
 

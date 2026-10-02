@@ -85,7 +85,7 @@ void main() {
     );
 
     expect(find.text('Seerr is not set up'), findsNothing);
-    expect(find.text('Search movies & TV shows...'), findsOneWidget);
+    expect(find.text('Search movies and series'), findsOneWidget);
     expect(harness.network.requestsTo(WorldIds.seerr), isNotEmpty);
 
     await harness.unmount(tester);

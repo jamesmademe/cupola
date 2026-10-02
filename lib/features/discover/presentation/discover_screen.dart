@@ -8,6 +8,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -110,7 +111,7 @@ class DiscoverScreen extends ConsumerWidget {
             ),
           SliverToBoxAdapter(
             child: SearchBarHeader(
-              hintText: 'Search movies & TV shows...',
+              hintText: Lexicon.searchToAsk,
               onQueryChanged: (query) {
                 ref.read(discoverSearchQueryProvider.notifier).state = query;
               },

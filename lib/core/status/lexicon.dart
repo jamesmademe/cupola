@@ -189,7 +189,8 @@ abstract final class Lexicon {
   /// lane and its filter.
   static const requestsLane = 'Requests';
 
-  /// The requester's search, before a word is typed.
+  /// The search for something to ask for, before a word is typed: the
+  /// requester's global search and Discover's own field.
   static const searchToAsk = 'Search movies and series';
 
   /// What the requester's search finds: titles to ask for, and on [players]

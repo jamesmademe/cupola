@@ -170,7 +170,7 @@ void main() {
       await _pumpSheetDirect(tester, service: _tvService(), mediaType: 'tv');
       await tester.pumpAndSettle();
 
-      expect(find.text('Request TV show'), findsOneWidget);
+      expect(find.text('Request series'), findsOneWidget);
     });
   });
 }
@@ -247,7 +247,7 @@ Future<void> _pumpSheetDirect(
             // Mirror real usage: the title lives in the shared AppBottomSheet
             // header (per media type), not inside RequestBottomSheet.
             child: AppBottomSheet(
-              title: mediaType == 'tv' ? 'Request TV show' : 'Request movie',
+              title: mediaType == 'tv' ? 'Request series' : 'Request movie',
               child: RequestBottomSheet(
                 mediaId: mediaId,
                 mediaType: mediaType,

@@ -23,7 +23,7 @@ List<CatalogScene> _scenes(CatalogPlatform platform, double width) => [
     'Seerr Discover · empty, hint only · the magnifier in the secondary ink, '
     'the same on every service',
     (_) => const SearchBarHeader(
-      hintText: 'Search movies & TV shows...',
+      hintText: 'Search movies and series',
       onQueryChanged: _ignore,
     ),
     width: width,
