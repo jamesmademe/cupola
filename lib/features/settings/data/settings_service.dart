@@ -886,7 +886,17 @@ class SettingsService {
     await _prefs.remove(instance.viewerIdStorageKey);
     await _secureStore.delete(key: instance.credentialStorageKey);
     await _saveAccess(instance.copyWith(access: const NoAccess()));
+    // A refused sign-in is kept as a mark derived from the password: it goes
+    // with the connection like the password itself.
+    if (instance.service == ServiceKey.qbittorrent) {
+      await _secureStore.delete(key: qbittorrentRefusalKey(instance.id));
+    }
   }
+
+  /// Where the qBittorrent sign-in refused for connection [id] is kept in
+  /// secure storage (`SecureQbittorrentRefusalStore`).
+  static String qbittorrentRefusalKey(String id) =>
+      'qbittorrent_refused_sign_in_$id';
 
   // === Access ==============================================================
   //

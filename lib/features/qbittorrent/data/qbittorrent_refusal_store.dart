@@ -75,14 +75,15 @@ class MemoryQbittorrentRefusalStore implements QbittorrentRefusalStore {
 /// Held in the platform's secure storage, beside the password it was refused
 /// for, so it survives a relaunch and is there for a check that runs in the
 /// background. The mark is derived from the password, which is why it lives
-/// there rather than in the plain preferences.
+/// there rather than in the plain preferences, and why removing the connection
+/// removes it ([SettingsService.qbittorrentRefusalKey]).
 class SecureQbittorrentRefusalStore implements QbittorrentRefusalStore {
   const SecureQbittorrentRefusalStore(this._storage);
 
   final SecureSettingsStore _storage;
 
   static String _key(String connectionId) =>
-      'qbittorrent_refused_sign_in_$connectionId';
+      SettingsService.qbittorrentRefusalKey(connectionId);
 
   @override
   Future<QbittorrentStoredRefusal?> read(String connectionId) async {

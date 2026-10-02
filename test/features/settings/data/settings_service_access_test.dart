@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -207,6 +208,43 @@ void main() {
       expect(loaded?.url, radarr.url);
       expect(loaded?.access, const NoAccess());
     }
+  });
+
+  test('a removed qBittorrent takes its refused sign-in with it', () async {
+    // The refusal is kept as a mark derived from the password, in the same
+    // keychain: it must not outlive the connection any more than the
+    // password does.
+    const home = ServiceInstance(
+      id: 'qbittorrent',
+      service: ServiceKey.qbittorrent,
+      url: 'https://qb.example.com',
+      username: 'admin',
+      credential: 'qb-password',
+    );
+    const seedbox = ServiceInstance(
+      id: 'qbittorrent-seed0001',
+      service: ServiceKey.qbittorrent,
+      label: 'Seedbox',
+      url: 'https://seedbox.example.net',
+      username: 'admin',
+      credential: 'seedbox-password',
+    );
+    await service.saveSettings(const SettingsModel(instances: [home, seedbox]));
+    final refusals = SecureQbittorrentRefusalStore(secureStore);
+    for (final id in [home.id, seedbox.id]) {
+      await refusals.write(id, (kind: 'credentials', credentials: 'mark'));
+    }
+
+    await service.saveSettings(const SettingsModel(instances: [home]));
+    expect(await refusals.read(seedbox.id), isNull);
+    expect(await refusals.read(home.id), isNotNull);
+
+    await service.saveSettings(const SettingsModel());
+    expect(await refusals.read(home.id), isNull);
+    expect(
+      secureStore.entries.keys.where((k) => k.contains('refused')),
+      isEmpty,
+    );
   });
 
   test('resetting the app removes every access value', () async {
