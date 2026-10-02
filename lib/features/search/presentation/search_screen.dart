@@ -124,7 +124,10 @@ class SearchScreen extends ConsumerWidget {
           SearchBarHeader(
             key: ValueKey(resetVersion),
             initialQuery: query,
-            hintText: 'Movies, series, artists',
+            // The requester's Seerr finds movies and series, not artists.
+            hintText: requester
+                ? 'Movies and series'
+                : 'Movies, series, artists',
             onQueryChanged: (value) {
               ref.read(globalSearchQueryProvider.notifier).state = value;
             },

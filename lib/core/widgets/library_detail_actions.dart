@@ -500,10 +500,10 @@ class LibraryDetailActions extends StatelessWidget {
         .map((candidate) => candidate.action)
         .toList(growable: false);
 
+    // Whole: it says what the band will do, or why it failed, and at 200%
+    // three lines cut the service's own sentence.
     final consequence = Text(
       action.consequence,
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
       style: theme.textTheme.bodySmall!.copyWith(
         color: colorScheme.onSurfaceVariant,
       ),

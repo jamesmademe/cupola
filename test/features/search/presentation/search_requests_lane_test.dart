@@ -37,6 +37,8 @@ void main() {
     expect(find.text('All services'), findsNothing);
     // The heading is the word alone: they search for something to ask for.
     expect(find.text('across every service'), findsNothing);
+    // And the field promises only what their Seerr finds.
+    expect(find.text('Movies, series, artists'), findsNothing);
 
     await harness.unmount(tester);
   });
