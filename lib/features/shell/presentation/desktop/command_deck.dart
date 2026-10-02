@@ -15,6 +15,7 @@ import 'package:cupola/features/shell/domain/command_deck_entry.dart';
 import 'package:cupola/features/shell/domain/inspector_state.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
+import 'package:cupola/features/search/presentation/global_search_provider.dart';
 
 /// The deck, open: one field, everything behind it.
 ///
@@ -59,7 +60,24 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
           )
           .toList(growable: false);
     }
-    return all.where((e) => e.haystack.contains(query)).toList(growable: false);
+    final found = all
+        .where((e) => e.haystack.contains(query))
+        .toList(growable: false);
+    if (found.isNotEmpty) return found;
+    // A word that names nothing the deck can open is still a title someone
+    // is looking for: the deck offers the global search with it, rather than
+    // a dead end (F-deck).
+    final typed = _controller.text.trim();
+    return [
+      CommandDeckEntry(
+        kind: CommandDeckKind.screen,
+        label: 'Search everything for “$typed”',
+        location: '/search',
+        detail: 'Search',
+        icon: Icons.search_rounded,
+        searchQuery: typed,
+      ),
+    ];
   }
 
   void _move(int delta, int length) {
@@ -80,7 +98,9 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
       // half, and it is byte-identical for two connections of one service.
       ref.read(activeInstancesProvider.notifier).select(service, instanceId);
     }
-    if (inInspector) {
+    final searchQuery = entry.searchQuery;
+    if (searchQuery != null) searchEverythingFor(ref, searchQuery);
+    if (inInspector && searchQuery == null) {
       ref.read(inspectorStateProvider.notifier).setOpen(true);
     } else {
       GoRouter.of(context).go(entry.location);
@@ -287,7 +307,9 @@ class _EntryRow extends StatelessWidget {
       button: true,
       selected: selected,
       label: spokenLabel,
-      hint: 'Open ${entry.label}',
+      hint: entry.searchQuery == null
+          ? 'Open ${entry.label}'
+          : 'Open the search with this word',
       onTap: onTap,
       child: ExcludeSemantics(
         child: MouseRegion(

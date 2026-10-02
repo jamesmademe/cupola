@@ -14,7 +14,7 @@ Rendered from `lib/features/shell/presentation/desktop/command_deck.dart` and `l
 Content and states:
 
 - Empty query: the four sections (detail *Section*), one row per configured connection in registry order (*Radarr*, or *Radarr · 4K* for a named one; detail = the URL's host), then up to five recents as breadcrumb trails (*Dashboard › Radarr › Library*); the place the window stands on is left out. Named Settings screens (*Connections*, *Trusted certificates*, *Appearance*, *Region*, *Hints*, *Background search*) join only when you type.
-- Typed: a case-insensitive substring match on label, detail and service title; the selection returns to the first row on every keystroke. Nothing matched: *Nothing by that name.* in `chrome` 12 `dim-text`, centred, padding `space-xl`; the panel does not shrink around it.
+- Typed: a case-insensitive substring match on label, detail and service title; the selection returns to the first row on every keystroke. Nothing matched: one row, selected, *Search everything for “Nosferatu”* (detail *Search*, the search glyph), which puts the word in the global search and runs it (`searchEverythingFor`), so a title is never a dead end; the panel does not shrink around it. *Nothing by that name.* (`chrome` 12 `dim-text`, centred) is left only for a deck with nothing in it at all.
 - Keys: ↑/↓ move (wrapping), ⏎ opens, ⌥⏎ opens the inspector instead, esc closes; ⌘K again also closes. Opening a connection moves that service's lens to it first.
 
 Each row is a button that speaks *label, detail*, reports `selected`, and hints *Open label*. At the 520 cap about ten rows show before the list scrolls.

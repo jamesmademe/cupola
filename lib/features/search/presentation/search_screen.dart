@@ -56,7 +56,7 @@ class SearchScreen extends ConsumerWidget {
     // page below draws a Radarr that has answered beside a Bazarr still
     // shimmering, and nothing on it waits.
     final lanes = ref.watch(globalSearchLanesProvider);
-    final resetVersion = ref.watch(_globalSearchResetVersionProvider);
+    final resetVersion = ref.watch(globalSearchFieldVersionProvider);
     final bottomPadding = FloatingNavBarMetrics.getScrollViewBottomPadding(
       context,
     );
@@ -71,7 +71,7 @@ class SearchScreen extends ConsumerWidget {
       // applies to the next query — and, on a service whose connection has
       // since gone, to a screen with nothing on it at all.
       ref.read(_selectedSearchServiceProvider.notifier).state = null;
-      ref.read(_globalSearchResetVersionProvider.notifier).state++;
+      ref.read(globalSearchFieldVersionProvider.notifier).state++;
     });
 
     // ⌘R's own channel. It is the opposite command to the tab re-tap above —
@@ -155,8 +155,6 @@ class SearchScreen extends ConsumerWidget {
     );
   }
 }
-
-final _globalSearchResetVersionProvider = StateProvider<int>((ref) => 0);
 
 final _selectedSearchServiceProvider = StateProvider<ServiceKey?>(
   (ref) => null,
@@ -1336,9 +1334,7 @@ class _SearchEmptyState extends ConsumerWidget {
                   label: query,
                   onTap: () {
                     ref.read(globalSearchQueryProvider.notifier).state = query;
-                    ref
-                        .read(_globalSearchResetVersionProvider.notifier)
-                        .state++;
+                    ref.read(globalSearchFieldVersionProvider.notifier).state++;
                   },
                 ),
             ],

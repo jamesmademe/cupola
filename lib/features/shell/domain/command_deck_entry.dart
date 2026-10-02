@@ -34,6 +34,7 @@ class CommandDeckEntry {
     this.instanceId,
     this.detail,
     this.icon,
+    this.searchQuery,
   });
 
   final CommandDeckKind kind;
@@ -53,6 +54,10 @@ class CommandDeckEntry {
   final String? detail;
 
   final IconData? icon;
+
+  /// Set on the deck's one offer for a word that names nothing it can open:
+  /// opening the row puts this in the global search and runs it (F-deck).
+  final String? searchQuery;
 
   /// Everything this row can be matched against, lower-cased once.
   String get haystack =>

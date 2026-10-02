@@ -26,6 +26,7 @@ import 'package:cupola/features/shell/presentation/desktop/service_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
+import 'package:cupola/features/search/presentation/global_search_provider.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
@@ -248,6 +249,31 @@ void main() {
     });
   });
 
+  testWidgets('a word the deck cannot open runs the global search', (
+    tester,
+  ) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+      await _press(tester, LogicalKeyboardKey.keyK, meta: true);
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(CommandDeck),
+          matching: find.byType(EditableText),
+        ),
+        'Nosferatu',
+      );
+      await tester.pump();
+      await _press(tester, LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      expect(container.read(globalSearchQueryProvider), 'Nosferatu');
+      expect(find.byType(CommandDeck), findsNothing);
+    });
+  });
+
   testWidgets('the deck panel keeps the field\'s width with no results', (
     tester,
   ) async {
@@ -266,7 +292,8 @@ void main() {
         'zzzz nothing',
       );
       await tester.pump();
-      expect(find.text('Nothing by that name.'), findsOneWidget);
+      // A word that names nothing is offered to the global search (F-deck).
+      expect(find.text('Search everything for “zzzz nothing”'), findsOneWidget);
 
       final deck = tester.getRect(find.byType(CommandDeck));
       final footer = tester.getRect(
