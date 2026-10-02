@@ -28,25 +28,19 @@ import 'package:cupola/core/network/connection_failure.dart';
 ///
 /// ## Where this is used, and where it is deliberately not
 ///
-/// Applied to the Seerr request providers and to the Jellyfin and Plex session
-/// providers — the sources read that way today.
+/// The rule, not a list (a list here went stale as every service adopted it):
+/// a provider that reads a service carries it, and so does every provider
+/// derived from one, or it waits out its source's retries. That covers each
+/// service's own providers (the \*arrs, Seerr, Prowlarr, Bazarr, the download
+/// clients, the media servers, TrueNAS, Unraid, Dockge, NPM) and the KPI reads
+/// behind the rail, which are awaited inside a `catch` that turns a failure
+/// into an em dash and would otherwise wait out ten backed-off attempts first.
 ///
-/// Deliberately **not** applied to:
-///
-/// * the `/services` dashboard's summary, queue and recently-added providers.
-///   Their `settle()` looks like the same shape, but each one already catches
-///   its own failures and degrades to an offline summary or an empty list, so
-///   they never throw and the retry never engages.
-/// * Prowlarr's derived providers, and every service KPI builder that awaits
-///   `.future` without a `try`: the error propagates to a screen that renders
-///   it, and there a retry only delays an error rather than hiding a recovery.
-///
-/// Applied, since the KPI rail stopped printing a dark server's library as
-/// zeros, to the four \*arr library reads behind it and to the Readarr queue
-/// (`_radarrKpiLibraryProvider` and its three siblings in
-/// `service_kpi_provider.dart`; `readarrQueueProvider`). Those *are* awaited
-/// inside a `catch`, which turns a failure into an em dash — and without the
-/// policy that `catch` waits out ten backed-off attempts first.
+/// Deliberately **not** applied to the `/services` dashboard's summary, queue
+/// and recently-added providers. Their `settle()` looks like the same shape,
+/// but each one already catches its own failures and degrades to an offline
+/// summary or an empty list, so they never throw and the retry never
+/// engages.
 ///
 /// ## The one failure it retries at once
 ///
