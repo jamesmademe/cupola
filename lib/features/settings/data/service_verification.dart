@@ -901,6 +901,29 @@ String connectionFailureMessage(
   }
 }
 
+/// What one saved connection's verdict is read from: the connection itself,
+/// the certificate pinned for its origin, and the install's Plex client id.
+///
+/// The two readouts below watched the whole [SettingsModel], so every settings
+/// write (a theme toggle, another service's edit) re-tested every connection
+/// over the network, and signed in again where a service signs in with a
+/// password. Watched through this, a connection is asked again only when
+/// something it is asked with changes.
+typedef _DiagnosisInputs = ({
+  ServiceInstance? instance,
+  String? pin,
+  String plexClientId,
+});
+
+_DiagnosisInputs _diagnosisInputs(SettingsModel settings, String instanceId) {
+  final instance = settings.instanceById(instanceId);
+  return (
+    instance: instance,
+    pin: instance == null ? null : settings.pinForUrl(instance.url),
+    plexClientId: settings.plexClientId,
+  );
+}
+
 /// The connection state of one **connection**, refreshed whenever its saved
 /// address or credentials change.
 ///
@@ -914,7 +937,11 @@ String connectionFailureMessage(
 /// below, and for the same reason.
 final instanceDiagnosisProvider =
     FutureProvider.family<ServiceDiagnosis, String>((ref, instanceId) async {
-      final settings = ref.watch(currentSettingsProvider);
+      // Watch the connection's own inputs; read the whole model for the work.
+      ref.watch(
+        currentSettingsProvider.select((s) => _diagnosisInputs(s, instanceId)),
+      );
+      final settings = ref.read(currentSettingsProvider);
       final instance = settings.instanceById(instanceId);
       if (instance == null) return const ServiceDiagnosis.notConfigured();
       return diagnoseSavedInstance(ref, instance, settings);
@@ -924,7 +951,20 @@ final instanceDiagnosisProvider =
 /// has, so the answer is never better than its worst one. See [diagnoseService].
 final serviceDiagnosisProvider =
     FutureProvider.family<ServiceDiagnosis, ServiceKey>((ref, service) async {
-      final settings = ref.watch(currentSettingsProvider);
+      // Which connections, joined into a string because a fresh list never
+      // compares equal; then each one's own inputs.
+      final ids = ref.watch(
+        currentSettingsProvider.select(
+          (s) => s.configuredInstancesOf(service).map((i) => i.id).join(','),
+        ),
+      );
+      for (final id in ids.split(',')) {
+        if (id.isEmpty) continue;
+        ref.watch(
+          currentSettingsProvider.select((s) => _diagnosisInputs(s, id)),
+        );
+      }
+      final settings = ref.read(currentSettingsProvider);
       // Deliberately *not* through `diagnoseThroughLocalNetworkGate`. This runs
       // unattended — on launch, and for every configured service at once — and
       // resolving the permission is not a passive question: on iOS it can put an
