@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -151,14 +152,19 @@ class AppIcon extends StatelessWidget {
     if (url == null || url.isEmpty) return placeholder;
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
-      child: CachedNetworkImage(
-        imageUrl: url,
-        cacheManager: pinnedImageCacheFor(url),
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorWidget: (_, _, _) => placeholder,
-        placeholder: (_, _) => placeholder,
+      child: ArtworkDecodeBox(
+        box: Size.square(size),
+        builder: (context, decode) => CachedNetworkImage(
+          imageUrl: url,
+          cacheManager: pinnedImageCacheFor(url),
+          memCacheWidth: decode.width,
+          memCacheHeight: decode.height,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: (_, _, _) => placeholder,
+          placeholder: (_, _) => placeholder,
+        ),
       ),
     );
   }

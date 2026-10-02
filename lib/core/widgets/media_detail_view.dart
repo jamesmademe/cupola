@@ -11,6 +11,7 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
@@ -1012,16 +1013,22 @@ class _FallbackHeroBackdrop extends StatelessWidget {
             // and fade in on navigation. Plain faded art avoids that artifact
             // while the real poster flies via the poster-row Hero.
             child: hasPoster
-                ? CachedNetworkImage(
-                    imageUrl: posterUrl!,
-                    httpHeaders: posterHeaders,
-                    cacheManager: pinnedImageCacheFor(posterUrl),
-                    width: 120,
-                    fit: BoxFit.cover,
-                    errorWidget: (context, url, error) => Icon(
-                      fallbackIcon,
-                      size: 90,
-                      color: colorScheme.onSurfaceVariant,
+                ? ArtworkDecodeBox(
+                    // 120 wide, and as tall as the poster's own shape.
+                    box: const Size(120, double.infinity),
+                    builder: (context, decode) => CachedNetworkImage(
+                      imageUrl: posterUrl!,
+                      httpHeaders: posterHeaders,
+                      cacheManager: pinnedImageCacheFor(posterUrl),
+                      memCacheWidth: decode.width,
+                      memCacheHeight: decode.height,
+                      width: 120,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) => Icon(
+                        fallbackIcon,
+                        size: 90,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   )
                 : Icon(
@@ -1184,12 +1191,16 @@ class _BackdropHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CachedNetworkImage(
-      imageUrl: backdropUrl,
-      cacheManager: pinnedImageCacheFor(backdropUrl),
-      fit: BoxFit.cover,
-      errorWidget: (context, url, error) =>
-          Container(color: Theme.of(context).colorScheme.surfaceContainer),
+    return ArtworkDecodeBox(
+      builder: (context, decode) => CachedNetworkImage(
+        imageUrl: backdropUrl,
+        cacheManager: pinnedImageCacheFor(backdropUrl),
+        memCacheWidth: decode.width,
+        memCacheHeight: decode.height,
+        fit: BoxFit.cover,
+        errorWidget: (context, url, error) =>
+            Container(color: Theme.of(context).colorScheme.surfaceContainer),
+      ),
     );
   }
 }

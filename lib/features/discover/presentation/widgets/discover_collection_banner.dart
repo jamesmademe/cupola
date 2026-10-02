@@ -6,6 +6,7 @@ import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/image_utils.dart';
@@ -61,12 +62,16 @@ class DiscoverCollectionBanner extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (backdropUrl.isNotEmpty)
-                CachedNetworkImage(
-                  imageUrl: backdropUrl,
-                  cacheManager: pinnedImageCacheFor(backdropUrl),
-                  fit: BoxFit.cover,
-                  errorWidget: (context, url, error) =>
-                      Container(color: colorScheme.surfaceContainerHigh),
+                ArtworkDecodeBox(
+                  builder: (context, decode) => CachedNetworkImage(
+                    imageUrl: backdropUrl,
+                    cacheManager: pinnedImageCacheFor(backdropUrl),
+                    memCacheWidth: decode.width,
+                    memCacheHeight: decode.height,
+                    fit: BoxFit.cover,
+                    errorWidget: (context, url, error) =>
+                        Container(color: colorScheme.surfaceContainerHigh),
+                  ),
                 )
               else
                 Container(color: colorScheme.surfaceContainerHigh),

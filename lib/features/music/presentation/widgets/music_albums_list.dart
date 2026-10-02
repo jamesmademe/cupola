@@ -312,14 +312,19 @@ class _AlbumArtwork extends StatelessWidget {
     return ClipRRect(
       borderRadius: AppRadius.borderRadiusSm,
       child: imageSource.url.isNotEmpty
-          ? CachedNetworkImage(
-              imageUrl: imageSource.url,
-              httpHeaders: imageSource.headers,
-              cacheManager: pinnedImageCacheFor(imageSource.url),
-              width: _width,
-              height: _height,
-              fit: BoxFit.cover,
-              errorWidget: (context, url, error) => const _AlbumPlaceholder(),
+          ? ArtworkDecodeBox(
+              box: const Size(_width, _height),
+              builder: (context, decode) => CachedNetworkImage(
+                imageUrl: imageSource.url,
+                httpHeaders: imageSource.headers,
+                cacheManager: pinnedImageCacheFor(imageSource.url),
+                memCacheWidth: decode.width,
+                memCacheHeight: decode.height,
+                width: _width,
+                height: _height,
+                fit: BoxFit.cover,
+                errorWidget: (context, url, error) => const _AlbumPlaceholder(),
+              ),
             )
           : const _AlbumPlaceholder(),
     );

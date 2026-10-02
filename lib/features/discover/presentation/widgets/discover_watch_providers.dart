@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -121,16 +122,21 @@ class _WatchProviderTile extends StatelessWidget {
             dimension: 18,
             child: ClipOval(
               child: logoPath != null && logoPath.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: 'https://image.tmdb.org/t/p/w92$logoPath',
-                      cacheManager: pinnedImageCacheFor(
-                        'https://image.tmdb.org/t/p/w92$logoPath',
-                      ),
-                      fit: BoxFit.cover,
-                      errorWidget: (context, url, error) => Icon(
-                        Icons.play_circle_outline_rounded,
-                        size: 16,
-                        color: colorScheme.onSurfaceVariant,
+                  ? ArtworkDecodeBox(
+                      box: const Size.square(18),
+                      builder: (context, decode) => CachedNetworkImage(
+                        imageUrl: 'https://image.tmdb.org/t/p/w92$logoPath',
+                        cacheManager: pinnedImageCacheFor(
+                          'https://image.tmdb.org/t/p/w92$logoPath',
+                        ),
+                        memCacheWidth: decode.width,
+                        memCacheHeight: decode.height,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) => Icon(
+                          Icons.play_circle_outline_rounded,
+                          size: 16,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     )
                   : Icon(

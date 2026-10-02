@@ -63,6 +63,9 @@ export 'download_queue_tile.dart';
 // Form & Input
 export 'search_bar_header.dart';
 
+// Artwork
+export 'artwork_decode.dart';
+
 // Status & Tags
 export 'status_badge.dart';
 export 'tag_chip.dart';

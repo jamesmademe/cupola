@@ -5,6 +5,7 @@ import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
 
 /// A reusable poster card for media detail screens.
 ///
@@ -78,32 +79,42 @@ class MediaPosterCard extends StatelessWidget {
       ),
     );
 
-    final image = hasImage
-        ? CachedNetworkImage(
-            imageUrl: imageUrl!,
-            httpHeaders: imageHeaders,
-            cacheManager: pinnedImageCacheFor(imageUrl),
-            fit: BoxFit.cover,
-            // No cross-fade: keeps the Hero flight crisp when the poster is
-            // already cached from the source grid/carousel.
-            fadeInDuration: Duration.zero,
-            fadeOutDuration: Duration.zero,
-            placeholderFadeInDuration: Duration.zero,
-            errorWidget: (context, url, error) => fallback(),
+    // Decoded at the size of the box it fills ([ArtworkCacheSize]), or of
+    // [decodeBox] when the box is a flight's and keeps changing.
+    Widget image({Size? decodeBox}) => hasImage
+        ? ArtworkDecodeBox(
+            box: decodeBox,
+            builder: (context, decode) => CachedNetworkImage(
+              imageUrl: imageUrl!,
+              httpHeaders: imageHeaders,
+              cacheManager: pinnedImageCacheFor(imageUrl),
+              memCacheWidth: decode.width,
+              memCacheHeight: decode.height,
+              fit: BoxFit.cover,
+              // No cross-fade: keeps the Hero flight crisp when the poster is
+              // already cached from the source grid/carousel.
+              fadeInDuration: Duration.zero,
+              fadeOutDuration: Duration.zero,
+              placeholderFadeInDuration: Duration.zero,
+              errorWidget: (context, url, error) => fallback(),
+            ),
           )
         : fallback();
-    final clippedImage = _circular
-        ? ClipOval(child: image)
-        : ClipRRect(borderRadius: effectiveBorderRadius, child: image);
+    Widget clippedImage({Size? decodeBox}) => _circular
+        ? ClipOval(child: image(decodeBox: decodeBox))
+        : ClipRRect(
+            borderRadius: effectiveBorderRadius,
+            child: image(decodeBox: decodeBox),
+          );
 
-    Widget content(List<BoxShadow> shadow) {
+    Widget content(List<BoxShadow> shadow, {Size? decodeBox}) {
       Widget child = DecoratedBox(
         decoration: BoxDecoration(
           shape: _circular ? BoxShape.circle : BoxShape.rectangle,
           borderRadius: _circular ? null : effectiveBorderRadius,
           boxShadow: shadow,
         ),
-        child: clippedImage,
+        child: clippedImage(decodeBox: decodeBox),
       );
       if (hasImage) {
         child = Stack(
@@ -126,10 +137,20 @@ class MediaPosterCard extends StatelessWidget {
       transitionOnUserGestures: flightOnUserGestures,
       flightShuttleBuilder:
           (flightContext, animation, direction, fromContext, toContext) {
+            // The picture is decoded at the size it is drawn at, so the hero
+            // a flight leaves and the one it lands on hold two decodes of it.
+            // The shuttle draws the one already on screen, at the size of the
+            // hero it leaves, so it never waits on a decode; the one it lands
+            // on is decoded while it flies, so the landing does not either.
+            final fromBox = _laidOutSize(fromContext);
+            _decodeAhead(flightContext, _laidOutSize(toContext));
             if (MediaQuery.disableAnimationsOf(flightContext)) {
               return Material(
                 type: MaterialType.transparency,
-                child: heroChild,
+                child: content(
+                  AppElevation.level2(colorScheme),
+                  decodeBox: fromBox,
+                ),
               );
             }
             // "Pick up / set down": the shadow deepens to level3 mid-flight
@@ -148,12 +169,41 @@ class MediaPosterCard extends StatelessWidget {
                 )!;
                 return Material(
                   type: MaterialType.transparency,
-                  child: content(shadow),
+                  child: content(shadow, decodeBox: fromBox),
                 );
               },
             );
           },
       child: Material(type: MaterialType.transparency, child: heroChild),
+    );
+  }
+
+  /// The size [context]'s hero was laid out at, or null before it was.
+  static Size? _laidOutSize(BuildContext context) {
+    final box = context.findRenderObject();
+    return box is RenderBox && box.hasSize ? box.size : null;
+  }
+
+  /// Starts decoding this card's picture for [box], so a hero that lands on
+  /// it finds it ready. A picture that does not load is the landing card's
+  /// to say so, in its fallback; nothing is reported here.
+  void _decodeAhead(BuildContext context, Size? box) {
+    final url = imageUrl;
+    if (box == null || url == null || url.isEmpty) return;
+    final decode = artworkCacheSize(
+      box,
+      MediaQuery.devicePixelRatioOf(context),
+    );
+    precacheImage(
+      decode.resize(
+        CachedNetworkImageProvider(
+          url,
+          headers: imageHeaders,
+          cacheManager: pinnedImageCacheFor(url),
+        ),
+      ),
+      context,
+      onError: (_, _) {},
     );
   }
 }

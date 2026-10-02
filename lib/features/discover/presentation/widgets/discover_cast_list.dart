@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -96,10 +97,17 @@ class _CastTile extends StatelessWidget {
     Widget avatar = CircleAvatar(
       radius: 32,
       backgroundColor: colorScheme.surfaceContainer,
+      // Decoded at the avatar's own 64 points, as the person's poster
+      // decodes the hero it flies into from here.
       backgroundImage: imageUrl != null
-          ? CachedNetworkImageProvider(
-              imageUrl,
-              cacheManager: pinnedImageCacheFor(imageUrl),
+          ? artworkCacheSize(
+              const Size.square(64),
+              MediaQuery.devicePixelRatioOf(context),
+            ).resize(
+              CachedNetworkImageProvider(
+                imageUrl,
+                cacheManager: pinnedImageCacheFor(imageUrl),
+              ),
             )
           : null,
       child: imageUrl == null

@@ -6,6 +6,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 
@@ -99,17 +100,25 @@ class ContentCard extends StatelessWidget {
       return _buildPlaceholder();
     }
 
-    return CachedNetworkImage(
-      imageUrl: imageUrl!,
-      httpHeaders: httpHeaders,
-      cacheManager: pinnedImageCacheFor(imageUrl),
-      fit: BoxFit.cover,
-      // The shared shimmer, not a local clone: it is the one that honours
-      // Reduce Motion, and a poster grid is where an unstoppable sweep is
-      // most visible.
-      placeholder: (context, url) =>
-          const ShimmerPlaceholder(height: double.infinity),
-      errorWidget: (context, url, error) => _buildErrorPlaceholder(),
+    // Decoded at the size of the tile, not the server's: see
+    // [ArtworkCacheSize]. The tile is the box the card fills, which is also
+    // the Hero it flies from, so the detail poster's flight starts on the
+    // picture already decoded here.
+    return ArtworkDecodeBox(
+      builder: (context, decode) => CachedNetworkImage(
+        imageUrl: imageUrl!,
+        httpHeaders: httpHeaders,
+        cacheManager: pinnedImageCacheFor(imageUrl),
+        memCacheWidth: decode.width,
+        memCacheHeight: decode.height,
+        fit: BoxFit.cover,
+        // The shared shimmer, not a local clone: it is the one that honours
+        // Reduce Motion, and a poster grid is where an unstoppable sweep is
+        // most visible.
+        placeholder: (context, url) =>
+            const ShimmerPlaceholder(height: double.infinity),
+        errorWidget: (context, url, error) => _buildErrorPlaceholder(),
+      ),
     );
   }
 
