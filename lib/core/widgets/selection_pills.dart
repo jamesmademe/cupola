@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -134,10 +135,13 @@ class SelectionPills<T> extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  /// The stricter of the two platform minimums (48dp Android, 44pt iOS), applied
-  /// as a floor rather than a fixed height so the pill can still grow with the
-  /// reading size.
-  static const double _minTouchTarget = 48;
+  /// The finger's target, `size.touch` 44: the area grows, the drawing does
+  /// not (brand book *Targets*). A floor, so it grows with the reading size.
+  static const double _minTouchTarget = 44;
+
+  /// The drawn pill, `size.chip` 36, centred in the target. It was drawn at
+  /// the target's 48 itself.
+  static const double _pillHeight = DesignTokens.sizeChip;
 
   final String label;
   final bool selected;
@@ -174,28 +178,41 @@ class _Pill extends StatelessWidget {
       child: ExcludeSemantics(
         child: PressableScale(
           onTap: onTap,
-          child: Container(
+          child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: _minTouchTarget),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: AppRadius.borderRadiusPill,
-              border: Border.all(color: border),
-            ),
-            child: Text(
-              label,
-              maxLines: 1,
-              style: theme.textTheme.labelMedium!
-                  .weight(FontWeight.w600)
-                  .copyWith(color: labelColor),
+            child: Center(
+              heightFactor: 1,
+              child: _pill(theme, background, border, labelColor),
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _pill(
+    ThemeData theme,
+    Color background,
+    Color border,
+    Color labelColor,
+  ) => Container(
+    constraints: const BoxConstraints(minHeight: _pillHeight),
+    alignment: Alignment.center,
+    padding: const EdgeInsets.symmetric(
+      horizontal: AppSpacing.lg,
+      vertical: AppSpacing.sm,
+    ),
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: AppRadius.borderRadiusPill,
+      border: Border.all(color: border),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      style: theme.textTheme.labelMedium!
+          .weight(FontWeight.w600)
+          .copyWith(color: labelColor),
+    ),
+  );
 }

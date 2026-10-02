@@ -28,5 +28,5 @@ Each sheet is drawn in the dark and the light room.
 ## Do / don't
 
 - Do pass the ground the chip lands on so its ink is measured against it.
-- Don't make a pill tappable — an interactive container uses `radius-md`, and a selected one `radius-pill`.
+- Don't make a pill tappable — an interactive pill is a `SelectionPills` choice, and a row of choices keeps its corner in both states: selection is carried by fill and ink, never by the corner.
 - Don't colour a chip with a status tone unless it states that status.
