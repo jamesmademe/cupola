@@ -58,6 +58,9 @@ void main() {
         'kilobytes:',
         'type ArrayDisk',
         'temp:',
+        // parity and cache slots, beside the data drives
+        'parities:',
+        'caches:',
         // dockerContainers fields
         'type DockerContainer',
         'names:',

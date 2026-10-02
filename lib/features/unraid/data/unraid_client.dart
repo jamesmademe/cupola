@@ -179,9 +179,13 @@ class UnraidClient {
   }
 
   static const _infoQuery = 'query { info { os { distro release uptime } } }';
+  // Parity and cache slots are their own lists in Unraid's schema, beside
+  // `disks`, which holds the data drives only. Asked for disks alone, a
+  // disabled parity drive, the fault Unraid users fear most, was invisible.
   static const _arrayQuery =
       'query { array { state capacity { kilobytes { free used total } } '
-      'disks { name status temp } } }';
+      'parities { name status temp } disks { name status temp } '
+      'caches { name status temp } } }';
   static const _dockerQuery =
       'query { dockerContainers { id names state status autoStart } }';
   static const _capabilitiesQuery =

@@ -161,7 +161,10 @@ void main() {
       expect(disk('DISK_OK', temp: 47).flagged, isFalse);
       expect(disk('DISK_NEW', temp: 30).flagged, isFalse);
       expect(disk('', temp: 30).flagged, isFalse);
-      expect(disk('DISK_NP').flagged, isTrue);
+      // An empty slot holds no drive and expects none: not a fault. A drive
+      // the array expected and lost still is.
+      expect(disk('DISK_NP').flagged, isFalse);
+      expect(disk('DISK_NP_MISSING').flagged, isTrue);
     });
   });
 

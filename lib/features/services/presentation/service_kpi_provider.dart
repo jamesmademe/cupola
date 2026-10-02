@@ -1703,7 +1703,8 @@ List<ServiceKpi> _unraidKpisFrom(
     if (array.reportedDisks)
       ServiceKpi(
         label: 'Disks',
-        value: '${array.disks.length}',
+        // Parity and cache drives too; an empty slot holds none.
+        value: '${array.drives.length}',
         icon: Icons.storage_rounded,
       )
     else

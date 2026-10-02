@@ -661,7 +661,9 @@ class _DiskList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return arrayAsync.when(
       data: (array) {
-        if (array.disks.isEmpty) {
+        // Parity and cache with the data drives, as Unraid lists them.
+        final drives = array.drives;
+        if (drives.isEmpty) {
           return const Padding(
             padding: EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
@@ -671,7 +673,7 @@ class _DiskList extends ConsumerWidget {
           );
         }
         return Column(
-          children: array.disks.map((disk) => _DiskTile(disk: disk)).toList(),
+          children: drives.map((disk) => _DiskTile(disk: disk)).toList(),
         );
       },
       loading: () => const ListRowsShimmer(),

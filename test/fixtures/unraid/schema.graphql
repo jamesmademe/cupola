@@ -114,7 +114,9 @@ type Os {
 type Array {
   state: ArrayState
   capacity: ArrayCapacity
+  parities: [ArrayDisk!]
   disks: [ArrayDisk!]
+  caches: [ArrayDisk!]
 }
 
 type ArrayCapacity {

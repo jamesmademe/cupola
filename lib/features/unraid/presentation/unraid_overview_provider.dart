@@ -308,15 +308,17 @@ UnraidArrayDigest unraidArrayDigest(
     stateLabel: unraidArrayStateLabel(array.state),
     capacityLabel: unraidCapacityLabel(array),
     // Only a list the array actually sent is a census. Silence is not zero.
-    diskCount: array.reportedDisks ? array.disks.length : null,
+    // Every drive counts, parity and cache with the data drives; an empty
+    // slot holds none, so it does not.
+    diskCount: array.reportedDisks ? array.drives.length : null,
     // Warm is a temperature, flagged is a slot status, and a disk can be both.
     // Each drive is attributed once, to the more serious of its two troubles:
     // every flagged slot is counted as flagged, and only an unflagged drive
     // over the threshold is counted as warm. Nothing in the headline is
     // double-reported, and nothing is dropped.
-    warmCount: array.disks.where((disk) => disk.warm && !disk.flagged).length,
-    faultCount: array.disks.where((disk) => disk.flagged).length,
-    preview: unraidDiskPreview(array.disks, limit: limit),
+    warmCount: array.drives.where((disk) => disk.warm && !disk.flagged).length,
+    faultCount: array.drives.where((disk) => disk.flagged).length,
+    preview: unraidDiskPreview(array.drives, limit: limit),
   );
 }
 

@@ -284,6 +284,8 @@ class UnraidArray {
     required this.state,
     required this.usedFraction,
     required List<UnraidDisk>? disks,
+    this.parities = const [],
+    this.caches = const [],
     this.usedBytes,
     this.totalBytes,
   }) : _disks = disks;
@@ -312,6 +314,22 @@ class UnraidArray {
   /// True for an array that answered `disks: []` — that is a real census of an
   /// array with no drives in it — and false only for silence.
   bool get reportedDisks => _disks != null;
+
+  /// The parity slots (`parities`), which Unraid lists apart from the data
+  /// drives in [disks]. Empty when the array reported none.
+  final List<UnraidDisk> parities;
+
+  /// The cache pool's slots (`caches`). Empty when the array reported none.
+  final List<UnraidDisk> caches;
+
+  /// Every slot that holds a drive, in the order Unraid's own UI lists them:
+  /// parity, then data, then cache. An empty slot ([UnraidDisk.empty]) is not
+  /// a drive, so it is not here: a second parity nobody fitted is a slot, not
+  /// a disk, and not a fault.
+  List<UnraidDisk> get drives => [
+    for (final disk in [...parities, ...disks, ...caches])
+      if (!disk.empty) disk,
+  ];
 
   /// The absolute capacity figures, normalised to **bytes**, or null when the
   /// server reported no capacity block at all.
@@ -368,16 +386,20 @@ class UnraidArray {
     // Left null when the field is absent, rather than collapsed to an empty
     // list: see [_disks]. An array that answered `disks: []` still lands here
     // as a list, and that one is a census.
-    final disks = json['disks'] as List?;
+    List<UnraidDisk>? slots(Object? list) => list is List
+        ? list
+              .whereType<Map>()
+              .map((e) => UnraidDisk.fromJson(e.cast<String, dynamic>()))
+              .toList(growable: false)
+        : null;
     return UnraidArray(
       state: (json['state'] ?? 'UNKNOWN').toString(),
       usedFraction: usedFraction,
       usedBytes: usedBytes,
       totalBytes: totalBytes,
-      disks: disks
-          ?.whereType<Map>()
-          .map((e) => UnraidDisk.fromJson(e.cast<String, dynamic>()))
-          .toList(growable: false),
+      disks: slots(json['disks']),
+      parities: slots(json['parities']) ?? const [],
+      caches: slots(json['caches']) ?? const [],
     );
   }
 }
@@ -411,21 +433,32 @@ class UnraidDisk {
 
   bool get warm => (temp ?? 0) >= warmThresholdCelsius;
 
+  /// A slot with no disk in it and none expected (`DISK_NP`): a second parity
+  /// nobody fitted, a data slot left free. Not a drive, and not a fault.
+  ///
+  /// `DISK_NP_MISSING` and `DISK_NP_DSBL` are not this: there the array
+  /// expected a drive and it is gone, which [flagged] reports.
+  bool get empty => status.trim().toUpperCase() == 'DISK_NP';
+
   /// Whether the array has flagged this slot.
   ///
   /// Unraid reports slot health as `DISK_OK`, `DISK_NEW`, `DISK_NP` (no disk in
   /// the slot), `DISK_INVALID`, `DISK_DSBL` (disabled — the array is running
-  /// without it) and a handful of `DISK_*` siblings. Only the first two are
-  /// "nothing to do here"; everything else is the array telling us something is
-  /// wrong with a slot it expected to use. An empty status is not a verdict, so
-  /// it is not one here either.
+  /// without it) and a handful of `DISK_*` siblings. `DISK_OK` and `DISK_NEW`
+  /// are "nothing to do here", and so is `DISK_NP`, an empty slot ([empty]): it
+  /// used to be flagged, a fault on every array with a free slot. Everything
+  /// else is the array telling us something is wrong with a slot it expected
+  /// to use. An empty status is not a verdict, so it is not one here either.
   ///
   /// Separate from [tone] because the header counts the two kinds of trouble
   /// apart: a drive can be flagged *and* over temperature, and the count that
   /// names the more serious of the two must never be the one that drops it.
   bool get flagged {
     final value = status.trim().toUpperCase();
-    return value.isNotEmpty && value != 'DISK_OK' && value != 'DISK_NEW';
+    return value.isNotEmpty &&
+        value != 'DISK_OK' &&
+        value != 'DISK_NEW' &&
+        value != 'DISK_NP';
   }
 
   /// Amber for a slot the array has [flagged] or a drive over the warning
