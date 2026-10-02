@@ -31,6 +31,9 @@ void main() {
     expect(find.text('Requests'), findsWidgets);
     expect(find.textContaining('Sprite Fright'), findsWidgets);
     expect(find.textContaining('Seerr'), findsNothing);
+    // They have no services, so the first filter does not say so.
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('All services'), findsNothing);
 
     await harness.unmount(tester);
   });
@@ -85,6 +88,7 @@ void main() {
 
     expect(find.text('Seerr'), findsWidgets);
     expect(find.text('Requests'), findsNothing);
+    expect(find.text('All services'), findsOneWidget);
 
     await harness.unmount(tester);
   });

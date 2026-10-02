@@ -280,7 +280,9 @@ class _ServiceFilterChips extends ConsumerWidget {
       child: Row(
         children: [
           _FilterChip(
-            label: 'All services',
+            label: gate.namesService(ServiceKey.seerr)
+                ? 'All services'
+                : Lexicon.allLanes,
             selected: selectedService == null,
             onTap: () => onSelected(null),
           ),

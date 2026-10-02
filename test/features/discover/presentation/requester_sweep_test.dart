@@ -41,6 +41,10 @@ final _never = <RegExp>[
   RegExp(r'\binstance\b', caseSensitive: false),
   RegExp(r'^(Manage|Approve|Decline|Server)$'),
   RegExp(r'\b(Approve|Decline) request\b'),
+  // The operator's words for a request that cannot be made: the requester's
+  // button reads `Didn't go through` and `Can't be requested`.
+  RegExp(r'^(Request failed|Blocklisted)$'),
+  RegExp(r'\bAll services\b'),
   // Somebody else's name: Luca's request is not hers to see.
   RegExp(WorldPeople.luca),
 ];

@@ -147,6 +147,14 @@ abstract final class Lexicon {
   static const blockedByOwner =
       'Whoever runs the server has blocked requests for this title.';
 
+  /// The requester's request button over [lastRequestFailed]: the state in
+  /// the sentence's own words, never the operator's `Request failed`.
+  static const requestDidNotGoThrough = "Didn't go through";
+
+  /// The requester's request button over [blockedByOwner]: what it means to
+  /// them, never the operator's `Blocklisted`.
+  static const cannotBeRequested = "Can't be requested";
+
   /// Under the request sheet of an account whose requests wait for whoever
   /// runs the server.
   static const approvedByOwner =
@@ -188,6 +196,10 @@ abstract final class Lexicon {
   /// The requester's Seerr, where its name would be: the global search's
   /// lane and its filter.
   static const requestsLane = 'Requests';
+
+  /// The requester's first search filter: they have no services, so it is
+  /// not `All services`.
+  static const allLanes = 'All';
 
   /// The search for something to ask for, before a word is typed: the
   /// requester's global search and Discover's own field.

@@ -118,7 +118,9 @@ class DiscoverActionButtons extends ConsumerWidget {
       case SeerrRequestState.failed:
         // Seerr takes no second request while this one stands, and the row
         // that can remove it is under Manage.
-        requestLabel = 'Request failed';
+        requestLabel = namesSeerr
+            ? 'Request failed'
+            : Lexicon.requestDidNotGoThrough;
         requestIcon = Icons.error_outline_rounded;
         disabledReason = namesSeerr && namesArr
             ? 'Seerr could not send the last request to $serviceName.'
@@ -126,7 +128,9 @@ class DiscoverActionButtons extends ConsumerWidget {
       case SeerrRequestState.blocklisted:
         // The operator's own choice, made in Seerr: neutral, and nothing to
         // fix from here. Seerr refuses any request for it.
-        requestLabel = StateWord.blocklisted.label;
+        requestLabel = namesSeerr
+            ? StateWord.blocklisted.label
+            : Lexicon.cannotBeRequested;
         requestIcon = Icons.block_rounded;
         disabledReason = namesSeerr
             ? 'Blocklisted in Seerr, which takes no request for it.'
