@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'package:dio/dio.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/domain/prowlarr_known_application.dart';
@@ -83,12 +84,15 @@ class ProwlarrService {
         'eventType': ?eventType,
       },
     );
-    // History pages can carry up to ~100 records; parse off the main isolate
-    // to keep the UI thread responsive (mirrors `BaseArrService`).
-    final data = response.data;
-    return Isolate.run(
-      () => ProwlarrHistoryPage.fromJson(mapOrNull(data) ?? const {}),
-    );
+    // A page is as long as asked for (20 on the overview, 50 on the History
+    // screen): below the \*arrs' threshold the isolate spawn costs more than
+    // the parse, so only a longer page leaves the main isolate.
+    final body = mapOrNull(response.data) ?? const <String, dynamic>{};
+    final records = body['records'];
+    if (records is! List || records.length <= arrIsolateMapThreshold) {
+      return ProwlarrHistoryPage.fromJson(body);
+    }
+    return Isolate.run(() => ProwlarrHistoryPage.fromJson(body));
   }
 
   /// Recent activity for a single indexer.

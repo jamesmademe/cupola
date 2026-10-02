@@ -65,7 +65,7 @@ class ArrServiceConfig {
 /// Jellyfin item mapper: below it the isolate spawn costs more than the mapping
 /// does. It matters most on `lookupItems`, which runs on the debounced global
 /// search path and typically answers with under twenty rows.
-const int _arrIsolateMapThreshold = 200;
+const int arrIsolateMapThreshold = 200;
 
 /// Maps a decoded list, moving to an isolate once the page is big enough to be
 /// worth the port.
@@ -78,7 +78,7 @@ Future<List<T>> _mapArrItems<T>(
   List<dynamic> data,
   T Function(Map<String, dynamic>) fromJson,
 ) async {
-  if (data.length <= _arrIsolateMapThreshold) {
+  if (data.length <= arrIsolateMapThreshold) {
     return data.map((item) => fromJson(item as Map<String, dynamic>)).toList();
   }
   return Isolate.run(
