@@ -170,6 +170,18 @@ void main() {
         expect(MediaGrid.columnsFor(AppBreakpoints.contentWell, 3), 8);
       });
 
+      test('a 390pt phone draws three columns of about 111 (F-grid)', () {
+        // The phone is the product: its library is three posters wide, as the
+        // canvas draws it, the floor winning over the 130 the width alone
+        // would ask for. 390 less the grid's 16 on each side is 358.
+        const well = 390.0 - 2 * 16;
+        final columns = MediaGrid.columnsFor(well, 3);
+        expect(columns, 3);
+        expect(tileWidth(well, columns), closeTo(111, 1));
+        // Above the floor a column is added only while it keeps 130.
+        expect(MediaGrid.columnsFor(well, 1), 2);
+      });
+
       test('minColumns is a floor on the count, for the phone', () {
         // Two enormous posters would be a worse answer than three correct ones,
         // so a narrow frame keeps its three even though the arithmetic would
