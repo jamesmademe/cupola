@@ -133,7 +133,7 @@ void main() {
 
       expect(service.added, ['magnet:?xt=urn:btih:abc']);
       expect(find.byType(Form), findsNothing);
-      expect(find.text('Torrent added successfully'), findsOneWidget);
+      expect(find.text('Torrent added'), findsOneWidget);
       expect(made.disposed, unorderedEquals(made.created));
     });
   });

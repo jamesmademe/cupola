@@ -42,7 +42,7 @@ class AddTorrentButton extends ConsumerWidget {
         // Told on the page that opened the sheet: the sheet is gone by then.
         onAdded: () {
           if (context.mounted) {
-            SnackBarHelper.success(context, 'Torrent added successfully');
+            SnackBarHelper.success(context, 'Torrent added');
           }
         },
       ),
