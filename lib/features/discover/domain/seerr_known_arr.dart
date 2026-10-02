@@ -1,5 +1,7 @@
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
+import 'package:cupola/features/settings/domain/connection_candidate.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A Radarr or Sonarr that Seerr knows, as its own settings hold it, key
@@ -74,6 +76,29 @@ class SeerrKnownArr {
 
   bool get is4k => server.is4k;
   bool get isDefault => server.isDefault;
+
+  /// This server as a candidate found through [seerr], the connection it
+  /// was read from, with the key Seerr uses. Null when Seerr's settings do
+  /// not say where it is.
+  ConnectionCandidate? toCandidate(ServiceInstance seerr) {
+    assert(seerr.service == ServiceKey.seerr, 'not a Seerr connection');
+    final address = this.address;
+    if (address == null) return null;
+    return ConnectionCandidate(
+      service: service,
+      name: name,
+      reportedUrl: address,
+      source: CandidateSource(
+        service: seerr.service,
+        connectionId: seerr.id,
+        url: seerr.url,
+      ),
+      apiKey: apiKey,
+      externalUrl: externalUrl,
+      is4k: is4k,
+      isDefault: isDefault,
+    );
+  }
 
   /// The server, its address, and whether a key came: never the key.
   @override

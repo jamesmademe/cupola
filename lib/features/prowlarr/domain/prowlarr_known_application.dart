@@ -1,5 +1,7 @@
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/connection_candidate.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// An application Prowlarr syncs its indexers to, as `GET
@@ -79,6 +81,29 @@ class ProwlarrKnownApplication {
     'readarr' => ServiceKey.readarr,
     _ => null,
   };
+
+  /// This application as a candidate found through [prowlarr], the
+  /// connection it was read from, with no key: Prowlarr never gives one. Null
+  /// for an application Cupola does not connect to, or one with no address.
+  ConnectionCandidate? toCandidate(ServiceInstance prowlarr) {
+    assert(
+      prowlarr.service == ServiceKey.prowlarr,
+      'not a Prowlarr connection',
+    );
+    final service = this.service;
+    final address = baseUrl;
+    if (service == null || address == null) return null;
+    return ConnectionCandidate(
+      service: service,
+      name: name,
+      reportedUrl: address,
+      source: CandidateSource(
+        service: prowlarr.service,
+        connectionId: prowlarr.id,
+        url: prowlarr.url,
+      ),
+    );
+  }
 
   @override
   String toString() =>
