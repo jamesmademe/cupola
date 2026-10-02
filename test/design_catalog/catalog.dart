@@ -458,25 +458,28 @@ class _Sheet extends StatelessWidget {
               overrides: scene.overrides.isEmpty
                   ? const []
                   : [...shared, ...scene.overrides],
-              child: SizedBox(
-                width: scene.width,
-                height: scene.height,
-                child: scene.width == null && scene.textScale == 1
-                    ? Builder(builder: scene.build)
-                    : MediaQuery(
-                        data: media.copyWith(
-                          size: scene.width == null
-                              ? media.size
-                              : Size(
-                                  scene.width!,
-                                  scene.height ?? media.size.height,
-                                ),
-                          textScaler: scene.textScale == 1
-                              ? media.textScaler
-                              : TextScaler.linear(scene.textScale),
+              child: ClipRect(
+                clipper: const _SceneClip(),
+                child: SizedBox(
+                  width: scene.width,
+                  height: scene.height,
+                  child: scene.width == null && scene.textScale == 1
+                      ? Builder(builder: scene.build)
+                      : MediaQuery(
+                          data: media.copyWith(
+                            size: scene.width == null
+                                ? media.size
+                                : Size(
+                                    scene.width!,
+                                    scene.height ?? media.size.height,
+                                  ),
+                            textScaler: scene.textScale == 1
+                                ? media.textScaler
+                                : TextScaler.linear(scene.textScale),
+                          ),
+                          child: Builder(builder: scene.build),
                         ),
-                        child: Builder(builder: scene.build),
-                      ),
+                ),
               ),
             ),
             const SizedBox(height: 6),
@@ -487,6 +490,21 @@ class _Sheet extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Keeps what a scene paints out of its neighbours: Flutter's overflow marker
+/// is a bar about 230pt tall that would draw across the scenes above and below
+/// the one that overflows. Shadows and glows still bleed 40pt past the box, and
+/// anything may run out to the right.
+class _SceneClip extends CustomClipper<Rect> {
+  const _SceneClip();
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(-24, -40, size.width + 2000, size.height + 40);
+
+  @override
+  bool shouldReclip(_SceneClip oldClipper) => false;
 }
 
 /// A scene's own provider container, when it overrides anything; retries are
