@@ -1154,12 +1154,10 @@ List<Widget> _buildQueueChips(
       ),
     if (quality != null)
       TagChip(surface: colorScheme.surfaceContainer, text: quality),
+    // A protocol states no status, so it wears no tone: the plain chip, like
+    // the quality beside it.
     if (protocol != null)
-      TagChip(
-        surface: colorScheme.surfaceContainer,
-        text: protocol,
-        color: statusToneFill(colorScheme, StatusTone.info),
-      ),
+      TagChip(surface: colorScheme.surfaceContainer, text: protocol),
     if (downloadClient != null)
       TagChip(
         surface: colorScheme.surfaceContainer,
@@ -1197,11 +1195,7 @@ List<Widget> _buildBlocklistChips(
 
   return [
     if (protocol != null)
-      TagChip(
-        surface: colorScheme.surfaceContainer,
-        text: protocol,
-        color: statusToneFill(colorScheme, StatusTone.info),
-      ),
+      TagChip(surface: colorScheme.surfaceContainer, text: protocol),
     if (indexer != null)
       TagChip(
         surface: colorScheme.surfaceContainer,
@@ -1251,11 +1245,7 @@ List<Widget> _buildWantedChips(
     if (quality != null)
       TagChip(surface: colorScheme.surfaceContainer, text: quality),
     if (showDateChip && date != null)
-      TagChip(
-        surface: colorScheme.surfaceContainer,
-        text: formatIsoDate(date),
-        color: statusToneFill(colorScheme, StatusTone.info),
-      ),
+      TagChip(surface: colorScheme.surfaceContainer, text: formatIsoDate(date)),
   ];
 }
 

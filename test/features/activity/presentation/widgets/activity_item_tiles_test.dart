@@ -429,10 +429,9 @@ void main() {
         );
       });
 
-      // The informational chips (a release's protocol, a wanted row's date) take
-      // the room's own blue through the tone helper. They used to take the dark
-      // room's blue raw, which on paper is a pale wash under an ink walked to
-      // another hue's lightness.
+      // A release's protocol and a wanted row's date state no status, so their
+      // chips wear no tone: the plain chip, like the quality beside them. They
+      // used to wear the info blue.
       Future<void> pumpRow(WidgetTester tester, Widget row) =>
           tester.pumpWidget(
             MaterialApp(
@@ -444,7 +443,7 @@ void main() {
       Iterable<Color?> chipTones(WidgetTester tester) =>
           tester.widgetList<TagChip>(find.byType(TagChip)).map((c) => c.color);
 
-      testWidgets('a queue row\'s protocol is the room\'s blue ($name)', (
+      testWidgets('a queue row\'s protocol is a plain chip ($name)', (
         tester,
       ) async {
         await pumpRow(
@@ -455,10 +454,10 @@ void main() {
           ),
         );
 
-        expect(chipTones(tester), [statusToneFill(scheme, StatusTone.info)]);
+        expect(chipTones(tester), [null]);
       });
 
-      testWidgets('a blocklist row\'s protocol is the room\'s blue ($name)', (
+      testWidgets('a blocklist row\'s protocol is a plain chip ($name)', (
         tester,
       ) async {
         await pumpRow(
@@ -469,10 +468,10 @@ void main() {
           ),
         );
 
-        expect(chipTones(tester), [statusToneFill(scheme, StatusTone.info)]);
+        expect(chipTones(tester), [null]);
       });
 
-      testWidgets('a wanted row\'s date is the room\'s blue ($name)', (
+      testWidgets('a wanted row\'s date is a plain chip ($name)', (
         tester,
       ) async {
         await pumpRow(
@@ -489,7 +488,7 @@ void main() {
           ),
         );
 
-        expect(chipTones(tester), [statusToneFill(scheme, StatusTone.info)]);
+        expect(chipTones(tester), [null]);
       });
     }
   });
