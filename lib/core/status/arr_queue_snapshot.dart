@@ -437,11 +437,16 @@ class ArrQueueSnapshot {
   }
 }
 
-/// How old [queue]'s reading is, in the app's one vocabulary for an age
-/// ([formatSampleAge]): `3 min ago`, `just now`. What a page under a stale
-/// queue ([ArrQueueSnapshot.isStale]) says of the downloads it still shows.
-String queueReadingAge(ArrQueueSnapshot queue, {DateTime? now}) =>
-    formatSampleAge(queue.sampledAt ?? now ?? DateTime.now(), now: now);
+/// How old [queue]'s reading is, as the end of "as it was …": what a page
+/// under a stale queue ([ArrQueueSnapshot.isStale]) says of the downloads it
+/// still shows. The app's one vocabulary for an age ([formatDurationAge],
+/// `3 min ago`), except under a minute, which reads `a moment ago`: "as it was
+/// just now" right after a failure reads as if nothing had failed.
+String queueReadingAge(ArrQueueSnapshot queue, {DateTime? now}) {
+  final at = now ?? DateTime.now();
+  final elapsed = at.difference(queue.sampledAt ?? at);
+  return elapsed.inMinutes < 1 ? 'a moment ago' : formatDurationAge(elapsed);
+}
 
 /// Collapses several queue records onto one media item.
 ///

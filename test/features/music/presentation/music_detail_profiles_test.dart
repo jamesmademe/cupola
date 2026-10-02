@@ -64,7 +64,7 @@ void main() {
       expect(
         find.text(
           "Lidarr's queue answered with an error, so the downloads shown are "
-          'as they were just now.',
+          'as they were a moment ago.',
         ),
         findsOneWidget,
       );

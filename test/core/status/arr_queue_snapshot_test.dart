@@ -573,6 +573,13 @@ void main() {
         queueReadingAge(stale, now: read.add(const Duration(minutes: 3))),
         '${withUnit(3, 'min')} ago',
       );
+      expect(
+        queueReadingAge(stale, now: read.add(const Duration(seconds: 20))),
+        'a moment ago',
+        reason:
+            '"as it was just now" right after a failure reads as if '
+            'nothing had failed.',
+      );
     });
 
     test('it did not answer now: not whole, not pending, and an absence '
