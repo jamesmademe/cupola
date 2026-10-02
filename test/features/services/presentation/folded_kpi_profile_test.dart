@@ -125,4 +125,31 @@ void main() {
     // Anna on each server: two streams.
     expect(pair.primary.value, '2');
   });
+
+  test('P1 + the cabin Jellyfin on a member\'s token: the ×2 card counts '
+      'at least two streams, never two', () async {
+    // The cabin's token sees only its own member's playback, so its count is
+    // part of that server's. The sum used to read "2", the figure of a whole
+    // household, and dropped the note that said one term was hers alone.
+    final harness = await ProfileHarness.start(
+      Profiles.p1.withConnection(
+        WorldConnections.jellyfinCabin.withBehaviour(
+          ConnectionBehaviour.readOnly,
+        ),
+      ),
+    );
+    final container = harness.container(retry: (_, _) => null);
+    final sub = container.listen(
+      foldedServiceSignalPairProvider(ServiceKey.jellyfin),
+      (_, _) {},
+    );
+    addTearDown(sub.close);
+
+    final pair = await container.read(
+      foldedServiceSignalPairProvider(ServiceKey.jellyfin).future,
+    );
+
+    expect(pair!.primary.value, '2+');
+    expect(pair.primary.spoken, 'Streaming at least 2');
+  });
 }

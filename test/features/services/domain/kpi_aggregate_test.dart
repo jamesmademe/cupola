@@ -196,8 +196,56 @@ void main() {
         [kpi('Queue', '2', note: 'indexer unreachable')],
       ]);
 
-      expect(folded!.single.value, '3');
+      // Neither reason survives, so the sum cannot say why it is short: it
+      // says that it is.
+      expect(folded!.single.value, '3+');
       expect(folded.single.note, isNull);
+    });
+
+    test('a count that loses what qualified one term is a floor', () {
+      // The server's API key counts everyone's playback; a household member's
+      // token counts only her own. Their sum is at least 2, never 2.
+      final folded = aggregateServiceKpis([
+        [kpi('Streams', '1')],
+        [kpi('Streams', '1', note: 'yours only')],
+      ]);
+
+      expect(folded!.single.value, '2+');
+      expect(folded.single.note, isNull);
+    });
+
+    test('a union that loses what qualified one term is a floor too', () {
+      final folded = aggregateServiceKpis([
+        [
+          const ServiceKpi(
+            label: 'Movies',
+            value: '2',
+            icon: Icons.movie_rounded,
+            members: {1, 2},
+          ),
+        ],
+        [
+          const ServiceKpi(
+            label: 'Movies',
+            value: '1',
+            icon: Icons.movie_rounded,
+            note: 'yours only',
+            members: {2},
+          ),
+        ],
+      ]);
+
+      expect(folded!.single.value, '2+');
+    });
+
+    test('a qualifier every term shares is said, and the sum stands', () {
+      final folded = aggregateServiceKpis([
+        [kpi('Streams', '1', note: 'yours only')],
+        [kpi('Streams', '2', note: 'yours only')],
+      ]);
+
+      expect(folded!.single.value, '3');
+      expect(folded.single.note, 'yours only');
     });
 
     test('one reason, said by every connection, survives', () {

@@ -24,7 +24,8 @@
 ///  * **The aggregate is never partial.** A term that did not answer takes the
 ///    whole figure to `—`, and a connection that could not be read at all takes
 ///    the whole fold away. A sum missing a term is worse than no sum: it looks
-///    like a sum.
+///    like a sum. A term that counted only part of what its label names (its
+///    note says so, `yours only`) makes a count a floor, `2+`.
 ///
 /// The arithmetic is done on the *rendered* strings rather than on the numbers
 /// behind them, because [ServiceKpi] is where the figures already are and the
@@ -95,13 +96,23 @@ ServiceKpi _foldOne(List<ServiceKpi> terms) {
     );
   }
 
+  // A note is the reason a figure is not what its label says. One the fold
+  // cannot carry, because the other terms do not share it, leaves the result
+  // short of what the label names: a household member's Jellyfin counts only
+  // her own playback, and added to a server that counts everyone's it is a
+  // floor, never a total. The fold says so the way the Home says every floor,
+  // `2+`, since the note it would need is gone.
+  final shortOfLabel =
+      _sharedNote(terms) == null && terms.any((term) => term.note != null);
+
   // A count of titles counts each title once, however many libraries hold it.
   // A floor in it is still a floor: the titles that did not arrive are not in
   // the union either.
   final members = [for (final term in terms) term.members];
   if (!members.contains(null)) {
     final union = <Object>{for (final titles in members) ...titles!};
-    final floor = terms.any((term) => _count(term.value)?.floor ?? false);
+    final floor =
+        shortOfLabel || terms.any((term) => _count(term.value)?.floor ?? false);
     return ServiceKpi(
       label: lens.label,
       value: floor ? Lexicon.floor(union.length) : '${union.length}',
@@ -121,7 +132,9 @@ ServiceKpi _foldOne(List<ServiceKpi> terms) {
     final sum = counts.fold<int>(0, (sum, count) => sum + count!.value);
     return ServiceKpi(
       label: lens.label,
-      value: counts.any((count) => count!.floor) ? Lexicon.floor(sum) : '$sum',
+      value: shortOfLabel || counts.any((count) => count!.floor)
+          ? Lexicon.floor(sum)
+          : '$sum',
       icon: lens.icon,
       tone: _worstTone(terms),
       note: _sharedNote(terms),
@@ -183,6 +196,7 @@ int _severity(StatusTone? tone) => switch (tone) {
 /// A note is *the reason this number is not what you expect*. Two connections
 /// with two different reasons have no single reason, and printing the lens's
 /// under a summed figure would attribute one server's excuse to the fleet.
+/// A count that loses a note this way is a floor ([_foldOne]).
 String? _sharedNote(List<ServiceKpi> terms) {
   final note = terms.first.note;
   return terms.every((term) => term.note == note) ? note : null;
