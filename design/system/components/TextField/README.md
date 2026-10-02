@@ -20,6 +20,15 @@ The label, the hint, the value, the keyboard type and the validation or error me
 
 Give every field a `labelText`; a field with only a hint loses its floating label the moment it fills, and VoiceOver/TalkBack read a hint as placeholder text, not as the field's name.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Rest, focused (the phone sheet), error, the obscured API-key field, disabled.
+- A long label, value and helper on a 280pt field.
+- Text at 200%: rest with a hint, and with an error.
+- Focused and in error on the desktop sheet, where the keyboard holds focus.
+
 ## Do / don't
 
 - Do obscure secrets (API keys, passwords) and pair `obscureText` with a reveal action rather than putting the value on the clipboard to check it.

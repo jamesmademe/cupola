@@ -26,6 +26,13 @@ Title, subtitle, icon, accent, trailing, close, and the body. Option rows and fo
 
 The sheet adds no node of its own; the header reads as its text, and the close button carries the platform close tooltip.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the picker also on the desktop.
+
+- A picker with icon, accent and subtitle; qBittorrent's Add torrent form; `showScrollable` with its close button; no title and no accent; `showHandle: false`; a long title and subtitle.
+- Text at 200%: the picker, and the long title and subtitle with the close button.
+
 ## Do / don't
 
 - Do pass a service's sheet its accent: the lamp, which lights the header and the tile without a hue — the title and subtitle say whose sheet it is.

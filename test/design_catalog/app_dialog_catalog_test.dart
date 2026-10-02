@@ -39,6 +39,7 @@ CatalogScene _scene(
   double height = 320,
   double width = 390,
   CatalogPlatform platform = CatalogPlatform.phone,
+  double textScale = 1,
 }) => CatalogScene(
   caption,
   (_) => ClipRect(
@@ -50,6 +51,7 @@ CatalogScene _scene(
   width: width,
   height: height,
   platform: platform,
+  textScale: textScale,
 );
 
 Future<AppConfirmResult> _grab(BuildContext context) => showAppConfirmDialog(
@@ -195,6 +197,26 @@ void main() {
         width: 832,
         height: 520,
         platform: CatalogPlatform.desktop,
+      ),
+      _scene(
+        'Text at 200% · the grab confirmation: the title, the message and '
+        'both buttons at twice the reading size',
+        _grab,
+        height: 640,
+        textScale: catalogTextScale,
+      ),
+      _scene(
+        'Text at 200% · a delete with two options: the labels, the subtitles '
+        'and the confirm label that rewrites itself',
+        _remove,
+        height: 1100,
+        textScale: catalogTextScale,
+      ),
+      _scene(
+        'Text at 200% · the typed confirmation',
+        _shutDown,
+        height: 1100,
+        textScale: catalogTextScale,
       ),
     ],
   );

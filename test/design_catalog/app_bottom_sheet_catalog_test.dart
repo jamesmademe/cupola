@@ -174,12 +174,14 @@ CatalogScene _scene(
   double width = 390,
   CatalogPlatform platform = CatalogPlatform.phone,
   double maxWidth = double.infinity,
+  double textScale = 1,
 }) => CatalogScene(
   caption,
   (_) => _open(sheet(), maxWidth: maxWidth),
   width: width,
   height: height,
   platform: platform,
+  textScale: textScale,
 );
 
 void main() {
@@ -248,6 +250,29 @@ void main() {
         height: 440,
         maxWidth: 640,
         platform: CatalogPlatform.desktop,
+      ),
+      _scene(
+        'Text at 200% · a picker with icon, accent and subtitle: the header '
+        'and the four rows at twice the reading size',
+        _qualityPicker,
+        height: 760,
+        textScale: catalogTextScale,
+      ),
+      _scene(
+        'Text at 200% · the long title and subtitle, close button in the '
+        'header',
+        () => AppBottomSheet(
+          title: 'Delete The Cabinet of Dr. Caligari and its files from Radarr',
+          subtitle:
+              'The Cabinet of Dr. Caligari (1920) · Das Cabinet des Dr. '
+              'Caligari · restored edition from the 2014 tinted negative scan',
+          icon: Icons.delete_outline_rounded,
+          accent: ServiceKey.radarr.accent,
+          showClose: true,
+          child: const SizedBox(height: 48),
+        ),
+        height: 560,
+        textScale: catalogTextScale,
       ),
     ],
   );

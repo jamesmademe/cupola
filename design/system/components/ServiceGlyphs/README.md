@@ -20,6 +20,13 @@ Six marks are [Simple Icons](https://simpleicons.org) (CC0 1.0) — Radarr, Sona
 
 A mark is decoration beside the service's name and is always excluded (`ExcludeSemantics`); the name carries the meaning.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- The seventeen marks on the settings header's well, and Radarr's mark at every size in use.
+- Text at 200%: the seventeen wells; the marks are icons and keep their size.
+
 ## Do / don't
 
 - Do use a mark only to identify the service Cupola connects to — every mark belongs to its owner.

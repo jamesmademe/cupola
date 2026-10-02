@@ -40,6 +40,13 @@ Title, message, icon, `confirmLabel`, optionally `confirmLabelFor`, `cancelLabel
 
 Material's: a dialog route, checkbox tiles that announce their state, two buttons. The typed variant's disabled confirm carries the hint *Type <phrase> above to enable*, on the button's label — a `Semantics(hint:)` wrapped around a button is dropped.
 
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the delete dialog also on the desktop.
+
+- Standard, with an icon, a delete with its options ticked and unticked, a delete with no options, a long title, the typed confirmation.
+- Text at 200%: the grab confirmation, the delete with two options, the typed confirmation.
+
 ## Do / don't
 
 - Do phrase the title as the question and put the object in the message.

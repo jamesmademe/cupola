@@ -16,8 +16,7 @@ void main() {
     'TextField',
     scenes: [
       CatalogScene(
-        'TextFormField · rest, filled, no border — the fill draws the '
-        'boundary',
+        'TextFormField · rest, filled, a 1px room.edge border',
         (_) => const TextField(
           decoration: InputDecoration(
             labelText: 'Server URL',
@@ -27,7 +26,7 @@ void main() {
         width: 360,
       ),
       CatalogScene(
-        'TextFormField(autofocus: true) · focused, a 2px primary border',
+        'TextFormField(autofocus: true) · focused, a 1.5px room.focus border',
         (_) => _controlled(
           'https://radarr.lan:7878',
           (controller) => TextField(
@@ -39,8 +38,8 @@ void main() {
         width: 360,
       ),
       CatalogScene(
-        'TextFormField(errorText:) · a 1px error border at rest, the message '
-        'in body-small under the field',
+        'TextFormField(errorText:) · a 1.5px amber border at rest, the '
+        'message in body-small in the same tone under the field',
         (_) => _controlled(
           'radarr.lan:7878',
           (controller) => TextField(
@@ -86,6 +85,81 @@ void main() {
           ),
         ),
         width: 360,
+      ),
+      CatalogScene(
+        'TextField(enabled: false) · disabled, with a value',
+        (_) => _controlled(
+          'https://radarr.lan:7878',
+          (controller) => TextField(
+            controller: controller,
+            enabled: false,
+            decoration: const InputDecoration(labelText: 'Server URL'),
+          ),
+        ),
+        width: 360,
+      ),
+      CatalogScene(
+        'A long label, value and helper · on a 280pt field: the value scrolls, '
+        'the helper wraps to its two lines',
+        (_) => _controlled(
+          'https://radarr.with-a-very-long-hostname.home.arpa:7878/radarr',
+          (controller) => TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Server URL including the port and any base path',
+              helperText:
+                  'Radarr → Settings → General → Host: the address you open '
+                  'in a browser, without a trailing slash',
+              helperMaxLines: 2,
+            ),
+          ),
+        ),
+        width: 280,
+      ),
+      CatalogScene(
+        'Text at 200% · rest with a hint, filled, and with an error: the '
+        'label, the value, the message and the field at twice the reading '
+        'size',
+        (_) => Column(
+          children: [
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Server URL',
+                hintText: 'https://your-server:7878',
+              ),
+            ),
+            const SizedBox(height: 16),
+            _controlled(
+              'radarr.lan:7878',
+              (controller) => TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Server URL',
+                  errorText: 'Include http:// or https://',
+                ),
+              ),
+            ),
+          ],
+        ),
+        width: 360,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'Focused and in error · autofocus with errorText, on the desktop where '
+        'the keyboard holds focus: the amber border at 1.5px',
+        (_) => _controlled(
+          'radarr.lan:7878',
+          (controller) => TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Server URL',
+              errorText: 'Include http:// or https://',
+            ),
+          ),
+        ),
+        width: 360,
+        platform: CatalogPlatform.desktop,
       ),
     ],
   );

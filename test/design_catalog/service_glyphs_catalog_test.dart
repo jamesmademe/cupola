@@ -13,7 +13,7 @@ import 'catalog.dart';
 /// The service settings header's well, at its real values: 48×48,
 /// `ServiceTheme.softContainer` (the accent at 14%), `radius-md`, the mark at
 /// 24, ink walked by `onTint` against the card it sits on.
-Widget _well(BuildContext context, ServiceKey service) {
+Widget _well(BuildContext context, ServiceKey service, {bool named = true}) {
   final serviceTheme = ServiceTheme.fromAccent(service.accent);
   final colorScheme = Theme.of(context).colorScheme;
   return Column(
@@ -36,19 +36,21 @@ Widget _well(BuildContext context, ServiceKey service) {
           ),
         ),
       ),
-      const SizedBox(height: 4),
-      SizedBox(
-        width: 72,
-        child: Text(
-          service.title,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+      if (named) ...[
+        const SizedBox(height: 4),
+        SizedBox(
+          width: 72,
+          child: Text(
+            service.title,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ),
-      ),
+      ],
     ],
   );
 }
@@ -119,6 +121,28 @@ void main() {
               ),
           ],
         ),
+      ),
+      CatalogScene(
+        'Text at 200% · the seventeen wells at twice the reading size: the '
+        'marks are icons, so the wells keep their 48pt',
+        (context) => Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            borderRadius: AppRadius.borderRadiusMd,
+          ),
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              for (final service in ServiceKey.values)
+                Builder(
+                  builder: (context) => _well(context, service, named: false),
+                ),
+            ],
+          ),
+        ),
+        textScale: catalogTextScale,
       ),
     ],
   );
