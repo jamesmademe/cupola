@@ -92,13 +92,18 @@ class SearchScreen extends ConsumerWidget {
     });
 
     final width = MediaQuery.sizeOf(context).width;
+    // The requester reads the heading alone: they search for something to
+    // ask for, never across services, and a count of connections that
+    // answered is a figure they cannot act on.
+    final requester = ref.watch(audienceProvider) == Audience.requester;
     // The readout is a desktop luxury: it is a census of seven lanes, and the
     // phone has no line long enough to print one without wrapping into the
     // field. The compact window gets the heading alone, as drawn.
     final showsReadout =
+        !requester &&
         AppBreakpoints.isDesktopShell(context) &&
         width >= AppBreakpoints.desktopCompact;
-    final stacked = !AppBreakpoints.isDesktopShell(context);
+    final stacked = !requester && !AppBreakpoints.isDesktopShell(context);
 
     return AmbientScaffold(
       appBar: GlassAppBar(

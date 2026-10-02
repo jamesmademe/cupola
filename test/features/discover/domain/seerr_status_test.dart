@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -340,6 +341,150 @@ void main() {
 
     test('ignores a seasons key that is not a list', () {
       expect(seerrSeasonStatuses(const {'seasons': 'nope'}, seasons).length, 3);
+    });
+  });
+
+  // The requester's words (brand book, *The requester*): what will happen to
+  // a request, never how, never a fault, never Seerr's own words.
+  group('the requester reads', () {
+    MediaStatusInfo read(Map<String, dynamic>? media, {bool is4k = false}) =>
+        seerrMediaStatus(
+          media,
+          is4k: is4k,
+          numbering: SeerrNumbering.seerr,
+          audience: Audience.requester,
+        );
+
+    List<Object?> download(Map<String, dynamic> record) => [record];
+
+    test('the states with no download', () {
+      expect(read(null).label, 'Available to request');
+      expect(read({'status': 2}).label, 'Waiting for approval');
+      expect(read({'status': 3}).label, 'On its way');
+      expect(read({'status': 4}).label, 'Partly on the server');
+      expect(read({'status': 5}).label, 'On the server');
+      expect(read({'status': 5}).tone, StatusTone.success);
+    });
+
+    test('a title the operator barred reads Blocked, neutral', () {
+      final status = read({'status': 6});
+      expect(status.label, 'Blocked');
+      expect(status.tone, StatusTone.neutral);
+      expect(status.glyph, StatusGlyph.blocked);
+    });
+
+    test('removed or with no state, it can be asked for again', () {
+      for (final code in [1, 7, 999]) {
+        final status = read({'status': code});
+        expect(status.label, 'Available to request', reason: '$code');
+        expect(status.availability, MediaAvailability.notTracked);
+      }
+    });
+
+    test('a download moving reads Downloading, with its ring', () {
+      final status = read({
+        'status': 3,
+        'downloadStatus': download({
+          'status': 'downloading',
+          'size': 100,
+          'sizeLeft': 38,
+        }),
+      });
+      expect(status.label, 'Downloading');
+      expect(status.progressPercent, 62);
+      expect(status.tone, StatusTone.info);
+    });
+
+    test('downloaded and being put in place: Finishing on the server', () {
+      for (final state in ['importPending', 'importing']) {
+        final status = read({
+          'status': 3,
+          'downloadStatus': download({
+            'status': 'completed',
+            'trackedDownloadState': state,
+          }),
+        });
+        expect(status.label, 'Finishing on the server', reason: state);
+        expect(status.tone, StatusTone.info);
+      }
+    });
+
+    test('a fault is never theirs: On its way, blue, no figure', () {
+      final faults = <String, Map<String, dynamic>>{
+        'stalled': {
+          'status': 'downloading',
+          'trackedDownloadState': 'downloading',
+          'size': 100,
+          'sizeLeft': 57,
+          'errorMessage': 'The download is stalled with no connections',
+        },
+        'failed': {'status': 'failed', 'trackedDownloadState': 'failed'},
+        'import blocked': {
+          'status': 'completed',
+          'trackedDownloadState': 'importBlocked',
+        },
+        'client unavailable': {'status': 'downloadClientUnavailable'},
+        'paused': {'status': 'paused'},
+        'warning': {
+          'status': 'warning',
+          'trackedDownloadStatus': 'warning',
+          'size': 100,
+          'sizeLeft': 50,
+        },
+      };
+      faults.forEach((name, record) {
+        final media = {'status': 3, 'downloadStatus': download(record)};
+        // The operator reads the download's own state: the record parsed.
+        expect(
+          seerrMediaStatus(media, numbering: SeerrNumbering.seerr).label,
+          isNot(anyOf('Processing', 'On its way')),
+          reason: name,
+        );
+        final status = read(media);
+        expect(status.label, 'On its way', reason: name);
+        expect(status.tone, StatusTone.info, reason: name);
+        expect(status.hasWarning, isFalse, reason: name);
+        expect(status.detail, isNull, reason: name);
+        expect(status.progressPercent, isNull, reason: name);
+      });
+    });
+
+    test('the title page: no copy Seerr removed, 4K in their words', () {
+      List<String> labels(Map<String, dynamic>? media) => seerrTitleStatuses(
+        media,
+        numbering: SeerrNumbering.seerr,
+        audience: Audience.requester,
+      ).map((status) => status.label).toList();
+
+      expect(labels({'status': 5, 'status4k': 3}), [
+        'On the server',
+        '4K: On its way',
+      ]);
+      expect(labels({'status': 7, 'status4k': 5}), ['4K: On the server']);
+      expect(labels({'status': 5, 'status4k': 7}), ['On the server']);
+      expect(labels({'status': 1, 'status4k': 1}), ['Available to request']);
+    });
+
+    test('the seasons: no state reads as never heard of', () {
+      const seasons = [
+        TvSeason(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: 10),
+        TvSeason(id: 2, seasonNumber: 2, name: 'Season 2', episodeCount: 10),
+        TvSeason(id: 3, seasonNumber: 3, name: 'Season 3', episodeCount: 10),
+      ];
+      final statuses = seerrSeasonStatuses(
+        const {
+          'seasons': [
+            {'seasonNumber': 1, 'status': 5},
+            {'seasonNumber': 2, 'status': 7},
+          ],
+        },
+        seasons,
+        numbering: SeerrNumbering.seerr,
+        audience: Audience.requester,
+      );
+      expect(statuses[1]!.label, 'On the server');
+      expect(statuses[2]!.label, 'Not requested');
+      expect(statuses[3]!.label, 'Not requested');
     });
   });
 }

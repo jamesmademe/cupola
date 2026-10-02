@@ -1,3 +1,4 @@
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -16,10 +17,14 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 /// Seerr surface shares. A Seerr 7 reads "Deleted", which is what "Remove
 /// from Radarr" leaves behind, and a Seerr 6 reads "Blocklisted" in the
 /// neutral tone, an operator's choice rather than a fault.
+///
+/// [audience] is who reads it: the requester reads their own words
+/// ([_requesterStatus]), never Seerr's or the download's.
 MediaStatusInfo seerrMediaStatus(
   Map<String, dynamic>? mediaInfo, {
   bool is4k = false,
   SeerrNumbering? numbering,
+  Audience audience = Audience.operator,
 }) {
   final code = intOrNull(mediaInfo?[is4k ? 'status4k' : 'status']);
   final entry = seerrDownloadEntry(
@@ -27,14 +32,10 @@ MediaStatusInfo seerrMediaStatus(
   );
 
   // Seerr has no record of this title at all.
-  if (code == null) {
-    return const MediaStatusInfo(
-      availability: MediaAvailability.notTracked,
-      labelOverride: 'Available to request',
-    );
-  }
+  if (code == null) return _noRecord;
 
   final media = SeerrMediaAvailability.fromCode(code, numbering: numbering);
+  if (audience == Audience.requester) return _requesterStatus(media, entry);
 
   // Nothing is downloading for a title the operator barred, and nothing is
   // wrong with it either: the word and its glyph, in the backlog's tone.
@@ -84,6 +85,86 @@ MediaStatusInfo seerrMediaStatus(
   );
 }
 
+/// A title Seerr holds no record of: the Request beside it is the way in.
+const MediaStatusInfo _noRecord = MediaStatusInfo(
+  availability: MediaAvailability.notTracked,
+  labelOverride: 'Available to request',
+);
+
+/// [media] as the requester reads it, with [entry] the download Seerr
+/// forwards (brand book, *The requester*): what will happen to a request,
+/// never how, and never a fault, which only whoever runs the server can mend.
+///
+/// - Waiting for approval, as the operator reads it.
+/// - Approved and coming: `On its way`, whatever the download is doing, but
+///   `Downloading` with its ring while bytes arrive and `Finishing on the
+///   server` once they have. A stuck or failed download, a paused one, a
+///   client that did not answer: still `On its way`.
+/// - `On the server` and `Partly on the server`, never `Available`, which
+///   beside `Available to request` reads as the same promise.
+/// - `Blocked` for a title the operator barred: the button says it `Can't be
+///   requested` and the sentence under it who blocked it.
+/// - A title Seerr removed (`Deleted`) or holds no state for (`Unknown`) can
+///   be asked for again: `Available to request`, as with no record at all.
+MediaStatusInfo _requesterStatus(
+  SeerrMediaAvailability media,
+  ArrQueueEntry? entry,
+) {
+  final availability = switch (media) {
+    SeerrMediaAvailability.available => MediaAvailability.available,
+    SeerrMediaAvailability.partiallyAvailable => MediaAvailability.partial,
+    _ => MediaAvailability.missing,
+  };
+
+  switch (media) {
+    case SeerrMediaAvailability.unknown || SeerrMediaAvailability.deleted:
+      return _noRecord;
+    case SeerrMediaAvailability.blocklisted:
+      return const MediaStatusInfo(
+        labelOverride: Lexicon.blocked,
+        toneOverride: StatusTone.neutral,
+        glyph: StatusGlyph.blocked,
+      );
+    case SeerrMediaAvailability.pending:
+      return MediaStatusInfo(
+        availability: availability,
+        pipeline: MediaPipeline.queued,
+        labelOverride: StateWord.waitingForApproval.label,
+      );
+    case SeerrMediaAvailability.processing ||
+        SeerrMediaAvailability.partiallyAvailable ||
+        SeerrMediaAvailability.available:
+      break;
+  }
+
+  return switch (entry?.pipeline) {
+    MediaPipeline.downloading => MediaStatusInfo(
+      availability: availability,
+      pipeline: MediaPipeline.downloading,
+      progress: entry?.progress,
+    ),
+    MediaPipeline.importPending || MediaPipeline.importing => MediaStatusInfo(
+      availability: availability,
+      pipeline: MediaPipeline.importing,
+      labelOverride: Lexicon.finishingOnTheServer,
+    ),
+    null when media == SeerrMediaAvailability.available => MediaStatusInfo(
+      availability: availability,
+      labelOverride: Lexicon.onTheServer,
+    ),
+    null when media == SeerrMediaAvailability.partiallyAvailable =>
+      MediaStatusInfo(
+        availability: availability,
+        labelOverride: Lexicon.partlyOnTheServer,
+      ),
+    _ => MediaStatusInfo(
+      availability: availability,
+      pipeline: MediaPipeline.queued,
+      labelOverride: Lexicon.onItsWayState,
+    ),
+  };
+}
+
 /// The 4K copy of a title, beside its standard one, or null when Seerr holds
 /// no 4K record of it.
 ///
@@ -97,15 +178,28 @@ MediaStatusInfo seerrMediaStatus(
 /// for, not a state to show. Otherwise [seerrMediaStatus] on the 4K axis,
 /// decoded with the same [numbering], its label led by `4K: ` so the two
 /// badges cannot be read as one.
+///
+/// The requester is not shown a 4K copy that is not there to ask about or
+/// watch: one Seerr removed reads as one nobody asked for.
 MediaStatusInfo? seerr4kMediaStatus(
   Map<String, dynamic>? mediaInfo, {
   SeerrNumbering? numbering,
+  Audience audience = Audience.operator,
 }) {
   final code = intOrNull(mediaInfo?['status4k']);
   final moving = seerrDownloadEntry(mediaInfo?['downloadStatus4k']) != null;
   if ((code == null || code == _seerrUnknownCode) && !moving) return null;
 
-  final info = seerrMediaStatus(mediaInfo, is4k: true, numbering: numbering);
+  final info = seerrMediaStatus(
+    mediaInfo,
+    is4k: true,
+    numbering: numbering,
+    audience: audience,
+  );
+  if (audience == Audience.requester &&
+      info.availability == MediaAvailability.notTracked) {
+    return null;
+  }
   return info.copyWith(labelOverride: '4K: ${info.label}');
 }
 
@@ -119,19 +213,30 @@ const int _seerrUnknownCode = 1;
 /// which is Seerr's word for no record of that copy. It drew "Unknown"
 /// beside the 4K state, as if something about the title were in doubt; the
 /// standard badge is left out then. With no record of either copy the
-/// standard one is drawn as it always was.
+/// standard one is drawn as it always was. To the requester, a standard copy
+/// Seerr removed is one more copy with no record.
 List<MediaStatusInfo> seerrTitleStatuses(
   Map<String, dynamic>? mediaInfo, {
   SeerrNumbering? numbering,
+  Audience audience = Audience.operator,
 }) {
-  final standard = seerrMediaStatus(mediaInfo, numbering: numbering);
-  final uhd = seerr4kMediaStatus(mediaInfo, numbering: numbering);
+  final standard = seerrMediaStatus(
+    mediaInfo,
+    numbering: numbering,
+    audience: audience,
+  );
+  final uhd = seerr4kMediaStatus(
+    mediaInfo,
+    numbering: numbering,
+    audience: audience,
+  );
   if (uhd == null) return [standard];
 
   final code = intOrNull(mediaInfo?['status']);
   final moving = seerrDownloadEntry(mediaInfo?['downloadStatus']) != null;
-  final noStandardRecord =
-      (code == null || code == _seerrUnknownCode) && !moving;
+  final noStandardRecord = audience == Audience.requester
+      ? standard.availability == MediaAvailability.notTracked
+      : (code == null || code == _seerrUnknownCode) && !moving;
   return noStandardRecord ? [uhd] : [standard, uhd];
 }
 
@@ -151,10 +256,14 @@ List<MediaStatusInfo> seerrTitleStatuses(
 /// The returned map covers **every** season in [seasons], so a caller never has
 /// to invent a fallback for a missing key — which is what the seasons list was
 /// doing, restating this exact `notTracked` decision inside a widget.
+///
+/// The requester reads a season with no state the way they read one Seerr
+/// never heard of, `Not requested`, so one list does not say it two ways.
 Map<int, MediaStatusInfo> seerrSeasonStatuses(
   Map<String, dynamic>? mediaInfo,
   List<TvSeason> seasons, {
   SeerrNumbering? numbering,
+  Audience audience = Audience.operator,
 }) {
   final byNumber = <int, MediaStatusInfo>{};
 
@@ -167,9 +276,16 @@ Map<int, MediaStatusInfo> seerrSeasonStatuses(
       final seasonNumber = intOrNull(entry['seasonNumber']);
       if (seasonNumber == null) continue;
 
-      byNumber[seasonNumber] = seerrMediaStatus(<String, dynamic>{
-        'status': entry['status'],
-      }, numbering: numbering);
+      final status = seerrMediaStatus(
+        <String, dynamic>{'status': entry['status']},
+        numbering: numbering,
+        audience: audience,
+      );
+      byNumber[seasonNumber] =
+          audience == Audience.requester &&
+              status.availability == MediaAvailability.notTracked
+          ? seerrUntrackedSeasonStatus
+          : status;
     }
   }
 

@@ -10,8 +10,9 @@ import '../../../test_helpers/profiles/profiles.dart';
 
 /// A title the requester cannot ask for reads in their words, never the
 /// operator's: `Didn't go through` over a request that failed on the stack,
-/// `Can't be requested` over a barred title. The sentence under the button
-/// already says who can act; the button names the state the same way.
+/// `Can't be requested` over a barred title, and `Blocked` on its badge. The
+/// sentence under the button already says who can act; the button and the
+/// badge name the state the same way.
 void main() {
   const tmdb = 730154; // Coffee Run.
 
@@ -86,14 +87,33 @@ void main() {
 
     expect(find.text(Lexicon.cannotBeRequested), findsWidgets);
     expect(find.text(Lexicon.blockedByOwner), findsWidgets);
-    // The button: the poster's status badge still reads the state word.
-    expect(
-      find.ancestor(
-        of: find.text('Blocklisted'),
-        matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
-      ),
-      findsNothing,
-    );
+    // The badge names the state in their words too, never Seerr's list.
+    expect(find.text(Lexicon.blocked), findsWidgets);
+    expect(find.text('Blocklisted'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P2: a title on the server reads "On the server" twice', (
+    tester,
+  ) async {
+    final harness = await pump(tester, Profiles.p2, details(status: 5));
+
+    // The badge and the button, never the operator's `Available`.
+    expect(find.text(Lexicon.onTheServer), findsNWidgets(2));
+    expect(find.text(Lexicon.alreadyOnTheServer), findsOneWidget);
+    expect(find.text('Available'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P5: the operator keeps "Blocklisted" on the badge', (
+    tester,
+  ) async {
+    final harness = await pump(tester, Profiles.p5, details(status: 6));
+
+    expect(find.text('Blocklisted'), findsWidgets);
+    expect(find.text(Lexicon.blocked), findsNothing);
 
     await harness.unmount(tester);
   });

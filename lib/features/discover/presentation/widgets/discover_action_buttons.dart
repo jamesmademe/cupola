@@ -100,9 +100,13 @@ class DiscoverActionButtons extends ConsumerWidget {
     final String? disabledReason;
     switch (requestGate.state) {
       case SeerrRequestState.available:
-        requestLabel = 'Available';
+        // The requester's badge says `On the server`: the button says the
+        // same, never the operator's `Available`.
+        requestLabel = namesSeerr ? 'Available' : Lexicon.onTheServer;
         requestIcon = Icons.check_circle_outline_rounded;
-        disabledReason = 'Already in your library, nothing to request.';
+        disabledReason = namesSeerr
+            ? 'Already in your library, nothing to request.'
+            : Lexicon.alreadyOnTheServer;
       case SeerrRequestState.waitingForApproval:
         requestLabel = 'Requested';
         requestIcon = Icons.check_circle_outline_rounded;

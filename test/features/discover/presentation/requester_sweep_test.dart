@@ -43,8 +43,16 @@ final _never = <RegExp>[
   RegExp(r'\b(Approve|Decline) request\b'),
   // The operator's words for a request that cannot be made: the requester's
   // button reads `Didn't go through` and `Can't be requested`.
-  RegExp(r'^(Request failed|Blocklisted)$'),
+  RegExp(r'^Request failed$'),
+  // Seerr's and the download's state words on a badge: the requester's read
+  // `On the server`, `On its way`, `Blocked` and the rest.
+  RegExp(
+    r'^(4K: )?(Available|Partially available|Processing|Blocklisted|Deleted|'
+    r'Unknown|Queued|Stuck|Failed|Import blocked|Client unavailable)$',
+  ),
   RegExp(r'\bAll services\b'),
+  RegExp(r'\bacross every service\b', caseSensitive: false),
+  RegExp(r'\bconnections? asked\b'),
   // Somebody else's name: Luca's request is not hers to see.
   RegExp(WorldPeople.luca),
 ];

@@ -134,7 +134,34 @@ abstract final class Lexicon {
 
   /// Approved, and on its way to the server. Seerr cannot see the download,
   /// so this is all it can say.
-  static const onItsWay = 'On its way.';
+  static const onItsWay = '$onItsWayState.';
+
+  // The requester's state words on a title's badge: the same few states the
+  // sentences above tell, never a fault and never how (`seerrMediaStatus`
+  // with `Audience.requester`).
+
+  /// Approved and coming, whatever the download is doing: queued, held up or
+  /// moving with no figure to show. Only whoever runs the server can mend a
+  /// stuck one, so the requester is not told it is stuck.
+  static const onItsWayState = 'On its way';
+
+  /// Downloaded, and being put in place on the server.
+  static const finishingOnTheServer = 'Finishing on the server';
+
+  /// On the server: what the operator reads as `Available`, which beside
+  /// `Available to request` would read as the same promise.
+  static const onTheServer = 'On the server';
+
+  /// Under a disabled Request over [onTheServer].
+  static const alreadyOnTheServer =
+      'Already on the server, nothing to ask for.';
+
+  /// Some of a series on the server: the operator's `Partially available`.
+  static const partlyOnTheServer = 'Partly on the server';
+
+  /// A title the operator barred, as a state ([blockedByOwner] says who):
+  /// the operator's [StateWord.blocklisted] is Seerr's list.
+  static const blocked = 'Blocked';
 
   /// The last request for a title failed on the stack, and the server takes
   /// no other while it stands. The requester cannot fix it, and is told who
@@ -173,7 +200,7 @@ abstract final class Lexicon {
       'Every season is already on the server or requested.';
 
   /// A failure as the requester reads it, whatever its cause: the server
-  /// ([subject], `the server`, or the player she watches with) and since when
+  /// ([subject], `the server`, or the player they watch with) and since when
   /// ([time], `20:41`). Never the service's name or the classification.
   static String cantReachSince(String subject, String time) =>
       "Can't reach $subject since $time";

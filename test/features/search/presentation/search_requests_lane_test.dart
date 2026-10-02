@@ -2,6 +2,7 @@
 /// `Requests`, and no service is named but the players she watches with.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,8 +35,43 @@ void main() {
     // They have no services, so the first filter does not say so.
     expect(find.text('All'), findsOneWidget);
     expect(find.text('All services'), findsNothing);
+    // The heading is the word alone: they search for something to ask for.
+    expect(find.text('across every service'), findsNothing);
 
     await harness.unmount(tester);
+  });
+
+  testWidgets('P2 on a desktop: no count of the connections asked', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    // A window wide enough for the readout, which starts at 1100.
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    try {
+      for (final (profile, census) in [
+        (Profiles.p1, findsOneWidget),
+        (Profiles.p2, findsNothing),
+      ]) {
+        final harness = await pumpWithProfile(
+          tester,
+          profile,
+          child: const SearchScreen(),
+          overrides: [
+            globalSearchQueryProvider.overrideWith((ref) => 'sprite'),
+          ],
+        );
+        expect(
+          find.textContaining(RegExp(r'connections? asked')),
+          census,
+          reason: profile.id,
+        );
+        await harness.unmount(tester);
+      }
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('P2: an empty lane says no results, not whose', (tester) async {
@@ -89,6 +125,7 @@ void main() {
     expect(find.text('Seerr'), findsWidgets);
     expect(find.text('Requests'), findsNothing);
     expect(find.text('All services'), findsOneWidget);
+    expect(find.text('across every service'), findsOneWidget);
 
     await harness.unmount(tester);
   });

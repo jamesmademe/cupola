@@ -159,6 +159,7 @@ class DiscoverDetailScreen extends ConsumerWidget {
               statuses: seerrTitleStatuses(
                 viewModel.mediaInfo,
                 numbering: numbering,
+                audience: gate.audience,
               ),
             ),
             title: viewModel.title,
@@ -228,6 +229,7 @@ class DiscoverDetailScreen extends ConsumerWidget {
                       viewModel.mediaInfo,
                       viewModel.seasons,
                       numbering: numbering,
+                      audience: gate.audience,
                     ),
                   ),
                 ),

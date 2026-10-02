@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
@@ -117,7 +119,10 @@ class DiscoverScreen extends ConsumerWidget {
               },
             ),
           ),
-          if (searchQuery.isEmpty)
+          // Seerr's counts are the operator's: to the requester they are
+          // figures to act on with no way to act, in Seerr's words.
+          if (searchQuery.isEmpty &&
+              ref.watch(audienceProvider) == Audience.operator)
             SliverToBoxAdapter(
               child: ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.seerr)),
