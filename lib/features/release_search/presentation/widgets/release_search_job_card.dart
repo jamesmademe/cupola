@@ -313,11 +313,16 @@ class _Verdict extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    // An OS ceiling or a deliberate cancellation is not a fault, so it does not
-    // take the alarm rail — the Quiet Alarm Rule applied to a job.
-    final isFault =
-        failure.kind != ReleaseSearchFailureKind.cancelled &&
-        failure.kind != ReleaseSearchFailureKind.interruptedByBackground;
+    // The rail takes the tone rule: red only for silence (the connection went
+    // away), amber for every fault that answered or ran out of time, and no
+    // tone for an OS ceiling or a deliberate cancellation, which are not faults
+    // (the Quiet Alarm Rule applied to a job).
+    final tone = switch (failure.kind) {
+      ReleaseSearchFailureKind.cancelled ||
+      ReleaseSearchFailureKind.interruptedByBackground => null,
+      ReleaseSearchFailureKind.connectionLost => StatusTone.error,
+      _ => StatusTone.warning,
+    };
 
     return Container(
       padding: const EdgeInsets.only(left: AppSpacing.md),
@@ -325,7 +330,13 @@ class _Verdict extends StatelessWidget {
         border: Border(
           left: BorderSide(
             width: 2,
-            color: isFault ? colors.error : colors.onSurfaceVariant,
+            color: tone == null
+                ? colors.onSurfaceVariant
+                : statusToneColor(
+                    colors,
+                    tone,
+                    surface: colors.surfaceContainer,
+                  ),
           ),
         ),
       ),

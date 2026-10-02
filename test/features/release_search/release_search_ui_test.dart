@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
@@ -217,6 +218,60 @@ void main() {
         // Present, because a self-hoster can act on it — but demoted, never the
         // message.
         expect(find.text('HTTP 502 · nginx'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'the verdict rail follows the tone rule: red only for silence',
+      (tester) async {
+        Future<Color?> rail(ReleaseSearchFailureKind kind) async {
+          await tester.pumpWidget(
+            _host(
+              ReleaseSearchJobCard(
+                job: _job(
+                  status: ReleaseSearchJobStatus.failed,
+                  failure: ReleaseSearchFailure(
+                    kind: kind,
+                    headline: 'Headline.',
+                    diagnosis: 'Diagnosis.',
+                  ),
+                ),
+                now: DateTime.utc(2026, 8, 5, 9),
+              ),
+            ),
+          );
+          final box = tester
+              .widgetList<Container>(find.byType(Container))
+              .map((c) => c.decoration)
+              .whereType<BoxDecoration>()
+              .map((d) => d.border)
+              .whereType<Border>()
+              .firstWhere((b) => b.left.width == 2);
+          return box.left.color;
+        }
+
+        final colors = AppTheme.darkTheme().colorScheme;
+        Color tone(StatusTone t) =>
+            statusToneColor(colors, t, surface: colors.surfaceContainer);
+
+        expect(
+          await rail(ReleaseSearchFailureKind.connectionLost),
+          tone(StatusTone.error),
+        );
+        // A fault that answered, or ran out of time, is amber, never red.
+        for (final kind in [
+          ReleaseSearchFailureKind.serverError,
+          ReleaseSearchFailureKind.refused,
+          ReleaseSearchFailureKind.gatewayTimeout,
+          ReleaseSearchFailureKind.clientTimeout,
+          ReleaseSearchFailureKind.cloudflareCap,
+        ]) {
+          expect(await rail(kind), tone(StatusTone.warning), reason: kind.name);
+        }
+        expect(
+          await rail(ReleaseSearchFailureKind.cancelled),
+          colors.onSurfaceVariant,
+        );
       },
     );
 
