@@ -833,6 +833,9 @@ class _FeedBody extends StatelessWidget {
     // First load, nothing to show yet.
     if (feed == null) {
       if (hasError) {
+        // No service passed, on purpose: this is the feed's own load failing
+        // (the per-connection reads are caught inside it and carried as
+        // results), so no connection's form holds the fix.
         return _ScrollableState(
           bottomPadding: bottomPadding,
           child: AppErrorState(
@@ -896,12 +899,21 @@ class _FeedBody extends StatelessWidget {
     // so it must read as a failure with a retry — the branch that used to be
     // unreachable because each service's error was swallowed upstream.
     if (feed.allConfiguredFailed) {
+      // With one connection asked the failure is its own, and the remedy its
+      // cause names can open that connection's form. With several there is no
+      // one form that holds the fix, so the state names none and keeps Retry.
+      final failures = feed.failures.toList(growable: false);
+      final sole = failures.length == 1 ? failures.single : null;
       return _ScrollableState(
         bottomPadding: bottomPadding,
         child: AppErrorState(
           error:
               feed.firstError ?? 'None of your configured services responded.',
           onRetry: onRetry,
+          service: sole?.service,
+          instanceId: sole == null || sole.instanceId.isEmpty
+              ? null
+              : sole.instanceId,
         ),
       );
     }

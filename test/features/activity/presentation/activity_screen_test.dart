@@ -409,6 +409,46 @@ void main() {
     );
   });
 
+  testWidgets('when the one connection asked refused the key, the whole-feed '
+      'failure names it and leads with the remedy', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(
+            configured: const [ServiceKey.sonarr],
+          ),
+          sonarrServiceProvider.overrideWith((ref) => _RefusingSonarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sonarr answered but refused the key'), findsOneWidget);
+    expect(find.text('Paste the key again'), findsOneWidget);
+  });
+
+  testWidgets('when several connections failed there is no one form to open, '
+      'so the whole-feed failure names none', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(
+            configured: const [ServiceKey.sonarr, ServiceKey.radarr],
+          ),
+          sonarrServiceProvider.overrideWith((ref) => _RefusingSonarrService()),
+          radarrServiceProvider.overrideWith((ref) => _RefusingRadarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Paste the key again'), findsNothing);
+    expect(find.textContaining('Sonarr answered'), findsNothing);
+    expect(find.textContaining('Radarr answered'), findsNothing);
+  });
+
   testWidgets('the page bar names what the queue is doing, and names its verb', (
     tester,
   ) async {
@@ -919,6 +959,21 @@ class _SilentSonarrService extends FakeSonarrService {
 
 /// A Sonarr that answered and refused the key.
 class _RefusingSonarrService extends FakeSonarrService {
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => throw DioException(
+    requestOptions: RequestOptions(path: '/api/v3/queue'),
+    type: DioExceptionType.badResponse,
+    response: Response<dynamic>(
+      requestOptions: RequestOptions(path: '/api/v3/queue'),
+      statusCode: 401,
+    ),
+  );
+}
+
+/// A Radarr that answered and refused the key.
+class _RefusingRadarrService extends FakeRadarrService {
   @override
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,

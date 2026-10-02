@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/interactive_search_sheet.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('InteractiveSearchSheet.showAsync', () {
@@ -187,6 +188,53 @@ void main() {
 
       expect(attempts, 2);
       expect(find.text('Recovered.Release'), findsOneWidget);
+    });
+  });
+
+  group('InteractiveSearchSheet.showAsync failures', () {
+    DioException refused() => DioException(
+      requestOptions: RequestOptions(path: '/api/v3/release'),
+      type: DioExceptionType.badResponse,
+      response: Response<dynamic>(
+        requestOptions: RequestOptions(path: '/api/v3/release'),
+        statusCode: 401,
+      ),
+    );
+
+    testWidgets('a sheet told its service names it and leads with the remedy', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: _InteractiveSearchSheetLauncher(
+            fetchReleases: (_) async => throw refused(),
+            service: ServiceKey.radarr,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Radarr answered but refused the key'), findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, 'Paste the key again'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a sheet told no service cannot say whose form to open', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: _InteractiveSearchSheetLauncher(
+            fetchReleases: (_) async => throw refused(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Paste the key again'), findsNothing);
+      expect(find.textContaining('Radarr'), findsNothing);
     });
   });
 
@@ -512,7 +560,11 @@ class _InteractiveSearchSheetLauncher extends StatefulWidget {
     this.fetchReleases,
     this.releases,
     this.onGrabRelease,
+    this.service,
   }) : assert(fetchReleases != null || releases != null);
+
+  /// Whose search the async variant is, when the caller knows.
+  final ServiceKey? service;
 
   /// Opens the async variant, which fetches before it lists.
   final Future<List<dynamic>> Function(CancelToken token)? fetchReleases;
@@ -558,6 +610,7 @@ class _InteractiveSearchSheetLauncherState
         title: 'Interactive Search',
         fetchReleases: widget.fetchReleases!,
         onGrabRelease: onGrabRelease,
+        service: widget.service,
       );
     });
   }

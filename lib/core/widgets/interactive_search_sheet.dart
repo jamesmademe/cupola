@@ -17,6 +17,7 @@ import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/release_list_widgets.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 // Re-export ReleaseSortType for backwards compatibility
 export 'package:cupola/core/utils/release_utils.dart' show ReleaseSortType;
@@ -94,12 +95,20 @@ class InteractiveSearchSheet extends StatefulWidget {
 
   /// Shows interactive search sheet with loading state, fetching releases asynchronously.
   /// Fetch failures render inline with a retry action instead of closing the sheet.
+  ///
+  /// [service] is whose search it is, and [instanceId] the connection when the
+  /// caller knows it. A failure names them and offers the remedy its cause
+  /// names (the key to paste again, the address to check) rather than Retry
+  /// alone, so a caller that knows its service passes it. Left out, the sheet
+  /// cannot say whose form to open and keeps Retry.
   static Future<void> showAsync({
     required BuildContext context,
     required String title,
     required Future<List<dynamic>> Function(CancelToken token) fetchReleases,
     required Future<void> Function(String guid, int indexerId) onGrabRelease,
     Color? accent,
+    ServiceKey? service,
+    String? instanceId,
   }) {
     return AppBottomSheet.showScrollable(
       context: context,
@@ -116,6 +125,8 @@ class InteractiveSearchSheet extends StatefulWidget {
         fetchReleases: fetchReleases,
         onGrabRelease: onGrabRelease,
         scrollController: scrollController,
+        service: service,
+        instanceId: instanceId,
       ),
     );
   }
@@ -980,12 +991,16 @@ class _AsyncInteractiveSearchSheet extends StatefulWidget {
   final Future<List<dynamic>> Function(CancelToken token) fetchReleases;
   final Future<void> Function(String guid, int indexerId) onGrabRelease;
   final ScrollController scrollController;
+  final ServiceKey? service;
+  final String? instanceId;
 
   const _AsyncInteractiveSearchSheet({
     required this.title,
     required this.fetchReleases,
     required this.onGrabRelease,
     required this.scrollController,
+    required this.service,
+    required this.instanceId,
   });
 
   @override
@@ -1075,7 +1090,12 @@ class _AsyncInteractiveSearchSheetState
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
-          child: AppErrorState.compact(error: _error!, onRetry: _retry),
+          child: AppErrorState.compact(
+            error: _error!,
+            onRetry: _retry,
+            service: widget.service,
+            instanceId: widget.instanceId,
+          ),
         ),
       );
     }
