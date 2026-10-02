@@ -832,6 +832,9 @@ class JellyfinClient implements StreamServerClient {
     }
   }
 
+  /// Throws on a remote failure: an empty list is only ever a server that
+  /// answered with no users. Swallowed, a server that was down read "This
+  /// server reports no users" in the viewer picker, a claim nobody made.
   @override
   Future<List<StreamViewer>> getViewers() async {
     try {
@@ -851,30 +854,25 @@ class JellyfinClient implements StreamServerClient {
       // itself the one person it can read as: listing nobody left that token
       // with "This server reports no users" and no way to choose itself, so
       // every per-viewer lens stayed asking for a viewer. A 403 from something
-      // in front of Jellyfin is not Jellyfin's answer and lists nobody.
+      // in front of Jellyfin is not Jellyfin's answer.
       if (error.response?.statusCode == 403 &&
           error.error is! AccessGatewayAnswer) {
         return _tokenUserAsViewer();
       }
-      return const [];
-    } catch (_) {
-      return const [];
+      rethrow;
     }
   }
 
   /// The user the token belongs to, as the one viewer it can read as. Empty
-  /// for an API key, which belongs to nobody, and on any failure.
+  /// for a user Jellyfin answers as disabled or without an id; a failure
+  /// throws, like the list it stands in for.
   Future<List<StreamViewer>> _tokenUserAsViewer() async {
-    try {
-      final response = await _api.get('/Users/Me');
-      final data = response.data;
-      if (data is! Map) return const [];
-      final user = JellyfinUserDto.fromJson(data.cast<String, dynamic>());
-      if (user.isDisabled || user.id.isEmpty) return const [];
-      return [user.toStreamViewer()];
-    } catch (_) {
-      return const [];
-    }
+    final response = await _api.get('/Users/Me');
+    final data = response.data;
+    if (data is! Map) return const [];
+    final user = JellyfinUserDto.fromJson(data.cast<String, dynamic>());
+    if (user.isDisabled || user.id.isEmpty) return const [];
+    return [user.toStreamViewer()];
   }
 
   /// Which credential kind the slot holds, from `GET /Users/Me`.

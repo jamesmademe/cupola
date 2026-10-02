@@ -1200,6 +1200,9 @@ void main() {
       final client = _client(adapter);
 
       await expectLater(client.getUsers(), throwsA(isA<DioException>()));
+      // The viewer list too: empty is a server that answered with no users,
+      // never one that did not answer.
+      await expectLater(client.getViewers(), throwsA(isA<DioException>()));
       await expectLater(client.getDevices(), throwsA(isA<DioException>()));
       await expectLater(
         client.getScheduledTasks(),
@@ -1217,7 +1220,6 @@ void main() {
 
       expect(await client.probeVersion(), isNull);
       expect(await client.verifyCredential(), isFalse);
-      expect(await client.getViewers(), isEmpty);
       expect(await client.getItem(_movieId), isNull);
       expect(await client.getChildren(_seriesId), isEmpty);
       expect(
