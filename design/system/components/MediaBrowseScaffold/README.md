@@ -21,3 +21,12 @@ The consumer provides `title` (*Movies*), `searchHint` (*Search movies...*), `se
 Semantics: a tile is one button named by its full title, with *subtitle, status* as its value (*1922, Available*); the truncated caption and the dot are excluded. Chips are buttons carrying a selected state. The sort control's hint rides on its child (*Sorted by Title A–Z*), because a hint wrapped around a button is dropped. The search field is labelled *Search*.
 
 Do: declare only the orders your model can answer, and pass `cutoffUnmetIds` as null until the service has answered. Don't: pin a tile width — the row resolves the count first and the tiles take what is left.
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room; the wall also in a 1280 desktop window.
+
+- The library under Title A–Z, Lidarr's circular wall, no sort choices and no cutoff source.
+- Searching with a result, with no match, an empty library, and results pending.
+- Loading, a failed load with no service, the same failure with `service:`, not configured.
+- Text at 200%: the library wall, a failed load with `service:` and a search.

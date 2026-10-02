@@ -165,7 +165,7 @@ final _unconfiguredProvider = FutureProvider<List<_Film>>(
 
 /// Each phone gets its own query, so typing into one does not search another.
 final _queries = [
-  for (var i = 0; i < 13; i++) StateProvider<String>((ref) => ''),
+  for (var i = 0; i < 16; i++) StateProvider<String>((ref) => ''),
 ];
 
 FutureProvider<List<_Film>?> _resultsFor(StateProvider<String> query) =>
@@ -386,6 +386,17 @@ void main() {
         width: 1280,
         height: 1000,
         platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
+        'Text at 200% · the library wall, a failed load with service: and a '
+        'search for Nosferatu: the header, the chips, the tile titles and the '
+        'failure at twice the reading size',
+        (_) => _phones([
+          _scaffold(0, library: _shelfProvider),
+          _scaffold(13, library: _failingProvider, service: ServiceKey.radarr),
+          _Typed(text: 'Nosferatu', child: _scaffold(14)),
+        ]),
+        textScale: catalogTextScale,
       ),
     ],
   );
