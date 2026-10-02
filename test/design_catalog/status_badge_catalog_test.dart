@@ -50,7 +50,7 @@ void main() {
     scenes: [
       CatalogScene(
         'StatusBadge() · every arm of the tone rule: green, blue, amber, red, '
-        'primary, neutral',
+        'neutral',
         (_) => Wrap(
           spacing: 12,
           runSpacing: 12,

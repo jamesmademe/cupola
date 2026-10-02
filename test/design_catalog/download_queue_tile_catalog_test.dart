@@ -56,7 +56,7 @@ void main() {
     scenes: [
       CatalogScene(
         'TorrentTile (qBittorrent) · downloading, stalled, paused, queued, '
-        'seeding · blue, amber, neutral, neutral, green; no bar when queued or '
+        'seeding · blue, amber, neutral, blue, green; no bar when queued or '
         'complete',
         (_) => _column([
           TorrentTile(

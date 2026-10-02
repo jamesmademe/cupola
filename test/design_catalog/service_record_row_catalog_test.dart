@@ -68,12 +68,12 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'Jellyfin users and Plex playlists · an administrator in primary, a '
-        'disabled user and a plain playlist neutral, a smart playlist blue',
+        'Jellyfin users and Plex playlists · an administrator, a disabled user '
+        'and a plain playlist neutral, a smart playlist blue',
         (_) => _list(const [
           ServiceRecordRow(
             icon: Icons.person_outline_rounded,
-            tone: StatusTone.primary,
+            tone: StatusTone.neutral,
             title: 'Max',
             detail: 'Last active 5 min ago',
             trailing: 'Administrator',
