@@ -100,10 +100,7 @@ void main() {
         .widgetList<SectionHeader>(find.byType(SectionHeader))
         .toList();
     expect(headers[0].subtitle, '0');
-    expect(
-      headers[1].subtitle,
-      '3 · reachability checked from this device for 2 of 3 enabled',
-    );
+    expect(headers[1].subtitle, '3 · 2 of 3 enabled checked from this device');
   });
 
   testWidgets('a host this device could not reach says so, and is no fault', (

@@ -194,7 +194,7 @@ void _invalidate(WidgetRef ref, NpmSection section) {
   ref.invalidate(serviceSummaryProvider(ServiceKey.nginxProxyManager));
 }
 
-/// `25 · reachability checked from this device for 8 of 23 enabled`, and
+/// `25 · 8 of 23 enabled checked from this device`, and
 /// nothing before either answers.
 String? _proxyHostSubtitle(
   List<NpmProxyHost>? hosts,
@@ -285,7 +285,7 @@ class _NpmSection extends ConsumerWidget {
       SectionHeader(
         title: 'Proxy hosts',
         showChevron: false,
-        // "25 · reachability checked from this device for 8 of 23 enabled" —
+        // "25 · 8 of 23 enabled checked from this device" —
         // the coverage is drawn because the Upstream column is partial by
         // design. Without it a column that answered for eight rows and stayed
         // blank for fifteen would read as fifteen healthy hosts.

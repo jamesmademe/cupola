@@ -428,7 +428,7 @@ List<NpmProxyHostRow> npmProxyHostRows(
   return List.unmodifiable(rows);
 }
 
-/// `25 · reachability checked for 8 of 23 enabled`.
+/// `25 · 8 of 23 enabled checked from this device`.
 ///
 /// The second half is the whole reason this is a function and not an
 /// interpolation at the call site. The Upstream column answers for eight rows

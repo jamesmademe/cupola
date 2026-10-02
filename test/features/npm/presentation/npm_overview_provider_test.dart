@@ -407,13 +407,13 @@ void main() {
         npmProxyHostsSubtitle([
           for (var i = 0; i < 23; i++) _host(id: i),
         ], _report(const {}, checked: 8, total: 23)),
-        '23 · reachability checked from this device for 8 of 23 enabled',
+        '23 · 8 of 23 enabled checked from this device',
       );
     });
 
     test('the coverage names the population it counted, and it is narrower', () {
       // 25 hosts, two of them switched off, so the probe had 23 to look at and
-      // reached 8. `25 · reachability checked for 8 of 23` would read as two
+      // reached 8. `25 · 8 of 23 checked from this device` would read as two
       // hosts going missing between the two figures; the word `enabled` is what
       // stops the pair lying.
       expect(
@@ -422,7 +422,7 @@ void main() {
           _host(id: 23, enabled: false),
           _host(id: 24, enabled: false),
         ], _report(const {}, checked: 8, total: 23)),
-        '25 · reachability checked from this device for 8 of 23 enabled',
+        '25 · 8 of 23 enabled checked from this device',
       );
     });
 

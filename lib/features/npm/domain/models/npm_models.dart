@@ -465,8 +465,8 @@ class NpmAccount {
 /// What a client-side probe found at a proxy host's forward target.
 ///
 /// Three values, not two: a host nobody probed is not a host that failed. The
-/// probe is budgeted — the board heads the table "reachability checked from
-/// this device for 8 of 23" — so [unchecked] is the normal state for most rows
+/// probe is budgeted — the board heads the table "8 of 23 enabled checked
+/// from this device" — so [unchecked] is the normal state for most rows
 /// and must read as the absence of a measurement rather than as a verdict.
 enum NpmUpstream {
   /// Something accepted a TCP connection on the forward host and port.

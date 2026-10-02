@@ -10,10 +10,9 @@ typedef NpmUpstreamConnector =
 /// What one pass of the probe found, plus how much of the table it covered.
 ///
 /// The coverage is part of the result rather than a detail of the run, because
-/// the screen has to print it: the board heads the table "23 · reachability
-/// checked from this device for 8 of 23". A column that silently showed a
-/// verdict for eight rows and nothing for fifteen would read as fifteen healthy
-/// hosts.
+/// the screen has to print it: the board heads the table "23 · 8 of 23 enabled
+/// checked from this device". A column that silently showed a verdict for
+/// eight rows and nothing for fifteen would read as fifteen healthy hosts.
 class NpmUpstreamReport {
   const NpmUpstreamReport({
     required this.byHostId,
@@ -52,21 +51,21 @@ class NpmUpstreamReport {
   int get downCount =>
       byHostId.values.where((u) => u == NpmUpstream.down).length;
 
-  /// `reachability checked from this device for 8 of 23 enabled`, or null when
-  /// nothing was checked — a coverage line reading "0 of 23" is noise on a
-  /// screen that has not probed anything yet. It says where the check ran,
+  /// `8 of 23 enabled checked from this device`, or null when nothing was
+  /// checked — a coverage line reading "0 of 23" is noise on a screen that has
+  /// not probed anything yet. It says where the check ran,
   /// because that is half of what it found.
   ///
   /// The word `enabled` is load-bearing and not padding. This line is printed
   /// beside a header count of the **whole** host table, and [total] counts only
   /// the hosts the probe is willing to look at. On a box with 25 hosts of which
-  /// two are switched off, `25 · reachability checked from this device for 8 of
-  /// 23` invites exactly one reading — that two hosts went missing between the
-  /// two figures — and the sentence has no way to say otherwise. Naming the
+  /// two are switched off, `25 · 8 of 23 checked from this device` invites
+  /// exactly one reading — that two hosts went missing between the two
+  /// figures — and the sentence has no way to say otherwise. Naming the
   /// population is what makes the pair honest.
   String? get coverage => checked == 0
       ? null
-      : 'reachability checked from this device for $checked of $total enabled';
+      : '$checked of $total enabled checked from this device';
 }
 
 /// Asks, from **this device**, whether anything is listening where each proxy
