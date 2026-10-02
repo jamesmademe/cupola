@@ -6,9 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 
+import '../../../test_helpers/settings_scope.dart';
 import '../../../test_helpers/fake_services.dart' as shared;
 
 void main() {
@@ -194,7 +197,13 @@ void main() {
   group('requestFormProvider', () {
     ProviderContainer createContainer(_FakeSeerr service) {
       final container = ProviderContainer(
-        overrides: [seerrServiceProvider.overrideWith((ref) => service)],
+        overrides: [
+          seerrServiceProvider.overrideWith((ref) => service),
+          // The operator's key: the sheet with its pickers.
+          currentSettingsProvider.overrideWith(
+            (ref) => settingsWithServices(const [ServiceKey.seerr]),
+          ),
+        ],
       );
       addTearDown(container.dispose);
       return container;
@@ -543,7 +552,7 @@ void main() {
           .read(requestFormProvider(args).notifier)
           .submitRequest();
 
-      expect(error, 'No profile selected');
+      expect(error?.message, 'No profile selected');
     });
   });
 }

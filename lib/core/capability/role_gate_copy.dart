@@ -51,6 +51,32 @@ abstract final class RoleGateCopy {
         '${_window(quota.days)}, the most this server allows.';
   }
 
+  /// How much of its quota for [kind] the requester has left, while it has
+  /// some: `You can ask for 3 more movies. This server allows 10 every 7
+  /// days.` Null without a limit, or once it is reached ([youQuotaReached]
+  /// says that).
+  static String? youQuotaLeft(SeerrQuotaStatus quota, SeerrMediaKind kind) {
+    final limit = quota.limit;
+    if (limit == null || quota.restricted) return null;
+    final left = quota.remaining ?? (limit - quota.used).clamp(0, limit);
+    return 'You can ask for $left more ${_unit(kind, left)}. This server '
+        'allows $limit${_every(quota.days)}.';
+  }
+
+  /// How much of its quota for [kind] an account on [server] has left, for
+  /// the operator. Null as for [youQuotaLeft].
+  static String? accountQuotaLeft(
+    SeerrQuotaStatus quota,
+    SeerrMediaKind kind, {
+    required String server,
+  }) {
+    final limit = quota.limit;
+    if (limit == null || quota.restricted) return null;
+    final left = quota.remaining ?? (limit - quota.used).clamp(0, limit);
+    return 'Your account on $server can ask for $left more '
+        '${_unit(kind, left)}. The server allows $limit${_every(quota.days)}.';
+  }
+
   /// Why an account on [server] cannot cancel somebody else's request.
   static String accountCannotCancelOthers({required String server}) =>
       "Your account on $server can't cancel other people's requests.";
@@ -88,6 +114,12 @@ abstract final class RoleGateCopy {
   static String _unit(SeerrMediaKind kind, int count) => switch (kind) {
     SeerrMediaKind.movie => count == 1 ? 'movie' : 'movies',
     SeerrMediaKind.tv => count == 1 ? 'season' : 'seasons',
+  };
+
+  static String _every(int? days) => switch (days) {
+    null => ' in all',
+    1 => ' a day',
+    _ => ' every $days days',
   };
 
   static String _window(int? days) => switch (days) {

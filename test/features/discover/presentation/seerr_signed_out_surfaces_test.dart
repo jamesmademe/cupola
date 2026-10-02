@@ -118,31 +118,45 @@ void main() {
     },
   );
 
-  testWidgets('the request sheet: signed out, so nothing can be sent', (
-    tester,
-  ) async {
-    final harness = await pumpWithProfile(
-      tester,
+  for (final (name, profile, sentence, seerr) in [
+    (
+      'P2, the requester',
       _p2SignedOut,
-      child: Scaffold(
-        body: RequestBottomSheet(
-          mediaId: 10378,
-          mediaType: 'movie',
-          onRequestComplete: () {},
+      'You were signed out. Sign in again to keep asking for movies and '
+          'series.',
+      WorldIds.seerr,
+    ),
+    (
+      "P9, the operator on Sara's Seerr",
+      _p9FriendSignedOut,
+      'Signed out of Seerr, so the request cannot be sent.',
+      WorldIds.seerrFriend,
+    ),
+  ]) {
+    testWidgets('$name: the request sheet is signed out, nothing is sent', (
+      tester,
+    ) async {
+      final harness = await pumpWithProfile(
+        tester,
+        profile,
+        child: Scaffold(
+          body: RequestBottomSheet(
+            mediaId: 10378,
+            mediaType: 'movie',
+            onRequestComplete: () {},
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(
-      find.text('Signed out of Seerr, so the request cannot be sent.'),
-      findsOneWidget,
-    );
-    expect(_filled('Sign in again'), findsOneWidget);
-    expect(find.text('Retry'), findsNothing);
-    expect(harness.network.requestsTo(WorldIds.seerr), isEmpty);
+      expect(find.text(sentence), findsOneWidget);
+      expect(_filled('Sign in again'), findsOneWidget);
+      expect(find.text('Retry'), findsNothing);
+      expect(find.text('Submit request'), findsNothing);
+      expect(harness.network.requestsTo(seerr), isEmpty);
 
-    await harness.unmount(tester);
-  });
+      await harness.unmount(tester);
+    });
+  }
 
   group('Home', () {
     testWidgets('the stack has Seerr, signed out, not an empty first run', (

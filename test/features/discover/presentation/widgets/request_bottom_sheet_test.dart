@@ -8,8 +8,11 @@ import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 
+import '../../../../test_helpers/settings_scope.dart';
 import '../../../../test_helpers/fake_services.dart' as shared;
 
 void main() {
@@ -230,7 +233,13 @@ Future<void> _pumpSheetDirect(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [seerrServiceProvider.overrideWith((ref) => service)],
+      overrides: [
+        seerrServiceProvider.overrideWith((ref) => service),
+        // The operator's key: the sheet with its pickers.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices(const [ServiceKey.seerr]),
+        ),
+      ],
       child: MaterialApp(
         home: Scaffold(
           body: SizedBox(
@@ -261,7 +270,13 @@ Future<void> _pumpSheetOnRoute(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [seerrServiceProvider.overrideWith((ref) => service)],
+      overrides: [
+        seerrServiceProvider.overrideWith((ref) => service),
+        // The operator's key: the sheet with its pickers.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices(const [ServiceKey.seerr]),
+        ),
+      ],
       child: MaterialApp(
         home: _RequestSheetRouteLauncher(
           mediaId: mediaId,

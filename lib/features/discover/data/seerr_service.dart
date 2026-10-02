@@ -12,6 +12,7 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_known_arr.dart';
 import 'package:cupola/features/discover/domain/seerr_quota.dart';
+import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/domain/seerr_request_update.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +36,16 @@ class SeerrRequestConflict implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Seerr answered a request `202 No seasons available to request`: a
+/// success status, and nothing was asked for, because every season of the
+/// series is on the server or asked for already.
+class SeerrNothingRequested implements Exception {
+  const SeerrNothingRequested();
+
+  @override
+  String toString() => 'SeerrNothingRequested';
 }
 
 int? _asInt(Object? value) =>
@@ -1090,7 +1101,18 @@ class SeerrService {
     if (rootFolder != null) body['rootFolder'] = rootFolder;
     if (serverId != null) body['serverId'] = serverId;
 
-    await _client.post('/api/v1/request', data: body);
+    final response = await _client.post('/api/v1/request', data: body);
+    // A success status that asked for nothing: every season is on the
+    // server or asked for already, and no request was made.
+    if (classifySeerrRefusal(
+          status: response.statusCode,
+          method: 'POST',
+          path: '/api/v1/request',
+          body: response.data,
+        ) ==
+        SeerrRefusal.noSeasonsLeft) {
+      throw const SeerrNothingRequested();
+    }
   }
 
   /// Deletes a media item from Seerr tracking.

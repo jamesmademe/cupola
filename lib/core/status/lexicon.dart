@@ -147,6 +147,32 @@ abstract final class Lexicon {
   static const blockedByOwner =
       'Whoever runs the server has blocked requests for this title.';
 
+  /// Under the request sheet of an account whose requests wait for whoever
+  /// runs the server.
+  static const approvedByOwner =
+      'Requests on this server are approved by its owner.';
+
+  /// Under the request sheet of an account whose requests are approved as
+  /// they are made.
+  static const startStraightAway = 'Your requests start straight away.';
+
+  /// A request Seerr refused because one is there already.
+  static const alreadyRequested = 'Already requested.';
+
+  /// A request for a series Seerr made nothing of: every season is on the
+  /// server or asked for already.
+  static const noSeasonsLeft =
+      'Every season is already on the server or requested.';
+
+  /// What [youWereSignedOut] asks of the requester.
+  static const signInToKeepAsking =
+      'Sign in again to keep asking for movies and series.';
+
+  /// A request that failed for a reason the requester cannot act on: what
+  /// did not happen, and that nothing half happened.
+  static String couldNotAskFor(String? title) =>
+      "Couldn't ask for ${title ?? 'this title'}. Nothing was sent.";
+
   /// A film's three dated events, as every screen that dates one names them:
   /// the calendar's `Sprite Fright · on digital` and the Radarr home's Coming
   /// up, `on digital · monitored`. Coming up used to say `digital release`

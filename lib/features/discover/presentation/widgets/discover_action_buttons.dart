@@ -308,6 +308,7 @@ class DiscoverActionButtons extends ConsumerWidget {
         mediaId: mediaId,
         mediaType: _normalizedMediaType,
         copies: requestGate.copies,
+        title: title,
         onRequestComplete: () {
           if (!context.mounted) {
             return;

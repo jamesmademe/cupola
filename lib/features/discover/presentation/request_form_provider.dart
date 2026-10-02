@@ -2,9 +2,21 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/core/capability/role_gate_copy.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/discover/domain/seerr_quota.dart';
+import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -144,6 +156,24 @@ class RequestFormState {
   final bool isSubmitting;
   final String? error;
 
+  /// Whether the sheet picks where the request goes: the server, the quality
+  /// profile and the folder. Only the operator with an account that may
+  /// choose (`SeerrAbility.chooseDestination`) does; everybody else sends
+  /// the title alone and the server applies its own defaults, so the sheet
+  /// reads none of Seerr's Radarr and Sonarr servers.
+  final bool choosesDestination;
+
+  /// Without [choosesDestination]: whether the request is for the 4K copy.
+  final bool is4k;
+
+  /// Without [choosesDestination], for a series: the seasons a request may
+  /// ask for, in order. Empty for a movie, and while they are read.
+  final List<int> seasons;
+
+  /// The seasons ticked, of [seasons]. Asked for one by one only where the
+  /// server takes partial requests; otherwise every season goes.
+  final Set<int> selectedSeasons;
+
   /// Why [error] happened, when it was a read that failed; null when Seerr
   /// answered and the answer is the problem (it has no server to send to).
   ///
@@ -163,6 +193,10 @@ class RequestFormState {
     this.isSubmitting = false,
     this.error,
     this.errorReason,
+    this.choosesDestination = true,
+    this.is4k = false,
+    this.seasons = const [],
+    this.selectedSeasons = const {},
   });
 
   /// Nothing answered: the one case the sheet paints red.
@@ -178,8 +212,13 @@ class RequestFormState {
     return servers.where((server) => server.id == id).firstOrNull;
   }
 
+  /// A profile is needed only by a sheet that picks one; without the
+  /// pickers the server applies its own.
   bool get canSubmit =>
-      selectedProfileId != null && !isSubmitting && !isLoading && error == null;
+      (!choosesDestination || selectedProfileId != null) &&
+      !isSubmitting &&
+      !isLoading &&
+      error == null;
 
   RequestFormState copyWith({
     List<SeerrServer>? servers,
@@ -193,8 +232,16 @@ class RequestFormState {
     String? error,
     ServiceFailureReason? errorReason,
     bool clearError = false,
+    bool? choosesDestination,
+    bool? is4k,
+    List<int>? seasons,
+    Set<int>? selectedSeasons,
   }) {
     return RequestFormState(
+      choosesDestination: choosesDestination ?? this.choosesDestination,
+      is4k: is4k ?? this.is4k,
+      seasons: seasons ?? this.seasons,
+      selectedSeasons: selectedSeasons ?? this.selectedSeasons,
       servers: servers ?? this.servers,
       profiles: profiles ?? this.profiles,
       rootFolders: rootFolders ?? this.rootFolders,
@@ -221,11 +268,15 @@ class RequestFormState {
 
 /// A failed read of the request sheet's lists, as the sheet says it: the
 /// classified headline, never the exception.
-String _loadFailure(Object error) =>
+///
+/// The requester is told only that she was signed out, never which service.
+String _loadFailure(Object error, {bool brief = false}) =>
     classifyConnectionFailure(error) == ServiceFailureReason.sessionEnded
     // Nothing to wait for: the person signs in again.
-    ? '${describeFailureOf(ServiceKey.seerr, error).headline}, so the '
-          'request cannot be sent.'
+    ? brief
+          ? '${Lexicon.youWereSignedOut}. ${Lexicon.signInToKeepAsking}'
+          : '${describeFailureOf(ServiceKey.seerr, error).headline}, so the '
+                'request cannot be sent.'
     : '${describeFailureOf(ServiceKey.seerr, error).headline}. '
           'The request cannot be sent until it does.';
 
@@ -250,6 +301,34 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
   /// by then. Writing `state` to it throws, from a microtask nobody awaits.
   Future<void> _loadServers() async {
     if (!ref.mounted) return;
+    // Who picks where the request goes is the gate's to say, and only the
+    // operator with an account that may choose does. Everybody else sends the
+    // title and nothing else, and the sheet never reads Seerr's servers:
+    // they are the operator's, named "Radarr 4K".
+    final chooses = ref
+        .read(roleGateProvider(''))
+        .operatorAction(SeerrAbility.chooseDestination)
+        .acts;
+    if (!chooses) {
+      state = state.copyWith(
+        choosesDestination: false,
+        is4k: arg.copies == SeerrRequestCopies.uhd,
+      );
+      try {
+        // Nothing to read, but a Seerr that signed out says so here, before
+        // a request is filled in that cannot be sent.
+        ref.read(seerrServiceProvider);
+      } catch (error) {
+        state = state.copyWith(
+          isLoading: false,
+          error: _loadFailure(error, brief: _brief),
+          errorReason: classifyConnectionFailure(error),
+        );
+        return;
+      }
+      await _loadSeasons();
+      return;
+    }
     try {
       final service = ref.read(seerrServiceProvider);
       final serverMaps = arg.mediaType == 'movie'
@@ -361,6 +440,59 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
     }
   }
 
+  /// The seasons a request for a series may ask for: every season with
+  /// episodes, less those the server holds or has been asked for already, as
+  /// the detail page reads them. A page that did not load leaves every
+  /// season to the server, which drops what it has.
+  Future<void> _loadSeasons() async {
+    var seasons = const <int>[];
+    if (arg.mediaType == 'tv') {
+      try {
+        final details = await ref.read(
+          discoverDetailProvider((id: arg.mediaId, type: 'tv')).future,
+        );
+        final numbering = await ref.read(seerrNumberingProvider.future);
+        final all = [
+          for (final raw in (details['seasons'] as List?) ?? const [])
+            if (raw is Map<String, dynamic>) TvSeason.fromJson(raw),
+        ];
+        final requestable = [
+          for (final season in all)
+            if (season.seasonNumber > 0 && season.episodeCount > 0)
+              season.seasonNumber,
+        ];
+        final missing = seerrRequestGate(
+          details['mediaInfo'] as Map<String, dynamic>?,
+          isMovie: false,
+          seasons: all,
+          numbering: numbering,
+        ).missingSeasons;
+        seasons = missing.isEmpty ? requestable : missing;
+      } catch (_) {
+        // The server drops every season it has: asking for all is safe.
+      }
+    }
+    if (!ref.mounted) return;
+    state = state.copyWith(
+      isLoading: false,
+      seasons: seasons,
+      selectedSeasons: seasons.toSet(),
+      clearError: true,
+    );
+  }
+
+  /// Without the pickers: the request is for the 4K copy, or the standard.
+  void selectQuality({required bool is4k}) {
+    state = state.copyWith(is4k: is4k);
+  }
+
+  /// Without the pickers: [season] ticked or not.
+  void toggleSeason(int season) {
+    final selected = {...state.selectedSeasons};
+    if (!selected.remove(season)) selected.add(season);
+    state = state.copyWith(selectedSeasons: selected);
+  }
+
   /// Reads Seerr's servers again, after its connection changed: signed in
   /// again, say.
   void reload() {
@@ -381,30 +513,149 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
     state = state.copyWith(selectedRootFolder: path, clearError: true);
   }
 
-  Future<String?> submitRequest() async {
-    if (state.selectedProfileId == null) {
-      return 'No profile selected';
+  /// Sends the request, and says why not when it was not made: null on
+  /// success.
+  ///
+  /// Without the pickers the request carries the title, the copy and, where
+  /// the server takes partial requests ([partialRequests]), the seasons
+  /// ticked; the server applies its own server, profile and folder.
+  /// [title] names the title in the requester's words when it fails.
+  Future<RequestSubmitFailure?> submitRequest({
+    bool partialRequests = false,
+    String? title,
+  }) async {
+    final chooses = state.choosesDestination;
+    if (chooses && state.selectedProfileId == null) {
+      return const RequestSubmitFailure('No profile selected');
     }
 
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       final service = ref.read(seerrServiceProvider);
-      await service.createRequest(
-        mediaType: arg.mediaType,
-        mediaId: arg.mediaId,
-        profileId: state.selectedProfileId,
-        rootFolder: state.selectedRootFolder,
-        serverId: state.selectedServerId,
-        // The chosen server decides the copy: without it a request filed on
-        // the 4K server was a standard request, tracked on the HD copy.
-        is4k: state.selectedServer?.is4k ?? false,
-      );
+      if (chooses) {
+        await service.createRequest(
+          mediaType: arg.mediaType,
+          mediaId: arg.mediaId,
+          profileId: state.selectedProfileId,
+          rootFolder: state.selectedRootFolder,
+          serverId: state.selectedServerId,
+          // The chosen server decides the copy: without it a request filed on
+          // the 4K server was a standard request, tracked on the HD copy.
+          is4k: state.selectedServer?.is4k ?? false,
+        );
+      } else {
+        final ticked = state.selectedSeasons;
+        await service.createRequest(
+          mediaType: arg.mediaType,
+          mediaId: arg.mediaId,
+          is4k: state.is4k,
+          seasons: partialRequests && ticked.length < state.seasons.length
+              ? [
+                  for (final season in state.seasons)
+                    if (ticked.contains(season)) season,
+                ]
+              : null,
+        );
+      }
       return null;
     } catch (error) {
-      return 'Could not send the request. '
-          '${writeFailureReason(ServiceKey.seerr, error)}';
+      return _submitFailure(error, title: title);
     } finally {
       if (ref.mounted) state = state.copyWith(isSubmitting: false);
     }
   }
+
+  /// What a request Seerr did not make says: the server's own reason where
+  /// it gave one, in the voice of who reads it.
+  RequestSubmitFailure _submitFailure(Object error, {String? title}) {
+    if (error is SeerrNothingRequested) {
+      return const RequestSubmitFailure(Lexicon.noSeasonsLeft);
+    }
+    final gate = ref.read(roleGateProvider(''));
+    final kind = arg.mediaType == 'movie'
+        ? SeerrMediaKind.movie
+        : SeerrMediaKind.tv;
+    final brief = gate.faultVoice == FaultVoice.brief;
+    final server = gate.server?.title ?? ServiceKey.seerr.title;
+    // The key's refusals read as they always have; an account's are the
+    // server's own reasons.
+    final account = gate.grant?.isApiKey == false;
+    switch (account ? seerrRefusalOf(error) : null) {
+      case SeerrRefusal.alreadyRequested:
+        return const RequestSubmitFailure(Lexicon.alreadyRequested);
+      case SeerrRefusal.blocklisted:
+        return const RequestSubmitFailure(Lexicon.blockedByOwner);
+      case SeerrRefusal.quotaReached:
+        // Read again, so the sheet dims Request with the limit as it stands.
+        final id = _lensId();
+        final held = id == null ? null : ref.read(seerrQuotaProvider(id)).value;
+        if (id != null) ref.invalidate(seerrQuotaProvider(id));
+        final quota = SeerrQuotaStatus(
+          limit: held?.of(kind).limit,
+          days: held?.of(kind).days,
+          restricted: true,
+        );
+        return RequestSubmitFailure(
+          brief
+              ? RoleGateCopy.youQuotaReached(quota, kind)
+              : RoleGateCopy.accountQuotaReached(quota, kind, server: server),
+        );
+      case SeerrRefusal.requestNotAllowed || SeerrRefusal.permissionDenied:
+        // The transport read `/auth/me` again, so the gate says it as it is.
+        return RequestSubmitFailure(
+          gate.requestAction(kind).reason ??
+              (brief
+                  ? RoleGateCopy.youCannot(SeerrAbility.request, kind: kind)
+                  : RoleGateCopy.accountCannot(
+                      SeerrAbility.request,
+                      server: server,
+                      kind: kind,
+                    )),
+        );
+      case _:
+        break;
+    }
+    if (brief) {
+      final reason = classifyConnectionFailure(error);
+      if (reason == ServiceFailureReason.sessionEnded) {
+        return const RequestSubmitFailure(
+          '${Lexicon.youWereSignedOut}. ${Lexicon.signInToKeepAsking}',
+        );
+      }
+      return RequestSubmitFailure(
+        Lexicon.couldNotAskFor(title),
+        retryHelps: failureRetryHelps(reason),
+      );
+    }
+    return RequestSubmitFailure(
+      'Could not send the request. '
+      '${writeFailureReason(ServiceKey.seerr, error)}',
+      error: error,
+    );
+  }
+
+  bool get _brief =>
+      ref.read(roleGateProvider('')).faultVoice == FaultVoice.brief;
+
+  String? _lensId() => ref.read(activeInstanceProvider(ServiceKey.seerr))?.id;
+}
+
+/// Why a request was not made, as the sheet says it: [message], and whether
+/// sending it again can still change the answer ([retryHelps]).
+class RequestSubmitFailure {
+  const RequestSubmitFailure(
+    this.message, {
+    this.retryHelps = false,
+    this.error,
+  });
+
+  final String message;
+  final bool retryHelps;
+
+  /// The failure behind the operator's message, for the toast's cause; null
+  /// where the words are all there is to say.
+  final Object? error;
+
+  @override
+  String toString() => message;
 }
