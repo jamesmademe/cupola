@@ -216,12 +216,25 @@ if [[ -z "$seerr_api_key" ]]; then
 fi
 "$curl_bin" -fsS -H "X-Api-Key: $seerr_api_key" "$seerr_url/api/v1/auth/me" >/dev/null
 
+# The requester accounts get new passwords on every run: the seed sets them
+# again on the accounts, so the credentials file is always the truth. They
+# exist only in that file, never on a command line.
+new_password() {
+  "$python_bin" -c 'import secrets; print(secrets.token_urlsafe(18))'
+}
+seerr_requester_password="$(new_password)"
+jellyfin_requester_password="$(new_password)"
+
 credentials="$state_dir/credentials.env"
 umask 077
 {
   printf 'CUPOLA_MACLAB_JELLYFIN_TOKEN=%s\n' "$jellyfin_token"
   printf 'CUPOLA_MACLAB_JELLYFIN_USER_ID=%s\n' "$jellyfin_user_id"
   printf 'CUPOLA_MACLAB_SEERR_API_KEY=%s\n' "$seerr_api_key"
+  printf 'CUPOLA_MACLAB_SEERR_REQUESTER_EMAIL=requester@example.com\n'
+  printf 'CUPOLA_MACLAB_SEERR_REQUESTER_PASSWORD=%s\n' "$seerr_requester_password"
+  printf 'CUPOLA_MACLAB_JELLYFIN_REQUESTER_USERNAME=cupola-viewer\n'
+  printf 'CUPOLA_MACLAB_JELLYFIN_REQUESTER_PASSWORD=%s\n' "$jellyfin_requester_password"
   printf 'CUPOLA_MACLAB_JELLYFIN_PASSWORD=cupola-pass\n'
   printf 'CUPOLA_MACLAB_NPM_USERNAME=admin@example.com\n'
   printf 'CUPOLA_MACLAB_NPM_PASSWORD=changeme\n'

@@ -72,7 +72,7 @@ server for the token-rejection check.
 
 | Service | Native endpoint | Auth in the lab | Transport |
 |---|---|---|---|
-| Seerr | http://127.0.0.1:5055 | generated API key | REST |
+| Seerr | http://127.0.0.1:5055 | generated API key; a local requester account with a generated password | REST + session cookie |
 | Radarr | http://127.0.0.1:7878 | test-key | REST v3 |
 | Sonarr | http://127.0.0.1:8989 | test-key | REST v3 |
 | Lidarr | http://127.0.0.1:8686 | test-key | REST v1 |
@@ -83,7 +83,7 @@ server for the token-rejection check.
 | Transmission | http://127.0.0.1:9091 | transmission / transmission | RPC + CSRF |
 | SABnzbd | http://127.0.0.1:8082 | test-key | query API |
 | NZBGet | http://127.0.0.1:6789 | nzbget / tegbzn6789 | JSON-RPC + Basic |
-| Jellyfin | http://127.0.0.1:8096 | generated token + user id | REST |
+| Jellyfin | http://127.0.0.1:8096 | generated token + user id; a requester user with a generated password | REST |
 | Plex | http://127.0.0.1:32400 | local auth disabled in the disposable image | REST/XML-or-JSON |
 | Dockge | http://127.0.0.1:5001 | disposable account provisioned by bootstrap | Socket.IO |
 | Nginx Proxy Manager | http://127.0.0.1:8181 | admin@example.com / changeme | REST + JWT |
@@ -117,6 +117,87 @@ public internet. Prowlarr remains an empty indexer registry. Bazarr is
 configured for the two arr services but has no subtitle records without a
 real media/subtitle provider. These are capability limits of the lab, not
 claims that the corresponding Cupola screens are unreachable.
+
+## A household member's own Seerr account
+
+test/e2e/maclab_requester_e2e_test.dart signs in to the lab's Seerr (3.4.1,
+set up on the lab's Jellyfin 12.1) the way a household member does, through
+Cupola's own code: `SeerrAuthService` for the sign-in, `seerrClientFor` for
+the session cookie and the CSRF token, `SeerrAccounts` and the providers for
+the account the connection keeps. The offline suite proves the same paths
+against the fake Seerr in test/test_helpers/profiles/fakes/seerr_sessions.dart;
+this run proves the fake answers the way Seerr does. Where the two disagree,
+Seerr wins, and the fake and the app change together.
+
+The bootstrap seeds two accounts, each with REQUEST alone (no manage
+permission, no auto-approve): a local Seerr account and a Jellyfin user that
+Seerr has imported. Both get new generated passwords on every run, kept only
+in the chmod-600 credentials file next to the other lab secrets. The bootstrap
+starts the lab and seeds them; a rerun only sets the new passwords:
+
+~~~bash
+test/e2e/maclab/bootstrap.sh
+flutter test --tags e2e --run-skipped test/e2e/maclab_requester_e2e_test.dart
+~~~
+
+The test reads `CUPOLA_MACLAB_CREDENTIALS_FILE` like the other lab tests, and
+falls back to .ai/scratch/zz_maclab/state/credentials.env under the working
+directory. Asking for a movie needs the lab's Seerr to reach TMDB, so that
+step needs the internet. What it proves:
+
+- the sign-in methods `SeerrServerFacts` reads from `/settings/public`;
+- an email and a wrong password refused as a wrong password, the right one
+  signed in, `/auth/me` read into `SeerrGrant`, the account's own requests
+  and quota, and the connection test passing as the account;
+- a request made as the account, a 4K one refused as not allowed, and the
+  operator's writes (approve, decline) refused as a permission the account
+  lacks, never as a refused key or an ended session; the account cancels its
+  own pending request; a permission the operator grants reaches the grant;
+- a way in the operator turned off after the methods were read, refused in
+  the route's words, and a Jellyfin user the server does not take (new
+  sign-ins off, never imported) refused as not allowed; the test puts both
+  settings back;
+- a Jellyfin username and password, and a Quick Connect code approved from
+  Jellyfin;
+- signing out, after which the server no longer knows the session, and a
+  session ended on the server side, read as ended on every request after;
+- a connection behind an access gateway (a local proxy started by the test)
+  whose custom header reaches Seerr, and the same address without it turned
+  away by the gateway;
+- with Seerr's CSRF protection on, writes as the key and as an account, a
+  sign-in, a Quick Connect code and a sign-out all pass the guard. The test
+  turns the setting on, restarts the Seerr container (`docker restart
+  cupola-maclab-seerr-1`, or `$CUPOLA_MACLAB_PROJECT-seerr-1`), and puts it
+  back the same way when it ends, failed or not.
+
+Never read Seerr's database while its container runs: it writes in SQLite's
+WAL mode, and a second reader over the bind mount can lose its recent writes.
+Stop the container first, then open state/seerr/db/db.sqlite3. That is how
+the session store's expiry was checked: 30 days after the session's last
+use, not after its sign-in.
+
+### Signing in with Plex
+
+The Plex group is reported as skipped: it needs a Seerr set up on Plex with a
+real plex.tv account, and a person to approve the PIN on app.plex.tv. Run it
+by hand on a macOS build of Cupola:
+
+1. Claim the lab's Plex for your own plex.tv account: recreate the container
+   with a claim token from https://plex.tv/claim in `PLEX_CLAIM`, or sign in
+   at http://127.0.0.1:32400/web.
+2. Start a second Seerr on its own port and state directory, from the image
+   the Compose file pins:
+   `docker run -d --name cupola-maclab-seerr-plex -p 127.0.0.1:5056:5055
+   -v "$PWD/.ai/scratch/zz_maclab/state/seerr-plex:/app/config" <image>`.
+3. Open http://127.0.0.1:5056 in a browser, sign in with Plex, choose the
+   lab's Plex server and finish the setup. To sign in as a household member
+   rather than the owner, share the server with a second plex.tv account.
+4. In Cupola, add a Seerr connection at http://127.0.0.1:5056, choose to sign
+   in with an account, then Plex. Approve Cupola on the Plex page, and check
+   that the connection reads signed in with the right name, that a request
+   goes through, and that signing out ends the session.
+5. Remove the container and its state directory, and revoke Cupola under
+   Authorized Devices on plex.tv.
 
 ## Native macOS test plan
 
