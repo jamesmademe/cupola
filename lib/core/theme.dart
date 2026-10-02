@@ -76,8 +76,11 @@ extension CupolaTextStyle on TextStyle {
   TextStyle get tabular =>
       copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
 
-  /// Switches a style onto the mono family, for release names, paths, logs,
-  /// keys and anything compared by eye in columns.
+  /// Switches a style onto the mono family, for machine strings only: release
+  /// names, paths, hashes, keys, logs, exactly as returned, and the legend of a
+  /// physical key. **Never for a figure**: a size, a rate, a percentage, a
+  /// clock or a count stays in the text face and takes [tabular] there.
+  /// `test/core/theme/mono_face_guard_test.dart` lists every use and why.
   ///
   /// Keeps the size, colour and line height it already had — a fingerprint or a
   /// log line still belongs to the role it was set in, it just needs columns

@@ -1265,7 +1265,7 @@ List<Widget> _buildWantedChips(
 /// than no header: the two used to be able to drift because only one of them
 /// existed.
 abstract final class _ActivityTableMetrics {
-  /// The figures cell — wide enough for `99.9 GB · 12h 12m left` in mono.
+  /// The figures cell, wide enough for `99.9 GB · 12h 12m left`.
   static const double figures = 210;
 
   /// The relative-time cell.
@@ -1352,8 +1352,8 @@ class ActivityTableHeader extends StatelessWidget {
 /// separate `size`, `done`, `speed` and `left` columns; `GlobalActivityItem`
 /// has no such fields and \*arr reports no transfer rate on a queue record at
 /// all, so the measurements arrive pre-formatted in [GlobalActivityItem.figures]
-/// and stay in one tabular-mono cell — still a column that lines up down the
-/// page. That cell used to be fed `subtitle`, which is prose: the table was
+/// and stay in one tabular cell, in the text face — still a column that lines
+/// up down the page. That cell used to be fed `subtitle`, which is prose: the table was
 /// right-aligning a release filename in a numeric column.
 class _DesktopActivityRow extends ConsumerStatefulWidget {
   const _DesktopActivityRow({
@@ -1577,7 +1577,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                 const SizedBox(width: AppSpacing.md),
                 // The measurements, in one tabular cell — never four sortable
                 // columns, which would need four fields the record does not
-                // have and a comparator each.
+                // have and a comparator each. Figures, so the text face.
                 SizedBox(
                   width: _ActivityTableMetrics.figures,
                   child: Text(
@@ -1589,7 +1589,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                       context,
                       size: 11,
                       color: dim,
-                    ).mono.tabular,
+                    ).tabular,
                   ),
                 ),
                 SizedBox(

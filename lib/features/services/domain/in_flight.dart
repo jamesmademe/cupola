@@ -1,6 +1,6 @@
 /// The grammar of the Dashboard's fifth region: what is moving, right now.
 ///
-/// ## Why the row is one mono line and not four fields
+/// ## Why the row is one line and not four fields
 ///
 /// The region this replaces printed a title, a `·`-joined subtitle assembled by
 /// each source in its own words, and a percentage — so a Radarr row said
@@ -15,9 +15,9 @@
 /// or explicitly absent. Absent prints `—`, **never `0`**: a figure nobody was
 /// able to take is not zero, and `0 B` would say the transfer has not started.
 ///
-/// Set in `TextStyle.mono.tabular` by the row, which is why the parts are
-/// formatted to a fixed shape here rather than left to each service's own
-/// formatter.
+/// Set in tabular figures, in the text face, by the row (figures are never
+/// mono), which is why the parts are formatted to a fixed shape here rather
+/// than left to each service's own formatter.
 library;
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';

@@ -420,7 +420,7 @@ class _ChromeChipState extends State<_ChromeChip> {
                 context,
                 size: 11,
                 color: CupolaThemeColors.of(context).dimText,
-              ).mono.tabular,
+              ).mono,
             ),
           ],
         ],

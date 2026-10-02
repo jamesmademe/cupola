@@ -378,12 +378,19 @@ class _DeckFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final health = ref.watch(stackHealthProvider);
-    final hints = [
-      '↑↓ move',
-      '⏎ open',
-      '${ShellShortcuts.openInInspector} open in inspector',
-      '${ShellShortcuts.section(0)}–${ShellShortcuts.section(3)} sections',
+    // Each hint is a key and what it does. The key is a legend for a physical
+    // key, set in the mono face the rail and the jump pill print theirs in;
+    // what it does is prose, and prose is never mono.
+    final hints = <({String key, String does})>[
+      (key: '↑↓', does: 'move'),
+      (key: '⏎', does: 'open'),
+      (key: ShellShortcuts.openInInspector, does: 'open in inspector'),
+      (
+        key: '${ShellShortcuts.section(0)}–${ShellShortcuts.section(3)}',
+        does: 'sections',
+      ),
     ];
+    final dim = CupolaThemeColors.of(context).dimText;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg + 4,
@@ -405,13 +412,17 @@ class _DeckFooter extends ConsumerWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           for (final hint in hints)
-            Text(
-              hint,
-              style: AppTheme.chrome(
-                context,
-                size: 11,
-                color: CupolaThemeColors.of(context).dimText,
-              ).mono.tabular,
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: hint.key,
+                    style: AppTheme.chrome(context, size: 11, color: dim).mono,
+                  ),
+                  TextSpan(text: ' ${hint.does}'),
+                ],
+              ),
+              style: AppTheme.chrome(context, size: 11, color: dim),
             ),
           if (health.headline case final headline?)
             Text(

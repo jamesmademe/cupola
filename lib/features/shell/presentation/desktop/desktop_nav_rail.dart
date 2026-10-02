@@ -248,7 +248,7 @@ class _RailBadge extends StatelessWidget {
             weight: FontWeight.w600,
             color: colorScheme.onPrimary,
             height: 1,
-          ).mono.tabular,
+          ).tabular,
         ),
       ),
     );
@@ -311,7 +311,7 @@ class _DeckKeyHintState extends State<_DeckKeyHint> {
                   color: _hovered
                       ? colorScheme.onSurface
                       : CupolaThemeColors.of(context).dimText,
-                ).mono.tabular,
+                ).mono,
               ),
             ),
           ),

@@ -1237,8 +1237,8 @@ class _FinishedTodayRow extends StatelessWidget {
             item.sortDate == null ? '' : formatTimeOnly(item.sortDate!),
             // Tabular so six clocks make a column rather than six ragged
             // strings — the only reason a time-only stamp beats a relative age
-            // here.
-            style: AppTheme.chrome(context, size: 11, color: dim).mono.tabular,
+            // here. A clock is a figure, so it stays in the text face.
+            style: AppTheme.chrome(context, size: 11, color: dim).tabular,
           ),
         ],
       ),

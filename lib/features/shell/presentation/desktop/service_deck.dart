@@ -209,6 +209,8 @@ class _ActiveChip extends ConsumerWidget {
             ),
             if (label.isNotEmpty) ...[
               const SizedBox(width: 2),
+              // The name the user gave the connection: their own word, not a
+              // machine string and not a figure.
               Text(
                 label,
                 style: AppTheme.chrome(
@@ -219,7 +221,7 @@ class _ActiveChip extends ConsumerWidget {
                     surface: colorScheme.surface,
                     tintAlpha: 0.13,
                   ),
-                ).mono.tabular,
+                ),
               ),
             ],
           ],
@@ -278,13 +280,14 @@ class _HealthReadout extends ConsumerWidget {
             if (health.unreachable > 0)
               _Dot(color: statusToneColor(colorScheme, StatusTone.error)),
             const SizedBox(width: AppSpacing.sm),
+            // A count that changes in place: a figure, tabular, text face.
             Text(
               '${health.answering}',
               style: AppTheme.chrome(
                 context,
                 size: 12,
                 color: colorScheme.onSurface,
-              ).mono.tabular,
+              ).tabular,
             ),
             const SizedBox(width: 3),
             Text(
@@ -438,13 +441,15 @@ class _JumpPillState extends State<_JumpPill> {
                       const SizedBox(width: 9),
                     ] else
                       const SizedBox(width: 6),
+                    // The key legend: mono, as the rail's is. Mono digits are
+                    // already one width, so no `.tabular`.
                     Text(
                       ShellShortcuts.commandDeck,
                       style: AppTheme.chrome(
                         context,
                         size: 11,
                         color: CupolaThemeColors.of(context).dimText,
-                      ).mono.tabular,
+                      ).mono,
                     ),
                   ],
                 ),

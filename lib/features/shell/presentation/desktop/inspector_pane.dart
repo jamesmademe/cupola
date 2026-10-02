@@ -167,7 +167,7 @@ class _InspectorHeader extends ConsumerWidget {
   }
 }
 
-/// One transfer: name, a 3pt bar, and the figures in tabular mono.
+/// One transfer: name, a 3pt bar, and the line under it in the text face.
 ///
 /// The bar is 3pt because it is a *readout*, not a control — nothing here can be
 /// dragged — and the row is the same 48pt-ish height as a list row elsewhere so
@@ -248,6 +248,10 @@ class _QueueRow extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 5),
+                // The episode, its title and the release it came as: a line of
+                // prose with a name in it, the same line the Activity table
+                // sets in the text face. Not a figure, and not a machine string
+                // on its own.
                 Text(
                   item.subtitle,
                   maxLines: 1,
@@ -256,7 +260,7 @@ class _QueueRow extends StatelessWidget {
                     context,
                     size: 11,
                     color: CupolaThemeColors.of(context).dimText,
-                  ).mono.tabular,
+                  ),
                 ),
               ],
             ),

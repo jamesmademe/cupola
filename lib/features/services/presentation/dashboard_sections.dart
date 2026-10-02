@@ -1178,7 +1178,7 @@ class _RequestDecisionButton extends StatelessWidget {
 
 /// One transfer, in the grammar every client shares.
 ///
-/// `2160p · 14.0 of 15.2 GB · 3 min left · qBittorrent`, in mono tabular figures
+/// `2160p · 14.0 of 15.2 GB · 3 min left · qBittorrent`, in tabular figures
 /// so a column of them lines up — see `domain/in_flight.dart` for why the four
 /// fields are the four fields.
 class _InFlightRow extends StatelessWidget {

@@ -129,7 +129,7 @@ Three families, all OFL and bundled, so the type is the same on all five platfor
 
 - **Bricolage Grotesque** (`type.family.display`; `opsz` 12–96, `wdth` 75–100, `wght` 200–800) — titles, section headings and figures. Voiced, and used sparingly. Its default instance is 96 pt ExtraBold at full width, so **every role sets all three axes**: `wght`, `wdth`, and `opsz` equal to the size (`AppTheme.variations`). Flutter never applies an optical size by itself. The narrow widths (90–96 %) are the voice: they fit *Cosmos Laundromat* on one line at 42.
 - **Onest** (`type.family.text`, `wght` 100–900) — everything read that is not a title or a figure. It has tabular figures.
-- **Geist Mono** (`type.family.mono`, `wght` 100–900) — machine strings only: release names, paths, hashes, keys, logs, the terminal, exactly as returned, with a slashed zero. Figures are never mono. Never the bare `monospace` alias, which is proportional on Apple platforms.
+- **Geist Mono** (`type.family.mono`, `wght` 100–900) — machine strings only: release names, paths, hashes, keys, logs, the terminal, exactly as returned, and the legend of a physical key (`⌘K`), with a slashed zero. Figures are never mono: a size, a rate, a percentage, a clock or a count takes `.tabular` in the text face, and `test/core/theme/mono_face_guard_test.dart` fails on a figure in mono and lists every use of the face. Never the bare `monospace` alias, which is proportional on Apple platforms.
 
 Geist Mono and Apple Symbols follow in every fallback list and carry the glyphs the faces lack (⇧ ⏎ ∞ ⌘ ⌥). Other scripts fall back per glyph to the system face — a decision, not a surprise.
 
