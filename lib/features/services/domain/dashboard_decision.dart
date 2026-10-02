@@ -184,6 +184,7 @@ class DashboardDecision {
     this.actionInstanceId = '',
     this.importPath,
     this.reason,
+    this.renewable = true,
   });
 
   final DecisionKind kind;
@@ -258,6 +259,12 @@ class DashboardDecision {
   /// of [detail]; kept apart so a folded row ([groupDecisions]) can carry it
   /// when every member shares it. Null when the source gave no cause.
   final String? reason;
+
+  /// For an expiring certificate: whether Nginx Proxy Manager can renew it,
+  /// which it can for a Let's Encrypt one only. An uploaded certificate can
+  /// only be replaced, by whoever issued it, so its row offers no Renew.
+  /// True for every other kind, where it means nothing.
+  final bool renewable;
 
   bool get isFault => kind.isFault;
 
@@ -498,26 +505,33 @@ String _kindNoun(DecisionKind kind) => switch (kind) {
 /// One table rather than a string per call site: the verb is the decision, and a
 /// row whose button says something different from what the screen reader
 /// announces is the defect this file exists to make impossible.
-String decisionActionLabel(DecisionKind kind, {ServiceKey? target}) =>
-    switch (kind) {
-      DecisionKind.stalledDownload => 'Open in ${target?.title ?? 'client'}',
-      // The wizard exists for three arrs. Anywhere else the honest control is
-      // the service's own page, and it says so rather than promising a wizard
-      // that would refuse to start.
-      DecisionKind.importBlocked =>
-        target == null || target.supportsManualImport
-            ? 'Manual import'
-            : 'Open in ${target.title}',
-      DecisionKind.failedImport => 'Fix',
-      DecisionKind.failingIndexer => 'Test',
-      DecisionKind.stoppedStack => 'Start',
-      // NPM's client has no renew call — `Renew` opens the screen that owns
-      // renewal rather than pretending to fire one. The row's own words say how
-      // long there is left, so the control is a destination and reads as one.
-      DecisionKind.expiringCertificate => 'Renew',
-      // Two controls, not one — see the row.
-      DecisionKind.pendingRequest => 'Approve',
-    };
+String decisionActionLabel(
+  DecisionKind kind, {
+  ServiceKey? target,
+  bool renewable = true,
+}) => switch (kind) {
+  DecisionKind.stalledDownload => 'Open in ${target?.title ?? 'client'}',
+  // The wizard exists for three arrs. Anywhere else the honest control is
+  // the service's own page, and it says so rather than promising a wizard
+  // that would refuse to start.
+  DecisionKind.importBlocked =>
+    target == null || target.supportsManualImport
+        ? 'Manual import'
+        : 'Open in ${target.title}',
+  DecisionKind.failedImport => 'Fix',
+  DecisionKind.failingIndexer => 'Test',
+  DecisionKind.stoppedStack => 'Start',
+  // `Renew` opens the Certificates tab, where renewal sits beside its
+  // confirmation: the call reaches Let's Encrypt, and a renewal fired from
+  // a row on Home is one mis-tap from spending the account's rate limits.
+  // Only a Let's Encrypt certificate renews; an uploaded one is replaced,
+  // so its control opens the certificates under their own name and never
+  // says Renew. Not "Open in Nginx Proxy Manager": the row's own detail
+  // names the service, and the long name pushed the control off a phone row.
+  DecisionKind.expiringCertificate => renewable ? 'Renew' : 'Open certificates',
+  // Two controls, not one — see the row.
+  DecisionKind.pendingRequest => 'Approve',
+};
 
 /// The toast a decision control opens when its target service is not set up.
 ///

@@ -789,6 +789,7 @@ class _DecisionRow extends ConsumerWidget {
           actionLabel: decisionActionLabel(
             decision.kind,
             target: decision.actionTarget,
+            renewable: decision.renewable,
           ),
         ),
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -898,6 +899,7 @@ class _DecisionControls extends ConsumerWidget {
     final label = decisionActionLabel(
       decision.kind,
       target: decision.actionTarget,
+      renewable: decision.renewable,
     );
 
     // Renewing is a write on the certificates of one NPM account, and a
@@ -905,8 +907,10 @@ class _DecisionControls extends ConsumerWidget {
     // draws its own Renew through, so Home never offers what the page beyond
     // it would dim. Dimmed rather than hidden, like every write a credential
     // may not make: the certificate still needs somebody, and the toast says
-    // which account can do it.
-    if (decision.kind == DecisionKind.expiringCertificate) {
+    // which account can do it. An uploaded certificate has no Renew to gate:
+    // its control only opens the certificates, which any account may read.
+    if (decision.kind == DecisionKind.expiringCertificate &&
+        decision.renewable) {
       return CapabilityGatedAction.builder(
         service: ServiceKey.nginxProxyManager,
         // Empty means the lens, which is the connection the certificates
@@ -1029,9 +1033,9 @@ Future<void> _runDecision(
         invalidate: [dockgeStackListProvider],
       );
     case DecisionKind.expiringCertificate:
-      // The Certificates tab, where Renew and its confirmation are: the
-      // service's root is its Overview, which offers no writes at all, so
-      // Renew used to land on a page with nothing to renew on it.
+      // The Certificates tab, where Renew and its confirmation are, and where
+      // an uploaded certificate is listed for replacing: the service's root
+      // is its Overview, which offers no writes at all.
       context.go(ServiceRoutes.npmCertificates);
   }
 }

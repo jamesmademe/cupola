@@ -2925,10 +2925,15 @@ Future<List<DashboardDecision>> _expiringCertificateDecisions(Ref ref) async {
           title: certificate.domainNames.isEmpty
               ? certificate.niceName
               : certificate.domainNames.first,
+          // An uploaded certificate does not renew, so the row says what
+          // will: replacing it, in Nginx Proxy Manager.
           detail: joinDisplayParts([
             _certificateExpiry(certificate, now),
-            ServiceKey.nginxProxyManager.title,
+            certificate.isLetsEncrypt
+                ? ServiceKey.nginxProxyManager.title
+                : 'replace it in ${ServiceKey.nginxProxyManager.title}',
           ]),
+          renewable: certificate.isLetsEncrypt,
           // The expiry date, standing in for "when did this start needing me".
           // Ordering by it puts the certificate closest to lapsing first, which
           // is what "oldest first" means for a deadline.
