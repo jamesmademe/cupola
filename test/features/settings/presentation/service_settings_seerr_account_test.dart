@@ -193,6 +193,11 @@ void main() {
     await _tap(tester, harness, find.widgetWithText(FilledButton, 'Sign in'));
     expect(find.text("That email and password didn't work"), findsOneWidget);
     expect(find.text('Check them and sign in again.'), findsOneWidget);
+    // The refusal reads under the form's title, beside the fields to change.
+    expect(
+      tester.getTopLeft(find.text("That email and password didn't work")).dy,
+      greaterThan(tester.getTopLeft(find.textContaining('Sign in to ')).dy),
+    );
     // The password left the form when it was sent.
     expect(
       tester.widget<TextField>(_field('Password')).controller!.text,

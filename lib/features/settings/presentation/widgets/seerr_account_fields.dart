@@ -599,7 +599,9 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_notice case final notice?) ...[
+        // The password form places its notice under its own title, beside the
+        // fields it is about; every other stage leads with it.
+        if (_notice case final notice? when _stage != _Stage.form) ...[
           _NoticeLine(notice: notice, actions: _noticeActions(notice)),
           const SizedBox(height: AppSpacing.md),
         ],
@@ -787,6 +789,12 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
         ),
       ],
       const SizedBox(height: AppSpacing.md),
+      // A refused password reads under the title it answers ("Sign in to
+      // Jellyseerr"), next to the fields to change, not above the heading.
+      if (_notice case final notice?) ...[
+        _NoticeLine(notice: notice, actions: _noticeActions(notice)),
+        const SizedBox(height: AppSpacing.md),
+      ],
       TextField(
         controller: _login,
         decoration: InputDecoration(labelText: local ? 'Email' : 'Username'),
