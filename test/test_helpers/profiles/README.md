@@ -166,7 +166,8 @@ The fake Seerr answers whoever calls it as Seerr v3.5.0 does
   `/settings/public`, the sign-ins) wants somebody; `/settings/*` wants ADMIN;
   approve, decline, retry and the `/media` writes want MANAGE_REQUESTS; the
   admin's `/user` writes and a user's `settings/permissions` MANAGE_USERS; the
-  issue list one of the issue permissions. Refused, they answer `403 {status:
+  issue list one of the issue permissions, and an issue's `open` or `resolved`
+  MANAGE_ISSUES or CREATE_ISSUES. Refused, they answer `403 {status:
   403, error: 'You do not have permission to access this endpoint'}`. A
   request with neither the key's header nor a `connect.sid` cookie never gets
   that far: Seerr's request validator answers it first, `401 {message:
@@ -185,8 +186,10 @@ The fake Seerr answers whoever calls it as Seerr v3.5.0 does
   user list without emails, its own quota. `DELETE /request/{id}` answers
   `401` once the request is not its own or no longer waits. `POST /request`
   checks the kind and 4K permissions and the quota, and an auto-approve bit
-  makes the new request approved. The key's answers are what they always
-  were.
+  makes the new request approved. Resolving or reopening an issue answers
+  `401 You do not have permission to modify this issue.` unless the account
+  has MANAGE_ISSUES or reported it (`issue.ts:345`). The key's answers are what
+  they always were.
 - **Signing in.** `POST /auth/local {email, password}`, `POST /auth/jellyfin
   {username, password}`, `POST /auth/plex {authToken}` and Quick Connect
   (`initiate` → `{code, secret}`, `check?secret=` → `{authenticated}`,
@@ -234,6 +237,16 @@ requests only, the operator's routes refused with the real body, and an
 ended session (`sessionExpired`) emptied from the settings and read as
 signed out. `withSeerrPermissions` changes the instance's saved permissions
 with the server's.
+
+**What each one is shown.** The app is the requester's when every connection is
+a Seerr account that may not approve, Jellyfin or Plex (`audienceOf`): P2,
+P2-J and P2-P. P9 stays the operator's, holding an account on Sara's server.
+Every shared surface reads the role gate of the Seerr it shows
+(`roleGateProvider`): an operator's control is absent for the requester, and a
+control the account may not use is dimmed with the server's reason for the
+operator. `requester_sweep_test.dart` walks the requester's pages under P2,
+P2-J and P2-P and fails on any service name but Jellyfin and Plex, and on the
+operator's words (queue, indexer, quality profile, Approve).
 
 Checked against Seerr 3.4.1 on Jellyfin 12.1 in the macOS lab
 (`test/e2e/maclab_requester_e2e_test.dart`, see `test/e2e/README.md`): the
