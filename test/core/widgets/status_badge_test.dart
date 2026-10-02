@@ -86,10 +86,10 @@ void main() {
       expect(unreachableWarning.tone, StatusTone.error);
     });
 
-    test('notTracked carries the accent tone as a call to action', () {
+    test('notTracked rests in neutral: nobody asked, nothing is wrong', () {
       expect(
         const MediaStatusInfo(availability: MediaAvailability.notTracked).tone,
-        StatusTone.primary,
+        StatusTone.neutral,
       );
     });
 

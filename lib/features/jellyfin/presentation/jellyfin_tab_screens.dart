@@ -204,11 +204,9 @@ class _UserRow extends StatelessWidget {
     final lastActivity = user.lastActivityAt == null
         ? 'Last activity unavailable'
         : 'Last active ${formatRelativeDateTime(user.lastActivityAt!)}';
-    final tone = user.isDisabled
-        ? StatusTone.neutral
-        : user.isAdministrator
-        ? StatusTone.primary
-        : StatusTone.neutral;
+    // A role is not a state, and colour is information: an administrator's
+    // row says so in its words, as every other row does, and carries no tone.
+    const tone = StatusTone.neutral;
     return ServiceRecordRow(
       icon: user.isDisabled
           ? Icons.person_off_outlined

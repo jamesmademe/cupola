@@ -11,7 +11,8 @@ void main() {
 
       expect(status.label, 'Available to request');
       expect(status.availability, MediaAvailability.notTracked);
-      expect(status.tone, StatusTone.primary);
+      // The resting state: one of the five arms, never the ink.
+      expect(status.tone, StatusTone.neutral);
     });
 
     // The codes both numberings share.

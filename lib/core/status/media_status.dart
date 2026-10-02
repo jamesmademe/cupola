@@ -104,6 +104,13 @@ enum MediaPipeline {
 
 /// Semantic tone of a status, resolved to a real colour by the presentation
 /// layer so no widget hardcodes hex values.
+///
+/// A status reads one of **five** arms: [success], [warning] (a fault),
+/// [error] (unreachable and nothing else), [info] (in line, informational)
+/// and [neutral] (the backlog, and every state that asks nothing of anyone).
+/// [primary] is not a sixth: it is the ink, which a status never wears. No
+/// state in the app resolves to it (`test/core/theme/five_tones_guard_test.dart`);
+/// it stays only for a design-catalog scene that still names it.
 enum StatusTone { primary, success, warning, info, error, neutral }
 
 /// What an *event* row depicts, for rows the availability/pipeline pair cannot
@@ -315,7 +322,12 @@ class MediaStatusInfo {
     if (unmonitored && !isAvailable) return StatusTone.neutral;
 
     return switch (availability) {
-      MediaAvailability.notTracked => StatusTone.primary,
+      // Nobody has asked for it: nothing is in flight, nothing is missing
+      // from a library that wants it, nothing is wrong. That is the resting
+      // state, and the resting state is neutral. It used to be the ink, a
+      // sixth tone dressed as a call to action; the Request beside it is the
+      // call to action.
+      MediaAvailability.notTracked => StatusTone.neutral,
       MediaAvailability.available => StatusTone.success,
       MediaAvailability.partial => StatusTone.info,
       // Backlog, all three of them: an upgrade the cutoff has not reached, a

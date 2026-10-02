@@ -1283,10 +1283,10 @@ class _InFlightRow extends StatelessWidget {
     // the light card and NZBGet's green about 2.9:1, well under AA. Identity:
     // eight download sources each putting a hue on a percentage said nothing
     // the row's name did not. Walked against the row's card.
-    final accent = statusToneColor(
-      colorScheme,
-      StatusTone.primary,
+    final accent = ServiceTheme.onTint(
+      colorScheme.primary,
       surface: colorScheme.surfaceContainer,
+      tintAlpha: 0,
     );
     final line = formatInFlightLine(
       // A client's own row is named by its client label already.
