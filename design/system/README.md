@@ -43,6 +43,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Stuck` | amber | Nothing has arrived for a while: `Big Buck Bunny is stuck at 47%` · `nothing for 3 h`. |
 | `Failed` | amber | It ended and cannot finish by itself. |
 | `Stopped` | neutral | Someone stopped it on purpose. Not a fault, never "stuck". |
+| `Blocklisted` | neutral | The operator put the title on Seerr's blocklist, so Seerr takes no request for it. A deliberate choice, not a fault. The state, never the action: `Blocklist and search` stays banned. |
 | `Missing` · `Wanted` · `Cutoff unmet` · `Not aired` · `Not out yet` | neutral | The backlog: released and not on disk, still looked for, below its profile, not yet out. |
 | `Waiting for approval` | blue | A request nobody has approved yet. |
 | `Signed out` · `Signed out of Seerr` · `You were signed out` | blue | A Seerr account's session ended: unused for 30 days, signed out elsewhere, or the account removed. The person's own step, never a fault: the operator reads `Signed out of Seerr`, the requester `You were signed out` · `Sign in again to keep asking for movies and series.`, and the remedy is `Sign in again`, in ink rather than the fault's amber fill. No `Retry`: no request revives a session. Never `Refused the key`: no key was sent. |
