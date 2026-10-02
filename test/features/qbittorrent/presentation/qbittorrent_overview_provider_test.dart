@@ -56,11 +56,12 @@ void main() {
   });
 
   group('qbittorrentPercentLabel', () {
-    test('rounds down, so 99.6% never claims to be finished', () {
+    test('rounds to nearest, but 99.6% never claims to be finished', () {
       expect(qbittorrentPercentLabel(0.996), '99%');
       expect(qbittorrentPercentLabel(1.0), '100%');
       expect(qbittorrentPercentLabel(0.0), '0%');
-      expect(qbittorrentPercentLabel(0.925), '92%');
+      expect(qbittorrentPercentLabel(0.924), '92%');
+      expect(qbittorrentPercentLabel(0.925), '93%');
     });
 
     test('a value outside 0..1 is clamped rather than printed', () {

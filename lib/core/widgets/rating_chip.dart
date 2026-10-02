@@ -3,6 +3,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 class RatingChip extends StatelessWidget {
   final String value;
@@ -121,7 +122,7 @@ class RatingChip extends StatelessWidget {
   /// Empty stays empty, so an unknown scale is not narrated into existence.
   String _spokenScale(String denominator) {
     if (denominator.isEmpty) return '';
-    if (denominator == '%') return ' percent';
+    if (denominator == percentSign) return ' percent';
     if (denominator.startsWith('/')) {
       return ' out of ${denominator.substring(1)}';
     }

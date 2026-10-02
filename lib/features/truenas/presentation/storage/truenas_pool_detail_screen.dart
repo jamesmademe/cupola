@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -133,15 +134,12 @@ class _PoolDetailBody extends StatelessWidget {
                     : null,
               ),
               if (used != null)
-                TrueNasInfoRow(
-                  label: 'Used',
-                  value: '${(used * 100).round()}%',
-                ),
+                TrueNasInfoRow(label: 'Used', value: formatPercent(used * 100)),
               if (pool.scanState != null)
                 TrueNasInfoRow(
                   label: 'Last scan',
                   value: pool.scanPercentage != null
-                      ? '${pool.scanState} · ${pool.scanPercentage!.toStringAsFixed(0)}%'
+                      ? '${pool.scanState} · ${formatPercent(pool.scanPercentage!)}'
                       : pool.scanState,
                 ),
             ],

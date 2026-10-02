@@ -10,6 +10,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
@@ -1098,7 +1099,7 @@ List<ServiceKpi> _truenasKpisFrom(TrueNasDashboard dashboard) {
     else
       ServiceKpi(
         label: 'Used',
-        value: '${(maxUsed * 100).round()}%',
+        value: formatPercent(maxUsed * 100),
         icon: Icons.pie_chart_rounded,
         tone: _faultIf(maxUsed >= 0.8),
       ),
@@ -1688,7 +1689,7 @@ List<ServiceKpi> _unraidKpisFrom(
     else
       ServiceKpi(
         label: 'Used',
-        value: '$usedPercent%',
+        value: formatPercent(usedPercent),
         icon: Icons.pie_chart_rounded,
         tone: _faultIf(usedPercent >= 80),
       ),

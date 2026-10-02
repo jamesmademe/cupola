@@ -71,6 +71,17 @@ void main() {
     test('progressFormatted is single-decimal percent', () {
       expect(file.progressFormatted, '50.0%');
     });
+
+    test('progressFormatted never reads 100.0% before the file is done', () {
+      final nearly = TorrentFile(
+        index: 0,
+        name: 'x',
+        size: 1,
+        progress: 0.9999,
+        priority: 0,
+      );
+      expect(nearly.progressFormatted, '99.9%');
+    });
   });
 
   group('TorrentFile.priorityLabel', () {

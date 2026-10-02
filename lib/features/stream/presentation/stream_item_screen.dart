@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -153,7 +154,7 @@ class _StateRow extends StatelessWidget {
       children: [
         if (progress != null)
           TagChip(
-            text: '${(progress * 100).round()}% watched',
+            text: '${formatPercent(progress * 100)} watched',
             color: accent,
             icon: Icons.play_circle_outline_rounded,
           )

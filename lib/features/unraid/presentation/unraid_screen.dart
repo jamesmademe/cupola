@@ -8,6 +8,7 @@ import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -557,7 +558,7 @@ class _ShareList extends ConsumerWidget {
                 .map((share) {
                   final used = share.usedFraction == null
                       ? '—'
-                      : '${(share.usedFraction! * 100).round()}% used';
+                      : '${formatPercent(share.usedFraction! * 100)} used';
                   final detail = [
                     used,
                     if (share.cached != null)

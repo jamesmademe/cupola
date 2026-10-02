@@ -61,6 +61,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
@@ -303,7 +304,7 @@ String streamOnDeckCaption(StreamItem item) {
   return joinDisplayParts([
     item.subtitle ?? (item.year == null ? null : '${item.year}'),
     if (progress != null)
-      '${(progress * 100).round()}% in'
+      '${formatPercent(progress * 100)} in'
     else if (item.isPlayed)
       'watched',
   ]);

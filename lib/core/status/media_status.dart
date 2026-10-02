@@ -7,6 +7,7 @@
 library;
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 /// What the service currently holds on disk.
 enum MediaAvailability {
@@ -222,7 +223,7 @@ class MediaStatusInfo {
   int? get progressPercent {
     final value = progress;
     if (value == null || !showsProgress) return null;
-    return (value * 100).round();
+    return wholePercent(value * 100);
   }
 
   /// The status as one spoken phrase, for assistive technology.
@@ -383,7 +384,7 @@ class MediaStatusInfo {
   String toString() =>
       'MediaStatusInfo(${availability.name}'
       '${pipeline == null ? '' : ' + ${pipeline!.name}'}'
-      '${progress == null ? '' : ' ${(progress! * 100).round()}%'}'
+      '${progress == null ? '' : ' ${formatPercent(progress! * 100)}'}'
       '${unmonitored ? ' unmonitored' : ''}'
       '${hasWarning ? ' warning' : ''})';
 }

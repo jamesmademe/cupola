@@ -10,6 +10,7 @@ library;
 
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 /// SABnzbd reports decimals with the server's locale separator, so a comma has
 /// to become a dot before parsing — which is why this is not `doubleOrNull`.
@@ -214,7 +215,7 @@ class SabnzbdQueueSlot {
       nzoId: (json['nzo_id'] ?? '').toString(),
       filename: (json['filename'] ?? json['name'] ?? 'Unknown').toString(),
       status: (json['status'] ?? '').toString(),
-      percentage: _asDouble(json['percentage']).round(),
+      percentage: wholePercent(_asDouble(json['percentage'])),
       category: (json['cat'] ?? '').toString(),
       timeLeft: (json['timeleft'] ?? '').toString(),
       mbLeft: _asDouble(json['mbleft']),

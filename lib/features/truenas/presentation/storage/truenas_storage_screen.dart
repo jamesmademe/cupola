@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -129,7 +130,7 @@ class _PoolCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                '${(used * 100).round()}% used'
+                '${formatPercent(used * 100)} used'
                 '${pool.sizeBytes != null ? ' · ${formatSize(pool.allocatedBytes ?? 0)} / ${formatSize(pool.sizeBytes!)}' : ''}',
                 style: theme.textTheme.labelSmall!.tabular.copyWith(
                   color: colorScheme.onSurfaceVariant,

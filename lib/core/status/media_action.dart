@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 /// What a promoted primary action *does*.
 ///
@@ -177,7 +178,8 @@ MediaPrimaryAction resolveMediaAction(
               ? 'No bytes are moving on this transfer right now.'
               // The figure is the last thing in the sentence, so 5% -> 43% ->
               // 100% never reflows a word beside it.
-              : 'No bytes are moving right now; it sits at $percent%.',
+              : 'No bytes are moving right now; it sits at '
+                    '${formatPercent(percent)}.',
         );
       // These five shared one branch that printed `detail ?? pipeline.label`
       // plus an appended percentage — the badge's own word with a diagnostic
@@ -203,7 +205,8 @@ MediaPrimaryAction resolveMediaAction(
             serviceName,
             downloadedPercent == null
                 ? 'The download client has it.'
-                : 'The download client has it, $downloadedPercent% through.',
+                : 'The download client has it, '
+                      '${formatPercent(downloadedPercent)} through.',
           ),
         );
       case MediaPipeline.importPending:

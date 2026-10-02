@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
@@ -302,7 +303,7 @@ String _tasksSummary(List<JellyfinScheduledTask> tasks) {
     final progress = task.progress;
     final suffix = progress == null
         ? ''
-        : ' · ${progress.clamp(0, 100).round()}%';
+        : ' · ${formatPercent(progress.clamp(0, 100))}';
     return (
       label: 'Running$suffix',
       tone: StatusTone.info,

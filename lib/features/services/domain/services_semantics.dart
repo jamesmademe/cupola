@@ -6,6 +6,7 @@
 library;
 
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 /// Joins the non-empty parts with the comma both screen readers read as a short
 /// pause.
@@ -271,6 +272,6 @@ String downloadRowValue({
   required String? warning,
 }) => joinSpokenParts([
   warning,
-  percent == null ? null : '$percent% downloaded',
+  percent == null ? null : '${formatPercent(percent)} downloaded',
   spokenFromDotted(subtitle),
 ]);

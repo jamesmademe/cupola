@@ -240,6 +240,11 @@ void main() {
       expect(build(progress: 1).progressFormatted, '100.0%');
     });
 
+    test('progressFormatted never reads 100.0% before the torrent is done', () {
+      expect(build(progress: 0.9996).progressFormatted, '99.9%');
+      expect(build(progress: 0.625).progressFormatted, '62.5%');
+    });
+
     test('sizeFormatted shows em-dash when zero', () {
       expect(build(size: 0).sizeFormatted, '—');
       expect(build(size: 1024).sizeFormatted, '1.0 KB');

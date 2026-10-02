@@ -31,6 +31,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
@@ -1191,7 +1192,7 @@ class _InFlightRow extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final percent = item.progress == null
         ? null
-        : (item.progress! * 100).round();
+        : wholePercent(item.progress! * 100);
     // The primary ink, not the source service's colour, for both the figure and
     // the bar. Contrast: SABnzbd's gold measured about 1.9:1 as `labelSmall` on
     // the light card and NZBGet's green about 2.9:1, well under AA. Identity:
@@ -1231,7 +1232,7 @@ class _InFlightRow extends StatelessWidget {
           // absence.
           ? const SizedBox.shrink()
           : Text(
-              '$percent%',
+              formatPercent(percent),
               style: Theme.of(context).textTheme.labelSmall
                   ?.weight(FontWeight.w600)
                   .tabular

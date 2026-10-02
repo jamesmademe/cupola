@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
@@ -159,7 +160,7 @@ class StreamSessionCard extends StatelessWidget {
 
   static String? _progressLabel(double? progress) {
     if (progress == null) return null;
-    return '${(progress * 100).round()}% in';
+    return '${formatPercent(progress * 100)} in';
   }
 }
 

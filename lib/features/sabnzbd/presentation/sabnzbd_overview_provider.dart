@@ -60,6 +60,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -367,7 +368,7 @@ SabnzbdQueueSection sabnzbdQueuePreview(
           slot.category.trim().isEmpty ? null : slot.category.trim(),
         ]),
         tone: sabnzbdStatusTone(slot.status),
-        percentLabel: '${slot.percentage}%',
+        percentLabel: formatPercent(slot.percentage),
       ),
     );
   }

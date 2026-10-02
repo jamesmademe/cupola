@@ -356,6 +356,23 @@ void main() {
       expect(info.semanticLabel, 'Downloading, 42 percent');
     });
 
+    test('never calls a transfer that is still copying 100 percent', () {
+      const nearlyThere = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        pipeline: MediaPipeline.downloading,
+        progress: 0.996,
+      );
+      const done = MediaStatusInfo(
+        availability: MediaAvailability.missing,
+        pipeline: MediaPipeline.downloading,
+        progress: 1,
+      );
+
+      expect(nearlyThere.progressPercent, 99);
+      expect(nearlyThere.semanticLabel, 'Downloading, 99 percent');
+      expect(done.progressPercent, 100);
+    });
+
     test('spells out a warning carried only by the tone colour', () {
       // hasWarning replaced a "… (Warning)" text suffix, so since then nothing
       // writes it down — the amber tone is the whole signal.

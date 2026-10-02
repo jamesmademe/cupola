@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
@@ -108,7 +109,7 @@ class StreamPosterTile extends ConsumerWidget {
     final parts = <String>[];
     final progress = item.resumeProgress;
     if (progress != null) {
-      parts.add('${(progress * 100).round()}% watched');
+      parts.add('${formatPercent(progress * 100)} watched');
     } else if (item.isPlayed) {
       parts.add('Watched');
     }

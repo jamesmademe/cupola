@@ -23,6 +23,7 @@ library;
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 
@@ -246,6 +247,6 @@ String inFlightEmptyLabel({
 /// reads as "middle dot" or drops, so the ear gets the same facts with the comma
 /// both readers treat as a short pause.
 String inFlightRowValue({required String line, required int? percent}) => [
-  if (percent != null) '$percent% done',
+  if (percent != null) '${formatPercent(percent)} done',
   ...line.split('·').map((part) => part.trim()).where((p) => p.isNotEmpty),
 ].join(', ');

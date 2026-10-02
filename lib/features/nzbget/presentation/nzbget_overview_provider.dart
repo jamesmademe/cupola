@@ -42,6 +42,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart'
     show joinDisplayParts;
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
@@ -206,7 +207,7 @@ NzbgetQueueEntry nzbgetQueueEntry(NzbgetGroup group) {
       },
     ]),
     percentLabel: switch (group.percentage) {
-      final int percent => '$percent%',
+      final int percent => formatPercent(percent),
       null => null,
     },
   );

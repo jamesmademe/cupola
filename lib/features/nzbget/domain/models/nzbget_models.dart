@@ -12,6 +12,7 @@ library;
 
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 /// Recomposes an unsigned 64-bit value from NZBGet's Hi/Lo 32-bit halves.
 int combineHiLo(dynamic hi, dynamic lo) {
@@ -189,7 +190,7 @@ class NzbgetGroup {
   /// The same value as a whole number, or null on the same terms.
   int? get percentage {
     final value = progress;
-    return value == null ? null : (value * 100).round();
+    return value == null ? null : wholePercent(value * 100);
   }
 
   String get remainingLabel {

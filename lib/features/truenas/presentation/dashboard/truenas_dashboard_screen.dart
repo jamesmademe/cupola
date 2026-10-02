@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -377,7 +378,7 @@ class _CpuCard extends StatelessWidget {
     final fraction =
         usage ?? (load != null ? (load / cores).clamp(0, 1).toDouble() : null);
     final label = usage != null
-        ? '${(usage * 100).round()}%'
+        ? formatPercent(usage * 100)
         : (load != null ? load.toStringAsFixed(2) : '—');
 
     return AppCard.surfaceOutlined(
@@ -408,7 +409,7 @@ class _MemoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final usage = metrics.value?.memoryUsage;
     final total = system.physmemBytes;
-    final label = usage != null ? '${(usage * 100).round()}%' : '—';
+    final label = usage != null ? formatPercent(usage * 100) : '—';
     final caption = (usage != null && total != null)
         ? formatSize((usage * total).round())
         : (total != null ? formatSize(total) : 'memory');
@@ -567,7 +568,7 @@ class _PoolHealthCard extends StatelessWidget {
                   if (pool.usedFraction != null) ...[
                     const SizedBox(width: 6),
                     Text(
-                      '${(pool.usedFraction! * 100).round()}%',
+                      formatPercent(pool.usedFraction! * 100),
                       style: theme.textTheme.labelSmall!.tabular.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

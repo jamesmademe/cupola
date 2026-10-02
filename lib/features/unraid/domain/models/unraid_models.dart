@@ -11,6 +11,7 @@ library;
 
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 /// The three `Resource` values the Unraid SDL declares that Cupola can write.
 ///
@@ -336,7 +337,7 @@ class UnraidArray {
   /// capacity clause correctly disappears for exactly this input.
   int? get usedPercent {
     final fraction = usedFraction;
-    return fraction == null ? null : (fraction * 100).round();
+    return fraction == null ? null : wholePercent(fraction * 100);
   }
 
   factory UnraidArray.fromJson(Map<String, dynamic> json) {

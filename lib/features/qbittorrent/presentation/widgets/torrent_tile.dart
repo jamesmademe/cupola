@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/download_queue_tile.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -64,7 +65,7 @@ class TorrentTile extends StatelessWidget {
       // by conditionally omitting the widget; the plate expresses it in the
       // value, so the same fact is stated once instead of twice.
       progress: _drawsBar(state) ? torrent.progress : null,
-      percentage: (torrent.progress * 100).round(),
+      percentage: wholePercent(torrent.progress * 100),
       accent: ServiceKey.qbittorrent.accent,
       statusLabel: state.label,
       statusTone: _toneFor(state),

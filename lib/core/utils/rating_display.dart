@@ -1,4 +1,5 @@
 import 'package:cupola/core/models/rating_source.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 /// Display vocabulary for rating pills.
 ///
@@ -79,7 +80,7 @@ RatingDisplay ratingDisplayFor({
     case 'Metacritic':
       return (value: value.round().toString(), denominator: '/100');
     case 'Rotten Tomatoes':
-      return (value: value.round().toString(), denominator: '%');
+      return (value: value.round().toString(), denominator: percentSign);
     case 'IMDb':
     case 'TMDB':
     case 'TVDB':

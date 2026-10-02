@@ -1,5 +1,6 @@
 import 'parse_utils.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 enum TorrentState {
   downloading,
@@ -223,7 +224,7 @@ class Torrent {
     return '${m}m';
   }
 
-  String get progressFormatted => '${(progress * 100).toStringAsFixed(1)}%';
+  String get progressFormatted => formatPercent(progress * 100, decimals: 1);
 
   String get trackerDomain {
     if (tracker.isEmpty) return '';

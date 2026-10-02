@@ -1,4 +1,5 @@
 import 'parse_utils.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 class TorrentFile {
   final int index;
@@ -27,7 +28,7 @@ class TorrentFile {
 
   String get sizeFormatted => formatSize(size);
 
-  String get progressFormatted => '${(progress * 100).toStringAsFixed(1)}%';
+  String get progressFormatted => formatPercent(progress * 100, decimals: 1);
 
   String get priorityLabel => switch (priority) {
     0 => 'Do not download',

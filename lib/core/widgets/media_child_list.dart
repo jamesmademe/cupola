@@ -43,6 +43,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/media_metadata_line.dart';
@@ -63,7 +64,9 @@ String? mediaStatusWord(MediaStatusInfo? status) {
   final pipeline = status.pipeline;
   if (pipeline != null) {
     final percent = status.progressPercent;
-    return percent == null ? pipeline.label : '${pipeline.label} $percent%';
+    return percent == null
+        ? pipeline.label
+        : '${pipeline.label} ${formatPercent(percent)}';
   }
   if (status.availability == MediaAvailability.available) return null;
   return status.label;

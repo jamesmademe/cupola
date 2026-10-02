@@ -5,6 +5,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 
 export 'package:cupola/core/status/media_status.dart';
 
@@ -262,7 +263,7 @@ class StatusBadge extends StatelessWidget {
 
   String? get _percentText {
     final percent = info.progressPercent;
-    return percent == null ? null : '$percent%';
+    return percent == null ? null : formatPercent(percent);
   }
 }
 

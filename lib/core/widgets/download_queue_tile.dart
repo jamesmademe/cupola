@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -245,7 +246,9 @@ class DownloadQueueTile extends StatelessWidget {
                                 ],
                                 const SizedBox(width: AppSpacing.sm),
                                 Text(
-                                  percentage == null ? '—' : '$percentage%',
+                                  percentage == null
+                                      ? '—'
+                                      : formatPercent(percentage!),
                                   style: theme.textTheme.labelMedium!
                                       .weight(FontWeight.w600)
                                       .tabular

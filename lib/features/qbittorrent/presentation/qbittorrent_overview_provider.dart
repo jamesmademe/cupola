@@ -41,6 +41,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
@@ -166,11 +167,12 @@ String? qbittorrentIdleLabel(int lastActivity, {required DateTime now}) {
 /// is noise beside a name that is already being ellipsised, and it is the
 /// spelling the board draws.
 ///
-/// Rounded **down**, not to nearest, so a torrent at 99.6% does not read `100%`
-/// while it is still copying. `100%` is a claim the user acts on.
+/// The shared rule of `percent_format.dart`: nearest, and a torrent at 99.6%
+/// does not read `100%` while it is still copying. `100%` is a claim the user
+/// acts on.
 String qbittorrentPercentLabel(double progress) {
   final clamped = progress.clamp(0.0, 1.0);
-  return '${(clamped * 100).floor()}%';
+  return formatPercent(clamped * 100);
 }
 
 /// Which faults a torrent is in, or null when it is not in one.
