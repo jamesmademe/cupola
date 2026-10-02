@@ -1,9 +1,13 @@
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
 
 void main() {
@@ -64,4 +68,90 @@ void main() {
       );
     });
   }
+
+  group('the add sheet lets go of what it made', () {
+    // Three field controllers and the picked-files notifier were created each
+    // time the sheet opened and never disposed.
+    ({List<Object> created, List<Object> disposed}) track() {
+      final created = <Object>[];
+      final disposed = <Object>[];
+      void record(ObjectEvent event) {
+        final object = event.object;
+        if (object is! TextEditingController &&
+            object is! ValueNotifier<List<PlatformFile>>) {
+          return;
+        }
+        if (event is ObjectCreated) created.add(object);
+        if (event is ObjectDisposed) disposed.add(object);
+      }
+
+      FlutterMemoryAllocations.instance.addListener(record);
+      addTearDown(
+        () => FlutterMemoryAllocations.instance.removeListener(record),
+      );
+      return (created: created, disposed: disposed);
+    }
+
+    Future<_AddingQbittorrent> open(WidgetTester tester) async {
+      final service = _AddingQbittorrent();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [qbittorrentServiceProvider.overrideWithValue(service)],
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: const Scaffold(body: Center(child: AddTorrentButton())),
+          ),
+        ),
+      );
+      await tester.tap(find.byType(AddTorrentButton));
+      await tester.pumpAndSettle();
+      return service;
+    }
+
+    testWidgets('when it is closed without adding', (tester) async {
+      final made = track();
+      await open(tester);
+      expect(made.created, hasLength(4));
+
+      Navigator.of(tester.element(find.byType(Form))).pop();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Form), findsNothing);
+      expect(made.disposed, unorderedEquals(made.created));
+    });
+
+    testWidgets('when it adds, and the page still says so', (tester) async {
+      final made = track();
+      final service = await open(tester);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Magnet / URL'),
+        'magnet:?xt=urn:btih:abc',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Add torrent'));
+      await tester.pumpAndSettle();
+
+      expect(service.added, ['magnet:?xt=urn:btih:abc']);
+      expect(find.byType(Form), findsNothing);
+      expect(find.text('Torrent added successfully'), findsOneWidget);
+      expect(made.disposed, unorderedEquals(made.created));
+    });
+  });
+}
+
+/// Records the links an add handed qBittorrent.
+class _AddingQbittorrent implements QbittorrentService {
+  final added = <String>[];
+
+  @override
+  Future<void> addTorrentUrl(
+    String url, {
+    String? category,
+    String? savePath,
+  }) async {
+    added.add(url);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

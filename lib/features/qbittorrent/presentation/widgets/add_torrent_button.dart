@@ -33,226 +33,242 @@ class AddTorrentButton extends ConsumerWidget {
   }
 
   void _showAddTorrentSheet(BuildContext context, WidgetRef ref) {
-    final urlController = TextEditingController();
-    final categoryController = TextEditingController();
-    final savePathController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    final pickedFilesNotifier = ValueNotifier<List<PlatformFile>>([]);
-
     AppBottomSheet.show<void>(
       context: context,
       title: 'Add torrent',
       icon: Icons.add_link_rounded,
       accent: ServiceKey.qbittorrent.accent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setModalState) {
-          return Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: urlController,
-                  decoration: const InputDecoration(
-                    labelText: 'Magnet / URL',
-                    hintText: 'magnet:?xt=urn:btih:...',
-                  ),
-                  onChanged: (_) => setModalState(() {}),
-                  validator: (v) {
-                    if (pickedFilesNotifier.value.isNotEmpty) return null;
-                    final value = v?.trim() ?? '';
-                    if (value.isEmpty) return 'Required';
-                    final isMagnet = value.toLowerCase().startsWith('magnet:');
-                    final isHttp =
-                        value.toLowerCase().startsWith('http://') ||
-                        value.toLowerCase().startsWith('https://');
-                    if (!isMagnet && !isHttp) {
-                      return 'Enter a magnet link or an http(s) URL';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ValueListenableBuilder<List<PlatformFile>>(
-                  valueListenable: pickedFilesNotifier,
-                  builder: (context, files, _) {
-                    if (files.isEmpty) {
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.attach_file_rounded, size: 18),
-                          label: const Text('Pick .torrent files'),
-                          onPressed: () async {
-                            final result = await FilePicker.platform.pickFiles(
-                              allowMultiple: true,
-                              type: FileType.custom,
-                              allowedExtensions: const ['torrent'],
-                              withData: true,
-                            );
-                            if (result != null && result.files.isNotEmpty) {
-                              pickedFilesNotifier.value = result.files;
-                              setModalState(() {});
-                            }
-                          },
-                        ),
+      builder: (_) => _AddTorrentForm(
+        // Told on the page that opened the sheet: the sheet is gone by then.
+        onAdded: () {
+          if (context.mounted) {
+            SnackBarHelper.success(context, 'Torrent added successfully');
+          }
+        },
+      ),
+    );
+  }
+}
+
+/// The add-torrent form.
+///
+/// A widget of its own so the fields' controllers, the picked-files notifier
+/// and the form key live exactly as long as the form and are disposed with it.
+/// They used to be created each time the sheet opened and never disposed.
+class _AddTorrentForm extends ConsumerStatefulWidget {
+  const _AddTorrentForm({required this.onAdded});
+
+  final VoidCallback onAdded;
+
+  @override
+  ConsumerState<_AddTorrentForm> createState() => _AddTorrentFormState();
+}
+
+class _AddTorrentFormState extends ConsumerState<_AddTorrentForm> {
+  final urlController = TextEditingController();
+  final categoryController = TextEditingController();
+  final savePathController = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+  final pickedFilesNotifier = ValueNotifier<List<PlatformFile>>([]);
+
+  @override
+  void dispose() {
+    urlController.dispose();
+    categoryController.dispose();
+    savePathController.dispose();
+    pickedFilesNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: urlController,
+            decoration: const InputDecoration(
+              labelText: 'Magnet / URL',
+              hintText: 'magnet:?xt=urn:btih:...',
+            ),
+            onChanged: (_) => setState(() {}),
+            validator: (v) {
+              if (pickedFilesNotifier.value.isNotEmpty) return null;
+              final value = v?.trim() ?? '';
+              if (value.isEmpty) return 'Required';
+              final isMagnet = value.toLowerCase().startsWith('magnet:');
+              final isHttp =
+                  value.toLowerCase().startsWith('http://') ||
+                  value.toLowerCase().startsWith('https://');
+              if (!isMagnet && !isHttp) {
+                return 'Enter a magnet link or an http(s) URL';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ValueListenableBuilder<List<PlatformFile>>(
+            valueListenable: pickedFilesNotifier,
+            builder: (context, files, _) {
+              if (files.isEmpty) {
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.attach_file_rounded, size: 18),
+                    label: const Text('Pick .torrent files'),
+                    onPressed: () async {
+                      final result = await FilePicker.platform.pickFiles(
+                        allowMultiple: true,
+                        type: FileType.custom,
+                        allowedExtensions: const ['torrent'],
+                        withData: true,
                       );
-                    }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ...files.map(
-                          (f) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.description_rounded, size: 16),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    f.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.close_rounded,
-                                    size: 18,
-                                  ),
-                                  tooltip: 'Remove',
-                                  onPressed: () {
-                                    pickedFilesNotifier.value = files
-                                        .where((x) => x != f)
-                                        .toList(growable: false);
-                                    setModalState(() {});
-                                  },
-                                ),
-                              ],
+                      if (result != null && result.files.isNotEmpty) {
+                        pickedFilesNotifier.value = result.files;
+                        setState(() {});
+                      }
+                    },
+                  ),
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...files.map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.description_rounded, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              f.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        TextButton.icon(
-                          icon: const Icon(Icons.add_rounded, size: 16),
-                          label: const Text('Add more files'),
-                          onPressed: () async {
-                            final result = await FilePicker.platform.pickFiles(
-                              allowMultiple: true,
-                              type: FileType.custom,
-                              allowedExtensions: const ['torrent'],
-                              withData: true,
-                            );
-                            if (result != null && result.files.isNotEmpty) {
-                              pickedFilesNotifier.value = [
-                                ...files,
-                                ...result.files,
-                              ];
-                              setModalState(() {});
-                            }
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: categoryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Category (optional)',
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            tooltip: 'Remove',
+                            onPressed: () {
+                              pickedFilesNotifier.value = files
+                                  .where((x) => x != f)
+                                  .toList(growable: false);
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: savePathController,
-                  decoration: const InputDecoration(
-                    labelText: 'Save path (optional)',
+                  const SizedBox(height: 4),
+                  TextButton.icon(
+                    icon: const Icon(Icons.add_rounded, size: 16),
+                    label: const Text('Add more files'),
+                    onPressed: () async {
+                      final result = await FilePicker.platform.pickFiles(
+                        allowMultiple: true,
+                        type: FileType.custom,
+                        allowedExtensions: const ['torrent'],
+                        withData: true,
+                      );
+                      if (result != null && result.files.isNotEmpty) {
+                        pickedFilesNotifier.value = [...files, ...result.files];
+                        setState(() {});
+                      }
+                    },
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    // The ink button, the theme's. The label's weight lives
-                    // here, not on the Text: a `labelLarge` style on the Text
-                    // carries the theme's own text colour and overrides the
-                    // button's foreground.
-                    textStyle: Theme.of(
-                      ctx2,
-                    ).textTheme.labelLarge!.weight(FontWeight.w600),
-                    minimumSize: const Size.fromHeight(46),
-                  ),
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    try {
-                      final service = ref.read(qbittorrentServiceProvider);
-                      final files = pickedFilesNotifier.value;
-                      final category = categoryController.text.trim().isEmpty
-                          ? null
-                          : categoryController.text.trim();
-                      final savePath = savePathController.text.trim().isEmpty
-                          ? null
-                          : savePathController.text.trim();
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextFormField(
+            controller: categoryController,
+            decoration: const InputDecoration(labelText: 'Category (optional)'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextFormField(
+            controller: savePathController,
+            decoration: const InputDecoration(
+              labelText: 'Save path (optional)',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              // The ink button, the theme's. The label's weight lives
+              // here, not on the Text: a `labelLarge` style on the Text
+              // carries the theme's own text colour and overrides the
+              // button's foreground.
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge!.weight(FontWeight.w600),
+              minimumSize: const Size.fromHeight(46),
+            ),
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+              try {
+                final service = ref.read(qbittorrentServiceProvider);
+                final files = pickedFilesNotifier.value;
+                final category = categoryController.text.trim().isEmpty
+                    ? null
+                    : categoryController.text.trim();
+                final savePath = savePathController.text.trim().isEmpty
+                    ? null
+                    : savePathController.text.trim();
 
-                      if (files.isNotEmpty) {
-                        final multipart = <MultipartFile>[];
-                        for (final f in files) {
-                          if (f.bytes != null) {
-                            multipart.add(
-                              MultipartFile.fromBytes(
-                                f.bytes!,
-                                filename: f.name,
-                              ),
-                            );
-                          }
-                        }
-                        await service.addTorrentFiles(
-                          multipart,
-                          category: category,
-                          savePath: savePath,
-                        );
-                      } else {
-                        await service.addTorrentUrl(
-                          urlController.text.trim(),
-                          category: category,
-                          savePath: savePath,
-                        );
-                      }
-                      ref.invalidate(torrentsProvider);
-                      ref.invalidate(allTorrentsProvider);
-                      if (ctx2.mounted) Navigator.of(ctx2).pop();
-                      if (context.mounted) {
-                        SnackBarHelper.success(
-                          context,
-                          'Torrent added successfully',
-                        );
-                      }
-                    } catch (e) {
-                      if (ctx2.mounted) {
-                        SnackBarHelper.error(
-                          ctx2,
-                          "Couldn't add the torrent.",
-                          detail: e,
-                        );
-                      }
+                if (files.isNotEmpty) {
+                  final multipart = <MultipartFile>[];
+                  for (final f in files) {
+                    if (f.bytes != null) {
+                      multipart.add(
+                        MultipartFile.fromBytes(f.bytes!, filename: f.name),
+                      );
                     }
-                  },
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add_rounded, size: 18),
-                      const SizedBox(width: 8),
-                      const Text('Add torrent'),
-                    ],
-                  ),
-                ),
+                  }
+                  await service.addTorrentFiles(
+                    multipart,
+                    category: category,
+                    savePath: savePath,
+                  );
+                } else {
+                  await service.addTorrentUrl(
+                    urlController.text.trim(),
+                    category: category,
+                    savePath: savePath,
+                  );
+                }
+                ref.invalidate(torrentsProvider);
+                ref.invalidate(allTorrentsProvider);
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+                widget.onAdded();
+              } catch (e) {
+                if (context.mounted) {
+                  SnackBarHelper.error(
+                    context,
+                    "Couldn't add the torrent.",
+                    detail: e,
+                  );
+                }
+              }
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.add_rounded, size: 18),
+                const SizedBox(width: 8),
+                const Text('Add torrent'),
               ],
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
