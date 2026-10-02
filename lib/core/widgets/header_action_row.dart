@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 /// A shared row layout for media detail header actions.
 ///
@@ -191,10 +191,10 @@ class ActionStateGlyph extends StatelessWidget {
   ///
   /// Only the confirmed state needs it. A success green that reads cleanly on
   /// the near-black surface measures around 1.3:1 on Radarr's amber, so on a
-  /// filled accent control the check is resolved through
-  /// [ServiceTheme.onTint] — which keeps the green's hue and walks its
-  /// lightness until it clears AA — rather than shipping a tone that is
-  /// invisible on a third of the palette. Defaults to `colorScheme.surface`.
+  /// filled accent control the check is resolved through [statusToneColor]
+  /// — which keeps the green's hue and walks its lightness until it clears AA
+  /// — rather than shipping a tone that is invisible on a third of the
+  /// palette. Defaults to `colorScheme.surface`.
   final Color? fill;
 
   const ActionStateGlyph({
@@ -237,11 +237,10 @@ class ActionStateGlyph extends StatelessWidget {
         Icons.check_rounded,
         key: const ValueKey('confirmed'),
         size: glyphSize,
-        // tertiary is the theme's success signal green.
-        color: ServiceTheme.onTint(
-          colorScheme.tertiary,
+        color: statusToneColor(
+          colorScheme,
+          StatusTone.success,
           surface: fill ?? colorScheme.surface,
-          tintAlpha: 0,
         ),
         semanticLabel: '$label complete',
       );

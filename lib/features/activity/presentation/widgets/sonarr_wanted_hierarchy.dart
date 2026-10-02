@@ -112,7 +112,7 @@ class _SeriesExpansionTile extends StatelessWidget {
         padding: EdgeInsets.zero,
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
-          leading: Icon(Icons.tv_rounded, color: colorScheme.tertiary),
+          leading: Icon(Icons.tv_rounded, color: colorScheme.onSurfaceVariant),
           title: Text(
             seriesTitle,
             style: textTheme.titleMedium?.weight(FontWeight.w600),
@@ -173,14 +173,17 @@ class _SeasonExpansionTile extends StatelessWidget {
         left: AppSpacing.lg,
         right: AppSpacing.md,
       ),
+      // A season number states no status, so the badge is the measured
+      // neutral pair (`onSurfaceVariant` on `surfaceContainerHighest`), not
+      // the green role.
       leading: CircleAvatar(
         radius: 14,
-        backgroundColor: colorScheme.tertiaryContainer,
+        backgroundColor: colorScheme.surfaceContainerHighest,
         child: Text(
           '$seasonNumber',
           style: textTheme.labelSmall
               ?.weight(FontWeight.w600)
-              .copyWith(color: colorScheme.onTertiaryContainer),
+              .copyWith(color: colorScheme.onSurfaceVariant),
         ),
       ),
       title: Text(

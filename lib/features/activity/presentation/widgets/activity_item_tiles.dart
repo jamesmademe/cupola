@@ -1159,11 +1159,7 @@ List<Widget> _buildQueueChips(
     if (protocol != null)
       TagChip(surface: colorScheme.surfaceContainer, text: protocol),
     if (downloadClient != null)
-      TagChip(
-        surface: colorScheme.surfaceContainer,
-        text: downloadClient,
-        color: colorScheme.tertiary,
-      ),
+      TagChip(surface: colorScheme.surfaceContainer, text: downloadClient),
   ];
 }
 
@@ -1178,11 +1174,7 @@ List<Widget> _buildHistoryChips(
     if (quality != null)
       TagChip(surface: colorScheme.surfaceContainer, text: quality),
     if (indexer != null)
-      TagChip(
-        surface: colorScheme.surfaceContainer,
-        text: indexer,
-        color: colorScheme.tertiary,
-      ),
+      TagChip(surface: colorScheme.surfaceContainer, text: indexer),
   ];
 }
 
@@ -1197,11 +1189,7 @@ List<Widget> _buildBlocklistChips(
     if (protocol != null)
       TagChip(surface: colorScheme.surfaceContainer, text: protocol),
     if (indexer != null)
-      TagChip(
-        surface: colorScheme.surfaceContainer,
-        text: indexer,
-        color: colorScheme.tertiary,
-      ),
+      TagChip(surface: colorScheme.surfaceContainer, text: indexer),
   ];
 }
 

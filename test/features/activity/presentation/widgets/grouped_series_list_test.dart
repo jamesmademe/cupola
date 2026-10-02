@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/activity/presentation/widgets/sonarr_wanted_hierarchy.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 
@@ -174,5 +175,46 @@ void main() {
 
       expect(find.textContaining('4.9\u00A0GB'), findsOneWidget);
     });
+    // A series glyph and a season number state no status, so neither wears the
+    // green scheme role: the glyph is the dim ink, the season badge the measured
+    // neutral pair.
+    for (final theme in [AppTheme.darkTheme(), AppTheme.lightTheme()]) {
+      final scheme = theme.colorScheme;
+
+      testWidgets('the series glyph and the season badge are neutral '
+          '(${theme.brightness.name})', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: SonarrWantedHierarchy(
+                  items: const [
+                    {
+                      'series': {'title': 'Show'},
+                      'seasonNumber': 2,
+                      'episodeNumber': 1,
+                      'title': 'S2E1',
+                    },
+                  ],
+                  service: service,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          tester.widget<Icon>(find.byIcon(Icons.tv_rounded)).color,
+          scheme.onSurfaceVariant,
+        );
+        final badge = tester.widget<CircleAvatar>(find.byType(CircleAvatar));
+        expect(badge.backgroundColor, scheme.surfaceContainerHighest);
+        expect(
+          tester.widget<Text>(find.text('2')).style!.color,
+          scheme.onSurfaceVariant,
+        );
+      });
+    }
   });
 }

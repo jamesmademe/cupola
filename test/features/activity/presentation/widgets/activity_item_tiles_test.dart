@@ -471,6 +471,60 @@ void main() {
         expect(chipTones(tester), [null]);
       });
 
+      // The green scheme role (`tertiary`) is a tone too: a download client and
+      // an indexer are names, not a status, and wore it.
+      testWidgets('a queue row\'s download client is a plain chip ($name)', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          const QueueItemTile(
+            item: {
+              'title': 'Movie.2024.WEB-DL',
+              'downloadClient': 'qBittorrent',
+            },
+            serviceType: ServiceType.movies,
+          ),
+        );
+
+        expect(find.text('qBittorrent'), findsOneWidget);
+        expect(chipTones(tester), [null]);
+      });
+
+      testWidgets('a history row\'s indexer is a plain chip ($name)', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          const HistoryItemTile(
+            item: {
+              'sourceTitle': 'Release.Name',
+              'eventType': 'grabbed',
+              'data': {'indexer': 'NZBgeek'},
+            },
+            serviceType: ServiceType.movies,
+          ),
+        );
+
+        expect(find.text('NZBgeek'), findsOneWidget);
+        expect(chipTones(tester), [null]);
+      });
+
+      testWidgets('a blocklist row\'s indexer is a plain chip ($name)', (
+        tester,
+      ) async {
+        await pumpRow(
+          tester,
+          const BlocklistItemTile(
+            item: {'sourceTitle': 'Bad.Release', 'indexer': 'NZBgeek'},
+            serviceType: ServiceType.movies,
+          ),
+        );
+
+        expect(find.text('NZBgeek'), findsOneWidget);
+        expect(chipTones(tester), [null]);
+      });
+
       testWidgets('a wanted row\'s date is a plain chip ($name)', (
         tester,
       ) async {
