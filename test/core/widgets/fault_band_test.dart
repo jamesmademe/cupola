@@ -224,6 +224,13 @@ void main() {
       final band = tester.widget<FaultBand>(find.byType(FaultBand));
       expect(band.tone, StatusTone.warning);
       expect(find.textContaining('4\u00A0min ago'), findsOneWidget);
+      // A sentence: "are 4 min ago" is not one.
+      expect(
+        find.textContaining(
+          'These figures are from 4\u00A0min ago. Nothing below is moving.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('stale offers no dismiss and no second action', (tester) async {

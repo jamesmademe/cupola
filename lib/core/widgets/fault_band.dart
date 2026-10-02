@@ -271,12 +271,13 @@ class FaultBand extends StatelessWidget {
 
   static String _staleMessage(Duration age, String detail) {
     final spoken = formatDurationAge(age);
-    // "These figures are just now" is not a sentence; under a minute the band
-    // has nothing worth saying and the caller should not be showing it, but a
-    // clock that ticks backwards across a poll must not produce one either.
+    // "These figures are from just now" would contradict the band; under a
+    // minute the band has nothing worth saying and the caller should not be
+    // showing it, but a clock that ticks backwards across a poll must not
+    // produce one either.
     final lead = spoken == 'just now'
         ? 'These figures have stopped updating.'
-        : 'These figures are $spoken.';
+        : 'These figures are from $spoken.';
     return '$lead $detail';
   }
 
