@@ -12,35 +12,17 @@ import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
-import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_external_match.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
+import 'media_test_helpers.dart';
 
-/// The rows of [title] under [profile], once no source is still waiting.
 Future<List<MediaRow>> _rows(
   ConfigProfile profile,
   WorldTitle title, {
   MediaKey? key,
-}) async {
-  final harness = await ProfileHarness.start(profile);
-  final container = harness.container();
-  key ??= title.isSeries
-      ? MediaKey.tv(title.tmdbId)
-      : MediaKey.movie(title.tmdbId);
-  final rows = mediaRowsProvider(key);
-  container.listen(rows, (_, _) {});
-  for (var turn = 0; turn < 200; turn++) {
-    final now = container.read(rows);
-    final waiting = now.any(
-      (row) => row is MediaConnectionRow && row.reading is MediaReadingWaiting,
-    );
-    if (!waiting) return now;
-    await pumpEventQueue();
-  }
-  fail('a source of ${title.title} never answered under ${profile.id}');
-}
+}) async => (await settledRows(profile, title, key: key)).rows;
 
 /// Each row as `service:connection` (or `service` when it has none), with
 /// the shape of what it holds, so an order and a set read at a glance.
