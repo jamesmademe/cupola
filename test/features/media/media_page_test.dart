@@ -113,6 +113,25 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('the collection says how much of it is on the server', (
+    tester,
+  ) async {
+    final (harness, router) = await _pumpRouted(
+      tester,
+      Profiles.p1,
+      WorldTitles.tearsOfSteel,
+    );
+
+    final band = find.bySemanticsLabel(
+      'Blender Open Movies, 5 of 8 on your server',
+    );
+    await tester.ensureVisible(band);
+    expect(band, findsOneWidget);
+    expect(find.text('Collection'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
   testWidgets('Files & quality opens on each copy\'s file, read only then', (
     tester,
   ) async {

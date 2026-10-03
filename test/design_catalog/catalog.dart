@@ -130,6 +130,25 @@ abstract final class CatalogArt {
     backdrop: 'design/system/assets/Imagery/backdrop.jpg',
   };
 
+  /// The same pictures as a Seerr record links them: TMDB paths, which the
+  /// app turns into TMDB addresses of any size.
+  static const tmdbPoster = '/catalog-poster.jpg';
+  static const tmdbBackdrop = '/catalog-backdrop.jpg';
+
+  /// The file behind [url]: a catalog address, or a TMDB address of one of
+  /// the catalog's paths at any size.
+  static String? _fileFor(String url) =>
+      _files[url] ??
+      switch (Uri.tryParse(url)) {
+        Uri(host: 'image.tmdb.org', :final path)
+            when path.endsWith(tmdbPoster) =>
+          _files[poster],
+        Uri(host: 'image.tmdb.org', :final path)
+            when path.endsWith(tmdbBackdrop) =>
+          _files[backdrop],
+        _ => null,
+      };
+
   static final _images = <String, MemoryImage>{};
 
   /// The same artwork as an [ImageProvider], for widgets that take one.
@@ -154,7 +173,7 @@ class _ArtCacheManager implements BaseCacheManager {
     Map<String, String>? headers,
     bool withProgress = false,
   }) async* {
-    final path = CatalogArt._files[url];
+    final path = CatalogArt._fileFor(url);
     if (path == null) throw StateError('no catalog artwork at $url');
     yield FileInfo(
       const LocalFileSystem().file(path),
@@ -240,7 +259,10 @@ void catalogCard(
     if (group.isEmpty) continue;
 
     testWidgets('$card · ${platform.name}', (tester) async {
-      CertTrustRegistry.update(const {'https://art.catalog:443': 'catalog'});
+      CertTrustRegistry.update(const {
+        'https://art.catalog:443': 'catalog',
+        'https://image.tmdb.org:443': 'catalog',
+      });
       pinnedImageCacheBuilder =
           ({
             required cacheKey,

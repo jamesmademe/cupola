@@ -23,6 +23,7 @@ import 'package:cupola/core/status/media_action.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -36,7 +37,8 @@ import 'package:cupola/features/stream/domain/stream_web_url.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
-import 'package:cupola/features/discover/presentation/widgets/discover_collection_banner.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/media/domain/media_collection.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
 import 'package:cupola/features/media/domain/media_row_view.dart';
@@ -272,7 +274,21 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   ],
                   if (identity?.collection case final collection?) ...[
                     const SizedBox(height: AppSpacing.section),
-                    DiscoverCollectionBanner(collection: collection),
+                    _CollectionBand(
+                      collection: collection,
+                      held: switch (_recommender(settings)) {
+                        final seerr? =>
+                          ref
+                              .watch(
+                                mediaCollectionHeldProvider((
+                                  connectionId: seerr,
+                                  collectionId: collection.id,
+                                )),
+                              )
+                              .value,
+                        null => null,
+                      },
+                    ),
                   ],
                   if (_recommender(settings) case final seerr?) ...[
                     const SizedBox(height: AppSpacing.section),
@@ -590,7 +606,8 @@ class _Artwork extends StatelessWidget {
     required this.fallback,
     this.decodeBox,
     this.onDrawn,
-  }) : veiled = false;
+  }) : veiled = false,
+       opacity = 1;
 
   /// [url] blurred and dimmed over the plate's well: a poster standing in
   /// for a backdrop.
@@ -599,6 +616,7 @@ class _Artwork extends StatelessWidget {
     required this.fallback,
     this.decodeBox,
     this.onDrawn,
+    this.opacity = 0.72,
   }) : veiled = true;
 
   final String? url;
@@ -610,6 +628,9 @@ class _Artwork extends StatelessWidget {
   final Size? decodeBox;
 
   final bool veiled;
+
+  /// How much of the veiled picture shows over the well: less under words.
+  final double opacity;
 
   /// Told once the picture is drawn, with its address.
   final ValueChanged<String>? onDrawn;
@@ -639,7 +660,7 @@ class _Artwork extends StatelessWidget {
     return ColoredBox(
       color: AppColors.plateWell,
       child: Opacity(
-        opacity: 0.72,
+        opacity: opacity,
         child: ImageFiltered(
           imageFilter: ui.ImageFilter.blur(
             sigmaX: 24,
@@ -647,6 +668,97 @@ class _Artwork extends StatelessWidget {
             tileMode: TileMode.clamp,
           ),
           child: SizedBox.expand(child: picture),
+        ),
+      ),
+    );
+  }
+}
+
+/// The collection the title belongs to, in one slab over its own artwork,
+/// veiled: its name, and how much of it the household holds. Taps
+/// into the collection.
+class _CollectionBand extends StatelessWidget {
+  const _CollectionBand({required this.collection, required this.held});
+
+  final CollectionInfo collection;
+
+  /// Null until Seerr has counted it, and when it could not: then the band
+  /// names what it is and states no figure.
+  final MediaCollectionHeld? held;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = held;
+    final words = count == null
+        ? 'Collection'
+        : '${count.held} of ${count.total} on your server';
+    final art = collection.backdropPath ?? collection.posterPath;
+    return PressableScale(
+      onTap: () => context.push(
+        ServiceRoutes.seerrCollection(
+          collection.id,
+          heroTag: 'collection_${collection.id}',
+        ),
+      ),
+      semanticLabel: '${collection.name}, $words',
+      excludeChildSemantics: true,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.slab),
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.slab),
+            border: Border.all(color: AppColors.plateOutline),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: _Artwork.veiled(
+                  url: ImageUtils.buildTmdbPosterUrl(art, size: 'w300'),
+                  fallback: const ColoredBox(color: AppColors.plateSurface),
+                  // Blurred: a small decode carries it.
+                  decodeBox: const Size(120, 68),
+                  opacity: 0.56,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            collection.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppType.feature.copyWith(
+                              color: AppColors.plateInk,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            words,
+                            style: AppType.label
+                                .weight(FontWeight.w600)
+                                .copyWith(color: AppColors.plateInk),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 24,
+                      color: AppColors.plateInk,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

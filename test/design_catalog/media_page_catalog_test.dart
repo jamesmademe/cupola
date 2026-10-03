@@ -56,6 +56,11 @@ Future<void> _readLights() async {
             rgba.getUint8(i + 2),
     ]);
   }
+  // The same pictures where Seerr's record links them.
+  _lights['https://image.tmdb.org/t/p/w1280${CatalogArt.tmdbBackdrop}'] =
+      _lights[CatalogArt.backdrop];
+  _lights['https://image.tmdb.org/t/p/w500${CatalogArt.tmdbPoster}'] =
+      _lights[CatalogArt.poster];
 }
 
 ServiceInstance _connection(
@@ -75,6 +80,7 @@ final _plex = _connection(ServiceKey.plex, 'plex');
 final _radarr = _connection(ServiceKey.radarr, 'radarr');
 final _radarr4k = _connection(ServiceKey.radarr, 'radarr-4k', label: '4K');
 final _bazarr = _connection(ServiceKey.bazarr, 'bazarr');
+final _seerr = _connection(ServiceKey.seerr, 'seerr');
 
 final _at = DateTime(2026, 10, 3, 20, 41);
 
@@ -209,6 +215,45 @@ List<MediaRow> _household({List<Object?> images = _art}) => [
   const MediaNotSetUpRow(ServiceKey.seerr),
 ];
 
+/// The household with Seerr in place of its setup row: TMDB's record names
+/// the title, and the collection it belongs to.
+List<MediaRow> _withSeerr() => [
+  ..._household().where((row) => row is! MediaNotSetUpRow),
+  MediaConnectionRow<MediaSeerrRecord>(
+    _seerr,
+    _answered(
+      const MediaSeerrRecord(
+        details: {
+          'id': 653,
+          'title': 'Nosferatu',
+          'releaseDate': '1922-02-16',
+          'runtime': 94,
+          'genres': [
+            {'id': 27, 'name': 'Horror'},
+          ],
+          'overview':
+              'Thomas Hutter travels to the Carpathians to sell a house to '
+              'Count Orlok, and the count follows him home by sea.',
+          'posterPath': CatalogArt.tmdbPoster,
+          'backdropPath': CatalogArt.tmdbBackdrop,
+          'voteAverage': 7.6,
+          'credits': {
+            'crew': [
+              {'id': 1, 'name': 'F. W. Murnau', 'job': 'Director'},
+            ],
+          },
+          'collection': {
+            'id': 1,
+            'name': 'Silent Horror',
+            'backdropPath': CatalogArt.tmdbBackdrop,
+          },
+          'mediaInfo': {'status': 5},
+        },
+      ),
+    ),
+  ),
+];
+
 /// One Radarr copy and nothing else, with [images].
 List<MediaRow> _bare(List<Object?> images) => [
   MediaConnectionRow<MediaRadarrCopy>(
@@ -239,6 +284,10 @@ CatalogScene _scene(
     mediaRowsProvider.overrideWith((ref, key) => rows),
     audienceProvider.overrideWithValue(audience),
     titleLightProvider.overrideWith((ref, url) async => _lights[url]),
+    mediaCollectionHeldProvider.overrideWith(
+      (ref, collection) async => (held: 5, total: 8),
+    ),
+    mediaRecommendationsProvider.overrideWith((ref, source) async => []),
   ],
 );
 
@@ -254,6 +303,7 @@ void main() {
         _radarr,
         _radarr4k,
         _bazarr,
+        _seerr,
       ].fold(settings, (s, c) => s.copyWithInstance(c)),
     ),
     scenes: [
@@ -287,6 +337,12 @@ void main() {
           const MediaReadingWaiting(),
         ),
       ], height: 760),
+      _scene(
+        'With Seerr · TMDB names the title, and the collection it belongs '
+        'to: 5 of 8 on your server',
+        _withSeerr(),
+        height: 1660,
+      ),
       _scene(
         'Twice the reading size',
         _household(),

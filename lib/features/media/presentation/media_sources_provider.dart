@@ -9,6 +9,7 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/media/domain/media_collection.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
@@ -419,6 +420,18 @@ final mediaRecommendationsProvider = FutureProvider.autoDispose
       return ref
           .watch(seerrServiceForProvider(source.connectionId))
           .getRecommendations(source.key.isMovie ? 'movie' : 'tv', tmdbId);
+    }, retry: noProviderRetry);
+
+/// The collection a title belongs to, counted on the household's server
+/// through the Seerr [connectionId]; null when Seerr has no such collection.
+final mediaCollectionHeldProvider = FutureProvider.autoDispose
+    .family<MediaCollectionHeld?, ({String connectionId, int collectionId})>((
+      ref,
+      collection,
+    ) async {
+      final seerr = ref.watch(seerrServiceForProvider(collection.connectionId));
+      final json = await seerr.getCollection(collection.collectionId);
+      return mediaCollectionHeld(json, numbering: await seerr.numbering());
     }, retry: noProviderRetry);
 
 /// One Radarr copy's history, read when History opens.
