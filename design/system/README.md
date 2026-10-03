@@ -114,7 +114,7 @@ A closed set: nothing outside state borrows a tone (**The Closed Tone Rule**). E
 
 **The lamp.** A room with no artwork — infrastructure, settings, a service's own room — and a title whose artwork has too little chroma are lit by the neutral lamp, `color.title-light.fallback` `#8A8A99`, as the ambient wash (`AppGradients.ambientBackground`, centre at `opacity.ambient-glow` 0.16 · day 0.10). The lamp never changes with state: a fault in a lamp room brings its own amber remedy.
 
-**Today** nothing is derived: every room, poster glow and hero glow is lit by the lamp (`AppElevation.poster` and `hero` take a `light:` that defaults to it), and the primary is the ink.
+**Today** the canonical Media page derives its light (`titleLightProvider` and `titleLightFromPixels` in `lib/core/title_light.dart`, from the backdrop, else the poster): its ambient wash, hero and poster glow, and the tinted fill of its lead. Every other room, poster glow and hero glow is still lit by the lamp (`AppElevation.poster` and `hero` take a `light:` that defaults to it), and their primary is the ink.
 
 ### Service accents are data, not paint
 

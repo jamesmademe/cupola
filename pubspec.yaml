@@ -54,6 +54,10 @@ dependencies:
   # `Client`, and `IOClient` is what lets it wrap our pinned `dart:io`
   # `HttpClient`.
   http: ^1.6.0
+  # Promoted from Flutter's own dependency, at the version Flutter pins, for
+  # the title light: Celebi quantising and HCT, as the brand book derives the
+  # room's light from a title's artwork.
+  material_color_utilities: ^0.11.1
   infinite_scroll_pagination: ^5.1.1
   url_launcher: ^6.3.2
   in_app_purchase: ^3.2.3

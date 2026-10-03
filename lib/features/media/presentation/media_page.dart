@@ -12,6 +12,7 @@ import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/status/media_action.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_collection_banner.dart';
@@ -61,12 +62,21 @@ class MediaPage extends ConsumerWidget {
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final top = MediaQuery.paddingOf(context).top;
+    // The one image that lights the room: the backdrop, else the poster. Until
+    // it is read, and for artwork with too little chroma, the lamp.
+    final lightSource = identity?.backdropUrl ?? identity?.posterUrl;
+    final light = lightSource == null
+        ? null
+        : ref.watch(titleLightProvider(lightSource)).value;
 
     return Scaffold(
       backgroundColor: room.ground,
       body: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: AppGradients.ambientBackground(scheme),
+          gradient: AppGradients.ambientBackground(
+            scheme,
+            accent: light?.light,
+          ),
         ),
         child: CustomScrollView(
           slivers: [
@@ -84,7 +94,11 @@ class MediaPage extends ConsumerWidget {
                     child: _BackPlate(),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  _Hero(identity: identity, marks: mediaFormatMarks(rows)),
+                  _Hero(
+                    identity: identity,
+                    marks: mediaFormatMarks(rows),
+                    light: light,
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   _Scores(
                     scores: mediaScoresOf(rows, identity),
@@ -93,6 +107,7 @@ class MediaPage extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.slabY),
                   _LeadBar(
                     lead: lead,
+                    light: light,
                     hasTrailer: identity?.videos.isNotEmpty ?? false,
                     showManage: audience == Audience.operator,
                     serverName: (lead) => settings.connectionTitle(
@@ -203,10 +218,13 @@ class _BackPlate extends StatelessWidget {
 /// Artwork, poster and title: the backdrop in a slab, the poster rising out
 /// of its foot, the title beside the poster, then the meta line.
 class _Hero extends StatelessWidget {
-  const _Hero({required this.identity, required this.marks});
+  const _Hero({required this.identity, required this.marks, this.light});
 
   final MediaIdentity? identity;
   final List<String> marks;
+
+  /// The title's light, or null for the lamp.
+  final TitleLight? light;
 
   @override
   Widget build(BuildContext context) {
@@ -231,7 +249,7 @@ class _Hero extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: room.raised,
                     borderRadius: BorderRadius.circular(AppRadius.slab),
-                    boxShadow: AppElevation.hero(scheme),
+                    boxShadow: AppElevation.hero(scheme, light: light?.light),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: _Artwork(url: identity?.backdropUrl),
@@ -255,7 +273,10 @@ class _Hero extends StatelessWidget {
                       color: room.raised,
                       borderRadius: BorderRadius.circular(AppRadius.poster),
                       border: Border.all(color: room.edge),
-                      boxShadow: AppElevation.poster(scheme),
+                      boxShadow: AppElevation.poster(
+                        scheme,
+                        light: light?.light,
+                      ),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: _Artwork(url: identity?.posterUrl),
@@ -426,12 +447,16 @@ class _Scores extends StatelessWidget {
 class _LeadBar extends StatelessWidget {
   const _LeadBar({
     required this.lead,
+    this.light,
     required this.hasTrailer,
     required this.showManage,
     required this.serverName,
   });
 
   final MediaLead lead;
+
+  /// The title's light: the lead takes its tinted fill. Null, the ink.
+  final TitleLight? light;
   final bool hasTrailer;
   final bool showManage;
   final String Function(MediaLeadPlay lead) serverName;
@@ -455,6 +480,23 @@ class _LeadBar extends StatelessWidget {
       MediaLeadTrailer() || MediaLeadNone() || MediaLeadWaiting() => null,
     };
     final trailerLeads = lead is MediaLeadTrailer;
+    // Lit by the title: the tinted fill under its ink in the dark room, the
+    // tinted primary under white in the day room. Unlit, the ink.
+    final light = this.light;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final leadStyle = light == null
+        ? AppTheme.primaryButtonStyle(context)
+        : AppTheme.primaryButtonStyle(context).copyWith(
+            backgroundColor: WidgetStatePropertyAll(
+              dark ? light.actionFill : light.dayPrimary,
+            ),
+            foregroundColor: WidgetStatePropertyAll(
+              dark ? light.actionInk : const Color(0xFFFFFFFF),
+            ),
+            iconColor: WidgetStatePropertyAll(
+              dark ? light.actionInk : const Color(0xFFFFFFFF),
+            ),
+          );
     final secondaries = [
       if (hasTrailer && !trailerLeads)
         ('Trailer', Icons.smart_display_outlined),
@@ -469,7 +511,7 @@ class _LeadBar extends StatelessWidget {
         else if (label != null && label.isNotEmpty)
           FilledButton(
             onPressed: () {},
-            style: AppTheme.primaryButtonStyle(context),
+            style: leadStyle,
             child: Row(
               children: [
                 Expanded(child: Text(label)),
@@ -485,7 +527,7 @@ class _LeadBar extends StatelessWidget {
         else if (trailerLeads)
           FilledButton.icon(
             onPressed: () {},
-            style: AppTheme.primaryButtonStyle(context),
+            style: leadStyle,
             icon: const Icon(Icons.smart_display_outlined, size: 20),
             label: const Text('Trailer'),
           ),
