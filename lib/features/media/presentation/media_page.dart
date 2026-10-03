@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_gradients.dart';
@@ -13,7 +14,11 @@ import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/status/media_action.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/stream/domain/stream_web_url.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_collection_banner.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -34,14 +39,73 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 /// one action that leads, what every connection holds ("On your server"),
 /// and the operator's sections, closed. [focus] is the connection the page
 /// was opened from: its copy leads when it needs something.
-class MediaPage extends ConsumerWidget {
+class MediaPage extends ConsumerStatefulWidget {
   const MediaPage({super.key, required this.mediaKey, this.focus});
 
   final MediaKey mediaKey;
   final String? focus;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MediaPage> createState() => _MediaPageState();
+}
+
+class _MediaPageState extends ConsumerState<MediaPage> {
+  /// Where Manage scrolls to.
+  final _manageKey = GlobalKey();
+
+  /// The artwork the page has drawn: the title light is read from one of
+  /// these only.
+  final _drawn = <String>{};
+
+  void _artDrawn(String url) {
+    if (_drawn.contains(url)) return;
+    // After the frame that drew it: a setState inside an image builder would
+    // rebuild the tree that is being built.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _drawn.add(url));
+    });
+  }
+
+  MediaKey get mediaKey => widget.mediaKey;
+  String? get focus => widget.focus;
+
+  /// Plays [lead] in its server's own client, at the item.
+  Future<void> _play(MediaLeadPlay lead, String serverName) async {
+    final server = lead.server;
+    final machineId = server.service == ServiceKey.plex
+        ? ref
+              .read(plexCapabilitiesForProvider(server.id))
+              .value
+              ?.machineIdentifier
+        : null;
+    final target = streamItemWebUrl(
+      service: server.service,
+      baseUrl: server.url,
+      itemId: lead.item.id,
+      plexMachineId: machineId,
+    );
+    final opened =
+        target != null &&
+        await launchUrl(target, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      SnackBarHelper.error(context, 'Could not open $serverName');
+    }
+  }
+
+  void _toManage() {
+    final target = _manageKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final rows = ref.watch(mediaRowsProvider(mediaKey));
     final audience = ref.watch(audienceProvider);
     final settings = ref.watch(currentSettingsProvider);
@@ -64,10 +128,11 @@ class MediaPage extends ConsumerWidget {
     final top = MediaQuery.paddingOf(context).top;
     // The one image that lights the room: the backdrop, else the poster. Until
     // it is read, and for artwork with too little chroma, the lamp.
+    // It is read once the page has drawn that picture: it comes from the same
+    // cache then, and a picture that never arrives leaves the lamp on.
     final lightSource = identity?.backdropUrl ?? identity?.posterUrl;
-    final light = lightSource == null
-        ? null
-        : ref.watch(titleLightProvider(lightSource)).value;
+    final lit = _drawn.contains(lightSource) ? lightSource : null;
+    final light = lit == null ? null : ref.watch(titleLightProvider(lit)).value;
 
     return Scaffold(
       backgroundColor: room.ground,
@@ -95,6 +160,7 @@ class MediaPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   _Hero(
+                    onArtDrawn: _artDrawn,
                     identity: identity,
                     marks: mediaFormatMarks(rows),
                     light: light,
@@ -108,6 +174,20 @@ class MediaPage extends ConsumerWidget {
                   _LeadBar(
                     lead: lead,
                     light: light,
+                    onPlay: (lead) => _play(
+                      lead,
+                      settings.connectionTitle(
+                        lead.server.id,
+                        lead.server.service,
+                      ),
+                    ),
+                    onTrailer: identity?.videos.isNotEmpty ?? false
+                        ? () => DiscoverVideosButton.show(
+                            context,
+                            identity!.videos,
+                          )
+                        : null,
+                    onManage: _toManage,
                     hasTrailer: identity?.videos.isNotEmpty ?? false,
                     showManage: audience == Audience.operator,
                     serverName: (lead) => settings.connectionTitle(
@@ -173,7 +253,7 @@ class MediaPage extends ConsumerWidget {
     );
     if (summaries == null) return const [];
     return [
-      const _Heading('Manage'),
+      _Heading('Manage', key: _manageKey),
       _RowsCard(
         views: const [],
         children: [
@@ -218,7 +298,15 @@ class _BackPlate extends StatelessWidget {
 /// Artwork, poster and title: the backdrop in a slab, the poster rising out
 /// of its foot, the title beside the poster, then the meta line.
 class _Hero extends StatelessWidget {
-  const _Hero({required this.identity, required this.marks, this.light});
+  const _Hero({
+    required this.identity,
+    required this.marks,
+    required this.onArtDrawn,
+    this.light,
+  });
+
+  /// Told when the backdrop or the poster has been drawn.
+  final ValueChanged<String> onArtDrawn;
 
   final MediaIdentity? identity;
   final List<String> marks;
@@ -252,7 +340,10 @@ class _Hero extends StatelessWidget {
                     boxShadow: AppElevation.hero(scheme, light: light?.light),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: _Artwork(url: identity?.backdropUrl),
+                  child: _Artwork(
+                    url: identity?.backdropUrl,
+                    onDrawn: onArtDrawn,
+                  ),
                 ),
                 // The poster rises [rise] into the artwork: the rest of it
                 // is the space below.
@@ -279,7 +370,10 @@ class _Hero extends StatelessWidget {
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: _Artwork(url: identity?.posterUrl),
+                    child: _Artwork(
+                      url: identity?.posterUrl,
+                      onDrawn: onArtDrawn,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.slabY),
                   Expanded(
@@ -348,9 +442,12 @@ class _Mark extends StatelessWidget {
 }
 
 class _Artwork extends StatelessWidget {
-  const _Artwork({required this.url});
+  const _Artwork({required this.url, this.onDrawn});
 
   final String? url;
+
+  /// Told once the picture is drawn, with its address.
+  final ValueChanged<String>? onDrawn;
 
   @override
   Widget build(BuildContext context) {
@@ -363,6 +460,10 @@ class _Artwork extends StatelessWidget {
         memCacheWidth: decode.width,
         memCacheHeight: decode.height,
         fit: BoxFit.cover,
+        imageBuilder: (context, image) {
+          onDrawn?.call(url);
+          return Image(image: image, fit: BoxFit.cover);
+        },
         placeholder: (context, url) =>
             const ShimmerPlaceholder(height: double.infinity),
         errorWidget: (context, url, error) => const SizedBox.expand(),
@@ -447,6 +548,9 @@ class _Scores extends StatelessWidget {
 class _LeadBar extends StatelessWidget {
   const _LeadBar({
     required this.lead,
+    required this.onPlay,
+    required this.onTrailer,
+    required this.onManage,
     this.light,
     required this.hasTrailer,
     required this.showManage,
@@ -457,6 +561,9 @@ class _LeadBar extends StatelessWidget {
 
   /// The title's light: the lead takes its tinted fill. Null, the ink.
   final TitleLight? light;
+  final void Function(MediaLeadPlay lead) onPlay;
+  final VoidCallback? onTrailer;
+  final VoidCallback onManage;
   final bool hasTrailer;
   final bool showManage;
   final String Function(MediaLeadPlay lead) serverName;
@@ -497,12 +604,20 @@ class _LeadBar extends StatelessWidget {
               dark ? light.actionInk : const Color(0xFFFFFFFF),
             ),
           );
-    final secondaries = [
+    // Watchlist is wired with the account the Seerr connection acts as
+    // (F-seerr-actas): until then it has no way to keep its promise.
+    final secondaries = <(String, IconData, VoidCallback?)>[
       if (hasTrailer && !trailerLeads)
-        ('Trailer', Icons.smart_display_outlined),
-      ('Watchlist', Icons.bookmark_border_rounded),
-      if (showManage) ('Manage', Icons.tune_rounded),
+        ('Trailer', Icons.smart_display_outlined, onTrailer),
+      ('Watchlist', Icons.bookmark_border_rounded, null),
+      if (showManage) ('Manage', Icons.tune_rounded, onManage),
     ];
+    final onLead = switch (lead) {
+      final MediaLeadPlay play => () => onPlay(play),
+      // Add, Request and a copy's own action open the operator's and the
+      // requester's flows from the page: lots M5 and M6.
+      _ => null,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -510,7 +625,7 @@ class _LeadBar extends StatelessWidget {
           const ShimmerPlaceholder(height: DesignTokens.sizeButtonL)
         else if (label != null && label.isNotEmpty)
           FilledButton(
-            onPressed: () {},
+            onPressed: onLead,
             style: leadStyle,
             child: Row(
               children: [
@@ -526,7 +641,7 @@ class _LeadBar extends StatelessWidget {
           )
         else if (trailerLeads)
           FilledButton.icon(
-            onPressed: () {},
+            onPressed: onTrailer,
             style: leadStyle,
             icon: const Icon(Icons.smart_display_outlined, size: 20),
             label: const Text('Trailer'),
@@ -534,11 +649,12 @@ class _LeadBar extends StatelessWidget {
         const SizedBox(height: AppSpacing.row),
         Row(
           children: [
-            for (final (index, (text, icon)) in secondaries.indexed) ...[
+            for (final (index, (text, icon, onPressed))
+                in secondaries.indexed) ...[
               if (index > 0) const SizedBox(width: AppSpacing.row),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: onPressed,
                   icon: Icon(icon, size: 17),
                   label: Text(
                     text,
@@ -556,7 +672,7 @@ class _LeadBar extends StatelessWidget {
 }
 
 class _Heading extends StatelessWidget {
-  const _Heading(this.text, {this.trailing});
+  const _Heading(this.text, {super.key, this.trailing});
 
   final String text;
   final String? trailing;

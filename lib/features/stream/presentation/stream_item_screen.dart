@@ -6,13 +6,13 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
-import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/stream_web_url.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
 
 /// One item on a media server, at any depth of the tree.
@@ -258,24 +258,14 @@ class _HandoffButton extends ConsumerWidget {
     }
   }
 
-  /// The server's own web client, deep-linked to this item.
-  ///
-  /// A web URL rather than an app scheme: neither Jellyfin nor Plex publishes a
-  /// documented, reliably-registered scheme across iOS, Android and macOS, and a
-  /// scheme that silently fails is worse than a browser that works. On a phone the
-  /// installed app usually claims the URL anyway through universal links.
-  Uri? _webUrl(String baseUrl, String? machineId) {
-    final root = UrlUtils.normalizeBaseUrl(baseUrl);
-    if (root.isEmpty) return null;
-
-    if (service == ServiceKey.jellyfin) {
-      return Uri.tryParse('$root/web/index.html#!/details?id=${item.id}');
-    }
-    final key = Uri.encodeComponent('/library/metadata/${item.id}');
-    return Uri.tryParse(
-      '$root/web/index.html#!/server/$machineId/details?key=$key',
-    );
-  }
+  /// The server's own web client, deep-linked to this item: see
+  /// [streamItemWebUrl].
+  Uri? _webUrl(String baseUrl, String? machineId) => streamItemWebUrl(
+    service: service,
+    baseUrl: baseUrl,
+    itemId: item.id,
+    plexMachineId: machineId,
+  );
 }
 
 /// Seasons, episodes or tracks.

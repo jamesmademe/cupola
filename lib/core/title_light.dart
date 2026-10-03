@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:ui' as ui;
+
+import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
 
@@ -89,24 +91,36 @@ Future<TitleLight?> titleLightFromPixels(List<int> pixels) async {
 /// The light of the artwork at [url], or null for artwork with too little
 /// chroma.
 ///
-/// The picture comes through the pinned image cache, the same file the page
-/// shows; it is decoded at [titleLightDecodeSize] and read off the UI
-/// isolate. A picture that cannot be fetched fails the provider, and the room
-/// keeps the lamp.
+/// The picture comes through the same image provider and pinned cache the page
+/// draws it with, so it is fetched once; it is decoded at
+/// [titleLightDecodeSize] and read off the UI isolate. A picture that cannot be
+/// fetched fails the provider, and the room keeps the lamp.
 final titleLightProvider = FutureProvider.autoDispose
     .family<TitleLight?, String>((ref, url) async {
-      final cache = pinnedImageCacheFor(url) ?? DefaultCacheManager();
-      final file = await cache.getSingleFile(url);
-      final bytes = await file.readAsBytes();
-      final codec = await ui.instantiateImageCodec(
-        bytes,
-        targetWidth: titleLightDecodeSize,
-        targetHeight: titleLightDecodeSize,
+      final provider = ResizeImage(
+        CachedNetworkImageProvider(url, cacheManager: pinnedImageCacheFor(url)),
+        width: titleLightDecodeSize,
+        height: titleLightDecodeSize,
       );
-      final frame = await codec.getNextFrame();
-      final rgba = await frame.image.toByteData();
-      frame.image.dispose();
-      codec.dispose();
+      final decoded = Completer<ui.Image>();
+      final stream = provider.resolve(ImageConfiguration.empty);
+      late final ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (info, _) {
+          if (!decoded.isCompleted) decoded.complete(info.image.clone());
+          info.dispose();
+          stream.removeListener(listener);
+        },
+        onError: (error, stack) {
+          if (!decoded.isCompleted) decoded.completeError(error, stack);
+          stream.removeListener(listener);
+        },
+      );
+      stream.addListener(listener);
+      ref.onDispose(() => stream.removeListener(listener));
+      final image = await decoded.future;
+      final rgba = await image.toByteData();
+      image.dispose();
       if (rgba == null) return null;
       final pixels = <int>[
         for (var i = 0; i + 3 < rgba.lengthInBytes; i += 4)
