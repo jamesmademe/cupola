@@ -51,6 +51,10 @@ final _signInRoute = RegExp(r'/api/v1/auth/(local|jellyfin|plex)(/|$)');
 
 const _writeMethods = {'POST', 'PUT', 'PATCH', 'DELETE'};
 
+/// The user Seerr's API key acts as: read by Seerr beside the key alone,
+/// absent meaning the owner (`server/middleware/auth.ts`).
+const _actsAsHeader = 'X-API-User';
+
 /// What a client tells the app about the session beyond one request.
 ///
 /// Every callback is optional, and none carries a secret except [onSession],
@@ -80,7 +84,8 @@ class SeerrSessionEvents {
 /// request carries what the connection needs.
 ///
 /// - The API key ([SeerrApiKeySignIn]) as `X-Api-Key`, plus
-///   [SeerrCsrfInterceptor].
+///   [SeerrCsrfInterceptor], and `X-API-User` when the connection acts as
+///   another administrator ([ServiceInstance.seerrActsAs]).
 /// - An account ([SeerrAccountSignIn]) as its session cookie
 ///   ([SeerrSessionInterceptor]), plus [SeerrCsrfInterceptor]. An account
 ///   with no session yet is a client to sign in with: it sends no cookie and
@@ -106,10 +111,21 @@ ApiClient seerrClientFor(
   assert(instance.service == ServiceKey.seerr, 'not a Seerr connection');
   final way = signIn ?? instance.seerrSignIn;
   final accessHeaders = instance.access.headers();
+  final actsAs = instance.seerrActsAs;
   return switch (way) {
-    SeerrApiKeySignIn(:final key) => ApiClient(
+    SeerrApiKeySignIn(:final key) when actsAs.isEmpty => ApiClient(
       baseUrl: instance.url,
       apiKey: key.trim(),
+      pinnedCertFingerprint: pinnedCertFingerprint,
+      accessHeaders: accessHeaders,
+      interceptors: (dio) => [SeerrCsrfInterceptor(dio)],
+    ),
+    // The key acting as another administrator of the household: Seerr reads
+    // `X-API-User` only beside its key, and the header stays on the
+    // configured origin with the key.
+    SeerrApiKeySignIn(:final key) => ApiClient.authenticatedBy(
+      baseUrl: instance.url,
+      headers: {'X-Api-Key': key.trim(), _actsAsHeader: actsAs},
       pinnedCertFingerprint: pinnedCertFingerprint,
       accessHeaders: accessHeaders,
       interceptors: (dio) => [SeerrCsrfInterceptor(dio)],
@@ -186,6 +202,13 @@ ApiClient watchSeerrClient(
     if (named?.isSignedOut ?? false) throw const SeerrSessionEnded();
     throw Exception('${ServiceKey.seerr.title} not configured');
   }
+  // The user the key acts as is part of the key the client is rebuilt on:
+  // choosing another one must not leave requests signed as the first.
+  ref.watch(
+    currentSettingsProvider.select(
+      (s) => s.instanceById(transport.instanceId)?.seerrActsAs ?? '',
+    ),
+  );
   // Read, not watched: the transport above is the key the client is rebuilt
   // on, and an account's permissions moving must not rebuild it.
   final instance = ref

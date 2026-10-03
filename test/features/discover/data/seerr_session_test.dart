@@ -82,7 +82,41 @@ void main() {
 
       final sent = harness.network.requestsTo(WorldIds.seerr).single;
       expect(sent.headers['x-api-key'], worldKey(WorldIds.seerr));
+      expect(sent.headers.containsKey('x-api-user'), isFalse);
       expect(_cookie(sent, 'connect.sid'), isNull);
+    });
+
+    test('the key acting as another user: X-API-User beside it, and Seerr '
+        'answers as them', () async {
+      final harness = await ProfileHarness.start(Profiles.p1);
+      final client = seerrClientFor(
+        _instance(Profiles.p1).copyWith(viewerId: '${WorldSeerrUsers.anna.id}'),
+      );
+      addTearDown(client.close);
+
+      final me = await client.get('/api/v1/auth/me');
+
+      expect(me.data['id'], WorldSeerrUsers.anna.id);
+      final sent = harness.network.requestsTo(WorldIds.seerr).single;
+      expect(sent.headers['x-api-key'], worldKey(WorldIds.seerr));
+      expect(sent.headers['x-api-user'], '${WorldSeerrUsers.anna.id}');
+    });
+
+    test('an account acts as itself, whatever the connection names', () async {
+      final harness = await ProfileHarness.start(Profiles.p2);
+      final client = seerrClientFor(
+        _instance(Profiles.p2).copyWith(
+          account: _account(harness),
+          viewerId: '${WorldSeerrUsers.luca.id}',
+        ),
+      );
+      addTearDown(client.close);
+
+      final me = await client.get('/api/v1/auth/me');
+
+      expect(me.data['displayName'], WorldPeople.anna);
+      final sent = harness.network.requestsTo(WorldIds.seerr).single;
+      expect(sent.headers.containsKey('x-api-user'), isFalse);
     });
 
     test('an account: its session cookie and no key', () async {

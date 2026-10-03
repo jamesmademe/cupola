@@ -129,7 +129,7 @@ class SeerrFake extends ServiceFake {
     WorldTitles.charge,
   ];
 
-  /// Ian Hubert, the brief's J-Person: director, 3 of 4 on the server.
+  /// Ian Hubert: director, 3 of 4 on the server.
   static const personId = 90001;
   static const personName = 'Ian Hubert';
   static const personCredits = [

@@ -499,10 +499,12 @@ SeerrCaller? _identify(NetworkRequest request, SeerrSetup setup) {
   if (key != null &&
       key == setup.apiKey &&
       setup.behaviour != ConnectionBehaviour.refusesKey) {
-    // The key acts as user 1, which a server in its first setup may not have:
-    // then it is nobody, and the session is not asked.
-    final admin = setup.userById(1);
-    return admin == null ? null : SeerrCaller(admin);
+    // The key acts as user 1, which a server in its first setup may not have,
+    // or as the user `X-API-User` names: then nobody when there is no such
+    // user, and the session is not asked.
+    final named = request.headers['x-api-user'];
+    final actsAs = setup.userById(named == null ? 1 : int.tryParse(named) ?? 0);
+    return actsAs == null ? null : SeerrCaller(actsAs);
   }
   final session = setup.state.resume(requestCookies(request)['connect.sid']);
   if (session == null) return null;

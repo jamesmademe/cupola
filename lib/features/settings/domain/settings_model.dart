@@ -461,7 +461,7 @@ class SettingsModel {
   /// exactly once, and `SettingsService.saveSettings` refuses to overwrite it
   /// for that reason.
   SettingsModel copyWithoutServiceExtras(ServiceKey service) {
-    if (!service.needsViewerSelection) return this;
+    if (!service.namesAPerson) return this;
     final updated = instances
         .map(
           (instance) => instance.service == service

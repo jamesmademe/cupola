@@ -241,6 +241,12 @@ extension ServiceKeyExtension on ServiceKey {
   /// `ServiceKey` inline.
   bool get needsViewerSelection => this == ServiceKey.jellyfin;
 
+  /// Whether a connection of this service names a person in
+  /// `ServiceInstance.viewerId`: Jellyfin's viewer ([needsViewerSelection]),
+  /// and the Seerr user an API key acts as (`ServiceInstance.seerrActsAs`).
+  /// Either one belongs to the server it was chosen on.
+  bool get namesAPerson => needsViewerSelection || this == ServiceKey.seerr;
+
   /// The port this service listens on out of the box.
   ///
   /// Offered as a one-tap suggestion next to the address field, alongside the

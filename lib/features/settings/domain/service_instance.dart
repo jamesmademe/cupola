@@ -58,12 +58,15 @@ class ServiceInstance {
   /// Empty for the API-key services, which have none.
   final String username;
 
-  /// Which viewer's watch state this library is read through. Jellyfin only —
-  /// see [ServiceKeyExtension.needsViewerSelection].
+  /// Which person this connection reads and acts as, for the two services
+  /// whose credential names nobody ([ServiceKeyExtension.namesAPerson]):
+  /// Jellyfin's viewer, whose watch state the library is read through (see
+  /// [ServiceKeyExtension.needsViewerSelection]), and the Seerr user an API
+  /// key acts as ([seerrActsAs]).
   ///
-  /// Per instance, not per install: two Jellyfin servers have two different
-  /// user tables, and carrying one server's user id to the other binds every
-  /// per-viewer query to an id that does not exist there.
+  /// Per instance, not per install: two servers have two different user
+  /// tables, and carrying one server's user id to the other binds every
+  /// per-person query to an id that does not exist there.
   final String viewerId;
 
   /// What this connection presents to a gateway in front of the service, on
@@ -178,6 +181,18 @@ class ServiceInstance {
 
   /// How this Seerr connection signs in: its [account], or its API key.
   SeerrSignIn get seerrSignIn => account ?? SeerrApiKeySignIn(credential);
+
+  /// The Seerr user this connection's API key acts as, sent as `X-API-User`,
+  /// or empty for the key's own: the server's owner, user 1.
+  ///
+  /// Seerr has one API key, with an administrator's rights, and every request
+  /// it signs is that user's: its watchlist, the requests it makes. A
+  /// household with two administrators names the one holding this phone here.
+  /// Only an administrator is offered, so the gate's operator stays true. An
+  /// account acts as itself, so this is empty for one whatever [viewerId]
+  /// holds.
+  String get seerrActsAs =>
+      service == ServiceKey.seerr && account == null ? viewerId : '';
 
   /// Whether this is a Seerr account that holds no session: signed out.
   bool get isSignedOut => account != null && !account!.isSignedIn;

@@ -254,6 +254,23 @@ void main() {
       ]);
     });
 
+    test('a Seerr loses the user its key acted as', () {
+      final settings = SettingsModel(
+        instances: [
+          const ServiceInstance(
+            id: 'seerr',
+            service: ServiceKey.seerr,
+            url: 'https://a',
+            credential: 'k',
+            viewerId: '2',
+          ),
+        ],
+      );
+      expect(settings.instancesOf(ServiceKey.seerr).single.seerrActsAs, '2');
+      final cleared = settings.copyWithoutServiceExtras(ServiceKey.seerr);
+      expect(cleared.instancesOf(ServiceKey.seerr).single.seerrActsAs, '');
+    });
+
     test('a service with no viewer to clear is left alone', () {
       final settings = SettingsModel(instances: [_radarr('radarr')]);
       expect(
