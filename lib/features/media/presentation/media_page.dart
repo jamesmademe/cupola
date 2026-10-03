@@ -1,6 +1,9 @@
+import 'dart:ui' as ui;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cupola/core/app_elevation.dart';
@@ -21,6 +24,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
@@ -112,6 +116,18 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         ?.id;
   }
 
+  /// Where [view]'s one way forward leads, for [row]: a setup form, the
+  /// connection asked again, or its own form for the remedy a failure names.
+  VoidCallback? _wayOf(MediaRow row, MediaRowView view) => switch (view.way) {
+    null => null,
+    MediaRowWay.setUp ||
+    MediaRowWay.add => () => context.go(ServiceRoutes.setUp(row.service)),
+    MediaRowWay.retry => () => retryMediaRow(ref, mediaKey, row),
+    MediaRowWay.fix => () => context.go(
+      ServiceRoutes.settingsForConnection(row.service, view.connectionId ?? ''),
+    ),
+  };
+
   void _toManage() {
     final target = _manageKey.currentContext;
     if (target == null) return;
@@ -136,12 +152,14 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         if (audience == Audience.operator ||
             row.service == ServiceKey.jellyfin ||
             row.service == ServiceKey.plex)
-          ?mediaRowView(
-            row,
-            title: (connection) =>
-                settings.connectionTitle(connection.id, connection.service),
-            now: DateTime.now(),
-          ),
+          if (mediaRowView(
+                row,
+                title: (connection) =>
+                    settings.connectionTitle(connection.id, connection.service),
+                now: DateTime.now(),
+              )
+              case final view?)
+            _ServerRow(view, onTap: _wayOf(row, view)),
     ];
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
@@ -182,6 +200,14 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   _Hero(
                     onArtDrawn: _artDrawn,
                     identity: identity,
+                    kind: mediaKey.kind,
+                    waiting:
+                        identity == null &&
+                        rows.any(
+                          (row) =>
+                              row is MediaConnectionRow &&
+                              row.reading is MediaReadingWaiting,
+                        ),
                     marks: mediaFormatMarks(rows),
                     light: light,
                   ),
@@ -217,7 +243,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   ),
                   if (views.isNotEmpty) ...[
                     _Heading('On your server', trailing: _servicesCount(rows)),
-                    _RowsCard(views: views),
+                    _RowsCard(children: views),
                   ],
                   if (audience == Audience.operator) ..._manage(rows, settings),
                   if ((identity?.overview ?? '').isNotEmpty) ...[
@@ -289,7 +315,6 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     return [
       _Heading('Manage', key: _manageKey),
       _RowsCard(
-        views: const [],
         children: [
           _ManageRow(
             title: 'Files & quality',
@@ -342,6 +367,8 @@ class _BackPlate extends StatelessWidget {
 class _Hero extends StatelessWidget {
   const _Hero({
     required this.identity,
+    required this.kind,
+    required this.waiting,
     required this.marks,
     required this.onArtDrawn,
     this.light,
@@ -351,6 +378,12 @@ class _Hero extends StatelessWidget {
   final ValueChanged<String> onArtDrawn;
 
   final MediaIdentity? identity;
+  final MediaKind kind;
+
+  /// Nobody has said who the title is yet: the artwork shimmers rather than
+  /// standing in.
+  final bool waiting;
+
   final List<String> marks;
 
   /// The title's light, or null for the lamp.
@@ -382,10 +415,27 @@ class _Hero extends StatelessWidget {
                     boxShadow: AppElevation.hero(scheme, light: light?.light),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: _Artwork(
-                    url: identity?.backdropUrl,
-                    onDrawn: onArtDrawn,
-                  ),
+                  child: switch ((identity?.backdropUrl, identity?.posterUrl)) {
+                    _ when waiting => const ShimmerPlaceholder(
+                      height: double.infinity,
+                    ),
+                    (final String backdrop, _) when backdrop.isNotEmpty =>
+                      _Artwork(
+                        url: backdrop,
+                        onDrawn: onArtDrawn,
+                        fallback: _Plate(kind: kind, well: true),
+                      ),
+                    // No backdrop: the poster, veiled, so the slab is still
+                    // the title's. Decoded once, at the poster's box.
+                    (_, final String poster) when poster.isNotEmpty =>
+                      _Artwork.veiled(
+                        url: poster,
+                        decodeBox: const Size(posterWidth, posterHeight),
+                        onDrawn: onArtDrawn,
+                        fallback: _Plate(kind: kind, well: true),
+                      ),
+                    _ => _Plate(kind: kind, well: true),
+                  },
                 ),
                 // The poster rises [rise] into the artwork: the rest of it
                 // is the space below.
@@ -412,10 +462,14 @@ class _Hero extends StatelessWidget {
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: _Artwork(
-                      url: identity?.posterUrl,
-                      onDrawn: onArtDrawn,
-                    ),
+                    child: waiting
+                        ? const ShimmerPlaceholder(height: double.infinity)
+                        : _Artwork(
+                            url: identity?.posterUrl,
+                            decodeBox: const Size(posterWidth, posterHeight),
+                            onDrawn: onArtDrawn,
+                            fallback: _Plate(kind: kind),
+                          ),
                   ),
                   const SizedBox(width: AppSpacing.slabY),
                   Expanded(
@@ -484,9 +538,31 @@ class _Mark extends StatelessWidget {
 }
 
 class _Artwork extends StatelessWidget {
-  const _Artwork({required this.url, this.onDrawn});
+  const _Artwork({
+    required this.url,
+    required this.fallback,
+    this.decodeBox,
+    this.onDrawn,
+  }) : veiled = false;
+
+  /// [url] blurred and dimmed over the plate's well: a poster standing in
+  /// for a backdrop.
+  const _Artwork.veiled({
+    required this.url,
+    required this.fallback,
+    this.decodeBox,
+    this.onDrawn,
+  }) : veiled = true;
 
   final String? url;
+
+  /// What stands in when there is no picture, or it cannot be fetched.
+  final Widget fallback;
+
+  /// The box the picture is decoded for, when it is not the one it fills.
+  final Size? decodeBox;
+
+  final bool veiled;
 
   /// Told once the picture is drawn, with its address.
   final ValueChanged<String>? onDrawn;
@@ -494,8 +570,9 @@ class _Artwork extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = this.url;
-    if (url == null || url.isEmpty) return const SizedBox.expand();
-    return ArtworkDecodeBox(
+    if (url == null || url.isEmpty) return fallback;
+    final picture = ArtworkDecodeBox(
+      box: decodeBox,
       builder: (context, decode) => CachedNetworkImage(
         imageUrl: url,
         cacheManager: pinnedImageCacheFor(url),
@@ -508,7 +585,49 @@ class _Artwork extends StatelessWidget {
         },
         placeholder: (context, url) =>
             const ShimmerPlaceholder(height: double.infinity),
-        errorWidget: (context, url, error) => const SizedBox.expand(),
+        errorWidget: (context, url, error) => fallback,
+      ),
+    );
+    if (!veiled) return picture;
+    return ColoredBox(
+      color: AppColors.plateWell,
+      child: Opacity(
+        opacity: 0.72,
+        child: ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(
+            sigmaX: 24,
+            sigmaY: 24,
+            tileMode: TileMode.clamp,
+          ),
+          child: SizedBox.expand(child: picture),
+        ),
+      ),
+    );
+  }
+}
+
+/// Missing artwork's stand-in: the plate, dark in both rooms (brand book,
+/// *Plates*), with the kind of title it stands for.
+class _Plate extends StatelessWidget {
+  const _Plate({required this.kind, this.well = false});
+
+  final MediaKind kind;
+
+  /// The backdrop's letterboxed well rather than a poster's plate.
+  final bool well;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: ColoredBox(
+        color: well ? AppColors.plateWell : AppColors.plateSurface,
+        child: Center(
+          child: Icon(
+            kind == MediaKind.movie ? Icons.movie_outlined : Icons.tv_outlined,
+            size: well ? 40 : 28,
+            color: AppColors.plateDimInk,
+          ),
+        ),
       ),
     );
   }
@@ -753,15 +872,14 @@ class _Heading extends StatelessWidget {
 
 /// A group of rows on one slab, divided by hairlines.
 class _RowsCard extends StatelessWidget {
-  const _RowsCard({required this.views, this.children = const []});
+  const _RowsCard({required this.children});
 
-  final List<MediaRowView> views;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
-    final items = [for (final view in views) _ServerRow(view), ...children];
+    final items = children;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.slabY),
       decoration: BoxDecoration(
@@ -783,15 +901,94 @@ class _RowsCard extends StatelessWidget {
 
 /// One row of "On your server", in the shape its case takes
 /// ([MediaRowShape]): the connection on the left, a fixed 92; what it holds;
-/// on the right the state, or the row's one way forward.
+/// on the right the state, or the row's one way forward. A row with a way
+/// forward is tapped whole, and speaks one sentence.
 class _ServerRow extends StatelessWidget {
-  const _ServerRow(this.view);
+  const _ServerRow(this.view, {this.onTap});
 
   final MediaRowView view;
+
+  /// The row's one way forward ([MediaRowView.way]).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
+      child: view.shape == MediaRowShape.notSetUp
+          ? _notSetUp(room)
+          : _reading(context, room),
+    );
+    final onTap = this.onTap;
+    if (onTap == null) {
+      return Semantics(
+        container: true,
+        label: view.spoken,
+        excludeSemantics: true,
+        child: content,
+      );
+    }
+    return PressableScale(
+      onTap: onTap,
+      semanticLabel: view.spoken,
+      excludeChildSemantics: true,
+      child: content,
+    );
+  }
+
+  /// Case a, dimmed and still the way in: the name, `Not
+  /// set up` and what it would bring, and the pill that names the service.
+  Widget _notSetUp(CupolaRoom room) => Row(
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(
+                  width: 92,
+                  child: Text(
+                    view.name,
+                    style: AppType.row.copyWith(
+                      color: room.ink.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.row),
+                Expanded(
+                  child: Text(
+                    view.state,
+                    style: AppType.meta
+                        .weight(FontWeight.w600)
+                        .copyWith(
+                          color: room.inkSecondary.withValues(alpha: 0.72),
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            if (view.detail.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                view.detail,
+                style: AppType.caption
+                    .weight(FontWeight.w400)
+                    .copyWith(color: room.inkTertiary),
+              ),
+            ],
+          ],
+        ),
+      ),
+      if (view.action case final action?) ...[
+        const SizedBox(width: AppSpacing.row),
+        _SetUpPill(action),
+      ],
+    ],
+  );
+
+  Widget _reading(BuildContext context, CupolaRoom room) {
     final scheme = Theme.of(context).colorScheme;
     final tone = statusToneColor(scheme, view.tone, surface: room.ground);
     final waiting = view.state.isEmpty;
@@ -831,15 +1028,6 @@ class _ServerRow extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: ShimmerPlaceholder(width: 120, height: 12),
       ),
-      MediaRowShape.fact ||
-      MediaRowShape.claim => Text(view.detail, style: secondary),
-      MediaRowShape.notSetUp => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(view.state, style: stateStyle),
-          if (view.detail.isNotEmpty) Text(view.detail, style: secondary),
-        ],
-      ),
       MediaRowShape.failed => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -847,85 +1035,107 @@ class _ServerRow extends StatelessWidget {
           if (view.detail.isNotEmpty) Text(view.detail, style: secondary),
         ],
       ),
+      _ => Text(view.detail, style: secondary),
     };
 
     final trailing = switch (view.shape) {
       _ when waiting => null,
-      MediaRowShape.fact || MediaRowShape.claim => state(),
-      MediaRowShape.notSetUp || MediaRowShape.failed => Text(
+      MediaRowShape.failed => Text(
         view.action ?? '',
         style: AppType.label.copyWith(color: room.ink),
       ),
+      _ => state(),
     };
 
-    return Semantics(
-      container: true,
-      button: view.action != null,
-      label: view.spoken,
-      excludeSemantics: true,
-      child: Opacity(
-        opacity: view.dimmed ? 0.62 : 1,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
-          child: Column(
+    return Column(
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 36),
+          child: Row(
             children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 36),
-                child: Row(
+              SizedBox(
+                width: 92,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: 92,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            view.name,
-                            style: AppType.row.copyWith(color: room.ink),
-                          ),
-                          if (view.via case final via?)
-                            Text(
-                              via,
-                              style: AppType.caption.copyWith(
-                                color: room.inkTertiary,
-                              ),
-                            ),
-                        ],
-                      ),
+                    Text(
+                      view.name,
+                      style: AppType.row.copyWith(color: room.ink),
                     ),
-                    const SizedBox(width: AppSpacing.row),
-                    Expanded(child: middle),
-                    if (trailing != null) ...[
-                      const SizedBox(width: AppSpacing.row),
-                      trailing,
-                    ],
+                    if (view.via case final via?)
+                      Text(
+                        via,
+                        style: AppType.caption.copyWith(
+                          color: room.inkTertiary,
+                        ),
+                      ),
                   ],
                 ),
               ),
-              if (view.shape == MediaRowShape.claim && view.action != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.sm),
-                  child: Row(
-                    children: [
-                      Icon(Icons.add_rounded, size: 18, color: room.ink),
-                      const SizedBox(width: AppSpacing.s),
-                      Expanded(
-                        child: Text(
-                          view.action!,
-                          style: AppType.label.copyWith(color: room.ink),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(width: AppSpacing.row),
+              Expanded(child: middle),
+              if (trailing != null) ...[
+                const SizedBox(width: AppSpacing.row),
+                trailing,
+              ],
             ],
           ),
         ),
+        if (view.shape == MediaRowShape.claim && view.action != null)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Row(
+              children: [
+                Icon(Icons.add_rounded, size: 18, color: room.ink),
+                const SizedBox(width: AppSpacing.s),
+                Expanded(
+                  child: Text(
+                    view.action!,
+                    style: AppType.label.copyWith(color: room.ink),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// `+ Set up Seerr`: the quiet pill a row that is not set up ends with. The
+/// row around it is the target; the pill names where it leads.
+class _SetUpPill extends StatelessWidget {
+  const _SetUpPill(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final ink = room.inkSecondary.withValues(alpha: 0.8);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 36),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.row),
+      decoration: BoxDecoration(
+        color: room.fillControl,
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+        border: Border.all(color: room.edge),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.add_rounded, size: 16, color: ink),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: AppType.meta.weight(FontWeight.w600).copyWith(color: ink),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// A closed operator section: its title and what it holds in one line.
 /// A closed operator section: its title and what it holds in one line,
 /// opening on [body] when there is one. Its content is built when it opens:
 /// a section nobody opens reads nothing.

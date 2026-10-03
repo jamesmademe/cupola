@@ -33,6 +33,22 @@ enum MediaRowShape {
   claim,
 }
 
+/// Where a row's one way forward leads.
+enum MediaRowWay {
+  /// `Set up X`: the service's setup form.
+  setUp,
+
+  /// `Add X to Cupola`: the setup form of the server Seerr knows.
+  add,
+
+  /// `Retry`: the same connection asked again, and only it.
+  retry,
+
+  /// The remedy a failure names (`Paste the key again`, `Check the address`):
+  /// the connection's own form.
+  fix,
+}
+
 /// A row of "On your server" as it is drawn and spoken: who, what, and the
 /// state's word in its tone.
 @immutable
@@ -47,6 +63,7 @@ class MediaRowView {
     this.hollow = false,
     this.progress,
     this.action,
+    this.way,
     this.dimmed = false,
     this.connectionId,
   });
@@ -77,6 +94,9 @@ class MediaRowView {
   /// The one quiet way forward the row offers: `Set up Seerr`, `Retry`,
   /// `Add Radarr · 4K to Cupola`.
   final String? action;
+
+  /// Where [action] leads; null exactly when there is no action.
+  final MediaRowWay? way;
 
   /// Case a: the row is dimmed, and still opens the setup form.
   final bool dimmed;
@@ -109,6 +129,7 @@ MediaRowView? mediaRowView(
       tone: StatusTone.neutral,
       hollow: true,
       action: Lexicon.setUp(service.title),
+      way: MediaRowWay.setUp,
       dimmed: true,
     ),
     MediaThroughSeerrRow(:final copy, :final mediaInfo) => () {
@@ -125,6 +146,7 @@ MediaRowView? mediaRowView(
         tone: status.tone,
         hollow: status.tone == StatusTone.neutral,
         action: 'Add $name to Cupola',
+        way: MediaRowWay.add,
       );
     }(),
     MediaConnectionRow(:final connection, :final reading) => _connectionView(
@@ -167,6 +189,13 @@ MediaRowView? _connectionView(
       final since = lastKnown == null
           ? ''
           : ' since ${formatClockTime(lastKnown.at)}';
+      final remedy = failureRemedy(
+        failure,
+        credential: connection.account == null
+            ? kRefusedCredential
+            : kRefusedSignIn,
+        gateway: gateway,
+      );
       return MediaRowView(
         shape: MediaRowShape.failed,
         name: name,
@@ -175,7 +204,10 @@ MediaRowView? _connectionView(
             : 'Last known: ${[if (known.detail.isNotEmpty) known.detail, known.state].join(' · ')}',
         state: '${failureLabel(failure, gateway: gateway)}$since',
         tone: failureTone(failure),
-        action: Lexicon.retry,
+        // The remedy the cause names, else Retry: a refused key is refused
+        // again, and only its form fixes it.
+        action: remedy ?? Lexicon.retry,
+        way: remedy == null ? MediaRowWay.retry : MediaRowWay.fix,
         connectionId: connection.id,
       );
     case MediaReadingAnswered(:final answer):

@@ -431,3 +431,23 @@ final mediaRadarrHistoryProvider = FutureProvider.autoDispose
           .watch(radarrServiceForProvider(copy.connectionId))
           .getMovieHistory(copy.movieId);
     }, retry: noProviderRetry);
+
+/// Asks [row]'s connection again, and only it: a failed row's `Retry`.
+void retryMediaRow(WidgetRef ref, MediaKey key, MediaRow row) {
+  if (row is! MediaConnectionRow) return;
+  final source = (key: key, connectionId: row.connection.id);
+  switch (row.service) {
+    case ServiceKey.jellyfin || ServiceKey.plex:
+      ref.invalidate(mediaStreamCopyProvider(source));
+    case ServiceKey.radarr:
+      ref.invalidate(mediaRadarrCopyProvider(source));
+    case ServiceKey.sonarr:
+      ref.invalidate(mediaSonarrCopyProvider(source));
+    case ServiceKey.bazarr:
+      ref.invalidate(mediaBazarrCopyProvider(source));
+    case ServiceKey.seerr:
+      ref.invalidate(mediaSeerrRecordProvider(source));
+    default:
+      break;
+  }
+}

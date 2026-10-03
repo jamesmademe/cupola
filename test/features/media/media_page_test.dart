@@ -3,11 +3,16 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
 
@@ -32,6 +37,55 @@ Future<ProfileHarness> _pump(
     await tester.pump(const Duration(milliseconds: 50));
   }
   return harness;
+}
+
+/// The page under a router, for the rows that lead somewhere: anything
+/// under Settings draws its own location.
+Future<(ProfileHarness, GoRouter)> _pumpRouted(
+  WidgetTester tester,
+  ConfigProfile profile,
+  WorldTitle title,
+) async {
+  tester.view.physicalSize = const Size(390, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final harness = await ProfileHarness.start(profile);
+  harness.network.followFakeTime(tester.binding);
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) =>
+            MediaPage(mediaKey: MediaKey.movie(title.tmdbId)),
+      ),
+      GoRoute(
+        path: '/settings/service/:service',
+        builder: (context, state) => Text('at ${state.uri}'),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: harness.overrides,
+      child: MaterialApp.router(
+        theme: AppTheme.darkTheme(),
+        routerConfig: router,
+      ),
+    ),
+  );
+  await _answer(tester);
+  return (harness, router);
+}
+
+/// Lets the profile's servers answer.
+Future<void> _answer(WidgetTester tester) async {
+  for (var i = 0; i < 20; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }
 
 void main() {
@@ -114,6 +168,56 @@ void main() {
       find.bySemanticsLabel(RegExp(r'^Jellyfin\. .*Did not answer.*Retry$')),
       findsOneWidget,
     );
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a row not set up is the way to its form, pill and all', (
+    tester,
+  ) async {
+    final (harness, _) = await _pumpRouted(
+      tester,
+      Profiles.p4,
+      WorldTitles.tearsOfSteel,
+    );
+
+    await tester.tap(find.text('Set up Seerr'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('at ${ServiceRoutes.setUp(ServiceKey.seerr)}'),
+      findsOneWidget,
+    );
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Retry asks the silent connection again, and only it', (
+    tester,
+  ) async {
+    final (harness, _) = await _pumpRouted(
+      tester,
+      Profiles.p7,
+      WorldTitles.tearsOfSteel,
+    );
+    // By address and port: the household's services share a host.
+    String at(ServiceKey service) => Uri.parse(
+      harness.profile.settings.instancesOf(service).first.url,
+    ).authority;
+    int asked(ServiceKey service) => harness.network.requests
+        .where((request) => request.uri.authority == at(service))
+        .length;
+    final jellyfin = asked(ServiceKey.jellyfin);
+    final radarr = asked(ServiceKey.radarr);
+    final bazarr = asked(ServiceKey.bazarr);
+    expect(jellyfin, greaterThan(0));
+
+    // Bazarr is silent too, and keeps its own Retry.
+    await tester.tap(find.bySemanticsLabel(RegExp(r'^Jellyfin\. .*Retry$')));
+    await _answer(tester);
+
+    expect(asked(ServiceKey.jellyfin), greaterThan(jellyfin));
+    expect(asked(ServiceKey.radarr), radarr);
+    expect(asked(ServiceKey.bazarr), bazarr);
 
     await harness.unmount(tester);
   });
