@@ -50,7 +50,7 @@ final mediaRadarrCopyProvider = FutureProvider.autoDispose
     .family<MediaAnswer<MediaRadarrCopy>, MediaSource>((ref, source) async {
       final tmdbId = source.key.tmdbId;
       if (!source.key.isMovie || tmdbId == null) {
-        throw ArgumentError.value(source.key, 'key', 'not a film');
+        throw ArgumentError.value(source.key, 'key', 'not a movie');
       }
       final radarr = ref.watch(radarrServiceForProvider(source.connectionId));
       final movie = await radarr.getMovieByTmdbId(tmdbId);
