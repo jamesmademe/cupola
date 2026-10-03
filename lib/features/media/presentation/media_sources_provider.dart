@@ -420,3 +420,14 @@ final mediaRecommendationsProvider = FutureProvider.autoDispose
           .watch(seerrServiceForProvider(source.connectionId))
           .getRecommendations(source.key.isMovie ? 'movie' : 'tv', tmdbId);
     }, retry: noProviderRetry);
+
+/// One Radarr copy's history, read when History opens.
+final mediaRadarrHistoryProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, ({String connectionId, int movieId})>((
+      ref,
+      copy,
+    ) {
+      return ref
+          .watch(radarrServiceForProvider(copy.connectionId))
+          .getMovieHistory(copy.movieId);
+    }, retry: noProviderRetry);

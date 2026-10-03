@@ -391,6 +391,14 @@ class RadarrFake extends ArrFake {
     if (r.method == 'GET' && r.path == '/api/v3/movie/lookup') {
       return NetworkReply.json(movies(c));
     }
+    // One film's history, unpaged, as `/history/movie` answers it.
+    if (r.method == 'GET' && r.path == '/api/v3/history/movie') {
+      final id = r.query['movieId'];
+      return NetworkReply.json([
+        for (final record in history(c))
+          if ('${record['movieId']}' == id) record,
+      ]);
+    }
     if (r.method == 'GET' && r.path == '/api/v3/moviefile') {
       return NetworkReply.json(const <Object?>[]);
     }

@@ -267,6 +267,23 @@ class RadarrService with ArrActivityMixin {
     return null;
   }
 
+  /// One film's history, newest first (`GET /api/v3/history/movie`,
+  /// unpaged). A failure travels.
+  Future<List<Map<String, dynamic>>> getMovieHistory(int movieId) async {
+    final response = await client.get(
+      '/api/v3/history/movie',
+      queryParameters: {'movieId': movieId},
+    );
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Radarr answered without a history list');
+    }
+    final records = [
+      for (final item in data.whereType<Map>()) item.cast<String, dynamic>(),
+    ]..sort((a, b) => '${b['date'] ?? ''}'.compareTo('${a['date'] ?? ''}'));
+    return records;
+  }
+
   /// Fetches all quality profiles.
   Future<List<Map<String, dynamic>>> getQualityProfiles() async {
     return fetchQualityProfiles();

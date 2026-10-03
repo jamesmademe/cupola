@@ -10,6 +10,7 @@ import 'package:material_color_utilities/material_color_utilities.dart';
 
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
 
 /// The colours a title's artwork lights its room with (brand book, *The title
 /// light*): derived, never picked.
@@ -97,11 +98,18 @@ Future<TitleLight?> titleLightFromPixels(List<int> pixels) async {
 /// fetched fails the provider, and the room keeps the lamp.
 final titleLightProvider = FutureProvider.autoDispose
     .family<TitleLight?, String>((ref, url) async {
-      final provider = ResizeImage(
-        CachedNetworkImageProvider(url, cacheManager: pinnedImageCacheFor(url)),
-        width: titleLightDecodeSize,
-        height: titleLightDecodeSize,
-      );
+      // Through the artwork ladder like every artwork read: a 64 box, rounded
+      // up to its rung. A light is a hue, and a hue needs no detail.
+      final provider =
+          artworkCacheSize(
+            const Size.square(titleLightDecodeSize * 1.0),
+            1,
+          ).resize(
+            CachedNetworkImageProvider(
+              url,
+              cacheManager: pinnedImageCacheFor(url),
+            ),
+          );
       final decoded = Completer<ui.Image>();
       final stream = provider.resolve(ImageConfiguration.empty);
       late final ImageStreamListener listener;

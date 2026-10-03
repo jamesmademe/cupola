@@ -19,11 +19,14 @@ import 'package:cupola/core/models/arr_media_file.dart';
 import 'package:cupola/core/status/media_action.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_collection_banner.dart';
@@ -293,7 +296,11 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             summary: summaries.files,
             body: (context) => _Files(rows: rows, settings: settings),
           ),
-          _ManageRow(title: 'History', summary: summaries.history),
+          _ManageRow(
+            title: 'History',
+            summary: summaries.history,
+            body: (context) => _History(rows: rows, settings: settings),
+          ),
           if (summaries.subtitles case final subtitles?)
             _ManageRow(title: 'Subtitles', summary: subtitles),
           _ManageRow(title: 'Search releases', summary: summaries.search),
@@ -1054,6 +1061,137 @@ class _Files extends StatelessWidget {
           },
         ],
       ],
+    );
+  }
+}
+
+/// History, open: each Radarr copy's own events, newest first, read when the
+/// section opens.
+class _History extends ConsumerWidget {
+  const _History({required this.rows, required this.settings});
+
+  final List<MediaRow> rows;
+  final SettingsModel settings;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final room = CupolaRoom.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final copies = [
+      for (final row in rows)
+        if (row case MediaConnectionRow(
+          :final connection,
+          reading: MediaReadingAnswered(:final answer),
+        ))
+          if (answer.value case MediaRadarrCopy(:final movie?))
+            (connection: connection, movieId: movie.id),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final copy in copies) ...[
+          Padding(
+            padding: const EdgeInsets.only(
+              top: AppSpacing.sm,
+              bottom: AppSpacing.xs,
+            ),
+            child: Text(
+              settings.connectionTitle(
+                copy.connection.id,
+                copy.connection.service,
+              ),
+              style: AppType.label.copyWith(color: room.inkSecondary),
+            ),
+          ),
+          switch (ref.watch(
+            mediaRadarrHistoryProvider((
+              connectionId: copy.connection.id,
+              movieId: copy.movieId,
+            )),
+          )) {
+            AsyncValue(:final value?) when value.isEmpty => Text(
+              'Nothing in its history yet',
+              style: AppType.meta.copyWith(color: room.inkTertiary),
+            ),
+            AsyncValue(:final value?) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final record in value.take(8))
+                  _HistoryLine(record: record, scheme: scheme),
+              ],
+            ),
+            AsyncValue(:final error?) => InlineErrorRetry(
+              message: 'Could not read the history',
+              error: error,
+              service: copy.connection.service,
+              instanceId: copy.connection.id,
+              onRetry: () => ref.invalidate(
+                mediaRadarrHistoryProvider((
+                  connectionId: copy.connection.id,
+                  movieId: copy.movieId,
+                )),
+              ),
+            ),
+            _ => const ShimmerPlaceholder(height: 36),
+          },
+        ],
+      ],
+    );
+  }
+}
+
+/// One event: its word in its tone, the release's quality, the day.
+class _HistoryLine extends StatelessWidget {
+  const _HistoryLine({required this.record, required this.scheme});
+
+  final Map<String, dynamic> record;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final event = '${record['eventType'] ?? ''}';
+    final quality = mapOrNull(
+      mapOrNull(record['quality'])?['quality'],
+    )?['name'];
+    final date = '${record['date'] ?? ''}';
+    final words = [
+      historyEventLabel(event),
+      if (quality is String && quality.isNotEmpty) qualityWords(quality),
+      if (date.isNotEmpty) formatShortDate(date),
+    ];
+    return Semantics(
+      container: true,
+      label: words.join('. '),
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: statusToneColor(
+                  scheme,
+                  historyEventTone(event),
+                  surface: room.ground,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                words.join(' · '),
+                style: AppType.meta
+                    .weight(FontWeight.w400)
+                    .copyWith(color: room.inkSecondary),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

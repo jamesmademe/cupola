@@ -70,6 +70,29 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('History opens on each copy\'s own imports', (tester) async {
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.tearsOfSteel);
+
+    await tester.tap(find.text('History'));
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(
+      find.bySemanticsLabel(RegExp(r'^Imported\. 1080p Bluray\. ')),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(RegExp(r'^Imported\. 2160p Bluray\. ')),
+      findsOneWidget,
+    );
+
+    await harness.unmount(tester);
+  });
+
   testWidgets('P4, without Seerr: one dimmed row that sets it up', (
     tester,
   ) async {
