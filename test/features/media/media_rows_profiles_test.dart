@@ -19,11 +19,17 @@ import 'package:cupola/features/stream/domain/stream_external_match.dart';
 import '../../test_helpers/profiles/profiles.dart';
 
 /// The rows of [title] under [profile], once no source is still waiting.
-Future<List<MediaRow>> _rows(ConfigProfile profile, WorldTitle title) async {
+Future<List<MediaRow>> _rows(
+  ConfigProfile profile,
+  WorldTitle title, {
+  MediaKey? key,
+}) async {
   final harness = await ProfileHarness.start(profile);
   final container = harness.container();
-  final key = MediaKey.movie(title.tmdbId);
-  final rows = mediaMovieRowsProvider(key);
+  key ??= title.isSeries
+      ? MediaKey.tv(title.tmdbId)
+      : MediaKey.movie(title.tmdbId);
+  final rows = mediaRowsProvider(key);
   container.listen(rows, (_, _) {});
   for (var turn = 0; turn < 200; turn++) {
     final now = container.read(rows);
@@ -88,7 +94,7 @@ void main() {
       final rows = await _rows(Profiles.p1, WorldTitles.tearsOfSteel);
 
       final bazarr = _answer<MediaBazarrCopy?>(_row(rows, WorldIds.bazarr));
-      expect(bazarr?.radarrConnectionId, WorldIds.radarr);
+      expect(bazarr?.arrConnectionId, WorldIds.radarr);
       expect(
         bazarr?.movie?.missingLanguages.map((language) => language.code2),
         contains('de'),
@@ -126,6 +132,43 @@ void main() {
         expect(_answer<MediaBazarrCopy?>(_row(rows, WorldIds.bazarr)), isNull);
       },
     );
+  });
+
+  group('a series', () {
+    test('P1, Cosmos Laundromat: Sonarr asked by the TVDB id Seerr names, '
+        'Bazarr on its copy', () async {
+      final rows = await _rows(Profiles.p1, WorldTitles.cosmosLaundromat);
+
+      expect(rows.map(_describe), [
+        '${WorldIds.jellyfin}:answered',
+        '${WorldIds.sonarr}:answered',
+        '${WorldIds.bazarr}:answered',
+        '${WorldIds.seerr}:answered',
+      ]);
+      final sonarr = _answer<MediaSonarrCopy>(_row(rows, WorldIds.sonarr));
+      expect(sonarr.series?.tvdbId, WorldTitles.cosmosLaundromat.tvdbId);
+      final bazarr = _answer<MediaBazarrCopy?>(_row(rows, WorldIds.bazarr));
+      expect(bazarr?.arrConnectionId, WorldIds.sonarr);
+      expect(bazarr?.series?.title, WorldTitles.cosmosLaundromat.title);
+    });
+
+    test('known by TVDB alone, without Seerr: Sonarr answers, Seerr is not '
+        'asked', () async {
+      final rows = await _rows(
+        Profiles.p4,
+        WorldTitles.cosmosLaundromat,
+        key: MediaKey.tvdb(WorldTitles.cosmosLaundromat.tvdbId!),
+      );
+
+      expect(rows.map(_describe), [
+        '${WorldIds.sonarr}:answered',
+        'seerr:not-set-up',
+      ]);
+      expect(
+        _answer<MediaSonarrCopy>(_row(rows, WorldIds.sonarr)).isTracked,
+        isTrue,
+      );
+    });
   });
 
   group('P5, known through Seerr', () {

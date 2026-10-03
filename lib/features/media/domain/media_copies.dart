@@ -5,6 +5,8 @@ import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/movies/domain/radarr_status.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/domain/sonarr_status.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_external_match.dart';
 
@@ -34,6 +36,31 @@ class MediaRadarrCopy {
   }
 }
 
+/// What one Sonarr holds of a series: its record, or nothing, and what its
+/// queue says about it.
+class MediaSonarrCopy {
+  const MediaSonarrCopy({required this.series, required this.queue});
+
+  /// Null when Sonarr answered and does not track the series.
+  final SonarrSeries? series;
+
+  /// This Sonarr's queue, indexed by series.
+  final ArrQueueSnapshot queue;
+
+  bool get isTracked => series != null;
+
+  /// The copy's status, null while Sonarr does not track the series.
+  MediaStatusInfo? get status {
+    final series = this.series;
+    if (series == null) return null;
+    return sonarrSeriesStatus(
+      series,
+      queueEntry: queue.entryFor(series.id),
+      queueUnknown: !queue.isWhole,
+    );
+  }
+}
+
 /// What one media server answered about a title, looked up by its ids.
 ///
 /// [StreamLookupOutcome.notVerified] is case f: something with that title
@@ -56,37 +83,53 @@ class MediaStreamCopy {
   final StreamItem? item;
 }
 
-/// What Bazarr holds for one Radarr copy of a film.
+/// What Bazarr holds for one arr copy of a title.
 ///
-/// Bazarr follows one Radarr, and its ids are that Radarr's: a film is matched
-/// to a copy by the copy's movie id and checked against the copy's path, or
-/// its title and year, so the 4K Radarr's film 12 is never read as the other
-/// Radarr's film 12.
+/// Bazarr follows one Radarr and one Sonarr, and its ids are theirs: a title
+/// is matched to a copy by the copy's id and checked against the copy's path,
+/// or its title and year, so the 4K Radarr's film 12 is never read as the
+/// other Radarr's film 12.
 class MediaBazarrCopy {
-  const MediaBazarrCopy({required this.radarrConnectionId, this.movie});
+  const MediaBazarrCopy({
+    required this.arrConnectionId,
+    this.movie,
+    this.series,
+  });
 
-  /// The Radarr connection whose copy Bazarr covers.
-  final String radarrConnectionId;
+  /// The Radarr or Sonarr connection whose copy Bazarr covers.
+  final String arrConnectionId;
 
-  /// Null when Bazarr answered and does not follow that copy.
+  /// The film Bazarr follows, for a film.
   final BazarrMovie? movie;
+
+  /// The series Bazarr follows, for a series.
+  final BazarrSeries? series;
 }
 
 /// What one Seerr knows of a title: its record, and the arr servers it
 /// would place it on.
 class MediaSeerrRecord {
-  const MediaSeerrRecord({required this.details, this.radarrServers});
+  const MediaSeerrRecord({required this.details, this.arrServers});
 
   /// `/movie/:id` or `/tv/:id`, as Seerr answered: identity, ratings, cast and
   /// the `mediaInfo` the rows read.
   final Map<String, dynamic> details;
 
-  /// Seerr's Radarr servers, null when they could not be read (an account
-  /// without ADMIN, or a failed read): then a copy cannot be bound to one.
-  final List<SeerrArrServer>? radarrServers;
+  /// Seerr's servers of the arr that holds this kind of title, Radarr's for a
+  /// film and Sonarr's for a series; null when they could not be read (an
+  /// account without ADMIN, or a failed read): then a copy cannot be bound to
+  /// one.
+  final List<SeerrArrServer>? arrServers;
 
   /// Seerr's media row for the title, null when it has no record.
   Map<String, dynamic>? get mediaInfo => mapOrNull(details['mediaInfo']);
+
+  /// TVDB's id for a series, as TMDB's record names it: what Sonarr is asked
+  /// by.
+  int? get tvdbId {
+    final id = intOrNull(mapOrNull(details['externalIds'])?['tvdbId']);
+    return id == null || id <= 0 ? null : id;
+  }
 
   /// The copies Seerr says an arr holds, the standard one first.
   List<SeerrMediaCopy> get copies => SeerrMediaCopy.fromMediaInfo(mediaInfo);

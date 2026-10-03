@@ -14,6 +14,7 @@ import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -25,6 +26,18 @@ import 'package:cupola/features/stream/domain/stream_external_match.dart';
 ///
 /// A record, so a family keyed on it compares structurally.
 typedef MediaSource = ({MediaKey key, String connectionId});
+
+/// The connections of [service] that are set up enough to ask, in the order
+/// the settings keep them.
+List<ServiceInstance> _configured(Ref ref, ServiceKey service) => ref
+    .watch(currentSettingsProvider)
+    .instancesOf(service)
+    .where((instance) => instance.isConfigured)
+    .toList(growable: false);
+
+/// The arr that holds titles of [key]'s kind.
+ServiceKey _arrOf(MediaKey key) =>
+    key.isMovie ? ServiceKey.radarr : ServiceKey.sonarr;
 
 /// What the Radarr [MediaSource.connectionId] holds of the film: one
 /// `movie?tmdbId=` read, and that Radarr's own queue.
@@ -52,13 +65,81 @@ final mediaRadarrCopyProvider = FutureProvider.autoDispose
       );
     }, retry: noProviderRetry);
 
+/// TVDB's id of the series [MediaKey] names: what Sonarr is asked by.
+///
+/// The key's own, else the first Seerr that answers with TMDB's record of the
+/// series, else the first Sonarr whose library carries the TMDB id (Sonarr v4
+/// records it; v3 does not, and a v3 Sonarr then cannot be matched without a
+/// Seerr). Null when nobody can say.
+final mediaTvdbIdProvider = FutureProvider.autoDispose.family<int?, MediaKey>((
+  ref,
+  key,
+) async {
+  if (key.isMovie) return null;
+  final own = key.tvdbId;
+  if (own != null) return own;
+  for (final seerr in _configured(ref, ServiceKey.seerr)) {
+    try {
+      final record = await ref.watch(
+        mediaSeerrRecordProvider((key: key, connectionId: seerr.id)).future,
+      );
+      final tvdb = record.value.tvdbId;
+      if (tvdb != null) return tvdb;
+    } catch (_) {
+      // That Seerr's failure is on its own row; another may still say.
+    }
+  }
+  for (final sonarr in _configured(ref, ServiceKey.sonarr)) {
+    try {
+      final library = await ref
+          .watch(sonarrServiceForProvider(sonarr.id))
+          .getSeriesOrThrow();
+      for (final series in library) {
+        if (series.tmdbId == key.tmdbId && series.tvdbId > 0) {
+          return series.tvdbId;
+        }
+      }
+    } catch (_) {
+      // That Sonarr's failure is on its own row.
+    }
+  }
+  return null;
+}, retry: noProviderRetry);
+
+/// What the Sonarr [MediaSource.connectionId] holds of the series: one
+/// `series?tvdbId=` read, and that Sonarr's own queue by series.
+///
+/// A series whose TVDB id nobody can name reads as one this Sonarr does not
+/// track ([mediaTvdbIdProvider] says when that is honest).
+final mediaSonarrCopyProvider = FutureProvider.autoDispose
+    .family<MediaAnswer<MediaSonarrCopy>, MediaSource>((ref, source) async {
+      if (source.key.isMovie) {
+        throw ArgumentError.value(source.key, 'key', 'not a series');
+      }
+      final sonarr = ref.watch(sonarrServiceForProvider(source.connectionId));
+      final tvdbId = await ref.watch(mediaTvdbIdProvider(source.key).future);
+      final series = tvdbId == null
+          ? null
+          : await sonarr.getSeriesByTvdbId(tvdbId);
+      final queue = series == null
+          ? ArrQueueSnapshot.empty
+          : await ref.watch(
+              sonarrQueueSnapshotForProvider(source.connectionId).future,
+            );
+      return MediaAnswer(
+        MediaSonarrCopy(series: series, queue: queue),
+        DateTime.now(),
+      );
+    }, retry: noProviderRetry);
+
 /// What the media server [MediaSource.connectionId] answers about the title,
 /// looked up by its ids and checked again here, as `streamAvailabilityProvider`
 /// does: a client that forgets to verify cannot put a wrong Play on the page.
 final mediaStreamCopyProvider = FutureProvider.autoDispose
     .family<MediaAnswer<MediaStreamCopy>, MediaSource>((ref, source) async {
-      final settings = ref.watch(currentSettingsProvider);
-      final connection = settings.instanceById(source.connectionId);
+      final connection = ref
+          .watch(currentSettingsProvider)
+          .instanceById(source.connectionId);
       final client = switch (connection?.service) {
         ServiceKey.jellyfin => ref.watch(
           jellyfinClientForProvider(source.connectionId),
@@ -100,8 +181,8 @@ final mediaStreamCopyProvider = FutureProvider.autoDispose
     }, retry: noProviderRetry);
 
 /// What the Seerr [MediaSource.connectionId] knows of the title: its record
-/// and, when the connection may read them, the Radarr servers it places
-/// films on.
+/// and, when the connection may read them, the servers of the arr that holds
+/// this kind of title.
 final mediaSeerrRecordProvider = FutureProvider.autoDispose
     .family<MediaAnswer<MediaSeerrRecord>, MediaSource>((ref, source) async {
       final tmdbId = source.key.tmdbId;
@@ -113,163 +194,217 @@ final mediaSeerrRecordProvider = FutureProvider.autoDispose
           ? await seerr.getMovie(tmdbId)
           : await seerr.getTv(tmdbId);
       List<SeerrArrServer>? servers;
-      if (source.key.isMovie) {
-        try {
-          servers = await seerr.getArrServers(ServiceKey.radarr);
-        } catch (_) {
-          // An account without ADMIN may not read them, and a failed read is
-          // no list either: no copy is bound, and nothing is claimed.
-          servers = null;
-        }
+      try {
+        servers = await seerr.getArrServers(_arrOf(source.key));
+      } catch (_) {
+        // An account without ADMIN may not read them, and a failed read is
+        // no list either: no copy is bound, and nothing is claimed.
+        servers = null;
       }
       return MediaAnswer(
-        MediaSeerrRecord(details: details, radarrServers: servers),
+        MediaSeerrRecord(details: details, arrServers: servers),
         DateTime.now(),
       );
     }, retry: noProviderRetry);
 
-/// What the Bazarr [MediaSource.connectionId] holds of the film: the one
-/// Radarr copy it follows, checked against that copy's path, or its title and
-/// year.
+/// Whether [path], [title] and [year] Bazarr holds name the same copy as the
+/// arr's: the same path, or the same title and year.
+bool _sameCopy({
+  required String? bazarrPath,
+  required String? bazarrTitle,
+  required int? bazarrYear,
+  required String? path,
+  required String title,
+  required int year,
+}) {
+  if ((bazarrPath ?? '').isNotEmpty && bazarrPath == path) return true;
+  final normalised = normaliseStreamTitle(bazarrTitle);
+  return normalised != null &&
+      normalised == normaliseStreamTitle(title) &&
+      bazarrYear == year;
+}
+
+/// What the Bazarr [MediaSource.connectionId] holds of the title: the one arr
+/// copy it follows, checked against that copy's path, or its title and year.
 ///
-/// Bazarr follows one Radarr and speaks in its ids, so every tracked copy is
-/// asked by its movie id and the answer verified; the first that matches is
-/// the copy Bazarr covers. A copy whose Radarr did not answer is skipped: it is
-/// Radarr's failure, already on Radarr's own row.
+/// Bazarr follows one Radarr and one Sonarr and speaks in their ids, so every
+/// tracked copy is asked by its id and the answer verified; the first that
+/// matches is the copy Bazarr covers. A copy whose arr did not answer is
+/// skipped: it is the arr's failure, already on the arr's own row.
 final mediaBazarrCopyProvider = FutureProvider.autoDispose
     .family<MediaAnswer<MediaBazarrCopy?>, MediaSource>((ref, source) async {
       final bazarr = ref.watch(bazarrServiceForProvider(source.connectionId));
-      final settings = ref.watch(currentSettingsProvider);
-      for (final radarr
-          in settings
-              .instancesOf(ServiceKey.radarr)
-              .where((instance) => instance.isConfigured)) {
-        final MediaAnswer<MediaRadarrCopy> answer;
+      final key = source.key;
+      for (final arr in _configured(ref, _arrOf(key))) {
+        final arrSource = (key: key, connectionId: arr.id);
+        // The arr's copy, or nothing to ask Bazarr about. The arr's failure is
+        // on its own row and skips the copy here; Bazarr's own fails this one.
+        final ({int id, String? path, String title, int year})? copy;
         try {
-          answer = await ref.watch(
-            mediaRadarrCopyProvider((
-              key: source.key,
-              connectionId: radarr.id,
-            )).future,
-          );
+          copy = key.isMovie
+              ? switch ((await ref.watch(
+                  mediaRadarrCopyProvider(arrSource).future,
+                )).value.movie) {
+                  final movie? => (
+                    id: movie.id,
+                    path: movie.path,
+                    title: movie.title,
+                    year: movie.year,
+                  ),
+                  null => null,
+                }
+              : switch ((await ref.watch(
+                  mediaSonarrCopyProvider(arrSource).future,
+                )).value.series) {
+                  final series? => (
+                    id: series.id,
+                    path: series.path,
+                    title: series.title,
+                    year: series.year,
+                  ),
+                  null => null,
+                };
         } catch (_) {
           continue;
         }
-        final movie = answer.value.movie;
-        if (movie == null) continue;
-        final followed = await bazarr.getMovieById(movie.id);
-        if (followed == null) continue;
-        final samePath =
-            (followed.path ?? '').isNotEmpty && followed.path == movie.path;
-        final title = normaliseStreamTitle(followed.title);
-        final sameTitle =
-            title != null &&
-            title == normaliseStreamTitle(movie.title) &&
-            followed.year == movie.year;
-        if (samePath || sameTitle) {
-          return MediaAnswer(
-            MediaBazarrCopy(radarrConnectionId: radarr.id, movie: followed),
-            DateTime.now(),
-          );
+        if (copy == null) continue;
+        if (key.isMovie) {
+          final followed = await bazarr.getMovieById(copy.id);
+          if (followed != null &&
+              _sameCopy(
+                bazarrPath: followed.path,
+                bazarrTitle: followed.title,
+                bazarrYear: followed.year,
+                path: copy.path,
+                title: copy.title,
+                year: copy.year,
+              )) {
+            return MediaAnswer(
+              MediaBazarrCopy(arrConnectionId: arr.id, movie: followed),
+              DateTime.now(),
+            );
+          }
+        } else {
+          final followed = await bazarr.getSeriesById(copy.id);
+          if (followed != null &&
+              _sameCopy(
+                bazarrPath: followed.path,
+                bazarrTitle: followed.title,
+                bazarrYear: followed.year,
+                path: copy.path,
+                title: copy.title,
+                year: copy.year,
+              )) {
+            return MediaAnswer(
+              MediaBazarrCopy(arrConnectionId: arr.id, series: followed),
+              DateTime.now(),
+            );
+          }
         }
       }
       return MediaAnswer<MediaBazarrCopy?>(null, DateTime.now());
     }, retry: noProviderRetry);
 
-/// The "On your server" rows of a film, one per fact, in the page's order:
-/// the media servers, the Radarr copies (or Seerr's claims about them), Bazarr,
+/// The "On your server" rows of a title, one per fact, in the page's order:
+/// the media servers, the arr copies (or Seerr's claims about them), Bazarr,
 /// Seerr.
 ///
 /// Every connection is read on its own, and no row waits for another: a
 /// connection that did not answer costs its own row, never the page (rule 1).
 /// What is not set up is decided from the settings alone, before anything is
 /// asked (rule 3). A media server's unverified match draws nothing (rule 7).
-final mediaMovieRowsProvider = Provider.autoDispose
-    .family<List<MediaRow>, MediaKey>((ref, key) {
-      final settings = ref.watch(currentSettingsProvider);
-      List<ServiceInstance> configured(ServiceKey service) => settings
-          .instancesOf(service)
-          .where((instance) => instance.isConfigured)
-          .toList(growable: false);
+final mediaRowsProvider = Provider.autoDispose.family<List<MediaRow>, MediaKey>(
+  (ref, key) {
+    final rows = <MediaRow>[];
+    MediaSource sourceOf(ServiceInstance connection) =>
+        (key: key, connectionId: connection.id);
 
-      final rows = <MediaRow>[];
-      MediaSource sourceOf(ServiceInstance connection) =>
-          (key: key, connectionId: connection.id);
-
-      for (final service in const [ServiceKey.jellyfin, ServiceKey.plex]) {
-        for (final connection in configured(service)) {
-          final reading = MediaReading.of(
-            ref.watch(mediaStreamCopyProvider(sourceOf(connection))),
-          );
-          if (reading case MediaReadingAnswered(
-            :final answer,
-          ) when answer.value.outcome == StreamLookupOutcome.notVerified) {
-            continue;
-          }
-          rows.add(MediaConnectionRow<MediaStreamCopy>(connection, reading));
+    for (final service in const [ServiceKey.jellyfin, ServiceKey.plex]) {
+      for (final connection in _configured(ref, service)) {
+        final reading = MediaReading.of(
+          ref.watch(mediaStreamCopyProvider(sourceOf(connection))),
+        );
+        if (reading case MediaReadingAnswered(
+          :final answer,
+        ) when answer.value.outcome == StreamLookupOutcome.notVerified) {
+          continue;
         }
+        rows.add(MediaConnectionRow<MediaStreamCopy>(connection, reading));
       }
+    }
 
-      final seerrs = configured(ServiceKey.seerr);
-      final seerrReadings = [
-        for (final seerr in seerrs)
-          (
-            connection: seerr,
-            reading: MediaReading.of(
-              ref.watch(mediaSeerrRecordProvider(sourceOf(seerr))),
-            ),
+    // Seerr needs TMDB's id: a series known only by TVDB's is not asked.
+    final seerrs = key.tmdbId == null
+        ? const <ServiceInstance>[]
+        : _configured(ref, ServiceKey.seerr);
+    final seerrReadings = [
+      for (final seerr in seerrs)
+        (
+          connection: seerr,
+          reading: MediaReading.of(
+            ref.watch(mediaSeerrRecordProvider(sourceOf(seerr))),
           ),
-      ];
+        ),
+    ];
 
-      final radarrs = configured(ServiceKey.radarr);
-      for (final connection in radarrs) {
-        rows.add(
-          MediaConnectionRow<MediaRadarrCopy>(
-            connection,
-            MediaReading.of(
-              ref.watch(mediaRadarrCopyProvider(sourceOf(connection))),
-            ),
-          ),
-        );
-      }
-      final claims = [
-        for (final seerr in seerrReadings)
-          if (seerr.reading case MediaReadingAnswered(:final answer))
-            for (final copy in answer.value.copies)
-              if (SeerrBoundCopy.of(
-                    copy,
-                    arr: ServiceKey.radarr,
-                    servers: answer.value.radarrServers,
-                    connections: radarrs,
-                  )
-                  case final bound when bound.isKnownOnlyToSeerr)
-                MediaThroughSeerrRow(
-                  seerr: seerr.connection,
-                  copy: bound,
-                  mediaInfo: answer.value.mediaInfo,
+    final arr = _arrOf(key);
+    final arrs = _configured(ref, arr);
+    for (final connection in arrs) {
+      rows.add(
+        key.isMovie
+            ? MediaConnectionRow<MediaRadarrCopy>(
+                connection,
+                MediaReading.of(
+                  ref.watch(mediaRadarrCopyProvider(sourceOf(connection))),
                 ),
-      ];
-      rows.addAll(claims);
-      if (radarrs.isEmpty && claims.isEmpty) {
-        rows.add(const MediaNotSetUpRow(ServiceKey.radarr));
-      }
+              )
+            : MediaConnectionRow<MediaSonarrCopy>(
+                connection,
+                MediaReading.of(
+                  ref.watch(mediaSonarrCopyProvider(sourceOf(connection))),
+                ),
+              ),
+      );
+    }
+    final claims = [
+      for (final seerr in seerrReadings)
+        if (seerr.reading case MediaReadingAnswered(:final answer))
+          for (final copy in answer.value.copies)
+            if (SeerrBoundCopy.of(
+                  copy,
+                  arr: arr,
+                  servers: answer.value.arrServers,
+                  connections: arrs,
+                )
+                case final bound when bound.isKnownOnlyToSeerr)
+              MediaThroughSeerrRow(
+                seerr: seerr.connection,
+                copy: bound,
+                mediaInfo: answer.value.mediaInfo,
+              ),
+    ];
+    rows.addAll(claims);
+    if (arrs.isEmpty && claims.isEmpty) rows.add(MediaNotSetUpRow(arr));
 
-      for (final connection in configured(ServiceKey.bazarr)) {
-        rows.add(
-          MediaConnectionRow<MediaBazarrCopy?>(
-            connection,
-            MediaReading.of(
-              ref.watch(mediaBazarrCopyProvider(sourceOf(connection))),
-            ),
+    for (final connection in _configured(ref, ServiceKey.bazarr)) {
+      rows.add(
+        MediaConnectionRow<MediaBazarrCopy?>(
+          connection,
+          MediaReading.of(
+            ref.watch(mediaBazarrCopyProvider(sourceOf(connection))),
           ),
-        );
-      }
+        ),
+      );
+    }
 
-      for (final seerr in seerrReadings) {
-        rows.add(
-          MediaConnectionRow<MediaSeerrRecord>(seerr.connection, seerr.reading),
-        );
-      }
-      if (seerrs.isEmpty) rows.add(const MediaNotSetUpRow(ServiceKey.seerr));
-      return rows;
-    });
+    for (final seerr in seerrReadings) {
+      rows.add(
+        MediaConnectionRow<MediaSeerrRecord>(seerr.connection, seerr.reading),
+      );
+    }
+    if (_configured(ref, ServiceKey.seerr).isEmpty) {
+      rows.add(const MediaNotSetUpRow(ServiceKey.seerr));
+    }
+    return rows;
+  },
+);
