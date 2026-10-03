@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/widgets/file_info_section.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
 
@@ -51,6 +52,20 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Manage'), findsWidgets);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Files & quality opens on each copy\'s file, read only then', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.tearsOfSteel);
+
+    expect(find.byType(FileInfoSection), findsNothing);
+    await tester.tap(find.text('Files & quality'));
+    await tester.pump();
+
+    expect(find.byType(FileInfoSection), findsNWidgets(2));
 
     await harness.unmount(tester);
   });

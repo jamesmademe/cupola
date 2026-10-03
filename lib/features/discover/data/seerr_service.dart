@@ -969,6 +969,16 @@ class SeerrService {
     return _discover('/api/v1/discover/trending', page: page);
   }
 
+  /// TMDB's recommendations for a title, as Seerr relays them: the first
+  /// page, titles only.
+  Future<List<MediaPreview>> getRecommendations(String mediaType, int tmdbId) {
+    return _discover(
+      '/api/v1/$mediaType/$tmdbId/recommendations',
+      page: 1,
+      forcedMediaType: mediaType,
+    );
+  }
+
   Future<Map<String, dynamic>> getMovie(int movieId) async {
     final response = await _client.get('/api/v1/movie/$movieId');
     return response.data;

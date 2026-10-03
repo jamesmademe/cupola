@@ -11,6 +11,11 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/features/media/domain/quality_words.dart';
+import 'package:cupola/features/media/domain/media_reading.dart';
+import 'package:cupola/features/media/domain/media_copies.dart';
+import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/models/arr_media_file.dart';
 import 'package:cupola/core/status/media_action.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
@@ -19,6 +24,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_collection_banner.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -90,6 +96,17 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     if (!opened && mounted) {
       SnackBarHelper.error(context, 'Could not open $serverName');
     }
+  }
+
+  /// The Seerr "More like this" is read through: the first one set up, while
+  /// the title has a TMDB id.
+  String? _recommender(SettingsModel settings) {
+    if (mediaKey.tmdbId == null) return null;
+    return settings
+        .instancesOf(ServiceKey.seerr)
+        .where((instance) => instance.isConfigured)
+        .firstOrNull
+        ?.id;
   }
 
   void _toManage() {
@@ -225,6 +242,20 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                     const SizedBox(height: AppSpacing.section),
                     DiscoverCollectionBanner(collection: collection),
                   ],
+                  if (_recommender(settings) case final seerr?) ...[
+                    const SizedBox(height: AppSpacing.section),
+                    DiscoverCarousel(
+                      title: 'More like this',
+                      sectionId: 'media-more-like-this',
+                      forcedMediaType: mediaKey.isMovie ? 'movie' : 'tv',
+                      items: ref.watch(
+                        mediaRecommendationsProvider((
+                          key: mediaKey,
+                          connectionId: seerr,
+                        )),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -257,7 +288,11 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       _RowsCard(
         views: const [],
         children: [
-          _ManageRow(title: 'Files & quality', summary: summaries.files),
+          _ManageRow(
+            title: 'Files & quality',
+            summary: summaries.files,
+            body: (context) => _Files(rows: rows, settings: settings),
+          ),
           _ManageRow(title: 'History', summary: summaries.history),
           if (summaries.subtitles case final subtitles?)
             _ManageRow(title: 'Subtitles', summary: subtitles),
@@ -884,16 +919,28 @@ class _ServerRow extends StatelessWidget {
 }
 
 /// A closed operator section: its title and what it holds in one line.
-class _ManageRow extends StatelessWidget {
-  const _ManageRow({required this.title, required this.summary});
+/// A closed operator section: its title and what it holds in one line,
+/// opening on [body] when there is one. Its content is built when it opens:
+/// a section nobody opens reads nothing.
+class _ManageRow extends StatefulWidget {
+  const _ManageRow({required this.title, required this.summary, this.body});
 
   final String title;
   final String summary;
+  final WidgetBuilder? body;
+
+  @override
+  State<_ManageRow> createState() => _ManageRowState();
+}
+
+class _ManageRowState extends State<_ManageRow> {
+  var _open = false;
 
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
-    return ConstrainedBox(
+    final body = widget.body;
+    final header = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 60),
       child: Row(
         children: [
@@ -902,18 +949,111 @@ class _ManageRow extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppType.row.copyWith(color: room.ink)),
-                if (summary.isNotEmpty)
+                Text(
+                  widget.title,
+                  style: AppType.row.copyWith(color: room.ink),
+                ),
+                if (widget.summary.isNotEmpty)
                   Text(
-                    summary,
-                    style: AppType.meta.copyWith(color: room.inkTertiary),
+                    widget.summary,
+                    style: AppType.meta
+                        .weight(FontWeight.w400)
+                        .copyWith(color: room.inkTertiary),
                   ),
               ],
             ),
           ),
-          Icon(Icons.expand_more_rounded, size: 18, color: room.inkTertiary),
+          if (body != null)
+            AnimatedRotation(
+              turns: _open ? 0.5 : 0,
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 220),
+              child: Icon(
+                Icons.expand_more_rounded,
+                size: 18,
+                color: room.inkTertiary,
+              ),
+            ),
         ],
       ),
+    );
+    if (body == null) return header;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          button: true,
+          expanded: _open,
+          child: InkWell(
+            onTap: () => setState(() => _open = !_open),
+            child: header,
+          ),
+        ),
+        if (_open)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.slabY),
+            child: body(context),
+          ),
+      ],
+    );
+  }
+}
+
+/// Files & quality, open: every copy under its connection's name, its file
+/// as the service records it, or the row a copy with nothing on disk keeps.
+class _Files extends StatelessWidget {
+  const _Files({required this.rows, required this.settings});
+
+  final List<MediaRow> rows;
+  final SettingsModel settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final copies = [
+      for (final row in rows)
+        if (row case MediaConnectionRow(
+          :final connection,
+          reading: MediaReadingAnswered(:final answer),
+        ))
+          if (answer.value case MediaRadarrCopy(:final movie?))
+            (connection: connection, file: movie.movieFile, folder: movie.path),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final copy in copies) ...[
+          Padding(
+            padding: const EdgeInsets.only(
+              top: AppSpacing.sm,
+              bottom: AppSpacing.xs,
+            ),
+            child: Text(
+              [
+                settings.connectionTitle(
+                  copy.connection.id,
+                  copy.connection.service,
+                ),
+                if (copy.file?.qualityName case final quality?
+                    when quality.isNotEmpty)
+                  qualityWords(quality),
+                if (copy.file?.size case final size? when size > 0)
+                  formatBytes(size),
+              ].join(' · '),
+              style: AppType.label.copyWith(color: room.inkSecondary),
+            ),
+          ),
+          switch (copy.file) {
+            ArrMediaFile(:final fileName?) => FileInfoSection.file(
+              fileName: fileName,
+              releasedAs: copy.file!.releasedAs,
+              path: copy.folder,
+            ),
+            _ => const FileInfoSection.missing(),
+          },
+        ],
+      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
@@ -408,3 +409,14 @@ final mediaRowsProvider = Provider.autoDispose.family<List<MediaRow>, MediaKey>(
     return rows;
   },
 );
+
+/// "More like this": TMDB's recommendations through the Seerr
+/// [MediaSource.connectionId], read when the page asks for them.
+final mediaRecommendationsProvider = FutureProvider.autoDispose
+    .family<List<MediaPreview>, MediaSource>((ref, source) async {
+      final tmdbId = source.key.tmdbId;
+      if (tmdbId == null) return const [];
+      return ref
+          .watch(seerrServiceForProvider(source.connectionId))
+          .getRecommendations(source.key.isMovie ? 'movie' : 'tv', tmdbId);
+    }, retry: noProviderRetry);
