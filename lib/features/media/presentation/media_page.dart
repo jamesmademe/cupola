@@ -28,7 +28,10 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
+import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
@@ -312,6 +315,21 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           settings.connectionTitle(connection.id, connection.service),
     );
     if (summaries == null) return const [];
+    final searches = [
+      for (final row in rows)
+        if (row case MediaConnectionRow(
+          :final connection,
+          reading: MediaReadingAnswered(:final answer),
+        ))
+          if (answer.value case MediaRadarrCopy(:final movie?))
+            (
+              name: settings.connectionTitle(connection.id, connection.service),
+              target: ReleaseSearchTarget.movie(
+                movieId: movie.id,
+                label: truncateTitle(movie.title),
+              ).stampedWith(connection.id),
+            ),
+    ];
     return [
       _Heading('Manage', key: _manageKey),
       _RowsCard(
@@ -327,8 +345,27 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             body: (context) => _History(rows: rows, settings: settings),
           ),
           if (summaries.subtitles case final subtitles?)
-            _ManageRow(title: 'Subtitles', summary: subtitles),
-          _ManageRow(title: 'Search releases', summary: summaries.search),
+            _ManageRow(
+              title: 'Subtitles',
+              summary: subtitles,
+              body: (context) => _Subtitles(rows: rows, settings: settings),
+            ),
+          _ManageRow(
+            title: 'Search releases',
+            summary: summaries.search,
+            // One copy: the row is the way in. More: it opens on the copies,
+            // and the search goes to the one chosen.
+            onTap: searches.length == 1
+                ? () => showReleaseSearch(context, ref, searches.single.target)
+                : null,
+            body: searches.length > 1
+                ? (context) => _SearchCopies(
+                    copies: searches,
+                    onSearch: (target) =>
+                        showReleaseSearch(context, ref, target),
+                  )
+                : null,
+          ),
         ],
       ),
     ];
@@ -1140,11 +1177,19 @@ class _SetUpPill extends StatelessWidget {
 /// opening on [body] when there is one. Its content is built when it opens:
 /// a section nobody opens reads nothing.
 class _ManageRow extends StatefulWidget {
-  const _ManageRow({required this.title, required this.summary, this.body});
+  const _ManageRow({
+    required this.title,
+    required this.summary,
+    this.body,
+    this.onTap,
+  }) : assert(body == null || onTap == null, 'a section opens or acts');
 
   final String title;
   final String summary;
   final WidgetBuilder? body;
+
+  /// What the row does instead of opening, when it leads straight there.
+  final VoidCallback? onTap;
 
   @override
   State<_ManageRow> createState() => _ManageRowState();
@@ -1180,6 +1225,12 @@ class _ManageRowState extends State<_ManageRow> {
               ],
             ),
           ),
+          if (widget.onTap != null)
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: room.inkTertiary,
+            ),
           if (body != null)
             AnimatedRotation(
               turns: _open ? 0.5 : 0,
@@ -1195,6 +1246,12 @@ class _ManageRowState extends State<_ManageRow> {
         ],
       ),
     );
+    if (widget.onTap case final onTap?) {
+      return Semantics(
+        button: true,
+        child: InkWell(onTap: onTap, child: header),
+      );
+    }
     if (body == null) return header;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1269,6 +1326,106 @@ class _Files extends StatelessWidget {
             ),
             _ => const FileInfoSection.missing(),
           },
+        ],
+      ],
+    );
+  }
+}
+
+/// Search releases, open on more than one copy: each copy a row that sends
+/// the search to its own connection.
+class _SearchCopies extends StatelessWidget {
+  const _SearchCopies({required this.copies, required this.onSearch});
+
+  final List<({String name, ReleaseSearchTarget target})> copies;
+  final ValueChanged<ReleaseSearchTarget> onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final copy in copies)
+          Semantics(
+            button: true,
+            label: 'Search releases on ${copy.name}',
+            excludeSemantics: true,
+            child: InkWell(
+              onTap: () => onSearch(copy.target),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: DesignTokens.sizeTouch,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        copy.name,
+                        style: AppType.label.copyWith(color: room.inkSecondary),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: room.inkTertiary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Subtitles, open: each Bazarr's languages for the movie, the ones on disk
+/// and the ones it is still looking for.
+class _Subtitles extends StatelessWidget {
+  const _Subtitles({required this.rows, required this.settings});
+
+  final List<MediaRow> rows;
+  final SettingsModel settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final copies = [
+      for (final row in rows)
+        if (row case MediaConnectionRow(
+          :final connection,
+          reading: MediaReadingAnswered(:final answer),
+        ))
+          if (answer.value case MediaBazarrCopy(:final movie?))
+            (connection: connection, movie: movie),
+    ];
+    Widget label(String text) => Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.s),
+      child: Text(
+        text,
+        style: AppType.label.copyWith(color: room.inkSecondary),
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final copy in copies) ...[
+          if (copies.length > 1)
+            label(
+              settings.connectionTitle(
+                copy.connection.id,
+                copy.connection.service,
+              ),
+            ),
+          if (copy.movie.presentLanguages.isNotEmpty) ...[
+            label('On disk'),
+            BazarrSubtitleLanguageWrap(languages: copy.movie.presentLanguages),
+          ],
+          if (copy.movie.missingLanguages.isNotEmpty) ...[
+            label('Wanted'),
+            BazarrSubtitleLanguageWrap(languages: copy.movie.missingLanguages),
+          ],
         ],
       ],
     );

@@ -221,4 +221,46 @@ void main() {
 
     await harness.unmount(tester);
   });
+
+  testWidgets('Subtitles opens on what Bazarr has and still wants', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.tearsOfSteel);
+
+    await tester.tap(find.text('Subtitles'));
+    await tester.pump();
+    expect(find.text('Wanted'), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Search releases asks which copy when there are two', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p7, WorldTitles.tearsOfSteel);
+
+    await tester.tap(find.text('Search releases'));
+    await tester.pump();
+    expect(
+      find.bySemanticsLabel('Search releases on Radarr 1'),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel('Search releases on Radarr · 4K'),
+      findsOneWidget,
+    );
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Search releases on one copy opens its releases', (tester) async {
+    final harness = await _pump(tester, Profiles.p4, WorldTitles.tearsOfSteel);
+
+    await tester.tap(find.text('Search releases'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Releases'), findsWidgets);
+
+    await harness.unmount(tester);
+  });
 }
