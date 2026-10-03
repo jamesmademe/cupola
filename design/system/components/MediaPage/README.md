@@ -1,0 +1,30 @@
+# MediaPage
+
+The one page a title has, whatever service it was opened from: who the title is, the one thing to do with it, and what every server of the household knows about it, each in its own row.
+
+Rendered from `lib/features/media/presentation/media_page.dart` (`MediaPage`), with the rows' words from `lib/features/media/domain/media_row_view.dart`, the lead from `lib/features/media/domain/media_lead.dart`, the identity, scores and marks from `lib/features/media/presentation/media_identity.dart`, the closed sections from `media_manage_summaries.dart` and the light from `lib/core/title_light.dart`, by `test/design_catalog/media_page_catalog_test.dart`.
+
+- **Room** — `CupolaRoom.ground` under `AppGradients.ambientBackground` washed with the title's light (the lamp until the light is read, and for artwork with too little chroma). Gutter `AppSpacing.lg` (16); the back plate sits under the top safe area at `AppSpacing.md` (12).
+- **Hero** — the backdrop in a slab 214 tall (`AppRadius.slab`, `AppElevation.hero` glowing with the light), the 88 × 132 poster (`AppRadius.poster`, the plate's outline in both rooms, `AppElevation.poster`) rising 52 out of its foot, and the title in the media role beside it, starting under the artwork, two lines then an ellipsis. The title sizes the hero: a second line pushes the meta line down. Under it, the meta line (year · runtime · genre, label role at 400, `inkSecondary`) and the format marks: `4K` when a copy is 2160p (a Radarr UHD quality or a media server's frame) and the range a media server reports (`HDR10`, `HDR10+`, `Dolby Vision`, `HLG`), each in a 5-radius outline at micro.
+- **Missing artwork** — no backdrop: the poster stands in, blurred (σ 24) at 0.72 over the plate's well, decoded once at the poster's box. No artwork at all: the plate (`AppColors.plateWell` for the slab, `plateSurface` for the poster) with the kind's glyph in `plateDimInk`, dark in both rooms. While nobody has said who the title is, both shimmer.
+- **Scores** — one slab (`AppRadius.door`, `fillQuiet`, hairline) of four: TMDB, IMDb, Rotten Tomatoes, Metacritic, each figure in the figure role over its source in micro. A source with no figure reads `—`, never 0. The requester has no Metacritic. All four come from the record of an arr that holds the title; without one, TMDB's comes through Seerr.
+- **Lead** — one 52 button: `Play on X` / `Resume on X`, `Add to Radarr`, `Request`, or the action a copy asks for (`resolveMediaAction`); with nothing to play and a trailer, `Trailer` leads. In the dark room its fill is the light's action fill under the action ink; in the day room the light's tinted primary under white; unlit, the ink. A shimmer while a source that could change it has not answered. Under it, outlined: Trailer (when it does not lead), Watchlist, Manage (operator only).
+- **On your server** — a heading with the count of services, then one group (`AppRadius.group`, `fillQuiet`, hairline) of rows split by hairlines. Each row: the connection's name in a 92 column, what it holds, and on the right the state's word after a 7 dot in its tone (a ring for the backlog). Four shapes (`MediaRowShape`): a **fact** (`2160p · HDR10 · 1 h 3 min left` · Available); a **failure** in its tone with the last answer and its time under it (`Did not answer since 18:12` / `Last known: 1080p · Available`) and, on the right, the remedy its cause names or `Retry`; **not set up**, dimmed (name 0.55, words 0.72), what the service would bring under it, and the `+ Set up X` pill (36 tall, `AppRadius.chip`, `fillControl`, edge); **through Seerr**, Seerr's word attributed (`through Seerr`) with `+ Add X to Cupola` under it. A row with a way forward is tapped whole: Set up and Add open the service's setup form, a remedy the connection's form, Retry asks that one connection again.
+- **Manage** — operator only, closed: Files & quality, History, Subtitles (with Bazarr), Search releases, each with what it holds in one line. Files, History and Subtitles open in place and read on opening; Search releases opens the releases sheet of a single copy, or opens on the copies when there are more.
+- **Reference** — the overview in the body role, the credits line, the cast rail, the collection and More like this (with Seerr).
+- **Twice the reading size** — past 1.4× (the threshold `SectionHeader` and `MediaChildList` use) what sits side by side stacks: the title takes the whole width under the poster, the scores go two to a line, the buttons under the lead one to a line, and each row reads name, what it holds, then its state or its way forward.
+
+The consumer provides only the title's `MediaKey` and, optionally, a `focus` (the connection the page was opened from). Everything else is read: `mediaRowsProvider`, the audience, the settings. Titles, figures and times in the catalog are illustrative; the light in the catalog is computed by `titleLightFromPixels` from the catalog's own artwork before the sheet is drawn.
+
+Semantics: the title is the page's header; each row speaks one sentence (`Plex. Did not answer since 18:12. Last known: 1080p · Available. Retry`) and is one button when it leads somewhere; the scores speak `Rotten Tomatoes: 97`, `Metacritic: no score`. The artwork and the plate are silent.
+
+Do: let the row decide its own shape and words (`mediaRowView`). Don't: paint a service's accent, draw a not-set-up service as answering, or build a control whose promise the page cannot keep yet (Watchlist stays dimmed until it is wired).
+
+## States in the catalog
+
+Each sheet is drawn in the dark and the light room.
+
+- Operator, the full household: Resume on Jellyfin lit by the backdrop, a fact with its picture, a failure with its last answer, two Radarr copies, Bazarr, Seerr not set up.
+- Requester: the media servers only, no Manage, no Metacritic.
+- No backdrop (the poster, veiled), no artwork (the plate), waiting.
+- Text at 200%: the full household.

@@ -1,0 +1,298 @@
+@Tags(['catalog'])
+library;
+
+import 'dart:io' as io;
+import 'dart:ui' as ui;
+
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/title_light.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/media/domain/media_copies.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/domain/media_reading.dart';
+import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/media_sources_provider.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+
+import '../test_helpers/settings_scope.dart';
+import 'catalog.dart';
+
+const _key = MediaKey.movie(653);
+
+/// Each catalog picture's light, from the same `titleLightFromPixels` the app
+/// runs. Read before the sheets: the app's own read goes through an image
+/// stream and an isolate, which the sheet's fake time never finishes.
+final _lights = <String, TitleLight?>{};
+
+Future<void> _readLights() async {
+  for (final (url, file) in [
+    (CatalogArt.backdrop, 'backdrop'),
+    (CatalogArt.poster, 'poster'),
+  ]) {
+    final bytes = io.File(
+      'design/system/assets/Imagery/$file.jpg',
+    ).readAsBytesSync();
+    final codec = await ui.instantiateImageCodec(
+      bytes,
+      targetWidth: titleLightDecodeSize,
+      targetHeight: titleLightDecodeSize,
+    );
+    final frame = await codec.getNextFrame();
+    final rgba = (await frame.image.toByteData())!;
+    _lights[url] = await titleLightFromPixels([
+      for (var i = 0; i + 3 < rgba.lengthInBytes; i += 4)
+        0xFF000000 |
+            rgba.getUint8(i) << 16 |
+            rgba.getUint8(i + 1) << 8 |
+            rgba.getUint8(i + 2),
+    ]);
+  }
+}
+
+ServiceInstance _connection(
+  ServiceKey service,
+  String id, {
+  String label = '',
+}) => ServiceInstance(
+  id: id,
+  service: service,
+  label: label,
+  url: 'http://nas.home.arpa',
+  credential: 'catalog',
+);
+
+final _jellyfin = _connection(ServiceKey.jellyfin, 'jellyfin');
+final _plex = _connection(ServiceKey.plex, 'plex');
+final _radarr = _connection(ServiceKey.radarr, 'radarr');
+final _radarr4k = _connection(ServiceKey.radarr, 'radarr-4k', label: '4K');
+final _bazarr = _connection(ServiceKey.bazarr, 'bazarr');
+
+final _at = DateTime(2026, 10, 3, 20, 41);
+
+MediaReading<T> _answered<T>(T value) =>
+    MediaReadingAnswered(MediaAnswer(value, _at));
+
+/// The household's copy of the catalog's title, with [images] as Radarr links
+/// them (`CatalogArt`, read from disk).
+RadarrMovie _movie({List<Object?> images = const [], bool uhd = false}) =>
+    RadarrMovie.fromJson({
+      'id': 7,
+      'title': 'Nosferatu',
+      'sortTitle': 'nosferatu',
+      'tmdbId': 653,
+      'year': 1922,
+      'runtime': 94,
+      'status': 'released',
+      'hasFile': true,
+      'monitored': true,
+      'isAvailable': true,
+      'studio': 'Prana Film',
+      'genres': ['Horror', 'Fantasy'],
+      'overview':
+          'Thomas Hutter travels to the Carpathians to sell a house to Count '
+          'Orlok, who has seen a portrait of Hutter\'s wife, and follows the '
+          'young man home by sea.',
+      'images': images,
+      'ratings': {
+        'imdb': {'value': 7.8, 'votes': 113000},
+        'tmdb': {'value': 7.6, 'votes': 2400},
+        'rottenTomatoes': {'value': 97},
+      },
+      'movieFile': {
+        'id': 70,
+        'movieId': 7,
+        'relativePath': 'Nosferatu (1922).mkv',
+        'path': '/data/movies/Nosferatu (1922)/Nosferatu (1922).mkv',
+        'size': uhd ? 41200000000 : 9400000000,
+        'dateAdded': '2026-09-28T21:04:00Z',
+        'quality': {
+          'quality': {
+            'id': uhd ? 19 : 7,
+            'name': uhd ? 'Bluray-2160p' : 'Bluray-1080p',
+            'resolution': uhd ? 2160 : 1080,
+          },
+        },
+      },
+    });
+
+const _art = [
+  {'coverType': 'poster', 'remoteUrl': CatalogArt.poster},
+  {'coverType': 'fanart', 'remoteUrl': CatalogArt.backdrop},
+];
+
+StreamItem _item({StreamVideo? video, int? resumeMs}) => StreamItem(
+  id: 'jf-653',
+  title: 'Nosferatu',
+  subtitle: '1922',
+  kind: StreamItemKind.movie,
+  posterPath: null,
+  year: 1922,
+  runtimeMs: 94 * 60000,
+  isPlayed: false,
+  resumeOffsetMs: resumeMs,
+  unplayedChildCount: null,
+  video: video,
+);
+
+/// The full household: Jellyfin part-way through, Plex silent since the
+/// evening with its last answer, two Radarr copies, Bazarr wanting German,
+/// and no Seerr.
+List<MediaRow> _household({List<Object?> images = _art}) => [
+  MediaConnectionRow<MediaStreamCopy>(
+    _jellyfin,
+    _answered(
+      MediaStreamCopy.found(
+        _item(
+          video: const StreamVideo(width: 3840, height: 2160, range: 'HDR10'),
+          resumeMs: 31 * 60000,
+        ),
+      ),
+    ),
+  ),
+  MediaConnectionRow<MediaStreamCopy>(
+    _plex,
+    MediaReadingFailed(
+      ServiceFailureReason.unreachable,
+      lastKnown: MediaAnswer(
+        MediaStreamCopy.found(
+          _item(video: const StreamVideo(width: 1920, height: 1080)),
+        ),
+        DateTime(2026, 10, 3, 18, 12),
+      ),
+    ),
+  ),
+  MediaConnectionRow<MediaRadarrCopy>(
+    _radarr,
+    _answered(
+      MediaRadarrCopy(
+        movie: _movie(images: images),
+        queue: ArrQueueSnapshot.empty,
+      ),
+    ),
+  ),
+  MediaConnectionRow<MediaRadarrCopy>(
+    _radarr4k,
+    _answered(
+      MediaRadarrCopy(
+        movie: _movie(images: images, uhd: true),
+        queue: ArrQueueSnapshot.empty,
+      ),
+    ),
+  ),
+  MediaConnectionRow<MediaBazarrCopy?>(
+    _bazarr,
+    _answered(
+      const MediaBazarrCopy(
+        arrConnectionId: 'radarr',
+        movie: BazarrMovie(
+          radarrId: 7,
+          monitored: true,
+          presentLanguages: [
+            BazarrSubtitleLanguage(name: 'English', code2: 'en'),
+          ],
+          missingLanguages: [
+            BazarrSubtitleLanguage(name: 'German', code2: 'de'),
+          ],
+        ),
+      ),
+    ),
+  ),
+  const MediaNotSetUpRow(ServiceKey.seerr),
+];
+
+/// One Radarr copy and nothing else, with [images].
+List<MediaRow> _bare(List<Object?> images) => [
+  MediaConnectionRow<MediaRadarrCopy>(
+    _radarr,
+    _answered(
+      MediaRadarrCopy(
+        movie: _movie(images: images),
+        queue: ArrQueueSnapshot.empty,
+      ),
+    ),
+  ),
+  const MediaNotSetUpRow(ServiceKey.seerr),
+];
+
+CatalogScene _scene(
+  String caption,
+  List<MediaRow> rows, {
+  double height = 1960,
+  Audience audience = Audience.operator,
+  double textScale = 1,
+}) => CatalogScene(
+  caption,
+  (_) => const MediaPage(mediaKey: _key),
+  width: 390,
+  height: height,
+  textScale: textScale,
+  overrides: [
+    mediaRowsProvider.overrideWith((ref, key) => rows),
+    audienceProvider.overrideWithValue(audience),
+    titleLightProvider.overrideWith((ref, url) async => _lights[url]),
+  ],
+);
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(_readLights);
+  catalogCard(
+    'MediaPage',
+    overrides: () => settingsScopeOverrides(
+      customize: (settings) => [
+        _jellyfin,
+        _plex,
+        _radarr,
+        _radarr4k,
+        _bazarr,
+      ].fold(settings, (s, c) => s.copyWithInstance(c)),
+    ),
+    scenes: [
+      _scene(
+        'Operator · Resume on Jellyfin, lit by the backdrop; every row shape: '
+        'a fact with its picture, a failure with its last answer, two copies, '
+        'Bazarr, Seerr not set up',
+        _household(),
+      ),
+      _scene(
+        'Requester · the media servers only, no Manage',
+        _household(),
+        height: 1100,
+        audience: Audience.requester,
+      ),
+      _scene(
+        'No backdrop · the poster, veiled, carries the slab',
+        _bare(const [
+          {'coverType': 'poster', 'remoteUrl': CatalogArt.poster},
+        ]),
+        height: 760,
+      ),
+      _scene(
+        'No artwork · the plate, dark in both rooms',
+        _bare(const []),
+        height: 760,
+      ),
+      _scene('Waiting · nobody has said who the title is yet', [
+        MediaConnectionRow<MediaRadarrCopy>(
+          _radarr,
+          const MediaReadingWaiting(),
+        ),
+      ], height: 760),
+      _scene(
+        'Twice the reading size',
+        _household(),
+        height: 2400,
+        textScale: catalogTextScale,
+      ),
+    ],
+  );
+}

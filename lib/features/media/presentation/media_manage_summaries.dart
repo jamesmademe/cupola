@@ -57,6 +57,13 @@ mediaManageSummaries(
 
   final files = copies.where((copy) => (copy.quality ?? '').isNotEmpty);
   final names = copies.map((copy) => title(copy.connection)).toList();
+  // Copies imported the same day say it once.
+  final days = {
+    for (final copy in copies)
+      if (copy.added case final added?) (added.year, added.month, added.day),
+  };
+  final sameDay =
+      days.length == 1 && copies.every((copy) => copy.added != null);
   final imported = [
     for (final copy in copies)
       if (copy.added case final added?)
@@ -71,8 +78,8 @@ mediaManageSummaries(
               '${files.map((copy) => qualityWords(copy.quality!)).join(', ')}',
     history: imported.isEmpty
         ? ''
-        : copies.length == 1
-        ? imported.single
+        : copies.length == 1 || sameDay
+        ? 'Imported ${formatShortDate(copies.first.added!.toIso8601String())}'
         : 'Imported ${imported.join(' · ')}',
     subtitles: subtitles,
     search: names.length <= 1

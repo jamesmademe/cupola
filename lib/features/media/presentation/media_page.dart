@@ -399,6 +399,11 @@ class _BackPlate extends StatelessWidget {
   }
 }
 
+/// Past 1.4 times the reading size the page stacks what sits side by side:
+/// the answer `SectionHeader` and `MediaChildList` give at the same threshold.
+bool _stacked(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(14) > 14 * 1.4;
+
 /// Artwork, poster and title: the backdrop in a slab, the poster rising out
 /// of its foot, the title beside the poster, then the meta line.
 class _Hero extends StatelessWidget {
@@ -436,99 +441,104 @@ class _Hero extends StatelessWidget {
     const posterHeight = 132.0;
     const rise = 52.0;
 
+    final stacked = _stacked(context);
+    final backdrop = Container(
+      height: backdropHeight,
+      decoration: BoxDecoration(
+        color: room.raised,
+        borderRadius: BorderRadius.circular(AppRadius.slab),
+        boxShadow: AppElevation.hero(scheme, light: light?.light),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: switch ((identity?.backdropUrl, identity?.posterUrl)) {
+        _ when waiting => const ShimmerPlaceholder(height: double.infinity),
+        (final String backdrop, _) when backdrop.isNotEmpty => _Artwork(
+          url: backdrop,
+          onDrawn: onArtDrawn,
+          fallback: _Plate(kind: kind, well: true),
+        ),
+        // No backdrop: the poster, veiled, so the slab is still the title's.
+        // Decoded once, at the poster's box.
+        (_, final String poster) when poster.isNotEmpty => _Artwork.veiled(
+          url: poster,
+          decodeBox: const Size(posterWidth, posterHeight),
+          onDrawn: onArtDrawn,
+          fallback: _Plate(kind: kind, well: true),
+        ),
+        _ => _Plate(kind: kind, well: true),
+      },
+    );
+    final poster = Container(
+      width: posterWidth,
+      height: posterHeight,
+      decoration: BoxDecoration(
+        color: room.raised,
+        borderRadius: BorderRadius.circular(AppRadius.poster),
+        // Artwork is not palette: the plate's line in both rooms.
+        border: Border.all(color: AppColors.plateOutline),
+        boxShadow: AppElevation.poster(scheme, light: light?.light),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: waiting
+          ? const ShimmerPlaceholder(height: double.infinity)
+          : _Artwork(
+              url: identity?.posterUrl,
+              decodeBox: const Size(posterWidth, posterHeight),
+              onDrawn: onArtDrawn,
+              fallback: _Plate(kind: kind),
+            ),
+    );
+    final title = Semantics(
+      header: true,
+      child: Text(
+        identity?.title ?? '',
+        maxLines: stacked ? 3 : 2,
+        overflow: TextOverflow.ellipsis,
+        style: AppType.media.copyWith(color: room.ink),
+      ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // The poster rises [rise] into the artwork, and the title beside it
+        // sizes the hero: a title on two lines pushes the meta line down
+        // rather than running over it.
         Stack(
           clipBehavior: Clip.none,
           children: [
-            Column(
-              children: [
-                Container(
-                  height: backdropHeight,
-                  decoration: BoxDecoration(
-                    color: room.raised,
-                    borderRadius: BorderRadius.circular(AppRadius.slab),
-                    boxShadow: AppElevation.hero(scheme, light: light?.light),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: switch ((identity?.backdropUrl, identity?.posterUrl)) {
-                    _ when waiting => const ShimmerPlaceholder(
-                      height: double.infinity,
-                    ),
-                    (final String backdrop, _) when backdrop.isNotEmpty =>
-                      _Artwork(
-                        url: backdrop,
-                        onDrawn: onArtDrawn,
-                        fallback: _Plate(kind: kind, well: true),
-                      ),
-                    // No backdrop: the poster, veiled, so the slab is still
-                    // the title's. Decoded once, at the poster's box.
-                    (_, final String poster) when poster.isNotEmpty =>
-                      _Artwork.veiled(
-                        url: poster,
-                        decodeBox: const Size(posterWidth, posterHeight),
-                        onDrawn: onArtDrawn,
-                        fallback: _Plate(kind: kind, well: true),
-                      ),
-                    _ => _Plate(kind: kind, well: true),
-                  },
-                ),
-                // The poster rises [rise] into the artwork: the rest of it
-                // is the space below.
-                const SizedBox(height: posterHeight - rise),
-              ],
-            ),
             Positioned(
+              top: 0,
               left: 0,
               right: 0,
-              top: backdropHeight - rise,
+              height: backdropHeight,
+              child: backdrop,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: backdropHeight - rise),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: posterWidth,
-                    height: posterHeight,
-                    decoration: BoxDecoration(
-                      color: room.raised,
-                      borderRadius: BorderRadius.circular(AppRadius.poster),
-                      border: Border.all(color: room.edge),
-                      boxShadow: AppElevation.poster(
-                        scheme,
-                        light: light?.light,
-                      ),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: waiting
-                        ? const ShimmerPlaceholder(height: double.infinity)
-                        : _Artwork(
-                            url: identity?.posterUrl,
-                            decodeBox: const Size(posterWidth, posterHeight),
-                            onDrawn: onArtDrawn,
-                            fallback: _Plate(kind: kind),
-                          ),
-                  ),
-                  const SizedBox(width: AppSpacing.slabY),
-                  Expanded(
-                    child: Padding(
-                      // Clear of the artwork: the title starts under it.
-                      padding: const EdgeInsets.only(top: rise + AppSpacing.md),
-                      child: Semantics(
-                        header: true,
-                        child: Text(
-                          identity?.title ?? '',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppType.media.copyWith(color: room.ink),
+                  poster,
+                  if (!stacked) ...[
+                    const SizedBox(width: AppSpacing.slabY),
+                    Expanded(
+                      child: Padding(
+                        // Clear of the artwork: the title starts under it.
+                        padding: const EdgeInsets.only(
+                          top: rise + AppSpacing.md,
                         ),
+                        child: title,
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
+        // At a large reading size the title takes the whole width.
+        if (stacked) ...[const SizedBox(height: AppSpacing.md), title],
         const SizedBox(height: AppSpacing.md),
         Wrap(
           spacing: AppSpacing.s,
@@ -688,6 +698,7 @@ class _Scores extends StatelessWidget {
         : decimal
         ? value.toStringAsFixed(1)
         : '$value';
+    Widget line(List<(String, String)> cells) => _ScoresLine(cells);
     final cells = [
       ('TMDB', figure(scores.tmdb)),
       ('IMDb', figure(scores.imdb)),
@@ -702,40 +713,61 @@ class _Scores extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.door),
         border: Border.all(color: room.hair),
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            for (final (index, cell) in cells.indexed) ...[
-              if (index > 0) VerticalDivider(width: 1, color: room.hair),
-              Expanded(
-                child: Semantics(
-                  label: '${cell.$1}: ${cell.$2 == '—' ? 'no score' : cell.$2}',
-                  excludeSemantics: true,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.row),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          cell.$2,
-                          style: AppType.figure.copyWith(color: room.ink),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          cell.$1,
-                          style: AppType.micro
-                              .weight(FontWeight.w400)
-                              .copyWith(color: room.inkTertiary),
-                        ),
-                      ],
-                    ),
+      child: _stacked(context)
+          // At a large reading size, two to a line.
+          ? Column(
+              children: [
+                line(cells.take(2).toList()),
+                Divider(height: 1, color: room.hair),
+                line(cells.skip(2).toList()),
+              ],
+            )
+          : line(cells),
+    );
+  }
+}
+
+class _ScoresLine extends StatelessWidget {
+  const _ScoresLine(this.cells);
+
+  final List<(String, String)> cells;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          for (final (index, cell) in cells.indexed) ...[
+            if (index > 0) VerticalDivider(width: 1, color: room.hair),
+            Expanded(
+              child: Semantics(
+                label: '${cell.$1}: ${cell.$2 == '—' ? 'no score' : cell.$2}',
+                excludeSemantics: true,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.row),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        cell.$2,
+                        style: AppType.figure.copyWith(color: room.ink),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        cell.$1,
+                        style: AppType.micro
+                            .weight(FontWeight.w400)
+                            .copyWith(color: room.inkTertiary),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -845,25 +877,38 @@ class _LeadBar extends StatelessWidget {
             label: const Text('Trailer'),
           ),
         const SizedBox(height: AppSpacing.row),
-        Row(
-          children: [
-            for (final (index, (text, icon, onPressed))
-                in secondaries.indexed) ...[
-              if (index > 0) const SizedBox(width: AppSpacing.row),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onPressed,
-                  icon: Icon(icon, size: 17),
-                  label: Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+        // At a large reading size, one to a line: three side by side cut
+        // their words.
+        if (_stacked(context))
+          for (final (index, (text, icon, onPressed))
+              in secondaries.indexed) ...[
+            if (index > 0) const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 17),
+              label: Text(text),
+            ),
+          ]
+        else
+          Row(
+            children: [
+              for (final (index, (text, icon, onPressed))
+                  in secondaries.indexed) ...[
+                if (index > 0) const SizedBox(width: AppSpacing.row),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onPressed,
+                    icon: Icon(icon, size: 17),
+                    label: Text(
+                      text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
-        ),
+          ),
       ],
     );
   }
@@ -925,6 +970,7 @@ class _RowsCard extends StatelessWidget {
         border: Border.all(color: room.hair),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final (index, item) in items.indexed) ...[
             if (index > 0) Divider(height: 1, color: room.hair),
@@ -951,11 +997,12 @@ class _ServerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
+    final stacked = _stacked(context);
     final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
       child: view.shape == MediaRowShape.notSetUp
-          ? _notSetUp(room)
-          : _reading(context, room),
+          ? _notSetUp(room, stacked: stacked)
+          : _reading(context, room, stacked: stacked),
     );
     final onTap = this.onTap;
     if (onTap == null) {
@@ -976,56 +1023,70 @@ class _ServerRow extends StatelessWidget {
 
   /// Case a, dimmed and still the way in: the name, `Not
   /// set up` and what it would bring, and the pill that names the service.
-  Widget _notSetUp(CupolaRoom room) => Row(
-    children: [
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                SizedBox(
-                  width: 92,
-                  child: Text(
-                    view.name,
-                    style: AppType.row.copyWith(
-                      color: room.ink.withValues(alpha: 0.55),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.row),
-                Expanded(
-                  child: Text(
-                    view.state,
-                    style: AppType.meta
-                        .weight(FontWeight.w600)
-                        .copyWith(
-                          color: room.inkSecondary.withValues(alpha: 0.72),
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            if (view.detail.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(
-                view.detail,
-                style: AppType.caption
-                    .weight(FontWeight.w400)
-                    .copyWith(color: room.inkTertiary),
-              ),
-            ],
+  Widget _notSetUp(CupolaRoom room, {required bool stacked}) {
+    final name = Text(
+      view.name,
+      style: AppType.row.copyWith(color: room.ink.withValues(alpha: 0.55)),
+    );
+    final state = Text(
+      view.state,
+      style: AppType.meta
+          .weight(FontWeight.w600)
+          .copyWith(color: room.inkSecondary.withValues(alpha: 0.72)),
+    );
+    final reason = Text(
+      view.detail,
+      style: AppType.caption
+          .weight(FontWeight.w400)
+          .copyWith(color: room.inkTertiary),
+    );
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          name,
+          state,
+          if (view.detail.isNotEmpty) reason,
+          if (view.action case final action?) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _SetUpPill(action),
           ],
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  SizedBox(width: 92, child: name),
+                  const SizedBox(width: AppSpacing.row),
+                  Expanded(child: state),
+                ],
+              ),
+              if (view.detail.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                reason,
+              ],
+            ],
+          ),
         ),
-      ),
-      if (view.action case final action?) ...[
-        const SizedBox(width: AppSpacing.row),
-        _SetUpPill(action),
+        if (view.action case final action?) ...[
+          const SizedBox(width: AppSpacing.row),
+          _SetUpPill(action),
+        ],
       ],
-    ],
-  );
+    );
+  }
 
-  Widget _reading(BuildContext context, CupolaRoom room) {
+  Widget _reading(
+    BuildContext context,
+    CupolaRoom room, {
+    required bool stacked,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     final tone = statusToneColor(scheme, view.tone, surface: room.ground);
     final waiting = view.state.isEmpty;
@@ -1084,42 +1145,16 @@ class _ServerRow extends StatelessWidget {
       _ => state(),
     };
 
-    return Column(
+    final name = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 36),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 92,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      view.name,
-                      style: AppType.row.copyWith(color: room.ink),
-                    ),
-                    if (view.via case final via?)
-                      Text(
-                        via,
-                        style: AppType.caption.copyWith(
-                          color: room.inkTertiary,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.row),
-              Expanded(child: middle),
-              if (trailing != null) ...[
-                const SizedBox(width: AppSpacing.row),
-                trailing,
-              ],
-            ],
-          ),
-        ),
-        if (view.shape == MediaRowShape.claim && view.action != null)
-          Padding(
+        Text(view.name, style: AppType.row.copyWith(color: room.ink)),
+        if (view.via case final via?)
+          Text(via, style: AppType.caption.copyWith(color: room.inkTertiary)),
+      ],
+    );
+    final add = view.shape == MediaRowShape.claim && view.action != null
+        ? Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Row(
               children: [
@@ -1133,7 +1168,46 @@ class _ServerRow extends StatelessWidget {
                 ),
               ],
             ),
+          )
+        : null;
+    // At a large reading size each part takes the whole width, one under
+    // the other: the name, what it holds, its state or its way forward.
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          name,
+          if (waiting ||
+              view.detail.isNotEmpty ||
+              view.shape == MediaRowShape.failed) ...[
+            const SizedBox(height: AppSpacing.xs),
+            middle,
+          ],
+          if (trailing != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            trailing,
+          ],
+          ?add,
+        ],
+      );
+    }
+    return Column(
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 36),
+          child: Row(
+            children: [
+              SizedBox(width: 92, child: name),
+              const SizedBox(width: AppSpacing.row),
+              Expanded(child: middle),
+              if (trailing != null) ...[
+                const SizedBox(width: AppSpacing.row),
+                trailing,
+              ],
+            ],
           ),
+        ),
+        ?add,
       ],
     );
   }

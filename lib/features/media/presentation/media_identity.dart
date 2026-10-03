@@ -166,7 +166,9 @@ MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
   }
   double? score(String name) {
     for (final rating in arr ?? const <RatingSource>[]) {
-      if (rating.name.toLowerCase() == name.toLowerCase() && rating.value > 0) {
+      // The arr's names are display names (`Rotten Tomatoes`).
+      final source = rating.name.toLowerCase().replaceAll(' ', '');
+      if (source == name.toLowerCase() && rating.value > 0) {
         return rating.value;
       }
     }
