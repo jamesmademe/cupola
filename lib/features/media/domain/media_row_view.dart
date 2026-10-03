@@ -16,11 +16,29 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_external_match.dart';
 
+/// The four shapes a row takes (the brand book's Configurations).
+enum MediaRowShape {
+  /// What a connection holds, and its state: name · detail · state.
+  fact,
+
+  /// Case a: `Not set up`, what the service would bring, and `Set up X`.
+  notSetUp,
+
+  /// Case c: the failure in its tone, the last known answer under it, and
+  /// `Retry`.
+  failed,
+
+  /// Case b: Seerr's word about a server Cupola does not have, attributed,
+  /// with `Add X to Cupola` under it.
+  claim,
+}
+
 /// A row of "On your server" as it is drawn and spoken: who, what, and the
 /// state's word in its tone.
 @immutable
 class MediaRowView {
   const MediaRowView({
+    this.shape = MediaRowShape.fact,
     required this.name,
     required this.detail,
     required this.state,
@@ -32,6 +50,8 @@ class MediaRowView {
     this.dimmed = false,
     this.connectionId,
   });
+
+  final MediaRowShape shape;
 
   /// The connection's name: `Radarr`, `Radarr · 4K`.
   final String name;
@@ -82,6 +102,7 @@ MediaRowView? mediaRowView(
 }) {
   return switch (row) {
     MediaNotSetUpRow(:final service) => MediaRowView(
+      shape: MediaRowShape.notSetUp,
       name: service.title,
       detail: _whatItBrings(service),
       state: StateWord.notSetUp.label,
@@ -96,6 +117,7 @@ MediaRowView? mediaRowView(
         connectionTitle: (connection) => title(connection),
       );
       return MediaRowView(
+        shape: MediaRowShape.claim,
         name: name,
         via: 'through Seerr',
         detail: '',
@@ -146,6 +168,7 @@ MediaRowView? _connectionView(
           ? ''
           : ' since ${formatClockTime(lastKnown.at)}';
       return MediaRowView(
+        shape: MediaRowShape.failed,
         name: name,
         detail: known == null
             ? ''
