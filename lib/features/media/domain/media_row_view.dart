@@ -248,8 +248,12 @@ MediaRowView? _answeredView(
       final left = item.isInProgress && item.runtimeMs != null
           ? '${formatRuntimeMinutes(((item.runtimeMs! - (item.resumeOffsetMs ?? 0)) / 60000).ceil())} left'
           : null;
+      final picture = item.video?.words ?? '';
       return view(
-        detail: item.isPlayed ? 'Watched' : left ?? '',
+        detail: [
+          if (picture.isNotEmpty) picture,
+          if (item.isPlayed) 'Watched' else ?left,
+        ].join(' · '),
         state: _onDisk.label,
         tone: _onDisk.tone,
       );

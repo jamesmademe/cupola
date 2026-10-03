@@ -291,4 +291,51 @@ void main() {
       );
     });
   });
+
+  group('the picture', () {
+    StreamItem item(List<Object?>? streams) => jellyfinStreamItemFromJson({
+      'Id': 'a',
+      'Name': 'A',
+      'Type': 'Movie',
+      'MediaStreams': ?streams,
+    });
+
+    test('not asked for is not reported', () {
+      expect(item(null).video, isNull);
+    });
+
+    test('the first video stream, its class and its range', () {
+      final video = item([
+        {'Type': 'Audio'},
+        {
+          'Type': 'Video',
+          'Width': 3840,
+          'Height': 1608,
+          'VideoRange': 'HDR',
+          'VideoRangeType': 'DOVIWithHDR10',
+        },
+      ]).video!;
+      expect(video.resolution, '2160p');
+      expect(video.words, '2160p · Dolby Vision');
+    });
+
+    test('a scope film is the class of its width; SDR says nothing', () {
+      final video = item([
+        {
+          'Type': 'Video',
+          'Width': 1920,
+          'Height': 800,
+          'VideoRangeType': 'SDR',
+        },
+      ]).video!;
+      expect(video.words, '1080p');
+    });
+
+    test('the ranges in the app\'s words', () {
+      expect(StreamVideo.rangeWord('HDR10Plus', 'HDR'), 'HDR10+');
+      expect(StreamVideo.rangeWord('HLG', 'HDR'), 'HLG');
+      expect(StreamVideo.rangeWord(null, 'HDR'), 'HDR');
+      expect(StreamVideo.rangeWord('SDR', 'SDR'), isNull);
+    });
+  });
 }

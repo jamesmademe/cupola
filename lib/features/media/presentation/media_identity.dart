@@ -181,18 +181,24 @@ MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
   );
 }
 
-/// The format marks beside the meta line: `4K` when a copy is 2160p.
+/// The format marks beside the meta line: `4K` when a copy is 2160p, and the
+/// dynamic range a media server reports (`HDR10`, `Dolby Vision`).
 List<String> mediaFormatMarks(List<MediaRow> rows) {
+  var uhd = false;
+  String? range;
   for (final row in rows) {
     if (row case MediaConnectionRow(
       reading: MediaReadingAnswered(:final answer),
     )) {
-      if (answer.value case MediaRadarrCopy(
-        :final movie?,
-      ) when isUhdQuality(movie.movieFile?.qualityName)) {
-        return const ['4K'];
+      switch (answer.value) {
+        case MediaRadarrCopy(:final movie?)
+            when isUhdQuality(movie.movieFile?.qualityName):
+          uhd = true;
+        case MediaStreamCopy(:final item?):
+          if (item.video?.resolution == '2160p') uhd = true;
+          range ??= item.video?.range;
       }
     }
   }
-  return const [];
+  return [if (uhd) '4K', ?range];
 }

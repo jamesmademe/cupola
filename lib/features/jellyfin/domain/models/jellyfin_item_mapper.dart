@@ -209,7 +209,27 @@ StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
     resumeOffsetMs: _resumeOffsetMs(userData, runtimeTicks),
     unplayedChildCount: jellyfinInt(userData['UnplayedItemCount']),
     externalIds: jellyfinExternalIds(item['ProviderIds']),
+    video: _video(item['MediaStreams']),
   );
+}
+
+/// The first video stream of `MediaStreams`, present only when the request
+/// asked for that field.
+StreamVideo? _video(Object? streams) {
+  if (streams is! List) return null;
+  for (final stream in streams) {
+    if (stream is Map && stream['Type'] == 'Video') {
+      return StreamVideo(
+        width: jellyfinInt(stream['Width']),
+        height: jellyfinInt(stream['Height']),
+        range: StreamVideo.rangeWord(
+          stream['VideoRangeType'],
+          stream['VideoRange'],
+        ),
+      );
+    }
+  }
+  return null;
 }
 
 /// `ProviderIds` → [StreamExternalIds].

@@ -743,7 +743,8 @@ class JellyfinClient implements StreamServerClient {
       // only evidence a row matched is that the server returned it — which is
       // also what a server that ignored `anyProviderIdEquals` does, with the
       // first rows of the whole library.
-      'fields': '$_browseFields,ProviderIds',
+      // `MediaStreams` for the picture the Media page names: `2160p · HDR10`.
+      'fields': '$_browseFields,ProviderIds,MediaStreams',
       // `UserData` is omitted from the response entirely unless both are
       // present, so they travel together or not at all.
       'userId': ?userId,

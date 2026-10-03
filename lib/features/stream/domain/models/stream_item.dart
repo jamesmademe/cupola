@@ -103,6 +103,52 @@ class StreamExternalIds {
       'StreamExternalIds(tmdb: $tmdb, tvdb: $tvdb, imdb: $imdb)';
 }
 
+/// The picture a server holds for an item: its frame and its dynamic range,
+/// as far as the read reported them.
+@immutable
+class StreamVideo {
+  const StreamVideo({this.width, this.height, this.range});
+
+  final int? width;
+  final int? height;
+
+  /// The dynamic range in the words the app shows (`HDR10`, `HDR10+`, `Dolby
+  /// Vision`, `HLG`, `HDR`); null for SDR, and when the server did not say.
+  final String? range;
+
+  /// The resolution class, `2160p`, `1080p`, `720p`, `576p`, `480p`, from
+  /// whichever side reaches it: a scope film at 1920 × 800 is 1080p. Null
+  /// when the server reported no frame.
+  String? get resolution {
+    final width = this.width ?? 0;
+    final height = this.height ?? 0;
+    if (width <= 0 && height <= 0) return null;
+    if (width >= 3200 || height >= 1800) return '2160p';
+    if (width >= 1700 || height >= 1000) return '1080p';
+    if (width >= 1200 || height >= 700) return '720p';
+    if (height >= 560) return '576p';
+    if (height >= 470) return '480p';
+    return height > 0 ? '${height}p' : null;
+  }
+
+  /// `2160p · HDR10`: what the row says of the picture, or empty.
+  String get words => [?resolution, ?range].join(' · ');
+
+  /// Jellyfin's `VideoRangeType` (or, from older servers, `VideoRange`) in the
+  /// app's words.
+  static String? rangeWord(Object? rangeType, Object? range) {
+    final type = rangeType?.toString() ?? '';
+    if (type.startsWith('DOVI')) return 'Dolby Vision';
+    return switch (type) {
+      'HDR10Plus' => 'HDR10+',
+      'HDR10' => 'HDR10',
+      'HLG' => 'HLG',
+      _ when range?.toString() == 'HDR' => 'HDR',
+      _ => null,
+    };
+  }
+}
+
 @immutable
 class StreamItem {
   /// Opaque server id — a Jellyfin GUID or a Plex `ratingKey`.
@@ -145,6 +191,10 @@ class StreamItem {
   /// them.
   final StreamExternalIds externalIds;
 
+  /// The picture of the item's first version, when the read asked for it.
+  /// Null is "not reported": only the Media page's lookup asks.
+  final StreamVideo? video;
+
   const StreamItem({
     required this.id,
     required this.title,
@@ -157,6 +207,7 @@ class StreamItem {
     required this.resumeOffsetMs,
     required this.unplayedChildCount,
     this.externalIds = StreamExternalIds.none,
+    this.video,
   });
 
   /// Fraction watched, 0..1, or null when there is no resume point.

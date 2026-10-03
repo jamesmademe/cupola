@@ -89,6 +89,14 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
     resumeOffsetMs: (viewOffset ?? 0) > 0 ? viewOffset : null,
     unplayedChildCount: unplayed != null && unplayed > 0 ? unplayed : null,
     externalIds: plexExternalIds(json),
+    // A list read carries the frame; the range needs the item's own streams.
+    video: switch (_firstMedia(json)) {
+      final media? => StreamVideo(
+        width: plexInt(media['width']),
+        height: plexInt(media['height']),
+      ),
+      null => null,
+    },
   );
 }
 

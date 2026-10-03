@@ -96,6 +96,9 @@ void main() {
 
     expect(find.text('Tears of Steel'), findsOneWidget);
     expect(find.text('Play on Jellyfin'), findsOneWidget);
+    // The marks: Jellyfin's copy is 2160p in HDR10.
+    expect(find.text('4K'), findsOneWidget);
+    expect(find.text('HDR10'), findsOneWidget);
     expect(find.text('On your server'), findsOneWidget);
     expect(
       find.bySemanticsLabel(RegExp(r'^Jellyfin\. .*Available$')),

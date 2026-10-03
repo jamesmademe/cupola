@@ -30,7 +30,10 @@ void main() {
     final words = await _words(Profiles.p1, WorldTitles.tearsOfSteel);
     printOnFailure(words.join('\n'));
     expect(words, hasLength(5));
-    expect(words.first, startsWith('Jellyfin. Watched. Available'));
+    expect(
+      words.first,
+      startsWith('Jellyfin. 2160p · HDR10 · Watched. Available'),
+    );
     expect(words[3], contains('DE wanted'));
   });
 

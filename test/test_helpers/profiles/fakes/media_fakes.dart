@@ -928,6 +928,27 @@ class JellyfinFake extends ServiceFake {
       },
       'ImageTags': const <String, Object?>{},
       'DateCreated': c.ago(const Duration(days: 30)),
+      // The picture: Tears of Steel is the household's 4K HDR copy.
+      if (!t.isSeries)
+        'MediaStreams': [
+          if (t == WorldTitles.tearsOfSteel)
+            {
+              'Type': 'Video',
+              'Width': 3840,
+              'Height': 1714,
+              'VideoRange': 'HDR',
+              'VideoRangeType': 'HDR10',
+            }
+          else
+            {
+              'Type': 'Video',
+              'Width': 1920,
+              'Height': 1080,
+              'VideoRange': 'SDR',
+              'VideoRangeType': 'SDR',
+            },
+          {'Type': 'Audio', 'Language': 'eng'},
+        ],
     };
   }
 
