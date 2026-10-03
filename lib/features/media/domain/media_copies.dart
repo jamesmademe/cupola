@@ -1,6 +1,7 @@
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/movies/domain/radarr_status.dart';
@@ -130,6 +131,16 @@ class MediaSeerrRecord {
     final id = intOrNull(mapOrNull(details['externalIds'])?['tvdbId']);
     return id == null || id <= 0 ? null : id;
   }
+
+  /// Whether TMDB's record has a video a viewer can open: the trailer the
+  /// page offers ([RelatedVideo.url], as the Seerr page reads it).
+  bool get hasTrailer => switch (details['relatedVideos']) {
+    final List<dynamic> videos => videos.whereType<Map>().any(
+      (video) =>
+          RelatedVideo.fromJson(video.cast<String, dynamic>()).url.isNotEmpty,
+    ),
+    _ => false,
+  };
 
   /// The copies Seerr says an arr holds, the standard one first.
   List<SeerrMediaCopy> get copies => SeerrMediaCopy.fromMediaInfo(mediaInfo);
