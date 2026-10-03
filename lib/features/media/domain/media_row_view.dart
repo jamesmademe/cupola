@@ -245,9 +245,9 @@ MediaRowView? _answeredView(
           tone: StatusTone.neutral,
         );
       }
-      // `1 h 3 min` holds together when the detail wraps.
+      // `1 h 3 min left` holds together when the detail wraps.
       final left = item.isInProgress && item.runtimeMs != null
-          ? '${formatRuntimeMinutes(((item.runtimeMs! - (item.resumeOffsetMs ?? 0)) / 60000).ceil()).replaceAll(' ', '\u00A0')} left'
+          ? '${formatRuntimeMinutes(((item.runtimeMs! - (item.resumeOffsetMs ?? 0)) / 60000).ceil()).replaceAll(' ', '\u00A0')}\u00A0left'
           : null;
       final picture = item.video?.words ?? '';
       return view(

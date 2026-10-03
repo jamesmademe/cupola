@@ -13,6 +13,7 @@ Rendered from `lib/features/media/presentation/media_page.dart` (`MediaPage`), w
 - **Manage** — operator only, closed: Files & quality, History, Subtitles (with Bazarr), Search releases, each with what it holds in one line. Files, History and Subtitles open in place and read on opening; Search releases opens the releases sheet of a single copy, or opens on the copies when there are more.
 - **Reference** — the overview in the body role, the credits line, the cast rail, the collection and More like this (with Seerr).
 - **Collection** — one slab (`AppRadius.slab`, the plate's outline) over the collection's own artwork, veiled at 0.56 over the plate's well and decoded small, dark in both rooms: its name in the feature role and `5 of 8 on your server` in the label role at 600, both in `plateInk`, a chevron on the right. The figure counts the members Seerr holds, whole or in part; until Seerr has counted them, and when it could not, the band reads `Collection` and states no figure. The whole slab opens the collection.
+- **Wider** — the page reads its own width, not the window's: in a tablet's detail pane it is the phone's column, wider. From 840 (`AppBreakpoints.touchRail`) it takes two tracks under the hero: scores, lead and the reference on the left, On your server and Manage in a 380 side track beside them (`AppSpacing.xl` between), More like this across both; the content stops at `AppBreakpoints.contentWell` (1140), centred. The slab grows with the column (its width / 2.6, from 214 to 420), and the poster and its rise with the slab, up to 1.5×.
 - **Twice the reading size** — past 1.4× (the threshold `SectionHeader` and `MediaChildList` use) what sits side by side stacks: the title takes the whole width under the poster, the scores go two to a line, the buttons under the lead one to a line, and each row reads name, what it holds, then its state or its way forward.
 
 The consumer provides only the title's `MediaKey` and, optionally, a `focus` (the connection the page was opened from). Everything else is read: `mediaRowsProvider`, the audience, the settings. Titles, figures and times in the catalog are illustrative; the light in the catalog is computed by `titleLightFromPixels` from the catalog's own artwork before the sheet is drawn.
@@ -29,4 +30,5 @@ Each sheet is drawn in the dark and the light room.
 - Requester: the media servers only, no Manage, no Metacritic.
 - No backdrop (the poster, veiled), no artwork (the plate), waiting.
 - With Seerr: TMDB names the title, and the collection band.
+- Tablet: a 592 detail pane, and the full 1180 screen in two tracks.
 - Text at 200%: the full household.

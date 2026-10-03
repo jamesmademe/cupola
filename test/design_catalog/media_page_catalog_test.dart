@@ -271,13 +271,14 @@ List<MediaRow> _bare(List<Object?> images) => [
 CatalogScene _scene(
   String caption,
   List<MediaRow> rows, {
+  double width = 390,
   double height = 1960,
   Audience audience = Audience.operator,
   double textScale = 1,
 }) => CatalogScene(
   caption,
   (_) => const MediaPage(mediaKey: _key),
-  width: 390,
+  width: width,
   height: height,
   textScale: textScale,
   overrides: [
@@ -296,6 +297,7 @@ void main() {
   setUpAll(_readLights);
   catalogCard(
     'MediaPage',
+    width: 1240,
     overrides: () => settingsScopeOverrides(
       customize: (settings) => [
         _jellyfin,
@@ -342,6 +344,18 @@ void main() {
         'to: 5 of 8 on your server',
         _withSeerr(),
         height: 1660,
+      ),
+      _scene(
+        'Tablet · a detail pane: the phone column, wider',
+        _withSeerr(),
+        width: 592,
+        height: 1900,
+      ),
+      _scene(
+        'Tablet · full screen: two tracks, the servers and Manage beside',
+        _withSeerr(),
+        width: 1180,
+        height: 1400,
       ),
       _scene(
         'Twice the reading size',

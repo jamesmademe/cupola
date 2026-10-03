@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
@@ -186,128 +187,170 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             accent: light?.light,
           ),
         ),
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                top + AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.xxxl,
-              ),
-              sliver: SliverList.list(
-                children: [
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: _BackPlate(),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _Hero(
-                    onArtDrawn: _artDrawn,
-                    identity: identity,
-                    kind: mediaKey.kind,
-                    waiting:
-                        identity == null &&
-                        rows.any(
-                          (row) =>
-                              row is MediaConnectionRow &&
-                              row.reading is MediaReadingWaiting,
-                        ),
-                    marks: mediaFormatMarks(rows),
-                    light: light,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _Scores(
-                    scores: mediaScoresOf(rows, identity),
-                    showMetacritic: audience == Audience.operator,
-                  ),
-                  const SizedBox(height: AppSpacing.slabY),
-                  _LeadBar(
-                    lead: lead,
-                    light: light,
-                    onPlay: (lead) => _play(
-                      lead,
-                      settings.connectionTitle(
-                        lead.server.id,
-                        lead.server.service,
-                      ),
+        child: LayoutBuilder(
+          builder: (context, box) {
+            // The page's own width, not the window's: in a tablet's detail
+            // pane it is a phone's column, full screen it takes two tracks.
+            final column = (box.maxWidth - 2 * AppSpacing.lg).clamp(
+              0.0,
+              AppBreakpoints.contentWell,
+            );
+            final gutter = (box.maxWidth - column) / 2;
+            final head = <Widget>[
+              const Align(alignment: Alignment.centerLeft, child: _BackPlate()),
+              const SizedBox(height: AppSpacing.md),
+              _Hero(
+                onArtDrawn: _artDrawn,
+                backdropHeight: (column / 2.6).clamp(214, 420),
+                identity: identity,
+                kind: mediaKey.kind,
+                waiting:
+                    identity == null &&
+                    rows.any(
+                      (row) =>
+                          row is MediaConnectionRow &&
+                          row.reading is MediaReadingWaiting,
                     ),
-                    onTrailer: identity?.videos.isNotEmpty ?? false
-                        ? () => DiscoverVideosButton.show(
-                            context,
-                            identity!.videos,
+                marks: mediaFormatMarks(rows),
+                light: light,
+              ),
+            ];
+            final act = <Widget>[
+              const SizedBox(height: AppSpacing.lg),
+              _Scores(
+                scores: mediaScoresOf(rows, identity),
+                showMetacritic: audience == Audience.operator,
+              ),
+              const SizedBox(height: AppSpacing.slabY),
+              _LeadBar(
+                lead: lead,
+                light: light,
+                onPlay: (lead) => _play(
+                  lead,
+                  settings.connectionTitle(lead.server.id, lead.server.service),
+                ),
+                onTrailer: identity?.videos.isNotEmpty ?? false
+                    ? () => DiscoverVideosButton.show(context, identity!.videos)
+                    : null,
+                onManage: _toManage,
+                hasTrailer: identity?.videos.isNotEmpty ?? false,
+                showManage: audience == Audience.operator,
+                serverName: (lead) => settings.connectionTitle(
+                  lead.server.id,
+                  lead.server.service,
+                ),
+              ),
+            ];
+            final serve = <Widget>[
+              if (views.isNotEmpty) ...[
+                _Heading('On your server', trailing: _servicesCount(rows)),
+                _RowsCard(children: views),
+              ],
+              if (audience == Audience.operator) ..._manage(rows, settings),
+            ];
+            final reference = <Widget>[
+              if ((identity?.overview ?? '').isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.section),
+                Text(
+                  identity!.overview,
+                  style: AppType.body.copyWith(color: room.ink),
+                ),
+              ],
+              if ((identity?.creditsLine ?? '').isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  identity!.creditsLine,
+                  style: AppType.meta.copyWith(color: room.inkSecondary),
+                ),
+              ],
+              if (identity?.cast.isNotEmpty ?? false) ...[
+                const _Heading('Cast'),
+                DiscoverCastList(
+                  cast: identity!.cast,
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+              if (identity?.collection case final collection?) ...[
+                const SizedBox(height: AppSpacing.section),
+                _CollectionBand(
+                  collection: collection,
+                  held: switch (_recommender(settings)) {
+                    final seerr? =>
+                      ref
+                          .watch(
+                            mediaCollectionHeldProvider((
+                              connectionId: seerr,
+                              collectionId: collection.id,
+                            )),
                           )
-                        : null,
-                    onManage: _toManage,
-                    hasTrailer: identity?.videos.isNotEmpty ?? false,
-                    showManage: audience == Audience.operator,
-                    serverName: (lead) => settings.connectionTitle(
-                      lead.server.id,
-                      lead.server.service,
-                    ),
+                          .value,
+                    null => null,
+                  },
+                ),
+              ],
+            ];
+            final more = <Widget>[
+              if (_recommender(settings) case final seerr?) ...[
+                const SizedBox(height: AppSpacing.section),
+                DiscoverCarousel(
+                  title: 'More like this',
+                  sectionId: 'media-more-like-this',
+                  forcedMediaType: mediaKey.isMovie ? 'movie' : 'tv',
+                  items: ref.watch(
+                    mediaRecommendationsProvider((
+                      key: mediaKey,
+                      connectionId: seerr,
+                    )),
                   ),
-                  if (views.isNotEmpty) ...[
-                    _Heading('On your server', trailing: _servicesCount(rows)),
-                    _RowsCard(children: views),
-                  ],
-                  if (audience == Audience.operator) ..._manage(rows, settings),
-                  if ((identity?.overview ?? '').isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.section),
-                    Text(
-                      identity!.overview,
-                      style: AppType.body.copyWith(color: room.ink),
-                    ),
-                  ],
-                  if ((identity?.creditsLine ?? '').isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      identity!.creditsLine,
-                      style: AppType.meta.copyWith(color: room.inkSecondary),
-                    ),
-                  ],
-                  if (identity?.cast.isNotEmpty ?? false) ...[
-                    const _Heading('Cast'),
-                    DiscoverCastList(
-                      cast: identity!.cast,
-                      padding: EdgeInsets.zero,
-                    ),
-                  ],
-                  if (identity?.collection case final collection?) ...[
-                    const SizedBox(height: AppSpacing.section),
-                    _CollectionBand(
-                      collection: collection,
-                      held: switch (_recommender(settings)) {
-                        final seerr? =>
-                          ref
-                              .watch(
-                                mediaCollectionHeldProvider((
-                                  connectionId: seerr,
-                                  collectionId: collection.id,
-                                )),
-                              )
-                              .value,
-                        null => null,
-                      },
-                    ),
-                  ],
-                  if (_recommender(settings) case final seerr?) ...[
-                    const SizedBox(height: AppSpacing.section),
-                    DiscoverCarousel(
-                      title: 'More like this',
-                      sectionId: 'media-more-like-this',
-                      forcedMediaType: mediaKey.isMovie ? 'movie' : 'tv',
-                      items: ref.watch(
-                        mediaRecommendationsProvider((
-                          key: mediaKey,
-                          connectionId: seerr,
-                        )),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            ];
+            return CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    gutter,
+                    top + AppSpacing.md,
+                    gutter,
+                    AppSpacing.xxxl,
+                  ),
+                  sliver: SliverList.list(
+                    children: [
+                      ...head,
+                      if (box.maxWidth >= AppBreakpoints.touchRail)
+                        // Two tracks: who the title is and what to do with it
+                        // on the left, the servers and Manage beside it.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [...act, ...reference],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xl),
+                            SizedBox(
+                              width: _sideTrack,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: serve,
+                              ),
+                            ),
+                          ],
+                        )
+                      else ...[
+                        ...act,
+                        ...serve,
+                        ...reference,
+                      ],
+                      ...more,
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -429,8 +472,12 @@ class _Hero extends StatelessWidget {
     required this.waiting,
     required this.marks,
     required this.onArtDrawn,
+    required this.backdropHeight,
     this.light,
   });
+
+  /// The slab's height: 214 on the phone, growing with the page's width.
+  final double backdropHeight;
 
   /// Told when the backdrop or the poster has been drawn.
   final ValueChanged<String> onArtDrawn;
@@ -452,10 +499,11 @@ class _Hero extends StatelessWidget {
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final identity = this.identity;
-    const backdropHeight = 214.0;
-    const posterWidth = 88.0;
-    const posterHeight = 132.0;
-    const rise = 52.0;
+    // The poster grows with the slab, up to half again its phone size.
+    final scale = (backdropHeight / 214).clamp(1.0, 1.5);
+    final posterWidth = 88.0 * scale;
+    final posterHeight = 132.0 * scale;
+    final rise = 52.0 * scale;
 
     final stacked = _stacked(context);
     final backdrop = Container(
@@ -477,7 +525,7 @@ class _Hero extends StatelessWidget {
         // Decoded once, at the poster's box.
         (_, final String poster) when poster.isNotEmpty => _Artwork.veiled(
           url: poster,
-          decodeBox: const Size(posterWidth, posterHeight),
+          decodeBox: Size(posterWidth, posterHeight),
           onDrawn: onArtDrawn,
           fallback: _Plate(kind: kind, well: true),
         ),
@@ -499,7 +547,7 @@ class _Hero extends StatelessWidget {
           ? const ShimmerPlaceholder(height: double.infinity)
           : _Artwork(
               url: identity?.posterUrl,
-              decodeBox: const Size(posterWidth, posterHeight),
+              decodeBox: Size(posterWidth, posterHeight),
               onDrawn: onArtDrawn,
               fallback: _Plate(kind: kind),
             ),
@@ -531,7 +579,7 @@ class _Hero extends StatelessWidget {
               child: backdrop,
             ),
             Padding(
-              padding: const EdgeInsets.only(top: backdropHeight - rise),
+              padding: EdgeInsets.only(top: backdropHeight - rise),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -541,9 +589,7 @@ class _Hero extends StatelessWidget {
                     Expanded(
                       child: Padding(
                         // Clear of the artwork: the title starts under it.
-                        padding: const EdgeInsets.only(
-                          top: rise + AppSpacing.md,
-                        ),
+                        padding: EdgeInsets.only(top: rise + AppSpacing.md),
                         child: title,
                       ),
                     ),
@@ -673,6 +719,10 @@ class _Artwork extends StatelessWidget {
     );
   }
 }
+
+/// The side track's width when the page takes two: the servers and Manage,
+/// drawn for the phone's column and a little more.
+const double _sideTrack = 380;
 
 /// The collection the title belongs to, in one slab over its own artwork,
 /// veiled: its name, and how much of it the household holds. Taps
