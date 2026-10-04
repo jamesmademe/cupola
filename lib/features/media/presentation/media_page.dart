@@ -47,6 +47,7 @@ import 'package:cupola/features/discover/presentation/discover_detail_view_model
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
 import 'package:cupola/features/media/domain/media_row_view.dart';
@@ -239,11 +240,38 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       namesArr: roleGate.namesService(arr),
       arrName: arr.title,
     );
+    // On the server by Seerr's word, with Seerr's link to it: watched there,
+    // in the player Seerr is set up with.
+    final link =
+        stringOrNull(record.mediaInfo?['mediaUrl']) ??
+        stringOrNull(record.mediaInfo?['mediaUrl4k']);
+    final watchAt = gate.state == SeerrRequestState.available
+        ? Uri.tryParse(link ?? '')
+        : null;
     return (
       gate: gate,
       words: words,
       verdict: words.open ? roleGate.requestAction(kind) : const Live(),
+      watch: watchAt == null || !watchAt.hasScheme
+          ? null
+          : (
+              label: switch (roleGate.server?.mediaServer) {
+                SeerrMediaServer.plex => 'Watch on Plex',
+                SeerrMediaServer.jellyfin => 'Watch on Jellyfin',
+                SeerrMediaServer.emby => 'Watch on Emby',
+                _ => 'Watch',
+              },
+              url: watchAt,
+            ),
     );
+  }
+
+  /// Opens Seerr's link to the title in its player.
+  Future<void> _watch(Uri url) async {
+    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      SnackBarHelper.error(context, 'Could not open it');
+    }
   }
 
   /// Opens the request sheet, then reads Seerr again.
@@ -418,7 +446,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         : answeredWatchlist?.on;
     // Under the buttons, what a request means now: why there is none to make,
     // what one would add, or for the requester, that the title is not there.
-    final requestLine = request == null
+    final requestLine = request == null || request.watch != null
         ? null
         : request.words.reason ??
               request.verdict.reason ??
@@ -534,6 +562,9 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   onRequest: request == null
                       ? null
                       : () => _request(request, identity, rows),
+                  onWatch: request?.watch == null
+                      ? null
+                      : () => _watch(request!.watch!.url),
                   // A series is added with its seasons, not drawn here yet.
                   onAdd: mediaKey.isMovie
                       ? (lead) => _add(lead, rows, identity, light)
@@ -1414,6 +1445,7 @@ class _LeadBar extends StatelessWidget {
     this.watchlist,
     this.request,
     this.onRequest,
+    this.onWatch,
     this.onAdd,
     this.light,
     required this.hasTrailer,
@@ -1439,6 +1471,9 @@ class _LeadBar extends StatelessWidget {
   /// Opens the request sheet, when a request can be made.
   final VoidCallback? onRequest;
 
+  /// Opens Seerr's link to the title, when Seerr has it on the server.
+  final VoidCallback? onWatch;
+
   /// Opens the add sheet, for an Add that leads.
   final void Function(MediaLeadAdd lead)? onAdd;
   final bool hasTrailer;
@@ -1451,7 +1486,8 @@ class _LeadBar extends StatelessWidget {
       MediaLeadPlay(:final resume) =>
         '${resume ? 'Resume' : 'Play'} on ${serverName(lead as MediaLeadPlay)}',
       MediaLeadAdd(:final arr) => 'Add to ${arr.title}',
-      MediaLeadRequest() => request?.words.label ?? 'Request',
+      MediaLeadRequest() =>
+        request?.watch?.label ?? request?.words.label ?? 'Request',
       MediaLeadCopy(:final status, :final connection) => resolveMediaAction(
         status,
         const MediaActionCapabilities(
@@ -1484,6 +1520,7 @@ class _LeadBar extends StatelessWidget {
     final onLead = switch (lead) {
       final MediaLeadPlay play => () => onPlay(play),
       final MediaLeadAdd add when onAdd != null => () => onAdd!(add),
+      MediaLeadRequest() when request?.watch != null => onWatch,
       MediaLeadRequest() when request?.words.open ?? false => onRequest,
       _ => null,
     };
@@ -1522,6 +1559,8 @@ class _LeadBar extends StatelessWidget {
                   Icon(switch (lead) {
                     MediaLeadPlay() => Icons.play_arrow_rounded,
                     MediaLeadAdd() => Icons.add_rounded,
+                    MediaLeadRequest() when request?.watch != null =>
+                      Icons.open_in_new_rounded,
                     MediaLeadRequest() when !(request?.words.open ?? true) =>
                       request!.words.icon,
                     MediaLeadRequest() => Icons.add_rounded,
@@ -2425,6 +2464,7 @@ typedef _Request = ({
   SeerrRequestGate gate,
   SeerrRequestWords words,
   GateVerdict verdict,
+  ({String label, Uri url})? watch,
 });
 
 /// One line under the lead that says where a title stands: a 7 dot in its

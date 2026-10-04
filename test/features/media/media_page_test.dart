@@ -519,6 +519,19 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('on the server by Seerr\'s word: watched in its player', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p2, WorldTitles.tearsOfSteel);
+
+    final watch = find.widgetWithText(FilledButton, 'Watch on Jellyfin');
+    expect(watch, findsOneWidget);
+    expect(tester.widget<FilledButton>(watch).onPressed, isNotNull);
+    expect(find.text('Request'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
   testWidgets('Search releases asks which copy when there are two', (
     tester,
   ) async {

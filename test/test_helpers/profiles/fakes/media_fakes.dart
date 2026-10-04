@@ -173,6 +173,10 @@ class SeerrFake extends ServiceFake {
       'externalServiceId': hdId,
       'externalServiceId4k': uhdId,
       'externalServiceSlug': t.slug,
+      // Seerr's link to the title in the player it is set up with, once it
+      // is there.
+      if (hd == 5)
+        'mediaUrl': '${WorldHosts.jellyfin}/web/#/details?id=jf-${t.key}',
       'downloadStatus': [
         for (final d in WorldDownloads.all)
           if (d.title == t &&
