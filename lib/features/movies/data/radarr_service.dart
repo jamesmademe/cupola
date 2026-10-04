@@ -251,6 +251,49 @@ class RadarrService with ArrActivityMixin {
     return RadarrMovie.fromJson(data.cast<String, dynamic>());
   }
 
+  /// The downloads the queue holds for one film (`queue/details?movieId=`),
+  /// each record as the queue lists it. A failure travels.
+  Future<List<Map<String, dynamic>>> getMovieQueue(int movieId) async {
+    final response = await client.get(
+      '/api/v3/queue/details',
+      queryParameters: {'movieId': movieId},
+    );
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Radarr answered without a queue');
+    }
+    // Matched here as well: a Radarr that ignored the filter answers with
+    // its whole queue.
+    return [
+      for (final item in data.whereType<Map>())
+        if (item['movieId'] == movieId) item.cast<String, dynamic>(),
+    ];
+  }
+
+  /// When a search for one film was asked, while it is queued or running:
+  /// the earliest such `MoviesSearch` among Radarr's commands. Null when none
+  /// is. A failure travels.
+  Future<DateTime?> searchingSince(int movieId) async {
+    final response = await client.get('/api/v3/command');
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Radarr answered without its commands');
+    }
+    DateTime? since;
+    for (final command in data.whereType<Map>()) {
+      if (command['name'] != 'MoviesSearch') continue;
+      if (command['status'] != 'queued' && command['status'] != 'started') {
+        continue;
+      }
+      final body = command['body'];
+      final ids = body is Map ? body['movieIds'] : null;
+      if (ids is! List || !ids.contains(movieId)) continue;
+      final at = DateTime.tryParse('${command['queued'] ?? ''}')?.toLocal();
+      if (at != null && (since == null || at.isBefore(since))) since = at;
+    }
+    return since;
+  }
+
   /// Fetches the root folders configured on this Radarr.
   Future<List<Map<String, dynamic>>> getRootFolders() async {
     return fetchRootFolders();

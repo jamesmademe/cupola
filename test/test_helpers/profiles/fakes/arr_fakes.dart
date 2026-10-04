@@ -107,6 +107,9 @@ abstract class ArrFake extends ServiceFake {
           ]);
         case final p when p == '$_base/tag':
           return NetworkReply.json(const <Object?>[]);
+        // No command running: nothing is being searched for.
+        case final p when p == '$_base/command':
+          return NetworkReply.json(const <Object?>[]);
         case final p when p == '$_base/indexer' && indexers != null:
           return NetworkReply.json(indexers);
         case final p when p == '$_base/manualimport':

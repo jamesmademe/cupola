@@ -50,6 +50,7 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_removal.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
+import 'package:cupola/features/media/presentation/media_copy_panel_card.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -187,6 +188,30 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     }
   }
 
+  /// The film [connectionId]'s Radarr holds, when it answered with one.
+  static RadarrMovie? _radarrMovieOf(List<MediaRow> rows, String connectionId) {
+    for (final row in rows) {
+      if (row case MediaConnectionRow(
+        :final connection,
+        reading: MediaReadingAnswered(:final answer),
+      ) when connection.id == connectionId) {
+        if (answer.value case MediaRadarrCopy(:final movie?)) return movie;
+      }
+    }
+    return null;
+  }
+
+  /// Reads every Radarr and Sonarr again, after something here changed what
+  /// they hold.
+  void _readArrsAgain(List<MediaRow> rows) {
+    for (final row in rows) {
+      if (row.service == ServiceKey.radarr ||
+          row.service == ServiceKey.sonarr) {
+        retryMediaRow(ref, mediaKey, row);
+      }
+    }
+  }
+
   void _toManage() {
     final target = _manageKey.currentContext;
     if (target == null) return;
@@ -281,28 +306,49 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 showMetacritic: audience == Audience.operator,
               ),
               const SizedBox(height: AppSpacing.slabY),
-              _LeadBar(
-                lead: lead,
-                light: light,
-                onPlay: (lead) => _play(
-                  lead,
-                  settings.connectionTitle(lead.server.id, lead.server.service),
+              // A Radarr copy that needs something says so where the lead
+              // stands, and what can be done.
+              if (lead case MediaLeadCopy(
+                :final connection,
+                :final status,
+              ) when _radarrMovieOf(rows, connection.id) != null)
+                MediaCopyPanelCard(
+                  connection: connection,
+                  name: settings.connectionTitle(
+                    connection.id,
+                    connection.service,
+                  ),
+                  movie: _radarrMovieOf(rows, connection.id)!,
+                  status: status,
+                  onChanged: () => _readArrsAgain(rows),
+                )
+              else
+                _LeadBar(
+                  lead: lead,
+                  light: light,
+                  onPlay: (lead) => _play(
+                    lead,
+                    settings.connectionTitle(
+                      lead.server.id,
+                      lead.server.service,
+                    ),
+                  ),
+                  onTrailer: identity?.videos.isNotEmpty ?? false
+                      ? () =>
+                            DiscoverVideosButton.show(context, identity!.videos)
+                      : null,
+                  onManage: _toManage,
+                  // A series is added with its seasons, not drawn here yet.
+                  onAdd: mediaKey.isMovie
+                      ? (lead) => _add(lead, rows, identity, light)
+                      : null,
+                  hasTrailer: identity?.videos.isNotEmpty ?? false,
+                  showManage: manage.isNotEmpty,
+                  serverName: (lead) => settings.connectionTitle(
+                    lead.server.id,
+                    lead.server.service,
+                  ),
                 ),
-                onTrailer: identity?.videos.isNotEmpty ?? false
-                    ? () => DiscoverVideosButton.show(context, identity!.videos)
-                    : null,
-                onManage: _toManage,
-                // A series is added with its seasons, not drawn here yet.
-                onAdd: mediaKey.isMovie
-                    ? (lead) => _add(lead, rows, identity, light)
-                    : null,
-                hasTrailer: identity?.videos.isNotEmpty ?? false,
-                showManage: manage.isNotEmpty,
-                serverName: (lead) => settings.connectionTitle(
-                  lead.server.id,
-                  lead.server.service,
-                ),
-              ),
             ];
             final serve = <Widget>[
               if (views.isNotEmpty) ...[

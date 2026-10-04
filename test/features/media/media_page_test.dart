@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
+import 'package:cupola/core/widgets/machine_name.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -370,6 +371,37 @@ void main() {
       harness.network.requests.where((r) => r.method == 'DELETE'),
       isEmpty,
     );
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a stuck copy leads with its fault and its remedy', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.bigBuckBunny);
+
+    expect(find.text('Stuck at 47%'), findsOneWidget);
+    expect(find.text('Radarr 1 · qBittorrent'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is MachineName &&
+            widget.name == 'Big.Buck.Bunny.2008.1080p.BluRay',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(FilledButton, 'Try another download'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(RegExp(r"^Radarr 1 drops this one \(.+ so far\), ")),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Remove download'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove from queue?'), findsOneWidget);
 
     await harness.unmount(tester);
   });

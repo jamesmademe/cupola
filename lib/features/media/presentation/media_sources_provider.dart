@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -453,6 +455,32 @@ final mediaAddLookupProvider = FutureProvider.autoDispose
       return ref
           .watch(radarrServiceForProvider(target.connectionId))
           .lookupMovieByTmdbId(target.tmdbId);
+    }, retry: noProviderRetry);
+
+/// One Radarr copy's downloads, read while its panel shows one.
+final mediaRadarrQueueProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, ({String connectionId, int movieId})>((
+      ref,
+      copy,
+    ) {
+      return ref
+          .watch(radarrServiceForProvider(copy.connectionId))
+          .getMovieQueue(copy.movieId);
+    }, retry: noProviderRetry);
+
+/// When a search for one Radarr copy was asked, while it runs; null when none
+/// does. Asked again every few seconds while one does, so the panel turns from
+/// searching to what Radarr found.
+final mediaRadarrSearchProvider = FutureProvider.autoDispose
+    .family<DateTime?, ({String connectionId, int movieId})>((ref, copy) async {
+      final since = await ref
+          .watch(radarrServiceForProvider(copy.connectionId))
+          .searchingSince(copy.movieId);
+      if (since != null) {
+        final again = Timer(const Duration(seconds: 4), ref.invalidateSelf);
+        ref.onDispose(again.cancel);
+      }
+      return since;
     }, retry: noProviderRetry);
 
 /// Asks [row]'s connection again, and only it: a failed row's `Retry`.

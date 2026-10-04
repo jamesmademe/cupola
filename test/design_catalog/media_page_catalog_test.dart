@@ -93,46 +93,50 @@ MediaReading<T> _answered<T>(T value) =>
 
 /// The household's copy of the catalog's title, with [images] as Radarr links
 /// them (`CatalogArt`, read from disk).
-RadarrMovie _movie({List<Object?> images = const [], bool uhd = false}) =>
-    RadarrMovie.fromJson({
-      'id': 7,
-      'title': 'Nosferatu',
-      'sortTitle': 'nosferatu',
-      'tmdbId': 653,
-      'year': 1922,
-      'runtime': 94,
-      'status': 'released',
-      'hasFile': true,
-      'monitored': true,
-      'isAvailable': true,
-      'studio': 'Prana Film',
-      'genres': ['Horror', 'Fantasy'],
-      'overview':
-          'Thomas Hutter travels to the Carpathians to sell a house to Count '
-          'Orlok, who has seen a portrait of Hutter\'s wife, and follows the '
-          'young man home by sea.',
-      'images': images,
-      'ratings': {
-        'imdb': {'value': 7.8, 'votes': 113000},
-        'tmdb': {'value': 7.6, 'votes': 2400},
-        'rottenTomatoes': {'value': 97},
-      },
-      'movieFile': {
-        'id': 70,
-        'movieId': 7,
-        'relativePath': 'Nosferatu (1922).mkv',
-        'path': '/data/movies/Nosferatu (1922)/Nosferatu (1922).mkv',
-        'size': uhd ? 41200000000 : 9400000000,
-        'dateAdded': '2026-09-28T21:04:00Z',
+RadarrMovie _movie({
+  List<Object?> images = const [],
+  bool uhd = false,
+  bool held = true,
+}) => RadarrMovie.fromJson({
+  'id': 7,
+  'title': 'Nosferatu',
+  'sortTitle': 'nosferatu',
+  'tmdbId': 653,
+  'year': 1922,
+  'runtime': 94,
+  'status': 'released',
+  'hasFile': held,
+  'monitored': true,
+  'isAvailable': true,
+  'studio': 'Prana Film',
+  'genres': ['Horror', 'Fantasy'],
+  'overview':
+      'Thomas Hutter travels to the Carpathians to sell a house to Count '
+      'Orlok, who has seen a portrait of Hutter\'s wife, and follows the '
+      'young man home by sea.',
+  'images': images,
+  'ratings': {
+    'imdb': {'value': 7.8, 'votes': 113000},
+    'tmdb': {'value': 7.6, 'votes': 2400},
+    'rottenTomatoes': {'value': 97},
+  },
+  if (held)
+    'movieFile': {
+      'id': 70,
+      'movieId': 7,
+      'relativePath': 'Nosferatu (1922).mkv',
+      'path': '/data/movies/Nosferatu (1922)/Nosferatu (1922).mkv',
+      'size': uhd ? 41200000000 : 9400000000,
+      'dateAdded': '2026-09-28T21:04:00Z',
+      'quality': {
         'quality': {
-          'quality': {
-            'id': uhd ? 19 : 7,
-            'name': uhd ? 'Bluray-2160p' : 'Bluray-1080p',
-            'resolution': uhd ? 2160 : 1080,
-          },
+          'id': uhd ? 19 : 7,
+          'name': uhd ? 'Bluray-2160p' : 'Bluray-1080p',
+          'resolution': uhd ? 2160 : 1080,
         },
       },
-    });
+    },
+});
 
 const _art = [
   {'coverType': 'poster', 'remoteUrl': CatalogArt.poster},
@@ -256,6 +260,44 @@ List<MediaRow> _withSeerr() => [
       ),
     ),
   ),
+];
+
+/// Nosferatu's download as Radarr's queue lists it, stalled at 47%.
+const _stuckRecord = {
+  'id': 2,
+  'movieId': 7,
+  'title': 'Nosferatu.1922.1080p.BluRay',
+  'downloadClient': 'qBittorrent',
+  'size': 2400000000,
+  'sizeleft': 1272000000,
+  'status': 'warning',
+  'trackedDownloadStatus': 'warning',
+  'trackedDownloadState': 'downloading',
+  'statusMessages': [
+    {
+      'title': 'Nosferatu.1922.1080p.BluRay',
+      'messages': ['The download is stalled with no connections'],
+    },
+  ],
+};
+
+/// Radarr tracks the film and holds no file, with [queue]; Jellyfin has
+/// none.
+List<MediaRow> _wanted(ArrQueueSnapshot queue) => [
+  MediaConnectionRow<MediaStreamCopy>(
+    _jellyfin,
+    _answered(const MediaStreamCopy.notInLibrary()),
+  ),
+  MediaConnectionRow<MediaRadarrCopy>(
+    _radarr,
+    _answered(
+      MediaRadarrCopy(
+        movie: _movie(images: _art, held: false),
+        queue: queue,
+      ),
+    ),
+  ),
+  const MediaNotSetUpRow(ServiceKey.seerr),
 ];
 
 /// A film nobody holds: Jellyfin has none, neither Radarr tracks it.
@@ -434,6 +476,43 @@ void main() {
         height: 1400,
       ),
       _addScene(),
+      CatalogScene(
+        'Stuck · the fault leads with its remedy, and Remove '
+        'download beside it',
+        (_) => const MediaPage(mediaKey: _key),
+        width: 390,
+        height: 1240,
+        overrides: [
+          mediaRowsProvider.overrideWith(
+            (ref, key) => _wanted(
+              ArrQueueSnapshot.fromQueueItems([
+                _stuckRecord,
+              ], idsFor: (item) => [item['movieId'] as int]),
+            ),
+          ),
+          titleLightProvider.overrideWith((ref, url) async => _lights[url]),
+          mediaRadarrQueueProvider.overrideWith(
+            (ref, copy) async => [_stuckRecord],
+          ),
+          mediaRadarrSearchProvider.overrideWith((ref, copy) async => null),
+        ],
+      ),
+      CatalogScene(
+        'Searching · Radarr asked its indexers, and a release can '
+        'be chosen by hand',
+        (_) => const MediaPage(mediaKey: _key),
+        width: 390,
+        height: 1100,
+        overrides: [
+          mediaRowsProvider.overrideWith(
+            (ref, key) => _wanted(ArrQueueSnapshot.empty),
+          ),
+          titleLightProvider.overrideWith((ref, url) async => _lights[url]),
+          mediaRadarrSearchProvider.overrideWith(
+            (ref, copy) async => DateTime(2026, 10, 3, 20, 53),
+          ),
+        ],
+      ),
       _scene(
         'Twice the reading size',
         _household(),
