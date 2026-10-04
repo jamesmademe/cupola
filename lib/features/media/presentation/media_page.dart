@@ -531,7 +531,11 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           _ManageRow(
             title: 'Files & quality',
             summary: summaries.files,
-            body: (context) => _Files(rows: rows, settings: settings),
+            body: (context) => _Files(
+              rows: rows,
+              settings: settings,
+              onChanged: () => _readArrsAgain(rows),
+            ),
           ),
           _ManageRow(
             title: 'History',
@@ -1721,10 +1725,17 @@ class _ManageRowState extends State<_ManageRow> {
 /// Files & quality, open: every copy under its connection's name, its file
 /// as the service records it, or the row a copy with nothing on disk keeps.
 class _Files extends StatelessWidget {
-  const _Files({required this.rows, required this.settings});
+  const _Files({
+    required this.rows,
+    required this.settings,
+    required this.onChanged,
+  });
 
   final List<MediaRow> rows;
   final SettingsModel settings;
+
+  /// Told after a copy's profile or monitoring changed.
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1736,7 +1747,12 @@ class _Files extends StatelessWidget {
           reading: MediaReadingAnswered(:final answer),
         ))
           if (answer.value case MediaRadarrCopy(:final movie?))
-            (connection: connection, file: movie.movieFile, folder: movie.path),
+            (
+              connection: connection,
+              movie: movie,
+              file: movie.movieFile,
+              folder: movie.path,
+            ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1770,7 +1786,139 @@ class _Files extends StatelessWidget {
             ),
             _ => const FileInfoSection.missing(),
           },
+          _CopyControls(
+            connection: copy.connection,
+            name: settings.connectionTitle(
+              copy.connection.id,
+              copy.connection.service,
+            ),
+            movie: copy.movie,
+            onChanged: onChanged,
+          ),
         ],
+      ],
+    );
+  }
+}
+
+/// What a copy's arr does about it, edited where it is read: its quality
+/// profile and whether it is monitored, in the words the add sheet uses.
+/// A change shows at once and is written to the arr; [onChanged] then reads
+/// the copy again, and a write that failed puts the old value back.
+class _CopyControls extends ConsumerStatefulWidget {
+  const _CopyControls({
+    required this.connection,
+    required this.name,
+    required this.movie,
+    required this.onChanged,
+  });
+
+  final ServiceInstance connection;
+  final String name;
+  final RadarrMovie movie;
+  final VoidCallback onChanged;
+
+  @override
+  ConsumerState<_CopyControls> createState() => _CopyControlsState();
+}
+
+class _CopyControlsState extends ConsumerState<_CopyControls> {
+  /// What the user chose, until the copy read again says so.
+  int? _profileId;
+  bool? _monitored;
+
+  @override
+  void didUpdateWidget(_CopyControls old) {
+    super.didUpdateWidget(old);
+    if (old.movie != widget.movie) {
+      _profileId = null;
+      _monitored = null;
+    }
+  }
+
+  Future<void> _write(
+    Future<void> Function() write,
+    VoidCallback undo,
+    String failure,
+  ) async {
+    try {
+      await write();
+      widget.onChanged();
+    } catch (error) {
+      if (!mounted) return;
+      setState(undo);
+      SnackBarHelper.error(context, failure, detail: error);
+    }
+  }
+
+  Future<void> _pickProfile(Map<int, String> profiles, int current) async {
+    final picked = await showMediaValueSheet<int>(
+      context,
+      title: 'Quality profile',
+      value: current,
+      currentLabel: profiles[current] ?? '',
+      options: [
+        for (final MapEntry(:key, :value) in profiles.entries)
+          MediaDetailValueOption(value: key, label: value),
+      ],
+    );
+    if (picked == null || picked.value == current || !mounted) return;
+    setState(() => _profileId = picked.value);
+    await _write(
+      () => ref
+          .read(radarrServiceForProvider(widget.connection.id))
+          .updateMovieProfile(widget.movie.id, picked.value),
+      () => _profileId = null,
+      'Could not change the profile in ${widget.name}',
+    );
+  }
+
+  Future<void> _setMonitored(bool value) async {
+    setState(() => _monitored = value);
+    await _write(
+      () => ref
+          .read(radarrServiceForProvider(widget.connection.id))
+          .updateMovieMonitored(widget.movie.id, value),
+      () => _monitored = null,
+      value
+          ? 'Could not monitor it in ${widget.name}'
+          : 'Could not stop monitoring it in ${widget.name}',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final profiles =
+        ref.watch(mediaRadarrProfilesProvider(widget.connection.id)).value ??
+        const <int, String>{};
+    final profileId = _profileId ?? widget.movie.qualityProfileId;
+    final profile = profiles[profileId];
+    final monitored = _monitored ?? widget.movie.monitored;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Unnamed until Radarr has said what its profiles are called.
+        if (profile != null)
+          MediaValueRow(
+            label: 'Quality profile',
+            value: Text(
+              profile,
+              textAlign: TextAlign.end,
+              style: AppType.meta.copyWith(color: room.inkSecondary),
+            ),
+            onTap: profiles.length > 1 && profileId != null
+                ? () => _pickProfile(profiles, profileId)
+                : null,
+          ),
+        MediaSwitchRow(
+          label: 'Monitor',
+          detail: monitored
+              ? 'Grabs it and upgrades it to ${profile ?? 'its profile'}'
+              : '${widget.name} lists it and never looks for it',
+          value: monitored,
+          onChanged: _setMonitored,
+        ),
       ],
     );
   }

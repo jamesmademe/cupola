@@ -441,6 +441,10 @@ class RadarrFake extends ArrFake {
     if (r.method == 'DELETE' && one != null) {
       return NetworkReply.json(const <String, Object?>{});
     }
+    // An edit: Radarr answers with the record as it now stands.
+    if (r.method == 'PUT' && one != null) {
+      return NetworkReply.json(r.json);
+    }
     // One film's history, unpaged, as `/history/movie` answers it.
     if (r.method == 'GET' && r.path == '/api/v3/history/movie') {
       final id = r.query['movieId'];

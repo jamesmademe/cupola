@@ -483,6 +483,19 @@ final mediaRadarrSearchProvider = FutureProvider.autoDispose
       return since;
     }, retry: noProviderRetry);
 
+/// One Radarr's quality profiles, by id: read when a copy's Files & quality
+/// opens. Empty when Radarr did not answer.
+final mediaRadarrProfilesProvider = FutureProvider.autoDispose
+    .family<Map<int, String>, String>((ref, connectionId) async {
+      final profiles = await ref
+          .watch(radarrServiceForProvider(connectionId))
+          .getQualityProfiles();
+      return {
+        for (final profile in profiles)
+          if (profile['id'] case final int id) id: '${profile['name'] ?? ''}',
+      };
+    }, retry: noProviderRetry);
+
 /// Asks [row]'s connection again, and only it: a failed row's `Retry`.
 void retryMediaRow(WidgetRef ref, MediaKey key, MediaRow row) {
   if (row is! MediaConnectionRow) return;

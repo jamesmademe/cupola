@@ -406,6 +406,33 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('a copy\'s profile and monitoring are changed where they are '
+      'read', (tester) async {
+    final harness = await _pump(tester, Profiles.p4, WorldTitles.tearsOfSteel);
+    await tester.ensureVisible(find.text('Files & quality'));
+    await tester.tap(find.text('Files & quality'));
+    await _answer(tester);
+
+    expect(find.text('Quality profile'), findsOneWidget);
+    expect(find.text('HD-1080p'), findsOneWidget);
+    expect(find.text('Grabs it and upgrades it to HD-1080p'), findsOneWidget);
+
+    await tester.tap(find.text('Monitor'));
+    await tester.pump();
+    // It shows at once, and Radarr is told. (The world keeps nothing: the
+    // copy read again after the write says what it always said.)
+    expect(find.text('Radarr lists it and never looks for it'), findsOneWidget);
+    await _answer(tester);
+    final put = harness.network
+        .requestsTo(WorldIds.radarr)
+        .where((r) => r.method == 'PUT')
+        .single;
+    expect(put.uri.path, '/api/v3/movie/5');
+    expect(put.json, containsPair('monitored', false));
+
+    await harness.unmount(tester);
+  });
+
   testWidgets('Search releases asks which copy when there are two', (
     tester,
   ) async {

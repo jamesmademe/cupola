@@ -152,7 +152,7 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
       _ when !loaded => _Refusal(state: state),
       _ => MediaGroup(
         children: [
-          _ValueRow(
+          MediaValueRow(
             label: 'Quality profile',
             value: Text(
               profile ?? '',
@@ -161,7 +161,7 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
             ),
             onTap: state.profiles.length > 1 ? () => _pickProfile(state) : null,
           ),
-          _ValueRow(
+          MediaValueRow(
             label: 'Root folder',
             value: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -182,7 +182,7 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
                 ? () => _pickFolder(state)
                 : null,
           ),
-          _SwitchRow(
+          MediaSwitchRow(
             label: 'Monitor',
             detail: monitor
                 ? 'Grabs it and upgrades it to ${profile ?? 'its profile'}'
@@ -194,7 +194,7 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
               form.setSearchOnAdd(value);
             },
           ),
-          _SwitchRow(
+          MediaSwitchRow(
             label: 'Search when added',
             detail: !monitor
                 ? 'Needs Monitor on'
@@ -257,99 +257,6 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A setting and its value, on the right; tapped to change it when there is
-/// more than one to choose from.
-class _ValueRow extends StatelessWidget {
-  const _ValueRow({required this.label, required this.value, this.onTap});
-
-  final String label;
-  final Widget value;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final row = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 56),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Row(
-          children: [
-            Text(label, style: AppType.row.copyWith(color: room.ink)),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Align(alignment: Alignment.centerRight, child: value),
-            ),
-            if (onTap != null) ...[
-              const SizedBox(width: AppSpacing.xs),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: room.inkTertiary,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-    if (onTap == null) return MergeSemantics(child: row);
-    return MergeSemantics(
-      child: Semantics(
-        button: true,
-        child: InkWell(onTap: onTap, child: row),
-      ),
-    );
-  }
-}
-
-/// A setting that is on or off, with what that means under it.
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({
-    required this.label,
-    required this.detail,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final String detail;
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    return MergeSemantics(
-      child: InkWell(
-        onTap: onChanged == null ? null : () => onChanged!(!value),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label, style: AppType.row.copyWith(color: room.ink)),
-                    Text(
-                      detail,
-                      style: AppType.meta
-                          .weight(FontWeight.w400)
-                          .copyWith(color: room.inkTertiary),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Switch(value: value, onChanged: onChanged),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
