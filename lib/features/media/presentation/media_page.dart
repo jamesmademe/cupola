@@ -59,6 +59,7 @@ import 'package:cupola/features/media/presentation/media_add_sheet.dart';
 import 'package:cupola/features/media/presentation/media_copy_panel_card.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/media/presentation/media_manage_summaries.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -98,6 +99,10 @@ class MediaPage extends ConsumerStatefulWidget {
 class _MediaPageState extends ConsumerState<MediaPage> {
   /// Where Manage scrolls to.
   final _manageKey = GlobalKey();
+
+  /// Watchlist as the user just set it, and when: it stands until Seerr
+  /// answers after that.
+  ({bool on, DateTime at})? _watchlisted;
 
   /// The artwork the page has drawn: the title light is read from one of
   /// these only.
@@ -272,6 +277,69 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     );
   }
 
+  /// Whether the title is on the watchlist of the user [seerrId] acts as,
+  /// as that Seerr answered; null until it has.
+  static ({bool on, DateTime at})? _onWatchlist(
+    List<MediaRow> rows,
+    String seerrId,
+  ) {
+    for (final row in rows) {
+      if (row case MediaConnectionRow(
+        :final connection,
+        reading: MediaReadingAnswered(:final answer),
+      ) when connection.id == seerrId) {
+        if (answer.value case final MediaSeerrRecord record) {
+          return (on: record.details['onUserWatchlist'] == true, at: answer.at);
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Puts the title on that watchlist or takes it off: shown at once, then
+  /// written, then Seerr read again; put back when the write failed.
+  Future<void> _toggleWatchlist(
+    String seerrId,
+    bool on,
+    MediaIdentity? identity,
+    List<MediaRow> rows,
+  ) async {
+    final tmdbId = mediaKey.tmdbId;
+    if (tmdbId == null) return;
+    final mediaType = mediaKey.isMovie ? 'movie' : 'tv';
+    setState(() => _watchlisted = (on: !on, at: DateTime.now()));
+    final seerr = ref.read(seerrServiceForProvider(seerrId));
+    try {
+      if (on) {
+        await seerr.removeFromWatchlist(tmdbId: tmdbId, mediaType: mediaType);
+      } else {
+        await seerr.addToWatchlist(
+          tmdbId: tmdbId,
+          mediaType: mediaType,
+          title: identity?.title ?? '',
+        );
+      }
+      if (!mounted) return;
+      SnackBarHelper.success(
+        context,
+        on ? 'Taken off your watchlist' : 'On your watchlist',
+      );
+      for (final row in rows) {
+        if (row.service == ServiceKey.seerr) retryMediaRow(ref, mediaKey, row);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _watchlisted = null);
+      SnackBarHelper.error(
+        context,
+        on
+            ? 'Could not take it off your watchlist'
+            : 'Could not put it on your watchlist',
+        detail: error,
+      );
+    }
+  }
+
   /// The film [connectionId]'s Radarr holds, when it answered with one.
   static RadarrMovie? _radarrMovieOf(List<MediaRow> rows, String connectionId) {
     for (final row in rows) {
@@ -335,6 +403,19 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           _ServerRow(view, onTap: _wayOf(row, view)),
     ];
     final request = lead is MediaLeadRequest ? _requestOf(lead, rows) : null;
+    // Watchlist is Seerr's, kept for the user the connection acts as: no
+    // Seerr, no Watchlist.
+    final watchlistSeerr = _recommender(settings);
+    final answeredWatchlist = watchlistSeerr == null
+        ? null
+        : _onWatchlist(rows, watchlistSeerr);
+    final chosen = _watchlisted;
+    final watchlisted =
+        chosen != null &&
+            (answeredWatchlist == null ||
+                !answeredWatchlist.at.isAfter(chosen.at))
+        ? chosen.on
+        : answeredWatchlist?.on;
     // Under the buttons, what a request means now: why there is none to make,
     // what one would add, or for the requester, that the title is not there.
     final requestLine = request == null
@@ -438,6 +519,17 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                             DiscoverVideosButton.show(context, identity!.videos)
                       : null,
                   onManage: _toManage,
+                  watchlist: watchlistSeerr == null || watchlisted == null
+                      ? null
+                      : (
+                          on: watchlisted,
+                          onTap: () => _toggleWatchlist(
+                            watchlistSeerr,
+                            watchlisted,
+                            identity,
+                            rows,
+                          ),
+                        ),
                   request: request,
                   onRequest: request == null
                       ? null
@@ -1319,6 +1411,7 @@ class _LeadBar extends StatelessWidget {
     required this.onPlay,
     required this.onTrailer,
     required this.onManage,
+    this.watchlist,
     this.request,
     this.onRequest,
     this.onAdd,
@@ -1335,6 +1428,10 @@ class _LeadBar extends StatelessWidget {
   final void Function(MediaLeadPlay lead) onPlay;
   final VoidCallback? onTrailer;
   final VoidCallback onManage;
+
+  /// Whether the title is on the watchlist, and the toggle; null without a
+  /// Seerr that has answered.
+  final ({bool on, VoidCallback onTap})? watchlist;
 
   /// What Request says and may do, when it leads.
   final _Request? request;
@@ -1368,13 +1465,21 @@ class _LeadBar extends StatelessWidget {
     };
     final trailerLeads = lead is MediaLeadTrailer;
     final leadStyle = mediaLeadStyle(context, light);
-    // Watchlist is wired with the account the Seerr connection acts as
-    // (F-seerr-actas): until then it has no way to keep its promise.
-    final secondaries = <(String, IconData, VoidCallback?)>[
+    final watchlist = this.watchlist;
+    final secondaries = <(String, IconData, VoidCallback?, String?)>[
       if (hasTrailer && !trailerLeads)
-        ('Trailer', Icons.smart_display_outlined, onTrailer),
-      ('Watchlist', Icons.bookmark_border_rounded, null),
-      if (showManage) ('Manage', Icons.tune_rounded, onManage),
+        ('Trailer', Icons.smart_display_outlined, onTrailer, null),
+      // The watchlist of the user the Seerr connection acts as
+      // (F-seerr-actas): the glyph fills while the title is on it.
+      if (watchlist != null)
+        (
+          'Watchlist',
+          watchlist.on ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+          watchlist.onTap,
+          // Heard as a state, since the glyph alone shows it.
+          watchlist.on ? 'On your watchlist' : null,
+        ),
+      if (showManage) ('Manage', Icons.tune_rounded, onManage, null),
     ];
     final onLead = switch (lead) {
       final MediaLeadPlay play => () => onPlay(play),
@@ -1436,19 +1541,19 @@ class _LeadBar extends StatelessWidget {
         // At a large reading size, one to a line: three side by side cut
         // their words.
         if (_stacked(context))
-          for (final (index, (text, icon, onPressed))
+          for (final (index, (text, icon, onPressed, spoken))
               in secondaries.indexed) ...[
             if (index > 0) const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: onPressed,
               icon: Icon(icon, size: 17),
-              label: Text(text),
+              label: Text(text, semanticsLabel: spoken),
             ),
           ]
         else
           Row(
             children: [
-              for (final (index, (text, icon, onPressed))
+              for (final (index, (text, icon, onPressed, spoken))
                   in secondaries.indexed) ...[
                 if (index > 0) const SizedBox(width: AppSpacing.row),
                 Expanded(
@@ -1457,6 +1562,7 @@ class _LeadBar extends StatelessWidget {
                     icon: Icon(icon, size: 17),
                     label: Text(
                       text,
+                      semanticsLabel: spoken,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

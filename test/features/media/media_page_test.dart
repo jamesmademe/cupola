@@ -182,7 +182,8 @@ void main() {
     final harness = await _pump(tester, Profiles.p4, WorldTitles.tearsOfSteel);
 
     expect(find.text('Set up Seerr'), findsOneWidget);
-    expect(find.text('Watchlist'), findsOneWidget);
+    // Watchlist is Seerr's: without one it steps aside, no dimmed copy.
+    expect(find.text('Watchlist'), findsNothing);
 
     await harness.unmount(tester);
   });
@@ -491,6 +492,29 @@ void main() {
       find.textContaining(RegExp(r'^(Waiting for approval|On its way)\.$')),
       findsOneWidget,
     );
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Watchlist puts the title on the list of whom Seerr acts as', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.tearsOfSteel);
+    final watchlist = find.widgetWithText(OutlinedButton, 'Watchlist');
+    expect(watchlist, findsOneWidget);
+
+    await tester.tap(watchlist);
+    await _answer(tester);
+    final add = harness.network
+        .requestsTo(WorldIds.seerr)
+        .where((r) => r.method == 'POST' && r.uri.path == '/api/v1/watchlist')
+        .single;
+    expect(add.json, {
+      'tmdbId': WorldTitles.tearsOfSteel.tmdbId,
+      'mediaType': 'movie',
+      'title': 'Tears of Steel',
+    });
+    expect(find.text('On your watchlist'), findsWidgets);
 
     await harness.unmount(tester);
   });

@@ -754,6 +754,32 @@ class SeerrService {
     await _guardConflict(() => _client.delete('/api/v1/request/$requestId'));
   }
 
+  /// Puts a title on the watchlist of the user this connection acts as
+  /// (`POST /api/v1/watchlist`; "chi sei in Seerr" decides who that is). A
+  /// failure travels.
+  Future<void> addToWatchlist({
+    required int tmdbId,
+    required String mediaType,
+    required String title,
+  }) async {
+    await _client.post(
+      '/api/v1/watchlist',
+      data: {'tmdbId': tmdbId, 'mediaType': mediaType, 'title': title},
+    );
+  }
+
+  /// Takes a title off that watchlist (`DELETE /api/v1/watchlist/:tmdbId`,
+  /// which Seerr refuses without the media type). A failure travels.
+  Future<void> removeFromWatchlist({
+    required int tmdbId,
+    required String mediaType,
+  }) async {
+    await _client.delete(
+      '/api/v1/watchlist/$tmdbId',
+      queryParameters: {'mediaType': mediaType},
+    );
+  }
+
   /// Approves a request that is waiting for approval.
   ///
   /// Seerr then sends it to the server [SeerrApproveTarget] names: the one the

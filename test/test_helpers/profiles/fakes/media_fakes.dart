@@ -768,6 +768,15 @@ class SeerrFake extends ServiceFake {
       }
       return NetworkReply.json(_request(c, row));
     }
+    // A title put on the watchlist: Seerr answers with the item. The world
+    // keeps no watchlist.
+    if (r.method == 'POST' && path == '/api/v1/watchlist') {
+      final body = r.json;
+      return NetworkReply.json({
+        if (body is Map) ...body.cast<String, Object?>(),
+        'ratingKey': '',
+      }, status: 201);
+    }
     if (r.method == 'POST' && path == '/api/v1/request') {
       // The operator's answer is the world's first row, as it always was:
       // the request sheet's tests read it.
