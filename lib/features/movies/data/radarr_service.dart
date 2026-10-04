@@ -237,6 +237,20 @@ class RadarrService with ArrActivityMixin {
     return RadarrMovie.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// The lookup row of one film, by its TMDB id (`movie/lookup/tmdb`): what
+  /// [addMovie] posts back. A failure travels.
+  Future<RadarrMovie> lookupMovieByTmdbId(int tmdbId) async {
+    final response = await client.get(
+      '/api/v3/movie/lookup/tmdb',
+      queryParameters: {'tmdbId': tmdbId},
+    );
+    final data = response.data;
+    if (data is! Map) {
+      throw const FormatException('Radarr answered without a movie');
+    }
+    return RadarrMovie.fromJson(data.cast<String, dynamic>());
+  }
+
   /// Fetches the root folders configured on this Radarr.
   Future<List<Map<String, dynamic>>> getRootFolders() async {
     return fetchRootFolders();

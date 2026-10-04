@@ -178,6 +178,13 @@ int _lineOf(String text, int offset) =>
 /// [uses] is how many times the file reaches for it.
 const _monoUses = <({String file, int uses, String prints})>[
   (
+    file: 'lib/features/media/presentation/media_add_sheet.dart',
+    uses: 1,
+    prints:
+        'the root folder a film is added under: a path, exactly as the '
+        'service returns it',
+  ),
+  (
     file: 'lib/core/widgets/file_info_section.dart',
     uses: 2,
     prints:

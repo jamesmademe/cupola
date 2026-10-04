@@ -15,6 +15,7 @@ import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -443,6 +444,15 @@ final mediaRadarrHistoryProvider = FutureProvider.autoDispose
       return ref
           .watch(radarrServiceForProvider(copy.connectionId))
           .getMovieHistory(copy.movieId);
+    }, retry: noProviderRetry);
+
+/// A film nobody holds, as the Radarr it would be added to looks it up: what
+/// the add posts back.
+final mediaAddLookupProvider = FutureProvider.autoDispose
+    .family<RadarrMovie, ({String connectionId, int tmdbId})>((ref, target) {
+      return ref
+          .watch(radarrServiceForProvider(target.connectionId))
+          .lookupMovieByTmdbId(target.tmdbId);
     }, retry: noProviderRetry);
 
 /// Asks [row]'s connection again, and only it: a failed row's `Retry`.

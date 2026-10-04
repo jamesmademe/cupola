@@ -45,10 +45,16 @@ import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
 import 'package:cupola/features/media/domain/media_row_view.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/media/domain/media_removal.dart';
+import 'package:cupola/features/media/presentation/media_parts.dart';
+import 'package:cupola/features/media/presentation/media_add_sheet.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/media/presentation/media_manage_summaries.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -148,6 +154,39 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     ),
   };
 
+  /// Adds the film to the Radarr chosen in the sheet, then reads
+  /// every Radarr again: the row and the lead change with the answer.
+  Future<void> _add(
+    MediaLeadAdd lead,
+    List<MediaRow> rows,
+    MediaIdentity? identity,
+    TitleLight? light,
+  ) async {
+    final tmdbId = mediaKey.tmdbId;
+    final arrs = [
+      for (final row in rows)
+        if (row is MediaConnectionRow && row.service == lead.arr) row,
+    ];
+    if (tmdbId == null || arrs.isEmpty) return;
+    final settings = ref.read(currentSettingsProvider);
+    String name(ServiceInstance connection) =>
+        settings.connectionTitle(connection.id, connection.service);
+    final added = await showMediaAddSheet(
+      context,
+      tmdbId: tmdbId,
+      connections: [for (final row in arrs) row.connection],
+      name: name,
+      title: identity?.title ?? '',
+      year: identity?.year,
+      light: light,
+    );
+    if (added == null || !mounted) return;
+    SnackBarHelper.success(context, 'Added to ${name(added)}');
+    for (final row in arrs) {
+      retryMediaRow(ref, mediaKey, row);
+    }
+  }
+
   void _toManage() {
     final target = _manageKey.currentContext;
     if (target == null) return;
@@ -181,6 +220,10 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               case final view?)
             _ServerRow(view, onTap: _wayOf(row, view)),
     ];
+    // Manage is the operator's, and only when there is something to manage.
+    final manage = audience == Audience.operator
+        ? _manage(rows, settings)
+        : const <Widget>[];
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final top = MediaQuery.paddingOf(context).top;
@@ -249,8 +292,12 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                     ? () => DiscoverVideosButton.show(context, identity!.videos)
                     : null,
                 onManage: _toManage,
+                // A series is added with its seasons, not drawn here yet.
+                onAdd: mediaKey.isMovie
+                    ? (lead) => _add(lead, rows, identity, light)
+                    : null,
                 hasTrailer: identity?.videos.isNotEmpty ?? false,
-                showManage: audience == Audience.operator,
+                showManage: manage.isNotEmpty,
                 serverName: (lead) => settings.connectionTitle(
                   lead.server.id,
                   lead.server.service,
@@ -260,9 +307,9 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             final serve = <Widget>[
               if (views.isNotEmpty) ...[
                 _Heading('On your server', trailing: _servicesCount(rows)),
-                _RowsCard(children: views),
+                MediaGroup(children: views),
               ],
-              if (audience == Audience.operator) ..._manage(rows, settings),
+              ...manage,
             ];
             final reference = <Widget>[
               if ((identity?.overview ?? '').isNotEmpty) ...[
@@ -410,9 +457,30 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               ).stampedWith(connection.id),
             ),
     ];
+    final held = [
+      for (final row in rows)
+        if (row case MediaConnectionRow(
+          :final connection,
+          reading: MediaReadingAnswered(:final answer),
+        ))
+          if (answer.value case MediaRadarrCopy(:final movie?))
+            (
+              name: settings.connectionTitle(connection.id, connection.service),
+              target: (connection: connection, movie: movie),
+            ),
+    ];
+    final title = MediaIdentity.of(rows)?.title ?? '';
+    void remove(_RadarrHeld copy) => _remove(
+      copy,
+      title: title,
+      keeping: [
+        for (final other in held)
+          if (other.target != copy && other.target.movie.hasFile) other.name,
+      ],
+    );
     return [
       _Heading('Manage', key: _manageKey),
-      _RowsCard(
+      MediaGroup(
         children: [
           _ManageRow(
             title: 'Files & quality',
@@ -439,18 +507,116 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 ? () => showReleaseSearch(context, ref, searches.single.target)
                 : null,
             body: searches.length > 1
-                ? (context) => _SearchCopies(
+                ? (context) => _CopyChoices<ReleaseSearchTarget>(
+                    verb: 'Search releases on',
                     copies: searches,
-                    onSearch: (target) =>
+                    onChoose: (target) =>
                         showReleaseSearch(context, ref, target),
                   )
                 : null,
           ),
+          if (held case [final copy])
+            _ManageRow(
+              title: 'Remove from ${copy.name}',
+              summary: copy.target.movie.monitored
+                  ? 'Stops ${copy.name} looking for it'
+                  : 'Stops ${copy.name} tracking it',
+              onTap: () => remove(copy.target),
+            )
+          else if (held.isNotEmpty)
+            _ManageRow(
+              title: 'Remove a copy',
+              summary: _names([for (final copy in held) copy.name]),
+              body: (context) => _CopyChoices<_RadarrHeld>(
+                verb: 'Remove from',
+                copies: held,
+                onChoose: remove,
+              ),
+            ),
         ],
       ),
     ];
   }
+
+  /// `Radarr`, `Radarr and Radarr 4K`, `A, B and C`.
+  static String _names(List<String> names) => switch (names) {
+    [] => '',
+    [final one] => one,
+    _ => '${names.take(names.length - 1).join(', ')} and ${names.last}',
+  };
+
+  /// Removes [copy] from its Radarr, after the question removing asks: what
+  /// it takes, whether its files go, whether Radarr may add it again. Then
+  /// every Radarr is read again.
+  Future<void> _remove(
+    _RadarrHeld copy, {
+    required String title,
+    required List<String> keeping,
+  }) async {
+    final name = ref
+        .read(currentSettingsProvider)
+        .connectionTitle(copy.connection.id, copy.connection.service);
+    final removal = mediaRemoval(
+      title: title,
+      name: name,
+      sizeOnDisk: copy.movie.sizeOnDisk,
+      monitored: copy.movie.monitored,
+      keeping: keeping,
+    );
+    final result = await showAppConfirmDialog(
+      context: context,
+      title: removal.title,
+      message: removal.message,
+      icon: Icons.delete_outline_rounded,
+      cancelLabel: 'Keep it',
+      confirmLabel: removal.confirm(deleteFiles: false, exclude: false),
+      confirmLabelFor: (checked) => removal.confirm(
+        deleteFiles: checked('files'),
+        exclude: checked('exclude'),
+      ),
+      options: [
+        if (removal.filesLabel case final label?)
+          AppConfirmOption(
+            key: 'files',
+            label: label,
+            subtitle: 'Its folder on your server. This cannot be undone.',
+          ),
+        AppConfirmOption(
+          key: 'exclude',
+          label: "Don't add it again",
+          subtitle: "Keeps $name's import lists from bringing it back",
+        ),
+      ],
+    );
+    if (!result.confirmed || !mounted) return;
+    try {
+      await ref
+          .read(radarrServiceForProvider(copy.connection.id))
+          .deleteMovie(
+            copy.movie.id,
+            deleteFiles: result.option('files'),
+            addImportExclusion: result.option('exclude'),
+          );
+      if (!mounted) return;
+      SnackBarHelper.success(context, 'Removed from $name');
+      for (final row in ref.read(mediaRowsProvider(mediaKey))) {
+        if (row.service == ServiceKey.radarr) {
+          retryMediaRow(ref, mediaKey, row);
+        }
+      }
+    } catch (error) {
+      if (!mounted) return;
+      SnackBarHelper.error(
+        context,
+        'Could not remove $title from $name',
+        detail: error,
+      );
+    }
+  }
 }
+
+/// A film one Radarr holds: the connection, and its record there.
+typedef _RadarrHeld = ({ServiceInstance connection, RadarrMovie movie});
 
 /// The back control: a 44 plate at rest over the room.
 class _BackPlate extends StatelessWidget {
@@ -981,6 +1147,7 @@ class _LeadBar extends StatelessWidget {
     required this.onPlay,
     required this.onTrailer,
     required this.onManage,
+    this.onAdd,
     this.light,
     required this.hasTrailer,
     required this.showManage,
@@ -994,6 +1161,9 @@ class _LeadBar extends StatelessWidget {
   final void Function(MediaLeadPlay lead) onPlay;
   final VoidCallback? onTrailer;
   final VoidCallback onManage;
+
+  /// Opens the add sheet, for an Add that leads.
+  final void Function(MediaLeadAdd lead)? onAdd;
   final bool hasTrailer;
   final bool showManage;
   final String Function(MediaLeadPlay lead) serverName;
@@ -1017,23 +1187,7 @@ class _LeadBar extends StatelessWidget {
       MediaLeadTrailer() || MediaLeadNone() || MediaLeadWaiting() => null,
     };
     final trailerLeads = lead is MediaLeadTrailer;
-    // Lit by the title: the tinted fill under its ink in the dark room, the
-    // tinted primary under white in the day room. Unlit, the ink.
-    final light = this.light;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final leadStyle = light == null
-        ? AppTheme.primaryButtonStyle(context)
-        : AppTheme.primaryButtonStyle(context).copyWith(
-            backgroundColor: WidgetStatePropertyAll(
-              dark ? light.actionFill : light.dayPrimary,
-            ),
-            foregroundColor: WidgetStatePropertyAll(
-              dark ? light.actionInk : const Color(0xFFFFFFFF),
-            ),
-            iconColor: WidgetStatePropertyAll(
-              dark ? light.actionInk : const Color(0xFFFFFFFF),
-            ),
-          );
+    final leadStyle = mediaLeadStyle(context, light);
     // Watchlist is wired with the account the Seerr connection acts as
     // (F-seerr-actas): until then it has no way to keep its promise.
     final secondaries = <(String, IconData, VoidCallback?)>[
@@ -1044,8 +1198,9 @@ class _LeadBar extends StatelessWidget {
     ];
     final onLead = switch (lead) {
       final MediaLeadPlay play => () => onPlay(play),
-      // Add, Request and a copy's own action open the operator's and the
-      // requester's flows from the page: lots M5 and M6.
+      final MediaLeadAdd add when onAdd != null => () => onAdd!(add),
+      // Request and a copy's own action open the requester's and the
+      // operator's flows from the page: lots M5 and M6.
       _ => null,
     };
     return Column(
@@ -1060,12 +1215,11 @@ class _LeadBar extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(child: Text(label)),
-                Icon(
-                  lead is MediaLeadPlay
-                      ? Icons.play_arrow_rounded
-                      : Icons.arrow_forward_rounded,
-                  size: 20,
-                ),
+                Icon(switch (lead) {
+                  MediaLeadPlay() => Icons.play_arrow_rounded,
+                  MediaLeadAdd() => Icons.add_rounded,
+                  _ => Icons.arrow_forward_rounded,
+                }, size: 20),
               ],
             ),
           )
@@ -1146,36 +1300,6 @@ class _Heading extends StatelessWidget {
               trailing!,
               style: AppType.meta.copyWith(color: room.inkTertiary),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A group of rows on one slab, divided by hairlines.
-class _RowsCard extends StatelessWidget {
-  const _RowsCard({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final items = children;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.slabY),
-      decoration: BoxDecoration(
-        color: room.fillQuiet,
-        borderRadius: BorderRadius.circular(AppRadius.group),
-        border: Border.all(color: room.hair),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (index, item) in items.indexed) ...[
-            if (index > 0) Divider(height: 1, color: room.hair),
-            item,
-          ],
         ],
       ),
     );
@@ -1606,13 +1730,19 @@ class _Files extends StatelessWidget {
   }
 }
 
-/// Search releases, open on more than one copy: each copy a row that sends
-/// the search to its own connection.
-class _SearchCopies extends StatelessWidget {
-  const _SearchCopies({required this.copies, required this.onSearch});
+/// A section open on the copies it can act on: one row per copy, each named
+/// for what it does there (`Search releases on Radarr 4K`).
+class _CopyChoices<T> extends StatelessWidget {
+  const _CopyChoices({
+    required this.verb,
+    required this.copies,
+    required this.onChoose,
+  });
 
-  final List<({String name, ReleaseSearchTarget target})> copies;
-  final ValueChanged<ReleaseSearchTarget> onSearch;
+  /// What a row does, before the connection's name: `Search releases on`.
+  final String verb;
+  final List<({String name, T target})> copies;
+  final ValueChanged<T> onChoose;
 
   @override
   Widget build(BuildContext context) {
@@ -1623,10 +1753,10 @@ class _SearchCopies extends StatelessWidget {
         for (final copy in copies)
           Semantics(
             button: true,
-            label: 'Search releases on ${copy.name}',
+            label: '$verb ${copy.name}',
             excludeSemantics: true,
             child: InkWell(
-              onTap: () => onSearch(copy.target),
+              onTap: () => onChoose(copy.target),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
                   minHeight: DesignTokens.sizeTouch,

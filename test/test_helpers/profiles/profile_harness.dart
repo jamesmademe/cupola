@@ -118,6 +118,7 @@ Future<ProfileHarness> pumpWithProfile(
   Size? surfaceSize,
   bool settle = true,
   DateTime? now,
+  ThemeData? theme,
 }) async {
   final harness = await ProfileHarness.start(
     profile,
@@ -134,7 +135,7 @@ Future<ProfileHarness> pumpWithProfile(
   await tester.pumpWidget(
     ProviderScope(
       overrides: harness.overrides,
-      child: MaterialApp(theme: AppTheme.darkTheme(), home: child),
+      child: MaterialApp(theme: theme ?? AppTheme.darkTheme(), home: child),
     ),
   );
   if (settle) await harness.settle(tester);

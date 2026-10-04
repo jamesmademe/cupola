@@ -256,6 +256,124 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('Add opens on the Radarr, its profile, folder and indexers', (
+    tester,
+  ) async {
+    // P1 holds no Metropolis: the first Radarr leads, and the sheet says
+    // what adding it there means.
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.metropolis);
+    final lead = find.widgetWithText(FilledButton, 'Add to Radarr');
+    expect(lead, findsOneWidget);
+
+    await tester.tap(lead);
+    await _answer(tester);
+    expect(find.text('Metropolis · 1927'), findsOneWidget);
+    expect(find.text('Instance'), findsOneWidget);
+    expect(find.text('HD-1080p'), findsOneWidget);
+    expect(find.text('/mnt/tank/media/films'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^11\.3.TB free$')), findsOneWidget);
+    expect(find.text('Grabs it and upgrades it to HD-1080p'), findsOneWidget);
+    expect(find.text('Asks your 2 indexers right away'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Add and search'), findsOneWidget);
+
+    // Unmonitored, Radarr never looks: the search goes with it.
+    await tester.tap(find.text('Monitor'));
+    await tester.pump();
+    expect(find.text('Needs Monitor on'), findsOneWidget);
+    expect(find.text('Add and search'), findsNothing);
+    await tester.tap(find.text('Monitor'));
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Add and search'));
+    await _answer(tester);
+    final add = harness.network
+        .requestsTo(WorldIds.radarr)
+        .where((r) => r.method == 'POST' && r.uri.path == '/api/v3/movie')
+        .single;
+    expect(add.json, containsPair('tmdbId', WorldTitles.metropolis.tmdbId));
+    expect(add.json, containsPair('qualityProfileId', 1));
+    expect(add.json, containsPair('rootFolderPath', '/mnt/tank/media/films'));
+    expect(add.json, containsPair('monitored', true));
+    expect(add.json, containsPair('addOptions', {'searchForMovie': true}));
+    expect(find.textContaining('Added to Radarr'), findsOneWidget);
+    // The sheet is gone, and Radarr is asked again.
+    expect(find.text('Instance'), findsNothing);
+    expect(
+      harness.network
+          .requestsTo(WorldIds.radarr)
+          .where((r) => r.method == 'GET' && r.uri.path == '/api/v3/movie'),
+      hasLength(2),
+    );
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Remove asks what goes with it, then asks Radarr', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p4, WorldTitles.tearsOfSteel);
+    final row = find.textContaining(RegExp(r'^Remove from '));
+    await tester.ensureVisible(row);
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Remove Tears of Steel from Radarr?'), findsOneWidget);
+    expect(find.text('Radarr stops looking for it.'), findsOneWidget);
+    expect(find.text("Don't add it again"), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Remove from Radarr'), findsOne);
+
+    await tester.tap(find.textContaining('Also delete'));
+    await tester.pump();
+    final confirm = find.ancestor(
+      of: find.textContaining(RegExp(r'^Remove and delete 1\.1.GB$')),
+      matching: find.byType(FilledButton),
+    );
+    expect(confirm, findsOneWidget);
+    await tester.tap(confirm);
+    await _answer(tester);
+
+    final delete = harness.network
+        .requestsTo(WorldIds.radarr)
+        .where((r) => r.method == 'DELETE')
+        .single;
+    expect(delete.uri.path, '/api/v3/movie/5');
+    expect(delete.uri.queryParameters, {
+      'deleteFiles': 'true',
+      'addImportExclusion': 'false',
+    });
+    expect(find.text('Removed from Radarr'), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('with two copies, Remove asks which, and says which stays', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p7, WorldTitles.tearsOfSteel);
+    final row = find.text('Remove a copy');
+    await tester.ensureVisible(row);
+    await tester.tap(row);
+    await tester.pump();
+    final fourK = find.bySemanticsLabel('Remove from Radarr · 4K');
+    expect(find.bySemanticsLabel('Remove from Radarr 1'), findsOneWidget);
+    expect(fourK, findsOneWidget);
+
+    await tester.tap(fourK);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Radarr · 4K stops looking for it. Radarr 1 keeps its copy.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Keep it'));
+    await tester.pumpAndSettle();
+    expect(
+      harness.network.requests.where((r) => r.method == 'DELETE'),
+      isEmpty,
+    );
+
+    await harness.unmount(tester);
+  });
+
   testWidgets('Search releases asks which copy when there are two', (
     tester,
   ) async {

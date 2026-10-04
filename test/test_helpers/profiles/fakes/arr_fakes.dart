@@ -48,6 +48,14 @@ abstract class ArrFake extends ServiceFake {
   /// The service's own routes, tried after the shared ones.
   NetworkReply? own(NetworkRequest r, ServerContext c) => null;
 
+  /// The indexers the arr searches with: three, two of which an automatic
+  /// search asks. Null for Prowlarr, whose indexers are its own routes.
+  List<JsonMap>? get indexers => const [
+    {'id': 1, 'name': 'Nyaa', 'enableAutomaticSearch': true},
+    {'id': 2, 'name': 'Torrentio', 'enableAutomaticSearch': true},
+    {'id': 3, 'name': 'Archive', 'enableAutomaticSearch': false},
+  ];
+
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
     final path = r.path;
@@ -99,6 +107,8 @@ abstract class ArrFake extends ServiceFake {
           ]);
         case final p when p == '$_base/tag':
           return NetworkReply.json(const <Object?>[]);
+        case final p when p == '$_base/indexer' && indexers != null:
+          return NetworkReply.json(indexers);
         case final p when p == '$_base/manualimport':
           return NetworkReply.json(manualImport(r, c));
         case final p when p == '$_base/filesystem':
@@ -390,6 +400,43 @@ class RadarrFake extends ArrFake {
     }
     if (r.method == 'GET' && r.path == '/api/v3/movie/lookup') {
       return NetworkReply.json(movies(c));
+    }
+    // One film looked up by its TMDB id, as Radarr answers it whether or not
+    // it holds it: a film it does not hold has no id of its own.
+    if (r.method == 'GET' && r.path == '/api/v3/movie/lookup/tmdb') {
+      final tmdb = r.query['tmdbId'];
+      for (final title in WorldTitles.all) {
+        if (!title.isSeries && '${title.tmdbId}' == tmdb) {
+          final held = [
+            for (final entry in _library(c))
+              if (entry.$2 == title) _movie(c, entry),
+          ];
+          return NetworkReply.json(
+            held.firstOrNull ??
+                {
+                  'title': title.title,
+                  'titleSlug': '${title.slug}-${title.tmdbId}',
+                  'year': title.year,
+                  'tmdbId': title.tmdbId,
+                  'images': const <Object?>[],
+                  'minimumAvailability': 'released',
+                },
+          );
+        }
+      }
+      return NetworkReply.json({'message': 'NotFound'}, status: 404);
+    }
+    // An add: Radarr answers with the new record. The world does not keep it.
+    if (r.method == 'POST' && r.path == '/api/v3/movie') {
+      final body = r.json;
+      return NetworkReply.json({
+        if (body is Map) ...body.cast<String, Object?>(),
+        'id': 100,
+        'hasFile': false,
+      }, status: 201);
+    }
+    if (r.method == 'DELETE' && one != null) {
+      return NetworkReply.json(const <String, Object?>{});
     }
     // One film's history, unpaged, as `/history/movie` answers it.
     if (r.method == 'GET' && r.path == '/api/v3/history/movie') {
@@ -838,6 +885,9 @@ class ReadarrFake extends ArrFake {
 
 class ProwlarrFake extends ArrFake {
   const ProwlarrFake();
+
+  @override
+  List<JsonMap>? get indexers => null;
 
   @override
   String get apiVersion => 'v1';

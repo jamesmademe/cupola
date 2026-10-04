@@ -4,6 +4,7 @@ library;
 import 'dart:io' as io;
 import 'dart:ui' as ui;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/capability/audience.dart';
@@ -16,7 +17,10 @@ import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/features/media/presentation/media_add_sheet.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -254,6 +258,78 @@ List<MediaRow> _withSeerr() => [
   ),
 ];
 
+/// A film nobody holds: Jellyfin has none, neither Radarr tracks it.
+List<MediaRow> _notHeld() => [
+  MediaConnectionRow<MediaStreamCopy>(
+    _jellyfin,
+    _answered(const MediaStreamCopy.notInLibrary()),
+  ),
+  for (final radarr in [_radarr, _radarr4k])
+    MediaConnectionRow<MediaRadarrCopy>(
+      radarr,
+      _answered(
+        const MediaRadarrCopy(movie: null, queue: ArrQueueSnapshot.empty),
+      ),
+    ),
+  const MediaNotSetUpRow(ServiceKey.seerr),
+];
+
+/// The add form as a Radarr answers it: two profiles, one folder, fourteen
+/// indexers.
+class _CatalogAddForm extends ArrAddFormNotifier {
+  _CatalogAddForm(super.arg);
+
+  @override
+  ArrAddFormState build() => const ArrAddFormState(
+    profiles: [(id: 1, name: 'HD-1080p'), (id: 2, name: 'Any')],
+    rootFolders: ['/mnt/tank/media/movies'],
+    freeSpace: {'/mnt/tank/media/movies': 13600000000000},
+    searchingIndexers: 14,
+    profileId: 1,
+    rootFolder: '/mnt/tank/media/movies',
+    isLoading: false,
+  );
+}
+
+/// The add sheet, open over a page that holds nothing of the film: the
+/// panel drawn in place, as `AppBottomSheet`'s card draws its panels.
+CatalogScene _addScene() => CatalogScene(
+  'Add · over a film nobody holds: which Radarr, its profile and '
+  'folder, Monitor and Search when added',
+  (context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      const MediaPage(mediaKey: _key),
+      const ColoredBox(color: Colors.black54),
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: AppBottomSheet(
+          title: 'Add to Radarr',
+          subtitle: 'Nosferatu · 1922',
+          showClose: true,
+          child: MediaAddSheet(
+            tmdbId: 653,
+            connections: [_radarr, _radarr4k],
+            name: (c) => c.label.isEmpty ? 'Radarr' : 'Radarr ${c.label}',
+            light: _lights[CatalogArt.backdrop],
+          ),
+        ),
+      ),
+    ],
+  ),
+  width: 390,
+  height: 844,
+  overrides: [
+    mediaRowsProvider.overrideWith((ref, key) => _notHeld()),
+    audienceProvider.overrideWithValue(Audience.operator),
+    titleLightProvider.overrideWith((ref, url) async => null),
+    arrAddFormProvider.overrideWith2(_CatalogAddForm.new),
+    mediaAddLookupProvider.overrideWith(
+      (ref, target) async => _movie(images: _art),
+    ),
+  ],
+);
+
 /// One Radarr copy and nothing else, with [images].
 List<MediaRow> _bare(List<Object?> images) => [
   MediaConnectionRow<MediaRadarrCopy>(
@@ -357,6 +433,7 @@ void main() {
         width: 1180,
         height: 1400,
       ),
+      _addScene(),
       _scene(
         'Twice the reading size',
         _household(),

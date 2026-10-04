@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
@@ -53,6 +55,13 @@ class ArrAddFormState {
   final List<ArrProfileOption> profiles;
   final List<String> rootFolders;
 
+  /// The free space under each root folder, in bytes, where the server said.
+  final Map<String, int> freeSpace;
+
+  /// How many indexers a search asks ([BaseArrService.countSearchingIndexers]),
+  /// null when the server did not say.
+  final int? searchingIndexers;
+
   /// Lidarr only, and empty everywhere else — see
   /// [LidarrService.fetchMetadataProfiles].
   final List<ArrProfileOption> metadataProfiles;
@@ -80,6 +89,8 @@ class ArrAddFormState {
   const ArrAddFormState({
     this.profiles = const [],
     this.rootFolders = const [],
+    this.freeSpace = const {},
+    this.searchingIndexers,
     this.metadataProfiles = const [],
     this.profileId,
     this.rootFolder,
@@ -107,6 +118,8 @@ class ArrAddFormState {
   ArrAddFormState copyWith({
     List<ArrProfileOption>? profiles,
     List<String>? rootFolders,
+    Map<String, int>? freeSpace,
+    int? searchingIndexers,
     List<ArrProfileOption>? metadataProfiles,
     int? profileId,
     String? rootFolder,
@@ -123,6 +136,8 @@ class ArrAddFormState {
     return ArrAddFormState(
       profiles: profiles ?? this.profiles,
       rootFolders: rootFolders ?? this.rootFolders,
+      freeSpace: freeSpace ?? this.freeSpace,
+      searchingIndexers: searchingIndexers ?? this.searchingIndexers,
       metadataProfiles: metadataProfiles ?? this.metadataProfiles,
       profileId: profileId ?? this.profileId,
       rootFolder: rootFolder ?? this.rootFolder,
@@ -218,6 +233,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
         state.copyWith(
           profiles: options.profiles,
           rootFolders: options.rootFolders,
+          freeSpace: options.freeSpace,
           metadataProfiles: options.metadataProfiles,
           // The defaults that make the common case two taps: first profile,
           // first folder, monitored, and search for it now.
@@ -228,6 +244,9 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
           clearError: true,
         ),
       );
+      // Read beside the form, never holding it: a figure the sheet can do
+      // without.
+      unawaited(_countIndexers());
     } catch (error) {
       // Classified, not "Couldn't reach" for everything: a refused key is an
       // answer, and the sheet said the server could not be reached.
@@ -248,6 +267,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
     ({
       List<ArrProfileOption> profiles,
       List<String> rootFolders,
+      Map<String, int> freeSpace,
       List<ArrProfileOption> metadataProfiles,
     })
   >
@@ -262,6 +282,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
         return (
           profiles: _profiles(profiles),
           rootFolders: _paths(folders),
+          freeSpace: _freeSpace(folders),
           metadataProfiles: const <ArrProfileOption>[],
         );
       case ServiceKey.sonarr:
@@ -273,6 +294,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
         return (
           profiles: _profiles(profiles),
           rootFolders: _paths(folders),
+          freeSpace: _freeSpace(folders),
           metadataProfiles: const <ArrProfileOption>[],
         );
       case ServiceKey.lidarr:
@@ -285,6 +307,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
         return (
           profiles: _profiles(profiles),
           rootFolders: _paths(folders),
+          freeSpace: _freeSpace(folders),
           metadataProfiles: _profiles(metadata),
         );
       // Named rather than defaulted. `ArrAddRequest` is sealed so that an arr
@@ -298,6 +321,24 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
           'has no add form; only Radarr, Sonarr and Lidarr can be added to',
         );
     }
+  }
+
+  /// How many indexers a search on this server asks, once it says.
+  Future<void> _countIndexers() async {
+    final count = switch (arg.service) {
+      ServiceKey.radarr =>
+        ref
+            .read(radarrServiceForProvider(arg.instanceId))
+            .countSearchingIndexers(),
+      ServiceKey.sonarr =>
+        ref
+            .read(sonarrServiceForProvider(arg.instanceId))
+            .countSearchingIndexers(),
+      _ => null,
+    };
+    final answer = await count;
+    if (answer == null || !_alive) return;
+    state = state.copyWith(searchingIndexers: answer);
   }
 
   void selectProfile(int id) =>
@@ -421,3 +462,9 @@ List<String> _paths(List<Map<String, dynamic>> raw) => [
     if (entry['path'] is String && (entry['path'] as String).isNotEmpty)
       entry['path'] as String,
 ];
+
+Map<String, int> _freeSpace(List<Map<String, dynamic>> raw) => {
+  for (final entry in raw)
+    if (entry['path'] case final String path when path.isNotEmpty)
+      if (entry['freeSpace'] case final num space) path: space.toInt(),
+};

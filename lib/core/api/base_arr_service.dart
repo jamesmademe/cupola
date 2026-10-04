@@ -739,6 +739,23 @@ mixin ArrActivityMixin {
     return data.cast<Map<String, dynamic>>();
   }
 
+  /// How many of this server's indexers an automatic search asks: the ones
+  /// with automatic search on. Null when the server did not answer, and the
+  /// add sheet then says "your indexers" with no figure.
+  Future<int?> countSearchingIndexers() async {
+    try {
+      final response = await client.get('/api/${config.apiVersion}/indexer');
+      final data = response.data;
+      if (data is! List) return null;
+      return data
+          .whereType<Map>()
+          .where((indexer) => indexer['enableAutomaticSearch'] == true)
+          .length;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Updates an item's quality profile.
   Future<void> updateItemProfile(
     String resourcePath,
