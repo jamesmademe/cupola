@@ -4,6 +4,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,6 +14,9 @@ import 'package:cupola/core/widgets/file_info_section.dart';
 import 'package:cupola/core/widgets/machine_name.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/media_sources_provider.dart';
+import 'package:cupola/features/media/domain/media_reading.dart';
+import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
@@ -20,14 +24,16 @@ import '../../test_helpers/profiles/profiles.dart';
 Future<ProfileHarness> _pump(
   WidgetTester tester,
   ConfigProfile profile,
-  WorldTitle title,
-) async {
+  WorldTitle title, {
+  List<Override> overrides = const [],
+}) async {
   tester.view.physicalSize = const Size(390, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final harness = await pumpWithProfile(
     tester,
     profile,
+    overrides: overrides,
     child: MediaPage(mediaKey: MediaKey.movie(title.tmdbId)),
     settle: false,
   );
@@ -429,6 +435,62 @@ void main() {
         .single;
     expect(put.uri.path, '/api/v3/movie/5');
     expect(put.json, containsPair('monitored', false));
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('the requester asks for a movie that is not there', (
+    tester,
+  ) async {
+    // In the world Anna has asked for Charge already: here Seerr knows
+    // nothing of it yet.
+    final harness = await _pump(
+      tester,
+      Profiles.p2,
+      WorldTitles.charge,
+      overrides: [
+        mediaSeerrRecordProvider.overrideWith(
+          (ref, source) async => MediaAnswer(
+            const MediaSeerrRecord(
+              details: {
+                'id': 1011985,
+                'title': 'Charge',
+                'releaseDate': '2022-10-11',
+                'overview': 'A Blender open movie.',
+              },
+            ),
+            DateTime(2026, 10, 4),
+          ),
+        ),
+      ],
+    );
+    final request = find.widgetWithText(FilledButton, 'Request');
+    expect(request, findsOneWidget);
+    expect(find.text('Not on the server yet.'), findsOneWidget);
+    // No service name but Jellyfin and Plex, no Manage.
+    expect(find.textContaining('Radarr'), findsNothing);
+    expect(find.text('Manage'), findsNothing);
+
+    await tester.tap(request);
+    await _answer(tester);
+    expect(find.text('Request Charge'), findsOneWidget);
+    expect(find.text('Submit request'), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a request that stands is said, and asks nothing', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p2, WorldTitles.metropolis);
+
+    final lead = find.widgetWithText(FilledButton, 'Requested');
+    expect(lead, findsOneWidget);
+    expect(tester.widget<FilledButton>(lead).onPressed, isNull);
+    expect(
+      find.textContaining(RegExp(r'^(Waiting for approval|On its way)\.$')),
+      findsOneWidget,
+    );
 
     await harness.unmount(tester);
   });

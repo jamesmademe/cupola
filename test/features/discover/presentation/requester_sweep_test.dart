@@ -12,6 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/media_page.dart';
+
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
@@ -92,6 +95,20 @@ final _pages = <String, Widget>{
     mediaId: WorldTitles.nightShift.tmdbId,
     mediaType: 'tv',
     heroTag: 'sweep_nightShift',
+  ),
+  // The one page a title has: the requester's reads no service but the
+  // players, and no copy's fault, whatever the household holds.
+  'the Media page, a movie of hers': MediaPage(
+    mediaKey: MediaKey.movie(WorldTitles.charge.tmdbId),
+  ),
+  "the Media page, Luca's movie": MediaPage(
+    mediaKey: MediaKey.movie(WorldTitles.metropolis.tmdbId),
+  ),
+  'the Media page, a stuck download': MediaPage(
+    mediaKey: MediaKey.movie(WorldTitles.bigBuckBunny.tmdbId),
+  ),
+  'the Media page, a movie on the server': MediaPage(
+    mediaKey: MediaKey.movie(WorldTitles.tearsOfSteel.tmdbId),
   ),
   'a person': const PersonDetailScreen(personId: SeerrFake.personId),
   'a collection': const CollectionDetailScreen(

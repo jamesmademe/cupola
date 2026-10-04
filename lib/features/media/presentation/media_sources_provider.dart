@@ -9,6 +9,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
+import 'package:cupola/features/discover/domain/seerr_numbering.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/media/domain/media_collection.dart';
@@ -494,6 +495,13 @@ final mediaRadarrProfilesProvider = FutureProvider.autoDispose
         for (final profile in profiles)
           if (profile['id'] case final int id) id: '${profile['name'] ?? ''}',
       };
+    }, retry: noProviderRetry);
+
+/// The numbering one Seerr follows for its media codes, so a request's state
+/// is read as that server means it. Null until it has said.
+final mediaSeerrNumberingProvider = FutureProvider.autoDispose
+    .family<SeerrNumbering?, String>((ref, connectionId) {
+      return ref.watch(seerrServiceForProvider(connectionId)).numbering();
     }, retry: noProviderRetry);
 
 /// Asks [row]'s connection again, and only it: a failed row's `Retry`.

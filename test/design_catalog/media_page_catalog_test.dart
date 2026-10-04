@@ -9,6 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/discover/domain/seerr_permission.dart';
+import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/title_light.dart';
@@ -300,6 +303,42 @@ List<MediaRow> _wanted(ArrQueueSnapshot queue) => [
   const MediaNotSetUpRow(ServiceKey.seerr),
 ];
 
+/// What the requester's household holds of a film nobody asked for: her
+/// Jellyfin has none, and Seerr knows the title and nothing of it.
+List<MediaRow> _notAskedFor() => [
+  MediaConnectionRow<MediaStreamCopy>(
+    _jellyfin,
+    _answered(const MediaStreamCopy.notInLibrary()),
+  ),
+  MediaConnectionRow<MediaSeerrRecord>(
+    _seerr,
+    _answered(
+      const MediaSeerrRecord(
+        details: {
+          'id': 653,
+          'title': 'Nosferatu',
+          'releaseDate': '1922-02-16',
+          'runtime': 94,
+          'genres': [
+            {'id': 27, 'name': 'Horror'},
+          ],
+          'overview':
+              'Thomas Hutter travels to the Carpathians to sell a house to '
+              'Count Orlok, and the count follows him home by sea.',
+          'posterPath': CatalogArt.tmdbPoster,
+          'backdropPath': CatalogArt.tmdbBackdrop,
+          'voteAverage': 7.6,
+          'credits': {
+            'crew': [
+              {'id': 1, 'name': 'F. W. Murnau', 'job': 'Director'},
+            ],
+          },
+        },
+      ),
+    ),
+  ),
+];
+
 /// A film nobody holds: Jellyfin has none, neither Radarr tracks it.
 List<MediaRow> _notHeld() => [
   MediaConnectionRow<MediaStreamCopy>(
@@ -476,6 +515,29 @@ void main() {
         height: 1400,
       ),
       _addScene(),
+      CatalogScene(
+        'Requester · Request, and what it means: the title is not on the '
+        'server yet',
+        (_) => const MediaPage(mediaKey: _key),
+        width: 390,
+        height: 1100,
+        overrides: [
+          mediaRowsProvider.overrideWith((ref, key) => _notAskedFor()),
+          audienceProvider.overrideWithValue(Audience.requester),
+          roleGateProvider.overrideWith(
+            (ref, id) => RoleGate(
+              audience: Audience.requester,
+              grant: SeerrGrant.account(
+                permissions: SeerrPermission.request.value,
+              ),
+            ),
+          ),
+          titleLightProvider.overrideWith((ref, url) async => _lights[url]),
+          mediaSeerrNumberingProvider.overrideWith((ref, id) async => null),
+          mediaCollectionHeldProvider.overrideWith((ref, c) async => null),
+          mediaRecommendationsProvider.overrideWith((ref, source) async => []),
+        ],
+      ),
       CatalogScene(
         'Stuck · the fault leads with its remedy, and Remove '
         'download beside it',

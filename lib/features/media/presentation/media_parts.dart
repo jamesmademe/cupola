@@ -39,17 +39,38 @@ class MediaGroup extends StatelessWidget {
 /// that closes one of its sheets: lit by the title, the tinted fill under its
 /// ink in the dark room and the tinted primary under white in the day room.
 /// Unlit, the ink.
+///
+/// A lead that only states something (`Requested`) stays legible: the
+/// secondary ink on the room's strong fill, never Material's faded grey.
 ButtonStyle mediaLeadStyle(BuildContext context, TitleLight? light) {
-  final base = AppTheme.primaryButtonStyle(context);
-  if (light == null) return base;
+  final room = CupolaRoom.of(context);
   final dark = Theme.of(context).brightness == Brightness.dark;
-  final ink = dark ? light.actionInk : const Color(0xFFFFFFFF);
-  return base.copyWith(
-    backgroundColor: WidgetStatePropertyAll(
-      dark ? light.actionFill : light.dayPrimary,
+  final primary = AppTheme.primaryButtonStyle(context);
+  final fill = light == null
+      ? primary.backgroundColor
+      : WidgetStatePropertyAll<Color?>(
+          dark ? light.actionFill : light.dayPrimary,
+        );
+  final ink = light == null
+      ? primary.foregroundColor
+      : WidgetStatePropertyAll<Color?>(
+          dark ? light.actionInk : const Color(0xFFFFFFFF),
+        );
+  WidgetStateProperty<Color?> legible(
+    WidgetStateProperty<Color?>? enabled,
+    Color disabled,
+  ) => WidgetStateProperty.resolveWith(
+    (states) => states.contains(WidgetState.disabled)
+        ? disabled
+        : enabled?.resolve(states),
+  );
+  return primary.copyWith(
+    backgroundColor: legible(fill, room.fillStrong),
+    foregroundColor: legible(ink, room.inkSecondary),
+    iconColor: legible(
+      light == null ? primary.iconColor : ink,
+      room.inkSecondary,
     ),
-    foregroundColor: WidgetStatePropertyAll(ink),
-    iconColor: WidgetStatePropertyAll(ink),
   );
 }
 

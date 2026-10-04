@@ -41,6 +41,12 @@ import 'package:cupola/features/discover/presentation/widgets/discover_carousel.
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/media/domain/media_collection.dart';
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
+import 'package:cupola/features/discover/presentation/seerr_request_words.dart';
+import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
+import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
 import 'package:cupola/features/media/domain/media_row_view.dart';
@@ -188,6 +194,84 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     }
   }
 
+  /// What Request says and may do through [lead]'s Seerr: the title's state
+  /// there, read as that Seerr numbers it, and what this account may ask.
+  /// Null until that Seerr has answered.
+  _Request? _requestOf(MediaLeadRequest lead, List<MediaRow> rows) {
+    final seerr = lead.seerr;
+    MediaSeerrRecord? record;
+    for (final row in rows) {
+      if (row case MediaConnectionRow(
+        :final connection,
+        reading: MediaReadingAnswered(:final answer),
+      ) when connection.id == seerr.id) {
+        if (answer.value case final MediaSeerrRecord answered) {
+          record = answered;
+        }
+      }
+    }
+    if (record == null) return null;
+    final kind = mediaKey.isMovie ? SeerrMediaKind.movie : SeerrMediaKind.tv;
+    final roleGate = ref.watch(roleGateProvider(seerr.id));
+    // An account is offered 4K when it may ask for it; the key, when Seerr
+    // has a 4K server for the kind.
+    final has4k = roleGate.grant?.isApiKey == false
+        ? roleGate.offers4k(kind)
+        : record.arrServers?.any((server) => server.is4k) ?? false;
+    final gate = seerrRequestGate(
+      record.mediaInfo,
+      isMovie: mediaKey.isMovie,
+      seasons: mediaKey.isMovie
+          ? const []
+          : DiscoverDetailViewModel.fromResponse(record.details).seasons,
+      numbering: ref.watch(mediaSeerrNumberingProvider(seerr.id)).value,
+      has4kServer: has4k,
+    );
+    final arr = mediaKey.isMovie ? ServiceKey.radarr : ServiceKey.sonarr;
+    final words = seerrRequestWords(
+      gate,
+      namesSeerr: roleGate.namesService(ServiceKey.seerr),
+      namesArr: roleGate.namesService(arr),
+      arrName: arr.title,
+    );
+    return (
+      gate: gate,
+      words: words,
+      verdict: words.open ? roleGate.requestAction(kind) : const Live(),
+    );
+  }
+
+  /// Opens the request sheet, then reads Seerr again.
+  void _request(
+    _Request request,
+    MediaIdentity? identity,
+    List<MediaRow> rows,
+  ) {
+    final tmdbId = mediaKey.tmdbId;
+    if (tmdbId == null) return;
+    AppBottomSheet.show<void>(
+      context: context,
+      title:
+          'Request ${identity?.title ?? (mediaKey.isMovie ? 'movie' : 'series')}',
+      subtitle: identity?.metaLine,
+      builder: (_) => RequestBottomSheet(
+        mediaId: tmdbId,
+        mediaType: mediaKey.isMovie ? 'movie' : 'tv',
+        copies: request.gate.copies,
+        title: identity?.title,
+        onRequestComplete: () {
+          if (!mounted) return;
+          SnackBarHelper.success(context, 'Request submitted');
+          for (final row in rows) {
+            if (row.service == ServiceKey.seerr) {
+              retryMediaRow(ref, mediaKey, row);
+            }
+          }
+        },
+      ),
+    );
+  }
+
   /// The film [connectionId]'s Radarr holds, when it answered with one.
   static RadarrMovie? _radarrMovieOf(List<MediaRow> rows, String connectionId) {
     for (final row in rows) {
@@ -231,20 +315,36 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final settings = ref.watch(currentSettingsProvider);
     final identity = MediaIdentity.of(rows);
     final lead = resolveMediaLead(rows, audience: audience, focus: focus);
-    final views = [
+    // The requester reads the players' rows only.
+    final shown = [
       for (final row in rows)
         if (audience == Audience.operator ||
             row.service == ServiceKey.jellyfin ||
             row.service == ServiceKey.plex)
-          if (mediaRowView(
-                row,
-                title: (connection) =>
-                    settings.connectionTitle(connection.id, connection.service),
-                now: DateTime.now(),
-              )
-              case final view?)
-            _ServerRow(view, onTap: _wayOf(row, view)),
+          row,
     ];
+    final views = [
+      for (final row in shown)
+        if (mediaRowView(
+              row,
+              title: (connection) =>
+                  settings.connectionTitle(connection.id, connection.service),
+              now: DateTime.now(),
+            )
+            case final view?)
+          _ServerRow(view, onTap: _wayOf(row, view)),
+    ];
+    final request = lead is MediaLeadRequest ? _requestOf(lead, rows) : null;
+    // Under the buttons, what a request means now: why there is none to make,
+    // what one would add, or for the requester, that the title is not there.
+    final requestLine = request == null
+        ? null
+        : request.words.reason ??
+              request.verdict.reason ??
+              request.words.adds ??
+              (audience == Audience.requester
+                  ? 'Not on the server yet.'
+                  : null);
     // Manage is the operator's, and only when there is something to manage.
     final manage = audience == Audience.operator
         ? _manage(rows, settings)
@@ -338,6 +438,10 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                             DiscoverVideosButton.show(context, identity!.videos)
                       : null,
                   onManage: _toManage,
+                  request: request,
+                  onRequest: request == null
+                      ? null
+                      : () => _request(request, identity, rows),
                   // A series is added with its seasons, not drawn here yet.
                   onAdd: mediaKey.isMovie
                       ? (lead) => _add(lead, rows, identity, light)
@@ -349,10 +453,28 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                     lead.server.service,
                   ),
                 ),
+              if (requestLine != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                _StateLine(
+                  requestLine,
+                  tone: switch (request?.gate.state) {
+                    SeerrRequestState.waitingForApproval ||
+                    SeerrRequestState.onItsWay => StatusTone.info,
+                    SeerrRequestState.failed => StatusTone.warning,
+                    SeerrRequestState.available => StatusTone.success,
+                    SeerrRequestState.blocklisted => StatusTone.neutral,
+                    // Not there yet: the backlog's ring.
+                    _ => null,
+                  },
+                ),
+              ],
             ];
             final serve = <Widget>[
-              if (views.isNotEmpty) ...[
-                _Heading('On your server', trailing: _servicesCount(rows)),
+              // The requester's line already says the title is not there, or
+              // where her request stands: the players' rows would repeat it.
+              if (views.isNotEmpty &&
+                  !(audience == Audience.requester && requestLine != null)) ...[
+                _Heading('On your server', trailing: _servicesCount(shown)),
                 MediaGroup(children: views),
               ],
               ...manage,
@@ -1197,6 +1319,8 @@ class _LeadBar extends StatelessWidget {
     required this.onPlay,
     required this.onTrailer,
     required this.onManage,
+    this.request,
+    this.onRequest,
     this.onAdd,
     this.light,
     required this.hasTrailer,
@@ -1212,6 +1336,12 @@ class _LeadBar extends StatelessWidget {
   final VoidCallback? onTrailer;
   final VoidCallback onManage;
 
+  /// What Request says and may do, when it leads.
+  final _Request? request;
+
+  /// Opens the request sheet, when a request can be made.
+  final VoidCallback? onRequest;
+
   /// Opens the add sheet, for an Add that leads.
   final void Function(MediaLeadAdd lead)? onAdd;
   final bool hasTrailer;
@@ -1224,7 +1354,7 @@ class _LeadBar extends StatelessWidget {
       MediaLeadPlay(:final resume) =>
         '${resume ? 'Resume' : 'Play'} on ${serverName(lead as MediaLeadPlay)}',
       MediaLeadAdd(:final arr) => 'Add to ${arr.title}',
-      MediaLeadRequest() => 'Request',
+      MediaLeadRequest() => request?.words.label ?? 'Request',
       MediaLeadCopy(:final status, :final connection) => resolveMediaAction(
         status,
         const MediaActionCapabilities(
@@ -1249,8 +1379,7 @@ class _LeadBar extends StatelessWidget {
     final onLead = switch (lead) {
       final MediaLeadPlay play => () => onPlay(play),
       final MediaLeadAdd add when onAdd != null => () => onAdd!(add),
-      // Request and a copy's own action open the requester's and the
-      // operator's flows from the page: lots M5 and M6.
+      MediaLeadRequest() when request?.words.open ?? false => onRequest,
       _ => null,
     };
     return Column(
@@ -1259,20 +1388,43 @@ class _LeadBar extends StatelessWidget {
         if (lead is MediaLeadWaiting)
           const ShimmerPlaceholder(height: DesignTokens.sizeButtonL)
         else if (label != null && label.isNotEmpty)
-          FilledButton(
-            onPressed: onLead,
-            style: leadStyle,
-            child: Row(
-              children: [
-                Expanded(child: Text(label)),
-                Icon(switch (lead) {
-                  MediaLeadPlay() => Icons.play_arrow_rounded,
-                  MediaLeadAdd() => Icons.add_rounded,
-                  _ => Icons.arrow_forward_rounded,
-                }, size: 20),
-              ],
-            ),
-          )
+          // An account that may not ask for this kind keeps Request, dimmed
+          // and tappable, and is told why.
+          if (lead is MediaLeadRequest &&
+              (request?.words.open ?? false) &&
+              onRequest != null)
+            RoleGatedAction.builder(
+              verdict: request!.verdict,
+              onTap: onRequest!,
+              builder: (context, onPressed, annotate) => FilledButton(
+                onPressed: onPressed,
+                style: leadStyle,
+                child: Row(
+                  children: [
+                    Expanded(child: annotate(Text(label))),
+                    const Icon(Icons.add_rounded, size: 20),
+                  ],
+                ),
+              ),
+            )
+          else
+            FilledButton(
+              onPressed: onLead,
+              style: leadStyle,
+              child: Row(
+                children: [
+                  Expanded(child: Text(label)),
+                  Icon(switch (lead) {
+                    MediaLeadPlay() => Icons.play_arrow_rounded,
+                    MediaLeadAdd() => Icons.add_rounded,
+                    MediaLeadRequest() when !(request?.words.open ?? true) =>
+                      request!.words.icon,
+                    MediaLeadRequest() => Icons.add_rounded,
+                    _ => Icons.arrow_forward_rounded,
+                  }, size: 20),
+                ],
+              ),
+            )
         else if (trailerLeads)
           FilledButton.icon(
             onPressed: onTrailer,
@@ -2157,6 +2309,62 @@ class _HistoryLine extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// What Request says and may do on a page: the title's state in Seerr, the
+/// control's words, and what the account may ask.
+typedef _Request = ({
+  SeerrRequestGate gate,
+  SeerrRequestWords words,
+  GateVerdict verdict,
+});
+
+/// One line under the lead that says where a title stands: a 7 dot in its
+/// tone, or the backlog's ring, then the sentence.
+class _StateLine extends StatelessWidget {
+  const _StateLine(this.text, {this.tone});
+
+  final String text;
+
+  /// The dot's tone; null draws the ring of something not there yet.
+  final StatusTone? tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final tone = this.tone;
+    final color = tone == null
+        ? room.inkTertiary
+        : statusToneColor(Theme.of(context).colorScheme, tone);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: tone == null ? null : color,
+              border: tone == null
+                  ? Border.all(color: color, width: 1.4)
+                  : null,
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            text,
+            style: AppType.meta
+                .weight(FontWeight.w400)
+                .copyWith(color: room.inkSecondary),
+          ),
+        ),
+      ],
     );
   }
 }
