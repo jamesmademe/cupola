@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/utils/image_utils.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/content_card.dart';
@@ -17,6 +15,7 @@ import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/staggered_entrance.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 
 /// A single premium discover row: a section header + horizontal poster
 /// carousel. Collapses to nothing when Seerr answered with nothing (an empty
@@ -137,13 +136,11 @@ class DiscoverCarousel extends StatelessWidget {
       child: SizedBox(
         width: _posterWidth,
         child: PressableScale(
-          onTap: () => context.push(
-            ServiceRoutes.seerrDetail(
-              mediaType: mediaType,
-              id: item.id,
-              heroTag: heroTag,
-              posterUrl: imageUrl,
-            ),
+          onTap: () => context.openSeerrTitle(
+            mediaType: mediaType,
+            id: item.id,
+            heroTag: heroTag,
+            posterUrl: imageUrl,
           ),
           child: Hero(
             tag: heroTag,

@@ -84,8 +84,16 @@ void main() {
 
   test('a blocked import is finished by hand', () {
     final panel = _panel(
-      const MediaStatusInfo(pipeline: MediaPipeline.importBlocked),
+      // A status word is no message: it is not quoted.
+      const MediaStatusInfo(
+        pipeline: MediaPipeline.importBlocked,
+        detail: 'Warning',
+      ),
       record: _record,
+    );
+    expect(
+      panel.sentence,
+      'The download is done; Radarr needs a hand importing it.',
     );
     expect(panel.headline, 'Needs a manual import');
     expect(panel.tone, StatusTone.warning);

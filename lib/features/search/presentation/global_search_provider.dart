@@ -28,6 +28,8 @@ import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 
 final globalSearchQueryProvider = StateProvider<String>((ref) => '');
 
@@ -556,15 +558,20 @@ GlobalSearchResult _seerrResult(
     // Seerr has no `routeExtra` to preload from, so the poster travels in the
     // URL: the detail page paints real art during its lookup instead of
     // landing the flight on an empty gradient.
-    route: ServiceRoutes.seerrDetail(
-      mediaType: item.mediaType,
-      id: item.id,
-      heroTag: heroTag,
-      posterUrl: imageUrl,
-      // No `i` here on purpose: Discover resolves through the lens end to end,
-      // so a connection in the URL would be a claim the page cannot honour.
-      // The day it can, this is the one line that changes.
-    ),
+    // A movie is its own page, under the Search tab (`pushMounted`); a
+    // series, until it has one, Seerr's page.
+    route: item.mediaType == 'tv'
+        ? ServiceRoutes.seerrDetail(
+            mediaType: item.mediaType,
+            id: item.id,
+            heroTag: heroTag,
+            posterUrl: imageUrl,
+          )
+        : ServiceRoutes.mediaRoot(
+            MediaKey.movie(item.id),
+            heroTag: heroTag,
+            posterUrl: imageUrl,
+          ),
   );
 }
 
@@ -607,11 +614,20 @@ GlobalSearchResult _radarrResult(
         ? null
         : RadarrAddRequest(instanceId: instance.id, movie: item),
     heroTag: heroTag,
-    route: ServiceRoutes.radarrMovie(
-      item.id,
-      heroTag: heroTag,
-      instanceId: instance.id,
-    ),
+    // The film's own page, opened on this Radarr's copy, or on Add to Radarr
+    // when it holds none: under the Search tab (`pushMounted`).
+    route: item.tmdbId > 0
+        ? ServiceRoutes.mediaRoot(
+            MediaKey.movie(item.tmdbId),
+            focus: instance.id,
+            heroTag: heroTag,
+            posterUrl: remotePosterOf(item.images),
+          )
+        : ServiceRoutes.radarrMovie(
+            item.id,
+            heroTag: heroTag,
+            instanceId: instance.id,
+          ),
     routeExtra: item,
   );
 }

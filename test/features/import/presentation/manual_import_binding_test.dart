@@ -11,8 +11,12 @@ import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
-import 'package:cupola/features/movies/presentation/movie_detail_provider.dart';
-import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
+import 'package:cupola/features/media/domain/media_copies.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/domain/media_reading.dart';
+import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/music/domain/lidarr_queue_snapshots.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/presentation/music_detail_provider.dart';
@@ -106,38 +110,63 @@ void main() {
   // belonging to the second server opened a wizard bound to whichever server
   // the lens was on, carrying an item id that names something else there.
   group('a detail page binds the wizard to its own connection', () {
-    testWidgets('Radarr', (tester) async {
+    testWidgets('Radarr, from the film\'s own page', (tester) async {
+      // The 4K Radarr's copy is the one whose import is blocked: its panel
+      // leads, and its Finish import opens the wizard on that server.
+      const record = {
+        'id': 7,
+        'movieId': 42,
+        'title': 'Sprite.Fright.2021.2160p.WEB',
+        'downloadClient': 'qBittorrent',
+        'outputPath': '/downloads/complete/Sprite.Fright.2021.2160p.WEB',
+        'size': 9000000000,
+        'sizeleft': 0,
+        'status': 'completed',
+        'trackedDownloadStatus': 'warning',
+        'trackedDownloadState': 'importBlocked',
+      };
+      final copy = MediaRadarrCopy(
+        movie: RadarrMovie.fromJson({
+          'id': 42,
+          'tmdbId': 811631,
+          'title': 'Sprite Fright',
+          'year': 2021,
+          'monitored': true,
+          'hasFile': false,
+          'path': '/movies/Sprite Fright (2021)',
+        }),
+        queue: ArrQueueSnapshot.fromQueueItems([
+          record,
+        ], idsFor: (item) => [item['movieId'] as int]),
+      );
       await _pump(
         tester,
-        const MovieDetailScreen(
-          movieId: 42,
-          heroTag: 'movie-42',
-          instanceId: 'radarr-4k',
-        ),
+        const MediaPage(mediaKey: MediaKey.movie(811631), focus: 'radarr-4k'),
         overrides: [
-          movieDetailForProvider.overrideWith(
-            (ref, item) async => RadarrMovie.fromJson({
-              'id': 42,
-              'title': 'Sprite Fright',
-              'year': 2021,
-              // A path is what makes it a library item, and only a library
-              // item has an action band.
-              'path': '/movies/Sprite Fright (2021)',
-            }),
+          mediaRowsProvider.overrideWith(
+            (ref, key) => [
+              MediaConnectionRow<MediaRadarrCopy>(
+                _instances[1],
+                MediaReadingAnswered(MediaAnswer(copy, DateTime(2026, 10, 4))),
+              ),
+            ],
           ),
-          radarrQueueSnapshotForProvider.overrideWith(
-            (ref, id) => ArrQueueSnapshot.empty,
-          ),
+          mediaRadarrQueueProvider.overrideWith((ref, copy) async => [record]),
+          mediaRadarrSearchProvider.overrideWith((ref, copy) async => null),
         ],
       );
 
-      await _import(tester);
+      await tester.scrollUntilVisible(
+        find.text('Finish import'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Finish import'));
+      await tester.pumpAndSettle();
 
-      expect(_opened?.queryParameters, {
-        'service': 'radarr',
-        'targetId': '42',
-        'i': 'radarr-4k',
-      });
+      expect(_opened?.queryParameters, containsPair('service', 'radarr'));
+      expect(_opened?.queryParameters, containsPair('targetId', '42'));
+      expect(_opened?.queryParameters, containsPair('i', 'radarr-4k'));
     });
 
     testWidgets('Sonarr', (tester) async {

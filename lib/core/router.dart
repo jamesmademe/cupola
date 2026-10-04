@@ -13,6 +13,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/radarr_movie_opener.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
@@ -29,7 +30,6 @@ import 'package:cupola/features/activity/presentation/global_activity_screen.dar
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
 import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
-import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
@@ -543,17 +543,23 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
           );
         },
       ),
-      // A bad id falls back to the tab this page was pushed from, not to the
-      // app home: the branch is where the user still is, and sending them out
-      // of the service would be a bigger move than the mistake.
+      // A movie is the title's own page now, mounted in this tab: the link
+      // every Seerr row makes lands there in one hop, its tile's hero tag and
+      // poster carried in the query. A bad id falls back to the tab this page
+      // was pushed from, not to the app home: the branch is where the user
+      // still is, and sending them out of the service would be a bigger move
+      // than the mistake.
       GoRoute(
         path: 'movie/:id',
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.seerrDiscover
-            : null,
-        pageBuilder: (context, state) =>
-            _discoverDetailPage(state, mediaType: 'movie'),
+            switch (RouteUtils.safeIntParam(state, 'id')) {
+              null => ServiceRoutes.seerrDiscover,
+              final id => _preserveQuery(
+                state.uri,
+                '${ServiceRoutes.seerrDiscover}'
+                '${MediaKey.movie(id).location}',
+              ),
+            },
       ),
       GoRoute(
         path: 'tv/:id',
@@ -637,10 +643,9 @@ GoRoute _moviesRoutes({required String path}) {
           state,
           heroPrefix: 'movie',
           fallbackLocation: ServiceRoutes.radarrLibrary,
-          buildChild: (id, heroTag, movie, instanceId) => MovieDetailScreen(
+          buildChild: (id, heroTag, movie, instanceId) => RadarrMovieOpener(
             movieId: id,
             heroTag: heroTag,
-            initialMovie: movie,
             instanceId: instanceId,
           ),
         ),
@@ -757,10 +762,9 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
           state,
           heroPrefix: 'movie',
           fallbackLocation: ServiceRoutes.radarrLibrary,
-          buildChild: (id, heroTag, movie, instanceId) => MovieDetailScreen(
+          buildChild: (id, heroTag, movie, instanceId) => RadarrMovieOpener(
             movieId: id,
             heroTag: heroTag,
-            initialMovie: movie,
             instanceId: instanceId,
           ),
         ),

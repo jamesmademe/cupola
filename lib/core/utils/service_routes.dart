@@ -591,6 +591,30 @@ class ServiceRoutes {
     'posterUrl': posterUrl,
   });
 
+  /// The page of [key] for a caller with no page of its own to open it
+  /// from (a row built by a provider): the root form, which
+  /// [mounted] moves under the tab it is opened from.
+  static String mediaRoot(
+    MediaKey key, {
+    String? focus,
+    String? heroTag,
+    String? posterUrl,
+  }) => media(
+    key,
+    from: '',
+    focus: focus,
+    heroTag: heroTag,
+    posterUrl: posterUrl,
+  );
+
+  /// [location] as it is opened from the page at [from]: a title's page in
+  /// root form ([mediaRoot]) moves under the mount [from] is in; anything
+  /// else stays as it is.
+  static String mounted(String location, {required String from}) =>
+      location.startsWith('/media/')
+      ? '${mediaMountFor(from)}$location'
+      : location;
+
   /// App settings, and the per-service page under it.
   ///
   /// Three widgets were interpolating the per-service settings path by hand —

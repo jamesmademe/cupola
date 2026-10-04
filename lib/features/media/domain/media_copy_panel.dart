@@ -111,7 +111,12 @@ MediaCopyPanel mediaCopyPanel({
       detail.substring(release.length + 2),
     final detail => detail,
   };
-  final says = said == null ? '' : ' $name says: $said';
+  // A bare status word is no message: nothing the arr said is quoted then.
+  final quoted = switch (said?.trim().toLowerCase()) {
+    null || '' || 'warning' || 'error' || 'ok' => null,
+    _ => said,
+  };
+  final says = quoted == null ? '' : ' $name says: $quoted';
   final drops =
       '$name drops this one${arrived == null ? '' : ' ($arrived so far)'}, '
       "won't pick it again, and looks for another.";

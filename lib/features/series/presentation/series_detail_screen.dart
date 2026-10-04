@@ -43,8 +43,9 @@ class SeriesDetailScreen extends ConsumerStatefulWidget {
   final SonarrSeries? initialSeries;
 
   /// The connection this page belongs to, from the route's `?i=`. Null falls
-  /// through to the lens — see [MovieDetailScreen.instanceId] for why every
-  /// source on the page has to agree with it.
+  /// through to the lens. Every source on the page has to agree with it: a
+  /// badge, a profile or a poster read from another connection of the same
+  /// service describes a different copy under this one's ids.
   final String? instanceId;
 
   const SeriesDetailScreen({
@@ -72,8 +73,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
   /// looks idle for the whole of it and takes a second tap.
   bool _isUpdatingSeriesType = false;
 
-  /// The connection resolved in the last build, for the callbacks to reuse —
-  /// see [_MovieDetailScreenState] for why it is held rather than re-resolved.
+  /// The connection resolved in the last build, for the callbacks to reuse:
+  /// held rather than re-resolved, so a write after an await goes to the
+  /// connection the page showed even if the lens moved meanwhile.
   String _instanceId = '';
 
   /// Sonarr, bound to the connection this page belongs to. Every read and

@@ -66,6 +66,8 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 
 /// Region 3 — everything waiting on a human, from every source, in one list.
 ///
@@ -728,6 +730,17 @@ void _openRecentlyAdded(BuildContext context, RecentlyAddedItem item) {
     context.go(ServiceRoutes.forService(item.service));
     return;
   }
+  // A Radarr film opens on its own page, under this tab, on the copy the
+  // record came off.
+  if (item.service == ServiceKey.radarr && (item.tmdbId ?? 0) > 0) {
+    context.openMedia(
+      MediaKey.movie(item.tmdbId!),
+      focus: item.instanceId.isEmpty ? null : item.instanceId,
+      heroTag: item.heroTag,
+      posterUrl: item.posterUrl.startsWith('http') ? item.posterUrl : null,
+    );
+    return;
+  }
   // With the connection the record came off: its id is that server's.
   final route = switch (item.service) {
     ServiceKey.radarr => ServiceRoutes.radarrMovie(
@@ -790,7 +803,8 @@ class _DecisionRow extends ConsumerWidget {
             await _bringUnderLens(ref, decision.service, decision.instanceId);
             if (!context.mounted) return;
           }
-          context.push(route);
+          // A title's own page opens under this tab.
+          context.pushMounted(route);
         },
         semanticLabel: decision.title,
         semanticValue: decisionRowSpokenValue(

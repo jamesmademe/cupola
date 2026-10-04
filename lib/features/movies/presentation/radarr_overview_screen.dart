@@ -37,6 +37,9 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 
 /// The first tab of Radarr's service home.
 ///
@@ -428,10 +431,16 @@ class _PosterTile extends StatelessWidget {
     return SizedBox(
       width: 96,
       child: PressableScale(
-        onTap: () => context.push(
-          ServiceRoutes.radarrMovie(movie.id, heroTag: heroTag),
-          extra: movie,
-        ),
+        // The film's own page, under this tab.
+        onTap: () => movie.tmdbId <= 0
+            ? context.push(
+                ServiceRoutes.radarrMovie(movie.id, heroTag: heroTag),
+              )
+            : context.openMedia(
+                MediaKey.movie(movie.tmdbId),
+                heroTag: heroTag,
+                posterUrl: remotePosterOf(movie.images),
+              ),
         // A poster is an image with no name of its own; the tile announces the
         // film and its year as one button.
         semanticLabel: movie.title,

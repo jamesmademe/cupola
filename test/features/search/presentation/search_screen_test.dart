@@ -65,10 +65,8 @@ void main() {
           builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
-          // From the constant, because the row's link is built from it: the
-          // film lives inside Radarr's Library branch now, and a path spelled
-          // by hand here would stop matching without a word.
-          path: '${ServiceRoutes.radarrMovieBase}/:id',
+          // The film's own page, under the Search tab it is opened from.
+          path: '${ServiceRoutes.search}/media/movie/:id',
           builder: (context, state) {
             final movie = state.extra as RadarrMovie?;
             return Scaffold(
@@ -93,14 +91,15 @@ void main() {
     await tester.tap(find.text('Dune'));
     await tester.pumpAndSettle();
 
-    expect(router.state.uri.path, '${ServiceRoutes.radarrMovieBase}/10');
+    // Its own page by TMDB's id, opened on the Radarr that listed it.
+    expect(router.state.uri.path, '${ServiceRoutes.search}/media/movie/123');
     // The poster's shared-element tag travels with the route so the detail
     // page's Hero has a matching destination.
     expect(
       router.state.uri.queryParameters['heroTag'],
       'search_radarr_movie_10_0',
     );
-    expect(find.text('Movie detail 10 Dune'), findsOneWidget);
+    expect(find.text('Movie detail 123 Dune'), findsOneWidget);
   });
 
   testWidgets('a result with artwork flies its poster into the detail page', (
@@ -142,10 +141,8 @@ void main() {
           builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
-          // From the constant, because the row's link is built from it: the
-          // film lives inside Radarr's Library branch now, and a path spelled
-          // by hand here would stop matching without a word.
-          path: '${ServiceRoutes.radarrMovieBase}/:id',
+          // The film's own page, under the Search tab it is opened from.
+          path: '${ServiceRoutes.search}/media/movie/:id',
           builder: (context, state) => Scaffold(
             body: SizedBox(
               width: 82,

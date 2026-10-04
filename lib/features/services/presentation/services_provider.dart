@@ -70,6 +70,7 @@ import 'package:cupola/features/transmission/presentation/transmission_provider.
 import 'package:cupola/features/truenas/data/truenas_service.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 
 /// A live reachability probe for one service.
 ///
@@ -935,9 +936,14 @@ class ArrHistoryEntry {
     required this.reason,
     this.instanceId = '',
     this.connectionName,
+    this.tmdbId,
   });
 
   final ServiceKey service;
+
+  /// TMDB's id for the film a Radarr record is about, from the film the
+  /// record embeds: what opens the film's own page. Null elsewhere.
+  final int? tmdbId;
 
   /// What tells [instanceId] apart from the service's other connections, by
   /// the app's one rule, or null while the service has only the one.
@@ -1105,6 +1111,9 @@ ArrHistoryEntry _historyEntryFrom(
         intOrNull(record['seriesId']) ??
         intOrNull(record['artistId']) ??
         0,
+    tmdbId: service == ServiceKey.radarr
+        ? intOrNull(mapOrNull(record['movie'])?['tmdbId'])
+        : null,
     title: title,
     unitId: switch (service) {
       ServiceKey.sonarr => intOrNull(
@@ -1197,6 +1206,7 @@ final servicesRecentlyAddedProvider = FutureProvider<ServicesRecentlyAdded>((
           instanceId: entry.instanceId,
           connectionName: entry.connectionName,
           id: entry.mediaId,
+          tmdbId: entry.tmdbId,
           title: entry.title,
           posterUrl: entry.posterUrl,
           addedAt: entry.at,
@@ -2562,13 +2572,23 @@ ServiceQueueItem _queueItemFromRecords(
     // With the connection: a queue record's ids are its server's, and the
     // same film id names a different film on the other Radarr.
     route: switch (service) {
-      ServiceKey.radarr =>
-        intOrNull(typedItem['movieId']) == null
-            ? null
-            : ServiceRoutes.radarrMovie(
-                intOrNull(typedItem['movieId'])!,
-                instanceId: instanceId,
-              ),
+      // The film's own page, on this Radarr's copy, when the record embeds
+      // the film; else the way through its id there.
+      ServiceKey.radarr => switch (intOrNull(
+        mapOrNull(typedItem['movie'])?['tmdbId'],
+      )) {
+        final tmdbId? when tmdbId > 0 => ServiceRoutes.mediaRoot(
+          MediaKey.movie(tmdbId),
+          focus: instanceId,
+        ),
+        _ =>
+          intOrNull(typedItem['movieId']) == null
+              ? null
+              : ServiceRoutes.radarrMovie(
+                  intOrNull(typedItem['movieId'])!,
+                  instanceId: instanceId,
+                ),
+      },
       ServiceKey.sonarr =>
         intOrNull(typedItem['seriesId']) == null
             ? null
@@ -3214,6 +3234,11 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
       route: entry.mediaId <= 0
           ? ServiceRoutes.forService(entry.service)
           : switch (entry.service) {
+              ServiceKey.radarr when (entry.tmdbId ?? 0) > 0 =>
+                ServiceRoutes.mediaRoot(
+                  MediaKey.movie(entry.tmdbId!),
+                  focus: entry.instanceId,
+                ),
               ServiceKey.radarr => ServiceRoutes.radarrMovie(
                 entry.mediaId,
                 instanceId: entry.instanceId,

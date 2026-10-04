@@ -16,7 +16,7 @@ import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
-import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
+import 'package:cupola/features/media/presentation/radarr_movie_opener.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -163,26 +163,39 @@ void main() {
         const encodedPosterUrl =
             'https%3A%2F%2Fcdn.example.com%2Fposter%20image.jpg';
 
+        // A series is still Seerr's page, with its default tag.
         router.go(
-          '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
+          '/dashboard/seerr/discover/tv/123?posterUrl=$encodedPosterUrl',
         );
         await tester.pumpAndSettle();
 
         final screen = tester.widget<DiscoverDetailScreen>(
           find.byType(DiscoverDetailScreen),
         );
-
-        expect(
-          router.state.uri.toString(),
-          '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
-        );
         expect(screen.mediaId, 123);
-        expect(screen.mediaType, 'movie');
-        expect(screen.heroTag, 'discover_movie_123');
+        expect(screen.mediaType, 'tv');
+        expect(screen.heroTag, 'discover_tv_123');
         expect(
           screen.initialPosterUrl,
           'https://cdn.example.com/poster image.jpg',
         );
+
+        // A movie is its own page in the same tab, the poster decoded once.
+        router.go(
+          '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          router.state.uri.toString(),
+          '/dashboard/seerr/discover/media/movie/123'
+          '?posterUrl=$encodedPosterUrl',
+        );
+        final page = tester.widget<MediaPage>(
+          find.byType(MediaPage).hitTestable(),
+        );
+        expect(page.mediaKey, const MediaKey.movie(123));
+        expect(page.posterUrl, 'https://cdn.example.com/poster image.jpg');
       },
     );
 
@@ -195,12 +208,12 @@ void main() {
         router.go('/dashboard/radarr/movie/42');
         await tester.pumpAndSettle();
 
-        final movieScreen = tester.widget<MovieDetailScreen>(
-          find.byType(MovieDetailScreen),
+        // A film named by Radarr's own id opens the way to its own page.
+        final opener = tester.widget<RadarrMovieOpener>(
+          find.byType(RadarrMovieOpener),
         );
-        expect(movieScreen.heroTag, 'movie_42');
-        expect(movieScreen.movieId, 42);
-        expect(movieScreen.initialMovie, isNull);
+        expect(opener.heroTag, 'movie_42');
+        expect(opener.movieId, 42);
 
         router.go('${ServiceRoutes.sonarrSeriesBase}/55');
         await tester.pumpAndSettle();
@@ -242,7 +255,7 @@ void main() {
 
       expect(router.state.uri.toString(), ServiceRoutes.radarrLibrary);
       expect(find.byType(MoviesScreen), findsOneWidget);
-      expect(find.byType(MovieDetailScreen), findsNothing);
+      expect(find.byType(RadarrMovieOpener), findsNothing);
     });
 
     testWidgets(
@@ -261,21 +274,24 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(router.state.uri.toString(), ServiceRoutes.radarrMovie(42));
-        var movieScreen = tester.widget<MovieDetailScreen>(
-          find.byType(MovieDetailScreen),
+        // The film is read from the path, whatever the extra carries.
+        expect(
+          tester
+              .widget<RadarrMovieOpener>(find.byType(RadarrMovieOpener))
+              .movieId,
+          42,
         );
-        expect(movieScreen.movieId, 42);
-        expect(movieScreen.initialMovie, isNull);
 
         router.go(ServiceRoutes.radarrMovie(42), extra: buildMovie(id: 7));
         await tester.pumpAndSettle();
 
         expect(router.state.uri.toString(), ServiceRoutes.radarrMovie(42));
-        movieScreen = tester.widget<MovieDetailScreen>(
-          find.byType(MovieDetailScreen),
+        expect(
+          tester
+              .widget<RadarrMovieOpener>(find.byType(RadarrMovieOpener))
+              .movieId,
+          42,
         );
-        expect(movieScreen.movieId, 42);
-        expect(movieScreen.initialMovie?.id, 7);
       },
     );
 
@@ -455,7 +471,8 @@ void main() {
             genreId: 28,
             title: 'Action',
           ),
-          '/movie/42': '${ServiceRoutes.seerrDiscover}/movie/42',
+          // A movie is its own page now, in the same tab.
+          '/movie/42': '${ServiceRoutes.seerrDiscover}/media/movie/42',
           '/tv/55': '${ServiceRoutes.seerrDiscover}/tv/55',
           '/person/287?heroTag=cast_287': ServiceRoutes.seerrPerson(
             287,
@@ -787,7 +804,7 @@ void main() {
         router.state.uri.toString(),
         '${ServiceRoutes.radarrMovieBase}/42?heroTag=legacy_movie',
       );
-      expect(find.byType(MovieDetailScreen), findsOneWidget);
+      expect(find.byType(RadarrMovieOpener), findsOneWidget);
     });
 
     testWidgets('a path that merely starts with the old prefix is not moved', (
@@ -842,16 +859,16 @@ void main() {
       router.go('/discover/movie/123?posterUrl=$encodedPosterUrl');
       await tester.pumpAndSettle();
 
-      // Two hops: the `/discover` tree rewrites onto the pre-tab Seerr
-      // spelling, which rewrites again onto the detail inside the Discover
-      // branch. What this asserts is that the chain finishes — a rewrite that
-      // stopped at the first hop would leave the user on a path that draws
-      // nothing.
+      // Three hops: the `/discover` tree rewrites onto the pre-tab Seerr
+      // spelling, which rewrites onto the detail inside the Discover branch,
+      // which is the movie's own page in that tab now. What this asserts is
+      // that the chain finishes, query and all: a rewrite that stopped early
+      // would leave the user on a path that draws nothing.
       expect(
         router.state.uri.toString(),
-        '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
+        '/dashboard/seerr/discover/media/movie/123?posterUrl=$encodedPosterUrl',
       );
-      expect(find.byType(DiscoverDetailScreen), findsOneWidget);
+      expect(find.byType(MediaPage), findsOneWidget);
 
       // `/movies/:id` still crosses in one hop, but its destination moved
       // inside the Library branch with the film.
@@ -862,7 +879,7 @@ void main() {
         router.state.uri.toString(),
         '${ServiceRoutes.radarrMovieBase}/42?heroTag=legacy_movie',
       );
-      expect(find.byType(MovieDetailScreen), findsOneWidget);
+      expect(find.byType(RadarrMovieOpener), findsOneWidget);
 
       router.go('/series/55?heroTag=legacy_series');
       await tester.pumpAndSettle();

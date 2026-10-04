@@ -15,6 +15,9 @@ import 'package:cupola/features/services/presentation/service_kpi_provider.dart'
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 
 /// The movie ids Radarr reports under `wanted/cutoff`.
 ///
@@ -99,9 +102,16 @@ class MoviesScreen extends ConsumerWidget {
       // the grid, and editing another does not.
       settingsSelector: (settings) => settings.artworkKeyOf(lens),
       onItemTap: (context, movie, heroTag) {
-        context.push(
-          ServiceRoutes.radarrMovie(movie.id, heroTag: heroTag),
-          extra: movie,
+        // The film's own page, under this tab, opened on this Radarr's copy.
+        if (movie.tmdbId <= 0) {
+          context.push(ServiceRoutes.radarrMovie(movie.id, heroTag: heroTag));
+          return;
+        }
+        context.openMedia(
+          MediaKey.movie(movie.tmdbId),
+          focus: lens.isEmpty ? null : lens,
+          heroTag: heroTag,
+          posterUrl: remotePosterOf(movie.images),
         );
       },
       showAppBar: showAppBar,

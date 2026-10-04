@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_breakpoints.dart';
@@ -34,6 +33,7 @@ import 'package:cupola/features/services/domain/seerr_request_filter.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 
 class ServiceAllRequestsScreen extends ConsumerStatefulWidget {
   /// Whether to draw this screen's own app bar.
@@ -539,13 +539,11 @@ class _RequestListRow extends ConsumerWidget {
     if (id == null || id <= 0) return;
     final mediaType = request.type == 'tv' ? 'tv' : 'movie';
     final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
-    context.push(
-      ServiceRoutes.seerrDetail(
-        mediaType: mediaType,
-        id: id,
-        heroTag: heroTag,
-        posterUrl: posterUrl,
-      ),
+    context.openSeerrTitle(
+      mediaType: mediaType,
+      id: id,
+      heroTag: heroTag,
+      posterUrl: posterUrl,
     );
   }
 }

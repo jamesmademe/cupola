@@ -34,6 +34,7 @@ import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_se
 import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 
 /// Premium Seerr discover catalog: featured banner, curated rows and per-genre
 /// carousels. Falls back to a grid of results while searching.
@@ -331,13 +332,11 @@ class _FeaturedBanner extends StatelessWidget {
         AppSpacing.xl,
       ),
       child: PressableScale(
-        onTap: () => context.push(
-          ServiceRoutes.seerrDetail(
-            mediaType: item.mediaType,
-            id: item.id,
-            heroTag: heroTag,
-            posterUrl: imageUrl,
-          ),
+        onTap: () => context.openSeerrTitle(
+          mediaType: item.mediaType,
+          id: item.id,
+          heroTag: heroTag,
+          posterUrl: imageUrl,
         ),
         child: ClipRRect(
           borderRadius: AppRadius.borderRadiusLg,
@@ -474,13 +473,11 @@ class _DiscoverSearchResults extends ConsumerWidget {
                 'discover_search_${item.mediaType}_${item.id}_$index';
 
             return PressableScale(
-              onTap: () => context.push(
-                ServiceRoutes.seerrDetail(
-                  mediaType: item.mediaType,
-                  id: item.id,
-                  heroTag: heroTag,
-                  posterUrl: imageUrl,
-                ),
+              onTap: () => context.openSeerrTitle(
+                mediaType: item.mediaType,
+                id: item.id,
+                heroTag: heroTag,
+                posterUrl: imageUrl,
               ),
               child: Hero(
                 tag: heroTag,

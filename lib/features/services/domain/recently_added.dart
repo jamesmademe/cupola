@@ -42,6 +42,9 @@ class RecentlyAddedItem {
   final String? connectionName;
 
   final int id;
+
+  /// TMDB's id for a Radarr film: what opens its own page. Null elsewhere.
+  final int? tmdbId;
   final String title;
   final String posterUrl;
 
@@ -77,6 +80,7 @@ class RecentlyAddedItem {
     this.instanceId = '',
     this.connectionName,
     required this.id,
+    this.tmdbId,
     required this.title,
     required this.posterUrl,
     required this.addedAt,
@@ -124,6 +128,7 @@ class RecentlyAddedItem {
       instanceId: instanceId,
       connectionName: connectionName,
       id: id,
+      tmdbId: tmdbId ?? other.tmdbId,
       title: title,
       // The first record that carried a poster keeps it: history embeds the
       // same series on every record, but an older record is no worse a source.

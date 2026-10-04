@@ -20,6 +20,7 @@ import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 
 /// The Seerr home's first region: the requests waiting on a human.
 ///
@@ -168,13 +169,11 @@ class _DecisionRow extends ConsumerWidget {
         // of the title.
         onTap: tmdbId == null
             ? null
-            : () => context.push(
-                ServiceRoutes.seerrDetail(
-                  mediaType: request.type,
-                  id: tmdbId,
-                  heroTag: heroTag,
-                  posterUrl: posterUrl,
-                ),
+            : () => context.openSeerrTitle(
+                mediaType: request.type,
+                id: tmdbId,
+                heroTag: heroTag,
+                posterUrl: posterUrl,
               ),
         semanticLabel: heading,
         semanticValue: spokenValue,

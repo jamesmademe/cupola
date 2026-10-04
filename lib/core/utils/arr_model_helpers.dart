@@ -159,3 +159,12 @@ String _displayNameForSource(String source) {
       return source;
   }
 }
+
+/// The poster an arr links to off its own host, in [images]: an address any
+/// client can load, for a page to stand in with until it reads its own. Null
+/// when the arr serves it only from its own cache.
+String? remotePosterOf(List<dynamic> images) =>
+    switch (extractPosterPathFromImages(images)) {
+      final String url when url.startsWith('http') => url,
+      _ => null,
+    };

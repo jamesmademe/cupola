@@ -44,6 +44,7 @@ import 'package:cupola/features/search/presentation/recent_searches_provider.dar
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 
 class SearchScreen extends ConsumerWidget {
   const SearchScreen({super.key});
@@ -944,7 +945,7 @@ class _SearchResultCard extends ConsumerWidget {
             ));
 
     return AppCard.outlined(
-      onTap: () => context.push(result.route, extra: result.routeExtra),
+      onTap: () => context.pushMounted(result.route, extra: result.routeExtra),
       backgroundColor: colorScheme.surfaceContainer,
       borderColor: colorScheme.outlineVariant,
       borderRadius: AppRadius.borderRadiusMd,

@@ -101,11 +101,12 @@ void main() {
         .expand((lane) => lane.results)
         .map((item) => Uri.parse(item.route))
         .toList(growable: false);
-    // The arr rows point inside their Library tab's branch: on the tab model
-    // the record is a page pushed from the library list, not a sibling of it.
+    // A movie is its own page, in root form: the screen opens it under the
+    // Search tab (`pushMounted`). The other arr rows point inside their
+    // Library tab's branch, a page pushed from the library list.
     expect(routes.map((uri) => uri.path), [
-      '/dashboard/seerr/discover/movie/101',
-      '/dashboard/radarr/library/movie/10',
+      '/media/movie/101',
+      '/media/movie/123',
       '/dashboard/sonarr/library/series/20',
       '/dashboard/lidarr/library/artist/30',
     ]);
