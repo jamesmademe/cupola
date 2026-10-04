@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -669,6 +670,89 @@ void main() {
         isNull,
         reason: 'settings must not become a tab segment by accident',
       );
+    });
+
+    group('a title opens where it was opened from', () {
+      const film = MediaKey.movie(653);
+
+      test('under the service tab, for a service that mounts titles', () {
+        expect(
+          ServiceRoutes.media(film, from: ServiceRoutes.radarrLibrary),
+          '/dashboard/radarr/library/media/movie/653',
+        );
+        // Deeper in the tab, the tab: one Navigator, so the poster flies.
+        expect(
+          ServiceRoutes.media(
+            film,
+            from: '${ServiceRoutes.seerrDiscover}/person/42',
+          ),
+          '/dashboard/seerr/discover/media/movie/653',
+        );
+        // From a title's page, its own mount: More like this stays put.
+        expect(
+          ServiceRoutes.media(
+            const MediaKey.tv(1399),
+            from: '/dashboard/jellyfin/libraries/media/movie/653',
+          ),
+          '/dashboard/jellyfin/libraries/media/tv/1399',
+        );
+      });
+
+      test('under the top-level tab otherwise', () {
+        expect(
+          ServiceRoutes.media(film, from: ServiceRoutes.dashboard),
+          '/dashboard/media/movie/653',
+        );
+        expect(
+          ServiceRoutes.media(film, from: ServiceRoutes.bazarrWanted),
+          '/dashboard/media/movie/653',
+          reason: 'Bazarr keeps its own pages and mounts no titles',
+        );
+        expect(
+          ServiceRoutes.media(film, from: '/dashboard/media/movie/1'),
+          '/dashboard/media/movie/653',
+        );
+        expect(
+          ServiceRoutes.media(film, from: ServiceRoutes.activity),
+          '/activity/media/movie/653',
+        );
+        expect(
+          ServiceRoutes.media(film, from: '/activity/media/movie/1'),
+          '/activity/media/movie/653',
+        );
+        expect(
+          ServiceRoutes.media(film, from: ServiceRoutes.search),
+          '/search/media/movie/653',
+        );
+      });
+
+      test('at the root from a page above the tabs', () {
+        // `/activity/movies` sits over the tabs: pushed into one, the title
+        // would open underneath it.
+        expect(
+          ServiceRoutes.media(film, from: '/activity/movies'),
+          '/media/movie/653',
+        );
+        expect(
+          ServiceRoutes.media(film, from: '/media/movie/1'),
+          '/media/movie/653',
+        );
+      });
+
+      test('with its connection, its tile and Sonarr v3\'s key', () {
+        expect(
+          ServiceRoutes.media(
+            const MediaKey.tvdb(300001),
+            from: ServiceRoutes.sonarrLibrary,
+            focus: 'sonarr-4k',
+            heroTag: 'series_7',
+            posterUrl: 'https://image.tmdb.org/t/p/w300/a b.jpg',
+          ),
+          '/dashboard/sonarr/library/media/tv/tvdb/300001'
+          '?i=sonarr-4k&heroTag=series_7'
+          '&posterUrl=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Fw300%2Fa+b.jpg',
+        );
+      });
     });
   });
 }

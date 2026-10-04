@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/router.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_screen.dart';
@@ -121,6 +122,15 @@ _tabDetailPaths = [
   // row of its own.
   (service: ServiceKey.dockge, tab: ServiceTab.stacks, path: 'new'),
   (service: ServiceKey.dockge, tab: ServiceTab.stacks, path: 'stack/:name'),
+];
+
+/// The title's own page, hung last under every tab of the services that open
+/// titles (`ServiceRoutes.mediaMountServices`): a title opened anywhere in one
+/// of them lands under the tab it was opened from.
+const List<String> _mediaPaths = [
+  'media/movie/:id',
+  'media/tv/tvdb/:id',
+  'media/tv/:id',
 ];
 
 /// The services with nothing pushed from any of their tabs, and why.
@@ -367,10 +377,13 @@ void main() {
 
       for (final service in _tabbedServices) {
         for (final tab in tabsFor(service)!) {
-          final expected = _tabDetailPaths
-              .where((entry) => entry.service == service && entry.tab == tab)
-              .map((entry) => entry.path)
-              .toList(growable: false);
+          final expected = [
+            ..._tabDetailPaths
+                .where((entry) => entry.service == service && entry.tab == tab)
+                .map((entry) => entry.path),
+            if (ServiceRoutes.mediaMountServices.contains(service))
+              ..._mediaPaths,
+          ];
           final actual = branchRootOf(router, service, tab).routes
               .whereType<GoRoute>()
               .map((route) => route.path)

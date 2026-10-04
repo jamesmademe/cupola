@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +13,8 @@ import 'package:cupola/features/dockge/presentation/dockge_stack_detail_screen.d
 import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
@@ -1532,6 +1536,133 @@ void main() {
         }
       });
     }
+
+    group('the one page a title has', () {
+      /// The title pages a user can see: a branch left keeps its stack, so
+      /// the one just opened is the one that is hit-testable.
+      Iterable<MediaPage> visiblePages(WidgetTester tester) =>
+          tester.widgetList<MediaPage>(find.byType(MediaPage).hitTestable());
+
+      testWidgets('draws under every tab that opens titles, and at the root', (
+        tester,
+      ) async {
+        // Every tab of a service in `mediaMountServices`, because a title
+        // opened anywhere in that service lands under the tab it was opened
+        // from: a tab without the mount would be a push that matches nothing.
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+        final froms = [
+          for (final service in ServiceRoutes.mediaMountServices)
+            for (final tab in tabsFor(service)!)
+              '${ServiceRoutes.forService(service)}/${tab.segment}',
+          ServiceRoutes.dashboard,
+          ServiceRoutes.activity,
+          ServiceRoutes.search,
+          '/activity/movies',
+        ];
+        for (final (index, from) in froms.indexed) {
+          final key = MediaKey.movie(600 + index);
+          final location = ServiceRoutes.media(
+            key,
+            from: from,
+            focus: 'radarr-4k',
+          );
+          router.go(location);
+          await tester.pumpAndSettle();
+
+          expect(router.state.uri.toString(), location, reason: from);
+          expect(
+            visiblePages(tester).map((page) => (page.mediaKey, page.focus)),
+            [(key, 'radarr-4k')],
+            reason: from,
+          );
+        }
+      });
+
+      testWidgets('reads every key, and a bad one goes back to the mount', (
+        tester,
+      ) async {
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+
+        for (final key in const [
+          MediaKey.tv(1399),
+          MediaKey.tvdb(300001),
+          MediaKey.movie(653),
+        ]) {
+          router.go('${ServiceRoutes.sonarrLibrary}${key.location}');
+          await tester.pumpAndSettle();
+          expect(visiblePages(tester).map((page) => page.mediaKey), [
+            key,
+          ], reason: key.location);
+        }
+
+        for (final (location, mount) in [
+          (
+            '${ServiceRoutes.sonarrLibrary}/media/tv/tvdb/0',
+            ServiceRoutes.sonarrLibrary,
+          ),
+          ('${ServiceRoutes.search}/media/movie/x', ServiceRoutes.search),
+          ('/media/movie/-1', ServiceRoutes.dashboard),
+        ]) {
+          router.go(location);
+          await tester.pumpAndSettle();
+          expect(router.state.uri.toString(), mount, reason: location);
+        }
+      });
+
+      testWidgets('opened from a page above the tabs, it opens above it', (
+        tester,
+      ) async {
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+        router.go('/activity/movies');
+        await tester.pumpAndSettle();
+
+        unawaited(
+          router.push(
+            ServiceRoutes.media(
+              const MediaKey.movie(653),
+              from: router.state.uri.path,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(visiblePages(tester).map((page) => page.mediaKey), [
+          const MediaKey.movie(653),
+        ]);
+      });
+
+      testWidgets('the tile lends its poster, and the poster flies', (
+        tester,
+      ) async {
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+        const posterUrl = 'https://cdn.example.com/poster%20image.jpg';
+
+        router.go(
+          ServiceRoutes.media(
+            const MediaKey.movie(653),
+            from: ServiceRoutes.seerrDiscover,
+            heroTag: 'discover_trending_653',
+            posterUrl: posterUrl,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final page = visiblePages(tester).single;
+        expect(page.heroTag, 'discover_trending_653');
+        // Decoded once, by go_router: a `%20` in the URL itself survives.
+        expect(page.posterUrl, posterUrl);
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is Hero && widget.tag == 'discover_trending_653',
+          ),
+          findsOneWidget,
+        );
+      });
+    });
   });
 }
 

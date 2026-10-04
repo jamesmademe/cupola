@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -59,10 +60,23 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 /// and the operator's sections, closed. [focus] is the connection the page
 /// was opened from: its copy leads when it needs something.
 class MediaPage extends ConsumerStatefulWidget {
-  const MediaPage({super.key, required this.mediaKey, this.focus});
+  const MediaPage({
+    super.key,
+    required this.mediaKey,
+    this.focus,
+    this.heroTag,
+    this.posterUrl,
+  });
 
   final MediaKey mediaKey;
   final String? focus;
+
+  /// The tag of the tile the page was opened from: its poster flies here.
+  final String? heroTag;
+
+  /// The poster that tile drew, standing in until the page has read who the
+  /// title is, so the flight lands on a picture rather than a shimmer.
+  final String? posterUrl;
 
   @override
   ConsumerState<MediaPage> createState() => _MediaPageState();
@@ -204,6 +218,8 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 backdropHeight: (column / 2.6).clamp(214, 420),
                 identity: identity,
                 kind: mediaKey.kind,
+                heroTag: widget.heroTag,
+                posterUrl: widget.posterUrl,
                 waiting:
                     identity == null &&
                     rows.any(
@@ -312,7 +328,12 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                     gutter,
                     top + AppSpacing.md,
                     gutter,
-                    AppSpacing.xxxl,
+                    // Clear of the floating bar, which grows with the
+                    // reading size; where there is none, a margin.
+                    math.max(
+                      AppSpacing.xxxl,
+                      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+                    ),
                   ),
                   sliver: SliverList.list(
                     children: [
@@ -473,8 +494,14 @@ class _Hero extends StatelessWidget {
     required this.marks,
     required this.onArtDrawn,
     required this.backdropHeight,
+    this.heroTag,
+    this.posterUrl,
     this.light,
   });
+
+  /// See [MediaPage.heroTag] and [MediaPage.posterUrl].
+  final String? heroTag;
+  final String? posterUrl;
 
   /// The slab's height: 214 on the phone, growing with the page's width.
   final double backdropHeight;
@@ -532,7 +559,11 @@ class _Hero extends StatelessWidget {
         _ => _Plate(kind: kind, well: true),
       },
     );
-    final poster = Container(
+    // The tile's poster stands in until the title's own is known.
+    final posterArt = (identity?.posterUrl ?? '').isNotEmpty
+        ? identity!.posterUrl
+        : posterUrl;
+    Widget poster = Container(
       width: posterWidth,
       height: posterHeight,
       decoration: BoxDecoration(
@@ -543,15 +574,22 @@ class _Hero extends StatelessWidget {
         boxShadow: AppElevation.poster(scheme, light: light?.light),
       ),
       clipBehavior: Clip.antiAlias,
-      child: waiting
+      child: waiting && (posterArt ?? '').isEmpty
           ? const ShimmerPlaceholder(height: double.infinity)
           : _Artwork(
-              url: identity?.posterUrl,
+              url: posterArt,
               decodeBox: Size(posterWidth, posterHeight),
               onDrawn: onArtDrawn,
               fallback: _Plate(kind: kind),
             ),
     );
+    if (heroTag case final tag?) {
+      poster = Hero(
+        tag: tag,
+        transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
+        child: poster,
+      );
+    }
     final title = Semantics(
       header: true,
       child: Text(

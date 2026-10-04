@@ -11,6 +11,8 @@ import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
@@ -178,6 +180,68 @@ GoRoute _page(
   routes: routes,
   pageBuilder: (context, state) =>
       RouteUtils.cupertinoPage(key: state.pageKey, child: child(state)),
+);
+
+/// The one page a title has, at the title's own location (`MediaKey.location`)
+/// under a mount. `ServiceRoutes.mediaMountServices` says where it hangs, and
+/// why more than once; [prefix] is `/` for the root mount.
+///
+/// A malformed id falls back to the mount, the tab the page would have been
+/// pushed from, like every other detail in this file. `tv/tvdb/:id` comes
+/// before `tv/:id` for the reader only: `tv/:id` takes one segment, so it
+/// could never complete `tv/tvdb/300001`.
+List<GoRoute> _mediaRoutes({String prefix = ''}) => [
+  for (final (path, kind, byTvdb) in const [
+    ('media/movie/:id', 'movie', false),
+    ('media/tv/tvdb/:id', 'tv', true),
+    ('media/tv/:id', 'tv', false),
+  ])
+    GoRoute(
+      path: '$prefix$path',
+      redirect: (context, state) =>
+          MediaKey.parse(kind, state.pathParameters['id']!, byTvdb: byTvdb) ==
+              null
+          ? _mediaMountOrHome(state.uri.path)
+          : null,
+      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+        key: state.pageKey,
+        child: MediaPage(
+          mediaKey: MediaKey.parse(
+            kind,
+            state.pathParameters['id']!,
+            byTvdb: byTvdb,
+          )!,
+          focus: state.uri.queryParameters['i'],
+          heroTag: state.uri.queryParameters['heroTag'],
+          // go_router has already decoded it; decoding again would break a
+          // poster URL with a literal `%` in it.
+          posterUrl: state.uri.queryParameters['posterUrl'],
+        ),
+      ),
+    ),
+];
+
+/// The mount a title's location hangs off, or the Dashboard for the root one.
+String _mediaMountOrHome(String path) =>
+    switch (ServiceRoutes.mediaMountFor(path)) {
+      '' => ServiceRoutes.dashboard,
+      final mount => mount,
+    };
+
+/// A service tab that can open a title: [_page] with the title's page hung
+/// under it. Every tab of a service in `ServiceRoutes.mediaMountServices` is
+/// one, because a title opened anywhere in that service lands under the tab
+/// it was opened from (`ServiceRoutes.mediaMountFor`).
+GoRoute _titledTab(
+  String path,
+  Widget Function(GoRouterState state) child, {
+  GoRouterRedirect? redirect,
+  List<RouteBase> routes = const [],
+}) => _page(
+  path,
+  child,
+  redirect: redirect,
+  routes: [...routes, ..._mediaRoutes()],
 );
 
 Page<void> _discoverDetailPage(
@@ -412,7 +476,7 @@ RouteBase _seerrRoutes() {
 /// throws rather than quietly rendering a placeholder: a sixth tab added to
 /// that table with no case here is a bar and a router disagreeing.
 GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
-  ServiceTab.overview => _page(
+  ServiceTab.overview => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.seerr,
@@ -420,7 +484,7 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
       child: SeerrOverviewScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
-  ServiceTab.requests => _page(
+  ServiceTab.requests => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.seerr,
@@ -434,7 +498,7 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
   // Discover, and the whole tree that used to hang off the service root with
   // it. Every one of these is reached by tapping a row of the Discover page,
   // which is what makes this the tab that owns them.
-  ServiceTab.discover => _page(
+  ServiceTab.discover => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.seerr,
@@ -525,7 +589,7 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  ServiceTab.issues => _page(
+  ServiceTab.issues => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.seerr,
@@ -533,7 +597,7 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
       child: SeerrIssuesScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
-  ServiceTab.users => _page(
+  ServiceTab.users => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.seerr,
@@ -663,7 +727,7 @@ RouteBase _radarrRoutes() {
 /// quietly rendering a placeholder — a seventh tab added to that table with no
 /// case here is a bar and a router disagreeing, and that has to fail loudly.
 GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
-  ServiceTab.overview => _page(
+  ServiceTab.overview => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.radarr,
@@ -671,7 +735,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
       child: RadarrOverviewScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
-  ServiceTab.library => _page(
+  ServiceTab.library => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.radarr,
@@ -703,7 +767,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  ServiceTab.calendar => _page(
+  ServiceTab.calendar => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.radarr,
@@ -714,7 +778,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.queue => _page(
+  ServiceTab.queue => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.radarr,
@@ -726,7 +790,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.wanted => _page(
+  ServiceTab.wanted => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.radarr,
@@ -738,7 +802,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.history => _page(
+  ServiceTab.history => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.radarr,
@@ -869,7 +933,7 @@ RouteBase _sonarrRoutes() {
 /// throws rather than quietly rendering a placeholder — a seventh tab added to
 /// that table with no case here is a bar and a router disagreeing.
 GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
-  ServiceTab.overview => _page(
+  ServiceTab.overview => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.sonarr,
@@ -877,7 +941,7 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
       child: SonarrOverviewScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
-  ServiceTab.library => _page(
+  ServiceTab.library => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.sonarr,
@@ -909,7 +973,7 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  ServiceTab.calendar => _page(
+  ServiceTab.calendar => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.sonarr,
@@ -920,7 +984,7 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.queue => _page(
+  ServiceTab.queue => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.sonarr,
@@ -932,7 +996,7 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.wanted => _page(
+  ServiceTab.wanted => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.sonarr,
@@ -944,7 +1008,7 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.history => _page(
+  ServiceTab.history => _titledTab(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.sonarr,
@@ -2515,7 +2579,7 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
       : null;
 
   return switch (tab) {
-    ServiceTab.libraries => _page(
+    ServiceTab.libraries => _titledTab(
       tab.segment,
       (state) => ServiceTabScaffold(
         service: service,
@@ -2559,7 +2623,7 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
         ),
       ],
     ),
-    ServiceTab.overview => _page(
+    ServiceTab.overview => _titledTab(
       tab.segment,
       (state) => ServiceTabScaffold(
         service: service,
@@ -2595,7 +2659,7 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
 /// `_radarrBranchRoot`, which is the shape this follows.
 GoRoute _streamCapabilityRoute(ServiceKey service, ServiceTab tab) {
   final child = _streamCapabilityScreen(service, tab);
-  return _page(
+  return _titledTab(
     tab.segment,
     (state) => ServiceTabScaffold(service: service, tab: tab, child: child),
   );
@@ -2793,6 +2857,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
     path: ServiceRoutes.dashboard,
     pageBuilder: (context, state) => _tabPage(state, const DashboardScreen()),
     routes: [
+      ..._mediaRoutes(),
       // Every mount takes its segment from `ServiceKey.routeParam` rather than
       // repeating the literal. Sixteen of these were spelled out by hand and
       // one — `npm`, the single segment that is *not* the enum name — was not,
@@ -2818,13 +2883,15 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
     ],
   ),
   NavTab.activity => GoRoute(
-    path: '/activity',
+    path: ServiceRoutes.activity,
     pageBuilder: (context, state) =>
         _tabPage(state, const GlobalActivityScreen()),
+    routes: _mediaRoutes(),
   ),
   NavTab.search => GoRoute(
-    path: '/search',
+    path: ServiceRoutes.search,
     pageBuilder: (context, state) => _tabPage(state, const SearchScreen()),
+    routes: _mediaRoutes(),
   ),
   NavTab.settings => GoRoute(
     path: '/settings',
@@ -3031,6 +3098,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // be a sibling of any more: the route list is derived from the branches.
       // Putting four dead trees inside the services branch would read as part of
       // that tab's subtree and invite someone to give them a real builder.
+      // A title opened from a page above the tabs (`/activity/movies`, the
+      // import flow): pushed into a tab, it would open underneath that page.
+      ..._mediaRoutes(prefix: '/'),
       _legacyDiscoverRoutes(path: '/discover'),
       _moviesRoutes(path: '/movies'),
       _seriesRoutes(path: '/series'),

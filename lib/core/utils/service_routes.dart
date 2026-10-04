@@ -1,3 +1,4 @@
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -533,6 +534,62 @@ class ServiceRoutes {
       'posterUrl': posterUrl,
     });
   }
+
+  /// The two top-level tabs a title can be opened from besides the Dashboard.
+  static const activity = '/activity';
+  static const search = '/search';
+
+  /// ## The one page a title has
+  ///
+  /// A title's page hangs off every branch that opens titles, at the title's
+  /// own location (`MediaKey.location`, `/media/movie/653`): the Dashboard,
+  /// Activity, Search, and every tab of the services in [mediaMountServices].
+  /// One page mounted many times rather than one route at the root, for the
+  /// two reasons the arr details moved inside Library: the poster's Hero flies
+  /// only when the tile it left and the page it lands on share one Navigator,
+  /// and a tab left and come back to still shows the title.
+  ///
+  /// The root mounts it once more, for the pages that sit above the tabs
+  /// (`/activity/movies`, the import flow): a page pushed into a tab from one
+  /// of those would open underneath it.
+  static const mediaMountServices = {
+    ServiceKey.seerr,
+    ServiceKey.radarr,
+    ServiceKey.sonarr,
+    ServiceKey.jellyfin,
+    ServiceKey.plex,
+  };
+
+  /// Where a title opened from [path] lands: under the service tab [path] is
+  /// in when that service mounts titles, else under its top-level tab, else
+  /// at the root. [path] is a location the app is at, never a redirecting
+  /// one.
+  static String mediaMountFor(String path) =>
+      switch (Uri.parse(path).pathSegments) {
+        ['dashboard', final service, final tab, ...]
+            when mediaMountServices.any((s) => s.routeParam == service) =>
+          '$dashboard/$service/$tab',
+        ['dashboard', ...] => dashboard,
+        ['activity'] || ['activity', 'media', ...] => activity,
+        ['search', ...] => search,
+        _ => '',
+      };
+
+  /// The page of [key], opened from the page at [from]. [focus] is the
+  /// connection it was opened from (`?i=`, above): that copy leads when it
+  /// needs something. [heroTag] lets the poster fly, and [posterUrl] stands
+  /// in for it until the page has read who the title is.
+  static String media(
+    MediaKey key, {
+    required String from,
+    String? focus,
+    String? heroTag,
+    String? posterUrl,
+  }) => _withQuery('${mediaMountFor(from)}${key.location}', {
+    'i': focus,
+    'heroTag': heroTag,
+    'posterUrl': posterUrl,
+  });
 
   /// App settings, and the per-service page under it.
   ///
