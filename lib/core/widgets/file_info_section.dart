@@ -111,16 +111,14 @@ class FileInfoSection extends StatelessWidget {
 
     switch (_shape) {
       case _FileInfoShape.missing:
+        // A statement, not a way: the page that draws it offers the import
+        // beside it.
         return _InfoRow(
-          title: 'Import a file you already have',
-          subtitle: 'Manual import is in the actions menu.',
+          title: 'Nothing on disk yet',
           icon: Icons.drive_folder_upload_rounded,
           iconColor: _glyphColor(colorScheme),
           colorScheme: colorScheme,
           theme: theme,
-          // The actionable half must survive a reading size, and this line is
-          // the only place the alternative route is named.
-          subtitleMaxLines: 2,
         );
       case _FileInfoShape.file:
         return _FileRow(

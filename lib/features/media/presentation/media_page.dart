@@ -58,6 +58,10 @@ import 'package:cupola/features/media/domain/media_removal.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
 import 'package:cupola/features/media/presentation/media_copy_panel_card.dart';
+import 'package:cupola/features/media/presentation/media_decision_card.dart';
+import 'package:cupola/features/media/presentation/media_facts_sections.dart';
+import 'package:cupola/features/media/domain/media_facts.dart';
+import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
@@ -431,6 +435,28 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           _ServerRow(view, onTap: _wayOf(row, view)),
     ];
     final request = lead is MediaLeadRequest ? _requestOf(lead, rows) : null;
+    final region = ref.watch(regionProvider);
+    // The requests that wait on the operator, answered from here: in the
+    // lead's place while the title is on no server, under the lead otherwise.
+    final decisions = audience == Audience.operator
+        ? [
+            for (final pending in mediaPendingRequests(rows))
+              if (ref
+                  .watch(roleGateProvider(pending.seerr.id))
+                  .operatorAction(SeerrAbility.approve)
+                  .isDrawn)
+                pending,
+          ]
+        : const <MediaPendingRequest>[];
+    final decisionLeads =
+        decisions.isNotEmpty &&
+        switch (lead) {
+          MediaLeadAdd() ||
+          MediaLeadRequest() ||
+          MediaLeadTrailer() ||
+          MediaLeadNone() => true,
+          _ => false,
+        };
     // Watchlist is Seerr's, kept for the user the connection acts as: no
     // Seerr, no Watchlist.
     final watchlistSeerr = _recommender(settings);
@@ -446,7 +472,8 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         : answeredWatchlist?.on;
     // Under the buttons, what a request means now: why there is none to make,
     // what one would add, or for the requester, that the title is not there.
-    final requestLine = request == null || request.watch != null
+    final requestLine =
+        request == null || request.watch != null || decisions.isNotEmpty
         ? null
         : request.words.reason ??
               request.verdict.reason ??
@@ -571,11 +598,30 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                       : null,
                   hasTrailer: identity?.videos.isNotEmpty ?? false,
                   showManage: manage.isNotEmpty,
+                  primary: decisionLeads
+                      ? _decisionCards(
+                          decisions,
+                          title: identity?.title ?? '',
+                          leads: true,
+                          light: light,
+                          rows: rows,
+                        )
+                      : null,
                   serverName: (lead) => settings.connectionTitle(
                     lead.server.id,
                     lead.server.service,
                   ),
                 ),
+              if (decisions.isNotEmpty && !decisionLeads) ...[
+                const SizedBox(height: AppSpacing.md),
+                _decisionCards(
+                  decisions,
+                  title: identity?.title ?? '',
+                  leads: false,
+                  light: light,
+                  rows: rows,
+                ),
+              ],
               if (requestLine != null) ...[
                 const SizedBox(height: AppSpacing.md),
                 _StateLine(
@@ -601,6 +647,11 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 MediaGroup(children: views),
               ],
               ...manage,
+              if (mediaWatchProvidersOf(rows, region)
+                  case final providers?) ...[
+                _Heading('Where to watch', trailing: regionName(region)),
+                MediaWatchProviders(providers: providers),
+              ],
             ];
             final reference = <Widget>[
               if ((identity?.overview ?? '').isNotEmpty) ...[
@@ -617,6 +668,17 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   style: AppType.meta.copyWith(color: room.inkSecondary),
                 ),
               ],
+              if (mediaKey.isMovie)
+                if (mediaReleasesOf(rows, region) case final releases?) ...[
+                  _Heading(
+                    'Release dates',
+                    trailing: switch (releases.region) {
+                      final code? => regionName(code),
+                      null => null,
+                    },
+                  ),
+                  MediaReleaseDates(releases: releases),
+                ],
               if (identity?.cast.isNotEmpty ?? false) ...[
                 const _Heading('Cast'),
                 DiscoverCastList(
@@ -714,6 +776,39 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       ),
     );
   }
+
+  /// The requests waiting on the operator, one card each; only the first
+  /// may lead.
+  Widget _decisionCards(
+    List<MediaPendingRequest> decisions, {
+    required String title,
+    required bool leads,
+    required TitleLight? light,
+    required List<MediaRow> rows,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (final (index, pending) in decisions.indexed) ...[
+        if (index > 0) const SizedBox(height: AppSpacing.md),
+        MediaDecisionCard(
+          pending: pending,
+          title: title,
+          leads: leads && index == 0,
+          light: light,
+          // An answer changes Seerr's record, and an approval Radarr's.
+          onDecided: () {
+            if (!mounted) return;
+            for (final row in ref.read(mediaRowsProvider(mediaKey))) {
+              if (row.service == ServiceKey.seerr ||
+                  row.service == ServiceKey.radarr) {
+                retryMediaRow(ref, mediaKey, row);
+              }
+            }
+          },
+        ),
+      ],
+    ],
+  );
 
   /// `4 services`: the services the rows speak for, each once.
   String _servicesCount(List<MediaRow> rows) {
@@ -1448,6 +1543,7 @@ class _LeadBar extends StatelessWidget {
     this.onWatch,
     this.onAdd,
     this.light,
+    this.primary,
     required this.hasTrailer,
     required this.showManage,
     required this.serverName,
@@ -1476,6 +1572,10 @@ class _LeadBar extends StatelessWidget {
 
   /// Opens the add sheet, for an Add that leads.
   final void Function(MediaLeadAdd lead)? onAdd;
+
+  /// What stands in the lead's place when something else answers first:
+  /// a request that waits on the operator. The buttons under it stay.
+  final Widget? primary;
   final bool hasTrailer;
   final bool showManage;
   final String Function(MediaLeadPlay lead) serverName;
@@ -1499,7 +1599,7 @@ class _LeadBar extends StatelessWidget {
       ).label,
       MediaLeadTrailer() || MediaLeadNone() || MediaLeadWaiting() => null,
     };
-    final trailerLeads = lead is MediaLeadTrailer;
+    final trailerLeads = primary == null && lead is MediaLeadTrailer;
     final leadStyle = mediaLeadStyle(context, light);
     final watchlist = this.watchlist;
     final secondaries = <(String, IconData, VoidCallback?, String?)>[
@@ -1527,7 +1627,9 @@ class _LeadBar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (lead is MediaLeadWaiting)
+        if (primary case final primary?)
+          primary
+        else if (lead is MediaLeadWaiting)
           const ShimmerPlaceholder(height: DesignTokens.sizeButtonL)
         else if (label != null && label.isNotEmpty)
           // An account that may not ask for this kind keeps Request, dimmed
@@ -2215,6 +2317,23 @@ class _CopyControlsState extends ConsumerState<_CopyControls> {
               : '${widget.name} lists it and never looks for it',
           value: monitored,
           onChanged: _setMonitored,
+        ),
+        // A file the user already has, on this copy's server: the wizard is
+        // bound to this connection, so it lands in this copy's library.
+        MediaLinkRow(
+          label: 'Import a file',
+          detail: 'From a folder on the server',
+          onTap: () async {
+            await context.push(
+              manualImportLocation(
+                manualImportBrowsePath,
+                ServiceKey.radarr,
+                targetId: widget.movie.id,
+                instanceId: widget.connection.id,
+              ),
+            );
+            widget.onChanged();
+          },
         ),
       ],
     );

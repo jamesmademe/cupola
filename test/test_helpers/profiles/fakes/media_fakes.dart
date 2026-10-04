@@ -190,6 +190,11 @@ class SeerrFake extends ServiceFake {
       ],
       'createdAt': c.ago(const Duration(days: 60)),
       'updatedAt': c.ago(const Duration(hours: 1)),
+      // Seerr's own: every request for the title, as `/movie/:id` sends it.
+      'requests': [
+        for (final row in _requests)
+          if (row.$2 == t) _requestRecord(c, row),
+      ],
     };
   }
 
@@ -217,6 +222,12 @@ class SeerrFake extends ServiceFake {
   static JsonMap _request(
     ServerContext c,
     (int, WorldTitle, int, int, Duration, bool) row,
+  ) => {..._requestRecord(c, row), 'media': _media(c, row.$2)};
+
+  /// A request without its media, as the title's own record lists it.
+  static JsonMap _requestRecord(
+    ServerContext c,
+    (int, WorldTitle, int, int, Duration, bool) row,
   ) {
     final (id, title, by, status, age, is4k) = row;
     return {
@@ -239,7 +250,6 @@ class SeerrFake extends ServiceFake {
               {'id': 2, 'seasonNumber': 2, 'status': 3},
             ]
           : const <Object?>[],
-      'media': _media(c, title),
     };
   }
 
@@ -270,6 +280,37 @@ class SeerrFake extends ServiceFake {
         ],
       if (collectionParts.contains(t))
         'collection': {'id': collectionId, 'name': collectionName},
+      if (!t.isSeries) ...{
+        'watchProviders': [
+          {
+            'iso_3166_1': 'IT',
+            'flatrate': [
+              {'id': 8, 'name': 'Netflix'},
+              {'id': 119, 'name': 'Prime Video'},
+            ],
+            'buy': [
+              {'id': 2, 'name': 'Apple TV'},
+            ],
+          },
+          {
+            'iso_3166_1': 'US',
+            'flatrate': [
+              {'id': 15, 'name': 'Hulu'},
+            ],
+          },
+        ],
+        'releases': {
+          'results': [
+            {
+              'iso_3166_1': 'IT',
+              'release_dates': [
+                {'type': 3, 'release_date': '${t.year}-09-26T00:00:00.000Z'},
+                {'type': 4, 'release_date': '${t.year}-11-12T00:00:00.000Z'},
+              ],
+            },
+          ],
+        },
+      },
       'credits': {
         'cast': const <Object?>[],
         'crew': [

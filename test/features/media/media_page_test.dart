@@ -46,6 +46,22 @@ Future<ProfileHarness> _pump(
   return harness;
 }
 
+/// Seerr knows [title] and nobody has asked for it: no media row.
+Override _unrequested(WorldTitle title) =>
+    mediaSeerrRecordProvider.overrideWith(
+      (ref, source) async => MediaAnswer(
+        MediaSeerrRecord(
+          details: {
+            'id': title.tmdbId,
+            'title': title.title,
+            'releaseDate': '${title.year}-01-10',
+            'overview': 'A movie nobody has asked for.',
+          },
+        ),
+        DateTime(2026, 10, 4),
+      ),
+    );
+
 /// The page under a router, for the rows that lead somewhere: anything
 /// under Settings draws its own location.
 Future<(ProfileHarness, GoRouter)> _pumpRouted(
@@ -67,6 +83,10 @@ Future<(ProfileHarness, GoRouter)> _pumpRouted(
       ),
       GoRoute(
         path: '/settings/service/:service',
+        builder: (context, state) => Text('at ${state.uri}'),
+      ),
+      GoRoute(
+        path: '/import/browse',
         builder: (context, state) => Text('at ${state.uri}'),
       ),
     ],
@@ -267,9 +287,14 @@ void main() {
   testWidgets('Add opens on the Radarr, its profile, folder and indexers', (
     tester,
   ) async {
-    // P1 holds no Metropolis: the first Radarr leads, and the sheet says
-    // what adding it there means.
-    final harness = await _pump(tester, Profiles.p1, WorldTitles.metropolis);
+    // P1 holds no Metropolis, and here nobody has asked for it: the first
+    // Radarr leads, and the sheet says what adding it there means.
+    final harness = await _pump(
+      tester,
+      Profiles.p1,
+      WorldTitles.metropolis,
+      overrides: [_unrequested(WorldTitles.metropolis)],
+    );
     final lead = find.widgetWithText(FilledButton, 'Add to Radarr');
     expect(lead, findsOneWidget);
 
@@ -488,6 +513,8 @@ void main() {
     final lead = find.widgetWithText(FilledButton, 'Requested');
     expect(lead, findsOneWidget);
     expect(tester.widget<FilledButton>(lead).onPressed, isNull);
+    // Deciding is the operator's.
+    expect(find.text('Approve'), findsNothing);
     expect(
       find.textContaining(RegExp(r'^(Waiting for approval|On its way)\.$')),
       findsOneWidget,
@@ -558,6 +585,110 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Releases'), findsWidgets);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a request that waits is answered from the page', (tester) async {
+    // Anna asked for Charge, and nobody holds it: the answer leads, not Add.
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.charge);
+
+    expect(find.text('${WorldPeople.anna} asked for it'), findsOneWidget);
+    expect(
+      find.textContaining(RegExp(r'^Waiting for approval · ')),
+      findsOneWidget,
+    );
+    expect(find.widgetWithText(FilledButton, 'Add to Radarr'), findsNothing);
+    // The line under the buttons would say it twice.
+    expect(find.text('Waiting for approval.'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
+    await _answer(tester);
+    expect(find.text('Approve this request?'), findsOneWidget);
+    await tester.tap(find.text('Approve request'));
+    await _answer(tester);
+    final approve = harness.network
+        .requestsTo(WorldIds.seerr)
+        .where((r) => r.method == 'POST')
+        .single;
+    expect(approve.uri.path, '/api/v1/request/1/approve');
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Decline asks, then tells Seerr', (tester) async {
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.metropolis);
+
+    expect(find.text('${WorldPeople.luca} asked for it'), findsOneWidget);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Decline'));
+    await _answer(tester);
+    expect(find.text('Decline this request?'), findsOneWidget);
+    await tester.tap(find.text('Decline request'));
+    await _answer(tester);
+    final decline = harness.network
+        .requestsTo(WorldIds.seerr)
+        .where((r) => r.method == 'POST')
+        .single;
+    expect(decline.uri.path, '/api/v1/request/2/decline');
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('where it streams and when it came out, in the region set', (
+    tester,
+  ) async {
+    // The household's region is Italy: TMDB's American list stays out.
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.tearsOfSteel);
+
+    expect(find.text('Where to watch'), findsOneWidget);
+    expect(find.text('Italy'), findsNWidgets(2));
+    expect(
+      find.bySemanticsLabel('Stream: Netflix, Prime Video'),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('Buy or rent: Apple TV'), findsOneWidget);
+    expect(find.textContaining('Hulu'), findsNothing);
+    expect(find.text('Release dates'), findsOneWidget);
+    expect(find.text('In cinemas'), findsOneWidget);
+    expect(find.text('Wed 26 Sep 2012'), findsOneWidget);
+    expect(find.text('Mon 12 Nov 2012'), findsOneWidget);
+    // TMDB has no disc date for it here: no row.
+    expect(find.text('Physical'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('without Seerr, nowhere to watch is claimed', (tester) async {
+    final harness = await _pump(tester, Profiles.p4, WorldTitles.tearsOfSteel);
+
+    expect(find.text('Where to watch'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a file already on the server is imported into this copy', (
+    tester,
+  ) async {
+    final (harness, router) = await _pumpRouted(
+      tester,
+      Profiles.p4,
+      WorldTitles.tearsOfSteel,
+    );
+    await tester.ensureVisible(find.text('Files & quality'));
+    await tester.tap(find.text('Files & quality'));
+    await _answer(tester);
+
+    final import = find.text('Import a file');
+    await tester.ensureVisible(import);
+    await tester.tap(import);
+    await _answer(tester);
+    final at = router.state.uri;
+    expect(at.path, '/import/browse');
+    expect(at.queryParameters, {
+      'service': 'radarr',
+      'targetId': '5',
+      'i': WorldIds.radarr,
+    });
 
     await harness.unmount(tester);
   });

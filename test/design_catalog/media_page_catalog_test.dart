@@ -258,7 +258,90 @@ List<MediaRow> _withSeerr() => [
             'name': 'Silent Horror',
             'backdropPath': CatalogArt.tmdbBackdrop,
           },
+          'watchProviders': _watchProviders,
+          'releases': _releases,
           'mediaInfo': {'status': 5},
+        },
+      ),
+    ),
+  ),
+];
+
+/// Where Nosferatu streams in the catalog's region, as TMDB lists it.
+const _watchProviders = [
+  {
+    'iso_3166_1': 'US',
+    'flatrate': [
+      {'id': 283, 'name': 'Crunchyroll'},
+      {'id': 191, 'name': 'Kanopy'},
+    ],
+    'buy': [
+      {'id': 2, 'name': 'Apple TV'},
+      {'id': 3, 'name': 'Google Play Movies'},
+    ],
+  },
+];
+
+/// Its dates there: in cinemas, then digital and on disc decades later.
+const _releases = {
+  'results': [
+    {
+      'iso_3166_1': 'US',
+      'release_dates': [
+        {'type': 3, 'release_date': '1929-06-03T00:00:00.000Z'},
+        {'type': 4, 'release_date': '2013-10-29T00:00:00.000Z'},
+        {'type': 5, 'release_date': '2007-04-17T00:00:00.000Z'},
+      ],
+    },
+  ],
+};
+
+/// A film nobody holds that Anna asked for two hours ago: the request
+/// waits on the operator.
+List<MediaRow> _askedFor() => [
+  ..._notHeld().where((row) => row is! MediaNotSetUpRow),
+  MediaConnectionRow<MediaSeerrRecord>(
+    _seerr,
+    _answered(
+      MediaSeerrRecord(
+        details: {
+          'id': 653,
+          'title': 'Nosferatu',
+          'releaseDate': '1922-02-16',
+          'runtime': 94,
+          'genres': const [
+            {'id': 27, 'name': 'Horror'},
+          ],
+          'overview':
+              'Thomas Hutter travels to the Carpathians to sell a house to '
+              'Count Orlok, and the count follows him home by sea.',
+          'posterPath': CatalogArt.tmdbPoster,
+          'backdropPath': CatalogArt.tmdbBackdrop,
+          'voteAverage': 7.6,
+          'credits': const {
+            'crew': [
+              {'id': 1, 'name': 'F. W. Murnau', 'job': 'Director'},
+            ],
+          },
+          'watchProviders': _watchProviders,
+          'releases': _releases,
+          'mediaInfo': {
+            'status': 2,
+            'status4k': 1,
+            'requests': [
+              {
+                'id': 41,
+                'status': 1,
+                'type': 'movie',
+                'is4k': false,
+                'createdAt': DateTime.now()
+                    .subtract(const Duration(hours: 2))
+                    .toUtc()
+                    .toIso8601String(),
+                'requestedBy': const {'id': 2, 'displayName': 'Anna'},
+              },
+            ],
+          },
         },
       ),
     ),
@@ -500,19 +583,40 @@ void main() {
         'With Seerr · TMDB names the title, and the collection it belongs '
         'to: 5 of 8 on your server',
         _withSeerr(),
-        height: 1660,
+        height: 2240,
       ),
       _scene(
         'Tablet · a detail pane: the phone column, wider',
         _withSeerr(),
         width: 592,
-        height: 1900,
+        height: 2480,
       ),
       _scene(
         'Tablet · full screen: two tracks, the servers and Manage beside',
         _withSeerr(),
         width: 1180,
-        height: 1400,
+        height: 1700,
+      ),
+      CatalogScene(
+        'Decision · Anna asked for it, and nobody holds it: the answer takes '
+        'the lead\'s place, Approve lit by the title',
+        (_) => const MediaPage(mediaKey: _key),
+        width: 390,
+        height: 1500,
+        overrides: [
+          mediaRowsProvider.overrideWith((ref, key) => _askedFor()),
+          audienceProvider.overrideWithValue(Audience.operator),
+          roleGateProvider.overrideWith(
+            (ref, id) => const RoleGate(
+              audience: Audience.operator,
+              grant: SeerrGrant.apiKey(),
+            ),
+          ),
+          titleLightProvider.overrideWith((ref, url) async => _lights[url]),
+          mediaSeerrNumberingProvider.overrideWith((ref, id) async => null),
+          mediaCollectionHeldProvider.overrideWith((ref, c) async => null),
+          mediaRecommendationsProvider.overrideWith((ref, source) async => []),
+        ],
       ),
       _addScene(),
       CatalogScene(

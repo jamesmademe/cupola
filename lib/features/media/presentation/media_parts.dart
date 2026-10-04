@@ -172,3 +172,64 @@ class MediaSwitchRow extends StatelessWidget {
     );
   }
 }
+
+/// A way somewhere else, with what it does under it: tapped whole, a
+/// chevron at its end.
+class MediaLinkRow extends StatelessWidget {
+  const MediaLinkRow({
+    super.key,
+    required this.label,
+    required this.detail,
+    required this.onTap,
+  });
+
+  final String label;
+  final String detail;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: AppType.row.copyWith(color: room.ink),
+                        ),
+                        Text(
+                          detail,
+                          style: AppType.meta
+                              .weight(FontWeight.w400)
+                              .copyWith(color: room.inkTertiary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: room.inkTertiary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
