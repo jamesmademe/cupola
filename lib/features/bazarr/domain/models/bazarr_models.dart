@@ -159,6 +159,37 @@ class BazarrMovie {
   }
 }
 
+/// One episode Bazarr follows (`/api/episodes`): the subtitle languages it
+/// has on disk, and the ones it is still looking for.
+class BazarrEpisode {
+  final int sonarrEpisodeId;
+  final int season;
+  final int episode;
+  final String? title;
+
+  /// The languages already on disk — see [parseBazarrPresentSubtitles].
+  final List<BazarrSubtitleLanguage> presentLanguages;
+  final List<BazarrSubtitleLanguage> missingLanguages;
+
+  const BazarrEpisode({
+    required this.sonarrEpisodeId,
+    required this.season,
+    required this.episode,
+    this.title,
+    this.presentLanguages = const [],
+    this.missingLanguages = const [],
+  });
+
+  factory BazarrEpisode.fromJson(Map<String, dynamic> json) => BazarrEpisode(
+    sonarrEpisodeId: intOrNull(json['sonarrEpisodeId']) ?? 0,
+    season: intOrNull(json['season']) ?? 0,
+    episode: intOrNull(json['episode']) ?? 0,
+    title: stringOrNull(json['title']),
+    presentLanguages: parseBazarrPresentSubtitles(json['subtitles']),
+    missingLanguages: parseBazarrSubtitleLanguages(json['missing_subtitles']),
+  );
+}
+
 class BazarrWantedItem {
   final String? title;
   final String? seriesTitle;

@@ -7,10 +7,14 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/media/domain/media_removal.dart';
 import 'package:cupola/features/media/domain/media_series_manage.dart';
+import 'package:cupola/features/media/domain/media_subtitles.dart';
 import 'package:cupola/features/media/presentation/media_episode_providers.dart';
 import 'package:cupola/features/media/presentation/media_manage_parts.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
@@ -44,6 +48,7 @@ class MediaSeriesManage extends ConsumerWidget {
     required this.copies,
     required this.title,
     required this.onChanged,
+    this.subtitles,
     this.now,
   }) : assert(copies.length > 0, 'nothing to manage');
 
@@ -54,6 +59,10 @@ class MediaSeriesManage extends ConsumerWidget {
 
   /// Sonarr changed: the page reads it again.
   final VoidCallback onChanged;
+
+  /// The episodes Bazarr follows, with their languages, and the Sonarr whose
+  /// copy they are; null without a Bazarr that follows one.
+  final ({String arr, List<BazarrEpisode> episodes})? subtitles;
 
   /// The clock the dates are read against; the wall clock by default.
   final DateTime? now;
@@ -106,6 +115,21 @@ class MediaSeriesManage extends ConsumerWidget {
               : '',
           body: (context) => _History(copies: copies),
         ),
+        if (subtitles case (
+          :final arr,
+          :final episodes,
+        ) when episodes.isNotEmpty)
+          MediaManageRow(
+            title: 'Subtitles',
+            summary: mediaSeriesSubtitlesSummary(episodes),
+            body: (context) => _Subtitles(
+              episodes: episodes,
+              sonarr: copies
+                  .where((copy) => copy.connection.id == arr)
+                  .firstOrNull
+                  ?.episodes,
+            ),
+          ),
         MediaManageRow(
           title: 'Search releases',
           summary: names,
@@ -519,6 +543,134 @@ class _History extends ConsumerWidget {
           },
         ],
       ],
+    );
+  }
+}
+
+/// Subtitles, open: the languages on disk across the series, then each
+/// episode still wanting one, with what it wants.
+class _Subtitles extends StatelessWidget {
+  const _Subtitles({required this.episodes, this.sonarr});
+
+  final List<BazarrEpisode> episodes;
+
+  /// Sonarr's episodes of the copy Bazarr follows, for their titles.
+  final List<SonarrEpisode>? sonarr;
+
+  /// How many wanting episodes are listed before the rest are counted.
+  static const _shown = 12;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final present = {
+      for (final language in mediaSeriesLanguagesOnDisk(episodes))
+        (language.code2 ?? language.name ?? '').toLowerCase(): language,
+    }..remove('');
+    final wanting =
+        [
+          for (final episode in episodes)
+            if (episode.missingLanguages.isNotEmpty) episode,
+        ]..sort(
+          (a, b) => a.season != b.season
+              ? a.season.compareTo(b.season)
+              : a.episode.compareTo(b.episode),
+        );
+    final titles = {
+      for (final episode in sonarr ?? const <SonarrEpisode>[])
+        episode.id: episode.title,
+    };
+    Widget label(String text) => Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.s),
+      child: Text(
+        text,
+        style: AppType.label.copyWith(color: room.inkSecondary),
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (present.isNotEmpty) ...[
+          label('On disk'),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: BazarrSubtitleLanguageWrap(
+              languages: present.values.toList(),
+            ),
+          ),
+        ],
+        if (wanting.isNotEmpty) ...[
+          label('Wanted'),
+          for (final episode in wanting.take(_shown))
+            _Wanting(
+              code: formatArrEpisodeCode(episode.season, episode.episode) ?? '',
+              title: titles[episode.sonarrEpisodeId] ?? episode.title ?? '',
+              wanted: mediaLanguageWords(episode.missingLanguages),
+            ),
+          if (wanting.length > _shown)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+              child: Text(
+                '${wanting.length - _shown} more',
+                style: AppType.meta.copyWith(color: room.inkTertiary),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+/// One episode that wants a subtitle: its code, its title, the languages it
+/// wants. Read as one sentence.
+class _Wanting extends StatelessWidget {
+  const _Wanting({
+    required this.code,
+    required this.title,
+    required this.wanted,
+  });
+
+  final String code;
+  final String title;
+  final String wanted;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label:
+          '${[code, if (title.isNotEmpty) title].join(', ')}: $wanted wanted',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 52,
+              child: Text(
+                code,
+                style: AppType.meta.copyWith(color: room.inkTertiary),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppType.meta
+                    .weight(FontWeight.w400)
+                    .copyWith(color: room.ink),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              wanted,
+              style: AppType.meta.copyWith(color: room.inkSecondary),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

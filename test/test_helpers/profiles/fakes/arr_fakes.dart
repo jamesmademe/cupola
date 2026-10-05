@@ -1302,7 +1302,12 @@ class BazarrFake extends ServiceFake {
                 'episode': e,
                 'title': 'Episode $e',
                 'monitored': true,
-                // The fourth has its subtitles.
+                // English on each; the fourth has its Italian too.
+                'subtitles': [
+                  {..._english[0], 'path': '/mnt/tank/media/S02E0$e.en.srt'},
+                  if (e == 4)
+                    {..._italian[0], 'path': '/mnt/tank/media/S02E04.it.srt'},
+                ],
                 'missing_subtitles': e < 4 ? _italian : const <Object?>[],
               },
         ]);
@@ -1319,6 +1324,9 @@ class BazarrFake extends ServiceFake {
   ];
   static const _italian = [
     {'name': 'Italian', 'code2': 'it', 'code3': 'ita'},
+  ];
+  static const _english = [
+    {'name': 'English', 'code2': 'en', 'code3': 'eng'},
   ];
 
   /// The ids a `name[]` filter asked for, or null when it asked for none.

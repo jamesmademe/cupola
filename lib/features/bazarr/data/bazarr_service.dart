@@ -111,6 +111,17 @@ class BazarrService {
     return null;
   }
 
+  /// The episodes of the series Bazarr follows under [sonarrSeriesId], each
+  /// with its subtitle languages (`/api/episodes?seriesid[]=`): the ones
+  /// with a file. Throws when Bazarr does not answer.
+  Future<List<BazarrEpisode>> getEpisodes(int sonarrSeriesId) async {
+    final response = await client.get(
+      '/api/episodes',
+      queryParameters: {'seriesid[]': sonarrSeriesId},
+    );
+    return _parsePaged(response.data, BazarrEpisode.fromJson).data;
+  }
+
   /// The movie Bazarr follows under [radarrId], or null. Asked by id
   /// (`radarrid[]`); see [getSeriesById].
   Future<BazarrMovie?> getMovieById(int radarrId) async {

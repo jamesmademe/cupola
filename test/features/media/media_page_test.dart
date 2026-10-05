@@ -857,6 +857,8 @@ void main() {
       // still be chosen.
       expect(find.textContaining('Search for'), findsNothing);
       expect(find.text('Choose a release'), findsOneWidget);
+      // Bazarr's languages for it.
+      expect(find.text('English on disk · Italian wanted'), findsOneWidget);
 
       // The next one, a step away.
       await tester.tap(find.byTooltip('Next episode, E4'));
@@ -959,8 +961,9 @@ void main() {
       await harness.unmount(tester);
     });
 
-    testWidgets('History names each event\'s episode; Search releases opens '
-        'a season that has aired', (tester) async {
+    testWidgets('History names each event\'s episode, Subtitles each '
+        'episode still wanting one, and Search releases opens a season that '
+        'has aired', (tester) async {
       final harness = await _pump(
         tester,
         Profiles.p1,
@@ -977,6 +980,17 @@ void main() {
         findsOneWidget,
       );
 
+      final subtitles = find.text('Subtitles');
+      await tester.ensureVisible(subtitles);
+      expect(find.text('EN · IT wanted on 3 episodes'), findsOneWidget);
+      await tester.tap(subtitles);
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel('S2 E3, The Second Cycle: Italian wanted'),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(find.text('Search releases'));
       await tester.tap(find.text('Search releases'));
       await tester.pumpAndSettle();
       expect(

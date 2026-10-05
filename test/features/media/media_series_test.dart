@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
 import 'package:cupola/features/media/domain/media_row_view.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
@@ -14,6 +15,7 @@ import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/media/domain/media_series_manage.dart';
+import 'package:cupola/features/media/domain/media_subtitles.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode_file.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -131,6 +133,21 @@ void main() {
       );
     });
 
+    test('Bazarr says the languages on disk, where one is wanted, and '
+        'which', () {
+      String title(ServiceInstance connection) => connection.service.title;
+      final bazarr = rows.firstWhere((r) => r.service == ServiceKey.bazarr);
+      final view = mediaRowViews(
+        bazarr,
+        title: title,
+        now: now,
+        rows: rows,
+      ).single;
+
+      expect(view.detail, 'English on disk · S2 E1–E3');
+      expect(view.state, 'Italian wanted');
+    });
+
     test('Play continues the episode part-way through', () {
       final lead = resolveMediaLead(rows, audience: Audience.operator);
 
@@ -204,6 +221,41 @@ void main() {
     expect(
       resolveMediaLead(rows, audience: Audience.operator),
       isNot(isA<MediaLeadCopy>()),
+    );
+  });
+
+  test('subtitles name up to two languages, then their codes', () {
+    const english = BazarrSubtitleLanguage(name: 'English', code2: 'en');
+    const italian = BazarrSubtitleLanguage(name: 'Italian', code2: 'it');
+    const german = BazarrSubtitleLanguage(name: 'German', code2: 'de');
+    BazarrEpisode episode(
+      int number, {
+      List<BazarrSubtitleLanguage> present = const [],
+      List<BazarrSubtitleLanguage> missing = const [],
+    }) => BazarrEpisode(
+      sonarrEpisodeId: number,
+      season: 1,
+      episode: number,
+      presentLanguages: present,
+      missingLanguages: missing,
+    );
+
+    expect(
+      mediaEpisodeSubtitles(episode(1, present: [english], missing: [italian])),
+      'English on disk · Italian wanted',
+    );
+    expect(
+      mediaEpisodeSubtitles(episode(2, missing: [english, italian, german])),
+      'EN · IT · DE wanted',
+    );
+    expect(mediaEpisodeSubtitles(episode(3)), isNull);
+    expect(
+      mediaSeriesSubtitlesSummary([
+        episode(1, present: [english], missing: [italian]),
+        episode(2, present: [english], missing: [italian]),
+        episode(3, present: [english, italian]),
+      ]),
+      'EN · IT wanted on 2 episodes',
     );
   });
 

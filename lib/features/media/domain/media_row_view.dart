@@ -12,6 +12,7 @@ import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/features/media/domain/media_subtitles.dart';
 import 'package:cupola/features/media/domain/quality_words.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
@@ -202,6 +203,19 @@ List<MediaRowView> mediaRowViews(
           now: now,
         );
         return facts.isEmpty ? [view] : facts;
+      // Bazarr's languages over the episodes that have them.
+      case MediaBazarrCopy(series: _?, :final episodes?):
+        final words = _bazarrSeriesWords(episodes, _airedBySeason(rows, now));
+        return [
+          MediaRowView(
+            name: view.name,
+            detail: words.detail,
+            state: words.state,
+            tone: view.tone,
+            hollow: view.hollow,
+            connectionId: view.connectionId,
+          ),
+        ];
       case MediaStreamCopy(:final item?, :final episodes?)
           when item.kind == StreamItemKind.series:
         final line = _seasonsLine(episodes, _airedBySeason(rows, now));
@@ -316,8 +330,19 @@ Map<int, List<SonarrEpisode>> _bySeason(Iterable<SonarrEpisode> episodes) {
 String _episodeSpan(
   List<SonarrEpisode> episodes,
   Map<int, List<SonarrEpisode>> aired,
-) {
-  final seasons = _bySeason(episodes);
+) => _spanOf(
+  {
+    for (final MapEntry(:key, :value) in _bySeason(episodes).entries)
+      key: [for (final episode in value) episode.episodeNumber],
+  },
+  {for (final MapEntry(:key, :value) in aired.entries) key: value.length},
+);
+
+/// [seasons] (each season's episode numbers) as one span: a season whose
+/// every aired episode is there by its code alone (`S1`), the rest as runs
+/// (`S2 E4–E5`); past three seasons, from the first to the last (`S1–S5`).
+/// [aired] counts each season's aired episodes.
+String _spanOf(Map<int, List<int>> seasons, Map<int, int> aired) {
   final numbers = seasons.keys.toList()..sort();
   if (numbers.length > 3) {
     return '${formatSeasonCode(numbers.first)}–'
@@ -325,12 +350,45 @@ String _episodeSpan(
   }
   return [
     for (final season in numbers)
-      if (seasons[season]!.length == (aired[season]?.length ?? -1))
+      if (seasons[season]!.toSet().length == (aired[season] ?? -1))
         formatSeasonCode(season)
       else
-        '${formatSeasonCode(season)} '
-            '${_ranges([for (final e in seasons[season]!) e.episodeNumber])}',
+        '${formatSeasonCode(season)} ${_ranges(seasons[season]!)}',
   ].join(' · ');
+}
+
+/// What Bazarr says of a series from its episodes: the languages on disk and
+/// the episodes still wanting one (`English on disk · S2 E1–E3`), then what
+/// is wanted (`Italian wanted`). [aired] counts each season's aired
+/// episodes, so a season wanting everywhere is named whole.
+({String detail, String state}) _bazarrSeriesWords(
+  List<BazarrEpisode> episodes,
+  Map<int, int> aired,
+) {
+  final wanting = [
+    for (final episode in episodes)
+      if (episode.missingLanguages.isNotEmpty) episode,
+  ];
+  final present = mediaLanguageWords(mediaSeriesLanguagesOnDisk(episodes));
+  final span = wanting.isEmpty
+      ? ''
+      : _spanOf({
+          for (final season in {for (final e in wanting) e.season})
+            season: [
+              for (final e in wanting)
+                if (e.season == season) e.episode,
+            ],
+        }, aired);
+  return (
+    detail: [
+      if (present.isNotEmpty) '$present on disk',
+      if (span.isNotEmpty) span,
+    ].join(' · '),
+    state: wanting.isEmpty
+        ? 'Nothing wanted'
+        : '${mediaLanguageWords(wanting.expand((e) => e.missingLanguages))} '
+              'wanted',
+  );
 }
 
 /// `E4–E5`, `E6, E8–E10`: [numbers] as runs.
@@ -540,10 +598,10 @@ MediaRowView? _answeredView(
       );
     case MediaBazarrCopy(:final movie?):
       return view(
-        detail: _languageCodes(movie.presentLanguages),
+        detail: mediaLanguageCodes(movie.presentLanguages),
         state: movie.missingLanguages.isEmpty
             ? 'Nothing wanted'
-            : '${_languageCodes(movie.missingLanguages)} wanted',
+            : '${mediaLanguageCodes(movie.missingLanguages)} wanted',
         tone: StatusTone.neutral,
       );
     case MediaBazarrCopy(:final series?):
@@ -579,14 +637,6 @@ MediaRowView? _answeredView(
 
 /// A copy a viewer can play: the badge's own word and tone.
 const _onDisk = MediaStatusInfo(availability: MediaAvailability.available);
-
-/// Subtitle languages by their two-letter code, upper case, each once:
-/// `EN · IT`.
-String _languageCodes(List<BazarrSubtitleLanguage> languages) => languages
-    .map((language) => (language.code2 ?? language.name ?? '').toUpperCase())
-    .where((code) => code.isNotEmpty)
-    .toSet()
-    .join(' · ');
 
 /// The most recent request in Seerr's [mediaInfo]: who asked, and when.
 ({String who, String when})? _latestRequest(Map<String, dynamic>? mediaInfo) {

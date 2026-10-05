@@ -126,6 +126,7 @@ class MediaBazarrCopy {
     required this.arrConnectionId,
     this.movie,
     this.series,
+    this.episodes,
   });
 
   /// The Radarr or Sonarr connection whose copy Bazarr covers.
@@ -136,6 +137,10 @@ class MediaBazarrCopy {
 
   /// The series Bazarr follows, for a series.
   final BazarrSeries? series;
+
+  /// The series' episodes with their languages; null when they could not be
+  /// read, and the row counts what is wanted instead.
+  final List<BazarrEpisode>? episodes;
 }
 
 /// What one Seerr knows of a title: its record, and the arr servers it

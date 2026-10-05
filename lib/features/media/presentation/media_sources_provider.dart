@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
@@ -355,8 +356,18 @@ final mediaBazarrCopyProvider = FutureProvider.autoDispose
                 title: copy.title,
                 year: copy.year,
               )) {
+            List<BazarrEpisode>? episodes;
+            try {
+              episodes = await bazarr.getEpisodes(copy.id);
+            } catch (_) {
+              // The row counts what is wanted instead.
+            }
             return MediaAnswer(
-              MediaBazarrCopy(arrConnectionId: arr.id, series: followed),
+              MediaBazarrCopy(
+                arrConnectionId: arr.id,
+                series: followed,
+                episodes: episodes,
+              ),
               DateTime.now(),
             );
           }

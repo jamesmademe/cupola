@@ -33,6 +33,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
 import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:cupola/features/media/presentation/media_episode_sheet.dart';
@@ -422,6 +423,26 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         retryMediaRow(ref, mediaKey, row);
       }
     }
+  }
+
+  /// The episodes Bazarr follows for a series, and the Sonarr whose copy
+  /// they are; null without them.
+  ({String arr, List<BazarrEpisode> episodes})? _bazarrEpisodesOf(
+    List<MediaRow> rows,
+  ) {
+    for (final row in rows) {
+      if (row case MediaConnectionRow(
+        reading: MediaReadingAnswered(:final answer),
+      )) {
+        if (answer.value case MediaBazarrCopy(
+          :final arrConnectionId,
+          :final episodes?,
+        )) {
+          return (arr: arrConnectionId, episodes: episodes);
+        }
+      }
+    }
+    return null;
   }
 
   void _toManage() {
@@ -1015,6 +1036,11 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         }
       }
     }
+    // Bazarr follows one Sonarr: its languages, when it is the one shown.
+    final bazarr = _bazarrEpisodesOf(rows);
+    final subtitles = bazarr == null || bazarr.arr != sonarr?.connection.id
+        ? null
+        : {for (final e in bazarr.episodes) e.sonarrEpisodeId: e};
     final tvId = mediaKey.tmdbId;
     AppBottomSheet.showScrollable<void>(
       context: context,
@@ -1035,6 +1061,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 ? null
                 : (connectionId: seerr, tvId: tvId),
             server: server,
+            subtitles: subtitles,
             light: light,
             onPlay: (item) {
               final on = server;
@@ -1168,6 +1195,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         MediaSeriesManage(
           copies: held,
           title: MediaIdentity.of(rows)?.title ?? '',
+          subtitles: _bazarrEpisodesOf(rows),
           onChanged: () => _readArrsAgain(rows),
         ),
       ];

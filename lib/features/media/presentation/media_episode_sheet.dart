@@ -13,7 +13,9 @@ import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/widgets/machine_name.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
+import 'package:cupola/features/media/domain/media_subtitles.dart';
 import 'package:cupola/features/media/domain/quality_words.dart';
 import 'package:cupola/features/media/presentation/media_episode_providers.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
@@ -57,6 +59,7 @@ class MediaEpisodeSheet extends ConsumerStatefulWidget {
     this.sonarr,
     this.seerr,
     this.server,
+    this.subtitles,
     this.light,
     this.now,
   });
@@ -72,6 +75,10 @@ class MediaEpisodeSheet extends ConsumerStatefulWidget {
   final MediaEpisodeSonarr? sonarr;
   final ({String connectionId, int tvId})? seerr;
   final MediaEpisodeServer? server;
+
+  /// What Bazarr holds of each episode, by Sonarr's episode id; null
+  /// without a Bazarr that follows this Sonarr.
+  final Map<int, BazarrEpisode>? subtitles;
 
   /// The title's light, for Play.
   final TitleLight? light;
@@ -309,6 +316,16 @@ class _MediaEpisodeSheetState extends ConsumerState<MediaEpisodeSheet> {
                   value: _monitored[record.id] ?? record.monitored,
                   onChanged: (value) => _monitor(sonarr, record.id, value),
                 ),
+                if (widget.subtitles?[record.id] case final bazarr?)
+                  if (mediaEpisodeSubtitles(bazarr) case final words?)
+                    MediaValueRow(
+                      label: 'Subtitles',
+                      value: Text(
+                        words,
+                        textAlign: TextAlign.end,
+                        style: AppType.meta.copyWith(color: room.inkSecondary),
+                      ),
+                    ),
               ],
             ),
           ],
