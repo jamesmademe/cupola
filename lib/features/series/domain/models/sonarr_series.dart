@@ -99,6 +99,10 @@ class SonarrSeries {
 
   bool get hasFiles => (episodeFileCount ?? 0) > 0;
 
+  /// What the series' files take on disk, in bytes; 0 when Sonarr did not
+  /// say.
+  int get sizeOnDisk => (statistics?['sizeOnDisk'] as num?)?.toInt() ?? 0;
+
   /// [seasons], typed and in display order (specials last).
   ///
   /// [seasons] itself stays raw because Sonarr nests a good deal more in each

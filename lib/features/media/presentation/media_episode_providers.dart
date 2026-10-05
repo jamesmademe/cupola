@@ -53,3 +53,28 @@ final mediaSonarrCutoffProvider = FutureProvider.autoDispose
       }
       return null;
     }, retry: noProviderRetry);
+
+/// The quality profiles of the Sonarr [connectionId], by id: what a series'
+/// profile row is called and may become.
+final mediaSonarrProfilesProvider = FutureProvider.autoDispose
+    .family<Map<int, String>, String>((ref, connectionId) async {
+      final profiles = await ref
+          .watch(sonarrServiceForProvider(connectionId))
+          .getQualityProfiles();
+      return {
+        for (final profile in profiles)
+          if (profile['id'] case final int id) id: '${profile['name'] ?? ''}',
+      };
+    }, retry: noProviderRetry);
+
+/// The Sonarr [connectionId]'s history of the series [seriesId], newest
+/// first: read when Manage's History opens.
+final mediaSonarrHistoryProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, ({String connectionId, int seriesId})>((
+      ref,
+      source,
+    ) {
+      return ref
+          .watch(sonarrServiceForProvider(source.connectionId))
+          .getSeriesHistory(source.seriesId);
+    }, retry: noProviderRetry);

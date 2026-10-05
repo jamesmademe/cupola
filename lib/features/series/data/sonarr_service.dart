@@ -219,6 +219,49 @@ class SonarrService with ArrActivityMixin {
     );
   }
 
+  /// Monitors, or stops monitoring, season [seasonNumber] of the series
+  /// [seriesId], and with it each of its episodes, as Sonarr's own season
+  /// switch does.
+  ///
+  /// Read-modify-write against `PUT /api/v3/series/{id}`, which takes the
+  /// whole resource (see [updateSeriesType]); Sonarr carries a season's change
+  /// down to its episodes. Throws on failure: the switch that asked shows the
+  /// answer.
+  Future<void> setSeasonMonitored(
+    int seriesId,
+    int seasonNumber, {
+    required bool monitored,
+  }) async {
+    final response = await client.get('/api/v3/series/$seriesId');
+    final series = response.data as Map<String, dynamic>;
+    final seasons = series['seasons'];
+    if (seasons is! List) {
+      throw const FormatException('Sonarr answered without its seasons');
+    }
+    for (final season in seasons.whereType<Map>()) {
+      if (season['seasonNumber'] == seasonNumber) {
+        season['monitored'] = monitored;
+      }
+    }
+    await client.put('/api/v3/series/$seriesId', data: series);
+  }
+
+  /// One series' history, newest first (`GET /api/v3/history/series`,
+  /// unpaged), each record with its episode. A failure travels.
+  Future<List<Map<String, dynamic>>> getSeriesHistory(int seriesId) async {
+    final response = await client.get(
+      '/api/v3/history/series',
+      queryParameters: {'seriesId': seriesId, 'includeEpisode': true},
+    );
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Sonarr answered without a history list');
+    }
+    return [
+      for (final item in data.whereType<Map>()) item.cast<String, dynamic>(),
+    ]..sort((a, b) => '${b['date'] ?? ''}'.compareTo('${a['date'] ?? ''}'));
+  }
+
   /// Fetches releases for interactive search.
   /// Note: Sonarr requires either episodeId or seriesId+seasonNumber for proper results.
   Future<List<dynamic>> getReleases({

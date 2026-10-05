@@ -43,7 +43,6 @@ import 'package:cupola/features/release_search/presentation/release_search_entry
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
-import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -64,6 +63,7 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_removal.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
+import 'package:cupola/features/media/presentation/media_series_manage.dart';
 import 'package:cupola/features/media/presentation/media_series_sections.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
 import 'package:cupola/features/media/presentation/media_copy_panel_card.dart';
@@ -75,6 +75,7 @@ import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/media/presentation/media_manage_parts.dart';
 import 'package:cupola/features/media/presentation/media_manage_summaries.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -1140,9 +1141,37 @@ class _MediaPageState extends ConsumerState<MediaPage> {
   /// The operator's sections, closed: each says what it holds in one line
   /// ([mediaManageSummaries]).
   List<Widget> _manage(List<MediaRow> rows, SettingsModel settings) {
-    // A series' files, searches and removal are its own: until they are
-    // drawn, Manage promises nothing it cannot do.
-    if (!mediaKey.isMovie) return const [];
+    if (!mediaKey.isMovie) {
+      final held = [
+        for (final row in rows)
+          if (row case MediaConnectionRow(
+            :final connection,
+            reading: MediaReadingAnswered(:final answer),
+          ))
+            if (answer.value case MediaSonarrCopy(
+              :final series?,
+              :final episodes,
+            ))
+              (
+                connection: connection,
+                name: settings.connectionTitle(
+                  connection.id,
+                  connection.service,
+                ),
+                series: series,
+                episodes: episodes,
+              ),
+      ];
+      if (held.isEmpty) return const [];
+      return [
+        _Heading('Manage', key: _manageKey),
+        MediaSeriesManage(
+          copies: held,
+          title: MediaIdentity.of(rows)?.title ?? '',
+          onChanged: () => _readArrsAgain(rows),
+        ),
+      ];
+    }
     final summaries = mediaManageSummaries(
       rows,
       title: (connection) =>
@@ -1189,7 +1218,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       _Heading('Manage', key: _manageKey),
       MediaGroup(
         children: [
-          _ManageRow(
+          MediaManageRow(
             title: 'Files & quality',
             summary: summaries.files,
             body: (context) => _Files(
@@ -1198,18 +1227,18 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               onChanged: () => _readArrsAgain(rows),
             ),
           ),
-          _ManageRow(
+          MediaManageRow(
             title: 'History',
             summary: summaries.history,
             body: (context) => _History(rows: rows, settings: settings),
           ),
           if (summaries.subtitles case final subtitles?)
-            _ManageRow(
+            MediaManageRow(
               title: 'Subtitles',
               summary: subtitles,
               body: (context) => _Subtitles(rows: rows, settings: settings),
             ),
-          _ManageRow(
+          MediaManageRow(
             title: 'Search releases',
             summary: summaries.search,
             // One copy: the row is the way in. More: it opens on the copies,
@@ -1218,7 +1247,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 ? () => showReleaseSearch(context, ref, searches.single.target)
                 : null,
             body: searches.length > 1
-                ? (context) => _CopyChoices<ReleaseSearchTarget>(
+                ? (context) => MediaCopyChoices<ReleaseSearchTarget>(
                     verb: 'Search releases on',
                     copies: searches,
                     onChoose: (target) =>
@@ -1227,7 +1256,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 : null,
           ),
           if (held case [final copy])
-            _ManageRow(
+            MediaManageRow(
               title: 'Remove from ${copy.name}',
               summary: copy.target.movie.monitored
                   ? 'Stops ${copy.name} looking for it'
@@ -1235,10 +1264,10 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               onTap: () => remove(copy.target),
             )
           else if (held.isNotEmpty)
-            _ManageRow(
+            MediaManageRow(
               title: 'Remove a copy',
               summary: _names([for (final copy in held) copy.name]),
-              body: (context) => _CopyChoices<_RadarrHeld>(
+              body: (context) => MediaCopyChoices<_RadarrHeld>(
                 verb: 'Remove from',
                 copies: held,
                 onChoose: remove,
@@ -2450,107 +2479,6 @@ class _SetUpPill extends StatelessWidget {
   }
 }
 
-/// A closed operator section: its title and what it holds in one line,
-/// opening on [body] when there is one. Its content is built when it opens:
-/// a section nobody opens reads nothing.
-class _ManageRow extends StatefulWidget {
-  const _ManageRow({
-    required this.title,
-    required this.summary,
-    this.body,
-    this.onTap,
-  }) : assert(body == null || onTap == null, 'a section opens or acts');
-
-  final String title;
-  final String summary;
-  final WidgetBuilder? body;
-
-  /// What the row does instead of opening, when it leads straight there.
-  final VoidCallback? onTap;
-
-  @override
-  State<_ManageRow> createState() => _ManageRowState();
-}
-
-class _ManageRowState extends State<_ManageRow> {
-  var _open = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final body = widget.body;
-    final header = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 60),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.title,
-                  style: AppType.row.copyWith(color: room.ink),
-                ),
-                if (widget.summary.isNotEmpty)
-                  Text(
-                    widget.summary,
-                    style: AppType.meta
-                        .weight(FontWeight.w400)
-                        .copyWith(color: room.inkTertiary),
-                  ),
-              ],
-            ),
-          ),
-          if (widget.onTap != null)
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: room.inkTertiary,
-            ),
-          if (body != null)
-            AnimatedRotation(
-              turns: _open ? 0.5 : 0,
-              duration: MediaQuery.disableAnimationsOf(context)
-                  ? Duration.zero
-                  : const Duration(milliseconds: 220),
-              child: Icon(
-                Icons.expand_more_rounded,
-                size: 18,
-                color: room.inkTertiary,
-              ),
-            ),
-        ],
-      ),
-    );
-    if (widget.onTap case final onTap?) {
-      return Semantics(
-        button: true,
-        child: InkWell(onTap: onTap, child: header),
-      );
-    }
-    if (body == null) return header;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Semantics(
-          button: true,
-          expanded: _open,
-          child: InkWell(
-            onTap: () => setState(() => _open = !_open),
-            child: header,
-          ),
-        ),
-        if (_open)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.slabY),
-            child: body(context),
-          ),
-      ],
-    );
-  }
-}
-
 /// Files & quality, open: every copy under its connection's name, its file
 /// as the service records it, or the row a copy with nothing on disk keeps.
 class _Files extends StatelessWidget {
@@ -2770,60 +2698,6 @@ class _CopyControlsState extends ConsumerState<_CopyControls> {
   }
 }
 
-/// A section open on the copies it can act on: one row per copy, each named
-/// for what it does there (`Search releases on Radarr 4K`).
-class _CopyChoices<T> extends StatelessWidget {
-  const _CopyChoices({
-    required this.verb,
-    required this.copies,
-    required this.onChoose,
-  });
-
-  /// What a row does, before the connection's name: `Search releases on`.
-  final String verb;
-  final List<({String name, T target})> copies;
-  final ValueChanged<T> onChoose;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final copy in copies)
-          Semantics(
-            button: true,
-            label: '$verb ${copy.name}',
-            excludeSemantics: true,
-            child: InkWell(
-              onTap: () => onChoose(copy.target),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: DesignTokens.sizeTouch,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        copy.name,
-                        style: AppType.label.copyWith(color: room.inkSecondary),
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: room.inkTertiary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
 /// Subtitles, open: each Bazarr's languages for the movie, the ones on disk
 /// and the ones it is still looking for.
 class _Subtitles extends StatelessWidget {
@@ -2928,7 +2802,7 @@ class _History extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final record in value.take(8))
-                  _HistoryLine(record: record, scheme: scheme),
+                  MediaHistoryLine(record: record, scheme: scheme),
               ],
             ),
             AsyncValue(:final error?) => InlineErrorRetry(
@@ -2947,62 +2821,6 @@ class _History extends ConsumerWidget {
           },
         ],
       ],
-    );
-  }
-}
-
-/// One event: its word in its tone, the release's quality, the day.
-class _HistoryLine extends StatelessWidget {
-  const _HistoryLine({required this.record, required this.scheme});
-
-  final Map<String, dynamic> record;
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final event = '${record['eventType'] ?? ''}';
-    final quality = mapOrNull(
-      mapOrNull(record['quality'])?['quality'],
-    )?['name'];
-    final date = '${record['date'] ?? ''}';
-    final words = [
-      historyEventLabel(event),
-      if (quality is String && quality.isNotEmpty) qualityWords(quality),
-      if (date.isNotEmpty) formatShortDate(date),
-    ];
-    return Semantics(
-      container: true,
-      label: words.join('. '),
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-        child: Row(
-          children: [
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: statusToneColor(
-                  scheme,
-                  historyEventTone(event),
-                  surface: room.ground,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                words.join(' · '),
-                style: AppType.meta
-                    .weight(FontWeight.w400)
-                    .copyWith(color: room.inkSecondary),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

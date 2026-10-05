@@ -8,6 +8,7 @@ import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/widgets/machine_name.dart';
@@ -16,6 +17,8 @@ import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/media/domain/quality_words.dart';
 import 'package:cupola/features/media/presentation/media_episode_providers.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -277,6 +280,25 @@ class _MediaEpisodeSheetState extends ConsumerState<MediaEpisodeSheet> {
                           : () => _search(sonarr, record.id),
                       icon: const Icon(Icons.search_rounded, size: 18),
                       label: Text(label),
+                    ),
+                  ),
+                // Sonarr's own pick passed over: the releases its indexers
+                // have, for this episode alone.
+                if (!record.isUnairedAt(now))
+                  MediaLinkRow(
+                    label: 'Choose a release',
+                    detail: 'Pick one from your indexers',
+                    onTap: () => showReleaseSearch(
+                      context,
+                      ref,
+                      ReleaseSearchTarget.episode(
+                        episodeId: record.id,
+                        seriesId: sonarr.seriesId,
+                        seasonNumber: record.seasonNumber,
+                        label:
+                            '${truncateTitle(widget.seriesTitle)} · '
+                            '${formatArrEpisodeCode(record.seasonNumber, record.episodeNumber)}',
+                      ).stampedWith(sonarr.connection.id),
                     ),
                   ),
                 MediaSwitchRow(

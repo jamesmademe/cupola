@@ -530,7 +530,11 @@ class SonarrFake extends ArrFake {
       if (title == WorldTitles.nightShift)
         'nextAiring': c.ahead(const Duration(days: 1, hours: 1, minutes: 7)),
       'seasons': cosmos
-          ? [_season(1, 10, 10, 10), _season(2, 3, 10, 10), _season(3, 0, 0, 8)]
+          ? [
+              _season(1, 10, 10, 10, size: 6400000000),
+              _season(2, 3, 10, 10, size: 2480000000),
+              _season(3, 0, 0, 8),
+            ]
           : [_season(1, 8, 8, 8), _season(2, 4, 5, 10)],
       'statistics': cosmos
           ? {
@@ -538,7 +542,8 @@ class SonarrFake extends ArrFake {
               'episodeFileCount': 13,
               'episodeCount': 20,
               'totalEpisodeCount': 28,
-              'sizeOnDisk': 15000000000,
+              // Its files: twelve in 720p, one in 1080p.
+              'sizeOnDisk': 8880000000,
               'percentOfEpisodes': 65.0,
             }
           : {
@@ -552,14 +557,20 @@ class SonarrFake extends ArrFake {
     };
   }
 
-  static JsonMap _season(int number, int files, int aired, int total) => {
+  static JsonMap _season(
+    int number,
+    int files,
+    int aired,
+    int total, {
+    int? size,
+  }) => {
     'seasonNumber': number,
     'monitored': true,
     'statistics': {
       'episodeFileCount': files,
       'episodeCount': aired,
       'totalEpisodeCount': total,
-      'sizeOnDisk': files * 1100000000,
+      'sizeOnDisk': size ?? files * 1100000000,
       'percentOfEpisodes': aired == 0 ? 0.0 : files * 100.0 / aired,
     },
   };
@@ -811,6 +822,21 @@ class SonarrFake extends ArrFake {
         if (sid == id) return NetworkReply.json(_series(c, sid, t));
       }
       return NetworkReply.json({'message': 'NotFound'}, status: 404);
+    }
+    // An edit: Sonarr answers with the record as it now stands.
+    if (r.method == 'PUT' && one != null) {
+      return NetworkReply.json(r.json, status: 202);
+    }
+    if (r.method == 'DELETE' && one != null) {
+      return NetworkReply.json(const <String, Object?>{});
+    }
+    // One series' history, unpaged, as `/history/series` answers it.
+    if (r.method == 'GET' && r.path == '/api/v3/history/series') {
+      final id = r.query['seriesId'];
+      return NetworkReply.json([
+        for (final record in history(c))
+          if ('${record['seriesId']}' == id) record,
+      ]);
     }
     if (r.method == 'GET' && r.path == '/api/v3/episode') {
       final id = int.tryParse(r.query['seriesId'] ?? '') ?? 0;

@@ -83,8 +83,8 @@ final class MediaLeadNone extends MediaLead {
 /// In order: a verified copy on a media server plays (rule 7: an unverified
 /// one never does); the requester asks for anything else; the operator adds a
 /// title nobody holds, requests it through Seerr when no arr is set up, or
-/// follows the copy that needs something, [focus] first (the connection the
-/// page was opened from); then the trailer; then nothing. A connection that
+/// follows the movie copy that needs something, [focus] first (the
+/// connection the page was opened from); then the trailer; then nothing. A connection that
 /// did not answer is never read as one that holds nothing: no Add while an arr
 /// is silent.
 MediaLead resolveMediaLead(
@@ -147,8 +147,12 @@ MediaLead resolveMediaLead(
       return MediaLeadRequest(seerrs.first.connection);
     }
   } else {
+    // A series' copy never leads: its rows say what is downloading and
+    // missing, and its searches are its episodes'.
     final needing = tracked.where(
-      (copy) => copy.status.availability != MediaAvailability.available,
+      (copy) =>
+          copy.row.service == ServiceKey.radarr &&
+          copy.status.availability != MediaAvailability.available,
     );
     final lead =
         needing.where((copy) => copy.row.connection.id == focus).firstOrNull ??

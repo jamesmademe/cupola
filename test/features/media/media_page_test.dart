@@ -751,8 +751,8 @@ void main() {
       // Two scores: TMDB's, and Rotten Tomatoes' through Seerr.
       expect(find.text('88'), findsOneWidget);
       expect(find.text('IMDb'), findsNothing);
-      // A series' Manage is not drawn yet: nothing it cannot do.
-      expect(find.text('Manage'), findsNothing);
+      // Manage, in the header and over its sections.
+      expect(find.text('Manage'), findsNWidgets(2));
 
       await harness.unmount(tester);
     });
@@ -853,8 +853,10 @@ void main() {
       expect(find.text('In Sonarr'), findsOneWidget);
       expect(find.text('1080p WEB'), findsOneWidget);
       expect(find.textContaining('imported today'), findsOneWidget);
-      // At the profile's cutoff: nothing to search for.
+      // At the profile's cutoff: nothing to search for, but a release can
+      // still be chosen.
       expect(find.textContaining('Search for'), findsNothing);
+      expect(find.text('Choose a release'), findsOneWidget);
 
       // The next one, a step away.
       await tester.tap(find.byTooltip('Next episode, E4'));
@@ -902,6 +904,132 @@ void main() {
         'monitored': false,
       });
       expect(find.text('Sonarr leaves it as it is'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('Manage holds Sonarr\'s files and seasons, and what Sonarr '
+        'does about them', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+        height: 3600,
+      );
+      final files = find.text('Files & quality');
+      await tester.ensureVisible(files);
+      await _answer(tester);
+      expect(find.text('13 files · 720p WEB, 1080p WEB'), findsOneWidget);
+      expect(
+        find.textContaining(RegExp(r'^Last imported S2 E3 · ')),
+        findsOneWidget,
+      );
+
+      await tester.tap(files);
+      await _answer(tester);
+      expect(find.text('HD-1080p'), findsOneWidget);
+      expect(
+        find.text('Grabs new episodes and upgrades them to HD-1080p'),
+        findsOneWidget,
+      );
+      expect(find.text('Standard'), findsOneWidget);
+      expect(find.text('10 of 10 on disk · 720p WEB'), findsOneWidget);
+      expect(find.text('8 episodes · not aired'), findsOneWidget);
+      expect(find.text('Import a file'), findsOneWidget);
+
+      // A season stops being looked for, and its episodes with it.
+      final second = find.text('3 of 10 on disk · 720p WEB, 1080p WEB');
+      await tester.ensureVisible(second);
+      await tester.tap(second);
+      await _answer(tester);
+      final put = harness.network
+          .requestsTo(WorldIds.sonarr)
+          .where((r) => r.method == 'PUT')
+          .single;
+      expect(put.uri.path, '/api/v3/series/1');
+      expect(
+        [
+          for (final season in (put.json as Map)['seasons'] as List)
+            (season['seasonNumber'], season['monitored']),
+        ],
+        [(1, true), (2, false), (3, true)],
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('History names each event\'s episode; Search releases opens '
+        'a season that has aired', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+        height: 3600,
+      );
+      final history = find.text('History');
+      await tester.ensureVisible(history);
+      await tester.tap(history);
+      await _answer(tester);
+      expect(
+        find.textContaining('Imported · S2 E3 · 1080p WEB'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Search releases'));
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel('Search releases for Season 2'),
+        findsOneWidget,
+      );
+      // Nothing of the third has aired.
+      expect(
+        find.bySemanticsLabel('Search releases for Season 3'),
+        findsNothing,
+      );
+      await tester.tap(find.bySemanticsLabel('Search releases for Season 2'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Releases'), findsWidgets);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('Remove asks what goes with it, then asks Sonarr', (
+      tester,
+    ) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+        height: 3600,
+      );
+      final row = find.text('Remove from Sonarr');
+      await tester.ensureVisible(row);
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Remove Cosmos Laundromat from Sonarr?'),
+        findsOneWidget,
+      );
+      expect(find.text('Sonarr stops looking for it.'), findsOneWidget);
+      expect(
+        find.textContaining(RegExp(r'^Also delete 8\.3.GB of files$')),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Remove from Sonarr'));
+      await _answer(tester);
+
+      final delete = harness.network
+          .requestsTo(WorldIds.sonarr)
+          .where((r) => r.method == 'DELETE')
+          .single;
+      expect(delete.uri.path, '/api/v3/series/1');
+      expect(delete.uri.queryParameters['deleteFiles'], 'false');
+      expect(find.text('Removed from Sonarr'), findsOneWidget);
 
       await harness.unmount(tester);
     });

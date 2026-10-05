@@ -9,8 +9,12 @@ import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
 import 'package:cupola/features/media/domain/media_row_view.dart';
+import 'package:cupola/features/media/domain/media_copies.dart';
+import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
+import 'package:cupola/features/media/domain/media_series_manage.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode_file.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -136,6 +140,50 @@ void main() {
       expect(play.resume, isTrue);
     });
 
+    test('Manage names the files, the last import and each season', () {
+      final MediaSonarrCopy copy = rows
+          .whereType<MediaConnectionRow<MediaSonarrCopy>>()
+          .map((row) => (row.reading as MediaReadingAnswered).answer.value)
+          .single;
+      final series = copy.series!;
+      final files = <int, SonarrEpisodeFile>{
+        for (final episode in copy.episodes.where((e) => e.hasFile))
+          episode.episodeFileId!: SonarrEpisodeFile(
+            id: episode.episodeFileId!,
+            relativePath: 'file.mkv',
+            qualityName: episode.seasonNumber == 2 && episode.episodeNumber == 3
+                ? 'WEBDL-1080p'
+                : 'WEBDL-720p',
+            dateAdded: episode.seasonNumber == 2 && episode.episodeNumber == 3
+                ? now.subtract(const Duration(hours: 2))
+                : now.subtract(const Duration(days: 40)),
+          ),
+      };
+
+      expect(mediaSeriesFilesSummary(series, null), '13 files · 8.3\u00A0GB');
+      expect(
+        mediaSeriesFilesSummary(series, files.values),
+        '13 files · 720p WEB, 1080p WEB',
+      );
+      expect(
+        mediaSeriesLastImport(copy.episodes, files, now: now),
+        startsWith('Last imported S2 E3 · '),
+      );
+      expect(mediaSeriesLastImport(copy.episodes, null), isEmpty);
+
+      final seasons = mediaSeasonFilesOf(
+        series,
+        copy.episodes,
+        files: files,
+        now: now,
+      );
+      expect(seasons.map((s) => (s.label, s.detail, s.aired)), [
+        ('Season 1', '10 of 10 on disk · 720p WEB', true),
+        ('Season 2', '3 of 10 on disk · 720p WEB, 1080p WEB', true),
+        ('Season 3', '8 episodes · not aired', false),
+      ]);
+    });
+
     test('the next to air is Sonarr\'s, with its hour', () {
       final next = mediaNextAiringOf(rows, now: now)!;
 
@@ -144,6 +192,34 @@ void main() {
       expect(next.timed, isTrue);
       expect(next.sonarrMonitors, isTrue);
     });
+  });
+
+  test('a series\' Sonarr copy never leads: without a media server, the '
+      'rows say what is missing', () async {
+    final rows = (await settledRows(
+      Profiles.p3,
+      WorldTitles.cosmosLaundromat,
+    )).rows;
+
+    expect(
+      resolveMediaLead(rows, audience: Audience.operator),
+      isNot(isA<MediaLeadCopy>()),
+    );
+  });
+
+  test('qualities name the commonest first, then how many more', () {
+    SonarrEpisodeFile file(String quality) =>
+        SonarrEpisodeFile(id: 0, relativePath: '', qualityName: quality);
+    expect(
+      mediaQualitiesOf([
+        file('WEBDL-1080p'),
+        file('WEBDL-720p'),
+        file('WEBDL-720p'),
+        file('Bluray-2160p'),
+        file('HDTV-720p'),
+      ]),
+      '720p WEB, 1080p WEB +2',
+    );
   });
 
   test('without Sonarr, TMDB dates the next episode: a day, and the '
