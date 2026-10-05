@@ -166,8 +166,8 @@ class RequestFormState {
   /// Without [choosesDestination]: whether the request is for the 4K copy.
   final bool is4k;
 
-  /// Without [choosesDestination], for a series: the seasons a request may
-  /// ask for, in order. Empty for a movie, and while they are read.
+  /// For a series: the seasons a request may ask for, in order. Empty for a
+  /// movie, and while they are read.
   final List<int> seasons;
 
   /// The seasons ticked, of [seasons]. Asked for one by one only where the
@@ -364,7 +364,9 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
         selectedServerId: chosen.id,
         clearError: true,
       );
-      await _loadProfiles(chosen.id);
+      // The operator names seasons too: read beside the profiles, and the
+      // load ends with both.
+      await _loadProfiles(chosen.id, seasons: _readSeasons());
     } catch (error) {
       if (!ref.mounted) return;
       // Classified, and never the exception: the sheet used to print
@@ -377,7 +379,10 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
     }
   }
 
-  Future<void> _loadProfiles(int serverId) async {
+  /// The profiles and folders of [serverId], and the load's end. [seasons],
+  /// read beside them, land with them. A server chosen meanwhile wins: its
+  /// own read writes the form, this one nothing.
+  Future<void> _loadProfiles(int serverId, {Future<List<int>>? seasons}) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
@@ -385,7 +390,17 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
       final data = arg.mediaType == 'movie'
           ? await service.getRadarrProfiles(serverId)
           : await service.getSonarrProfiles(serverId);
+      final known = seasons == null ? null : await seasons;
       if (!ref.mounted) return;
+      if (state.selectedServerId != serverId) {
+        if (known != null) {
+          state = state.copyWith(
+            seasons: known,
+            selectedSeasons: known.toSet(),
+          );
+        }
+        return;
+      }
 
       final profileMaps = data['profiles'] as List<dynamic>? ?? const [];
       final rootFolderMaps = data['rootFolders'] as List<dynamic>? ?? const [];
@@ -427,6 +442,8 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
         rootFolders: rootFolders,
         selectedProfileId: selectedProfileId,
         selectedRootFolder: selectedRootFolder,
+        seasons: known,
+        selectedSeasons: known?.toSet(),
         isLoading: false,
         clearError: true,
       );
@@ -440,11 +457,23 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
     }
   }
 
+  /// Without the pickers, the seasons and the load's end.
+  Future<void> _loadSeasons() async {
+    final seasons = await _readSeasons();
+    if (!ref.mounted) return;
+    state = state.copyWith(
+      isLoading: false,
+      seasons: seasons,
+      selectedSeasons: seasons.toSet(),
+      clearError: true,
+    );
+  }
+
   /// The seasons a request for a series may ask for: every season with
   /// episodes, less those the server holds or has been asked for already, as
-  /// the detail page reads them. A page that did not load leaves every
-  /// season to the server, which drops what it has.
-  Future<void> _loadSeasons() async {
+  /// the detail page reads them. None for a movie, and for a page that did
+  /// not load: the request then asks for every season, the most it can.
+  Future<List<int>> _readSeasons() async {
     var seasons = const <int>[];
     if (arg.mediaType == 'tv') {
       try {
@@ -469,16 +498,10 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
         ).missingSeasons;
         seasons = missing.isEmpty ? requestable : missing;
       } catch (_) {
-        // The server drops every season it has: asking for all is safe.
+        // Seerr drops the seasons it holds from a request for all of them.
       }
     }
-    if (!ref.mounted) return;
-    state = state.copyWith(
-      isLoading: false,
-      seasons: seasons,
-      selectedSeasons: seasons.toSet(),
-      clearError: true,
-    );
+    return seasons;
   }
 
   /// Without the pickers: the request is for the 4K copy, or the standard.
@@ -516,9 +539,13 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
   /// Sends the request, and says why not when it was not made: null on
   /// success.
   ///
-  /// Without the pickers the request carries the title, the copy and, where
-  /// the server takes partial requests ([partialRequests]), the seasons
-  /// ticked; the server applies its own server, profile and folder.
+  /// Without the pickers the request carries the title and the copy, and the
+  /// server applies its own server, profile and folder. Either way a series
+  /// names its seasons: the ones ticked where the server takes partial
+  /// requests ([partialRequests]), every one left otherwise. `all` only when
+  /// they could not be read: Seerr narrows `all` to the seasons it does not
+  /// hold, never to those somebody else asked for already, so `all` asks for
+  /// a waiting season twice.
   /// [title] names the title in the requester's words when it fails.
   Future<RequestSubmitFailure?> submitRequest({
     bool partialRequests = false,
@@ -530,6 +557,13 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
     }
 
     state = state.copyWith(isSubmitting: true, clearError: true);
+    final ticked = state.selectedSeasons;
+    final seasons = state.seasons.isEmpty
+        ? null
+        : [
+            for (final season in state.seasons)
+              if (!partialRequests || ticked.contains(season)) season,
+          ];
     try {
       final service = ref.read(seerrServiceProvider);
       if (chooses) {
@@ -542,19 +576,14 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
           // The chosen server decides the copy: without it a request filed on
           // the 4K server was a standard request, tracked on the HD copy.
           is4k: state.selectedServer?.is4k ?? false,
+          seasons: seasons,
         );
       } else {
-        final ticked = state.selectedSeasons;
         await service.createRequest(
           mediaType: arg.mediaType,
           mediaId: arg.mediaId,
           is4k: state.is4k,
-          seasons: partialRequests && ticked.length < state.seasons.length
-              ? [
-                  for (final season in state.seasons)
-                    if (ticked.contains(season)) season,
-                ]
-              : null,
+          seasons: seasons,
         );
       }
       return null;

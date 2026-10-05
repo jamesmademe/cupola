@@ -271,6 +271,14 @@ abstract final class Lexicon {
     return '${all.sublist(0, all.length - 1).join(', ')} and ${all.last}';
   }
 
+  /// Seasons in a sentence, in order: `Season 2`, `Seasons 2 and 3`,
+  /// `Seasons 1, 3 and 4`.
+  static String seasons(Iterable<int> numbers) {
+    final all = numbers.toSet().toList()..sort();
+    return '${all.length == 1 ? 'Season' : 'Seasons'} '
+        '${names(all.map((number) => '$number'))}';
+  }
+
   /// A label as it reads inside a sentence or after a count — `Refused the
   /// key` → `refused the key` — leaving an acronym alone (`API not at this
   /// address`).

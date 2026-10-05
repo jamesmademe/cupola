@@ -74,10 +74,27 @@ class RequestBottomSheet extends ConsumerWidget {
     final submitVerdict = state.choosesDestination
         ? const Live()
         : gate.requestAction(kind, quota: quota);
+    // Whether the server takes a series one season at a time: an account's
+    // gate knows its server, the key reads the server's public settings.
+    final keyReads =
+        mediaType == 'tv' && lensId != null && (gate.grant?.isApiKey ?? false);
+    final partialRequests =
+        gate.server?.partialRequestsEnabled ??
+        (keyReads &&
+            (ref
+                    .watch(seerrServerFactsProvider(lensId))
+                    .value
+                    ?.partialRequestsEnabled ??
+                false));
+    // A chip per season the request can still take, where the server takes
+    // them one by one; otherwise the seasons it asks for, said.
+    final picksSeasons = partialRequests && state.seasons.isNotEmpty;
+    final seasonsTicked =
+        state.seasons.isEmpty || state.selectedSeasons.isNotEmpty;
 
     Future<void> submit() async {
       final failure = await notifier.submitRequest(
-        partialRequests: gate.server?.partialRequestsEnabled ?? false,
+        partialRequests: partialRequests,
         title: title,
       );
       if (!context.mounted) return;
@@ -92,7 +109,7 @@ class RequestBottomSheet extends ConsumerWidget {
           failure.message,
           actionLabel: Lexicon.retry,
           onAction: () => notifier.submitRequest(
-            partialRequests: gate.server?.partialRequestsEnabled ?? false,
+            partialRequests: partialRequests,
             title: title,
           ),
         );
@@ -139,6 +156,7 @@ class RequestBottomSheet extends ConsumerWidget {
             kind: kind,
             quota: quota,
             submitVerdict: submitVerdict,
+            picksSeasons: picksSeasons,
           ),
           SizedBox(
             width: double.infinity,
@@ -148,12 +166,7 @@ class RequestBottomSheet extends ConsumerWidget {
               builder: (context, onPressed, annotate) => FilledButton(
                 // The sheet's one primary: `button-l`.
                 style: AppTheme.primaryButtonStyle(context),
-                onPressed:
-                    state.canSubmit &&
-                        (state.seasons.isEmpty ||
-                            state.selectedSeasons.isNotEmpty)
-                    ? onPressed
-                    : null,
+                onPressed: state.canSubmit && seasonsTicked ? onPressed : null,
                 child: state.isSubmitting
                     ? const SizedBox(
                         width: 20,
@@ -229,11 +242,12 @@ class RequestBottomSheet extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
           ],
+          ..._seasonChoices(context, state, notifier, picks: picksSeasons),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
               style: AppTheme.primaryButtonStyle(context),
-              onPressed: state.canSubmit ? submit : null,
+              onPressed: state.canSubmit && seasonsTicked ? submit : null,
               child: state.isSubmitting
                   ? const SizedBox(
                       width: 20,
@@ -259,6 +273,7 @@ class RequestBottomSheet extends ConsumerWidget {
     required SeerrMediaKind kind,
     required SeerrQuota? quota,
     required GateVerdict submitVerdict,
+    required bool picksSeasons,
   }) {
     final theme = Theme.of(context);
     final quiet = theme.textTheme.bodySmall!.copyWith(
@@ -281,9 +296,6 @@ class RequestBottomSheet extends ConsumerWidget {
         : brief
         ? RoleGateCopy.youQuotaLeft(status, kind)
         : RoleGateCopy.accountQuotaLeft(status, kind, server: server);
-    final partial =
-        (gate.server?.partialRequestsEnabled ?? false) &&
-        state.seasons.length > 1;
     // The operator holding an account that may not choose is told why the
     // pickers are not here; the requester never had them.
     final destination = gate.operatorAction(SeerrAbility.chooseDestination);
@@ -301,23 +313,7 @@ class RequestBottomSheet extends ConsumerWidget {
       else
         Text(state.is4k ? '4K' : 'Standard', style: theme.textTheme.bodyMedium),
       const SizedBox(height: AppSpacing.lg),
-      if (partial) ...[
-        Text('Seasons', style: theme.textTheme.labelLarge),
-        const SizedBox(height: AppSpacing.sm),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (final season in state.seasons)
-              FilterChip(
-                label: Text('Season $season'),
-                selected: state.selectedSeasons.contains(season),
-                onSelected: (_) => notifier.toggleSeason(season),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
+      ..._seasonChoices(context, state, notifier, picks: picksSeasons),
       Text(
         autoApproved ? Lexicon.startStraightAway : Lexicon.approvedByOwner,
         style: quiet,
@@ -333,4 +329,38 @@ class RequestBottomSheet extends ConsumerWidget {
       const SizedBox(height: AppSpacing.xl),
     ];
   }
+
+  /// The seasons a request asks for: one chip per season it may still ask
+  /// for where the server takes them one by one ([picks]), the ones ticked
+  /// going; otherwise every one left, said. Nothing for a movie.
+  List<Widget> _seasonChoices(
+    BuildContext context,
+    RequestFormState state,
+    RequestFormNotifier notifier, {
+    required bool picks,
+  }) => [
+    if (state.seasons.isNotEmpty) ...[
+      Text('Seasons', style: Theme.of(context).textTheme.labelLarge),
+      const SizedBox(height: AppSpacing.sm),
+      if (picks)
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final season in state.seasons)
+              FilterChip(
+                label: Text('Season $season'),
+                selected: state.selectedSeasons.contains(season),
+                onSelected: (_) => notifier.toggleSeason(season),
+              ),
+          ],
+        )
+      else
+        Text(
+          Lexicon.seasons(state.seasons),
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      const SizedBox(height: AppSpacing.lg),
+    ],
+  ];
 }

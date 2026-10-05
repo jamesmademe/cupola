@@ -46,8 +46,7 @@ SeerrRequestWords seerrRequestWords(
   final only4k = gate.copies == SeerrRequestCopies.uhd;
   final adds = missing.isEmpty
       ? (only4k ? 'Only the 4K copy can be requested.' : null)
-      : '${missing.length == 1 ? 'Season' : 'Seasons'} '
-            '${Lexicon.names(missing.map((season) => '$season'))} '
+      : '${Lexicon.seasons(missing)} '
             '${missing.length == 1 ? 'is' : 'are'} not requested '
             '${only4k ? 'in 4K ' : ''}yet.';
   return switch (gate.state) {

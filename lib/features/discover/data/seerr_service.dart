@@ -1195,7 +1195,7 @@ class SeerrService {
     String? rootFolder, // Root folder path
     int? serverId,
     bool is4k = false,
-    List<int>? seasons, // For TV shows - if null, requests all seasons
+    List<int>? seasons, // A series' seasons; null asks for every one
   }) async {
     final body = <String, dynamic>{
       'mediaType': mediaType,

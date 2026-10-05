@@ -1,7 +1,8 @@
 /// The request sheet of an account that may not choose where requests go:
 /// the title alone, its quality and its seasons, under who approves it and how
 /// much of the quota is left. No server, profile or folder, and none of
-/// Seerr's servers read.
+/// Seerr's servers read. The key's sheet, beside it, picks them and the
+/// seasons.
 library;
 
 import 'dart:convert';
@@ -9,8 +10,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
+import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -189,6 +192,76 @@ void main() {
     expect(done, isFalse);
 
     await harness.unmount(tester);
+  });
+
+  group('the operator with the key (P1)', () {
+    testWidgets('picks the server and the profile, and the seasons too', (
+      tester,
+    ) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p1,
+        child: _sheet(WorldTitles.agent327),
+      );
+
+      expect(find.text('Quality profile'), findsOneWidget);
+      for (final season in [1, 2, 3]) {
+        expect(find.text('Season $season'), findsOneWidget);
+      }
+      await tester.tap(find.text('Season 3'));
+      await tester.pump();
+      await tester.tap(find.text('Submit request'));
+      await harness.settle(tester);
+
+      final sent = _sent(harness, WorldIds.seerr);
+      expect(sent['seasons'], [1, 2]);
+      expect(sent['profileId'], isNotNull);
+      expect(sent['serverId'], isNotNull);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a server that takes a series whole: no chips, the seasons '
+        'said and sent', (tester) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p1,
+        overrides: [
+          seerrServerFactsProvider.overrideWith(
+            (ref, id) async => SeerrServerFacts.fromPublicSettings(const {
+              'initialized': true,
+              'partialRequestsEnabled': false,
+            }),
+          ),
+        ],
+        child: _sheet(WorldTitles.agent327),
+      );
+
+      expect(find.byType(FilterChip), findsNothing);
+      expect(find.text('Seasons 1, 2 and 3'), findsOneWidget);
+      await tester.tap(find.text('Submit request'));
+      await harness.settle(tester);
+
+      expect(_sent(harness, WorldIds.seerr)['seasons'], [1, 2, 3]);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('every season ticked still names them: Seerr would ask again '
+        'for one somebody is waiting for', (tester) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p1,
+        child: _sheet(WorldTitles.agent327),
+      );
+
+      await tester.tap(find.text('Submit request'));
+      await harness.settle(tester);
+
+      expect(_sent(harness, WorldIds.seerr)['seasons'], [1, 2, 3]);
+
+      await harness.unmount(tester);
+    });
   });
 
   group("the operator's account on Sara's Seerr (P9)", () {
