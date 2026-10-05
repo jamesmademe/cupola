@@ -6,6 +6,7 @@ import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/movies/domain/radarr_status.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -41,13 +42,26 @@ class MediaRadarrCopy {
 /// What one Sonarr holds of a series: its record, or nothing, and what its
 /// queue says about it.
 class MediaSonarrCopy {
-  const MediaSonarrCopy({required this.series, required this.queue});
+  const MediaSonarrCopy({
+    required this.series,
+    required this.queue,
+    this.episodes = const [],
+    this.episodeQueue = ArrQueueSnapshot.empty,
+  });
 
   /// Null when Sonarr answered and does not track the series.
   final SonarrSeries? series;
 
   /// This Sonarr's queue, indexed by series.
   final ArrQueueSnapshot queue;
+
+  /// Every episode Sonarr lists for the series, specials included, aired or
+  /// not: empty while it does not track the series.
+  final List<SonarrEpisode> episodes;
+
+  /// The same queue, indexed by episode: what each episode row says while it
+  /// downloads.
+  final ArrQueueSnapshot episodeQueue;
 
   bool get isTracked => series != null;
 
@@ -68,18 +82,23 @@ class MediaSonarrCopy {
 /// [StreamLookupOutcome.notVerified] is case f: something with that title
 /// whose ids do not match. It is no match, and draws nothing (rule 7).
 class MediaStreamCopy {
-  const MediaStreamCopy.found(StreamItem this.item, {this.poster})
-    : outcome = StreamLookupOutcome.found;
+  const MediaStreamCopy.found(
+    StreamItem this.item, {
+    this.poster,
+    this.episodes,
+  }) : outcome = StreamLookupOutcome.found;
 
   const MediaStreamCopy.notInLibrary()
     : outcome = StreamLookupOutcome.notInLibrary,
       item = null,
-      poster = null;
+      poster = null,
+      episodes = null;
 
   const MediaStreamCopy.notVerified()
     : outcome = StreamLookupOutcome.notVerified,
       item = null,
-      poster = null;
+      poster = null,
+      episodes = null;
 
   final StreamLookupOutcome outcome;
 
@@ -89,6 +108,11 @@ class MediaStreamCopy {
   /// The item's poster as the server serves it, with the credential it asks
   /// for: the page's artwork when no one else says who the title is.
   final StreamImageSource? poster;
+
+  /// A series' episodes on the server, with the viewer's watch state. Null
+  /// for a movie, and when the read of them did not answer: then nothing is
+  /// said of any episode, never that the server lacks it.
+  final List<StreamItem>? episodes;
 }
 
 /// What Bazarr holds for one arr copy of a title.
@@ -117,7 +141,16 @@ class MediaBazarrCopy {
 /// What one Seerr knows of a title: its record, and the arr servers it
 /// would place it on.
 class MediaSeerrRecord {
-  const MediaSeerrRecord({required this.details, this.arrServers});
+  const MediaSeerrRecord({
+    required this.details,
+    this.arrServers,
+    this.rottenTomatoes,
+  });
+
+  /// Rotten Tomatoes' critics score for a series, which TMDB's record does
+  /// not carry; null for a movie, and when there is none or it could not be
+  /// read.
+  final int? rottenTomatoes;
 
   /// `/movie/:id` or `/tv/:id`, as Seerr answered: identity, ratings, cast and
   /// the `mediaInfo` the rows read.
@@ -131,6 +164,12 @@ class MediaSeerrRecord {
 
   /// Seerr's media row for the title, null when it has no record.
   Map<String, dynamic>? get mediaInfo => mapOrNull(details['mediaInfo']);
+
+  /// TMDB's record of a series (`/tv/:id`), which counts seasons and has a
+  /// first air date where a movie's has a release date.
+  bool get isSeries =>
+      details.containsKey('numberOfSeasons') ||
+      details.containsKey('firstAirDate');
 
   /// TVDB's id for a series, as TMDB's record names it: what Sonarr is asked
   /// by.

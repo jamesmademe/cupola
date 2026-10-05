@@ -1015,6 +1015,15 @@ class SeerrService {
     return response.data;
   }
 
+  /// Rotten Tomatoes' critics score for a series (`/tv/:id/ratings`), 0..100;
+  /// null when Rotten Tomatoes has none for it. Throws on a remote failure.
+  Future<int?> getTvCriticsScore(int tvId) async {
+    final response = await _client.get('/api/v1/tv/$tvId/ratings');
+    final data = response.data;
+    final score = data is Map ? data['criticsScore'] : null;
+    return score is num && score > 0 ? score.round() : null;
+  }
+
   /// A collection and its member films, `{}` when Seerr answered that there is
   /// no such collection (404).
   ///

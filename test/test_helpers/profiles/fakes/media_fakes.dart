@@ -273,6 +273,15 @@ class SeerrFake extends ServiceFake {
       },
       if (t.imdbId != null) 'imdbId': t.imdbId,
       if (t.isSeries) 'numberOfSeasons': 3,
+      if (t.isSeries) 'status': 'Returning Series',
+      // The third season's premiere, as TMDB dates it: a day, no hour.
+      if (t == WorldTitles.cosmosLaundromat)
+        'nextEpisodeToAir': {
+          'name': 'Episode 1',
+          'airDate': c.ahead(const Duration(days: 3)).substring(0, 10),
+          'seasonNumber': 3,
+          'episodeNumber': 1,
+        },
       if (t.isSeries)
         'seasons': [
           for (var s = 1; s <= 3; s++)
@@ -700,6 +709,14 @@ class SeerrFake extends ServiceFake {
           );
         }
         return NetworkReply.json(_request(c, row));
+      }
+      // Rotten Tomatoes' word on a series, which TMDB's record lacks.
+      if (RegExp(r'^/api/v1/tv/\d+/ratings$').hasMatch(path)) {
+        return NetworkReply.json({
+          'title': WorldTitles.cosmosLaundromat.title,
+          'criticsScore': 88,
+          'criticsRating': 'Fresh',
+        });
       }
       final detail = RegExp(r'^/api/v1/(movie|tv)/(\d+)$').firstMatch(path);
       if (detail != null) {
@@ -1162,6 +1179,46 @@ class JellyfinFake extends ServiceFake {
           'Items': const <Object?>[],
           'TotalRecordCount': 0,
         });
+    }
+    // A series' episodes, with the household viewer's watch state: Cosmos
+    // Laundromat's first season and the three of the second on the server,
+    // two of them watched and the third part-way.
+    final episodes = RegExp(
+      r'^/Shows/jf-([A-Za-z0-9]+)/Episodes$',
+    ).firstMatch(path);
+    if (episodes != null) {
+      final cosmos = episodes.group(1) == WorldTitles.cosmosLaundromat.key;
+      JsonMap episode(int season, int number, {double played = 1}) => {
+        ..._item(c, WorldTitles.cosmosLaundromat, type: 'Episode'),
+        'Id': 'jf-cosmos-s${season}e$number',
+        'Name': season == 2 && number == 3
+            ? 'The Second Cycle'
+            : 'Episode $number',
+        'SeriesName': WorldTitles.cosmosLaundromat.title,
+        'SeriesId': 'jf-cosmosLaundromat',
+        'ParentIndexNumber': season,
+        'IndexNumber': number,
+        'RunTimeTicks': 12000000000,
+        'UserData': {
+          'Played': played >= 1,
+          'PlaybackPositionTicks': played > 0 && played < 1
+              ? (12000000000 * played).round()
+              : 0,
+          if (played > 0 && played < 1) 'PlayedPercentage': played * 100,
+        },
+      };
+      final items = cosmos
+          ? [
+              for (var e = 1; e <= 10; e++) episode(1, e),
+              episode(2, 1),
+              episode(2, 2),
+              episode(2, 3, played: 0.75),
+            ]
+          : const <JsonMap>[];
+      return NetworkReply.json({
+        'Items': items,
+        'TotalRecordCount': items.length,
+      });
     }
     if (RegExp(r'^/Users/[^/]+/Items/Resume$').hasMatch(path) ||
         path == '/UserItems/Resume') {

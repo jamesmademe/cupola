@@ -195,6 +195,18 @@ abstract interface class StreamServerClient {
     CancelToken? cancelToken,
   });
 
+  /// Every episode of the series [seriesId], specials included, with the
+  /// viewer's watch state where there is a viewer: one read, for a title's
+  /// page, numbered by season and episode.
+  ///
+  /// Throws on a remote failure: an empty list is a series with no episode
+  /// on the server.
+  Future<List<StreamItem>> getEpisodes(
+    String seriesId, {
+    String? viewerId,
+    CancelToken? cancelToken,
+  });
+
   /// Whether an item the *arrs* know about is on this server, and where the
   /// viewer stopped in it.
   ///

@@ -16,6 +16,8 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/media/domain/quality_words.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
@@ -29,12 +31,15 @@ import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
 import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
@@ -52,10 +57,12 @@ import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
 import 'package:cupola/features/media/domain/media_row_view.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_removal.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
+import 'package:cupola/features/media/presentation/media_series_sections.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
 import 'package:cupola/features/media/presentation/media_copy_panel_card.dart';
 import 'package:cupola/features/media/presentation/media_decision_card.dart';
@@ -137,7 +144,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final target = streamItemWebUrl(
       service: server.service,
       baseUrl: server.url,
-      itemId: lead.item.id,
+      itemId: (lead.episode ?? lead.item).id,
       plexMachineId: machineId,
     );
     final opened =
@@ -169,6 +176,17 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     MediaRowWay.fix => () => context.go(
       ServiceRoutes.settingsForConnection(row.service, view.connectionId ?? ''),
     ),
+    MediaRowWay.review => () async {
+      await context.push(
+        manualImportLocation(
+          manualImportReviewPath,
+          row.service,
+          targetId: view.targetId,
+          instanceId: view.connectionId,
+        ),
+      );
+      if (mounted) retryMediaRow(ref, mediaKey, row);
+    },
   };
 
   /// Adds the film to the Radarr chosen in the sheet, then reads
@@ -434,18 +452,26 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             row.service == ServiceKey.plex)
           row,
     ];
+    final now = DateTime.now();
     final views = [
       for (final row in shown)
-        if (mediaRowView(
-              row,
-              title: (connection) =>
-                  settings.connectionTitle(connection.id, connection.service),
-              now: DateTime.now(),
-            )
-            case final view?)
+        for (final view in mediaRowViews(
+          row,
+          title: (connection) =>
+              settings.connectionTitle(connection.id, connection.service),
+          now: now,
+          rows: rows,
+        ))
           _ServerRow(view, onTap: _wayOf(row, view)),
     ];
     final request = lead is MediaLeadRequest ? _requestOf(lead, rows) : null;
+    // A series: its seasons and episodes, and the next one to air.
+    final seasons = mediaKey.isMovie
+        ? const <MediaSeason>[]
+        : mediaSeasonsOf(rows, audience: audience, now: now, focus: focus);
+    final nextAiring = mediaKey.isMovie
+        ? null
+        : mediaNextAiringOf(rows, now: now);
     final region = ref.watch(regionProvider);
     // The requests that wait on the operator, answered from here: in the
     // lead's place while the title is on no server, under the lead otherwise.
@@ -552,6 +578,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 _Scores(
                   scores: mediaScoresOf(rows, identity),
                   showMetacritic: audience == Audience.operator,
+                  series: !mediaKey.isMovie,
                 ),
               ],
               const SizedBox(height: AppSpacing.slabY),
@@ -635,6 +662,14 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   rows: rows,
                 ),
               ],
+              if (nextAiring != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                MediaNextAiringCard(
+                  next: nextAiring,
+                  now: now,
+                  operator: audience == Audience.operator,
+                ),
+              ],
               if (requestLine != null) ...[
                 const SizedBox(height: AppSpacing.md),
                 _StateLine(
@@ -658,6 +693,17 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   !(audience == Audience.requester && requestLine != null)) ...[
                 _Heading('On your server', trailing: _servicesCount(shown)),
                 MediaGroup(children: views),
+              ],
+              if (seasons.isNotEmpty) ...[
+                const _Heading('Episodes'),
+                MediaEpisodes(
+                  key: ValueKey(('episodes', mediaKey)),
+                  seasons: seasons,
+                  initialSeason: _initialSeason(lead, seasons),
+                  onSearchMissing: audience == Audience.operator
+                      ? (season) => _searchMissing(season, rows)
+                      : null,
+                ),
               ],
               ...manage,
               if (mediaWatchProvidersOf(rows, region)
@@ -790,6 +836,67 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     );
   }
 
+  /// The season the episodes open on: the one Play would continue, else the
+  /// latest with an episode that has aired, else the first.
+  int _initialSeason(MediaLead lead, List<MediaSeason> seasons) {
+    if (lead case MediaLeadPlay(
+      episode: StreamItem(:final seasonNumber?),
+    ) when seasons.any((season) => season.number == seasonNumber)) {
+      return seasonNumber;
+    }
+    final aired = [
+      for (final season in seasons)
+        if (season.number > 0 &&
+            season.episodes.any(
+              (episode) => episode.state != StateWord.notAired.label,
+            ))
+          season.number,
+    ];
+    return aired.lastOrNull ?? seasons.first.number;
+  }
+
+  /// Asks the Sonarr that tracks the series for [season]'s missing episodes.
+  Future<void> _searchMissing(MediaSeason season, List<MediaRow> rows) async {
+    final sonarr = [
+      for (final row in rows)
+        if (row
+            case MediaConnectionRow(
+              :final connection,
+              reading: MediaReadingAnswered(:final answer),
+            )
+            when answer.value is MediaSonarrCopy &&
+                (answer.value as MediaSonarrCopy).series != null)
+          connection,
+    ];
+    final connection =
+        sonarr.where((c) => c.id == focus).firstOrNull ?? sonarr.firstOrNull;
+    if (connection == null) return;
+    final name = ref
+        .read(currentSettingsProvider)
+        .connectionTitle(connection.id, connection.service);
+    final missing = season.missing;
+    try {
+      await ref.read(sonarrServiceForProvider(connection.id)).searchEpisodes([
+        for (final e in missing) ?e.sonarrId,
+      ]);
+      if (!mounted) return;
+      SnackBarHelper.success(
+        context,
+        missing.length == 1
+            ? '$name is searching for it'
+            : '$name is searching for the ${missing.length}',
+      );
+    } catch (error) {
+      if (mounted) {
+        SnackBarHelper.error(
+          context,
+          'Could not ask $name to search',
+          detail: error,
+        );
+      }
+    }
+  }
+
   /// The requests waiting on the operator, one card each; only the first
   /// may lead.
   Widget _decisionCards(
@@ -835,6 +942,9 @@ class _MediaPageState extends ConsumerState<MediaPage> {
   /// The operator's sections, closed: each says what it holds in one line
   /// ([mediaManageSummaries]).
   List<Widget> _manage(List<MediaRow> rows, SettingsModel settings) {
+    // A series' files, searches and removal are its own: until they are
+    // drawn, Manage promises nothing it cannot do.
+    if (!mediaKey.isMovie) return const [];
     final summaries = mediaManageSummaries(
       rows,
       title: (connection) =>
@@ -1459,12 +1569,20 @@ class _Plate extends StatelessWidget {
 /// The four scores in one slab, each with its source; a source with no
 /// figure reads `—`.
 class _Scores extends StatelessWidget {
-  const _Scores({required this.scores, required this.showMetacritic});
+  const _Scores({
+    required this.scores,
+    required this.showMetacritic,
+    this.series = false,
+  });
 
   final MediaScores scores;
 
   /// The requester never sees Metacritic: Seerr has none.
   final bool showMetacritic;
+
+  /// A series has two: TMDB's, and Rotten Tomatoes' through Seerr. IMDb and
+  /// Metacritic reach the app for movies alone.
+  final bool series;
 
   @override
   Widget build(BuildContext context) {
@@ -1477,9 +1595,9 @@ class _Scores extends StatelessWidget {
     Widget line(List<(String, String)> cells) => _ScoresLine(cells);
     final cells = [
       ('TMDB', figure(scores.tmdb)),
-      ('IMDb', figure(scores.imdb)),
+      if (!series) ('IMDb', figure(scores.imdb)),
       ('Rotten Tomatoes', figure(scores.rottenTomatoes, decimal: false)),
-      if (showMetacritic)
+      if (showMetacritic && !series)
         ('Metacritic', figure(scores.metacritic, decimal: false)),
     ];
     return Container(
@@ -1489,7 +1607,7 @@ class _Scores extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.door),
         border: Border.all(color: room.hair),
       ),
-      child: _stacked(context)
+      child: _stacked(context) && cells.length > 2
           // At a large reading size, two to a line.
           ? Column(
               children: [
@@ -1603,6 +1721,10 @@ class _LeadBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = switch (lead) {
+      // A series plays the episode: `Resume S2 E3`, `Play S2 E4`.
+      MediaLeadPlay(:final resume, episode: final episode?) =>
+        '${resume ? 'Resume' : 'Play'} '
+            '${formatArrEpisodeCode(episode.seasonNumber, episode.episodeNumber)}',
       MediaLeadPlay(:final resume) =>
         '${resume ? 'Resume' : 'Play'} on ${serverName(lead as MediaLeadPlay)}',
       MediaLeadAdd(:final arr) => 'Add to ${arr.title}',
@@ -1618,6 +1740,18 @@ class _LeadBar extends StatelessWidget {
         serviceName: connection.service.title,
       ).label,
       MediaLeadTrailer() || MediaLeadNone() || MediaLeadWaiting() => null,
+    };
+    // Under an episode's Play, which one and how far: `The Second Cycle · 5
+    // min left`, `Episode 4 · on Jellyfin`.
+    final subtitle = switch (lead) {
+      MediaLeadPlay(:final resume, episode: final episode?) => [
+        if (episode.title.isNotEmpty) episode.title,
+        if (resume)
+          ?mediaTimeLeft(episode)
+        else
+          'on ${serverName(lead as MediaLeadPlay)}',
+      ].join(' · '),
+      _ => null,
     };
     final trailerLeads = primary == null && lead is MediaLeadTrailer;
     final leadStyle = mediaLeadStyle(context, light);
@@ -1677,7 +1811,27 @@ class _LeadBar extends StatelessWidget {
               style: leadStyle,
               child: Row(
                 children: [
-                  Expanded(child: Text(label)),
+                  Expanded(
+                    child: subtitle == null || subtitle.isEmpty
+                        ? Text(label)
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.sm,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(label),
+                                Text(
+                                  subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppType.meta.weight(FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ),
                   Icon(switch (lead) {
                     MediaLeadPlay() => Icons.play_arrow_rounded,
                     MediaLeadAdd() => Icons.add_rounded,
@@ -1798,6 +1952,30 @@ class _ServerRow extends StatelessWidget {
           : _reading(context, room, stacked: stacked),
     );
     final onTap = this.onTap;
+    // A fault reads as one sentence, and its remedy is a button of its own:
+    // the one amber fill.
+    if (view.shape == MediaRowShape.fault) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            container: true,
+            label: [view.name, view.state, view.detail].join('. '),
+            excludeSemantics: true,
+            child: content,
+          ),
+          if (view.action case final action?)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.row),
+              child: FilledButton(
+                onPressed: onTap,
+                style: remedyFillStyle(context),
+                child: Text(action),
+              ),
+            ),
+        ],
+      );
+    }
     if (onTap == null) {
       return Semantics(
         container: true,
@@ -1926,11 +2104,45 @@ class _ServerRow extends StatelessWidget {
           if (view.detail.isNotEmpty) Text(view.detail, style: secondary),
         ],
       ),
+      MediaRowShape.fault => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                // On the first line's centre.
+                padding: const EdgeInsets.only(top: 6),
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: tone,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              Expanded(
+                child: Text(
+                  view.state,
+                  style: stateStyle.copyWith(color: tone),
+                ),
+              ),
+            ],
+          ),
+          if (view.detail.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(view.detail, style: secondary),
+          ],
+        ],
+      ),
       _ => Text(view.detail, style: secondary),
     };
 
     final trailing = switch (view.shape) {
       _ when waiting => null,
+      MediaRowShape.fault => null,
       MediaRowShape.failed => Text(
         view.action ?? '',
         style: AppType.label.copyWith(color: room.ink),

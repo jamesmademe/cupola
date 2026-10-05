@@ -1,0 +1,197 @@
+/// A series' page reads its seasons from Sonarr and the media server
+/// together: each episode one word, Sonarr's facts one row each, the next
+/// episode to air, and the one Play continues.
+library;
+
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/media/domain/media_lead.dart';
+import 'package:cupola/features/media/domain/media_row_view.dart';
+import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/features/media/domain/media_series.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+
+import '../../test_helpers/profiles/profiles.dart';
+import 'media_test_helpers.dart';
+
+StreamItem _episode(
+  int season,
+  int number, {
+  bool played = false,
+  int? offset,
+}) => StreamItem(
+  id: 'e$season$number',
+  title: 'Episode $number',
+  subtitle: null,
+  kind: StreamItemKind.episode,
+  posterPath: null,
+  year: null,
+  runtimeMs: 1200000,
+  isPlayed: played,
+  resumeOffsetMs: offset,
+  unplayedChildCount: null,
+  seasonNumber: season,
+  episodeNumber: number,
+);
+
+void main() {
+  final now = DateTime.now();
+
+  group('Cosmos Laundromat in the full household', () {
+    late List<MediaRow> rows;
+
+    setUpAll(() async {
+      rows = (await settledRows(
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+      )).rows;
+    });
+
+    test('each episode says one word, from the queue, the server, the '
+        'file and the air date', () {
+      final seasons = mediaSeasonsOf(
+        rows,
+        audience: Audience.operator,
+        now: now,
+      );
+
+      expect(seasons.map((s) => s.label), ['Season 1', 'Season 2', 'Season 3']);
+      final second = seasons[1].episodes;
+      expect(second.map((e) => e.state), [
+        // A stuck upgrade leaves a watched episode watched.
+        'Watched',
+        'Watched',
+        '5\u00A0min\u00A0left',
+        'Downloading 88%',
+        'Downloading 9%',
+        'Missing',
+        'Missing',
+        'Missing',
+        'Missing',
+        'Missing',
+      ]);
+      expect(second[2].title, 'The Second Cycle');
+      expect(second[2].progress, closeTo(0.75, 0.001));
+      expect(second[2].downloading, isFalse);
+      expect(second[3].tone, StatusTone.info);
+      expect(second[3].downloading, isTrue);
+      expect(seasons[1].missing.map((e) => e.number), [6, 7, 8, 9, 10]);
+      expect(seasons[2].episodes.map((e) => e.state).toSet(), {'Not aired'});
+      expect(
+        second[2].spoken,
+        'Episode 3, The Second Cycle. 5\u00A0min\u00A0left',
+      );
+    });
+
+    test('the requester reads where it stands, never what Sonarr misses', () {
+      final second = mediaSeasonsOf(
+        rows,
+        audience: Audience.requester,
+        now: now,
+      )[1].episodes;
+
+      expect(second[5].state, 'Not on the server yet');
+      expect(second.any((e) => e.missing), isFalse);
+    });
+
+    test('Sonarr says one row per fact; the server counts by season', () {
+      String title(ServiceInstance connection) => connection.service.title;
+      final sonarr = rows.firstWhere((r) => r.service == ServiceKey.sonarr);
+      final views = mediaRowViews(sonarr, title: title, now: now, rows: rows);
+
+      expect(views.map((v) => (v.detail, v.state)).take(2), [
+        ('S2 E4–E5', 'Downloading'),
+        ('S2 E6–E10 aired', '5 missing'),
+      ]);
+      final fault = views.last;
+      expect(fault.shape, MediaRowShape.fault);
+      expect(fault.state, 'S1 · S2 E1–E2 · 12 upgrades need import');
+      expect(fault.tone, StatusTone.warning);
+      expect(fault.action, 'Review the imports');
+      expect(fault.way, MediaRowWay.review);
+      expect(fault.targetId, 1);
+
+      final jellyfin = rows.firstWhere((r) => r.service == ServiceKey.jellyfin);
+      expect(
+        mediaRowViews(
+          jellyfin,
+          title: title,
+          now: now,
+          rows: rows,
+        ).single.detail,
+        'S1 10 of 10 · S2 3 of 10',
+      );
+    });
+
+    test('Play continues the episode part-way through', () {
+      final lead = resolveMediaLead(rows, audience: Audience.operator);
+
+      expect(lead, isA<MediaLeadPlay>());
+      final play = lead as MediaLeadPlay;
+      expect((play.episode?.seasonNumber, play.episode?.episodeNumber), (2, 3));
+      expect(play.resume, isTrue);
+    });
+
+    test('the next to air is Sonarr\'s, with its hour', () {
+      final next = mediaNextAiringOf(rows, now: now)!;
+
+      expect((next.season, next.number), (3, 1));
+      expect(next.premiere, isTrue);
+      expect(next.timed, isTrue);
+      expect(next.sonarrMonitors, isTrue);
+    });
+  });
+
+  test('without Sonarr, TMDB dates the next episode: a day, and the '
+      'season it opens', () async {
+    final rows = (await settledRows(
+      Profiles.p5,
+      WorldTitles.cosmosLaundromat,
+    )).rows;
+
+    final next = mediaNextAiringOf(rows, now: DateTime.now())!;
+
+    expect((next.season, next.number), (3, 1));
+    expect(next.timed, isFalse);
+    expect(next.seasonEpisodes, 8);
+  });
+
+  group('the episode Play opens', () {
+    test('the one part-way through', () {
+      expect(
+        mediaNextEpisode([
+          _episode(1, 1, played: true),
+          _episode(1, 2, offset: 60000),
+          _episode(1, 3),
+        ])?.episodeNumber,
+        2,
+      );
+    });
+
+    test('else the first unwatched after the last watched', () {
+      expect(
+        mediaNextEpisode([
+          _episode(1, 1, played: true),
+          _episode(1, 2),
+          _episode(2, 1, played: true),
+          _episode(2, 2),
+        ]),
+        isA<StreamItem>()
+            .having((e) => e.seasonNumber, 'season', 2)
+            .having((e) => e.episodeNumber, 'number', 2),
+      );
+    });
+
+    test('the first of all when none is watched, none when all are', () {
+      expect(
+        mediaNextEpisode([_episode(1, 2), _episode(1, 1)])?.episodeNumber,
+        1,
+      );
+      expect(mediaNextEpisode([_episode(1, 1, played: true)]), isNull);
+    });
+  });
+}

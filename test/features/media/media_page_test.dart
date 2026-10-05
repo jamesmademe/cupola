@@ -26,6 +26,7 @@ Future<ProfileHarness> _pump(
   ConfigProfile profile,
   WorldTitle title, {
   List<Override> overrides = const [],
+  MediaKey? key,
 }) async {
   tester.view.physicalSize = const Size(390, 2400);
   tester.view.devicePixelRatio = 1;
@@ -34,7 +35,7 @@ Future<ProfileHarness> _pump(
     tester,
     profile,
     overrides: overrides,
-    child: MediaPage(mediaKey: MediaKey.movie(title.tmdbId)),
+    child: MediaPage(mediaKey: key ?? MediaKey.movie(title.tmdbId)),
     settle: false,
   );
   for (var i = 0; i < 20; i++) {
@@ -67,8 +68,9 @@ Override _unrequested(WorldTitle title) =>
 Future<(ProfileHarness, GoRouter)> _pumpRouted(
   WidgetTester tester,
   ConfigProfile profile,
-  WorldTitle title,
-) async {
+  WorldTitle title, {
+  MediaKey? key,
+}) async {
   tester.view.physicalSize = const Size(390, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -79,7 +81,7 @@ Future<(ProfileHarness, GoRouter)> _pumpRouted(
       GoRoute(
         path: '/',
         builder: (context, state) =>
-            MediaPage(mediaKey: MediaKey.movie(title.tmdbId)),
+            MediaPage(mediaKey: key ?? MediaKey.movie(title.tmdbId)),
       ),
       GoRoute(
         path: '/settings/service/:service',
@@ -87,6 +89,10 @@ Future<(ProfileHarness, GoRouter)> _pumpRouted(
       ),
       GoRoute(
         path: '/import/browse',
+        builder: (context, state) => Text('at ${state.uri}'),
+      ),
+      GoRoute(
+        path: '/import/review',
         builder: (context, state) => Text('at ${state.uri}'),
       ),
     ],
@@ -716,5 +722,105 @@ void main() {
     expect(find.text('Rotten Tomatoes'), findsNothing);
 
     await harness.unmount(tester);
+  });
+
+  group('a series', () {
+    final cosmos = MediaKey.tv(WorldTitles.cosmosLaundromat.tmdbId);
+
+    testWidgets('continues where the viewer is, and says what airs next', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 3600);
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+      );
+
+      expect(find.text('Resume S2 E3'), findsOneWidget);
+      expect(
+        find.text('The Second Cycle · 5\u00A0min\u00A0left'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Series · 2015– · 3 seasons'), findsOneWidget);
+      expect(find.textContaining('S3 E1 · premiere at'), findsOneWidget);
+      expect(find.text('Sonarr looks for it once it airs'), findsOneWidget);
+      // Two scores: TMDB's, and Rotten Tomatoes' through Seerr.
+      expect(find.text('88'), findsOneWidget);
+      expect(find.text('IMDb'), findsNothing);
+      // A series' Manage is not drawn yet: nothing it cannot do.
+      expect(find.text('Manage'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('shows its episodes a season at a time, and asks Sonarr for '
+        'the missing', (tester) async {
+      tester.view.physicalSize = const Size(390, 3600);
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+      );
+
+      // The season Play continues.
+      expect(find.text('The Second Cycle'), findsOneWidget);
+      expect(find.text('Downloading 88%'), findsOneWidget);
+      expect(find.bySemanticsLabel('Episode 6. Missing'), findsOneWidget);
+
+      final search = find.text('Search the 5 missing');
+      await tester.ensureVisible(search);
+      await tester.tap(search);
+      await _answer(tester);
+      final asked = harness.network
+          .requestsTo(WorldIds.sonarr)
+          .where((r) => r.method == 'POST' && r.uri.path == '/api/v3/command')
+          .single;
+      expect(asked.json, containsPair('name', 'EpisodeSearch'));
+      expect(
+        asked.json,
+        containsPair('episodeIds', [1016, 1017, 1018, 1019, 1020]),
+      );
+      expect(find.text('Sonarr is searching for the 5'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Season 1'));
+      await tester.tap(find.text('Season 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('The Second Cycle'), findsNothing);
+      expect(find.text('Episode 10'), findsOneWidget);
+      // Nothing of the first season is missing.
+      expect(find.textContaining('missing'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('sends a stuck upgrade to the review of Sonarr\'s imports', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 3600);
+      final (harness, router) = await _pumpRouted(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+      );
+
+      expect(find.textContaining('12 upgrades need import'), findsOneWidget);
+      final review = find.text('Review the imports');
+      await tester.ensureVisible(review);
+      await tester.tap(review);
+      await _answer(tester);
+      final at = router.state.uri;
+      expect(at.path, '/import/review');
+      expect(at.queryParameters, {
+        'service': 'sonarr',
+        'targetId': '1',
+        'i': WorldIds.sonarr,
+      });
+
+      await harness.unmount(tester);
+    });
   });
 }

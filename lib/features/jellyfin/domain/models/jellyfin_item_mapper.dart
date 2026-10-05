@@ -211,6 +211,12 @@ StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
     externalIds: jellyfinExternalIds(item['ProviderIds']),
     video: _video(item['MediaStreams']),
     overview: _text(item['Overview']),
+    seasonNumber: kind == StreamItemKind.episode
+        ? jellyfinInt(item['ParentIndexNumber'])
+        : null,
+    episodeNumber: kind == StreamItemKind.episode
+        ? jellyfinInt(item['IndexNumber'])
+        : null,
   );
 }
 

@@ -610,7 +610,8 @@ class SonarrFake extends ArrFake {
           2,
           e,
           file: e <= 3,
-          airedAgo: Duration(days: 70 - e * 7),
+          // The tenth aired yesterday: every one of them has.
+          airedAgo: Duration(days: 71 - e * 7),
         ),
       for (var e = 1; e <= 8; e++)
         episode(

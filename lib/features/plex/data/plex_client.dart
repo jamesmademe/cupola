@@ -969,6 +969,22 @@ class PlexClient implements StreamServerClient {
     return _itemsFrom(container['Metadata'] ?? container['Directory']);
   }
 
+  /// `GET /library/metadata/{ratingKey}/allLeaves`: every episode of a show,
+  /// in order, with the token owner's watch state ([getViewers]).
+  @override
+  Future<List<StreamItem>> getEpisodes(
+    String seriesId, {
+    String? viewerId,
+    CancelToken? cancelToken,
+  }) async {
+    // Not caught: see [getChildren].
+    final container = await _container(
+      '/library/metadata/${_pathSegment(seriesId)}/allLeaves',
+      cancelToken: cancelToken,
+    );
+    return _itemsFrom(container['Metadata']);
+  }
+
   /// The household members whose watch state can be read: exactly one, always.
   ///
   /// This is not a stub. `GET /accounts` would list every Plex Home user, and

@@ -3,6 +3,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -27,13 +28,17 @@ final class MediaLeadWaiting extends MediaLead {
 
 /// Play, or resume, on the media server that holds a verified copy.
 final class MediaLeadPlay extends MediaLead {
-  const MediaLeadPlay(this.server, this.item);
+  const MediaLeadPlay(this.server, this.item, {this.episode});
 
   final ServiceInstance server;
   final StreamItem item;
 
+  /// For a series, the episode Play opens (`mediaNextEpisode`): null for a
+  /// movie, and when every episode is watched or none could be read.
+  final StreamItem? episode;
+
   /// The viewer is partway in: `Resume`.
-  bool get resume => item.isInProgress;
+  bool get resume => (episode ?? item).isInProgress;
 }
 
 /// The operator's arr is set up and none of its connections holds the title:
@@ -96,7 +101,14 @@ MediaLead resolveMediaLead(
       if (row.reading case MediaReadingAnswered(
         :final answer,
       ) when answer.value.outcome == StreamLookupOutcome.found)
-        MediaLeadPlay(row.connection, answer.value.item!),
+        MediaLeadPlay(
+          row.connection,
+          answer.value.item!,
+          episode: switch (answer.value.episodes) {
+            final episodes? => mediaNextEpisode(episodes),
+            null => null,
+          },
+        ),
   ];
   if (found.isNotEmpty) {
     return found.where((play) => play.resume).firstOrNull ?? found.first;

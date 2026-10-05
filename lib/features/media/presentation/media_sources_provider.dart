@@ -27,6 +27,7 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_external_match.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// One source of a Media page: a title, read through one connection.
 ///
@@ -113,7 +114,9 @@ final mediaTvdbIdProvider = FutureProvider.autoDispose.family<int?, MediaKey>((
 }, retry: noProviderRetry);
 
 /// What the Sonarr [MediaSource.connectionId] holds of the series: one
-/// `series?tvdbId=` read, and that Sonarr's own queue by series.
+/// `series?tvdbId=` read, its episodes, and that Sonarr's own queue by series
+/// and by episode. The episodes are the same Sonarr's answer: a read of them
+/// that fails fails the copy, rather than a series with no episodes.
 ///
 /// A series whose TVDB id nobody can name reads as one this Sonarr does not
 /// track ([mediaTvdbIdProvider] says when that is honest).
@@ -127,13 +130,23 @@ final mediaSonarrCopyProvider = FutureProvider.autoDispose
       final series = tvdbId == null
           ? null
           : await sonarr.getSeriesByTvdbId(tvdbId);
-      final queue = series == null
-          ? ArrQueueSnapshot.empty
-          : await ref.watch(
-              sonarrQueueSnapshotForProvider(source.connectionId).future,
-            );
+      if (series == null) {
+        return MediaAnswer(
+          const MediaSonarrCopy(series: null, queue: ArrQueueSnapshot.empty),
+          DateTime.now(),
+        );
+      }
+      final episodes = await sonarr.getEpisodes(series.id);
+      final queues = await ref.watch(
+        sonarrQueueSnapshotsForProvider(source.connectionId).future,
+      );
       return MediaAnswer(
-        MediaSonarrCopy(series: series, queue: queue),
+        MediaSonarrCopy(
+          series: series,
+          queue: queues.bySeries,
+          episodes: episodes,
+          episodeQueue: queues.byEpisode,
+        ),
         DateTime.now(),
       );
     }, retry: noProviderRetry);
@@ -188,6 +201,9 @@ final mediaStreamCopyProvider = FutureProvider.autoDispose
               ),
               _ => null,
             },
+            episodes: key.isMovie
+                ? null
+                : await _streamEpisodes(client, item.id, cancelToken),
           ),
         StreamLookupOutcome.notInLibrary =>
           const MediaStreamCopy.notInLibrary(),
@@ -195,6 +211,21 @@ final mediaStreamCopyProvider = FutureProvider.autoDispose
       };
       return MediaAnswer(copy, DateTime.now());
     }, retry: noProviderRetry);
+
+/// A series' episodes on a media server, or null when the read of them did
+/// not answer: the copy itself is still a fact, and its episodes are then
+/// unknown, never absent.
+Future<List<StreamItem>?> _streamEpisodes(
+  StreamServerClient client,
+  String seriesId,
+  CancelToken cancelToken,
+) async {
+  try {
+    return await client.getEpisodes(seriesId, cancelToken: cancelToken);
+  } catch (_) {
+    return null;
+  }
+}
 
 /// What the Seerr [MediaSource.connectionId] knows of the title: its record
 /// and, when the connection may read them, the servers of the arr that holds
@@ -217,8 +248,21 @@ final mediaSeerrRecordProvider = FutureProvider.autoDispose
         // no list either: no copy is bound, and nothing is claimed.
         servers = null;
       }
+      int? rottenTomatoes;
+      if (!source.key.isMovie) {
+        try {
+          rottenTomatoes = await seerr.getTvCriticsScore(tmdbId);
+        } catch (_) {
+          // A score that did not answer reads `—`: never the record's
+          // failure.
+        }
+      }
       return MediaAnswer(
-        MediaSeerrRecord(details: details, arrServers: servers),
+        MediaSeerrRecord(
+          details: details,
+          arrServers: servers,
+          rottenTomatoes: rottenTomatoes,
+        ),
         DateTime.now(),
       );
     }, retry: noProviderRetry);

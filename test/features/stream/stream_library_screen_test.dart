@@ -94,6 +94,13 @@ class _ScriptedServer implements StreamServerClient {
   }) async => const [];
 
   @override
+  Future<List<StreamItem>> getEpisodes(
+    String seriesId, {
+    String? viewerId,
+    CancelToken? cancelToken,
+  }) async => const [];
+
+  @override
   Future<StreamItem?> getItem(
     String itemId, {
     String? viewerId,

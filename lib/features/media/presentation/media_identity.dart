@@ -6,6 +6,7 @@ import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/features/media/domain/quality_words.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 
 /// Who the title is: the identity layer of the page.
 ///
@@ -29,6 +30,7 @@ class MediaIdentity {
     this.videos = const [],
     this.tmdbScore,
     this.artHeaders,
+    this.series,
   });
 
   /// TMDB's record, as Seerr answered it.
@@ -49,6 +51,19 @@ class MediaIdentity {
       collection: model.collection,
       videos: model.playableVideos,
       tmdbScore: model.voteAverage,
+      series: record.isSeries
+          ? (
+              span: _span(
+                model.firstAirDate,
+                model.lastAirDate,
+                ended: switch (record.details['status']) {
+                  'Ended' || 'Canceled' => true,
+                  _ => false,
+                },
+              ),
+              seasons: model.numberOfSeasons,
+            )
+          : null,
     );
   }
 
@@ -73,14 +88,28 @@ class MediaIdentity {
   /// for a media server's own poster, which needs its credential.
   final Map<String, String>? artHeaders;
 
+  /// A series' years on air (`2015–` while it runs, `2015–2019` once it
+  /// ended) and how many seasons it has; null for a movie.
+  final ({String? span, int? seasons})? series;
+
   /// The line under the title: who made it, when, how long, what it is.
-  /// `Ian Hubert · 2012 · 12 min · Science fiction`.
-  String get metaLine => [
-    if (directors.isNotEmpty) directors.first,
-    ?year,
-    if ((runtime ?? '').isNotEmpty) runtime!,
-    if (genres.isNotEmpty) genres.first,
-  ].join(' · ');
+  /// `Ian Hubert · 2012 · 12 min · Science fiction`; a series says it is
+  /// one, its years and seasons, and two genres: `Series · 2015– · 3 seasons
+  /// · Animation · Sci-Fi & Fantasy`.
+  String get metaLine => switch (series) {
+    (:final span, :final seasons) => [
+      'Series',
+      ?(span ?? year),
+      if (seasons != null && seasons > 0) countLabel(seasons, 'season'),
+      ...genres.take(2),
+    ].join(' · '),
+    null => [
+      if (directors.isNotEmpty) directors.first,
+      ?year,
+      if ((runtime ?? '').isNotEmpty) runtime!,
+      if (genres.isNotEmpty) genres.first,
+    ].join(' · '),
+  };
 
   /// The credits under the overview: `Directed by …` · `written by …` ·
   /// the studios.
@@ -117,7 +146,7 @@ class MediaIdentity {
               backdropUrl: _remoteImage(movie.images, 'fanart'),
               studios: [?movie.studio],
             );
-          case MediaSonarrCopy(:final series?):
+          case MediaSonarrCopy(:final series?, :final episodes):
             return MediaIdentity(
               title: series.title,
               year: series.year > 0 ? '${series.year}' : null,
@@ -126,6 +155,18 @@ class MediaIdentity {
               posterUrl: _remoteImage(series.images, 'poster'),
               backdropUrl: _remoteImage(series.images, 'fanart'),
               studios: [?series.network],
+              series: (
+                span: _span(
+                  series.firstAired ??
+                      (series.year > 0 ? '${series.year}' : null),
+                  series.lastAired,
+                  ended: series.status == 'ended',
+                ),
+                seasons: {
+                  for (final episode in episodes)
+                    if (episode.seasonNumber > 0) episode.seasonNumber,
+                }.length,
+              ),
             );
         }
       }
@@ -138,6 +179,9 @@ class MediaIdentity {
       )) {
         if (answer.value case MediaStreamCopy(:final item?, :final poster)) {
           return MediaIdentity(
+            series: item.kind == StreamItemKind.series
+                ? (span: null, seasons: null)
+                : null,
             title: item.title,
             year: item.year == null ? null : '${item.year}',
             runtime: switch (item.runtimeMs) {
@@ -155,6 +199,16 @@ class MediaIdentity {
     }
     return null;
   }
+}
+
+/// `2015–` for a series still on air, `2015–2019` for one that ended (`2015`
+/// when it ended the year it began); null without a first date.
+String? _span(String? first, String? last, {required bool ended}) {
+  final from = (first ?? '').length >= 4 ? first!.substring(0, 4) : null;
+  if (from == null) return null;
+  if (!ended) return '$from–';
+  final to = (last ?? '').length >= 4 ? last!.substring(0, 4) : null;
+  return to == null || to == from ? from : '$from–$to';
 }
 
 /// The public artwork an arr's record links for [coverType]: TMDB's or
@@ -182,6 +236,7 @@ typedef MediaScores = ({
 /// holds; otherwise TMDB's through Seerr.
 MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
   List<RatingSource>? arr;
+  int? seerrTomatoes;
   for (final row in rows) {
     if (row case MediaConnectionRow(
       reading: MediaReadingAnswered(:final answer),
@@ -191,6 +246,9 @@ MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
         MediaSonarrCopy(:final series?) => series.ratings,
         _ => null,
       };
+      if (answer.value case MediaSeerrRecord(:final rottenTomatoes?)) {
+        seerrTomatoes ??= rottenTomatoes;
+      }
     }
   }
   double? score(String name) {
@@ -207,7 +265,7 @@ MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
   return (
     tmdb: score('tmdb') ?? identity?.tmdbScore,
     imdb: score('imdb'),
-    rottenTomatoes: score('rottenTomatoes')?.round(),
+    rottenTomatoes: score('rottenTomatoes')?.round() ?? seerrTomatoes,
     metacritic: score('metacritic')?.round(),
   );
 }

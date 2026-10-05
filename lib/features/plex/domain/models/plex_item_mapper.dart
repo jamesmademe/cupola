@@ -98,6 +98,12 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
       null => null,
     },
     overview: plexString(json['summary'])?.trim(),
+    seasonNumber: kind == StreamItemKind.episode
+        ? plexInt(json['parentIndex'])
+        : null,
+    episodeNumber: kind == StreamItemKind.episode
+        ? plexInt(json['index'])
+        : null,
   );
 }
 

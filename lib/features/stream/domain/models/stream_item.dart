@@ -195,6 +195,11 @@ class StreamItem {
   /// says of a title only a media server knows.
   final String? overview;
 
+  /// An episode's season and its number in it, as the server numbers them;
+  /// null for anything else, and for an episode the server has not numbered.
+  final int? seasonNumber;
+  final int? episodeNumber;
+
   /// The picture of the item's first version, when the read asked for it.
   /// Null is "not reported": only the Media page's lookup asks.
   final StreamVideo? video;
@@ -213,6 +218,8 @@ class StreamItem {
     this.externalIds = StreamExternalIds.none,
     this.video,
     this.overview,
+    this.seasonNumber,
+    this.episodeNumber,
   });
 
   /// Fraction watched, 0..1, or null when there is no resume point.

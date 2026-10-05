@@ -5,6 +5,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
@@ -12,6 +13,9 @@ import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/features/media/domain/quality_words.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/sonarr_status.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_external_match.dart';
@@ -31,6 +35,10 @@ enum MediaRowShape {
   /// Case b: Seerr's word about a server Cupola does not have, attributed,
   /// with `Add X to Cupola` under it.
   claim,
+
+  /// A fault a copy reports, in amber: what is wrong as the state, the
+  /// sentence under it, and its remedy as the one amber fill.
+  fault,
 }
 
 /// Where a row's one way forward leads.
@@ -47,6 +55,10 @@ enum MediaRowWay {
   /// The remedy a failure names (`Paste the key again`, `Check the address`):
   /// the connection's own form.
   fix,
+
+  /// `Review the imports`: the manual import review of the copy
+  /// ([MediaRowView.targetId]) on its connection.
+  review,
 }
 
 /// A row of "On your server" as it is drawn and spoken: who, what, and the
@@ -66,6 +78,7 @@ class MediaRowView {
     this.way,
     this.dimmed = false,
     this.connectionId,
+    this.targetId,
   });
 
   final MediaRowShape shape;
@@ -103,6 +116,10 @@ class MediaRowView {
 
   /// The connection the row reads, for its tap and for the page's focus.
   final String? connectionId;
+
+  /// The copy's own id on its connection (a Sonarr series), for a way that
+  /// acts on it ([MediaRowWay.review]).
+  final int? targetId;
 
   /// The one sentence a screen reader speaks for the row.
   String get spoken =>
@@ -156,6 +173,232 @@ MediaRowView? mediaRowView(
       now: now,
     ),
   };
+}
+
+/// [row] as the rows it draws: one, or none (see [mediaRowView]), except a
+/// Sonarr that tracks the series, which says one row per fact (what is
+/// downloading, what aired and is missing, what needs an import), and a media
+/// server, which counts a series' episodes by season. [rows] are the page's,
+/// for the seasons' sizes.
+List<MediaRowView> mediaRowViews(
+  MediaRow row, {
+  required String Function(ServiceInstance connection) title,
+  required DateTime now,
+  required List<MediaRow> rows,
+}) {
+  final view = mediaRowView(row, title: title, now: now);
+  if (view == null) return const [];
+  if (row case MediaConnectionRow(
+    :final connection,
+    reading: MediaReadingAnswered(:final answer),
+  )) {
+    switch (answer.value) {
+      case MediaSonarrCopy(:final series?) && final copy:
+        final facts = _sonarrFacts(
+          copy,
+          series.id,
+          name: view.name,
+          connectionId: connection.id,
+          now: now,
+        );
+        return facts.isEmpty ? [view] : facts;
+      case MediaStreamCopy(:final item?, :final episodes?)
+          when item.kind == StreamItemKind.series:
+        final line = _seasonsLine(episodes, _airedBySeason(rows, now));
+        if (line.isEmpty) return [view];
+        return [
+          MediaRowView(
+            name: view.name,
+            detail: line,
+            state: view.state,
+            tone: view.tone,
+            hollow: view.hollow,
+            connectionId: view.connectionId,
+          ),
+        ];
+    }
+  }
+  return [view];
+}
+
+/// What one Sonarr says of a series, one row per fact: the episodes
+/// downloading, the aired ones missing, the downloads that need an import.
+/// Empty when none of that is true: the row then says the files it holds.
+List<MediaRowView> _sonarrFacts(
+  MediaSonarrCopy copy,
+  int seriesId, {
+  required String name,
+  required String connectionId,
+  required DateTime now,
+}) {
+  final queue = copy.episodeQueue;
+  final aired = _bySeason([
+    for (final episode in copy.episodes)
+      if (!episode.isUnairedAt(now)) episode,
+  ]);
+  final downloading = <SonarrEpisode>[];
+  final blocked = <SonarrEpisode>[];
+  final missing = <SonarrEpisode>[];
+  var downloadWord = 'Queued';
+  for (final episode in copy.episodes) {
+    final entry = queue.entryFor(episode.id);
+    if (entry != null) {
+      final status = sonarrEpisodeStatus(episode, now: now, queueEntry: entry);
+      if (status.tone == StatusTone.warning || status.hasWarning) {
+        blocked.add(episode);
+      } else {
+        downloading.add(episode);
+        if (status.pipeline == MediaPipeline.downloading) {
+          downloadWord = 'Downloading';
+        } else if (downloadWord == 'Queued' &&
+            (status.pipeline == MediaPipeline.importing ||
+                status.pipeline == MediaPipeline.importPending)) {
+          downloadWord = Lexicon.finishingOnTheServer;
+        }
+      }
+    } else if (!episode.hasFile &&
+        episode.monitored &&
+        episode.seasonNumber > 0 &&
+        !episode.isUnairedAt(now) &&
+        queue.isWhole) {
+      missing.add(episode);
+    }
+  }
+  MediaRowView fact(String detail, String state, StatusTone tone) =>
+      MediaRowView(
+        name: name,
+        detail: detail,
+        state: state,
+        tone: tone,
+        hollow: tone == StatusTone.neutral,
+        connectionId: connectionId,
+      );
+  final upgrades = blocked.every((episode) => episode.hasFile);
+  return [
+    if (downloading.isNotEmpty)
+      fact(_episodeSpan(downloading, aired), downloadWord, StatusTone.info),
+    if (missing.isNotEmpty)
+      fact(
+        '${_episodeSpan(missing, aired)} aired',
+        '${missing.length} missing',
+        StatusTone.neutral,
+      ),
+    if (blocked.isNotEmpty)
+      MediaRowView(
+        shape: MediaRowShape.fault,
+        name: name,
+        state:
+            '${_episodeSpan(blocked, aired)} · ${blocked.length} '
+            '${upgrades ? (blocked.length == 1 ? 'upgrade needs' : 'upgrades need') : (blocked.length == 1 ? 'episode needs' : 'episodes need')} import',
+        detail: upgrades
+            ? "Better versions arrived; $name won't import them on its own"
+            : "The downloads are done; $name won't import them on its own",
+        tone: StatusTone.warning,
+        action: 'Review the imports',
+        way: MediaRowWay.review,
+        connectionId: connectionId,
+        targetId: seriesId,
+      ),
+  ];
+}
+
+Map<int, List<SonarrEpisode>> _bySeason(Iterable<SonarrEpisode> episodes) {
+  final seasons = <int, List<SonarrEpisode>>{};
+  for (final episode in episodes) {
+    seasons.putIfAbsent(episode.seasonNumber, () => []).add(episode);
+  }
+  return seasons;
+}
+
+/// `S2 E4–E5`, `S1 · S2 E1–E2`: [episodes] by season, a season whose aired
+/// episodes are all there by its number alone; past three seasons, their
+/// span (`S1–S6`).
+String _episodeSpan(
+  List<SonarrEpisode> episodes,
+  Map<int, List<SonarrEpisode>> aired,
+) {
+  final seasons = _bySeason(episodes);
+  final numbers = seasons.keys.toList()..sort();
+  if (numbers.length > 3) {
+    return '${formatSeasonCode(numbers.first)}–'
+        '${formatSeasonCode(numbers.last)}';
+  }
+  return [
+    for (final season in numbers)
+      if (seasons[season]!.length == (aired[season]?.length ?? -1))
+        formatSeasonCode(season)
+      else
+        '${formatSeasonCode(season)} '
+            '${_ranges([for (final e in seasons[season]!) e.episodeNumber])}',
+  ].join(' · ');
+}
+
+/// `E4–E5`, `E6, E8–E10`: [numbers] as runs.
+String _ranges(List<int> numbers) {
+  final sorted = numbers.toSet().toList()..sort();
+  final runs = <String>[];
+  var start = 0;
+  for (var i = 1; i <= sorted.length; i++) {
+    if (i == sorted.length || sorted[i] != sorted[i - 1] + 1) {
+      runs.add(
+        i - 1 == start
+            ? formatEpisodeOrdinal(sorted[start])
+            : '${formatEpisodeOrdinal(sorted[start])}–'
+                  '${formatEpisodeOrdinal(sorted[i - 1])}',
+      );
+      start = i;
+    }
+  }
+  return runs.join(', ');
+}
+
+/// How many episodes of each season have aired, by the first Sonarr that
+/// tracks the series; empty without one.
+Map<int, int> _airedBySeason(List<MediaRow> rows, DateTime now) {
+  for (final row in rows) {
+    if (row case MediaConnectionRow(
+      reading: MediaReadingAnswered(:final answer),
+    )) {
+      if (answer.value case MediaSonarrCopy(series: _?, :final episodes)) {
+        return {
+          for (final MapEntry(:key, :value) in _bySeason([
+            for (final episode in episodes)
+              if (!episode.isUnairedAt(now)) episode,
+          ]).entries)
+            key: value.length,
+        };
+      }
+    }
+  }
+  return const {};
+}
+
+/// `S1 10 of 10 · S2 3 of 10`: a media server's episodes by season, against
+/// the episodes Sonarr says aired; past three seasons, or without Sonarr,
+/// the total (`38 of 50 episodes`, `13 episodes`).
+String _seasonsLine(List<StreamItem> episodes, Map<int, int> aired) {
+  final held = <int, int>{};
+  for (final episode in episodes) {
+    final season = episode.seasonNumber;
+    if (season != null && season > 0) {
+      held[season] = (held[season] ?? 0) + 1;
+    }
+  }
+  if (held.isEmpty) return '';
+  final seasons = held.keys.toList()..sort();
+  final total = held.values.fold(0, (sum, count) => sum + count);
+  if (aired.isEmpty) return countLabel(total, 'episode');
+  if (seasons.length > 3) {
+    final of = aired.entries
+        .where((entry) => entry.key > 0)
+        .fold(0, (sum, entry) => sum + entry.value);
+    return '$total of $of episodes';
+  }
+  return [
+    for (final season in seasons)
+      '${formatSeasonCode(season)} ${held[season]} of '
+          '${aired[season] ?? held[season]}',
+  ].join(' · ');
 }
 
 /// What a service that is not set up would bring to the page, for its

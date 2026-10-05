@@ -763,6 +763,25 @@ class JellyfinClient implements StreamServerClient {
   static const int _kExternalMatchCandidates = 10;
 
   @override
+  Future<List<StreamItem>> getEpisodes(
+    String seriesId, {
+    String? viewerId,
+    CancelToken? cancelToken,
+  }) {
+    // Unpaged, like a season's: `/Shows/{id}/Episodes` answers the whole
+    // series. Without a viewer the server still lists what it holds; only the
+    // watch state goes, which `UserData` carries for a user alone.
+    final userId = _resolveViewerId(viewerId);
+    // Not caught: see [getChildren].
+    return _fetchItems('/Shows/$seriesId/Episodes', {
+      'userId': userId,
+      'enableUserData': userId != null,
+      'fields': _browseFields,
+      'sortBy': 'AiredEpisodeOrder',
+    }, cancelToken: cancelToken);
+  }
+
+  @override
   Future<List<StreamItem>> getChildren(
     String itemId, {
     String? viewerId,

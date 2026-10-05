@@ -26,6 +26,8 @@ import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -508,6 +510,150 @@ List<MediaRow> _bare(List<Object?> images) => [
   const MediaNotSetUpRow(ServiceKey.seerr),
 ];
 
+final _sonarr = _connection(ServiceKey.sonarr, 'sonarr');
+
+/// A series as its page draws it: the first season and three of the second on
+/// Jellyfin (two watched, the third part-way), two downloading, five aired
+/// and missing, ten upgrades waiting on an import, and a third season
+/// starting in three days.
+List<MediaRow> _series() {
+  final now = DateTime.now();
+  var id = 1000;
+  final episodes = [
+    for (final (season, count) in [(1, 10), (2, 10), (3, 8)])
+      for (var number = 1; number <= count; number++)
+        SonarrEpisode(
+          id: ++id,
+          seasonNumber: season,
+          episodeNumber: number,
+          title: switch ((season, number)) {
+            (2, 3) => 'The Second Cycle',
+            (2, 6) => 'The Seventh Cycle',
+            _ => 'Episode $number',
+          },
+          hasFile: season == 1 || (season == 2 && number <= 3),
+          monitored: true,
+          airDateUtc:
+              (season == 3
+                      ? now.add(Duration(days: 3 + (number - 1) * 7, hours: 1))
+                      : now.subtract(
+                          Duration(days: 400 - season * 60 + number),
+                        ))
+                  .toUtc()
+                  .toIso8601String(),
+        ),
+  ];
+  Map<String, Object?> record(
+    int episodeId, {
+    double? left,
+    bool blocked = false,
+  }) => {
+    'seriesId': 1,
+    'episodeId': episodeId,
+    'size': 1000,
+    'sizeleft': left == null ? 0 : (left * 1000).round(),
+    'status': blocked ? 'completed' : 'downloading',
+    'trackedDownloadStatus': blocked ? 'warning' : 'ok',
+    'trackedDownloadState': blocked ? 'importBlocked' : 'downloading',
+  };
+  final queue = [
+    record(1014, left: 0.12),
+    record(1015, left: 0.91),
+    for (var e = 1001; e <= 1010; e++) record(e, blocked: true),
+  ];
+  StreamItem episode(int season, int number, {double played = 1}) => StreamItem(
+    id: 'jf-$season-$number',
+    title: season == 2 && number == 3 ? 'The Second Cycle' : 'Episode $number',
+    subtitle: null,
+    kind: StreamItemKind.episode,
+    posterPath: null,
+    year: null,
+    runtimeMs: 20 * 60000,
+    isPlayed: played >= 1,
+    resumeOffsetMs: played < 1 ? (20 * 60000 * played).round() : null,
+    unplayedChildCount: null,
+    seasonNumber: season,
+    episodeNumber: number,
+  );
+  return [
+    MediaConnectionRow<MediaStreamCopy>(
+      _jellyfin,
+      _answered(
+        MediaStreamCopy.found(
+          const StreamItem(
+            id: 'jf-cosmos',
+            title: 'Cosmos Laundromat',
+            subtitle: null,
+            kind: StreamItemKind.series,
+            posterPath: null,
+            year: 2015,
+            runtimeMs: null,
+            isPlayed: false,
+            resumeOffsetMs: null,
+            unplayedChildCount: 7,
+          ),
+          episodes: [
+            for (var e = 1; e <= 10; e++) episode(1, e),
+            episode(2, 1),
+            episode(2, 2),
+            episode(2, 3, played: 0.75),
+          ],
+        ),
+      ),
+    ),
+    MediaConnectionRow<MediaSonarrCopy>(
+      _sonarr,
+      _answered(
+        MediaSonarrCopy(
+          series: SonarrSeries.fromJson({
+            'id': 1,
+            'title': 'Cosmos Laundromat',
+            'tvdbId': 300001,
+            'tmdbId': 358332,
+            'year': 2015,
+            'status': 'continuing',
+            'monitored': true,
+            'images': _art,
+            'genres': ['Animation'],
+          }),
+          queue: ArrQueueSnapshot.empty,
+          episodes: episodes,
+          episodeQueue: ArrQueueSnapshot.fromQueueItems(
+            queue,
+            idsFor: (item) => [item['episodeId'] as int],
+          ),
+        ),
+      ),
+    ),
+    MediaConnectionRow<MediaSeerrRecord>(
+      _seerr,
+      _answered(
+        const MediaSeerrRecord(
+          details: {
+            'id': 358332,
+            'name': 'Cosmos Laundromat',
+            'firstAirDate': '2015-08-10',
+            'status': 'Returning Series',
+            'numberOfSeasons': 3,
+            'genres': [
+              {'id': 16, 'name': 'Animation'},
+              {'id': 10765, 'name': 'Sci-Fi & Fantasy'},
+            ],
+            'overview':
+                'Franck, a suicidal sheep, meets Tachyon, a salesman who '
+                'offers him the gift of a lifetime.',
+            'posterPath': CatalogArt.tmdbPoster,
+            'backdropPath': CatalogArt.tmdbBackdrop,
+            'voteAverage': 8.0,
+            'mediaInfo': {'status': 4},
+          },
+          rottenTomatoes: 88,
+        ),
+      ),
+    ),
+  ];
+}
+
 CatalogScene _scene(
   String caption,
   List<MediaRow> rows, {
@@ -515,9 +661,10 @@ CatalogScene _scene(
   double height = 1960,
   Audience audience = Audience.operator,
   double textScale = 1,
+  MediaKey key = _key,
 }) => CatalogScene(
   caption,
-  (_) => const MediaPage(mediaKey: _key),
+  (_) => MediaPage(mediaKey: key),
   width: width,
   height: height,
   textScale: textScale,
@@ -546,6 +693,7 @@ void main() {
         _radarr4k,
         _bazarr,
         _seerr,
+        _sonarr,
       ].fold(settings, (s, c) => s.copyWithInstance(c)),
     ),
     scenes: [
@@ -602,6 +750,13 @@ void main() {
           ),
         ],
         height: 820,
+      ),
+      _scene(
+        'Series · Resume the episode, the next to air, Sonarr\'s facts one '
+        'row each, the episodes a season at a time',
+        _series(),
+        height: 2000,
+        key: const MediaKey.tv(358332),
       ),
       _scene('Waiting · nobody has said who the title is yet', [
         MediaConnectionRow<MediaRadarrCopy>(
