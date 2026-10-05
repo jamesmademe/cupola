@@ -133,6 +133,7 @@ class MediaEpisodes extends StatefulWidget {
     required this.seasons,
     required this.initialSeason,
     this.onSearchMissing,
+    this.onOpen,
   });
 
   final List<MediaSeason> seasons;
@@ -142,6 +143,9 @@ class MediaEpisodes extends StatefulWidget {
 
   /// Asks Sonarr for a season's missing episodes; null where nothing can.
   final Future<void> Function(MediaSeason season)? onSearchMissing;
+
+  /// Opens an episode's sheet.
+  final void Function(MediaEpisode episode)? onOpen;
 
   @override
   State<MediaEpisodes> createState() => _MediaEpisodesState();
@@ -174,7 +178,13 @@ class _MediaEpisodesState extends State<MediaEpisodes> {
         ],
         MediaGroup(
           children: [
-            for (final episode in season.episodes) _EpisodeRow(episode),
+            for (final episode in season.episodes)
+              _EpisodeRow(
+                episode,
+                onTap: widget.onOpen == null
+                    ? null
+                    : () => widget.onOpen!(episode),
+              ),
           ],
         ),
         if (onSearch != null && missing.isNotEmpty) ...[
@@ -294,82 +304,95 @@ class _SeasonTrack extends StatelessWidget {
 /// One episode: its number, its title, its word, and a bar while it plays
 /// or downloads. One sentence for a screen reader.
 class _EpisodeRow extends StatelessWidget {
-  const _EpisodeRow(this.episode);
+  const _EpisodeRow(this.episode, {this.onTap});
 
   final MediaEpisode episode;
+
+  /// Opens the episode's sheet.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final progress = episode.progress;
-    return Semantics(
-      container: true,
-      label: episode.spoken,
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 40,
-              child: Text(
-                episode.code,
-                style: AppType.meta
-                    .weight(FontWeight.w400)
-                    .copyWith(color: room.inkTertiary),
-              ),
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 40,
+            child: Text(
+              episode.code,
+              style: AppType.meta
+                  .weight(FontWeight.w400)
+                  .copyWith(color: room.inkTertiary),
             ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          episode.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppType.row.copyWith(color: room.ink),
-                        ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        episode.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppType.row.copyWith(color: room.ink),
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 170),
-                        child: _StateWord(
-                          episode.state,
-                          tone: episode.tone,
-                          hollow: episode.tone == StatusTone.neutral,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (progress != null) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: LinearProgressIndicator(
-                        value: progress.clamp(0.0, 1.0),
-                        minHeight: 4,
-                        backgroundColor: room.fillTrack,
-                        color: episode.downloading
-                            ? statusToneColor(
-                                scheme,
-                                StatusTone.info,
-                                surface: room.ground,
-                              )
-                            : room.inkSecondary,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 170),
+                      child: _StateWord(
+                        episode.state,
+                        tone: episode.tone,
+                        hollow: episode.tone == StatusTone.neutral,
                       ),
                     ),
                   ],
+                ),
+                if (progress != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: progress.clamp(0.0, 1.0),
+                      minHeight: 4,
+                      backgroundColor: room.fillTrack,
+                      color: episode.downloading
+                          ? statusToneColor(
+                              scheme,
+                              StatusTone.info,
+                              surface: room.ground,
+                            )
+                          : room.inkSecondary,
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+    final onTap = this.onTap;
+    if (onTap == null) {
+      return Semantics(
+        container: true,
+        label: episode.spoken,
+        excludeSemantics: true,
+        child: row,
+      );
+    }
+    return PressableScale(
+      onTap: onTap,
+      semanticLabel: episode.spoken,
+      excludeChildSemantics: true,
+      child: row,
     );
   }
 }

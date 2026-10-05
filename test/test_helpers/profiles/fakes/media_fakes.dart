@@ -710,6 +710,50 @@ class SeerrFake extends ServiceFake {
         }
         return NetworkReply.json(_request(c, row));
       }
+      // A season as TMDB keeps it: Cosmos Laundromat's votes, a few of the
+      // second season's from fewer than twenty people, the third not out.
+      final season = RegExp(
+        r'^/api/v1/tv/(\d+)/season/(\d+)$',
+      ).firstMatch(path);
+      if (season != null) {
+        final number = int.parse(season.group(2)!);
+        final votes = switch (number) {
+          1 => const [7.2, 7.5, 7.9, 8.1, 7.4, 8.3, 7.0, 7.7, 8.0, 8.6],
+          2 => const [8.2, 8.4, 8.1, 7.6, 7.9, 8.9, 7.3, 8.0, 8.5, 8.7],
+          _ => const <double>[0, 0, 0, 0, 0, 0, 0, 0],
+        };
+        return NetworkReply.json({
+          'id': number,
+          'seasonNumber': number,
+          'episodes': [
+            for (final (i, vote) in votes.indexed)
+              {
+                'id': number * 100 + i + 1,
+                'seasonNumber': number,
+                'episodeNumber': i + 1,
+                'name': switch ((number, i + 1)) {
+                  (2, 3) => 'The Second Cycle',
+                  (2, 6) => 'The Seventh Cycle',
+                  _ => 'Episode ${i + 1}',
+                },
+                'airDate':
+                    '2025-0${number + 1}-${(i + 1).toString().padLeft(2, '0')}',
+                'overview': number == 2 && i == 2
+                    ? 'Franck wakes up in the second life Tachyon sold him.'
+                    : '',
+                // No still: a picture needs the disk cache tests have not got.
+                'voteAverage': vote,
+                'voteCount': vote == 0
+                    ? 0
+                    : number == 2 && const {4, 6, 7, 8}.contains(i)
+                    ? 12
+                    : number == 2 && i == 5
+                    ? 31
+                    : 37,
+              },
+          ],
+        });
+      }
       // Rotten Tomatoes' word on a series, which TMDB's record lacks.
       if (RegExp(r'^/api/v1/tv/\d+/ratings$').hasMatch(path)) {
         return NetworkReply.json({

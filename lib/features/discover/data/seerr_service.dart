@@ -1015,6 +1015,14 @@ class SeerrService {
     return response.data;
   }
 
+  /// One season of a series as TMDB keeps it (`/tv/:id/season/:n`): its
+  /// episodes with their stills, synopses and votes. Throws on a remote
+  /// failure.
+  Future<Map<String, dynamic>> getTvSeason(int tvId, int season) async {
+    final response = await _client.get('/api/v1/tv/$tvId/season/$season');
+    return response.data;
+  }
+
   /// Rotten Tomatoes' critics score for a series (`/tv/:id/ratings`), 0..100;
   /// null when Rotten Tomatoes has none for it. Throws on a remote failure.
   Future<int?> getTvCriticsScore(int tvId) async {

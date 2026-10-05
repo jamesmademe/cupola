@@ -28,6 +28,10 @@ import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/media/domain/media_series.dart';
+import 'package:cupola/features/media/presentation/media_episode_providers.dart';
+import 'package:cupola/features/media/presentation/media_episode_sheet.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode_file.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -496,6 +500,87 @@ CatalogScene _addScene() => CatalogScene(
   ],
 );
 
+/// An episode's sheet over its series: the still, TMDB's score, Resume on
+/// Jellyfin part-way, the synopsis, and what Sonarr holds: a 720p file below
+/// the profile's 1080p, the search for it, Monitored.
+CatalogScene _episodeScene() {
+  final rows = _series();
+  return CatalogScene(
+    'Episode · its still, where it plays and how far, what Sonarr holds and '
+    'the search for the quality it lacks',
+    (context) => Stack(
+      fit: StackFit.expand,
+      children: [
+        const MediaPage(mediaKey: MediaKey.tv(358332)),
+        const ColoredBox(color: Colors.black54),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: AppBottomSheet(
+            child: MediaEpisodeSheet(
+              seriesTitle: 'Cosmos Laundromat',
+              seasons: mediaSeasonsOf(
+                rows,
+                audience: Audience.operator,
+                now: DateTime.now(),
+              ),
+              season: 2,
+              number: 3,
+              operator: true,
+              sonarr: (
+                connection: _sonarr,
+                name: 'Sonarr',
+                seriesId: 1,
+                profileId: 1,
+              ),
+              seerr: (connectionId: _seerr.id, tvId: 358332),
+              server: (connection: _jellyfin, name: 'Jellyfin'),
+              light: _lights[CatalogArt.backdrop],
+              onPlay: (_) {},
+              onChanged: () {},
+            ),
+          ),
+        ),
+      ],
+    ),
+    width: 390,
+    height: 1240,
+    overrides: [
+      mediaRowsProvider.overrideWith((ref, key) => rows),
+      audienceProvider.overrideWithValue(Audience.operator),
+      titleLightProvider.overrideWith((ref, url) async => _lights[url]),
+      mediaRecommendationsProvider.overrideWith((ref, source) async => []),
+      mediaSeasonFactsProvider.overrideWith(
+        (ref, source) async => [
+          const MediaEpisodeFacts(
+            season: 2,
+            number: 3,
+            name: 'The Second Cycle',
+            overview:
+                'Franck wakes up in the second life Tachyon sold him, and it '
+                'looks better than the first. The laundry is still there.',
+            stillPath: CatalogArt.tmdbBackdrop,
+            voteAverage: 8.1,
+            voteCount: 37,
+          ),
+        ],
+      ),
+      mediaEpisodeFilesProvider.overrideWith(
+        (ref, source) async => {
+          6013: SonarrEpisodeFile(
+            id: 6013,
+            relativePath:
+                'Cosmos Laundromat - S02E03 - The Second Cycle WEBDL-720p.mkv',
+            qualityName: 'WEBDL-720p',
+            dateAdded: DateTime.now().subtract(const Duration(hours: 2)),
+            cutoffNotMet: true,
+          ),
+        },
+      ),
+      mediaSonarrCutoffProvider.overrideWith((ref, source) async => '1080p'),
+    ],
+  );
+}
+
 /// One Radarr copy and nothing else, with [images].
 List<MediaRow> _bare(List<Object?> images) => [
   MediaConnectionRow<MediaRadarrCopy>(
@@ -532,6 +617,9 @@ List<MediaRow> _series() {
             _ => 'Episode $number',
           },
           hasFile: season == 1 || (season == 2 && number <= 3),
+          episodeFileId: season == 1 || (season == 2 && number <= 3)
+              ? id + 5000
+              : null,
           monitored: true,
           airDateUtc:
               (season == 3
@@ -804,6 +892,7 @@ void main() {
         ],
       ),
       _addScene(),
+      _episodeScene(),
       CatalogScene(
         'Requester · Request, and what it means: the title is not on the '
         'server yet',

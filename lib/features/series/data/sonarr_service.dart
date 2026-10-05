@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
+import 'package:cupola/features/series/domain/models/sonarr_episode_file.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -196,6 +197,26 @@ class SonarrService with ArrActivityMixin {
     return fetchListItems('episode', {
       'seriesId': seriesId,
     }, SonarrEpisode.fromJson);
+  }
+
+  /// Every file Sonarr holds for the series, one per episode it has. Throws
+  /// on a remote failure.
+  Future<List<SonarrEpisodeFile>> getEpisodeFiles(int seriesId) async {
+    return fetchListItems('episodefile', {
+      'seriesId': seriesId,
+    }, SonarrEpisodeFile.fromJson);
+  }
+
+  /// Monitors, or stops monitoring, the episodes [episodeIds]. Throws on
+  /// failure: the switch that asked shows the answer.
+  Future<void> setEpisodesMonitored(
+    List<int> episodeIds, {
+    required bool monitored,
+  }) async {
+    await client.put(
+      '/api/v3/episode/monitor',
+      data: {'episodeIds': episodeIds, 'monitored': monitored},
+    );
   }
 
   /// Fetches releases for interactive search.

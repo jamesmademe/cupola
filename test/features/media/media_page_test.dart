@@ -768,7 +768,10 @@ void main() {
       // The season Play continues.
       expect(find.text('The Second Cycle'), findsOneWidget);
       expect(find.text('Downloading 88%'), findsOneWidget);
-      expect(find.bySemanticsLabel('Episode 6. Missing'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Episode 6, The Seventh Cycle. Missing'),
+        findsOneWidget,
+      );
 
       final search = find.text('Search the 5 missing');
       await tester.ensureVisible(search);
@@ -819,6 +822,84 @@ void main() {
         'targetId': '1',
         'i': WorldIds.sonarr,
       });
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('opens an episode whole: where it plays, what Sonarr holds', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 3600);
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+      );
+      await tester.ensureVisible(find.text('The Second Cycle'));
+      await tester.tap(find.text('The Second Cycle'));
+      await _answer(tester);
+
+      expect(
+        find.textContaining('Season 2 · Episode 3 · aired'),
+        findsOneWidget,
+      );
+      expect(find.text('8.1'), findsOneWidget);
+      expect(find.text('TMDB · 37 votes'), findsOneWidget);
+      expect(find.text('On Jellyfin'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Resume'), findsOneWidget);
+      expect(find.text('In Sonarr'), findsOneWidget);
+      expect(find.text('1080p WEB'), findsOneWidget);
+      expect(find.textContaining('imported today'), findsOneWidget);
+      // At the profile's cutoff: nothing to search for.
+      expect(find.textContaining('Search for'), findsNothing);
+
+      // The next one, a step away.
+      await tester.tap(find.byTooltip('Next episode, E4'));
+      await _answer(tester);
+      expect(find.textContaining('Season 2 · Episode 4'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('searches for a file below the cutoff, and monitors in '
+        'Sonarr', (tester) async {
+      tester.view.physicalSize = const Size(390, 3600);
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+      );
+      final first = find.text('Episode 1').first;
+      await tester.ensureVisible(first);
+      await tester.tap(first);
+      await _answer(tester);
+
+      expect(find.text('720p WEB'), findsOneWidget);
+      expect(find.textContaining('Below the 1080p cutoff'), findsOneWidget);
+      await tester.tap(find.text('Search for 1080p'));
+      await _answer(tester);
+      final search = harness.network
+          .requestsTo(WorldIds.sonarr)
+          .where((r) => r.method == 'POST' && r.uri.path == '/api/v3/command')
+          .single;
+      expect(search.json, containsPair('episodeIds', [1011]));
+
+      await tester.ensureVisible(find.text('Monitored'));
+      await tester.tap(find.text('Monitored'));
+      await _answer(tester);
+      final monitor = harness.network
+          .requestsTo(WorldIds.sonarr)
+          .where(
+            (r) => r.method == 'PUT' && r.uri.path == '/api/v3/episode/monitor',
+          )
+          .single;
+      expect(monitor.json, {
+        'episodeIds': [1011],
+        'monitored': false,
+      });
+      expect(find.text('Sonarr leaves it as it is'), findsOneWidget);
 
       await harness.unmount(tester);
     });

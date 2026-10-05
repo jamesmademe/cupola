@@ -21,6 +21,12 @@ class SonarrEpisode {
   /// Episode length in minutes, when Sonarr knows it.
   final int? runtime;
 
+  /// The file Sonarr holds for it (`episodefile`), when it has one.
+  final int? episodeFileId;
+
+  /// Sonarr's synopsis of the episode, when its metadata has one.
+  final String? overview;
+
   const SonarrEpisode({
     required this.id,
     required this.seasonNumber,
@@ -31,6 +37,8 @@ class SonarrEpisode {
     this.airDate,
     this.airDateUtc,
     this.runtime,
+    this.episodeFileId,
+    this.overview,
   });
 
   /// When this episode airs, preferring the UTC instant over the local date.
@@ -73,6 +81,13 @@ class SonarrEpisode {
       airDate: json['airDate'] as String?,
       airDateUtc: json['airDateUtc'] as String?,
       runtime: (json['runtime'] as num?)?.toInt(),
+      episodeFileId: switch ((json['episodeFileId'] as num?)?.toInt()) {
+        final id? when id > 0 => id,
+        _ => null,
+      },
+      overview: (json['overview'] as String?)?.trim().isNotEmpty == true
+          ? (json['overview'] as String).trim()
+          : null,
     );
   }
 }

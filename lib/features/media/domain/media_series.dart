@@ -32,6 +32,7 @@ class MediaEpisode {
     this.missing = false,
     this.sonarrId,
     this.onServer,
+    this.fromSonarr,
   });
 
   final int season;
@@ -58,6 +59,9 @@ class MediaEpisode {
 
   /// The episode on the media server, when it is there.
   final StreamItem? onServer;
+
+  /// Sonarr's record of the episode: its file, whether it is monitored.
+  final SonarrEpisode? fromSonarr;
 
   /// `E3`: the number the row leads with.
   String get code => formatEpisodeOrdinal(number);
@@ -202,6 +206,7 @@ MediaEpisode _fromSonarr(
     missing: missing && !requester,
     sonarrId: episode.id,
     onServer: onServer,
+    fromSonarr: episode,
   );
 
   // A download in flight says so first: the row is about to change.
@@ -447,4 +452,112 @@ MediaNextAiring? mediaNextAiringOf(
     }
   }
   return found;
+}
+
+/// What TMDB says of one episode, through Seerr: its still, synopsis and
+/// votes, read when its sheet or the episodes graph opens.
+@immutable
+class MediaEpisodeFacts {
+  const MediaEpisodeFacts({
+    required this.season,
+    required this.number,
+    this.name,
+    this.overview,
+    this.stillPath,
+    this.voteAverage,
+    this.voteCount = 0,
+    this.airDate,
+  });
+
+  final int season;
+  final int number;
+  final String? name;
+  final String? overview;
+
+  /// TMDB's path to the still (`/abc.jpg`).
+  final String? stillPath;
+
+  /// TMDB's score, null when nobody has voted.
+  final double? voteAverage;
+  final int voteCount;
+
+  /// `2025-08-07`, as TMDB dates it.
+  final String? airDate;
+
+  /// The still at [width], from TMDB's own address.
+  String? stillUrl({int width = 780}) => switch (stillPath) {
+    final path? when path.isNotEmpty =>
+      'https://image.tmdb.org/t/p/w$width$path',
+    _ => null,
+  };
+}
+
+/// The episodes of one season TMDB's record lists (`/tv/:id/season/:n`).
+List<MediaEpisodeFacts> mediaEpisodeFactsOf(Map<String, dynamic> season) {
+  String? text(Object? value) {
+    final string = value?.toString().trim() ?? '';
+    return string.isEmpty ? null : string;
+  }
+
+  return [
+    for (final episode in switch (season['episodes']) {
+      final List<dynamic> list => list.whereType<Map<String, dynamic>>(),
+      _ => const <Map<String, dynamic>>[],
+    })
+      if ((episode['seasonNumber'], episode['episodeNumber']) case (
+        final num season,
+        final num number,
+      ))
+        MediaEpisodeFacts(
+          season: season.toInt(),
+          number: number.toInt(),
+          name: text(episode['name']),
+          overview: text(episode['overview']),
+          stillPath: text(episode['stillPath']),
+          voteAverage: switch (episode['voteAverage']) {
+            final num vote when vote > 0 => vote.toDouble(),
+            _ => null,
+          },
+          voteCount: switch (episode['voteCount']) {
+            final num count => count.toInt(),
+            _ => 0,
+          },
+          airDate: text(episode['airDate']),
+        ),
+  ];
+}
+
+/// The resolution a Sonarr quality profile's cutoff asks for, `1080p`: the
+/// cutoff quality's, or the best of the cutoff group's. Null when the
+/// profile names none.
+String? sonarrCutoffResolution(Map<String, dynamic> profile) {
+  final cutoff = profile['cutoff'];
+  int? resolution(Map<String, dynamic> item) {
+    final quality = item['quality'];
+    if (quality is Map && quality['resolution'] is num) {
+      return (quality['resolution'] as num).toInt();
+    }
+    final group = item['items'];
+    if (group is List) {
+      final values = [
+        for (final inner in group.whereType<Map<String, dynamic>>())
+          ?resolution(inner),
+      ];
+      return values.isEmpty ? null : values.reduce((a, b) => a > b ? a : b);
+    }
+    return null;
+  }
+
+  for (final item in switch (profile['items']) {
+    final List<dynamic> list => list.whereType<Map<String, dynamic>>(),
+    _ => const <Map<String, dynamic>>[],
+  }) {
+    final quality = item['quality'];
+    final id = quality is Map ? quality['id'] : item['id'];
+    if (id == cutoff) {
+      final value = resolution(item);
+      return value == null || value <= 0 ? null : '${value}p';
+    }
+  }
+  return null;
 }

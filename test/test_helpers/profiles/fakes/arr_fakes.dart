@@ -92,8 +92,37 @@ abstract class ArrFake extends ServiceFake {
         case final p when p == '$_base/parse':
           return NetworkReply.json(parse(c, r.query['title'] ?? ''));
         case final p when p == '$_base/qualityprofile':
+          // The first asks for 1080p (2160p on a 4K server) and stops there.
+          final top = c.server.is4k ? 2160 : 1080;
           return NetworkReply.json([
-            {'id': 1, 'name': c.server.is4k ? 'Ultra-HD' : 'HD-1080p'},
+            {
+              'id': 1,
+              'name': c.server.is4k ? 'Ultra-HD' : 'HD-1080p',
+              'cutoff': top == 2160 ? 19 : 3,
+              'items': [
+                {
+                  'quality': {'id': 5, 'name': 'WEBDL-720p', 'resolution': 720},
+                  'allowed': true,
+                },
+                {
+                  'quality': {
+                    'id': 3,
+                    'name': 'WEBDL-1080p',
+                    'resolution': 1080,
+                  },
+                  'allowed': true,
+                },
+                if (top == 2160)
+                  {
+                    'quality': {
+                      'id': 19,
+                      'name': 'Bluray-2160p',
+                      'resolution': 2160,
+                    },
+                    'allowed': true,
+                  },
+              ],
+            },
             {'id': 2, 'name': 'Any'},
           ]);
         case final p when p == '$_base/rootfolder':
@@ -594,10 +623,13 @@ class SonarrFake extends ArrFake {
       'seriesId': 1,
       'seasonNumber': season,
       'episodeNumber': number,
-      'title': season == 2 && number == 3
-          ? 'The Second Cycle'
-          : 'Episode $number',
+      'title': switch ((season, number)) {
+        (2, 3) => 'The Second Cycle',
+        (2, 6) => 'The Seventh Cycle',
+        _ => 'Episode $number',
+      },
       'hasFile': file,
+      if (file) 'episodeFileId': id + 5000,
       'monitored': true,
       'airDateUtc': airsIn != null
           ? c.ahead(airsIn)
@@ -621,6 +653,26 @@ class SonarrFake extends ArrFake {
           airsIn: Duration(days: 3 + (e - 1) * 7, minutes: 7),
         ),
     ];
+  }
+
+  JsonMap _episodeFile(JsonMap e, String quality, int resolution, String at) {
+    final code =
+        'S${'${e['seasonNumber']}'.padLeft(2, '0')}'
+        'E${'${e['episodeNumber']}'.padLeft(2, '0')}';
+    return {
+      'id': e['episodeFileId'],
+      'seriesId': e['seriesId'],
+      'seasonNumber': e['seasonNumber'],
+      'relativePath':
+          'Season ${'${e['seasonNumber']}'.padLeft(2, '0')}/'
+          'Cosmos Laundromat - $code - ${e['title']} $quality.mkv',
+      'size': resolution == 1080 ? 1200000000 : 640000000,
+      'dateAdded': at,
+      'quality': {
+        'quality': {'name': quality, 'resolution': resolution},
+      },
+      'qualityCutoffNotMet': resolution < 1080,
+    };
   }
 
   /// The id Sonarr gives episode [episode] of season [season] of series
@@ -768,7 +820,30 @@ class SonarrFake extends ArrFake {
       return NetworkReply.json(series(c));
     }
     if (r.method == 'GET' && r.path == '/api/v3/episodefile') {
-      return NetworkReply.json(const <Object?>[]);
+      final id = int.tryParse(r.query['seriesId'] ?? '') ?? 0;
+      // The first season and the second's first two in 720p, below the
+      // profile's 1080p; the third episode in 1080p, imported this evening.
+      return NetworkReply.json([
+        for (final e in _episodes(c, id))
+          if (e['hasFile'] == true)
+            if (e['seasonNumber'] == 2 && e['episodeNumber'] == 3)
+              _episodeFile(
+                e,
+                'WEBDL-1080p',
+                1080,
+                c.ago(const Duration(hours: 2, minutes: 43)),
+              )
+            else
+              _episodeFile(
+                e,
+                'WEBDL-720p',
+                720,
+                c.ago(const Duration(days: 40)),
+              ),
+      ]);
+    }
+    if (r.method == 'PUT' && r.path == '/api/v3/episode/monitor') {
+      return const NetworkReply(202);
     }
     return null;
   }

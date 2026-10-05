@@ -35,6 +35,7 @@ import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
 import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
+import 'package:cupola/features/media/presentation/media_episode_sheet.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
@@ -133,8 +134,15 @@ class _MediaPageState extends ConsumerState<MediaPage> {
   String? get focus => widget.focus;
 
   /// Plays [lead] in its server's own client, at the item.
-  Future<void> _play(MediaLeadPlay lead, String serverName) async {
-    final server = lead.server;
+  Future<void> _play(MediaLeadPlay lead, String serverName) =>
+      _playOn(lead.server, (lead.episode ?? lead.item).id, serverName);
+
+  /// Opens the item [itemId] in [server]'s own client.
+  Future<void> _playOn(
+    ServiceInstance server,
+    String itemId,
+    String serverName,
+  ) async {
     final machineId = server.service == ServiceKey.plex
         ? ref
               .read(plexCapabilitiesForProvider(server.id))
@@ -144,7 +152,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final target = streamItemWebUrl(
       service: server.service,
       baseUrl: server.url,
-      itemId: (lead.episode ?? lead.item).id,
+      itemId: itemId,
       plexMachineId: machineId,
     );
     final opened =
@@ -703,6 +711,14 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   onSearchMissing: audience == Audience.operator
                       ? (season) => _searchMissing(season, rows)
                       : null,
+                  onOpen: (episode) => _openEpisode(
+                    episode,
+                    seasons: seasons,
+                    rows: rows,
+                    title: identity?.title ?? '',
+                    light: light,
+                    operator: audience == Audience.operator,
+                  ),
                 ),
               ],
               ...manage,
@@ -853,6 +869,82 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           season.number,
     ];
     return aired.lastOrNull ?? seasons.first.number;
+  }
+
+  /// Opens [episode]'s sheet, bound to the Sonarr, the Seerr and the media
+  /// server the page reads.
+  void _openEpisode(
+    MediaEpisode episode, {
+    required List<MediaSeason> seasons,
+    required List<MediaRow> rows,
+    required String title,
+    required TitleLight? light,
+    required bool operator,
+  }) {
+    final settings = ref.read(currentSettingsProvider);
+    String name(ServiceInstance c) => settings.connectionTitle(c.id, c.service);
+    MediaEpisodeSonarr? sonarr;
+    String? seerr;
+    MediaEpisodeServer? server;
+    for (final row in rows) {
+      if (row case MediaConnectionRow(
+        :final connection,
+        reading: MediaReadingAnswered(:final answer),
+      )) {
+        switch (answer.value) {
+          case MediaSonarrCopy(:final series?)
+              when sonarr == null || connection.id == focus:
+            sonarr = (
+              connection: connection,
+              name: name(connection),
+              seriesId: series.id,
+              profileId: series.qualityProfileId,
+            );
+          case MediaSeerrRecord():
+            seerr ??= connection.id;
+          case MediaStreamCopy(episodes: _?)
+              when server == null || connection.id == focus:
+            server = (connection: connection, name: name(connection));
+        }
+      }
+    }
+    final tvId = mediaKey.tmdbId;
+    AppBottomSheet.showScrollable<void>(
+      context: context,
+      initialSize: 0.92,
+      minSize: 0.5,
+      builder: (context, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        children: [
+          MediaEpisodeSheet(
+            seriesTitle: title,
+            seasons: seasons,
+            season: episode.season,
+            number: episode.number,
+            operator: operator,
+            sonarr: sonarr,
+            seerr: seerr == null || tvId == null
+                ? null
+                : (connectionId: seerr, tvId: tvId),
+            server: server,
+            light: light,
+            onPlay: (item) {
+              final on = server;
+              if (on != null) _playOn(on.connection, item.id, on.name);
+            },
+            onChanged: () {
+              if (!mounted) return;
+              for (final row in ref.read(mediaRowsProvider(mediaKey))) {
+                if (row.service == ServiceKey.sonarr) {
+                  retryMediaRow(ref, mediaKey, row);
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   /// Asks the Sonarr that tracks the series for [season]'s missing episodes.
