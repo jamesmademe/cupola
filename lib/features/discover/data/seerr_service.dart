@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -1150,6 +1151,28 @@ class SeerrService {
       if (reportFailure) rethrow;
       return [];
     }
+  }
+
+  /// TMDB's id of the series TVDB knows as [tvdbId], by Seerr's `tvdb:`
+  /// search; null when Seerr finds none. A failure throws.
+  ///
+  /// Encoded once, unlike [search]: Seerr matches `tvdb:` on the query as it
+  /// arrives, so the double encoding a typed term needs (Seerr refuses a
+  /// space or an `&` encoded once) would hide the prefix and find nothing.
+  Future<int?> findTvByTvdbId(int tvdbId) async {
+    final response = await _client.get(
+      '/api/v1/search',
+      queryParameters: {'query': 'tvdb:$tvdbId', 'page': 1},
+    );
+    final results = mapOrNull(response.data)?['results'];
+    if (results is! List) return null;
+    for (final result in results) {
+      final row = mapOrNull(result);
+      if ((row?['mediaType'] ?? row?['media_type']) != 'tv') continue;
+      final id = intOrNull(row?['id']);
+      if (id != null && id > 0) return id;
+    }
+    return null;
   }
 
   /// The Radarr servers Seerr sends requests to. An empty list means Seerr

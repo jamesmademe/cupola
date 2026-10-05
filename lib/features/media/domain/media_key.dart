@@ -55,13 +55,32 @@ class MediaKey {
     };
   }
 
+  /// The page a series has by the ids a source carries: TMDB's when it has
+  /// one, else TVDB's (a Sonarr v3 record, a server that knows only TVDB's).
+  /// Null with neither.
+  static MediaKey? ofSeries({int? tmdbId, int? tvdbId}) =>
+      switch ((tmdbId, tvdbId)) {
+        (final tmdb?, _) when tmdb > 0 => MediaKey.tv(tmdb),
+        (_, final tvdb?) when tvdb > 0 => MediaKey.tvdb(tvdb),
+        _ => null,
+      };
+
   /// The page a media server's item has: a movie the server knows by its
-  /// TMDB id. Null for anything else (a series until it has its page, an
-  /// episode, a home video with no id), which keeps the server's own page.
+  /// TMDB id, a series by its TMDB or TVDB id. Null for anything else (an
+  /// episode, a season, a home video with no id), which keeps the server's
+  /// own page.
   static MediaKey? ofStreamItem(StreamItem item) {
-    if (item.kind != StreamItemKind.movie) return null;
-    final tmdb = int.tryParse(item.externalIds.tmdb ?? '');
-    return tmdb == null || tmdb <= 0 ? null : MediaKey.movie(tmdb);
+    final ids = item.externalIds;
+    final tmdb = int.tryParse(ids.tmdb ?? '');
+    return switch (item.kind) {
+      StreamItemKind.movie =>
+        tmdb == null || tmdb <= 0 ? null : MediaKey.movie(tmdb),
+      StreamItemKind.series => ofSeries(
+        tmdbId: tmdb,
+        tvdbId: int.tryParse(ids.tvdb ?? ''),
+      ),
+      _ => null,
+    };
   }
 
   @override

@@ -810,7 +810,7 @@ void main() {
       },
     );
 
-    test('a movie the server knows by its TMDB id opens on its own page, '
+    test('a title the server knows by its TMDB id opens on its own page, '
         "that server's copy leading", () async {
       StreamItem item(String title, StreamItemKind kind, String? tmdb) =>
           StreamItem(
@@ -863,10 +863,13 @@ void main() {
       // route; nor does the item, which the title's page does not read.
       expect(Uri.parse(rows.first.route).queryParameters['posterUrl'], isNull);
       expect(rows.first.routeExtra, isNull);
-      // A movie with no TMDB id, and a series until it has its page, stay
-      // on the server's own page.
+      // A movie with no TMDB id stays on the server's own page; a series
+      // with one opens on its own.
       expect(rows[1].route, ServiceRoutes.jellyfinItem('id-Home video'));
-      expect(rows[2].route, ServiceRoutes.jellyfinItem('id-Arcane'));
+      expect(
+        rows[2].route,
+        ServiceRoutes.mediaRoot(const MediaKey.tv(94605), focus: 'jellyfin'),
+      );
     });
   });
 }

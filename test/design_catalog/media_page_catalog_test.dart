@@ -286,6 +286,18 @@ List<MediaRow> _throughSeerr() => [
   ..._withSeerr().where((row) => row is! MediaConnectionRow<MediaStreamCopy>),
 ];
 
+/// The household with Seerr on an account whose session ended.
+List<MediaRow> _signedOut() => [
+  for (final row in _household())
+    if (row is MediaNotSetUpRow)
+      MediaConnectionRow<MediaSeerrRecord>(
+        _seerr,
+        const MediaReadingFailed(ServiceFailureReason.sessionEnded),
+      )
+    else
+      row,
+];
+
 /// Where Nosferatu streams in the catalog's region, as TMDB lists it.
 const _watchProviders = [
   {
@@ -961,6 +973,24 @@ void main() {
         'and Jellyfin\'s row is Seerr\'s word with the way to add it',
         _throughSeerr(),
         height: 2240,
+      ),
+      _scene(
+        'Seerr signed out · its account in blue with Sign in again, never '
+        'not set up',
+        _signedOut(),
+        height: 2240,
+      ),
+      _scene(
+        'Signed out · the requester\'s Seerr holds no session and nobody '
+        'else can say who the title is: the page is the way to sign in',
+        [
+          MediaConnectionRow<MediaSeerrRecord>(
+            _seerr,
+            const MediaReadingFailed(ServiceFailureReason.sessionEnded),
+          ),
+        ],
+        height: 760,
+        audience: Audience.requester,
       ),
       _scene(
         'Tablet · a detail pane: the phone column, wider',

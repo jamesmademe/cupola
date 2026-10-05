@@ -21,9 +21,6 @@ import 'package:cupola/features/music/domain/lidarr_queue_snapshots.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/presentation/music_detail_provider.dart';
 import 'package:cupola/features/music/presentation/music_detail_screen.dart';
-import 'package:cupola/features/series/domain/models/sonarr_series.dart';
-import 'package:cupola/features/series/presentation/series_detail_provider.dart';
-import 'package:cupola/features/series/presentation/series_detail_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -167,36 +164,6 @@ void main() {
       expect(_opened?.queryParameters, containsPair('service', 'radarr'));
       expect(_opened?.queryParameters, containsPair('targetId', '42'));
       expect(_opened?.queryParameters, containsPair('i', 'radarr-4k'));
-    });
-
-    testWidgets('Sonarr', (tester) async {
-      await _pump(
-        tester,
-        const SeriesDetailScreen(
-          seriesId: 7,
-          heroTag: 'series-7',
-          instanceId: 'sonarr-anime',
-        ),
-        overrides: [
-          seriesDetailForProvider.overrideWith(
-            (ref, item) async => SonarrSeries.fromJson({
-              'id': 7,
-              'title': 'Cosmos Laundromat',
-              'path': '/tv/Cosmos Laundromat',
-            }),
-          ),
-          seriesEpisodesForProvider.overrideWith((ref, item) async => []),
-          sonarrQueueSnapshotForProvider.overrideWith(
-            (ref, id) => ArrQueueSnapshot.empty,
-          ),
-        ],
-      );
-
-      await _import(tester);
-
-      expect(_opened?.queryParameters['service'], 'sonarr');
-      expect(_opened?.queryParameters['targetId'], '7');
-      expect(_opened?.queryParameters['i'], 'sonarr-anime');
     });
 
     testWidgets('Lidarr', (tester) async {

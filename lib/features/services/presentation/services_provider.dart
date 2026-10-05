@@ -1111,9 +1111,11 @@ ArrHistoryEntry _historyEntryFrom(
         intOrNull(record['seriesId']) ??
         intOrNull(record['artistId']) ??
         0,
-    tmdbId: service == ServiceKey.radarr
-        ? intOrNull(mapOrNull(record['movie'])?['tmdbId'])
-        : null,
+    tmdbId: switch (service) {
+      ServiceKey.radarr => intOrNull(mapOrNull(record['movie'])?['tmdbId']),
+      ServiceKey.sonarr => intOrNull(mapOrNull(record['series'])?['tmdbId']),
+      _ => null,
+    },
     title: title,
     unitId: switch (service) {
       ServiceKey.sonarr => intOrNull(
@@ -2572,8 +2574,8 @@ ServiceQueueItem _queueItemFromRecords(
     // With the connection: a queue record's ids are its server's, and the
     // same film id names a different film on the other Radarr.
     route: switch (service) {
-      // The film's own page, on this Radarr's copy, when the record embeds
-      // the film; else the way through its id there.
+      // The title's own page, on this arr's copy, when the record embeds
+      // the title; else the way through its id there.
       ServiceKey.radarr => switch (intOrNull(
         mapOrNull(typedItem['movie'])?['tmdbId'],
       )) {
@@ -2589,13 +2591,21 @@ ServiceQueueItem _queueItemFromRecords(
                   instanceId: instanceId,
                 ),
       },
-      ServiceKey.sonarr =>
-        intOrNull(typedItem['seriesId']) == null
-            ? null
-            : ServiceRoutes.sonarrSeries(
-                intOrNull(typedItem['seriesId'])!,
-                instanceId: instanceId,
-              ),
+      ServiceKey.sonarr => switch (intOrNull(
+        mapOrNull(typedItem['series'])?['tmdbId'],
+      )) {
+        final tmdbId? when tmdbId > 0 => ServiceRoutes.mediaRoot(
+          MediaKey.tv(tmdbId),
+          focus: instanceId,
+        ),
+        _ =>
+          intOrNull(typedItem['seriesId']) == null
+              ? null
+              : ServiceRoutes.sonarrSeries(
+                  intOrNull(typedItem['seriesId'])!,
+                  instanceId: instanceId,
+                ),
+      },
       ServiceKey.lidarr =>
         intOrNull(typedItem['artistId']) == null
             ? null
@@ -2968,9 +2978,8 @@ String _seerrRequestRoute(SeerrRequest request) {
   final media = request.media;
   final id = media?.tmdbId ?? media?.id;
   if (id == null || id <= 0) return ServiceRoutes.seerr;
-  return ServiceRoutes.seerrDetail(
-    mediaType: request.type == 'tv' ? 'tv' : 'movie',
-    id: id,
+  return ServiceRoutes.mediaRoot(
+    request.type == 'tv' ? MediaKey.tv(id) : MediaKey.movie(id),
   );
 }
 
@@ -3243,6 +3252,11 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
                 entry.mediaId,
                 instanceId: entry.instanceId,
               ),
+              ServiceKey.sonarr when (entry.tmdbId ?? 0) > 0 =>
+                ServiceRoutes.mediaRoot(
+                  MediaKey.tv(entry.tmdbId!),
+                  focus: entry.instanceId,
+                ),
               ServiceKey.sonarr => ServiceRoutes.sonarrSeries(
                 entry.mediaId,
                 instanceId: entry.instanceId,

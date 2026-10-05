@@ -20,7 +20,7 @@ const String _regionSettingsLocation = '/settings/region';
 /// `/api/v1/discover/*` call, so no choice made on this page could alter which
 /// titles the rails return. What the setting does reach is one level down — a
 /// title's release dates, its certification and where it can be watched, all of
-/// which `discover_detail_screen.dart` reads through `regionProvider`.
+/// which a title's own page (`media_page.dart`) reads through `regionProvider`.
 ///
 /// So this is a label, not a control over the list, and it has to *look* like
 /// one: no selected-state fill, no chevron-down, and deliberately not

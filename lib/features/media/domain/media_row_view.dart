@@ -675,7 +675,10 @@ MediaRowView? _answeredView(
     case MediaBazarrCopy() || null:
       return null;
     case final MediaSeerrRecord record:
-      final status = seerrMediaStatus(record.mediaInfo);
+      final status = seerrMediaStatus(
+        record.mediaInfo,
+        numbering: record.numbering,
+      );
       final request = _latestRequest(record.mediaInfo);
       return view(
         // "Nobody" only where Seerr has no record at all: a record without

@@ -1,6 +1,7 @@
-/// A film opened from the app's own entry points lands on its one page, under
-/// the tab it was opened from, and the page draws it: what a route test alone
-/// cannot say (a placeholder and a real screen resolve the same).
+/// A movie or a series opened from the app's own entry points lands on its
+/// one page, under the tab it was opened from, and the page draws it: what a
+/// route test alone cannot say (a placeholder and a real screen resolve the
+/// same).
 library;
 
 import 'package:flutter/material.dart';
@@ -101,7 +102,7 @@ void main() {
   });
 
   testWidgets('a movie in a Jellyfin library opens on its own page, that '
-      "server's copy leading; a series on the server's page", (tester) async {
+      "server's copy leading, and so does a series", (tester) async {
     final (harness, router, container) = await _app(tester, Profiles.p1);
     router.go(ServiceRoutes.jellyfinLibrary('films'));
     await _answer(tester);
@@ -132,11 +133,118 @@ void main() {
 
     expect(
       router.state.uri.path,
-      ServiceRoutes.jellyfinItem('jf-${WorldTitles.cosmosLaundromat.key}'),
+      '${ServiceRoutes.jellyfinLibraries}/media/tv/'
+      '${WorldTitles.cosmosLaundromat.tmdbId}',
     );
-    expect(_shown(tester), isEmpty);
+    expect(_shown(tester).single.focus, WorldIds.jellyfin);
 
     await _close(tester, harness, container);
+  });
+
+  testWidgets('a series in the Sonarr library opens on its own page, in the '
+      'Library tab', (tester) async {
+    final (harness, router, container) = await _app(tester, Profiles.p1);
+    router.go(ServiceRoutes.sonarrLibrary);
+    await _answer(tester);
+
+    final tile = find.bySemanticsLabel(
+      RegExp('^${WorldTitles.cosmosLaundromat.title}'),
+    );
+    await tester.ensureVisible(tile.first);
+    await tester.tap(tile.first);
+    await _answer(tester);
+
+    expect(
+      router.state.uri.path,
+      '${ServiceRoutes.sonarrLibrary}/media/tv/'
+      '${WorldTitles.cosmosLaundromat.tmdbId}',
+    );
+    expect(_shown(tester).map((page) => page.mediaKey), [
+      MediaKey.tv(WorldTitles.cosmosLaundromat.tmdbId),
+    ]);
+    expect(find.text('Episodes'), findsWidgets);
+
+    await _close(tester, harness, container);
+  });
+
+  group("a link that names a series by Sonarr's own id", () {
+    testWidgets('lands on its page, on that copy', (tester) async {
+      final (harness, router, container) = await _app(tester, Profiles.p1);
+      router.go(ServiceRoutes.sonarrSeries(1, instanceId: WorldIds.sonarr));
+      await _answer(tester);
+
+      expect(
+        router.state.uri.toString(),
+        startsWith(
+          '${ServiceRoutes.sonarrLibrary}/media/tv/'
+          '${WorldTitles.cosmosLaundromat.tmdbId}?',
+        ),
+      );
+      expect(_shown(tester).single.focus, WorldIds.sonarr);
+
+      await _close(tester, harness, container);
+    });
+
+    /// Sonarr v3: a record with no TMDB id.
+    void v3(ProfileHarness harness) => harness.network.on(
+      WorldIds.sonarr,
+      'GET',
+      '/api/v3/series/1',
+      (_) => NetworkReply.json({
+        'id': 1,
+        'title': WorldTitles.cosmosLaundromat.title,
+        'tvdbId': WorldTitles.cosmosLaundromat.tvdbId,
+        'tmdbId': 0,
+      }),
+    );
+
+    testWidgets('on Sonarr v3, Seerr names it by TMDB: the same page as '
+        "Seerr's", (tester) async {
+      final (harness, router, container) = await _app(tester, Profiles.p1);
+      v3(harness);
+      harness.network.on(
+        WorldIds.seerr,
+        'GET',
+        '/api/v1/search',
+        (request) => NetworkReply.json({
+          'results': [
+            if (request.uri.queryParameters['query'] ==
+                'tvdb:${WorldTitles.cosmosLaundromat.tvdbId}')
+              {
+                'id': WorldTitles.cosmosLaundromat.tmdbId,
+                'mediaType': 'tv',
+                'name': WorldTitles.cosmosLaundromat.title,
+              },
+          ],
+        }),
+      );
+      router.go(ServiceRoutes.sonarrSeries(1, instanceId: WorldIds.sonarr));
+      await _answer(tester);
+
+      expect(
+        router.state.uri.path,
+        '${ServiceRoutes.sonarrLibrary}/media/tv/'
+        '${WorldTitles.cosmosLaundromat.tmdbId}',
+      );
+
+      await _close(tester, harness, container);
+    });
+
+    testWidgets('on Sonarr v3 with no Seerr, it opens by TVDB', (tester) async {
+      final (harness, router, container) = await _app(tester, Profiles.p4);
+      v3(harness);
+      router.go(ServiceRoutes.sonarrSeries(1, instanceId: WorldIds.sonarr));
+      await _answer(tester);
+
+      expect(
+        router.state.uri.path,
+        '${ServiceRoutes.sonarrLibrary}/media/tv/tvdb/'
+        '${WorldTitles.cosmosLaundromat.tvdbId}',
+      );
+      expect(_shown(tester).single.mediaKey.tvdbId, isNotNull);
+
+      await _close(tester, harness, container);
+    });
   });
 
   testWidgets('a link that names a film by Radarr\'s own id lands on its '

@@ -16,8 +16,9 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
@@ -49,11 +50,7 @@ void main() {
   group('Seerr pages, before they ask Seerr anything', () {
     final pages = <String, Widget>{
       'the Discover tab': const DiscoverScreen(showAppBar: false),
-      'a movie': const DiscoverDetailScreen(
-        mediaId: 10378,
-        mediaType: 'movie',
-        heroTag: 'discover_movie_10378',
-      ),
+      'a movie': MediaPage(mediaKey: MediaKey.movie(10378)),
       'a person': const PersonDetailScreen(personId: 17),
       'a collection': const CollectionDetailScreen(collectionId: 3),
       'See all': const DiscoverSeeAllScreen(type: 'movies', title: 'Movies'),
@@ -71,6 +68,9 @@ void main() {
       ),
     ]) {
       for (final MapEntry(key: page, value: widget) in pages.entries) {
+        // The operator reads a title from his other sources, and Sara's
+        // Seerr as one row: below.
+        if (page == 'a movie' && profile != _p2SignedOut) continue;
         testWidgets('$name: $page reads signed out, never Set up Seerr', (
           tester,
         ) async {
@@ -100,6 +100,33 @@ void main() {
         });
       }
     }
+  });
+
+  testWidgets("P9: a movie's page names Sara's Seerr signed out in its row, "
+      'and asks it nothing', (tester) async {
+    tester.view.physicalSize = const Size(390, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final harness = await pumpWithProfile(
+      tester,
+      _p9FriendSignedOut,
+      child: MediaPage(mediaKey: MediaKey.movie(WorldTitles.charge.tmdbId)),
+      settle: false,
+    );
+    for (var i = 0; i < 20; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(find.text('Charge'), findsWidgets);
+    expect(find.text('Signed out'), findsOneWidget);
+    expect(find.text('Sign in again'), findsOneWidget);
+    expect(find.text('Set up Seerr'), findsNothing);
+    expect(harness.network.requestsTo(WorldIds.seerrFriend), isEmpty);
+
+    await harness.unmount(tester);
   });
 
   test(

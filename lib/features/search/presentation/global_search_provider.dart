@@ -558,20 +558,12 @@ GlobalSearchResult _seerrResult(
     // Seerr has no `routeExtra` to preload from, so the poster travels in the
     // URL: the detail page paints real art during its lookup instead of
     // landing the flight on an empty gradient.
-    // A movie is its own page, under the Search tab (`pushMounted`); a
-    // series, until it has one, Seerr's page.
-    route: item.mediaType == 'tv'
-        ? ServiceRoutes.seerrDetail(
-            mediaType: item.mediaType,
-            id: item.id,
-            heroTag: heroTag,
-            posterUrl: imageUrl,
-          )
-        : ServiceRoutes.mediaRoot(
-            MediaKey.movie(item.id),
-            heroTag: heroTag,
-            posterUrl: imageUrl,
-          ),
+    // The title's own page, under the Search tab (`pushMounted`).
+    route: ServiceRoutes.mediaRoot(
+      item.mediaType == 'tv' ? MediaKey.tv(item.id) : MediaKey.movie(item.id),
+      heroTag: heroTag,
+      posterUrl: imageUrl,
+    ),
   );
 }
 
@@ -669,11 +661,26 @@ GlobalSearchResult _sonarrResult(
         ? null
         : SonarrAddRequest(instanceId: instance.id, series: item),
     heroTag: heroTag,
-    route: ServiceRoutes.sonarrSeries(
-      item.id,
-      heroTag: heroTag,
-      instanceId: instance.id,
-    ),
+    // The series' own page, opened on this Sonarr's copy, or on Add to Sonarr
+    // when it holds none: under the Search tab (`pushMounted`). A series it
+    // holds with no TMDB id goes the way of its id there, where a Seerr can
+    // name TMDB's from TVDB's.
+    route: switch (MediaKey.ofSeries(
+      tmdbId: item.tmdbId,
+      tvdbId: inLibrary ? null : item.tvdbId,
+    )) {
+      final key? => ServiceRoutes.mediaRoot(
+        key,
+        focus: instance.id,
+        heroTag: heroTag,
+        posterUrl: remotePosterOf(item.images),
+      ),
+      null => ServiceRoutes.sonarrSeries(
+        item.id,
+        heroTag: heroTag,
+        instanceId: instance.id,
+      ),
+    },
     routeExtra: item,
   );
 }
@@ -754,8 +761,8 @@ GlobalSearchResult _streamResult(
     // that listed it, so the tag would repeat the heading on every row, and
     // there is no library on a media server this app can write into.
     heroTag: heroTag,
-    // A movie is its own page, this server's copy leading, under the Search
-    // tab (`pushMounted`): no poster travels, since the server's artwork
+    // A movie or a series is its own page, this server's copy leading, under
+    // the Search tab (`pushMounted`): no poster travels, since the server's artwork
     // needs its credential. Anything else is the server's own page, with the
     // item itself so it can draw before its own fetch lands.
     route: switch (MediaKey.ofStreamItem(item)) {

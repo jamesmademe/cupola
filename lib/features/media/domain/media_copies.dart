@@ -4,6 +4,7 @@ import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
+import 'package:cupola/features/discover/domain/seerr_numbering.dart';
 import 'package:cupola/features/movies/domain/radarr_status.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
@@ -150,7 +151,13 @@ class MediaSeerrRecord {
     required this.details,
     this.arrServers,
     this.rottenTomatoes,
+    this.numbering,
   });
+
+  /// The numbering this Seerr's media codes follow (a 6 is Blocklisted on
+  /// one, Deleted on another); null when it did not say, and a code that
+  /// differs between them is then not guessed.
+  final SeerrNumbering? numbering;
 
   /// Rotten Tomatoes' critics score for a series, which TMDB's record does
   /// not carry; null for a movie, and when there is none or it could not be

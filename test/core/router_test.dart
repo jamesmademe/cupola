@@ -11,12 +11,11 @@ import 'package:cupola/features/dockge/presentation/dockge_overview_screen.dart'
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_detail_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
-import 'package:cupola/features/media/presentation/radarr_movie_opener.dart';
+import 'package:cupola/features/media/presentation/arr_title_opener.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -36,7 +35,6 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
-import 'package:cupola/features/series/presentation/series_detail_screen.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
@@ -152,33 +150,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(router.state.uri.toString(), ServiceRoutes.seerrDiscover);
-      expect(find.byType(DiscoverDetailScreen), findsNothing);
+      expect(find.byType(MediaPage), findsNothing);
     });
 
     testWidgets(
-      'preserves discover detail default hero tag and posterUrl decoding',
+      'a Seerr title lands on its own page with its poster decoded once',
       (tester) async {
         final container = await _pumpRouter(tester);
         final router = container.read(routerProvider);
         const encodedPosterUrl =
             'https%3A%2F%2Fcdn.example.com%2Fposter%20image.jpg';
 
-        // A series is still Seerr's page, with its default tag.
+        // A series is its own page in the same tab, the poster decoded once.
         router.go(
           '/dashboard/seerr/discover/tv/123?posterUrl=$encodedPosterUrl',
         );
         await tester.pumpAndSettle();
 
-        final screen = tester.widget<DiscoverDetailScreen>(
-          find.byType(DiscoverDetailScreen),
-        );
-        expect(screen.mediaId, 123);
-        expect(screen.mediaType, 'tv');
-        expect(screen.heroTag, 'discover_tv_123');
         expect(
-          screen.initialPosterUrl,
-          'https://cdn.example.com/poster image.jpg',
+          router.state.uri.toString(),
+          '/dashboard/seerr/discover/media/tv/123?posterUrl=$encodedPosterUrl',
         );
+        final series = tester.widget<MediaPage>(
+          find.byType(MediaPage).hitTestable(),
+        );
+        expect(series.mediaKey, const MediaKey.tv(123));
+        expect(series.posterUrl, 'https://cdn.example.com/poster image.jpg');
 
         // A movie is its own page in the same tab, the poster decoded once.
         router.go(
@@ -208,22 +205,23 @@ void main() {
         router.go('/dashboard/radarr/movie/42');
         await tester.pumpAndSettle();
 
-        // A film named by Radarr's own id opens the way to its own page.
-        final opener = tester.widget<RadarrMovieOpener>(
-          find.byType(RadarrMovieOpener),
+        // A title named by an arr's own id opens the way to its own page.
+        final opener = tester.widget<ArrTitleOpener>(
+          find.byType(ArrTitleOpener),
         );
+        expect(opener.arr, ServiceKey.radarr);
         expect(opener.heroTag, 'movie_42');
-        expect(opener.movieId, 42);
+        expect(opener.id, 42);
 
         router.go('${ServiceRoutes.sonarrSeriesBase}/55');
         await tester.pumpAndSettle();
 
-        final seriesScreen = tester.widget<SeriesDetailScreen>(
-          find.byType(SeriesDetailScreen),
+        final seriesOpener = tester.widget<ArrTitleOpener>(
+          find.byType(ArrTitleOpener),
         );
-        expect(seriesScreen.heroTag, 'series_55');
-        expect(seriesScreen.seriesId, 55);
-        expect(seriesScreen.initialSeries, isNull);
+        expect(seriesOpener.arr, ServiceKey.sonarr);
+        expect(seriesOpener.heroTag, 'series_55');
+        expect(seriesOpener.id, 55);
 
         router.go('${ServiceRoutes.lidarrArtistBase}/9');
         await tester.pumpAndSettle();
@@ -255,7 +253,7 @@ void main() {
 
       expect(router.state.uri.toString(), ServiceRoutes.radarrLibrary);
       expect(find.byType(MoviesScreen), findsOneWidget);
-      expect(find.byType(RadarrMovieOpener), findsNothing);
+      expect(find.byType(ArrTitleOpener), findsNothing);
     });
 
     testWidgets(
@@ -276,9 +274,7 @@ void main() {
         expect(router.state.uri.toString(), ServiceRoutes.radarrMovie(42));
         // The film is read from the path, whatever the extra carries.
         expect(
-          tester
-              .widget<RadarrMovieOpener>(find.byType(RadarrMovieOpener))
-              .movieId,
+          tester.widget<ArrTitleOpener>(find.byType(ArrTitleOpener)).id,
           42,
         );
 
@@ -287,9 +283,7 @@ void main() {
 
         expect(router.state.uri.toString(), ServiceRoutes.radarrMovie(42));
         expect(
-          tester
-              .widget<RadarrMovieOpener>(find.byType(RadarrMovieOpener))
-              .movieId,
+          tester.widget<ArrTitleOpener>(find.byType(ArrTitleOpener)).id,
           42,
         );
       },
@@ -471,9 +465,9 @@ void main() {
             genreId: 28,
             title: 'Action',
           ),
-          // A movie is its own page now, in the same tab.
+          // A title is its own page now, in the same tab.
           '/movie/42': '${ServiceRoutes.seerrDiscover}/media/movie/42',
-          '/tv/55': '${ServiceRoutes.seerrDiscover}/tv/55',
+          '/tv/55': '${ServiceRoutes.seerrDiscover}/media/tv/55',
           '/person/287?heroTag=cast_287': ServiceRoutes.seerrPerson(
             287,
             heroTag: 'cast_287',
@@ -804,7 +798,7 @@ void main() {
         router.state.uri.toString(),
         '${ServiceRoutes.radarrMovieBase}/42?heroTag=legacy_movie',
       );
-      expect(find.byType(RadarrMovieOpener), findsOneWidget);
+      expect(find.byType(ArrTitleOpener), findsOneWidget);
     });
 
     testWidgets('a path that merely starts with the old prefix is not moved', (
@@ -879,7 +873,7 @@ void main() {
         router.state.uri.toString(),
         '${ServiceRoutes.radarrMovieBase}/42?heroTag=legacy_movie',
       );
-      expect(find.byType(RadarrMovieOpener), findsOneWidget);
+      expect(find.byType(ArrTitleOpener), findsOneWidget);
 
       router.go('/series/55?heroTag=legacy_series');
       await tester.pumpAndSettle();
@@ -888,7 +882,7 @@ void main() {
         router.state.uri.toString(),
         '${ServiceRoutes.sonarrSeriesBase}/55?heroTag=legacy_series',
       );
-      expect(find.byType(SeriesDetailScreen), findsOneWidget);
+      expect(find.byType(ArrTitleOpener), findsOneWidget);
 
       router.go('/music/9?heroTag=legacy_artist');
       await tester.pumpAndSettle();

@@ -15,6 +15,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/episode_code.dart';
@@ -579,6 +580,33 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final lightSource = identity?.backdropUrl ?? identity?.posterUrl;
     final lit = _drawn.contains(lightSource) ? lightSource : null;
     final light = lit == null ? null : ref.watch(titleLightProvider(lit)).value;
+    final waiting = rows.any(
+      (row) => row is MediaConnectionRow && row.reading is MediaReadingWaiting,
+    );
+    // Nobody can say who the title is while the Seerr that would did not
+    // answer: a session that ended makes the page the way to sign in again,
+    // as every Seerr page is; for the requester, who reads no rows, any
+    // failure is the page, in her words.
+    final silentSeerr = identity != null || waiting
+        ? null
+        : rows
+              .whereType<MediaConnectionRow<MediaSeerrRecord>>()
+              .where(
+                (row) => switch (row.reading) {
+                  MediaReadingFailed(:final failure) =>
+                    failure == ServiceFailureReason.sessionEnded ||
+                        audience == Audience.requester,
+                  _ => false,
+                },
+              )
+              .firstOrNull;
+    final silence = switch (silentSeerr?.reading) {
+      MediaReadingFailed(:final failure, :final gateway) => ClassifiedFailure(
+        failure,
+        gateway: gateway,
+      ),
+      _ => null,
+    };
 
     return Scaffold(
       backgroundColor: room.ground,
@@ -608,13 +636,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 kind: mediaKey.kind,
                 heroTag: widget.heroTag,
                 posterUrl: widget.posterUrl,
-                waiting:
-                    identity == null &&
-                    rows.any(
-                      (row) =>
-                          row is MediaConnectionRow &&
-                          row.reading is MediaReadingWaiting,
-                    ),
+                waiting: identity == null && waiting,
                 marks: mediaFormatMarks(rows),
                 light: light,
               ),
@@ -841,22 +863,54 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 ),
               ],
             ];
+            final recommendations = switch (_recommender(settings)) {
+              final seerr? => ref.watch(
+                mediaRecommendationsProvider((
+                  key: mediaKey,
+                  connectionId: seerr,
+                )),
+              ),
+              null => null,
+            };
             final more = <Widget>[
-              if (_recommender(settings) case final seerr?) ...[
+              // A Seerr that did not answer says so once, on its row or as
+              // the page: More like this steps aside rather than say it again.
+              if (recommendations != null && !recommendations.hasError) ...[
                 const SizedBox(height: AppSpacing.section),
                 DiscoverCarousel(
                   title: 'More like this',
                   sectionId: 'media-more-like-this',
                   forcedMediaType: mediaKey.isMovie ? 'movie' : 'tv',
-                  items: ref.watch(
-                    mediaRecommendationsProvider((
-                      key: mediaKey,
-                      connectionId: seerr,
-                    )),
-                  ),
+                  items: recommendations,
                 ),
               ],
             ];
+            if ((silentSeerr, silence) case (final row?, final failure?)) {
+              return CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      gutter,
+                      top + AppSpacing.md,
+                      gutter,
+                      0,
+                    ),
+                    sliver: SliverToBoxAdapter(child: head.first),
+                  ),
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppErrorState(
+                      service: ServiceKey.seerr,
+                      instanceId: row.connection.id,
+                      error: failure,
+                      onRetry: failureRetryHelps(failure.reason)
+                          ? () => retryMediaRow(ref, mediaKey, row)
+                          : null,
+                    ),
+                  ),
+                ],
+              );
+            }
             return CustomScrollView(
               slivers: [
                 SliverPadding(

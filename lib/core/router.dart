@@ -13,7 +13,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
-import 'package:cupola/features/media/presentation/radarr_movie_opener.dart';
+import 'package:cupola/features/media/presentation/arr_title_opener.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
@@ -31,7 +31,6 @@ import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
 import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
-import 'package:cupola/features/series/presentation/series_detail_screen.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
 import 'package:cupola/features/music/presentation/music_screen.dart';
 import 'package:cupola/features/music/presentation/music_detail_screen.dart';
@@ -41,7 +40,6 @@ import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
@@ -167,7 +165,7 @@ Page<void> _tabPage(GoRouterState state, Widget child) => CustomTransitionPage(
 /// identity is unchanged.
 ///
 /// Routes whose page is *not* plain — the ones that return a redirect page for
-/// bad params ([_discoverDetailPage], [_libraryDetailPage], [_manualImportPage])
+/// bad params ([_libraryDetailPage], [_manualImportPage])
 /// or that swap between `builder` and `pageBuilder` — keep their long form.
 GoRoute _page(
   String path,
@@ -243,33 +241,6 @@ GoRoute _titledTab(
   redirect: redirect,
   routes: [...routes, ..._mediaRoutes()],
 );
-
-Page<void> _discoverDetailPage(
-  GoRouterState state, {
-  required String mediaType,
-}) {
-  final id = RouteUtils.safeIntParam(state, 'id');
-  if (id == null) {
-    return RouteUtils.redirectPage(
-      key: state.pageKey,
-      location: ServiceRoutes.seerrDiscover,
-    );
-  }
-  final heroTag =
-      state.uri.queryParameters['heroTag'] ?? 'discover_${mediaType}_$id';
-  // go_router already URL-decodes queryParameters; decoding again here would
-  // double-decode a poster URL that contains a literal `%` sequence.
-  final posterUrl = state.uri.queryParameters['posterUrl'];
-  return RouteUtils.cupertinoPage(
-    key: state.pageKey,
-    child: DiscoverDetailScreen(
-      mediaId: id,
-      mediaType: mediaType,
-      heroTag: heroTag,
-      initialPosterUrl: posterUrl,
-    ),
-  );
-}
 
 Page<void> _libraryDetailPage<T>(
   GoRouterState state, {
@@ -543,8 +514,8 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
           );
         },
       ),
-      // A movie is the title's own page now, mounted in this tab: the link
-      // every Seerr row makes lands there in one hop, its tile's hero tag and
+      // A title is its own page now, mounted in this tab: the link every
+      // Seerr row makes lands there in one hop, its tile's hero tag and
       // poster carried in the query. A bad id falls back to the tab this page
       // was pushed from, not to the app home: the branch is where the user
       // still is, and sending them out of the service would be a bigger move
@@ -564,11 +535,14 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
       GoRoute(
         path: 'tv/:id',
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.seerrDiscover
-            : null,
-        pageBuilder: (context, state) =>
-            _discoverDetailPage(state, mediaType: 'tv'),
+            switch (RouteUtils.safeIntParam(state, 'id')) {
+              null => ServiceRoutes.seerrDiscover,
+              final id => _preserveQuery(
+                state.uri,
+                '${ServiceRoutes.seerrDiscover}'
+                '${MediaKey.tv(id).location}',
+              ),
+            },
       ),
       _page(
         'person/:id',
@@ -643,7 +617,7 @@ GoRoute _moviesRoutes({required String path}) {
           state,
           heroPrefix: 'movie',
           fallbackLocation: ServiceRoutes.radarrLibrary,
-          buildChild: (id, heroTag, movie, instanceId) => RadarrMovieOpener(
+          buildChild: (id, heroTag, movie, instanceId) => ArrTitleOpener.radarr(
             movieId: id,
             heroTag: heroTag,
             instanceId: instanceId,
@@ -762,7 +736,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
           state,
           heroPrefix: 'movie',
           fallbackLocation: ServiceRoutes.radarrLibrary,
-          buildChild: (id, heroTag, movie, instanceId) => RadarrMovieOpener(
+          buildChild: (id, heroTag, movie, instanceId) => ArrTitleOpener.radarr(
             movieId: id,
             heroTag: heroTag,
             instanceId: instanceId,
@@ -850,12 +824,12 @@ GoRoute _seriesRoutes({required String path}) {
           state,
           heroPrefix: 'series',
           fallbackLocation: ServiceRoutes.sonarrLibrary,
-          buildChild: (id, heroTag, series, instanceId) => SeriesDetailScreen(
-            seriesId: id,
-            heroTag: heroTag,
-            initialSeries: series,
-            instanceId: instanceId,
-          ),
+          buildChild: (id, heroTag, series, instanceId) =>
+              ArrTitleOpener.sonarr(
+                seriesId: id,
+                heroTag: heroTag,
+                instanceId: instanceId,
+              ),
         ),
       ),
     ],
@@ -967,12 +941,12 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
           state,
           heroPrefix: 'series',
           fallbackLocation: ServiceRoutes.sonarrLibrary,
-          buildChild: (id, heroTag, series, instanceId) => SeriesDetailScreen(
-            seriesId: id,
-            heroTag: heroTag,
-            initialSeries: series,
-            instanceId: instanceId,
-          ),
+          buildChild: (id, heroTag, series, instanceId) =>
+              ArrTitleOpener.sonarr(
+                seriesId: id,
+                heroTag: heroTag,
+                instanceId: instanceId,
+              ),
         ),
       ),
     ],

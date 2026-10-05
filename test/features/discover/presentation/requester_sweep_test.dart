@@ -17,7 +17,6 @@ import 'package:cupola/features/media/presentation/media_page.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
@@ -81,21 +80,6 @@ void _expectNothingOfTheOperators(WidgetTester tester, String where) {
 
 final _pages = <String, Widget>{
   'the Discover tab': const DiscoverScreen(showAppBar: false),
-  'a movie of hers': DiscoverDetailScreen(
-    mediaId: WorldTitles.charge.tmdbId,
-    mediaType: 'movie',
-    heroTag: 'sweep_charge',
-  ),
-  "Luca's movie": DiscoverDetailScreen(
-    mediaId: WorldTitles.metropolis.tmdbId,
-    mediaType: 'movie',
-    heroTag: 'sweep_metropolis',
-  ),
-  'a series': DiscoverDetailScreen(
-    mediaId: WorldTitles.nightShift.tmdbId,
-    mediaType: 'tv',
-    heroTag: 'sweep_nightShift',
-  ),
   // The one page a title has: the requester's reads no service but the
   // players, and no copy's fault, whatever the household holds.
   'the Media page, a movie of hers': MediaPage(
@@ -191,7 +175,7 @@ void main() {
     final harness = await _pump(
       tester,
       Profiles.p3,
-      _pages['a movie of hers']!,
+      _pages['the Media page, a movie of hers']!,
     );
 
     final met = [
@@ -199,7 +183,7 @@ void main() {
         for (final pattern in _never)
           if (pattern.hasMatch(word)) word,
     ];
-    expect(met, containsAll(['Manage', 'Waiting for approval in Seerr.']));
+    expect(met, containsAll(['Approve', 'Decline', 'Seerr']));
 
     await harness.unmount(tester);
   });
@@ -213,7 +197,7 @@ void main() {
 
     for (final name in [
       'the Discover tab',
-      'a movie of hers',
+      'the Media page, a movie of hers',
       'the global search',
     ]) {
       testWidgets('P2: $name says one line with its time, and Retry', (

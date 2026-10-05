@@ -14,11 +14,17 @@ import 'package:cupola/core/theme.dart';
 
 import 'package:cupola/core/utils/arr_activity_display.dart';
 
+import 'package:cupola/core/utils/arr_model_helpers.dart';
+
 import 'package:cupola/core/utils/image_utils.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
 
 import 'package:cupola/core/widgets/widgets.dart';
+
+import 'package:cupola/features/media/domain/media_key.dart';
+
+import 'package:cupola/features/media/presentation/open_media.dart';
 
 import 'package:cupola/features/series/presentation/series_provider.dart';
 
@@ -446,14 +452,19 @@ class _PosterTile extends StatelessWidget {
     return SizedBox(
       width: 96,
       child: PressableScale(
-        // The tile links to the *series*, not to the episode: the app has no
-        // episode page, and the series detail opens on the season the episode
-        // belongs to. No `extra:` — this rail holds history records, not the
-        // `SonarrSeries` the detail would preload from, and the route resolves
-        // from its path alone.
-        onTap: () => context.push(
-          ServiceRoutes.sonarrSeries(episode.seriesId, heroTag: heroTag),
-        ),
+        // The tile links to the *series*, not to the episode: the series'
+        // own page, under this tab, by the TMDB id the record embeds; else
+        // the way through its id here.
+        onTap: () => switch (episode.tmdbId) {
+          final tmdbId? when tmdbId > 0 => context.openMedia(
+            MediaKey.tv(tmdbId),
+            heroTag: heroTag,
+            posterUrl: remotePosterOf(episode.images),
+          ),
+          _ => context.push(
+            ServiceRoutes.sonarrSeries(episode.seriesId, heroTag: heroTag),
+          ),
+        },
         // A poster is an image with no name of its own; the tile announces the
         // series, the slot and the age as one button.
         semanticLabel: episode.seriesTitle,

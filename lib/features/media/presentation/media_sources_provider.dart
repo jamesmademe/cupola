@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -267,6 +268,9 @@ final mediaSeerrRecordProvider = FutureProvider.autoDispose
           details: details,
           arrServers: servers,
           rottenTomatoes: rottenTomatoes,
+          // Asked of a public route, once per connection; a silence leaves
+          // the codes that differ undecoded.
+          numbering: await seerr.numbering().catchError((Object _) => null),
         ),
         DateTime.now(),
       );
@@ -498,7 +502,21 @@ final mediaRowsProvider = Provider.autoDispose.family<List<MediaRow>, MediaKey>(
         MediaConnectionRow<MediaSeerrRecord>(seerr.connection, seerr.reading),
       );
     }
-    if (_configured(ref, ServiceKey.seerr).isEmpty) {
+    // A Seerr account with no session is signed out, never not set up: its
+    // row says so with the way to sign in again, and nothing is asked of it.
+    final signedOut = ref
+        .watch(currentSettingsProvider)
+        .instancesOf(ServiceKey.seerr)
+        .where((instance) => instance.isSignedOut);
+    for (final seerr in signedOut) {
+      rows.add(
+        MediaConnectionRow<MediaSeerrRecord>(
+          seerr,
+          const MediaReadingFailed(ServiceFailureReason.sessionEnded),
+        ),
+      );
+    }
+    if (_configured(ref, ServiceKey.seerr).isEmpty && signedOut.isEmpty) {
       rows.add(const MediaNotSetUpRow(ServiceKey.seerr));
     }
     return rows;

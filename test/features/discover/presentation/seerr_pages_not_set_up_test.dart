@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/media_detail_view.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
@@ -21,20 +20,11 @@ import '../../../test_helpers/profiles/profiles.dart';
 /// nobody drew.
 void main() {
   // P4 is the stack with no Seerr in it: Radarr, Sonarr, Lidarr, Prowlarr and
-  // two download clients.
+  // two download clients. A title's own page reads from those and draws
+  // Seerr as one row to set up: the Media page's tests hold it.
   group('P4, no Seerr', () {
     final pages = <String, Widget>{
       'the Discover tab': const DiscoverScreen(showAppBar: false),
-      'a film': const DiscoverDetailScreen(
-        mediaId: 10378,
-        mediaType: 'movie',
-        heroTag: 'discover_movie_10378',
-      ),
-      'a series': const DiscoverDetailScreen(
-        mediaId: 1396,
-        mediaType: 'tv',
-        heroTag: 'discover_tv_1396',
-      ),
       'a person': const PersonDetailScreen(personId: 17),
       'a collection': const CollectionDetailScreen(collectionId: 3),
       'See all': const DiscoverSeeAllScreen(type: 'movies', title: 'Movies'),

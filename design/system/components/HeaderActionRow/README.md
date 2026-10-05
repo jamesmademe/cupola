@@ -2,7 +2,7 @@
 
 The action band on a media detail page: one wide control that fills the row, optional square discs beside it, and the consequence sentence underneath.
 
-Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `ActionStateGlyph`, `HeaderActionButton`) and `lib/features/discover/presentation/widgets/discover_action_buttons.dart` (`DiscoverActionButtons`, the Seerr deck) by `test/design_catalog/header_action_row_catalog_test.dart`. The library bands compose the row the way `lib/core/widgets/library_detail_actions.dart` does, with the real ladder strings from `lib/core/status/media_action.dart`; the Seerr deck scenes render the widget itself, fed through `seerrRequestGate`.
+Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `ActionStateGlyph`, `HeaderActionButton`) by `test/design_catalog/header_action_row_catalog_test.dart`. The library bands compose the row the way `lib/core/widgets/library_detail_actions.dart` does, with the real ladder strings from `lib/core/status/media_action.dart`. A movie's or a series' page has its own lead and buttons: see [MediaPage](../MediaPage/README.md).
 
 ## The row
 
@@ -27,27 +27,6 @@ A disc in a 72pt column (`captionMeasure`, the 48 square plus `AppSpacing.xl`), 
 
 **Gated** (`annotate`, handed in by `CrossServiceAction.builder` or `CapabilityGatedAction.builder`): glyph and caption drain to 38% together while the plate and the 52pt target stay; the button keeps its name and gains the hint (*Open in Radarr*, *requires Radarr*). A tap raises the toast whose action opens that service's settings.
 
-## The Seerr deck
-
-`DiscoverActionButtons` is the band on a Seerr title, `crossAxisAlignment: start` so the captions hang under tops that align. It is the Request primary and at most two captioned buttons:
-
-- **Trailers** only when Seerr sent something to play. With nothing to play there is no button, never a disabled one.
-- **Manage** when Seerr holds a row for the title; otherwise **Open** (*Open in Radarr*, *Open in Sonarr*), the cross-service jump. Never both. Open is dimmed but tappable when that service is not set up here, and absent when it answered that it does not hold the title, or for a series Seerr sent without a TVDB id.
-
-The primary says what Seerr would do with a request (`seerrRequestGate`, read from Seerr's record alone, its codes decoded in the server's own numbering: Seerr's 6 is a blocklisted title, Overseerr's 6 and Seerr's 7 a deleted one, which can be requested again; the 4K copy is read from its own fields once Seerr is known to have a 4K server), with one `bodySmall` line under it when it does not act or acts for one copy only:
-
-| State | Label | Line under it |
-|---|---|---|
-| Seerr would take a request | **Request** | none, or for a series partly on disk the seasons a request would add: *Seasons 3 and 4 are not requested yet.* |
-| Seerr would take only a 4K request: the standard copy is on disk or asked for, and Seerr has a 4K server | **Request** | *Only the 4K copy can be requested.*, or for a series partly on disk in 4K *Seasons 3 and 4 are not requested in 4K yet.* The sheet offers the 4K servers only and opens on the default one. |
-| Everything Seerr can hold is on disk | **Available** | *Already in your library, nothing to request.* |
-| A request is waiting on somebody | **Requested** | *Waiting for approval in Seerr.* |
-| Approved, or already in the arr | **Requested** | *Radarr is already tracking this.* |
-| The last request failed | **Request failed** | *Seerr could not send the last request to Radarr.* |
-| The operator blocklisted it in Seerr | **Blocklisted** | *Blocklisted in Seerr, which takes no request for it.* |
-
-A state that does not act keeps its label legible: the secondary ink on the room's strong fill, not Material's 38% grey.
-
 ## Rungs
 
 A primary takes one visible secondary (Interactive search first) plus `more_horiz`; a withheld primary frees both slots as labelled tonal buttons. Delete is never visible — sheet only.
@@ -65,9 +44,8 @@ The controls, their callbacks, the busy and confirmed flags, and the consequence
 Each sheet is drawn in the dark and the light room; the bands also on the desktop.
 
 - The library band: primary with two discs, busy, confirmed, withheld (two tonal buttons), nothing to promote.
-- The Seerr deck: nothing requested, a series partly on disk, available, on disk in HD with a 4K server, requested, failed, blocklisted.
 - `HeaderActionButton`: idle, busy, confirmed, `onPressed: null`, a long caption.
-- Text at 200%: the partly held series deck, the library band, and the deck with Open dimmed.
+- Text at 200%: the library band.
 
 ## Do / don't
 

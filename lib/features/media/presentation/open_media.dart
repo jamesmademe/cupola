@@ -30,27 +30,22 @@ extension OpenMedia on BuildContext {
     ),
   );
 
-  /// Opens a title Seerr names: a movie's own page under the tab the user is
-  /// on; a series, until it has one, Seerr's page.
+  /// Opens a title Seerr names on its own page, under the tab the user is
+  /// on: [mediaType] is Seerr's `movie` or `tv`, [id] TMDB's.
   Future<void> openSeerrTitle({
     required String mediaType,
     required int id,
     String? heroTag,
     String? posterUrl,
-  }) => mediaType == 'tv'
-      ? push(
-          ServiceRoutes.seerrDetail(
-            mediaType: 'tv',
-            id: id,
-            heroTag: heroTag,
-            posterUrl: posterUrl,
-          ),
-        )
-      : openMedia(MediaKey.movie(id), heroTag: heroTag, posterUrl: posterUrl);
+  }) => openMedia(
+    mediaType == 'tv' ? MediaKey.tv(id) : MediaKey.movie(id),
+    heroTag: heroTag,
+    posterUrl: posterUrl,
+  );
 
-  /// Opens an item a media server listed: a movie on its own page, with the
-  /// copy of the connection that listed it leading (the service's lens);
-  /// anything else on the server's own page.
+  /// Opens an item a media server listed: a movie or a series on its own
+  /// page, with the copy of the connection that listed it leading (the
+  /// service's lens); anything else on the server's own page.
   Future<void> openStreamItem(ServiceKey service, StreamItem item) =>
       switch (MediaKey.ofStreamItem(item)) {
         final key? => openMedia(

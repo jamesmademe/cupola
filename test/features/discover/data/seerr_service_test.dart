@@ -103,6 +103,25 @@ void main() {
       expect(q, Uri.encodeComponent('star wars & friends'));
     });
 
+    test('names a series by TVDB through `tvdb:`, encoded once', () async {
+      client.getResponseData = {
+        'results': [
+          {'id': 2, 'mediaType': 'person', 'name': 'Someone'},
+          {'id': 1399, 'mediaType': 'tv', 'name': 'Game of Thrones'},
+        ],
+      };
+
+      expect(await service.findTvByTvdbId(121361), 1399);
+      expect(client.lastGetPath, '/api/v1/search');
+      // As typed: Seerr reads the prefix before it decodes a second time.
+      expect(client.lastGetQueryParameters!['query'], 'tvdb:121361');
+    });
+
+    test('a TVDB id Seerr finds no series for names none', () async {
+      client.getResponseData = {'results': const []};
+      expect(await service.findTvByTvdbId(1), isNull);
+    });
+
     test('forwards the cancel token to ApiClient', () async {
       // The other three global-search legs pin this at service level; Seerr's
       // only cover was a fake that overrode `search` outright, so dropping the

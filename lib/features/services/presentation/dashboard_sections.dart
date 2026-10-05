@@ -730,11 +730,16 @@ void _openRecentlyAdded(BuildContext context, RecentlyAddedItem item) {
     context.go(ServiceRoutes.forService(item.service));
     return;
   }
-  // A Radarr film opens on its own page, under this tab, on the copy the
-  // record came off.
-  if (item.service == ServiceKey.radarr && (item.tmdbId ?? 0) > 0) {
+  // A Radarr movie or a Sonarr series opens on its own page, under this tab,
+  // on the copy the record came off.
+  final tmdbId = item.tmdbId ?? 0;
+  if (tmdbId > 0 &&
+      (item.service == ServiceKey.radarr ||
+          item.service == ServiceKey.sonarr)) {
     context.openMedia(
-      MediaKey.movie(item.tmdbId!),
+      item.service == ServiceKey.radarr
+          ? MediaKey.movie(tmdbId)
+          : MediaKey.tv(tmdbId),
       focus: item.instanceId.isEmpty ? null : item.instanceId,
       heroTag: item.heroTag,
       posterUrl: item.posterUrl.startsWith('http') ? item.posterUrl : null,

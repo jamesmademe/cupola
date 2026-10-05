@@ -17,6 +17,7 @@ import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
@@ -71,6 +72,7 @@ Future<(ProfileHarness, GoRouter)> _pumpRouted(
   ConfigProfile profile,
   WorldTitle title, {
   MediaKey? key,
+  String? focus,
   double height = 2400,
 }) async {
   tester.view.physicalSize = Size(390, height);
@@ -82,8 +84,10 @@ Future<(ProfileHarness, GoRouter)> _pumpRouted(
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) =>
-            MediaPage(mediaKey: key ?? MediaKey.movie(title.tmdbId)),
+        builder: (context, state) => MediaPage(
+          mediaKey: key ?? MediaKey.movie(title.tmdbId),
+          focus: focus,
+        ),
       ),
       GoRoute(
         path: '/settings/service/:service',
@@ -981,6 +985,57 @@ void main() {
         ],
         [(1, true), (2, false), (3, true)],
       );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a queue Sonarr could not read: no aired episode reads '
+        'Missing', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+        height: 3600,
+        overrides: [
+          sonarrQueueSnapshotsForProvider.overrideWith(
+            (ref, id) async => throw Exception('the queue did not answer'),
+          ),
+        ],
+      );
+
+      // A gap with no queue under it may be downloading: nothing is said
+      // missing, and nothing is offered to search.
+      expect(find.textContaining('Missing'), findsNothing);
+      expect(find.textContaining('missing'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a file imported from Manage lands in the copy the page '
+        'was opened on', (tester) async {
+      // Agent 327 is on the anime Sonarr only.
+      final (harness, router) = await _pumpRouted(
+        tester,
+        Profiles.p6,
+        WorldTitles.agent327,
+        key: MediaKey.tv(WorldTitles.agent327.tmdbId),
+        focus: WorldIds.sonarrAnime,
+        height: 3600,
+      );
+      final files = find.text('Files & quality');
+      await tester.ensureVisible(files);
+      await tester.tap(files);
+      await _answer(tester);
+      final import = find.text('Import a file');
+      await tester.ensureVisible(import);
+      await tester.tap(import);
+      await _answer(tester);
+
+      final at = router.state.uri;
+      expect(at.path, '/import/browse');
+      expect(at.queryParameters, containsPair('service', 'sonarr'));
+      expect(at.queryParameters, containsPair('i', WorldIds.sonarrAnime));
 
       await harness.unmount(tester);
     });

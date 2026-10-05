@@ -12,6 +12,7 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -254,8 +255,10 @@ List<String> _routes() {
     ServiceRoutes.seerrTvAll,
     ServiceRoutes.seerrTrendingAll,
     ServiceRoutes.seerrGenre(mediaType: 'movie', genreId: 28, title: 'Action'),
-    ServiceRoutes.seerrDetail(mediaType: 'movie', id: 42),
-    ServiceRoutes.seerrDetail(mediaType: 'tv', id: 55),
+    '${ServiceRoutes.seerrDiscover}/movie/42',
+    '${ServiceRoutes.seerrDiscover}/tv/55',
+    ServiceRoutes.mediaRoot(const MediaKey.movie(42)),
+    ServiceRoutes.mediaRoot(const MediaKey.tv(55)),
     ServiceRoutes.seerrPerson(287),
     ServiceRoutes.seerrCollection(10),
     ServiceRoutes.radarrMovie(42),

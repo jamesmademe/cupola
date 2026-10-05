@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
@@ -86,9 +89,18 @@ class SeriesScreen extends ConsumerWidget {
       // The lens's connection, never the first one's: see `movies_screen.dart`.
       settingsSelector: (settings) => settings.artworkKeyOf(lens),
       onItemTap: (context, series, heroTag) {
-        context.push(
-          ServiceRoutes.sonarrSeries(series.id, heroTag: heroTag),
-          extra: series,
+        // The series' own page, under this tab, opened on this Sonarr's copy;
+        // with no TMDB id, the way through its id here, where a Seerr can
+        // name TMDB's from TVDB's.
+        if (series.tmdbId <= 0) {
+          context.push(ServiceRoutes.sonarrSeries(series.id, heroTag: heroTag));
+          return;
+        }
+        context.openMedia(
+          MediaKey.tv(series.tmdbId),
+          focus: lens.isEmpty ? null : lens,
+          heroTag: heroTag,
+          posterUrl: remotePosterOf(series.images),
         );
       },
       showAppBar: showAppBar,

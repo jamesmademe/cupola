@@ -532,6 +532,7 @@ final sonarrHistoryPageProvider = FutureProvider.autoDispose<List<dynamic>>((
 class SonarrDownloadedEpisode {
   const SonarrDownloadedEpisode({
     required this.seriesId,
+    this.tmdbId,
     required this.seriesTitle,
     required this.slot,
     required this.images,
@@ -542,6 +543,10 @@ class SonarrDownloadedEpisode {
   /// Sonarr's series id — required, because the tile is a link and a poster
   /// that cannot navigate is a promise the page cannot keep.
   final int seriesId;
+
+  /// TMDB's id of the series, when the embedded series carries it (Sonarr
+  /// v4): the series' own page opens by it.
+  final int? tmdbId;
 
   final String seriesTitle;
 
@@ -605,6 +610,7 @@ List<SonarrDownloadedEpisode> sonarrRecentlyDownloaded(
       date,
       SonarrDownloadedEpisode(
         seriesId: seriesId,
+        tmdbId: intOrNull(series?['tmdbId']),
         seriesTitle: arrSeriesTitle(record) ?? 'Unknown series',
         slot: sonarrEpisodeSlot(record),
         images: (series?['images'] as List<dynamic>?) ?? const [],

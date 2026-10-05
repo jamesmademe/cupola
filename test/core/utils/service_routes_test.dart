@@ -292,10 +292,6 @@ void main() {
         expect(base, startsWith('${ServiceRoutes.seerrDiscover}/'));
       }
       expect(
-        ServiceRoutes.seerrDetail(mediaType: 'movie', id: 7),
-        startsWith('${ServiceRoutes.seerrDiscover}/'),
-      );
-      expect(
         ServiceRoutes.seerrPerson(287),
         '/dashboard/seerr/discover/person/287',
       );
@@ -306,29 +302,6 @@ void main() {
       expect(
         ServiceRoutes.seerrGenre(mediaType: 'tv', genreId: 28, title: 'Action'),
         '/dashboard/seerr/discover/genre/tv/28?title=Action',
-      );
-    });
-
-    test('encodes Seerr detail query values once', () {
-      expect(
-        ServiceRoutes.seerrDetail(
-          mediaType: 'tv',
-          id: 123,
-          heroTag: 'hero tag',
-          posterUrl: 'https://image.tmdb.org/t/p/w500/a/b.jpg',
-        ),
-        '/dashboard/seerr/discover/tv/123?heroTag=hero+tag&posterUrl=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Fw500%2Fa%2Fb.jpg',
-      );
-    });
-
-    test('normalizes non-tv Seerr media types to movie', () {
-      expect(
-        ServiceRoutes.seerrDetail(mediaType: 'movie', id: 1),
-        '/dashboard/seerr/discover/movie/1',
-      );
-      expect(
-        ServiceRoutes.seerrDetail(mediaType: 'person', id: 1),
-        '/dashboard/seerr/discover/movie/1',
       );
     });
 

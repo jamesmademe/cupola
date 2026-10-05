@@ -523,22 +523,6 @@ class ServiceRoutes {
     return _withQuery('$bazarrMovieBase/$radarrId', {'heroTag': heroTag});
   }
 
-  /// Likewise no `i`: Discover resolves through the lens end to end, so a
-  /// connection in the URL would be a claim the page cannot honour. The day
-  /// `_discoverDetailPage` reads one, this is where it goes back.
-  static String seerrDetail({
-    required String mediaType,
-    required int id,
-    String? heroTag,
-    String? posterUrl,
-  }) {
-    final normalizedMediaType = mediaType == 'tv' ? 'tv' : 'movie';
-    return _withQuery('$seerrDiscover/$normalizedMediaType/$id', {
-      'heroTag': heroTag,
-      'posterUrl': posterUrl,
-    });
-  }
-
   /// The two top-level tabs a title can be opened from besides the Dashboard.
   static const activity = '/activity';
   static const search = '/search';
