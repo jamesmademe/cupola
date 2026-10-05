@@ -181,8 +181,21 @@ class _MediaPageState extends ConsumerState<MediaPage> {
 
   /// Where [view]'s one way forward leads, for [row]: a setup form, the
   /// connection asked again, or its own form for the remedy a failure names.
-  VoidCallback? _wayOf(MediaRow row, MediaRowView view) => switch (view.way) {
+  VoidCallback? _wayOf(
+    MediaRow row,
+    MediaRowView view, {
+    required List<MediaRow> rows,
+    required MediaIdentity? identity,
+    required TitleLight? light,
+  }) => switch (view.way) {
     null => null,
+    MediaRowWay.addCopy => () => _add(
+      MediaLeadAdd(row.service),
+      [row],
+      identity,
+      light,
+      retry: rows,
+    ),
     MediaRowWay.setUp ||
     MediaRowWay.add => () => context.go(ServiceRoutes.setUp(row.service)),
     MediaRowWay.retry => () => retryMediaRow(ref, mediaKey, row),
@@ -204,12 +217,16 @@ class _MediaPageState extends ConsumerState<MediaPage> {
 
   /// Adds the title to the Radarr or Sonarr chosen in the sheet, then reads
   /// each of them again: the row and the lead change with the answer.
+  ///
+  /// [rows] are the connections the sheet offers; [retry], the rows read
+  /// again after, when they are more than those.
   Future<void> _add(
     MediaLeadAdd lead,
     List<MediaRow> rows,
     MediaIdentity? identity,
-    TitleLight? light,
-  ) async {
+    TitleLight? light, {
+    List<MediaRow>? retry,
+  }) async {
     final tmdbId = mediaKey.tmdbId;
     // Sonarr knows a series by TVDB's id; TMDB's stands in without it.
     final tvdbId = mediaKey.isMovie
@@ -236,8 +253,10 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     );
     if (added == null || !mounted) return;
     SnackBarHelper.success(context, 'Added to ${name(added)}');
-    for (final row in arrs) {
-      retryMediaRow(ref, mediaKey, row);
+    for (final row in retry ?? arrs) {
+      if (row is MediaConnectionRow && row.service == lead.arr) {
+        retryMediaRow(ref, mediaKey, row);
+      }
     }
   }
 
@@ -498,6 +517,13 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                     row.service == ServiceKey.plex)))
           row,
     ];
+    // The one image that lights the room: the backdrop, else the poster. Until
+    // it is read, and for artwork with too little chroma, the lamp.
+    // It is read once the page has drawn that picture: it comes from the same
+    // cache then, and a picture that never arrives leaves the lamp on.
+    final lightSource = identity?.backdropUrl ?? identity?.posterUrl;
+    final lit = _drawn.contains(lightSource) ? lightSource : null;
+    final light = lit == null ? null : ref.watch(titleLightProvider(lit)).value;
     final now = DateTime.now();
     final views = [
       for (final row in shown)
@@ -508,7 +534,16 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           now: now,
           rows: rows,
         ))
-          _ServerRow(view, onTap: _wayOf(row, view)),
+          _ServerRow(
+            view,
+            onTap: _wayOf(
+              row,
+              view,
+              rows: rows,
+              identity: identity,
+              light: light,
+            ),
+          ),
     ];
     final request = lead is MediaLeadRequest ? _requestOf(lead, rows) : null;
     // A series: its seasons and episodes, and the next one to air.
@@ -573,13 +608,6 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final top = MediaQuery.paddingOf(context).top;
-    // The one image that lights the room: the backdrop, else the poster. Until
-    // it is read, and for artwork with too little chroma, the lamp.
-    // It is read once the page has drawn that picture: it comes from the same
-    // cache then, and a picture that never arrives leaves the lamp on.
-    final lightSource = identity?.backdropUrl ?? identity?.posterUrl;
-    final lit = _drawn.contains(lightSource) ? lightSource : null;
-    final light = lit == null ? null : ref.watch(titleLightProvider(lit)).value;
     final waiting = rows.any(
       (row) => row is MediaConnectionRow && row.reading is MediaReadingWaiting,
     );
@@ -2487,7 +2515,11 @@ class _ServerRow extends StatelessWidget {
           Text(via, style: AppType.caption.copyWith(color: room.inkTertiary)),
       ],
     );
-    final add = view.shape == MediaRowShape.claim && view.action != null
+    // The quiet way to a server or a copy the household does not have yet.
+    final add =
+        (view.shape == MediaRowShape.claim ||
+                view.way == MediaRowWay.addCopy) &&
+            view.action != null
         ? Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Row(

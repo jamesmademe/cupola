@@ -61,6 +61,10 @@ enum MediaRowWay {
   /// `Review the imports`: the manual import review of the copy
   /// ([MediaRowView.targetId]) on its connection.
   review,
+
+  /// `Add to Radarr · 4K`: the add sheet on this connection alone, for the
+  /// copy it does not hold while another of the same arr does.
+  addCopy,
 }
 
 /// A row of "On your server" as it is drawn and spoken: who, what, and the
@@ -253,6 +257,22 @@ List<MediaRowView> mediaRowViews(
     reading: MediaReadingAnswered(:final answer),
   )) {
     switch (answer.value) {
+      // A copy this arr does not hold while another of it does: the one way
+      // to it. While nobody holds the title, Add leads instead.
+      case MediaRadarrCopy(movie: null) || MediaSonarrCopy(series: null)
+          when _heldByAnother(row, rows):
+        return [
+          MediaRowView(
+            name: view.name,
+            detail: view.detail,
+            state: view.state,
+            tone: view.tone,
+            hollow: view.hollow,
+            action: 'Add to ${view.name}',
+            way: MediaRowWay.addCopy,
+            connectionId: connection.id,
+          ),
+        ];
       case MediaSonarrCopy(:final series?) && final copy:
         final facts = _sonarrFacts(
           copy,
@@ -716,3 +736,18 @@ const _onDisk = MediaStatusInfo(availability: MediaAvailability.available);
     when: '${latest['createdAt'] ?? ''}',
   );
 }
+
+/// Whether a connection of [row]'s arr other than [row]'s holds the title.
+bool _heldByAnother(MediaConnectionRow row, List<MediaRow> rows) => rows.any(
+  (other) =>
+      other is MediaConnectionRow &&
+      other.service == row.service &&
+      other.connection.id != row.connection.id &&
+      switch (other.reading) {
+        MediaReadingAnswered(:final answer) => switch (answer.value) {
+          MediaRadarrCopy(movie: _?) || MediaSonarrCopy(series: _?) => true,
+          _ => false,
+        },
+        _ => false,
+      },
+);

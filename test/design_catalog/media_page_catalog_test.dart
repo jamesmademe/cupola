@@ -286,13 +286,21 @@ List<MediaRow> _throughSeerr() => [
   ..._withSeerr().where((row) => row is! MediaConnectionRow<MediaStreamCopy>),
 ];
 
-/// The household with Seerr on an account whose session ended.
-List<MediaRow> _signedOut() => [
+/// The household with the 4K Radarr holding nothing yet, and Seerr on an
+/// account whose session ended.
+List<MediaRow> _copyToAdd() => [
   for (final row in _household())
     if (row is MediaNotSetUpRow)
       MediaConnectionRow<MediaSeerrRecord>(
         _seerr,
         const MediaReadingFailed(ServiceFailureReason.sessionEnded),
+      )
+    else if (row is MediaConnectionRow && row.connection.id == _radarr4k.id)
+      MediaConnectionRow<MediaRadarrCopy>(
+        _radarr4k,
+        _answered(
+          const MediaRadarrCopy(movie: null, queue: ArrQueueSnapshot.empty),
+        ),
       )
     else
       row,
@@ -975,9 +983,10 @@ void main() {
         height: 2240,
       ),
       _scene(
-        'Seerr signed out · its account in blue with Sign in again, never '
-        'not set up',
-        _signedOut(),
+        'A copy to add, Seerr signed out · `+ Add to Radarr · 4K` under the '
+        '4K Radarr\'s row; Seerr\'s account in blue with Sign in again, '
+        'never not set up',
+        _copyToAdd(),
         height: 2240,
       ),
       _scene(

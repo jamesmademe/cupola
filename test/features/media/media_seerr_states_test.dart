@@ -1,7 +1,7 @@
 /// What a title's page says about Seerr's own states, now that it is the
 /// one page a title has: a code read in the server's numbering, the
-/// requester's words for a title she cannot ask for, and an account that may
-/// ask for movies only.
+/// requester's words for a title she cannot ask for, an account that may ask
+/// for movies only, and the copy one arr holds while another does not.
 library;
 
 import 'package:flutter/material.dart';
@@ -203,5 +203,31 @@ void main() {
 
       await harness.unmount(tester);
     });
+  });
+
+  testWidgets('P6: the 4K copy of a movie on disk in HD is added from its '
+      'own row, on that Radarr alone', (tester) async {
+    final harness = await _pump(
+      tester,
+      Profiles.p6,
+      key: MediaKey.movie(WorldTitles.coffeeRun.tmdbId),
+    );
+
+    final add = find.text('Add to Radarr · 4K');
+    expect(add, findsOneWidget);
+    // The copy it holds offers nothing of the kind.
+    expect(find.text('Add to Radarr 1'), findsNothing);
+
+    final other = find.text('Radarr 1').evaluate().length;
+    await tester.ensureVisible(add);
+    await tester.tap(add);
+    await _answer(tester);
+    // The sheet is that Radarr's, with no choice of another: nothing new
+    // names the other one.
+    expect(find.text('Add to Radarr · 4K'), findsWidgets);
+    expect(find.text('Quality profile'), findsOneWidget);
+    expect(find.text('Radarr 1'), findsNWidgets(other));
+
+    await harness.unmount(tester);
   });
 }
