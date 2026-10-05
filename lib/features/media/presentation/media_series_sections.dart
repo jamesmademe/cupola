@@ -29,22 +29,7 @@ class MediaNextAiringCard extends StatelessWidget {
   final DateTime now;
   final bool operator;
 
-  /// `Today`, `Tomorrow`, `Fri` within the week, else `12 Oct`.
-  String get _day {
-    final at = next.timed ? next.at.toLocal() : next.at;
-    final today = DateTime(now.year, now.month, now.day);
-    final days = DateTime(at.year, at.month, at.day).difference(today).inDays;
-    if (days <= 0) return 'Today';
-    if (days == 1) return 'Tomorrow';
-    final short = formatShortDate(
-      '${at.year.toString().padLeft(4, '0')}-'
-      '${at.month.toString().padLeft(2, '0')}-'
-      '${at.day.toString().padLeft(2, '0')}',
-      now: now,
-    );
-    // `Fri 9 Oct`: the weekday alone within the week, the date beyond it.
-    return days < 7 ? short.split(' ').first : short.substring(4);
-  }
+  String get _day => mediaAiringDay(next, now);
 
   /// `S3 E1 · premiere at 21:00`, `S2 E7 · at 21:00`, `S3 E1 · premiere`.
   String get _what {
@@ -439,4 +424,22 @@ class _StateWord extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The day [next] airs, as a card or a graph row says it: `Today`,
+/// `Tomorrow`, `Fri` within the week, else `9 Oct`.
+String mediaAiringDay(MediaNextAiring next, DateTime now) {
+  final at = next.timed ? next.at.toLocal() : next.at;
+  final today = DateTime(now.year, now.month, now.day);
+  final days = DateTime(at.year, at.month, at.day).difference(today).inDays;
+  if (days <= 0) return 'Today';
+  if (days == 1) return 'Tomorrow';
+  final short = formatShortDate(
+    '${at.year.toString().padLeft(4, '0')}-'
+    '${at.month.toString().padLeft(2, '0')}-'
+    '${at.day.toString().padLeft(2, '0')}',
+    now: now,
+  );
+  // `Fri 9 Oct`: the weekday alone within the week, the date beyond it.
+  return days < 7 ? short.split(' ').first : short.substring(4);
 }

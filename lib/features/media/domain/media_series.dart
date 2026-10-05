@@ -561,3 +561,85 @@ String? sonarrCutoffResolution(Map<String, dynamic> profile) {
   }
   return null;
 }
+
+/// The episodes graph: TMDB's votes, a season to a column.
+@immutable
+class MediaEpisodesGraph {
+  const MediaEpisodesGraph({
+    required this.seasons,
+    required this.best,
+    this.stronger,
+  });
+
+  /// Fewer votes than this, and a cell is drawn uncertain.
+  static const fewVotes = 20;
+
+  /// The steps of the one-colour scale: under 7.3, then every 0.3, to 8.5
+  /// and above.
+  static const steps = [7.3, 7.6, 7.9, 8.2, 8.5];
+
+  final List<({int number, double? average, List<MediaEpisodeFacts> episodes})>
+  seasons;
+
+  /// The three best-scored episodes, the best first.
+  final List<MediaEpisodeFacts> best;
+
+  /// The season whose average leads, against the next one, and how many of
+  /// its episodes have few votes; null with fewer than two seasons scored.
+  final ({int season, double average, double other, int fewVotes})? stronger;
+
+  /// The scale's step for [vote]: 0 under 7.3, 5 at 8.5 and above.
+  static int stepOf(double vote) =>
+      steps.where((threshold) => vote >= threshold).length;
+
+  bool get isEmpty => best.isEmpty;
+}
+
+/// The graph of [seasons], each a season's episodes as TMDB lists them.
+MediaEpisodesGraph mediaEpisodesGraphOf(
+  Map<int, List<MediaEpisodeFacts>> seasons,
+) {
+  final numbers = seasons.keys.where((n) => n > 0).toList()..sort();
+  final columns = [
+    for (final number in numbers)
+      () {
+        final episodes = [...seasons[number]!]
+          ..sort((a, b) => a.number.compareTo(b.number));
+        final votes = [for (final e in episodes) ?e.voteAverage];
+        return (
+          number: number,
+          average: votes.isEmpty
+              ? null
+              : votes.reduce((a, b) => a + b) / votes.length,
+          episodes: episodes,
+        );
+      }(),
+  ];
+  final scored = [
+    for (final column in columns)
+      for (final e in column.episodes)
+        if (e.voteAverage != null) e,
+  ]..sort((a, b) => b.voteAverage!.compareTo(a.voteAverage!));
+  final ranked = [
+    for (final column in columns)
+      if (column.average != null) column,
+  ]..sort((a, b) => b.average!.compareTo(a.average!));
+  return MediaEpisodesGraph(
+    seasons: columns,
+    best: scored.take(3).toList(),
+    stronger: ranked.length < 2
+        ? null
+        : (
+            season: ranked[0].number,
+            average: ranked[0].average!,
+            other: ranked[1].average!,
+            fewVotes: ranked[0].episodes
+                .where(
+                  (e) =>
+                      e.voteAverage != null &&
+                      e.voteCount < MediaEpisodesGraph.fewVotes,
+                )
+                .length,
+          ),
+  );
+}

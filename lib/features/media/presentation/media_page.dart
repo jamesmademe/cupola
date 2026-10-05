@@ -36,6 +36,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_videos_button.dart';
 import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:cupola/features/media/presentation/media_episode_sheet.dart';
+import 'package:cupola/features/media/presentation/media_episodes_graph.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
@@ -480,6 +481,8 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final nextAiring = mediaKey.isMovie
         ? null
         : mediaNextAiringOf(rows, now: now);
+    // The graph reads TMDB's votes through the first Seerr that answered.
+    final graphSource = mediaKey.isMovie ? null : _graphSource(rows);
     final region = ref.watch(regionProvider);
     // The requests that wait on the operator, answered from here: in the
     // lead's place while the title is on no server, under the lead otherwise.
@@ -702,6 +705,30 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 _Heading('On your server', trailing: _servicesCount(shown)),
                 MediaGroup(children: views),
               ],
+              if (graphSource case (:final seerr, :final tvId, :final numbers))
+                MediaEpisodesGraphPanel(
+                  connectionId: seerr,
+                  tvId: tvId,
+                  seasons: numbers,
+                  light: light,
+                  upcoming: switch (nextAiring) {
+                    final next? when next.premiere => (
+                      season: next.season,
+                      day: mediaAiringDay(next, now),
+                    ),
+                    _ => null,
+                  },
+                  onOpen: () => _openGraph(
+                    seerr: seerr,
+                    tvId: tvId,
+                    numbers: numbers,
+                    seasons: seasons,
+                    rows: rows,
+                    title: identity?.title ?? '',
+                    light: light,
+                    operator: audience == Audience.operator,
+                  ),
+                ),
               if (seasons.isNotEmpty) ...[
                 const _Heading('Episodes'),
                 MediaEpisodes(
@@ -869,6 +896,85 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           season.number,
     ];
     return aired.lastOrNull ?? seasons.first.number;
+  }
+
+  /// The Seerr whose record names the series' seasons, the series' TMDB id,
+  /// and the seasons TMDB lists episodes for; null without one.
+  ({String seerr, int tvId, List<int> numbers})? _graphSource(
+    List<MediaRow> rows,
+  ) {
+    final tvId = mediaKey.tmdbId;
+    if (tvId == null) return null;
+    for (final row in rows) {
+      if (row case MediaConnectionRow(
+        :final connection,
+        reading: MediaReadingAnswered(:final answer),
+      ) when answer.value is MediaSeerrRecord) {
+        final model = DiscoverDetailViewModel.fromResponse(
+          (answer.value as MediaSeerrRecord).details,
+        );
+        final numbers = [
+          for (final season in model.seasons)
+            if (season.seasonNumber > 0 && season.episodeCount > 0)
+              season.seasonNumber,
+        ];
+        return numbers.isEmpty
+            ? null
+            : (seerr: connection.id, tvId: tvId, numbers: numbers);
+      }
+    }
+    return null;
+  }
+
+  /// Opens the episodes graph; its best episode opens that episode's sheet.
+  void _openGraph({
+    required String seerr,
+    required int tvId,
+    required List<int> numbers,
+    required List<MediaSeason> seasons,
+    required List<MediaRow> rows,
+    required String title,
+    required TitleLight? light,
+    required bool operator,
+  }) {
+    AppBottomSheet.showScrollable<void>(
+      context: context,
+      title: 'Episodes graph',
+      subtitle: [if (title.isNotEmpty) title, 'TMDB votes'].join(' · '),
+      showClose: true,
+      initialSize: 0.92,
+      minSize: 0.5,
+      builder: (sheet, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        children: [
+          MediaEpisodesGraphSheet(
+            connectionId: seerr,
+            tvId: tvId,
+            seasonNumbers: numbers,
+            seasons: seasons,
+            light: light,
+            onOpenEpisode: (season, number) {
+              final episode = [
+                for (final s in seasons)
+                  for (final e in s.episodes)
+                    if (e.season == season && e.number == number) e,
+              ].firstOrNull;
+              if (episode == null) return;
+              Navigator.of(sheet).pop();
+              _openEpisode(
+                episode,
+                seasons: seasons,
+                rows: rows,
+                title: title,
+                light: light,
+                operator: operator,
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   /// Opens [episode]'s sheet, bound to the Sonarr, the Seerr and the media

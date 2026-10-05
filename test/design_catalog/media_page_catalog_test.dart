@@ -31,6 +31,7 @@ import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/media/presentation/media_episode_providers.dart';
 import 'package:cupola/features/media/presentation/media_episode_sheet.dart';
+import 'package:cupola/features/media/presentation/media_episodes_graph.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode_file.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -723,6 +724,11 @@ List<MediaRow> _series() {
             'firstAirDate': '2015-08-10',
             'status': 'Returning Series',
             'numberOfSeasons': 3,
+            'seasons': [
+              {'id': 1, 'seasonNumber': 1, 'episodeCount': 10},
+              {'id': 2, 'seasonNumber': 2, 'episodeCount': 10},
+              {'id': 3, 'seasonNumber': 3, 'episodeCount': 8},
+            ],
             'genres': [
               {'id': 16, 'name': 'Animation'},
               {'id': 10765, 'name': 'Sci-Fi & Fantasy'},
@@ -740,6 +746,83 @@ List<MediaRow> _series() {
       ),
     ),
   ];
+}
+
+/// TMDB's votes for the series, as the graph reads them: the second season
+/// stronger, four of its episodes voted by few, the third not out.
+Future<List<MediaEpisodeFacts>> _seasonFacts(int season) async {
+  final votes = switch (season) {
+    1 => const [7.2, 7.5, 7.9, 8.1, 7.4, 8.3, 7.0, 7.7, 8.0, 8.6],
+    2 => const [8.2, 8.4, 8.1, 7.6, 7.9, 8.9, 7.3, 8.0, 8.5, 8.7],
+    _ => const <double>[0, 0, 0, 0, 0, 0, 0, 0],
+  };
+  return [
+    for (final (i, vote) in votes.indexed)
+      MediaEpisodeFacts(
+        season: season,
+        number: i + 1,
+        name: switch ((season, i + 1)) {
+          (2, 3) => 'The Second Cycle',
+          (2, 6) => 'The Seventh Cycle',
+          _ => 'Episode ${i + 1}',
+        },
+        voteAverage: vote == 0 ? null : vote,
+        voteCount: vote == 0
+            ? 0
+            : season == 2 && const {4, 6, 7, 8}.contains(i)
+            ? 12
+            : season == 2 && i == 5
+            ? 31
+            : 37,
+      ),
+  ];
+}
+
+/// The episodes graph open over its series.
+CatalogScene _graphScene() {
+  final rows = _series();
+  return CatalogScene(
+    'Episodes graph · TMDB\'s votes a season to a column, in the title\'s '
+    'light; dashed where few voted',
+    (context) => Stack(
+      fit: StackFit.expand,
+      children: [
+        const MediaPage(mediaKey: MediaKey.tv(358332)),
+        const ColoredBox(color: Colors.black54),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: AppBottomSheet(
+            title: 'Episodes graph',
+            subtitle: 'Cosmos Laundromat · TMDB votes',
+            showClose: true,
+            child: MediaEpisodesGraphSheet(
+              connectionId: _seerr.id,
+              tvId: 358332,
+              seasonNumbers: const [1, 2, 3],
+              seasons: mediaSeasonsOf(
+                rows,
+                audience: Audience.operator,
+                now: DateTime.now(),
+              ),
+              light: _lights[CatalogArt.backdrop],
+              onOpenEpisode: (_, _) {},
+            ),
+          ),
+        ),
+      ],
+    ),
+    width: 390,
+    height: 1000,
+    overrides: [
+      mediaRowsProvider.overrideWith((ref, key) => rows),
+      audienceProvider.overrideWithValue(Audience.operator),
+      titleLightProvider.overrideWith((ref, url) async => _lights[url]),
+      mediaRecommendationsProvider.overrideWith((ref, source) async => []),
+      mediaSeasonFactsProvider.overrideWith(
+        (ref, source) => _seasonFacts(source.season),
+      ),
+    ],
+  );
 }
 
 CatalogScene _scene(
@@ -764,6 +847,9 @@ CatalogScene _scene(
       (ref, collection) async => (held: 5, total: 8),
     ),
     mediaRecommendationsProvider.overrideWith((ref, source) async => []),
+    mediaSeasonFactsProvider.overrideWith(
+      (ref, source) => _seasonFacts(source.season),
+    ),
   ],
 );
 
@@ -843,7 +929,7 @@ void main() {
         'Series · Resume the episode, the next to air, Sonarr\'s facts one '
         'row each, the episodes a season at a time',
         _series(),
-        height: 2000,
+        height: 2200,
         key: const MediaKey.tv(358332),
       ),
       _scene('Waiting · nobody has said who the title is yet', [
@@ -893,6 +979,7 @@ void main() {
       ),
       _addScene(),
       _episodeScene(),
+      _graphScene(),
       CatalogScene(
         'Requester · Request, and what it means: the title is not on the '
         'server yet',

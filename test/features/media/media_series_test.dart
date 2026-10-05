@@ -194,4 +194,59 @@ void main() {
       expect(mediaNextEpisode([_episode(1, 1, played: true)]), isNull);
     });
   });
+
+  test('the graph averages each season, ranks the best, and names the '
+      'stronger season', () {
+    MediaEpisodeFacts facts(int season, int number, double? vote, int votes) =>
+        MediaEpisodeFacts(
+          season: season,
+          number: number,
+          voteAverage: vote,
+          voteCount: votes,
+        );
+    final graph = mediaEpisodesGraphOf({
+      1: [facts(1, 1, 7.0, 40), facts(1, 2, 8.0, 40)],
+      2: [facts(2, 1, 8.9, 31), facts(2, 2, 8.1, 12)],
+      3: [facts(3, 1, null, 0)],
+    });
+
+    expect(graph.seasons.map((s) => s.average), [
+      7.5,
+      closeTo(8.5, 1e-9),
+      null,
+    ]);
+    expect(graph.best.map((e) => (e.season, e.number)), [
+      (2, 1),
+      (2, 2),
+      (1, 2),
+    ]);
+    expect(graph.stronger?.season, 2);
+    expect(graph.stronger?.fewVotes, 1);
+    expect(MediaEpisodesGraph.stepOf(7.2), 0);
+    expect(MediaEpisodesGraph.stepOf(8.5), 5);
+  });
+
+  test('a profile names the resolution its cutoff stops at', () {
+    expect(
+      sonarrCutoffResolution({
+        'cutoff': 1001,
+        'items': [
+          {
+            'quality': {'id': 5, 'resolution': 720},
+          },
+          {
+            'id': 1001,
+            'name': 'WEB 1080p',
+            'items': [
+              {
+                'quality': {'id': 3, 'resolution': 1080},
+              },
+            ],
+          },
+        ],
+      }),
+      '1080p',
+    );
+    expect(sonarrCutoffResolution({'cutoff': 9, 'items': const []}), isNull);
+  });
 }

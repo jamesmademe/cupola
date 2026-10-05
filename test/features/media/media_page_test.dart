@@ -27,8 +27,9 @@ Future<ProfileHarness> _pump(
   WorldTitle title, {
   List<Override> overrides = const [],
   MediaKey? key,
+  double height = 2400,
 }) async {
-  tester.view.physicalSize = const Size(390, 2400);
+  tester.view.physicalSize = Size(390, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final harness = await pumpWithProfile(
@@ -70,8 +71,9 @@ Future<(ProfileHarness, GoRouter)> _pumpRouted(
   ConfigProfile profile,
   WorldTitle title, {
   MediaKey? key,
+  double height = 2400,
 }) async {
-  tester.view.physicalSize = const Size(390, 2400);
+  tester.view.physicalSize = Size(390, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final harness = await ProfileHarness.start(profile);
@@ -730,12 +732,12 @@ void main() {
     testWidgets('continues where the viewer is, and says what airs next', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(390, 3600);
       final harness = await _pump(
         tester,
         Profiles.p1,
         WorldTitles.cosmosLaundromat,
         key: cosmos,
+        height: 3600,
       );
 
       expect(find.text('Resume S2 E3'), findsOneWidget);
@@ -757,12 +759,12 @@ void main() {
 
     testWidgets('shows its episodes a season at a time, and asks Sonarr for '
         'the missing', (tester) async {
-      tester.view.physicalSize = const Size(390, 3600);
       final harness = await _pump(
         tester,
         Profiles.p1,
         WorldTitles.cosmosLaundromat,
         key: cosmos,
+        height: 3600,
       );
 
       // The season Play continues.
@@ -802,12 +804,12 @@ void main() {
     testWidgets('sends a stuck upgrade to the review of Sonarr\'s imports', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(390, 3600);
       final (harness, router) = await _pumpRouted(
         tester,
         Profiles.p1,
         WorldTitles.cosmosLaundromat,
         key: cosmos,
+        height: 3600,
       );
 
       expect(find.textContaining('12 upgrades need import'), findsOneWidget);
@@ -829,12 +831,12 @@ void main() {
     testWidgets('opens an episode whole: where it plays, what Sonarr holds', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(390, 3600);
       final harness = await _pump(
         tester,
         Profiles.p1,
         WorldTitles.cosmosLaundromat,
         key: cosmos,
+        height: 3600,
       );
       await tester.ensureVisible(find.text('The Second Cycle'));
       await tester.tap(find.text('The Second Cycle'));
@@ -864,12 +866,12 @@ void main() {
 
     testWidgets('searches for a file below the cutoff, and monitors in '
         'Sonarr', (tester) async {
-      tester.view.physicalSize = const Size(390, 3600);
       final harness = await _pump(
         tester,
         Profiles.p1,
         WorldTitles.cosmosLaundromat,
         key: cosmos,
+        height: 3600,
       );
       final first = find.text('Episode 1').first;
       await tester.ensureVisible(first);
@@ -900,6 +902,48 @@ void main() {
         'monitored': false,
       });
       expect(find.text('Sonarr leaves it as it is'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('graphs its episodes from TMDB\'s votes, and opens the best', (
+      tester,
+    ) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+        height: 3600,
+      );
+
+      expect(find.text('S1 · 7.8'), findsOneWidget);
+      expect(find.text('S2 · 8.2'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          'Episodes graph. Best: S2 E6, 8.9. Season 2 is the stronger one',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(find.text('Episodes graph'));
+      await tester.tap(find.text('Episodes graph'));
+      await _answer(tester);
+      expect(find.text('Votes from TMDB, per episode.'), findsOneWidget);
+      expect(find.text('S2 E6 · The Seventh Cycle'), findsOneWidget);
+      expect(find.text('31 votes · Missing'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'Season 2 is the stronger one · 8.2 against 7.8 · 4 of its '
+          'episodes have few votes',
+        ),
+        findsOneWidget,
+      );
+
+      // The best opens its own sheet.
+      await tester.tap(find.text('S2 E6 · The Seventh Cycle'));
+      await _answer(tester);
+      expect(find.textContaining('Season 2 · Episode 6'), findsOneWidget);
 
       await harness.unmount(tester);
     });
