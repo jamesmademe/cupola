@@ -692,4 +692,29 @@ void main() {
 
     await harness.unmount(tester);
   });
+
+  testWidgets('a title only a media server holds is still named, and played '
+      'there', (tester) async {
+    // A household with Jellyfin and nothing else: no Seerr to say who the
+    // title is, no arr. The server's own item says it.
+    final harness = await _pump(
+      tester,
+      ConfigProfile(
+        id: 'Z1',
+        title: 'Jellyfin alone',
+        summary: 'Only a Jellyfin.',
+        cases: const {},
+        connections: [WorldConnections.jellyfin],
+      ),
+      WorldTitles.tearsOfSteel,
+    );
+
+    expect(find.text('Tears of Steel'), findsWidgets);
+    expect(find.textContaining('2012'), findsWidgets);
+    expect(find.text('Play on Jellyfin'), findsOneWidget);
+    // No Seerr and no arr: no source here has a score to give.
+    expect(find.text('Rotten Tomatoes'), findsNothing);
+
+    await harness.unmount(tester);
+  });
 }

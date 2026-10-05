@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_admin_placeholder.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
@@ -335,7 +334,7 @@ class _OnDeckTile extends StatelessWidget {
     return SizedBox(
       width: 96,
       child: PressableScale(
-        onTap: () => context.push(ServiceRoutes.plexItem(item.id)),
+        onTap: () => context.openStreamItem(ServiceKey.plex, item),
         // A poster is an image with no name of its own; the tile announces the
         // title and its state as one button rather than as two fragments.
         semanticLabel: item.title,

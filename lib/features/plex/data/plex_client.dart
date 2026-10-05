@@ -785,6 +785,9 @@ class PlexClient implements StreamServerClient {
           // re-reads page one.
           'X-Plex-Container-Start': startIndex,
           'X-Plex-Container-Size': limit,
+          // The item's own ids, which send a movie's tile to the movie's own
+          // page (`MediaKey.ofStreamItem`).
+          'includeGuids': 1,
         },
         cancelToken: cancelToken,
       );
@@ -1018,7 +1021,7 @@ class PlexClient implements StreamServerClient {
   }) async {
     final container = await _container(
       '/hubs/continueWatching',
-      queryParameters: {'count': count},
+      queryParameters: {'count': count, 'includeGuids': 1},
       cancelToken: cancelToken,
     );
     return _itemsFromHubs(container);
@@ -1071,6 +1074,7 @@ class PlexClient implements StreamServerClient {
         'query': term,
         'limit': limit ?? kPlexSearchHubLimit,
         'includeExternalMedia': 0,
+        'includeGuids': 1,
       },
       cancelToken: cancelToken,
     );

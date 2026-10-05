@@ -414,6 +414,17 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final audience = ref.watch(audienceProvider);
     final settings = ref.watch(currentSettingsProvider);
     final identity = MediaIdentity.of(rows);
+    // The scores are Seerr's and the arrs': with neither set up, four dashes
+    // would promise figures no source here can give.
+    final scored = rows.any(
+      (row) =>
+          row is MediaConnectionRow &&
+          const {
+            ServiceKey.seerr,
+            ServiceKey.radarr,
+            ServiceKey.sonarr,
+          }.contains(row.service),
+    );
     final lead = resolveMediaLead(rows, audience: audience, focus: focus);
     // The requester reads the players' rows only.
     final shown = [
@@ -536,11 +547,13 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               ),
             ];
             final act = <Widget>[
-              const SizedBox(height: AppSpacing.lg),
-              _Scores(
-                scores: mediaScoresOf(rows, identity),
-                showMetacritic: audience == Audience.operator,
-              ),
+              if (scored) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _Scores(
+                  scores: mediaScoresOf(rows, identity),
+                  showMetacritic: audience == Audience.operator,
+                ),
+              ],
               const SizedBox(height: AppSpacing.slabY),
               // A Radarr copy that needs something says so where the lead
               // stands, and what can be done.
@@ -1108,6 +1121,7 @@ class _Hero extends StatelessWidget {
         // Decoded once, at the poster's box.
         (_, final String poster) when poster.isNotEmpty => _Artwork.veiled(
           url: poster,
+          headers: identity?.artHeaders,
           decodeBox: Size(posterWidth, posterHeight),
           onDrawn: onArtDrawn,
           fallback: _Plate(kind: kind, well: true),
@@ -1116,9 +1130,8 @@ class _Hero extends StatelessWidget {
       },
     );
     // The tile's poster stands in until the title's own is known.
-    final posterArt = (identity?.posterUrl ?? '').isNotEmpty
-        ? identity!.posterUrl
-        : posterUrl;
+    final ownPoster = (identity?.posterUrl ?? '').isNotEmpty;
+    final posterArt = ownPoster ? identity!.posterUrl : posterUrl;
     Widget poster = Container(
       width: posterWidth,
       height: posterHeight,
@@ -1134,6 +1147,7 @@ class _Hero extends StatelessWidget {
           ? const ShimmerPlaceholder(height: double.infinity)
           : _Artwork(
               url: posterArt,
+              headers: ownPoster ? identity!.artHeaders : null,
               decodeBox: Size(posterWidth, posterHeight),
               onDrawn: onArtDrawn,
               fallback: _Plate(kind: kind),
@@ -1244,6 +1258,7 @@ class _Artwork extends StatelessWidget {
   const _Artwork({
     required this.url,
     required this.fallback,
+    this.headers,
     this.decodeBox,
     this.onDrawn,
   }) : veiled = false,
@@ -1254,12 +1269,16 @@ class _Artwork extends StatelessWidget {
   const _Artwork.veiled({
     required this.url,
     required this.fallback,
+    this.headers,
     this.decodeBox,
     this.onDrawn,
     this.opacity = 0.72,
   }) : veiled = true;
 
   final String? url;
+
+  /// Sent with the request: a media server's credential for its own poster.
+  final Map<String, String>? headers;
 
   /// What stands in when there is no picture, or it cannot be fetched.
   final Widget fallback;
@@ -1283,6 +1302,7 @@ class _Artwork extends StatelessWidget {
       box: decodeBox,
       builder: (context, decode) => CachedNetworkImage(
         imageUrl: url,
+        httpHeaders: headers,
         cacheManager: pinnedImageCacheFor(url),
         memCacheWidth: decode.width,
         memCacheHeight: decode.height,

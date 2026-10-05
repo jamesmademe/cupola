@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/percent_format.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -59,9 +58,6 @@ class StreamPosterTile extends ConsumerWidget {
         ? null
         : client.imageFor(item.posterPath!, width: 260);
     final heroTag = 'stream_${service.name}_${item.id}_$index';
-    final route = service == ServiceKey.jellyfin
-        ? ServiceRoutes.jellyfinItem(item.id)
-        : ServiceRoutes.plexItem(item.id);
 
     final progress = item.resumeProgress;
     final unplayed = item.unplayedChildCount;
@@ -72,7 +68,8 @@ class StreamPosterTile extends ConsumerWidget {
       button: true,
       excludeSemantics: true,
       child: PressableScale(
-        onTap: () => context.push(route),
+        // A movie opens on its own page, this server's copy leading.
+        onTap: () => context.openStreamItem(service, item),
         child: Stack(
           fit: StackFit.expand,
           children: [

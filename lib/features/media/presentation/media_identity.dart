@@ -28,6 +28,7 @@ class MediaIdentity {
     this.collection,
     this.videos = const [],
     this.tmdbScore,
+    this.artHeaders,
   });
 
   /// TMDB's record, as Seerr answered it.
@@ -68,6 +69,10 @@ class MediaIdentity {
   /// TMDB's score, when Seerr gave one.
   final double? tmdbScore;
 
+  /// What the server holding the artwork asks to be sent with it: set only
+  /// for a media server's own poster, which needs its credential.
+  final Map<String, String>? artHeaders;
+
   /// The line under the title: who made it, when, how long, what it is.
   /// `Ian Hubert · 2012 · 12 min · Science fiction`.
   String get metaLine => [
@@ -86,7 +91,8 @@ class MediaIdentity {
   ].join(' · ');
 
   /// The identity [rows] carry: the first Seerr's that answered, else the
-  /// first arr copy's own record, else null while nothing has answered.
+  /// first arr copy's own record, else the first media server's item, else
+  /// null while nothing has answered.
   static MediaIdentity? of(List<MediaRow> rows) {
     for (final row in rows) {
       if (row case MediaConnectionRow(
@@ -121,6 +127,29 @@ class MediaIdentity {
               backdropUrl: _remoteImage(series.images, 'fanart'),
               studios: [?series.network],
             );
+        }
+      }
+    }
+    // A title only a media server holds: its name, year and length, its
+    // synopsis, and its poster with the server's credential.
+    for (final row in rows) {
+      if (row case MediaConnectionRow(
+        reading: MediaReadingAnswered(:final answer),
+      )) {
+        if (answer.value case MediaStreamCopy(:final item?, :final poster)) {
+          return MediaIdentity(
+            title: item.title,
+            year: item.year == null ? null : '${item.year}',
+            runtime: switch (item.runtimeMs) {
+              final ms? when ms > 0 => formatRuntimeMinutes(
+                (ms / 60000).round(),
+              ),
+              _ => null,
+            },
+            overview: item.overview ?? '',
+            posterUrl: poster?.url,
+            artHeaders: poster?.headers,
+          );
         }
       }
     }

@@ -97,6 +97,7 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
       ),
       null => null,
     },
+    overview: plexString(json['summary'])?.trim(),
   );
 }
 
@@ -104,7 +105,8 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
 /// `tmdb://603`, `tvdb://169`) and, for an item still on a legacy agent, from
 /// its `guid` attribute (`com.plexapp.agents.themoviedb://603?lang=en`).
 ///
-/// `Guid[]` only arrives with `includeGuids=1`, which only the arr join sends.
+/// `Guid[]` only arrives with `includeGuids=1`, which the browse reads and the
+/// arr join send.
 /// It wins over the legacy attribute per provider: it is what the modern agents
 /// write and what `?guid=` filters on.
 ///

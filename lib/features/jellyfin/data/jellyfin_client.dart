@@ -156,8 +156,10 @@ class JellyfinClient implements StreamServerClient {
   /// `PrimaryImageAspectRatio` lets a poster reserve its box before the bytes
   /// arrive; `Overview` is what an item detail opens with, and asking for it here
   /// means a tap on a grid tile can render text immediately instead of waiting
-  /// for `/Items/{id}`.
-  static const String _browseFields = 'PrimaryImageAspectRatio,Overview';
+  /// for `/Items/{id}`. `ProviderIds` is what sends a movie's tile to the
+  /// movie's own page (`MediaKey.ofStreamItem`).
+  static const String _browseFields =
+      'PrimaryImageAspectRatio,Overview,ProviderIds';
 
   /// Lets a test swap in a stubbed transport, exactly as the per-service clients
   /// do with an injected `Dio` — and lets it assert on the real request this
@@ -739,12 +741,13 @@ class JellyfinClient implements StreamServerClient {
       // series' TMDB number is a hit too, and the first row is simply
       // whichever sorted first. The matcher picks among them.
       'limit': _kExternalMatchCandidates,
-      // `ProviderIds` is what the answer is checked against. Without it the
+      // `ProviderIds`, in the browse fields, is what the answer is checked
+      // against. Without it the
       // only evidence a row matched is that the server returned it — which is
       // also what a server that ignored `anyProviderIdEquals` does, with the
       // first rows of the whole library.
       // `MediaStreams` for the picture the Media page names: `2160p · HDR10`.
-      'fields': '$_browseFields,ProviderIds,MediaStreams',
+      'fields': '$_browseFields,MediaStreams',
       // `UserData` is omitted from the response entirely unless both are
       // present, so they travel together or not at all.
       'userId': ?userId,

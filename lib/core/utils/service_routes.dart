@@ -141,6 +141,10 @@ class ServiceRoutes {
   static String jellyfinItem(String id) => '$jellyfinItemBase/$id';
   static String plexItem(String id) => '$plexItemBase/$id';
 
+  /// [jellyfinItem] or [plexItem], by [service].
+  static String streamItem(ServiceKey service, String id) =>
+      service == ServiceKey.jellyfin ? jellyfinItem(id) : plexItem(id);
+
   // ── TrueNAS sections ──────────────────────────────────────────────────────
   static const truenasDashboard = '$truenas/dashboard';
   static const truenasStorage = '$truenas/storage';

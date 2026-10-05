@@ -754,11 +754,15 @@ GlobalSearchResult _streamResult(
     // that listed it, so the tag would repeat the heading on every row, and
     // there is no library on a media server this app can write into.
     heroTag: heroTag,
-    route: instance.service == ServiceKey.jellyfin
-        ? ServiceRoutes.jellyfinItem(item.id)
-        : ServiceRoutes.plexItem(item.id),
-    // The item itself, so the detail page can draw before its own fetch lands.
-    routeExtra: item,
+    // A movie is its own page, this server's copy leading, under the Search
+    // tab (`pushMounted`): no poster travels, since the server's artwork
+    // needs its credential. Anything else is the server's own page, with the
+    // item itself so it can draw before its own fetch lands.
+    route: switch (MediaKey.ofStreamItem(item)) {
+      final key? => ServiceRoutes.mediaRoot(key, focus: instance.id),
+      null => ServiceRoutes.streamItem(instance.service, item.id),
+    },
+    routeExtra: MediaKey.ofStreamItem(item) == null ? item : null,
   );
 }
 

@@ -12,6 +12,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
@@ -808,6 +809,65 @@ void main() {
         );
       },
     );
+
+    test('a movie the server knows by its TMDB id opens on its own page, '
+        "that server's copy leading", () async {
+      StreamItem item(String title, StreamItemKind kind, String? tmdb) =>
+          StreamItem(
+            id: 'id-$title',
+            title: title,
+            subtitle: null,
+            kind: kind,
+            posterPath: '/poster/$title',
+            year: null,
+            runtimeMs: null,
+            isPlayed: false,
+            resumeOffsetMs: null,
+            unplayedChildCount: null,
+            externalIds: StreamExternalIds(tmdb: tmdb),
+          );
+      final container = streamContainer(
+        jellyfin: _ScriptedStreamServer([
+          StreamSearchGroup(
+            label: 'Movies',
+            kind: StreamItemKind.movie,
+            items: [
+              item('Dune', StreamItemKind.movie, '438631'),
+              item('Home video', StreamItemKind.movie, null),
+            ],
+          ),
+          StreamSearchGroup(
+            label: 'Shows',
+            kind: StreamItemKind.series,
+            items: [item('Arcane', StreamItemKind.series, '94605')],
+          ),
+        ]),
+        plex: _ScriptedStreamServer(const []),
+      );
+      addTearDown(container.dispose);
+      container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+      final lanes = await _settledLanes(container);
+      final rows = lanes
+          .firstWhere((l) => l.service == ServiceKey.jellyfin)
+          .results;
+
+      expect(
+        rows.first.route,
+        ServiceRoutes.mediaRoot(
+          const MediaKey.movie(438631),
+          focus: 'jellyfin',
+        ),
+      );
+      // The server's poster needs its credential, so none travels in the
+      // route; nor does the item, which the title's page does not read.
+      expect(Uri.parse(rows.first.route).queryParameters['posterUrl'], isNull);
+      expect(rows.first.routeExtra, isNull);
+      // A movie with no TMDB id, and a series until it has its page, stay
+      // on the server's own page.
+      expect(rows[1].route, ServiceRoutes.jellyfinItem('id-Home video'));
+      expect(rows[2].route, ServiceRoutes.jellyfinItem('id-Arcane'));
+    });
   });
 }
 

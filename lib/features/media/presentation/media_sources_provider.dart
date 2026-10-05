@@ -178,7 +178,17 @@ final mediaStreamCopyProvider = FutureProvider.autoDispose
         StreamLookupOutcome.found
             when item != null &&
                 streamExternalMatchScore(item, query) != null =>
-          MediaStreamCopy.found(item),
+          MediaStreamCopy.found(
+            item,
+            // At the hero poster's largest box, on a dense screen.
+            poster: switch (item.posterPath) {
+              final path? when path.isNotEmpty => client.imageFor(
+                path,
+                width: 400,
+              ),
+              _ => null,
+            },
+          ),
         StreamLookupOutcome.notInLibrary =>
           const MediaStreamCopy.notInLibrary(),
         _ => const MediaStreamCopy.notVerified(),

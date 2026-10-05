@@ -64,6 +64,13 @@ Future<void> _close(
   await harness.unmount(tester);
 }
 
+/// A library's whole shelf, A to Z: the lens needs no viewer.
+Future<void> _wholeLibrary(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('A–Z'));
+  await tester.tap(find.text('A–Z'));
+  await _answer(tester);
+}
+
 /// The title page the user sees.
 Iterable<MediaPage> _shown(WidgetTester tester) =>
     tester.widgetList<MediaPage>(find.byType(MediaPage).hitTestable());
@@ -89,6 +96,45 @@ void main() {
       MediaKey.movie(WorldTitles.tearsOfSteel.tmdbId),
     ]);
     expect(find.text('On your server'), findsOneWidget);
+
+    await _close(tester, harness, container);
+  });
+
+  testWidgets('a movie in a Jellyfin library opens on its own page, that '
+      "server's copy leading; a series on the server's page", (tester) async {
+    final (harness, router, container) = await _app(tester, Profiles.p1);
+    router.go(ServiceRoutes.jellyfinLibrary('films'));
+    await _answer(tester);
+    await _wholeLibrary(tester);
+
+    final movie = find.bySemanticsLabel(RegExp('^Tears of Steel'));
+    await tester.ensureVisible(movie.first);
+    await tester.tap(movie.first);
+    await _answer(tester);
+
+    expect(
+      router.state.uri.path,
+      '${ServiceRoutes.jellyfinLibraries}/media/movie/'
+      '${WorldTitles.tearsOfSteel.tmdbId}',
+    );
+    expect(_shown(tester).single.focus, WorldIds.jellyfin);
+    expect(find.text('On your server'), findsOneWidget);
+
+    router.go(ServiceRoutes.jellyfinLibrary('films'));
+    await _answer(tester);
+    await _wholeLibrary(tester);
+    final series = find.bySemanticsLabel(
+      RegExp('^${WorldTitles.cosmosLaundromat.title}'),
+    );
+    await tester.ensureVisible(series.first);
+    await tester.tap(series.first);
+    await _answer(tester);
+
+    expect(
+      router.state.uri.path,
+      ServiceRoutes.jellyfinItem('jf-${WorldTitles.cosmosLaundromat.key}'),
+    );
+    expect(_shown(tester), isEmpty);
 
     await _close(tester, harness, container);
   });

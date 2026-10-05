@@ -1,8 +1,12 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 
 /// Opening a title's page from the page the user is on: under that page's
 /// tab, so the poster flies and the tab keeps it (`ServiceRoutes.media`).
@@ -43,6 +47,21 @@ extension OpenMedia on BuildContext {
           ),
         )
       : openMedia(MediaKey.movie(id), heroTag: heroTag, posterUrl: posterUrl);
+
+  /// Opens an item a media server listed: a movie on its own page, with the
+  /// copy of the connection that listed it leading (the service's lens);
+  /// anything else on the server's own page.
+  Future<void> openStreamItem(ServiceKey service, StreamItem item) =>
+      switch (MediaKey.ofStreamItem(item)) {
+        final key? => openMedia(
+          key,
+          focus: ProviderScope.containerOf(
+            this,
+            listen: false,
+          ).read(activeInstanceProvider(service))?.id,
+        ),
+        null => push(ServiceRoutes.streamItem(service, item.id)),
+      };
 
   /// Pushes [location], a title's page in root form moved under the tab the
   /// user is on (`ServiceRoutes.mounted`); any other location as it is.

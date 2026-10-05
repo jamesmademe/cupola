@@ -573,6 +573,36 @@ void main() {
         _bare(const []),
         height: 760,
       ),
+      _scene(
+        'Media server only · no Seerr, no arr: the server names the title, '
+        'with its synopsis and its poster',
+        [
+          MediaConnectionRow<MediaStreamCopy>(
+            _jellyfin,
+            _answered(
+              MediaStreamCopy.found(
+                StreamItem(
+                  id: 'jf-653',
+                  title: 'Nosferatu',
+                  subtitle: '1922',
+                  kind: StreamItemKind.movie,
+                  posterPath: '/Items/jf-653/Images/Primary',
+                  year: 1922,
+                  runtimeMs: 94 * 60000,
+                  isPlayed: false,
+                  resumeOffsetMs: null,
+                  unplayedChildCount: null,
+                  overview:
+                      'An estate agent travels to the Carpathians to sell a '
+                      'house to a count who is never seen by day.',
+                ),
+                poster: (url: CatalogArt.poster, headers: null),
+              ),
+            ),
+          ),
+        ],
+        height: 820,
+      ),
       _scene('Waiting · nobody has said who the title is yet', [
         MediaConnectionRow<MediaRadarrCopy>(
           _radarr,

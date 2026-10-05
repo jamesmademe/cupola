@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+
 /// The two kinds of title a canonical Media page is about.
 enum MediaKind { movie, tv }
 
@@ -51,6 +53,15 @@ class MediaKey {
       'tv' => MediaKey.tv(value),
       _ => null,
     };
+  }
+
+  /// The page a media server's item has: a movie the server knows by its
+  /// TMDB id. Null for anything else (a series until it has its page, an
+  /// episode, a home video with no id), which keeps the server's own page.
+  static MediaKey? ofStreamItem(StreamItem item) {
+    if (item.kind != StreamItemKind.movie) return null;
+    final tmdb = int.tryParse(item.externalIds.tmdb ?? '');
+    return tmdb == null || tmdb <= 0 ? null : MediaKey.movie(tmdb);
   }
 
   @override

@@ -10,6 +10,7 @@ import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_external_match.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// What one Radarr holds of a film: its record, or nothing, and what its
 /// queue says about it.
@@ -67,21 +68,27 @@ class MediaSonarrCopy {
 /// [StreamLookupOutcome.notVerified] is case f: something with that title
 /// whose ids do not match. It is no match, and draws nothing (rule 7).
 class MediaStreamCopy {
-  const MediaStreamCopy.found(StreamItem this.item)
+  const MediaStreamCopy.found(StreamItem this.item, {this.poster})
     : outcome = StreamLookupOutcome.found;
 
   const MediaStreamCopy.notInLibrary()
     : outcome = StreamLookupOutcome.notInLibrary,
-      item = null;
+      item = null,
+      poster = null;
 
   const MediaStreamCopy.notVerified()
     : outcome = StreamLookupOutcome.notVerified,
-      item = null;
+      item = null,
+      poster = null;
 
   final StreamLookupOutcome outcome;
 
   /// The verified item, only for [StreamLookupOutcome.found].
   final StreamItem? item;
+
+  /// The item's poster as the server serves it, with the credential it asks
+  /// for: the page's artwork when no one else says who the title is.
+  final StreamImageSource? poster;
 }
 
 /// What Bazarr holds for one arr copy of a title.

@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/duration_format.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
@@ -279,7 +278,7 @@ class _OnDeckTile extends StatelessWidget {
     final theme = Theme.of(context);
     final caption = streamOnDeckCaption(item);
     return PressableScale(
-      onTap: () => context.push(ServiceRoutes.plexItem(item.id)),
+      onTap: () => context.openStreamItem(ServiceKey.plex, item),
       semanticLabel: item.title,
       semanticValue: caption.isEmpty ? null : spokenFromDotted(caption),
       semanticHint: 'Open this title',

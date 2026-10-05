@@ -210,7 +210,14 @@ StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
     unplayedChildCount: jellyfinInt(userData['UnplayedItemCount']),
     externalIds: jellyfinExternalIds(item['ProviderIds']),
     video: _video(item['MediaStreams']),
+    overview: _text(item['Overview']),
   );
+}
+
+/// [raw] trimmed, or null when it says nothing.
+String? _text(Object? raw) {
+  final text = raw?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
 }
 
 /// The first video stream of `MediaStreams`, present only when the request
@@ -234,8 +241,8 @@ StreamVideo? _video(Object? streams) {
 
 /// `ProviderIds` → [StreamExternalIds].
 ///
-/// Only present when the request listed `ProviderIds` in `fields`, which only
-/// the arr join does. The keys are Jellyfin's provider names (`Tmdb`, `Tvdb`,
+/// Only present when the request listed `ProviderIds` in `fields`, which the
+/// browse reads and the arr join do. The keys are Jellyfin's provider names (`Tmdb`, `Tvdb`,
 /// `Imdb`) and are read case-insensitively, since plugins and older builds have
 /// not always agreed on the casing; `TmdbCollection` and the other composite
 /// keys are different ids and are ignored.

@@ -187,9 +187,13 @@ class StreamItem {
 
   /// The TMDB / TVDB / IMDb ids the server holds for this item, when the
   /// request asked for them — see [StreamExternalIds]. Empty is "not reported",
-  /// never "has none": most reads do not ask, because only the arr join needs
-  /// them.
+  /// never "has none". The browse reads ask too: a movie with a TMDB id opens
+  /// on its own page (`MediaKey.ofStreamItem`).
   final StreamExternalIds externalIds;
+
+  /// The server's synopsis, when the read carried it: what the Media page
+  /// says of a title only a media server knows.
+  final String? overview;
 
   /// The picture of the item's first version, when the read asked for it.
   /// Null is "not reported": only the Media page's lookup asks.
@@ -208,6 +212,7 @@ class StreamItem {
     required this.unplayedChildCount,
     this.externalIds = StreamExternalIds.none,
     this.video,
+    this.overview,
   });
 
   /// Fraction watched, 0..1, or null when there is no resume point.
