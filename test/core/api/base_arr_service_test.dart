@@ -58,7 +58,7 @@ void main() {
       expect(client.lastGetPath, isNull);
     });
 
-    test('lookupItems encodes term and maps results', () async {
+    test('lookupItems sends the term as typed and maps results', () async {
       client.getResponseData = [
         {'id': 3, 'title': 'Lookup'},
       ];
@@ -70,9 +70,7 @@ void main() {
       );
 
       expect(client.lastGetPath, '/api/v3/movie/lookup');
-      expect(client.lastGetQueryParameters, {
-        'term': 'tmdb%3A123%20some%20title',
-      });
+      expect(client.lastGetQueryParameters, {'term': 'tmdb:123 some title'});
       expect(items, [const TestItem(id: 3, title: 'Lookup')]);
 
       items.add(const TestItem(id: 4, title: 'Growable'));

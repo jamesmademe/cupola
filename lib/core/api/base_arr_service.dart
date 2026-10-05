@@ -628,10 +628,12 @@ mixin ArrActivityMixin {
     }
 
     try {
-      final encodedTerm = Uri.encodeComponent(term);
+      // As typed: Dio encodes query values itself. Encoding it here too sent
+      // `tvdb%253A121361`, which Sonarr matches to nothing, and turned
+      // `Game of Thrones` into a search for `Game%20of%20Thrones`.
       final response = await client.get(
         '/api/${config.apiVersion}/$endpoint',
-        queryParameters: {'term': encodedTerm},
+        queryParameters: {'term': term},
         cancelToken: cancelToken,
       );
       final data = response.data as List<dynamic>;

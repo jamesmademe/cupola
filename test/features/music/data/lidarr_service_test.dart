@@ -288,15 +288,13 @@ void main() {
       expect(client.lastGetPath, isNull);
     });
 
-    test('lookupArtists encodes the term and maps results', () async {
+    test('lookupArtists sends the term as typed and maps results', () async {
       client.getResponseData = [_artistJson(id: 3, artistName: 'Metallica')];
 
       final artists = await service.lookupArtists('metallica & friends');
 
       expect(client.lastGetPath, '/api/v1/artist/lookup');
-      expect(client.lastGetQueryParameters, {
-        'term': 'metallica%20%26%20friends',
-      });
+      expect(client.lastGetQueryParameters, {'term': 'metallica & friends'});
       expect(artists.single.artistName, 'Metallica');
     });
 

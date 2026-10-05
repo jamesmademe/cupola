@@ -108,7 +108,7 @@ void main() {
       expect(client.getCallCount, 0);
     });
 
-    test('lookupMovies encodes the term and maps results', () async {
+    test('lookupMovies sends the term as typed and maps results', () async {
       final client = FakeApiClient()
         ..getResponseData = [
           {'id': 7, 'title': 'Dune', 'year': 2021},
@@ -118,7 +118,7 @@ void main() {
       final movies = await service.lookupMovies('dune & friends');
 
       expect(client.lastGetPath, '/api/v3/movie/lookup');
-      expect(client.lastGetQueryParameters, {'term': 'dune%20%26%20friends'});
+      expect(client.lastGetQueryParameters, {'term': 'dune & friends'});
       expect(movies.single.title, 'Dune');
     });
 

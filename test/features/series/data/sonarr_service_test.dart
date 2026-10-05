@@ -153,7 +153,7 @@ void main() {
       expect(client.getCallCount, 0);
     });
 
-    test('lookupSeries encodes the term and maps results', () async {
+    test('lookupSeries sends the term as typed and maps results', () async {
       final client = FakeApiClient()
         ..getResponseData = [
           {'id': 9, 'title': 'The Boys', 'year': 2019},
@@ -163,7 +163,7 @@ void main() {
       final series = await service.lookupSeries('the boys & co');
 
       expect(client.lastGetPath, '/api/v3/series/lookup');
-      expect(client.lastGetQueryParameters, {'term': 'the%20boys%20%26%20co'});
+      expect(client.lastGetQueryParameters, {'term': 'the boys & co'});
       expect(series.single.title, 'The Boys');
     });
 
