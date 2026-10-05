@@ -843,7 +843,46 @@ class SonarrFake extends ArrFake {
       return NetworkReply.json(_episodes(c, id));
     }
     if (r.method == 'GET' && r.path == '/api/v3/series/lookup') {
-      return NetworkReply.json(series(c));
+      // By id (`tvdb:300003`, `tmdb:300003`): the world's series under it,
+      // as this Sonarr holds it or as it would add it. Any other term: the
+      // library, whatever it says.
+      final byId = RegExp(
+        r'^(tvdb|tmdb):(\d+)$',
+      ).firstMatch(r.query['term'] ?? '');
+      if (byId == null) return NetworkReply.json(series(c));
+      final id = int.parse(byId.group(2)!);
+      for (final title in WorldTitles.all) {
+        if (!title.isSeries) continue;
+        if ((byId.group(1) == 'tvdb' ? title.tvdbId : title.tmdbId) != id) {
+          continue;
+        }
+        return NetworkReply.json([
+          _seriesFor(c, title)?.$2 ??
+              {
+                'title': title.title,
+                'sortTitle': title.title.toLowerCase(),
+                'titleSlug': title.slug,
+                'year': title.year,
+                'tvdbId': title.tvdbId,
+                'tmdbId': title.tmdbId,
+                'status': 'continuing',
+                'seriesType': 'standard',
+                'images': const <Object?>[],
+                'seasons': [
+                  {'seasonNumber': 1, 'monitored': true},
+                ],
+              },
+        ]);
+      }
+      return NetworkReply.json(const <Object?>[]);
+    }
+    // An add: Sonarr answers with the new record. The world does not keep it.
+    if (r.method == 'POST' && r.path == '/api/v3/series') {
+      final body = r.json;
+      return NetworkReply.json({
+        if (body is Map) ...body.cast<String, Object?>(),
+        'id': 100,
+      }, status: 201);
     }
     if (r.method == 'GET' && r.path == '/api/v3/episodefile') {
       final id = int.tryParse(r.query['seriesId'] ?? '') ?? 0;

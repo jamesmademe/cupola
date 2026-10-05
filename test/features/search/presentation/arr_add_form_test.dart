@@ -7,6 +7,7 @@ import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
+import 'package:cupola/features/series/domain/sonarr_monitor.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -478,6 +479,8 @@ class _FakeSonarr extends FakeSonarrService {
     required String rootFolderPath,
     bool monitored = true,
     bool searchForMissingEpisodes = true,
+    SonarrMonitor monitor = SonarrMonitor.all,
+    String? seriesType,
   }) async {
     added.add(_SonarrAdd(qualityProfileId, rootFolderPath));
     return series;

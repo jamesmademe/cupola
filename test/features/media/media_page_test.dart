@@ -1048,6 +1048,61 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('a series nobody holds is added to Sonarr with the episodes '
+        'it should look for', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.agent327,
+        key: MediaKey.tv(WorldTitles.agent327.tmdbId),
+        height: 2400,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Add to Sonarr'));
+      await _answer(tester);
+      // ignore: avoid_print
+      print(
+        tester
+            .widgetList<Text>(find.byType(Text))
+            .map((t) => t.data ?? t.textSpan?.toPlainText())
+            .join(' | '),
+      );
+
+      expect(find.text('All episodes'), findsOneWidget);
+      expect(find.text('Every episode, aired and to come'), findsOneWidget);
+      expect(find.text('Standard'), findsOneWidget);
+      expect(find.text('Episodes numbered by season, S01E02'), findsOneWidget);
+
+      await tester.tap(find.text('All episodes'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Future episodes').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Only the ones that air from now'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Add and search'));
+      await _answer(tester);
+      final add = harness.network
+          .requestsTo(WorldIds.sonarr)
+          .where((r) => r.method == 'POST' && r.uri.path == '/api/v3/series')
+          .single;
+      expect(add.json, containsPair('tvdbId', WorldTitles.agent327.tvdbId));
+      expect(add.json, containsPair('seriesType', 'standard'));
+      expect(
+        add.json,
+        containsPair('rootFolderPath', '/mnt/tank/media/series'),
+      );
+      expect(
+        (add.json as Map)['addOptions'],
+        containsPair('monitor', 'future'),
+      );
+      expect(
+        (add.json as Map)['addOptions'],
+        containsPair('searchForMissingEpisodes', true),
+      );
+      expect(find.textContaining('Added to Sonarr'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('graphs its episodes from TMDB\'s votes, and opens the best', (
       tester,
     ) async {

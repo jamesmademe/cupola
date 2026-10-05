@@ -9,39 +9,50 @@ import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/domain/sonarr_monitor.dart';
+import 'package:cupola/features/series/domain/sonarr_series_type.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Adds a film nobody holds to Radarr: which Radarr, the quality
-/// profile and root folder it lands under, whether Radarr monitors it, and
-/// whether it searches now.
+/// Adds a title nobody holds to its arr: a film to Radarr, a series to
+/// Sonarr. Which connection, the quality profile and root folder it lands
+/// under, what the arr looks for (for a film, whether it monitors it; for a
+/// series, which episodes, and how it numbers them), and whether it searches
+/// now.
 ///
-/// [connections] are the Radarr connections set up, the first chosen. The
-/// sheet resolves to the one the film was added to, null when it closed
-/// without adding. The film is posted as that Radarr looks it up
-/// ([mediaAddLookupProvider]), with the form the global search's add uses
+/// [connections] are the [arr] connections set up, the first chosen. The
+/// sheet resolves to the one the title was added to, null when it closed
+/// without adding. The title is posted as that connection looks it up
+/// ([mediaAddLookupProvider] by TMDB's id, [mediaSonarrAddLookupProvider] by
+/// TVDB's, else TMDB's), with the form the global search's add uses
 /// ([arrAddFormProvider]).
 Future<ServiceInstance?> showMediaAddSheet(
   BuildContext context, {
-  required int tmdbId,
+  required ServiceKey arr,
   required List<ServiceInstance> connections,
   required String Function(ServiceInstance connection) name,
   required String title,
+  int? tmdbId,
+  int? tvdbId,
   String? year,
   TitleLight? light,
 }) {
   assert(connections.isNotEmpty, 'nothing to add to');
   return AppBottomSheet.show<ServiceInstance>(
     context: context,
-    // One Radarr: the sheet names it. More: the pills under it do.
+    // One connection: the sheet names it. More: the pills under it do.
     title:
-        'Add to ${connections.length == 1 ? name(connections.single) : ServiceKey.radarr.title}',
+        'Add to ${connections.length == 1 ? name(connections.single) : arr.title}',
     subtitle: (year ?? '').isEmpty ? title : '$title · $year',
     showClose: true,
     builder: (_) => MediaAddSheet(
+      arr: arr,
       tmdbId: tmdbId,
+      tvdbId: tvdbId,
       connections: connections,
       name: name,
       light: light,
@@ -53,13 +64,23 @@ Future<ServiceInstance?> showMediaAddSheet(
 class MediaAddSheet extends ConsumerStatefulWidget {
   const MediaAddSheet({
     super.key,
+    this.arr = ServiceKey.radarr,
     required this.tmdbId,
+    this.tvdbId,
     required this.connections,
     required this.name,
     this.light,
-  });
+  }) : assert(
+         arr == ServiceKey.radarr ? tmdbId != null : (tmdbId ?? tvdbId) != null,
+         'nothing to look the title up by',
+       );
 
-  final int tmdbId;
+  /// Radarr for a film, Sonarr for a series.
+  final ServiceKey arr;
+  final int? tmdbId;
+
+  /// A series' TVDB id, Sonarr's own; TMDB's stands in without it.
+  final int? tvdbId;
   final List<ServiceInstance> connections;
   final String Function(ServiceInstance connection) name;
   final TitleLight? light;
@@ -71,10 +92,74 @@ class MediaAddSheet extends ConsumerStatefulWidget {
 class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
   late ServiceInstance _to = widget.connections.first;
 
-  ArrAddArgs get _args => (instanceId: _to.id, service: ServiceKey.radarr);
+  bool get _series => widget.arr == ServiceKey.sonarr;
 
-  ({String connectionId, int tmdbId}) get _target =>
-      (connectionId: _to.id, tmdbId: widget.tmdbId);
+  ArrAddArgs get _args => (instanceId: _to.id, service: widget.arr);
+
+  /// The title as the chosen connection looks it up.
+  AsyncValue<Object> _lookup() => _series
+      ? ref.watch(
+          mediaSonarrAddLookupProvider((
+            connectionId: _to.id,
+            tvdbId: widget.tvdbId,
+            tmdbId: widget.tmdbId,
+          )),
+        )
+      : ref.watch(
+          mediaAddLookupProvider((
+            connectionId: _to.id,
+            tmdbId: widget.tmdbId!,
+          )),
+        );
+
+  void _lookAgain() => _series
+      ? ref.invalidate(
+          mediaSonarrAddLookupProvider((
+            connectionId: _to.id,
+            tvdbId: widget.tvdbId,
+            tmdbId: widget.tmdbId,
+          )),
+        )
+      : ref.invalidate(
+          mediaAddLookupProvider((
+            connectionId: _to.id,
+            tmdbId: widget.tmdbId!,
+          )),
+        );
+
+  Future<void> _pickMonitor(ArrAddFormState state) async {
+    final picked = await showMediaValueSheet<SonarrMonitor>(
+      context,
+      title: 'Monitor',
+      value: state.sonarrMonitor,
+      currentLabel: state.sonarrMonitor.label,
+      options: [
+        for (final monitor in SonarrMonitor.values)
+          MediaDetailValueOption(value: monitor, label: monitor.label),
+      ],
+    );
+    if (picked != null) {
+      ref
+          .read(arrAddFormProvider(_args).notifier)
+          .setSonarrMonitor(picked.value);
+    }
+  }
+
+  Future<void> _pickType(SonarrSeriesType current) async {
+    final picked = await showMediaValueSheet<SonarrSeriesType>(
+      context,
+      title: 'Series type',
+      value: current,
+      currentLabel: current.label,
+      options: [
+        for (final type in SonarrSeriesType.values)
+          MediaDetailValueOption(value: type, label: type.label),
+      ],
+    );
+    if (picked != null) {
+      ref.read(arrAddFormProvider(_args).notifier).setSeriesType(picked.value);
+    }
+  }
 
   Future<void> _add(ArrAddFormNotifier form, ArrAddRequest request) async {
     final to = _to;
@@ -123,7 +208,7 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
     final name = widget.name(_to);
     final state = ref.watch(arrAddFormProvider(_args));
     final form = ref.read(arrAddFormProvider(_args).notifier);
-    final lookup = ref.watch(mediaAddLookupProvider(_target));
+    final lookup = _lookup();
     final profile = state.profiles
         .where((p) => p.id == state.profileId)
         .firstOrNull
@@ -141,9 +226,9 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
       AsyncError(:final error) => InlineErrorRetry(
         message: 'Could not look it up in $name',
         error: error,
-        service: ServiceKey.radarr,
+        service: widget.arr,
         instanceId: _to.id,
-        onRetry: () => ref.invalidate(mediaAddLookupProvider(_target)),
+        onRetry: _lookAgain,
       ),
       _ when state.isLoading || lookup.isLoading => const ShimmerPlaceholder(
         height: 4 * 60,
@@ -182,22 +267,45 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
                 ? () => _pickFolder(state)
                 : null,
           ),
-          MediaSwitchRow(
-            label: 'Monitor',
-            detail: monitor
-                ? 'Grabs it and upgrades it to ${profile ?? 'its profile'}'
-                : '$name lists it and never looks for it',
-            value: monitor,
-            onChanged: (value) {
-              form.setMonitored(value);
-              // Radarr does not search for a film it does not monitor.
-              form.setSearchOnAdd(value);
-            },
-          ),
+          if (_series) ...[
+            // Which episodes, in Sonarr's words, with what each means.
+            MediaValueRow(
+              label: 'Monitor',
+              value: _Choice(
+                label: state.sonarrMonitor.label,
+                meaning: state.sonarrMonitor.meaning,
+              ),
+              onTap: () => _pickMonitor(state),
+            ),
+            if (lookup.value case final SonarrSeries series)
+              () {
+                final type =
+                    state.seriesType ??
+                    SonarrSeriesType.fromWire(series.seriesType) ??
+                    SonarrSeriesType.standard;
+                return MediaValueRow(
+                  label: 'Series type',
+                  value: _Choice(label: type.label, meaning: type.description),
+                  onTap: () => _pickType(type),
+                );
+              }(),
+          ] else
+            MediaSwitchRow(
+              label: 'Monitor',
+              detail: monitor
+                  ? 'Grabs it and upgrades it to ${profile ?? 'its profile'}'
+                  : '$name lists it and never looks for it',
+              value: monitor,
+              onChanged: (value) {
+                form.setMonitored(value);
+                // Radarr does not search for a film it does not monitor.
+                form.setSearchOnAdd(value);
+              },
+            ),
           MediaSwitchRow(
             label: 'Search when added',
             detail: !monitor
-                ? 'Needs Monitor on'
+                ? (_series ? 'Needs episodes to monitor' : 'Needs Monitor on')
                 : search
                 ? 'Asks $indexers right away'
                 : 'Search later from its page',
@@ -235,10 +343,16 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
         const SizedBox(height: AppSpacing.lg),
         FilledButton(
           onPressed: state.canSubmit && lookup.hasValue
-              ? () => _add(
-                  form,
-                  RadarrAddRequest(instanceId: _to.id, movie: lookup.value!),
-                )
+              ? () => _add(form, switch (lookup.value!) {
+                  final SonarrSeries series => SonarrAddRequest(
+                    instanceId: _to.id,
+                    series: series,
+                  ),
+                  final movie => RadarrAddRequest(
+                    instanceId: _to.id,
+                    movie: movie as RadarrMovie,
+                  ),
+                })
               : null,
           style: mediaLeadStyle(context, widget.light),
           child: Row(
@@ -255,6 +369,35 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
               Flexible(child: Text(search ? 'Add and search' : 'Add to $name')),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A choice and what it means, right-aligned in its row: `Future episodes`,
+/// `Only the ones that air from now` under it.
+class _Choice extends StatelessWidget {
+  const _Choice({required this.label, required this.meaning});
+
+  final String label;
+  final String meaning;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          label,
+          textAlign: TextAlign.end,
+          style: AppType.meta.copyWith(color: room.inkSecondary),
+        ),
+        Text(
+          meaning,
+          textAlign: TextAlign.end,
+          style: AppType.caption.copyWith(color: room.inkTertiary),
         ),
       ],
     );

@@ -22,6 +22,7 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -521,6 +522,32 @@ final mediaAddLookupProvider = FutureProvider.autoDispose
       return ref
           .watch(radarrServiceForProvider(target.connectionId))
           .lookupMovieByTmdbId(target.tmdbId);
+    }, retry: noProviderRetry);
+
+/// A series nobody holds, as the Sonarr it would be added to looks it up: by
+/// TVDB's id when it is known, else by TMDB's (which Sonarr 4 reads). What
+/// the add posts back. Throws when Sonarr does not answer or does not find
+/// it.
+final mediaSonarrAddLookupProvider = FutureProvider.autoDispose
+    .family<SonarrSeries, ({String connectionId, int? tvdbId, int? tmdbId})>((
+      ref,
+      target,
+    ) async {
+      final tvdb = target.tvdbId;
+      final found = await ref
+          .watch(sonarrServiceForProvider(target.connectionId))
+          .lookupSeries(
+            tvdb != null ? 'tvdb:$tvdb' : 'tmdb:${target.tmdbId}',
+            reportFailure: true,
+          );
+      for (final series in found) {
+        if (tvdb != null
+            ? series.tvdbId == tvdb
+            : series.tmdbId == target.tmdbId) {
+          return series;
+        }
+      }
+      throw StateError('Sonarr found no series under that id');
     }, retry: noProviderRetry);
 
 /// One Radarr copy's downloads, read while its panel shows one.

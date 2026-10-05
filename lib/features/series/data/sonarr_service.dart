@@ -8,6 +8,7 @@ import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode_file.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/domain/sonarr_monitor.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -330,6 +331,8 @@ class SonarrService with ArrActivityMixin {
     required String rootFolderPath,
     bool monitored = true,
     bool searchForMissingEpisodes = true,
+    SonarrMonitor monitor = SonarrMonitor.all,
+    String? seriesType,
   }) async {
     final response = await client.post(
       '/api/v3/series',
@@ -341,13 +344,13 @@ class SonarrService with ArrActivityMixin {
         'year': series.year,
         'images': series.images,
         'seasons': series.seasons,
-        'seriesType': series.seriesType ?? 'standard',
+        'seriesType': seriesType ?? series.seriesType ?? 'standard',
         'qualityProfileId': qualityProfileId,
         'rootFolderPath': rootFolderPath,
         'monitored': monitored,
         'seasonFolder': true,
         'addOptions': {
-          'monitor': monitored ? 'all' : 'none',
+          'monitor': monitored ? monitor.wireValue : 'none',
           'searchForMissingEpisodes': searchForMissingEpisodes,
           'searchForCutoffUnmetEpisodes': false,
         },

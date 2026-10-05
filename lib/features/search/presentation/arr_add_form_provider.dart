@@ -8,6 +8,8 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/series/domain/sonarr_monitor.dart';
+import 'package:cupola/features/series/domain/sonarr_series_type.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -70,6 +72,13 @@ class ArrAddFormState {
   final String? rootFolder;
   final int? metadataProfileId;
   final bool monitored;
+
+  /// Sonarr only: which episodes it looks for, under [monitored].
+  final SonarrMonitor sonarrMonitor;
+
+  /// Sonarr only: how it numbers the episodes; null keeps the lookup's.
+  final SonarrSeriesType? seriesType;
+
   final bool searchOnAdd;
   final bool isLoading;
   final bool isSubmitting;
@@ -96,6 +105,8 @@ class ArrAddFormState {
     this.rootFolder,
     this.metadataProfileId,
     this.monitored = true,
+    this.sonarrMonitor = SonarrMonitor.all,
+    this.seriesType,
     this.searchOnAdd = true,
     this.isLoading = true,
     this.isSubmitting = false,
@@ -125,6 +136,8 @@ class ArrAddFormState {
     String? rootFolder,
     int? metadataProfileId,
     bool? monitored,
+    SonarrMonitor? sonarrMonitor,
+    SonarrSeriesType? seriesType,
     bool? searchOnAdd,
     bool? isLoading,
     bool? isSubmitting,
@@ -143,6 +156,8 @@ class ArrAddFormState {
       rootFolder: rootFolder ?? this.rootFolder,
       metadataProfileId: metadataProfileId ?? this.metadataProfileId,
       monitored: monitored ?? this.monitored,
+      sonarrMonitor: sonarrMonitor ?? this.sonarrMonitor,
+      seriesType: seriesType ?? this.seriesType,
       searchOnAdd: searchOnAdd ?? this.searchOnAdd,
       isLoading: isLoading ?? this.isLoading,
       isSubmitting: isSubmitting ?? this.isSubmitting,
@@ -354,6 +369,18 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
 
   void setSearchOnAdd(bool value) => state = state.copyWith(searchOnAdd: value);
 
+  /// Sonarr: which episodes it looks for. `None` is not monitoring, and
+  /// Sonarr does not search for a series it does not monitor.
+  void setSonarrMonitor(SonarrMonitor value) => state = state.copyWith(
+    sonarrMonitor: value,
+    monitored: value != SonarrMonitor.none,
+    searchOnAdd: value != SonarrMonitor.none && state.searchOnAdd,
+  );
+
+  /// Sonarr: how it numbers the episodes.
+  void setSeriesType(SonarrSeriesType value) =>
+      state = state.copyWith(seriesType: value);
+
   /// Posts the add. Returns null on success, or the sentence to show.
   ///
   /// The failure is never swallowed: Radarr answers 400 for a title it already
@@ -402,6 +429,8 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
                 rootFolderPath: rootFolder,
                 monitored: state.monitored,
                 searchForMissingEpisodes: state.searchOnAdd,
+                monitor: state.sonarrMonitor,
+                seriesType: state.seriesType?.wireValue,
               );
         case LidarrAddRequest(:final artist):
           await ref

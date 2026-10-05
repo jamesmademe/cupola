@@ -200,8 +200,8 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     },
   };
 
-  /// Adds the film to the Radarr chosen in the sheet, then reads
-  /// every Radarr again: the row and the lead change with the answer.
+  /// Adds the title to the Radarr or Sonarr chosen in the sheet, then reads
+  /// each of them again: the row and the lead change with the answer.
   Future<void> _add(
     MediaLeadAdd lead,
     List<MediaRow> rows,
@@ -209,17 +209,23 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     TitleLight? light,
   ) async {
     final tmdbId = mediaKey.tmdbId;
+    // Sonarr knows a series by TVDB's id; TMDB's stands in without it.
+    final tvdbId = mediaKey.isMovie
+        ? null
+        : ref.read(mediaTvdbIdProvider(mediaKey)).value;
     final arrs = [
       for (final row in rows)
         if (row is MediaConnectionRow && row.service == lead.arr) row,
     ];
-    if (tmdbId == null || arrs.isEmpty) return;
+    if ((tmdbId ?? tvdbId) == null || arrs.isEmpty) return;
     final settings = ref.read(currentSettingsProvider);
     String name(ServiceInstance connection) =>
         settings.connectionTitle(connection.id, connection.service);
     final added = await showMediaAddSheet(
       context,
+      arr: lead.arr,
       tmdbId: tmdbId,
+      tvdbId: tvdbId,
       connections: [for (final row in arrs) row.connection],
       name: name,
       title: identity?.title ?? '',
@@ -665,10 +671,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   onWatch: request?.watch == null
                       ? null
                       : () => _watch(request!.watch!.url),
-                  // A series is added with its seasons, not drawn here yet.
-                  onAdd: mediaKey.isMovie
-                      ? (lead) => _add(lead, rows, identity, light)
-                      : null,
+                  onAdd: (lead) => _add(lead, rows, identity, light),
                   hasTrailer: identity?.videos.isNotEmpty ?? false,
                   showManage: manage.isNotEmpty,
                   primary: decisionLeads
