@@ -110,6 +110,12 @@ final _pages = <String, Widget>{
   'the Media page, a movie on the server': MediaPage(
     mediaKey: MediaKey.movie(WorldTitles.tearsOfSteel.tmdbId),
   ),
+  'the Media page, a series with a season to ask for': MediaPage(
+    mediaKey: MediaKey.tv(WorldTitles.nightShift.tmdbId),
+  ),
+  'the Media page, a series on the server in part': MediaPage(
+    mediaKey: MediaKey.tv(WorldTitles.cosmosLaundromat.tmdbId),
+  ),
   'a person': const PersonDetailScreen(personId: SeerrFake.personId),
   'a collection': const CollectionDetailScreen(
     collectionId: SeerrFake.collectionId,

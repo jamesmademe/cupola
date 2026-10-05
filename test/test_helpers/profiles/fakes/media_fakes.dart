@@ -98,6 +98,8 @@ class SeerrFake extends ServiceFake {
     (5, WorldTitles.sintel, 2, 2, Duration(days: 9), false),
     (6, WorldTitles.tearsOfSteel, 2, 2, Duration(days: 30), true),
     (7, WorldTitles.cosmosLaundromat, 2, 2, Duration(days: 60), false),
+    // A series' next season, asked for and waiting.
+    (8, WorldTitles.nightShift, 3, 1, Duration(hours: 5), false),
   ];
 
   /// What Seerr knows of each title: `(status, status4k)`, Seerr's media
@@ -174,9 +176,21 @@ class SeerrFake extends ServiceFake {
       'externalServiceId4k': uhdId,
       'externalServiceSlug': t.slug,
       // Seerr's link to the title in the player it is set up with, once it
-      // is there.
-      if (hd == 5)
+      // is there, whole or in part.
+      if (hd == 4 || hd == 5)
         'mediaUrl': '${WorldHosts.jellyfin}/web/#/details?id=jf-${t.key}',
+      // A series' seasons, each with its own status. Cosmos Laundromat: the
+      // first on the server, the second in part. Night Shift: the first on
+      // the server, the second asked for by nobody, the third waiting.
+      if (t.isSeries)
+        'seasons': [
+          {'seasonNumber': 1, 'status': hd >= 4 ? 5 : hd, 'status4k': 1},
+          {
+            'seasonNumber': 2,
+            'status': t == WorldTitles.nightShift ? 1 : hd,
+            'status4k': 1,
+          },
+        ],
       'downloadStatus': [
         for (final d in WorldDownloads.all)
           if (d.title == t &&
@@ -244,12 +258,17 @@ class SeerrFake extends ServiceFake {
       'canRemove': true,
       'requestedBy': _user(c, by),
       if (status != 1) 'modifiedBy': _user(c, 1),
-      'seasons': title.isSeries
+      // A waiting request asks for the season nobody has asked for yet.
+      'seasons': !title.isSeries
+          ? const <Object?>[]
+          : status == 1
           ? [
+              {'id': 3, 'seasonNumber': 3, 'status': 1},
+            ]
+          : [
               {'id': 1, 'seasonNumber': 1, 'status': 5},
               {'id': 2, 'seasonNumber': 2, 'status': 3},
-            ]
-          : const <Object?>[],
+            ],
     };
   }
 
@@ -289,25 +308,25 @@ class SeerrFake extends ServiceFake {
         ],
       if (collectionParts.contains(t))
         'collection': {'id': collectionId, 'name': collectionName},
+      'watchProviders': [
+        {
+          'iso_3166_1': 'IT',
+          'flatrate': [
+            {'id': 8, 'name': 'Netflix'},
+            {'id': 119, 'name': 'Prime Video'},
+          ],
+          'buy': [
+            {'id': 2, 'name': 'Apple TV'},
+          ],
+        },
+        {
+          'iso_3166_1': 'US',
+          'flatrate': [
+            {'id': 15, 'name': 'Hulu'},
+          ],
+        },
+      ],
       if (!t.isSeries) ...{
-        'watchProviders': [
-          {
-            'iso_3166_1': 'IT',
-            'flatrate': [
-              {'id': 8, 'name': 'Netflix'},
-              {'id': 119, 'name': 'Prime Video'},
-            ],
-            'buy': [
-              {'id': 2, 'name': 'Apple TV'},
-            ],
-          },
-          {
-            'iso_3166_1': 'US',
-            'flatrate': [
-              {'id': 15, 'name': 'Hulu'},
-            ],
-          },
-        ],
         'releases': {
           'results': [
             {

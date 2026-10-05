@@ -53,6 +53,36 @@ final class MediaThroughSeerrRow extends MediaRow {
   ServiceKey get service => copy.arr;
 }
 
+/// Case b for a player: Seerr says the title is on the media server it is set
+/// up with, and Cupola has no media server of its own. Seerr's word and its
+/// link to the title there, with one quiet way to set the server up
+/// (rule 9): no progress, no episodes, never drawn as set up.
+final class MediaServerThroughSeerrRow extends MediaRow {
+  const MediaServerThroughSeerrRow({
+    required this.seerr,
+    required this.server,
+    required this.mediaInfo,
+    required this.url,
+  });
+
+  /// The Seerr connection that made the claim.
+  final ServiceInstance seerr;
+
+  /// Jellyfin or Plex: the server Seerr is set up with. Null while Seerr has
+  /// not said which yet: the row draws nothing, and the lead waits for it.
+  final ServiceKey? server;
+
+  /// Seerr's media row, for the status and a series' seasons.
+  final Map<String, dynamic>? mediaInfo;
+
+  /// Seerr's link to the title in that server (`mediaUrl`).
+  final Uri url;
+
+  /// Unnamed, it draws nothing and leads nowhere; Jellyfin stands in.
+  @override
+  ServiceKey get service => server ?? ServiceKey.jellyfin;
+}
+
 /// Case a: [service] is not set up and nothing else knows it. One dimmed,
 /// tappable row that opens its setup form (rule 3).
 final class MediaNotSetUpRow extends MediaRow {

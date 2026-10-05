@@ -274,6 +274,18 @@ List<MediaRow> _withSeerr() => [
   ),
 ];
 
+/// No media server in Cupola: Seerr says Nosferatu is on its Jellyfin, and
+/// its link opens it there.
+List<MediaRow> _throughSeerr() => [
+  MediaServerThroughSeerrRow(
+    seerr: _seerr,
+    server: ServiceKey.jellyfin,
+    mediaInfo: const {'status': 5},
+    url: Uri.parse('http://jellyfin.local:8096/web/#/details?id=jf-653'),
+  ),
+  ..._withSeerr().where((row) => row is! MediaConnectionRow<MediaStreamCopy>),
+];
+
 /// Where Nosferatu streams in the catalog's region, as TMDB lists it.
 const _watchProviders = [
   {
@@ -942,6 +954,12 @@ void main() {
         'With Seerr · TMDB names the title, and the collection it belongs '
         'to: 5 of 8 on your server',
         _withSeerr(),
+        height: 2240,
+      ),
+      _scene(
+        'Through Seerr · no media server in Cupola: Seerr\'s link leads, '
+        'and Jellyfin\'s row is Seerr\'s word with the way to add it',
+        _throughSeerr(),
         height: 2240,
       ),
       _scene(

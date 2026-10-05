@@ -35,11 +35,12 @@ void main() {
         if (result.service == ServiceKey.seerr)
           for (final item in result.items) item.title,
     };
-    // Two waiting for approval, two approved and on their way. Coffee Run,
-    // Sintel and the 4K Tears of Steel are on the server already.
+    // Three waiting for approval, two approved and on their way. Coffee
+    // Run, Sintel and the 4K Tears of Steel are on the server already.
     expect(titles, {
       WorldTitles.charge.title,
       WorldTitles.metropolis.title,
+      WorldTitles.nightShift.title,
       WorldTitles.spriteFright.title,
       WorldTitles.cosmosLaundromat.title,
     });

@@ -59,10 +59,7 @@ class MediaDecisionCard extends ConsumerWidget {
     final who = gate.showsRequesterNames
         ? request.requestedBy?.displayName
         : null;
-    final headline = [
-      who == null ? 'Requested' : '$who asked for it',
-      if (request.is4k) 'in 4K',
-    ].join(' ');
+    final headline = mediaDecisionHeadline(request, who: who);
     final waiting = [
       StateWord.waitingForApproval.label,
       formatRelativeActivityDate(request.createdAt),

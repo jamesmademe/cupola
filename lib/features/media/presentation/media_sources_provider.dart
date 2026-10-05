@@ -6,11 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_numbering.dart';
+import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/media/domain/media_collection.dart';
@@ -419,6 +422,27 @@ final mediaRowsProvider = Provider.autoDispose.family<List<MediaRow>, MediaKey>(
         ),
     ];
 
+    // With no media server of Cupola's own, Seerr's word that the title is
+    // on the one Seerr is set up with, and its link to it there (rule 9).
+    final players = [
+      for (final service in const [ServiceKey.jellyfin, ServiceKey.plex])
+        ..._configured(ref, service),
+    ];
+    if (players.isEmpty) {
+      for (final seerr in seerrReadings) {
+        // Asked beside the record, so the server is usually named by the
+        // time the record says the title is there.
+        ref.watch(seerrServerFactsProvider(seerr.connection.id));
+        if (seerr.reading case MediaReadingAnswered(:final answer)) {
+          if (_playerClaim(ref, seerr.connection, answer.value)
+              case final claim?) {
+            rows.add(claim);
+            break;
+          }
+        }
+      }
+    }
+
     final arr = _arrOf(key);
     final arrs = _configured(ref, arr);
     for (final connection in arrs) {
@@ -480,6 +504,49 @@ final mediaRowsProvider = Provider.autoDispose.family<List<MediaRow>, MediaKey>(
     return rows;
   },
 );
+
+/// Seerr [seerr]'s claim that the title is on the media server it is set up
+/// with: where [record] says it is there, in part or whole, with a link to
+/// it. The server comes from Seerr's public settings: a claim with none
+/// while they are out, and no claim when they failed or name a server Cupola
+/// cannot set up (Emby).
+MediaServerThroughSeerrRow? _playerClaim(
+  Ref ref,
+  ServiceInstance seerr,
+  MediaSeerrRecord record,
+) {
+  final mediaInfo = record.mediaInfo;
+  bool there(Object? code) => code == 4 || code == 5;
+  if (!there(mediaInfo?['status']) && !there(mediaInfo?['status4k'])) {
+    return null;
+  }
+  final url = Uri.tryParse(
+    stringOrNull(mediaInfo?['mediaUrl']) ??
+        stringOrNull(mediaInfo?['mediaUrl4k']) ??
+        '',
+  );
+  if (url == null || !url.hasScheme) return null;
+  final facts = ref.watch(seerrServerFactsProvider(seerr.id));
+  final ServiceKey? server;
+  if (facts.isLoading && !facts.hasValue) {
+    server = null;
+  } else {
+    switch (facts.value?.mediaServer) {
+      case SeerrMediaServer.jellyfin:
+        server = ServiceKey.jellyfin;
+      case SeerrMediaServer.plex:
+        server = ServiceKey.plex;
+      default:
+        return null;
+    }
+  }
+  return MediaServerThroughSeerrRow(
+    seerr: seerr,
+    server: server,
+    mediaInfo: mediaInfo,
+    url: url,
+  );
+}
 
 /// "More like this": TMDB's recommendations through the Seerr
 /// [MediaSource.connectionId], read when the page asks for them.

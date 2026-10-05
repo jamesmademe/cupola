@@ -1,3 +1,4 @@
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
@@ -107,6 +108,29 @@ List<MediaPendingRequest> mediaPendingRequests(List<MediaRow> rows) {
     }
   }
   return pending;
+}
+
+/// What a waiting request asked for, as its card heads it: `Anna asked for
+/// it`, or for a series the seasons, `Anna asked for Seasons 2 and 3`; then
+/// `in 4K` for the 4K copy. [who] is null where the connection does not see
+/// who asked: `Requested`, `Season 3 requested`.
+String mediaDecisionHeadline(SeerrRequest request, {String? who}) {
+  final seasons = [
+    for (final season in request.seasons ?? const <RequestSeason>[])
+      if (season.seasonNumber > 0) season.seasonNumber,
+  ];
+  final what = request.type == 'tv' && seasons.isNotEmpty
+      ? Lexicon.seasons(seasons)
+      : null;
+  return [
+    switch ((who, what)) {
+      (final who?, final what?) => '$who asked for $what',
+      (final who?, null) => '$who asked for it',
+      (null, final what?) => '$what requested',
+      (null, null) => 'Requested',
+    },
+    if (request.is4k) 'in 4K',
+  ].join(' ');
 }
 
 Iterable<Object?> _answered(List<MediaRow> rows) sync* {

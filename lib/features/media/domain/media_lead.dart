@@ -68,6 +68,19 @@ final class MediaLeadCopy extends MediaLead {
   final MediaStatusInfo status;
 }
 
+/// The operator has no media server in Cupola, and Seerr says the title is
+/// on the one it is set up with: Seerr's link opens it there (rule 9), as it
+/// does for the requester.
+final class MediaLeadWatch extends MediaLead {
+  const MediaLeadWatch(this.claim);
+
+  final MediaServerThroughSeerrRow claim;
+
+  /// Jellyfin or Plex: a claim leads only once Seerr has named its server.
+  ServiceKey get server => claim.server!;
+  Uri get url => claim.url;
+}
+
 /// Nothing to play and nothing to do: Seerr's trailer leads.
 final class MediaLeadTrailer extends MediaLead {
   const MediaLeadTrailer();
@@ -84,7 +97,8 @@ final class MediaLeadNone extends MediaLead {
 /// one never does); the requester asks for anything else; the operator adds a
 /// title nobody holds, requests it through Seerr when no arr is set up, or
 /// follows the movie copy that needs something, [focus] first (the
-/// connection the page was opened from); then the trailer; then nothing. A connection that
+/// connection the page was opened from), or opens the title through Seerr's
+/// link where Cupola has no media server; then the trailer; then nothing. A connection that
 /// did not answer is never read as one that holds nothing: no Add while an arr
 /// is silent.
 MediaLead resolveMediaLead(
@@ -162,6 +176,12 @@ MediaLead resolveMediaLead(
 
   if (seerrs.any((row) => row.reading is MediaReadingWaiting)) {
     return const MediaLeadWaiting();
+  }
+  if (rows.whereType<MediaServerThroughSeerrRow>().firstOrNull
+      case final claim?) {
+    return claim.server == null
+        ? const MediaLeadWaiting()
+        : MediaLeadWatch(claim);
   }
   final trailer = seerrs.any(
     (row) => switch (row.reading) {

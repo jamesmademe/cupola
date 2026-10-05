@@ -74,6 +74,7 @@ import 'package:cupola/features/media/domain/media_facts.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
+import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/media/presentation/media_manage_parts.dart';
@@ -287,6 +288,11 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final watchAt = gate.state == SeerrRequestState.available
         ? Uri.tryParse(link ?? '')
         : null;
+    // The key's gate knows no server: its public settings name the player.
+    final player = watchAt == null
+        ? null
+        : roleGate.server?.mediaServer ??
+              ref.watch(seerrServerFactsProvider(seerr.id)).value?.mediaServer;
     return (
       gate: gate,
       words: words,
@@ -294,7 +300,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       watch: watchAt == null || !watchAt.hasScheme
           ? null
           : (
-              label: switch (roleGate.server?.mediaServer) {
+              label: switch (player) {
                 SeerrMediaServer.plex => 'Watch on Plex',
                 SeerrMediaServer.jellyfin => 'Watch on Jellyfin',
                 SeerrMediaServer.emby => 'Watch on Emby',
@@ -481,12 +487,14 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           }.contains(row.service),
     );
     final lead = resolveMediaLead(rows, audience: audience, focus: focus);
-    // The requester reads the players' rows only.
+    // The requester reads the players' rows only, and none that says how to
+    // set one up.
     final shown = [
       for (final row in rows)
         if (audience == Audience.operator ||
-            row.service == ServiceKey.jellyfin ||
-            row.service == ServiceKey.plex)
+            (row is MediaConnectionRow &&
+                (row.service == ServiceKey.jellyfin ||
+                    row.service == ServiceKey.plex)))
           row,
     ];
     final now = DateTime.now();
@@ -671,6 +679,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   onWatch: request?.watch == null
                       ? null
                       : () => _watch(request!.watch!.url),
+                  onWatchAt: _watch,
                   onAdd: (lead) => _add(lead, rows, identity, light),
                   hasTrailer: identity?.videos.isNotEmpty ?? false,
                   showManage: manage.isNotEmpty,
@@ -1144,12 +1153,13 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           title: title,
           leads: leads && index == 0,
           light: light,
-          // An answer changes Seerr's record, and an approval Radarr's.
+          // An answer changes Seerr's record, and an approval the arr's.
           onDecided: () {
             if (!mounted) return;
             for (final row in ref.read(mediaRowsProvider(mediaKey))) {
               if (row.service == ServiceKey.seerr ||
-                  row.service == ServiceKey.radarr) {
+                  row.service == ServiceKey.radarr ||
+                  row.service == ServiceKey.sonarr) {
                 retryMediaRow(ref, mediaKey, row);
               }
             }
@@ -1937,6 +1947,7 @@ class _LeadBar extends StatelessWidget {
     this.request,
     this.onRequest,
     this.onWatch,
+    required this.onWatchAt,
     this.onAdd,
     this.light,
     this.primary,
@@ -1966,6 +1977,9 @@ class _LeadBar extends StatelessWidget {
   /// Opens Seerr's link to the title, when Seerr has it on the server.
   final VoidCallback? onWatch;
 
+  /// Opens Seerr's link for a Watch that leads.
+  final void Function(Uri url) onWatchAt;
+
   /// Opens the add sheet, for an Add that leads.
   final void Function(MediaLeadAdd lead)? onAdd;
 
@@ -1986,6 +2000,7 @@ class _LeadBar extends StatelessWidget {
       MediaLeadPlay(:final resume) =>
         '${resume ? 'Resume' : 'Play'} on ${serverName(lead as MediaLeadPlay)}',
       MediaLeadAdd(:final arr) => 'Add to ${arr.title}',
+      MediaLeadWatch(:final server) => 'Watch on ${server.title}',
       MediaLeadRequest() =>
         request?.watch?.label ?? request?.words.label ?? 'Request',
       MediaLeadCopy(:final status, :final connection) => resolveMediaAction(
@@ -2032,6 +2047,7 @@ class _LeadBar extends StatelessWidget {
     final onLead = switch (lead) {
       final MediaLeadPlay play => () => onPlay(play),
       final MediaLeadAdd add when onAdd != null => () => onAdd!(add),
+      final MediaLeadWatch watch => () => onWatchAt(watch.url),
       MediaLeadRequest() when request?.watch != null => onWatch,
       MediaLeadRequest() when request?.words.open ?? false => onRequest,
       _ => null,
@@ -2093,6 +2109,7 @@ class _LeadBar extends StatelessWidget {
                   Icon(switch (lead) {
                     MediaLeadPlay() => Icons.play_arrow_rounded,
                     MediaLeadAdd() => Icons.add_rounded,
+                    MediaLeadWatch() => Icons.open_in_new_rounded,
                     MediaLeadRequest() when request?.watch != null =>
                       Icons.open_in_new_rounded,
                     MediaLeadRequest() when !(request?.words.open ?? true) =>

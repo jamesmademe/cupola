@@ -8,6 +8,7 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
@@ -159,11 +160,38 @@ MediaRowView? mediaRowView(
         shape: MediaRowShape.claim,
         name: name,
         via: 'through Seerr',
-        detail: '',
+        detail: mediaSeerrSeasonsLine(mediaInfo, is4k: copy.copy.is4k),
         state: status.label,
         tone: status.tone,
         hollow: status.tone == StatusTone.neutral,
         action: 'Add $name to Cupola',
+        way: MediaRowWay.add,
+      );
+    }(),
+    MediaServerThroughSeerrRow(server: null) => null,
+    MediaServerThroughSeerrRow(:final server?, :final mediaInfo) => () {
+      // What is on the player, not what is coming to it: the downloads are
+      // the arr's to say.
+      final status = seerrMediaStatus(
+        {...?mediaInfo}
+          ..remove('downloadStatus')
+          ..remove('downloadStatus4k'),
+      );
+      // A series in part: the seasons say which, the state only that.
+      final partial = status.availability == MediaAvailability.partial;
+      return MediaRowView(
+        shape: MediaRowShape.claim,
+        name: server.title,
+        via: 'through Seerr',
+        detail: mediaSeerrSeasonsLine(mediaInfo),
+        state: partial
+            ? const MediaStatusInfo(
+                availability: MediaAvailability.partial,
+              ).label
+            : status.label,
+        tone: status.tone,
+        hollow: status.tone == StatusTone.neutral,
+        action: 'Add ${server.title} to Cupola',
         way: MediaRowWay.add,
       );
     }(),
@@ -174,6 +202,37 @@ MediaRowView? mediaRowView(
       now: now,
     ),
   };
+}
+
+/// A series' seasons as Seerr has them on the server, `S1 available · S2
+/// partly available`; empty for a movie, and for seasons not there yet.
+/// [is4k] reads the 4K copy's.
+String mediaSeerrSeasonsLine(
+  Map<String, dynamic>? mediaInfo, {
+  bool is4k = false,
+}) {
+  final seasons = [
+    for (final season in switch (mediaInfo?['seasons']) {
+      final List<dynamic> list => list.whereType<Map<String, dynamic>>(),
+      _ => const <Map<String, dynamic>>[],
+    })
+      (
+        number: intOrNull(season['seasonNumber']) ?? 0,
+        // 4 and 5 mean the same in every numbering.
+        status: SeerrMediaAvailability.fromCode(
+          season[is4k ? 'status4k' : 'status'],
+          numbering: null,
+        ),
+      ),
+  ]..sort((a, b) => a.number.compareTo(b.number));
+  return [
+    for (final season in seasons)
+      if (season.number > 0)
+        if (season.status == SeerrMediaAvailability.available)
+          '${formatSeasonCode(season.number)} available'
+        else if (season.status == SeerrMediaAvailability.partiallyAvailable)
+          '${formatSeasonCode(season.number)} partly available',
+  ].join(' · ');
 }
 
 /// [row] as the rows it draws: one, or none (see [mediaRowView]), except a

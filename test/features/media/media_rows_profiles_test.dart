@@ -35,6 +35,8 @@ String _describe(MediaRow row) => switch (row) {
     }}',
   MediaThroughSeerrRow(:final copy) =>
     '${copy.arr.name}${copy.copy.is4k ? '-4k' : ''}:through-seerr',
+  MediaServerThroughSeerrRow(:final server) =>
+    '${server?.name ?? 'player'}:through-seerr',
   MediaNotSetUpRow(:final service) => '${service.name}:not-set-up',
 };
 

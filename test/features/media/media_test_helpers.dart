@@ -25,7 +25,9 @@ Future<({List<MediaRow> rows, ProviderContainer container})> settledRows(
   for (var turn = 0; turn < 200; turn++) {
     final now = container.read(rows);
     final waiting = now.any(
-      (row) => row is MediaConnectionRow && row.reading is MediaReadingWaiting,
+      (row) =>
+          (row is MediaConnectionRow && row.reading is MediaReadingWaiting) ||
+          (row is MediaServerThroughSeerrRow && row.server == null),
     );
     if (!waiting) return (rows: now, container: container);
     await pumpEventQueue();

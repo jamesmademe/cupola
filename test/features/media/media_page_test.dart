@@ -567,6 +567,30 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('without a media server of its own, the operator watches in '
+      'the one Seerr is set up with', (tester) async {
+    final (harness, _) = await _pumpRouted(
+      tester,
+      Profiles.p3,
+      WorldTitles.tearsOfSteel,
+    );
+
+    final watch = find.widgetWithText(FilledButton, 'Watch on Jellyfin');
+    expect(watch, findsOneWidget);
+    expect(tester.widget<FilledButton>(watch).onPressed, isNotNull);
+    expect(find.text('through Seerr'), findsWidgets);
+    expect(find.text('Trailer'), findsNothing);
+
+    await tester.tap(find.text('Add Jellyfin to Cupola'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('at ${ServiceRoutes.setUp(ServiceKey.jellyfin)}'),
+      findsOneWidget,
+    );
+
+    await harness.unmount(tester);
+  });
+
   testWidgets('Search releases asks which copy when there are two', (
     tester,
   ) async {
@@ -1099,6 +1123,117 @@ void main() {
         containsPair('searchForMissingEpisodes', true),
       );
       expect(find.textContaining('Added to Sonarr'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('without a media server of its own, Seerr\'s link opens it, '
+        'and the row says which seasons are there', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p3,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+        height: 3600,
+      );
+
+      expect(
+        find.widgetWithText(FilledButton, 'Watch on Jellyfin'),
+        findsOneWidget,
+      );
+      expect(find.text('S1 available · S2 partly available'), findsOneWidget);
+      expect(find.text('Add Jellyfin to Cupola'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('says where it streams in the region set', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+        height: 5200,
+      );
+
+      expect(find.text('Where to watch'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Stream: Netflix, Prime Video'),
+        findsOneWidget,
+      );
+      // A series has no release dates of its own kinds.
+      expect(find.text('Release dates'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('the requester asks for the seasons nobody has asked for', (
+      tester,
+    ) async {
+      // Night Shift: the first season on the server, the third asked for by
+      // Luca, the second by nobody.
+      final harness = await _pump(
+        tester,
+        Profiles.p2,
+        WorldTitles.nightShift,
+        key: MediaKey.tv(WorldTitles.nightShift.tmdbId),
+      );
+
+      expect(find.text('Season 2 is not requested yet.'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Request'));
+      await _answer(tester);
+      expect(find.text('Request Night Shift'), findsOneWidget);
+      // One season left to ask for, and it says which.
+      expect(find.widgetWithText(FilterChip, 'Season 2'), findsOneWidget);
+      expect(find.byType(FilterChip), findsOneWidget);
+
+      await tester.tap(find.text('Submit request'));
+      await _answer(tester);
+      final sent =
+          harness.network
+                  .requestsTo(WorldIds.seerr)
+                  .where(
+                    (r) =>
+                        r.method == 'POST' && r.uri.path == '/api/v1/request',
+                  )
+                  .single
+                  .json
+              as Map;
+      expect(sent['mediaType'], 'tv');
+      expect(sent['mediaId'], WorldTitles.nightShift.tmdbId);
+      expect(sent['seasons'], [2]);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a season asked for is answered from the page, and Sonarr is '
+        'read again', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.nightShift,
+        key: MediaKey.tv(WorldTitles.nightShift.tmdbId),
+        height: 3600,
+      );
+
+      expect(
+        find.text('${WorldPeople.luca} asked for Season 3'),
+        findsOneWidget,
+      );
+      final sonarrReads = harness.network.requestsTo(WorldIds.sonarr).length;
+      await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
+      await _answer(tester);
+      await tester.tap(find.text('Approve request'));
+      await _answer(tester);
+      final approve = harness.network
+          .requestsTo(WorldIds.seerr)
+          .where((r) => r.method == 'POST')
+          .single;
+      expect(approve.uri.path, '/api/v1/request/8/approve');
+      expect(
+        harness.network.requestsTo(WorldIds.sonarr).length,
+        greaterThan(sonarrReads),
+      );
 
       await harness.unmount(tester);
     });
