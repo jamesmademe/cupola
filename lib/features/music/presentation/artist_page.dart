@@ -792,7 +792,7 @@ class _Covers extends StatelessWidget {
   }
 }
 
-/// An album without a cover: the plate and a disc.
+/// An album without a cover: the plate and a disc, dark in both rooms.
 class _AlbumPlate extends StatelessWidget {
   const _AlbumPlate();
 
@@ -800,11 +800,8 @@ class _AlbumPlate extends StatelessWidget {
   Widget build(BuildContext context) => ColoredBox(
     color: AppColors.plateWell,
     child: Center(
-      child: Icon(
-        Icons.album_outlined,
-        size: 24,
-        color: CupolaRoom.of(context).inkTertiary,
-      ),
+      // Artwork is not palette: the plate's own ink, in both rooms.
+      child: Icon(Icons.album_outlined, size: 24, color: AppColors.plateDimInk),
     ),
   );
 }

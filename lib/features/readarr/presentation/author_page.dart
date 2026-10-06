@@ -645,6 +645,19 @@ class _BookGrid extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.s),
+          // At a large reading size the cover's lettering stays its size, so
+          // the title is written under it too, at the reader's.
+          if (mediaStacked(context)) ...[
+            Text(
+              book.title,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppType.label
+                  .weight(FontWeight.w600)
+                  .copyWith(color: room.ink),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+          ],
           Wrap(
             spacing: AppSpacing.s,
             runSpacing: AppSpacing.xxs,
@@ -669,7 +682,8 @@ class _BookGrid extends StatelessWidget {
   }
 }
 
-/// A book without a cover: its title on the plate, a hairline, its author.
+/// A book without a cover: its title on the plate, a hairline, its author;
+/// dark in both rooms.
 class _BookPlate extends StatelessWidget {
   const _BookPlate({
     required this.title,
@@ -683,9 +697,16 @@ class _BookPlate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
+    // Artwork is not palette: the plate, dark in both rooms, in its own inks.
+    // Its lettering is a picture of a cover, at the cover's own size: grown
+    // with the reading size it broke into letters, and the title beside or
+    // under it is what is read.
+    return MediaQuery.withNoTextScaling(child: _plate());
+  }
+
+  Widget _plate() {
     return ColoredBox(
-      color: room.fillStrong,
+      color: AppColors.plateSurface,
       child: Padding(
         padding: EdgeInsets.all(small ? AppSpacing.xs : AppSpacing.md),
         child: Column(
@@ -700,15 +721,18 @@ class _BookPlate extends StatelessWidget {
                     (small
                             ? AppType.micro
                             : AppType.label.weight(FontWeight.w600))
-                        .copyWith(color: room.ink),
+                        .copyWith(color: AppColors.plateInk),
               ),
             ),
-            Divider(height: small ? 6 : AppSpacing.md, color: room.hair),
+            Divider(
+              height: small ? 6 : AppSpacing.md,
+              color: AppColors.plateOutline,
+            ),
             Text(
               author,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppType.micro.copyWith(color: room.inkSecondary),
+              style: AppType.micro.copyWith(color: AppColors.plateDimInk),
             ),
           ],
         ),
