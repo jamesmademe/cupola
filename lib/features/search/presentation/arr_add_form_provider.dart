@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 
 import 'package:cupola/features/movies/data/radarr_service.dart';
-import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/sonarr_monitor.dart';
@@ -14,7 +13,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// One selectable option: a quality profile, or a metadata profile.
+/// One selectable option: a quality profile.
 typedef ArrProfileOption = ({int id, String name});
 
 /// Which connection the add sheet is filling in for.
@@ -35,13 +34,8 @@ class ArrAddFormState {
   /// null when the server did not say.
   final int? searchingIndexers;
 
-  /// Lidarr only, and empty everywhere else — see
-  /// [LidarrService.fetchMetadataProfiles].
-  final List<ArrProfileOption> metadataProfiles;
-
   final int? profileId;
   final String? rootFolder;
-  final int? metadataProfileId;
   final bool monitored;
 
   /// Sonarr only: which episodes it looks for, under [monitored].
@@ -71,10 +65,8 @@ class ArrAddFormState {
     this.rootFolders = const [],
     this.freeSpace = const {},
     this.searchingIndexers,
-    this.metadataProfiles = const [],
     this.profileId,
     this.rootFolder,
-    this.metadataProfileId,
     this.monitored = true,
     this.sonarrMonitor = SonarrMonitor.all,
     this.seriesType,
@@ -91,21 +83,15 @@ class ArrAddFormState {
   /// A load that failed leaves no selections, so this is false for the reason
   /// that matters: there is nothing honest to post.
   bool get canSubmit =>
-      !isLoading &&
-      !isSubmitting &&
-      profileId != null &&
-      rootFolder != null &&
-      (metadataProfiles.isEmpty || metadataProfileId != null);
+      !isLoading && !isSubmitting && profileId != null && rootFolder != null;
 
   ArrAddFormState copyWith({
     List<ArrProfileOption>? profiles,
     List<String>? rootFolders,
     Map<String, int>? freeSpace,
     int? searchingIndexers,
-    List<ArrProfileOption>? metadataProfiles,
     int? profileId,
     String? rootFolder,
-    int? metadataProfileId,
     bool? monitored,
     SonarrMonitor? sonarrMonitor,
     SonarrSeriesType? seriesType,
@@ -122,10 +108,8 @@ class ArrAddFormState {
       rootFolders: rootFolders ?? this.rootFolders,
       freeSpace: freeSpace ?? this.freeSpace,
       searchingIndexers: searchingIndexers ?? this.searchingIndexers,
-      metadataProfiles: metadataProfiles ?? this.metadataProfiles,
       profileId: profileId ?? this.profileId,
       rootFolder: rootFolder ?? this.rootFolder,
-      metadataProfileId: metadataProfileId ?? this.metadataProfileId,
       monitored: monitored ?? this.monitored,
       sonarrMonitor: sonarrMonitor ?? this.sonarrMonitor,
       seriesType: seriesType ?? this.seriesType,
@@ -197,12 +181,6 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
       final missing = switch (options) {
         _ when options.rootFolders.isEmpty => 'root folder',
         _ when options.profiles.isEmpty => 'quality profile',
-        // Lidarr's extra axis is not optional: an add without one is rejected,
-        // so a server that has none cannot be added to at all.
-        _
-            when arg.service == ServiceKey.lidarr &&
-                options.metadataProfiles.isEmpty =>
-          'metadata profile',
         _ => null,
       };
       if (missing != null) {
@@ -220,12 +198,10 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
           profiles: options.profiles,
           rootFolders: options.rootFolders,
           freeSpace: options.freeSpace,
-          metadataProfiles: options.metadataProfiles,
           // The defaults that make the common case two taps: first profile,
           // first folder, monitored, and search for it now.
           profileId: options.profiles.first.id,
           rootFolder: options.rootFolders.first,
-          metadataProfileId: options.metadataProfiles.firstOrNull?.id,
           isLoading: false,
           clearError: true,
         ),
@@ -254,7 +230,6 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
       List<ArrProfileOption> profiles,
       List<String> rootFolders,
       Map<String, int> freeSpace,
-      List<ArrProfileOption> metadataProfiles,
     })
   >
   _fetchOptions() async {
@@ -269,7 +244,6 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
           profiles: _profiles(profiles),
           rootFolders: _paths(folders),
           freeSpace: _freeSpace(folders),
-          metadataProfiles: const <ArrProfileOption>[],
         );
       case ServiceKey.sonarr:
         final service = ref.read(sonarrServiceForProvider(arg.instanceId));
@@ -281,30 +255,16 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
           profiles: _profiles(profiles),
           rootFolders: _paths(folders),
           freeSpace: _freeSpace(folders),
-          metadataProfiles: const <ArrProfileOption>[],
-        );
-      case ServiceKey.lidarr:
-        final service = ref.read(lidarrServiceForProvider(arg.instanceId));
-        final (profiles, folders, metadata) = await (
-          service.getQualityProfiles(),
-          service.getRootFolders(),
-          service.fetchMetadataProfiles(),
-        ).wait;
-        return (
-          profiles: _profiles(profiles),
-          rootFolders: _paths(folders),
-          freeSpace: _freeSpace(folders),
-          metadataProfiles: _profiles(metadata),
         );
       // Named rather than defaulted. `ArrAddRequest` is sealed so that an arr
       // added later is a compile error instead of a plus over a sheet that
       // cannot post; a `default:` here handed that guarantee back, by quietly
-      // fetching Lidarr's profiles for whatever key arrived.
+      // fetching another arr's profiles for whatever key arrived.
       default:
         throw ArgumentError.value(
           arg.service,
           'service',
-          'has no add form; only Radarr, Sonarr and Lidarr can be added to',
+          'has no add form; only Radarr and Sonarr can be added to',
         );
     }
   }
@@ -332,9 +292,6 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
 
   void selectRootFolder(String path) =>
       state = state.copyWith(rootFolder: path, clearError: true);
-
-  void selectMetadataProfile(int id) =>
-      state = state.copyWith(metadataProfileId: id, clearError: true);
 
   void setMonitored(bool value) => state = state.copyWith(monitored: value);
 
@@ -366,10 +323,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
     // the row added. Refusing to post and reporting success is the same lie the
     // doc above says this method exists to prevent — `canSubmit` keeps the
     // button off, but the contract must hold without it.
-    final metadataProfileId = state.metadataProfileId;
-    if (profileId == null ||
-        rootFolder == null ||
-        (request is LidarrAddRequest && metadataProfileId == null)) {
+    if (profileId == null || rootFolder == null) {
       return _refuse(request, 'the form is not filled in');
     }
 
@@ -397,17 +351,6 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
                 searchForMissingEpisodes: state.searchOnAdd,
                 monitor: state.sonarrMonitor,
                 seriesType: state.seriesType?.wireValue,
-              );
-        case LidarrAddRequest(:final artist):
-          await ref
-              .read(lidarrServiceForProvider(request.instanceId))
-              .addArtist(
-                artist,
-                qualityProfileId: profileId,
-                metadataProfileId: metadataProfileId!,
-                rootFolderPath: rootFolder,
-                monitored: state.monitored,
-                searchForMissingAlbums: state.searchOnAdd,
               );
       }
       // Cleared on the way out as well as on the way in. This entry is keyed on

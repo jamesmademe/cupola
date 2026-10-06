@@ -2,8 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/features/music/data/lidarr_service.dart';
-import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
 import 'package:cupola/features/series/domain/sonarr_monitor.dart';
@@ -33,20 +31,6 @@ const _sonarrAway = ServiceInstance(
   url: 'http://away.lan:8989',
   credential: 'k',
 );
-const _lidarrLens = ServiceInstance(
-  id: 'lidarr',
-  service: ServiceKey.lidarr,
-  label: 'Home',
-  url: 'http://home.lan:8686',
-  credential: 'k',
-);
-const _lidarrAway = ServiceInstance(
-  id: 'lidarr-away111',
-  service: ServiceKey.lidarr,
-  label: 'Away',
-  url: 'http://away.lan:8686',
-  credential: 'k',
-);
 
 /// A service with no add form at all, for the arm that used to be a `default:`.
 const _bazarr = ServiceInstance(
@@ -72,19 +56,6 @@ const _severance = SonarrAddRequest(
     runtime: 50,
     genres: [],
     seasons: [],
-  ),
-);
-
-const _boards = LidarrAddRequest(
-  instanceId: 'lidarr-away111',
-  artist: LidarrArtist(
-    id: 0,
-    artistName: 'Boards of Canada',
-    foreignArtistId: 'mbid-1',
-    status: 'active',
-    monitored: false,
-    images: [],
-    genres: [],
   ),
 );
 
@@ -141,79 +112,6 @@ void main() {
     expect(lens.added, isEmpty);
   });
 
-  test(
-    'an artist add carries the metadata profile Lidarr insists on',
-    () async {
-      final lens = _FakeLidarr();
-      final away = _FakeLidarr(metadataProfileId: 7);
-      final container = ProviderContainer(
-        overrides: [
-          currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(instances: [_lidarrLens, _lidarrAway]),
-          ),
-          lidarrServiceProvider.overrideWith((ref) => lens),
-          lidarrServiceForProvider(_lidarrAway.id).overrideWithValue(away),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      const args = (instanceId: 'lidarr-away111', service: ServiceKey.lidarr);
-      final sub = container.listen(arrAddFormProvider(args), (_, _) {});
-      addTearDown(sub.close);
-      final notifier = container.read(arrAddFormProvider(args).notifier);
-      await _settle();
-
-      expect(
-        container.read(arrAddFormProvider(args)).metadataProfiles,
-        isNotEmpty,
-      );
-
-      final error = await notifier.submit(
-        const LidarrAddRequest(
-          instanceId: 'lidarr-away111',
-          artist: LidarrArtist(
-            id: 0,
-            artistName: 'Boards of Canada',
-            foreignArtistId: 'mbid-1',
-            status: 'active',
-            monitored: false,
-            images: [],
-            genres: [],
-          ),
-        ),
-      );
-
-      expect(error, isNull);
-      expect(away.added.single.metadataProfileId, 7);
-      expect(lens.added, isEmpty);
-    },
-  );
-
-  test('a Lidarr with no metadata profile cannot be added to', () async {
-    // Not a form the user can submit and not a silent failure at post time:
-    // Lidarr rejects an add without one, so the sheet says so up front.
-    final away = _FakeLidarr(metadataProfiles: const []);
-    final container = ProviderContainer(
-      overrides: [
-        currentSettingsProvider.overrideWith(
-          (ref) => const SettingsModel(instances: [_lidarrLens, _lidarrAway]),
-        ),
-        lidarrServiceProvider.overrideWith((ref) => _FakeLidarr()),
-        lidarrServiceForProvider(_lidarrAway.id).overrideWithValue(away),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    const args = (instanceId: 'lidarr-away111', service: ServiceKey.lidarr);
-    final sub = container.listen(arrAddFormProvider(args), (_, _) {});
-    addTearDown(sub.close);
-    await _settle();
-
-    final state = container.read(arrAddFormProvider(args));
-    expect(state.error, 'Lidarr · Away has no metadata profile configured.');
-    expect(state.canSubmit, isFalse);
-  });
-
   test('the next row on the same section can still be added', () async {
     // This entry is keyed on the CONNECTION, not on the item, and outlives the
     // sheet by however long autoDispose takes. Adding one row and immediately
@@ -249,21 +147,25 @@ void main() {
   });
 
   test(
-    'a service with no add form is refused, not treated as Lidarr',
+    'a service with no add form is refused, not treated as another arr',
     () async {
       // `ArrAddRequest` is sealed so that an arr added later is a compile error
       // rather than a plus over a sheet that cannot post. A `default:` arm here
-      // handed that guarantee straight back: it fetched Lidarr's profiles for
+      // handed that guarantee straight back: it fetched one arr's profiles for
       // whatever key arrived, and the sheet came up looking perfectly fillable.
-      // The Lidarr fake below is wired to the Bazarr id precisely so the defect
+      // The Sonarr fake below is wired to the Bazarr id precisely so the defect
       // would find it.
       final container = ProviderContainer(
         overrides: [
           currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(instances: [_lidarrLens, _bazarr]),
+            (ref) => const SettingsModel(instances: [_sonarrLens, _bazarr]),
           ),
-          lidarrServiceProvider.overrideWith((ref) => _FakeLidarr()),
-          lidarrServiceForProvider(_bazarr.id).overrideWithValue(_FakeLidarr()),
+          sonarrServiceProvider.overrideWith(
+            (ref) => _FakeSonarr(profileId: 1, rootFolder: '/home/tv'),
+          ),
+          sonarrServiceForProvider(_bazarr.id).overrideWithValue(
+            _FakeSonarr(profileId: 9, rootFolder: '/away/tv'),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -301,14 +203,13 @@ void main() {
       // honest to post, so no default is chosen.
       qualityProfiles: const [],
     );
+    final lens = _FakeSonarr(profileId: 1, rootFolder: '/home/tv');
     final container = ProviderContainer(
       overrides: [
         currentSettingsProvider.overrideWith(
           (ref) => const SettingsModel(instances: [_sonarrLens, _sonarrAway]),
         ),
-        sonarrServiceProvider.overrideWith(
-          (ref) => _FakeSonarr(profileId: 1, rootFolder: '/home/tv'),
-        ),
+        sonarrServiceProvider.overrideWith((ref) => lens),
         sonarrServiceForProvider(_sonarrAway.id).overrideWithValue(away),
       ],
     );
@@ -325,67 +226,13 @@ void main() {
 
     expect(error, "Could not add Severance to Sonarr · Away.");
     final state = container.read(arrAddFormProvider(args));
+    // A refusal, in words — not an exception caught by the handler that exists
+    // for a server saying no — and nothing was posted to either connection.
     expect(state.errorDetail, 'the form is not filled in');
     expect(state.isSubmitting, isFalse);
     expect(away.added, isEmpty);
+    expect(lens.added, isEmpty);
   });
-
-  test(
-    'an artist with no metadata profile chosen never reaches the wire',
-    () async {
-      // The invariant the force-unwrap trusted, broken the one way it can be: a
-      // request the form in front of it was not built for. `canSubmit` is true
-      // here — a Sonarr form has no metadata axis to be missing — so nothing
-      // upstream stops the post, and the unwrap turned a refusal into a
-      // null-check crash caught by the failure handler.
-      var lidarrReads = 0;
-      final lidarr = _FakeLidarr();
-      final container = ProviderContainer(
-        overrides: [
-          currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(
-              instances: [_sonarrLens, _sonarrAway, _lidarrLens, _lidarrAway],
-            ),
-          ),
-          sonarrServiceProvider.overrideWith(
-            (ref) => _FakeSonarr(profileId: 1, rootFolder: '/home/tv'),
-          ),
-          sonarrServiceForProvider(_sonarrAway.id).overrideWithValue(
-            _FakeSonarr(profileId: 9, rootFolder: '/away/tv'),
-          ),
-          lidarrServiceForProvider(_lidarrAway.id).overrideWith((ref) {
-            lidarrReads++;
-            return lidarr;
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      const args = (instanceId: 'sonarr-away111', service: ServiceKey.sonarr);
-      final sub = container.listen(arrAddFormProvider(args), (_, _) {});
-      addTearDown(sub.close);
-      final notifier = container.read(arrAddFormProvider(args).notifier);
-      await _settle();
-      expect(
-        container.read(arrAddFormProvider(args)).metadataProfileId,
-        isNull,
-      );
-      expect(container.read(arrAddFormProvider(args)).canSubmit, isTrue);
-
-      final error = await notifier.submit(_boards);
-
-      expect(error, isNotNull);
-      // A refusal, in words — not a `TypeError` caught by the handler that exists
-      // for a server saying no.
-      expect(
-        container.read(arrAddFormProvider(args)).errorDetail,
-        'the form is not filled in',
-      );
-      // And it was refused before anything was reached for.
-      expect(lidarrReads, 0);
-      expect(lidarr.added, isEmpty);
-    },
-  );
 }
 
 /// Lets the notifier's deferred load run to completion.
@@ -444,49 +291,5 @@ class _FakeSonarr extends FakeSonarrService {
   }) async {
     added.add(_SonarrAdd(qualityProfileId, rootFolderPath));
     return series;
-  }
-}
-
-class _LidarrAdd {
-  final int metadataProfileId;
-
-  _LidarrAdd(this.metadataProfileId);
-}
-
-class _FakeLidarr extends FakeLidarrService {
-  final int metadataProfileId;
-  final List<Map<String, dynamic>>? metadataProfiles;
-  final List<_LidarrAdd> added = [];
-
-  _FakeLidarr({this.metadataProfileId = 1, this.metadataProfiles});
-
-  @override
-  Future<List<Map<String, dynamic>>> getQualityProfiles() async => [
-    {'id': 2, 'name': 'Any'},
-  ];
-
-  @override
-  Future<List<Map<String, dynamic>>> getRootFolders() async => [
-    {'id': 1, 'path': '/music'},
-  ];
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchMetadataProfiles() async =>
-      metadataProfiles ??
-      [
-        {'id': metadataProfileId, 'name': 'Standard'},
-      ];
-
-  @override
-  Future<LidarrArtist> addArtist(
-    LidarrArtist artist, {
-    required int qualityProfileId,
-    required int metadataProfileId,
-    required String rootFolderPath,
-    bool monitored = true,
-    bool searchForMissingAlbums = true,
-  }) async {
-    added.add(_LidarrAdd(metadataProfileId));
-    return artist;
   }
 }

@@ -308,54 +308,9 @@ class LidarrService with ArrActivityMixin {
     return fetchQualityProfiles();
   }
 
-  /// Fetches the metadata profiles — the axis only Lidarr has.
-  ///
-  /// It decides which release types (studio albums, EPs, live records…) the
-  /// artist's discography is built from, and an add without one is rejected,
-  /// so it is not optional the way it looks.
-  Future<List<Map<String, dynamic>>> fetchMetadataProfiles() async {
-    final response = await client.get('/api/v1/metadataprofile');
-    final data = response.data as List<dynamic>;
-    return data.cast<Map<String, dynamic>>();
-  }
-
   /// Fetches the root folders configured on this Lidarr.
   Future<List<Map<String, dynamic>>> getRootFolders() async {
     return fetchRootFolders();
-  }
-
-  /// Adds [artist] — an `artist/lookup` row — to this Lidarr's library.
-  ///
-  /// [artist] must carry a [LidarrArtist.foreignArtistId]: Lidarr identifies an
-  /// artist by its MusicBrainz id and by nothing else, so an add without it is
-  /// rejected outright. That id is why the model parses it at all.
-  ///
-  /// Throws on failure rather than degrading; see [RadarrService.addMovie].
-  Future<LidarrArtist> addArtist(
-    LidarrArtist artist, {
-    required int qualityProfileId,
-    required int metadataProfileId,
-    required String rootFolderPath,
-    bool monitored = true,
-    bool searchForMissingAlbums = true,
-  }) async {
-    final response = await client.post(
-      '/api/v1/artist',
-      data: {
-        'artistName': artist.artistName,
-        'foreignArtistId': artist.foreignArtistId,
-        'images': artist.images,
-        'qualityProfileId': qualityProfileId,
-        'metadataProfileId': metadataProfileId,
-        'rootFolderPath': rootFolderPath,
-        'monitored': monitored,
-        'addOptions': {
-          'monitored': monitored,
-          'searchForMissingAlbums': searchForMissingAlbums,
-        },
-      },
-    );
-    return LidarrArtist.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Updates an artist's quality profile.

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/music/data/lidarr_service.dart';
-import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -357,94 +356,6 @@ void main() {
       expect(client.lastDeleteQueryParameters, {
         'deleteFiles': true,
         'addImportListExclusion': true,
-      });
-    });
-
-    group('addArtist', () {
-      LidarrArtist lookupHit() => LidarrArtist.fromJson({
-        // What `artist/lookup` sends for an artist the server does NOT have:
-        // no library id, and the MusicBrainz id that names the artist
-        // everywhere else. The model dropped that id until now, which is what
-        // made an add impossible to build.
-        'id': 0,
-        'artistName': 'Boards of Canada',
-        'foreignArtistId': '69158f97-4c07-4c4e-baf8-4e4ab1ed666e',
-        'status': 'active',
-        'monitored': false,
-        'images': const [
-          {'coverType': 'poster', 'url': '/MediaCover/Artists/0/poster.jpg'},
-        ],
-        'genres': const ['electronic'],
-      });
-
-      test('posts the lookup payload with the chosen options', () async {
-        final client = FakeApiClient()
-          ..postResponseData = {
-            'id': 12,
-            'artistName': 'Boards of Canada',
-            'monitored': true,
-            'images': const [],
-          };
-        final service = LidarrService(client);
-
-        final added = await service.addArtist(
-          lookupHit(),
-          qualityProfileId: 2,
-          metadataProfileId: 1,
-          rootFolderPath: '/data/music',
-          monitored: true,
-          searchForMissingAlbums: true,
-        );
-
-        expect(client.lastPostPath, '/api/v1/artist');
-        final body = client.lastPostData as Map<String, dynamic>;
-        // The one field that makes this an add rather than a 400: Lidarr keys
-        // an artist on the MusicBrainz id, not on the name.
-        expect(body['foreignArtistId'], '69158f97-4c07-4c4e-baf8-4e4ab1ed666e');
-        expect(body['artistName'], 'Boards of Canada');
-        expect(body['qualityProfileId'], 2);
-        // Lidarr's extra axis: an add without it is rejected outright.
-        expect(body['metadataProfileId'], 1);
-        expect(body['rootFolderPath'], '/data/music');
-        expect(body['monitored'], isTrue);
-        expect(body['addOptions'], {
-          'monitored': true,
-          'searchForMissingAlbums': true,
-        });
-        expect(added.id, 12);
-      });
-
-      test('a rejected add is not swallowed', () async {
-        final client = FakeApiClient()
-          ..postException = Exception('400 ArtistExistsValidator');
-        final service = LidarrService(client);
-
-        expect(
-          service.addArtist(
-            lookupHit(),
-            qualityProfileId: 2,
-            metadataProfileId: 1,
-            rootFolderPath: '/data/music',
-          ),
-          throwsA(isA<Exception>()),
-        );
-      });
-
-      test('fetchMetadataProfiles reads the axis Lidarr adds', () async {
-        final client = FakeApiClient()
-          ..getResponseData = [
-            {'id': 1, 'name': 'Standard'},
-            {'id': 2, 'name': 'Everything'},
-          ];
-        final service = LidarrService(client);
-
-        final profiles = await service.fetchMetadataProfiles();
-
-        expect(client.lastGetPath, '/api/v1/metadataprofile');
-        expect(profiles.map((profile) => profile['name']), [
-          'Standard',
-          'Everything',
-        ]);
       });
     });
   });

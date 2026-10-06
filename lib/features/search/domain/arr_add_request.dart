@@ -1,5 +1,4 @@
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
-import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -51,16 +50,4 @@ class SonarrAddRequest extends ArrAddRequest {
 
   @override
   String get title => series.title;
-}
-
-class LidarrAddRequest extends ArrAddRequest {
-  final LidarrArtist artist;
-
-  const LidarrAddRequest({required super.instanceId, required this.artist});
-
-  @override
-  ServiceKey get service => ServiceKey.lidarr;
-
-  @override
-  String get title => artist.artistName;
 }

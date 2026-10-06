@@ -8,11 +8,7 @@ class LidarrArtist {
   final int id;
   final String artistName;
 
-  /// The MusicBrainz id Lidarr keys an artist on.
-  ///
-  /// The model dropped this until now, which is precisely what made an add
-  /// impossible to build: Lidarr identifies an artist by this id and not by
-  /// name, so `POST /artist` without it is rejected. It comes down on every
+  /// The MusicBrainz id Lidarr keys an artist on. It comes down on every
   /// `artist/lookup` row.
   final String foreignArtistId;
   final String status;
