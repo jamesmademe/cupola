@@ -43,13 +43,12 @@ class DockgeScreen extends ConsumerWidget {
               ],
             )
           : null,
+      // The top inset is consumed here whether or not this page draws an app
+      // bar. With one, the `Scaffold` has already taken it off the body and
+      // this changes nothing. Without one (the tab shell), the service band
+      // consumes it and the tab bar under the band sits an inset lower than
+      // `topPadding` says, so the page has to start below the inset too.
       body: SafeArea(
-        // The inset is the app bar's to consume when this page draws one. In
-        // the tab shell it does not: the service band and the tab bar float
-        // above the content at fixed offsets from the top of the screen, and
-        // `topPadding` is what clears them — consuming the inset here as well
-        // would push the first row a status bar's height below the tab bar.
-        top: showAppBar,
         child: isConfigured
             ? _DockgeDashboard(topPadding: topPadding)
             : const NotConfiguredPlaceholder(serviceName: 'Dockge'),

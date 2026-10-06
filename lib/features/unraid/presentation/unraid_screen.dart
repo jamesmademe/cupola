@@ -124,8 +124,11 @@ class UnraidScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.unraid.accent,
       appBar: showAppBar ? GlassAppBar(title: Text(section.label)) : null,
+      // The inset is consumed here with or without an app bar: with one the
+      // `Scaffold` has already taken it off the body, and without one (the tab
+      // shell) the band above consumes it and the tab bar sits an inset lower
+      // than `topPadding` says.
       body: SafeArea(
-        top: showAppBar,
         // The shared placeholder, not a private copy: four dashboards had each
         // grown their own "this service isn't set up" card, which is the state
         // `NotConfiguredPlaceholder` exists to unify.

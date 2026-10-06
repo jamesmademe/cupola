@@ -10,6 +10,7 @@ import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/list_rows_shimmer.dart';
 import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -40,10 +41,24 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_provide
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
+import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
+import 'package:cupola/features/dockge/presentation/dockge_terminal_screen.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/npm/presentation/npm_provider.dart';
+import 'package:cupola/features/npm/presentation/npm_screen.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
+import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
+import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 import 'package:cupola/features/transmission/presentation/transmission_tab_screens.dart';
 
+import '../../../test_helpers/capability_overrides.dart';
 import '../../../test_helpers/fake_api_client.dart';
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
@@ -587,6 +602,131 @@ void main() {
       );
 
       expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+  });
+
+  // These five pages wrapped their body in a `SafeArea` that took the top inset
+  // only when they drew an app bar of their own, and hosted they draw none.
+  group('The pages that skipped the status bar clear the glass bars', () {
+    testWidgets('Dockge Stacks starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.dockge,
+        tab: ServiceTab.stacks,
+        overrides: [
+          dockgeStackListProvider.overrideWith(
+            (ref) => const Stream<List<DockgeStack>>.empty(),
+          ),
+          serviceKpiProvider(
+            ServiceKey.dockge,
+          ).overrideWith((ref) => _pending()),
+        ],
+        child: const DockgeScreen(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(ServiceKpiPeek));
+    });
+
+    testWidgets('Dockge Terminal starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.dockge,
+        tab: ServiceTab.terminal,
+        overrides: [
+          dockgeStackListProvider.overrideWith(
+            (ref) => const Stream<List<DockgeStack>>.empty(),
+          ),
+        ],
+        child: const DockgeTerminalScreen(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+
+    testWidgets('Unraid Array starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.unraid,
+        tab: ServiceTab.array,
+        overrides: [
+          serviceSummaryProvider(
+            ServiceKey.unraid,
+          ).overrideWith((ref) => _pending()),
+          unraidArrayProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const UnraidScreen.array(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+
+    testWidgets('Nginx Proxy Manager Proxy hosts starts below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.nginxProxyManager,
+        tab: ServiceTab.proxyHosts,
+        overrides: [
+          serviceSummaryProvider(
+            ServiceKey.nginxProxyManager,
+          ).overrideWith((ref) => _pending()),
+          npmProxyHostsProvider.overrideWith((ref) => _pending()),
+          // Answered, so the capability banner (which a probe that cannot
+          // reach a real server would draw first) is not what leads the page.
+          capabilityOverride(),
+        ],
+        child: const NpmScreen.proxyHosts(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+
+    testWidgets('Jellyfin Libraries starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.jellyfin,
+        tab: ServiceTab.libraries,
+        overrides: [
+          jellyfinLacksAdministratorProvider.overrideWithValue(false),
+          jellyfinLibrariesProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const StreamLibrariesScreen(
+          service: ServiceKey.jellyfin,
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+
+    testWidgets('Plex Libraries starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.plex,
+        tab: ServiceTab.libraries,
+        overrides: [plexLibrariesProvider.overrideWith((ref) => _pending())],
+        child: const StreamLibrariesScreen(
+          service: ServiceKey.plex,
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(SectionHeader));
     });
   });
 }

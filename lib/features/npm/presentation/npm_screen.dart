@@ -140,8 +140,11 @@ class NpmScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.nginxProxyManager.accent,
       appBar: showAppBar ? GlassAppBar(title: Text(section.label)) : null,
+      // The inset is consumed here with or without an app bar: with one the
+      // `Scaffold` has already taken it off the body, and without one (the tab
+      // shell) the band above consumes it and the tab bar sits an inset lower
+      // than `topPadding` says.
       body: SafeArea(
-        top: showAppBar,
         child: isConfigured
             // Keyed by section so two variants cannot share one list state:
             // they are separate branches of the service shell and each keeps

@@ -65,8 +65,11 @@ class StreamLibrariesScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: service.accent,
       appBar: showAppBar ? GlassAppBar(title: Text(service.title)) : null,
+      // The inset is consumed here with or without an app bar: with one the
+      // `Scaffold` has already taken it off the body, and without one (the tab
+      // shell) the band above consumes it and the tab bar sits an inset lower
+      // than `topPadding` says.
       body: SafeArea(
-        top: showAppBar,
         child: settings.isServiceConfigured(service)
             ? _LibrariesBody(service: service, topPadding: topPadding)
             : NotConfiguredPlaceholder.forService(service),

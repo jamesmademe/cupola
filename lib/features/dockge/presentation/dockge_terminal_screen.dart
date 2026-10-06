@@ -39,8 +39,11 @@ class _DockgeTerminalScreenState extends ConsumerState<DockgeTerminalScreen> {
       appBar: widget.showAppBar
           ? const GlassAppBar(title: Text('Terminal'))
           : null,
+      // The inset is consumed here with or without an app bar: with one the
+      // `Scaffold` has already taken it off the body, and without one (the tab
+      // shell) the band above consumes it and the tab bar sits an inset lower
+      // than `topPadding` says.
       body: SafeArea(
-        top: widget.showAppBar,
         child: configured
             ? _body(context)
             : NotConfiguredPlaceholder.forService(ServiceKey.dockge),
