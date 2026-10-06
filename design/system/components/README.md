@@ -42,6 +42,9 @@ cards live in [`../motion/`](../motion/).
 | Overlays | [AppDialog](AppDialog/README.md) | `lib/core/widgets/app_dialog.dart` |
 | Forms | [TextField](TextField/README.md) | `lib/core/theme.dart` |
 | Iconography | [ServiceGlyphs](ServiceGlyphs/README.md) | `lib/core/service_glyphs.dart`, `lib/features/settings/domain/service_key.dart` |
+| Media | [CalendarAgenda](CalendarAgenda/README.md) | `lib/features/discover/presentation/widgets/calendar_agenda.dart` |
+| Media | [CalendarBand](CalendarBand/README.md) | `lib/features/discover/presentation/widgets/calendar_band.dart` |
+| Media | [CalendarWeekStrip](CalendarWeekStrip/README.md) | `lib/features/discover/presentation/widgets/calendar_week_strip.dart` |
 | Media | [CatalogPoster](CatalogPoster/README.md) | `lib/features/discover/presentation/widgets/catalog_poster.dart` |
 | Media | [CollectionTally](CollectionTally/README.md) | `lib/features/discover/presentation/widgets/collection_tally.dart` |
 | Media | [DiscoverDoor](DiscoverDoor/README.md) | `lib/features/discover/presentation/widgets/discover_door.dart` |

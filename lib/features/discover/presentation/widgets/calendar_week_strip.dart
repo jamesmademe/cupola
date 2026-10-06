@@ -93,11 +93,18 @@ class CalendarWeekStrip extends StatelessWidget {
     final cell = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          _band ? _letters[index] : _names[index],
-          maxLines: 1,
-          style: AppType.caption.copyWith(
-            color: dim ? room.inkDisabled : room.inkTertiary,
+        // A name scales down rather than lose its letters at a large size.
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _band ? _letters[index] : _names[index],
+              maxLines: 1,
+              style: AppType.caption.copyWith(
+                color: dim ? room.inkDisabled : room.inkTertiary,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -112,6 +119,8 @@ class CalendarWeekStrip extends StatelessWidget {
                 ? Border.all(color: room.ink, width: 1.5)
                 : null,
           ),
+          // Inset, so a date scaled down to the disc stays inside its ring.
+          padding: const EdgeInsets.all(AppSpacing.s),
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(

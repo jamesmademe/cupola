@@ -67,13 +67,21 @@ class CalendarRow extends StatelessWidget {
         ? lead.lead
         : '${lead.lead} · ${lead.under}';
 
+    // The dot sits on the first line of the status, however many it takes.
+    final firstLine =
+        MediaQuery.textScalerOf(context).scale(AppType.meta.fontSize ?? 13) *
+        (AppType.meta.height ?? 1.4);
     final status = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Dot(
-          color: state.hollow || state.stand == CalendarStand.out
-              ? room.inkSecondary
-              : tone,
-          hollow: state.hollow,
+        Padding(
+          padding: EdgeInsets.only(top: (firstLine - 7) / 2),
+          child: _Dot(
+            color: state.hollow || state.stand == CalendarStand.out
+                ? room.inkSecondary
+                : tone,
+            hollow: state.hollow,
+          ),
         ),
         const SizedBox(width: AppSpacing.s),
         Flexible(
@@ -356,7 +364,9 @@ class CalendarQuietLine extends StatelessWidget {
         children: [
           dash(18),
           const SizedBox(width: AppSpacing.sm),
+          // The words take what they need, the dashes what is left.
           Flexible(
+            flex: 4,
             child: Text(
               words,
               style: AppType.meta.copyWith(color: room.inkTertiary),
@@ -435,10 +445,17 @@ class _Initials extends StatelessWidget {
         border: Border.all(color: room.hair),
         borderRadius: BorderRadius.circular(AppRadius.thumb),
       ),
-      child: Center(
-        child: Text(
-          initials,
-          style: AppType.label.copyWith(color: room.inkSecondary),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xs),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              initials,
+              maxLines: 1,
+              style: AppType.label.copyWith(color: room.inkSecondary),
+            ),
+          ),
         ),
       ),
     );

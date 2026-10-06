@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/discover/presentation/calendar_page.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -124,6 +125,8 @@ final _pages = <String, Widget>{
     ),
   ),
   'the global search': const DiscoverPage(),
+  // Her calendar comes from her requests, and says no service.
+  'the calendar': const CalendarPage(),
 };
 
 Future<ProfileHarness> _pump(
@@ -199,6 +202,7 @@ void main() {
       'the Discover tab',
       'the Media page, a movie of hers',
       'the global search',
+      'the calendar',
     ]) {
       testWidgets('P2: $name says one line with its time, and Retry', (
         tester,
