@@ -69,7 +69,6 @@ export 'artwork_decode.dart';
 // Status & Tags
 export 'status_badge.dart';
 export 'tag_chip.dart';
-export 'rating_chip.dart';
 export 'release_list_widgets.dart';
 export 'file_info_section.dart';
 export 'machine_name.dart';

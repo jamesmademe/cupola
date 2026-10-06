@@ -5,7 +5,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/connection_badge.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
-import 'package:cupola/core/widgets/rating_chip.dart';
 import 'package:cupola/core/widgets/release_list_widgets.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
@@ -53,18 +52,6 @@ void main() {
         ),
       ),
       ground: (scheme, accent) => _tint(accent, 0.12, scheme.surfaceContainer),
-    ),
-    _InkCase(
-      'RatingChip',
-      build: (accent) => RatingChip(
-        value: '8.1',
-        denominator: '/10',
-        votes: 1200,
-        sourceName: 'IMDb',
-        sourceIcon: 'I',
-        accent: accent,
-      ),
-      ground: (scheme, accent) => _tint(accent, 0.12, scheme.surface),
     ),
     _InkCase(
       'ConnectionBadge',

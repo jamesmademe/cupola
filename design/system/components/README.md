@@ -54,7 +54,7 @@ cards live in [`../motion/`](../motion/).
 | Media detail | [ShelfPage](ShelfPage/README.md) | `lib/features/media/presentation/shelf_page.dart`, `lib/features/music/presentation/artist_page.dart`, `lib/features/readarr/presentation/author_page.dart` |
 | Media detail | [MediaInfoCard](MediaInfoCard/README.md) | `lib/core/widgets/media_info_card.dart`, `lib/core/widgets/file_info_section.dart` |
 | Media detail | [MediaProseSection](MediaProseSection/README.md) | `lib/core/widgets/media_prose_section.dart` |
-| Media detail | [RatingChip](RatingChip/README.md) | `lib/core/widgets/rating_chip.dart`, `lib/core/utils/rating_display.dart` |
+| Media detail | [MediaMetadataLine](MediaMetadataLine/README.md) | `lib/core/widgets/media_metadata_line.dart` |
 | Downloads | [DownloadQueueTile](DownloadQueueTile/README.md) | `lib/core/widgets/download_queue_tile.dart`, `lib/features/qbittorrent/presentation/widgets/torrent_tile.dart` |
 | Downloads | [ReleaseRow](ReleaseRow/README.md) | `lib/core/widgets/release_list_widgets.dart`, `lib/core/widgets/interactive_search_sheet.dart` |
 | Service surfaces | [AmbientScaffold](AmbientScaffold/README.md) | `lib/core/widgets/ambient_scaffold.dart`, `lib/features/services/presentation/service_home_screen.dart` |

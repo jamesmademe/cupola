@@ -52,10 +52,9 @@ List<RatingSource> parseArrRatings(
 
   ratings.add(
     RatingSource(
-      // The badge, never a vote count. `RatingSource.name` is the field
-      // `RatingChip` speaks to a screen reader and shows in its tooltip, so the
-      // old `'$votes voti'` announced a Sonarr rating as "145000 voti rating
-      // 7.2" — a number where a source name belongs, in Italian, in an
+      // The badge, never a vote count. `RatingSource.name` is the field a
+      // score is looked up by (`mediaScoresOf`), so the old `'$votes voti'`
+      // put a number where a source name belongs, in Italian, in an
       // English-only app. The count is already carried by `votes`.
       name: singleSourceName ?? singleSourceIcon,
       value: value,
