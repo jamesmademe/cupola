@@ -105,9 +105,8 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
         ),
       ),
       body: MediaDetailBody(
-        // The top of the body on a page with no deck, and the region whose
-        // padding a line of this kind is drawn for: its first glyph lands on
-        // the column edge.
+        // The top of the body, and the region whose padding a line of this
+        // kind is drawn for: its first glyph lands on the column edge.
         readout: lookupFailure == null
             ? null
             : InlineErrorRetry(
@@ -125,11 +124,10 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
         // has none of, so the missing-subtitle list holds it. Details and Tags
         // stand aside.
         sideTrack: const {'Details', 'Tags'},
-        // Region 1 wants Bazarr's own promoted action ('Refresh from Bazarr'
-        // while anything is missing). Until a Bazarr action resolver exists the
-        // refresh lives on the section label, where the spine documents a
-        // refresh control as belonging, and on the pull gesture above.
-        // Region 3 — the manifest, and the only question this page exists to
+        // The page has no promoted action: the refresh lives on the section
+        // label, where the spine documents a refresh control as belonging, and
+        // on the pull gesture above.
+        // Region 2 — the manifest, and the only question this page exists to
         // answer. It used to render *after* Details and Tags, because the old
         // spine emitted every content section before every sliver.
         operate: [

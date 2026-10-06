@@ -40,10 +40,13 @@ Widget _wrap(Widget home, {double textScale = 1.0, bool reduceMotion = false}) {
   );
 }
 
-/// A body with only the required region, which is the shape every hero test
-/// wants: one tall filler so the page scrolls.
-MediaDetailBody _fillerBody() =>
-    const MediaDetailBody(deck: SizedBox(height: 2000, width: double.infinity));
+/// A body with one tall unlabelled box, which is the shape every hero test
+/// wants: filler so the page scrolls.
+MediaDetailBody _fillerBody() => const MediaDetailBody(
+  operate: [
+    MediaDetailSlot.box(child: SizedBox(height: 2000, width: double.infinity)),
+  ],
+);
 
 MediaDetailView _detailView({
   String heroTag = 'poster_1',
@@ -362,9 +365,8 @@ void main() {
 
   group('region order', () {
     /// A body with every region filled, each holding one short labelled box, so
-    /// all six land inside one tall viewport and are therefore all built.
-    MediaDetailBody sixRegions() => const MediaDetailBody(
-      deck: SizedBox(key: ValueKey('deck'), height: 40, width: double.infinity),
+    /// all five land inside one tall viewport and are therefore all built.
+    MediaDetailBody fiveRegions() => const MediaDetailBody(
       readout: SizedBox(
         key: ValueKey('readout'),
         height: 40,
@@ -407,12 +409,12 @@ void main() {
       addTearDown(tester.view.reset);
     }
 
-    testWidgets('emits deck, readout, then the four slot regions in order', (
+    testWidgets('emits the readout, then the four slot regions in order', (
       tester,
     ) async {
       useTallViewport(tester);
       await tester.pumpWidget(
-        _wrap(_detailView(body: sixRegions(), staggerSections: false)),
+        _wrap(_detailView(body: fiveRegions(), staggerSections: false)),
       );
       await tester.pump();
 
@@ -426,13 +428,11 @@ void main() {
       // Canonical order, and a variant may omit a region but never reorder one.
       expect(labels, ['Episodes', 'Overview', 'Details', 'Genres', 'Cast']);
 
-      // The two unlabelled regions come first, in their own order.
-      final deckY = tester.getTopLeft(find.byKey(const ValueKey('deck'))).dy;
+      // The unlabelled readout comes first.
       final readoutY = tester
           .getTopLeft(find.byKey(const ValueKey('readout')))
           .dy;
       final firstLabelY = tester.getTopLeft(find.text('Episodes')).dy;
-      expect(deckY, lessThan(readoutY));
       expect(readoutY, lessThan(firstLabelY));
     });
 
@@ -441,7 +441,7 @@ void main() {
     ) async {
       useTallViewport(tester);
       await tester.pumpWidget(
-        _wrap(_detailView(body: sixRegions(), staggerSections: false)),
+        _wrap(_detailView(body: fiveRegions(), staggerSections: false)),
       );
       await tester.pump();
 
@@ -467,7 +467,6 @@ void main() {
             _detailView(
               staggerSections: false,
               body: MediaDetailBody(
-                deck: const SizedBox(height: 40, width: double.infinity),
                 operate: [
                   MediaDetailSlot.lazy(
                     label: 'Episodes',
@@ -499,7 +498,7 @@ void main() {
               'the lazy slot was flattened into a Column and lost its laziness',
         );
 
-        // And it is still region 3: `Genres` is below it, off screen.
+        // And it is still region 2: `Genres` is below it, off screen.
         expect(find.text('Episodes'), findsOneWidget);
         expect(find.text('Genres'), findsNothing);
       },
@@ -517,20 +516,24 @@ void main() {
           _detailView(
             staggerSections: false,
             body: const MediaDetailBody(
-              deck: SizedBox(
-                key: ValueKey('deck'),
-                height: 40,
-                width: double.infinity,
-              ),
+              operate: [
+                MediaDetailSlot.box(
+                  child: SizedBox(
+                    key: ValueKey('box'),
+                    height: 40,
+                    width: double.infinity,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       );
       await tester.pump();
 
-      final deck = tester.getRect(find.byKey(const ValueKey('deck')));
-      expect(deck.left, MediaDetailMetrics.gutterOf(390));
-      expect(deck.right, 390 - MediaDetailMetrics.gutterOf(390));
+      final box = tester.getRect(find.byKey(const ValueKey('box')));
+      expect(box.left, MediaDetailMetrics.gutterOf(390));
+      expect(box.right, 390 - MediaDetailMetrics.gutterOf(390));
     });
 
     testWidgets('centres the column on a wide macOS window', (tester) async {
@@ -543,20 +546,24 @@ void main() {
           _detailView(
             staggerSections: false,
             body: const MediaDetailBody(
-              deck: SizedBox(
-                key: ValueKey('deck'),
-                height: 40,
-                width: double.infinity,
-              ),
+              operate: [
+                MediaDetailSlot.box(
+                  child: SizedBox(
+                    key: ValueKey('box'),
+                    height: 40,
+                    width: double.infinity,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       );
       await tester.pump();
 
-      final deck = tester.getRect(find.byKey(const ValueKey('deck')));
-      expect(deck.width, MediaDetailMetrics.bodyMaxWidth - 2 * AppSpacing.lg);
-      expect(deck.center.dx, closeTo(700, 0.01));
+      final box = tester.getRect(find.byKey(const ValueKey('box')));
+      expect(box.width, MediaDetailMetrics.bodyMaxWidth - 2 * AppSpacing.lg);
+      expect(box.center.dx, closeTo(700, 0.01));
     });
 
     testWidgets('lands the readout rail on the column at both widths', (
@@ -570,7 +577,6 @@ void main() {
         _detailView(
           staggerSections: false,
           body: const MediaDetailBody(
-            deck: SizedBox(height: 40, width: double.infinity),
             readout: Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: SizedBox(
@@ -603,21 +609,25 @@ void main() {
       );
     });
 
-    testWidgets('lands a band\'s glyph on the deck\'s leading edge, above it, '
-        'at both widths', (tester) async {
+    testWidgets('lands a band\'s glyph on the column edge, above the first '
+        'box, at both widths', (tester) async {
       // A FaultBand and an InlineErrorRetry carry the screen gutter
-      // themselves. Inside the deck they paid it twice, and the glyph sat
-      // 16pt in from the actions it qualifies.
+      // themselves. Inside a region they would pay it twice, and the glyph
+      // would sit 16pt in from the box it qualifies.
       Widget page(Widget band) => _wrap(
         _detailView(
           staggerSections: false,
           body: MediaDetailBody(
             band: band,
-            deck: const SizedBox(
-              key: ValueKey('deck'),
-              height: 40,
-              width: double.infinity,
-            ),
+            operate: const [
+              MediaDetailSlot.box(
+                child: SizedBox(
+                  key: ValueKey('box'),
+                  height: 40,
+                  width: double.infinity,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -643,14 +653,14 @@ void main() {
           await tester.pumpWidget(page(band));
           await tester.pump();
 
-          final deck = tester.getRect(find.byKey(const ValueKey('deck')));
+          final box = tester.getRect(find.byKey(const ValueKey('box')));
           final glyph = tester.getRect(
             find.byIcon(Icons.cloud_off_rounded).first,
           );
-          expect(glyph.left, deck.left, reason: '${band.runtimeType} $size');
+          expect(glyph.left, box.left, reason: '${band.runtimeType} $size');
           expect(
             glyph.bottom,
-            lessThanOrEqualTo(deck.top),
+            lessThanOrEqualTo(box.top),
             reason: '${band.runtimeType} $size',
           );
         }
@@ -670,7 +680,6 @@ void main() {
           _detailView(
             staggerSections: false,
             body: MediaDetailBody(
-              deck: const SizedBox(height: 40, width: double.infinity),
               related: [
                 MediaDetailSlot.rail(
                   label: 'Cast',
@@ -731,7 +740,11 @@ void main() {
                       posterCard: SizedBox.shrink(),
                     ),
                     body: const MediaDetailBody(
-                      deck: SizedBox(height: 2000, width: double.infinity),
+                      operate: [
+                        MediaDetailSlot.box(
+                          child: SizedBox(height: 2000, width: double.infinity),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -865,36 +878,6 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(refreshed, 1);
-    });
-  });
-
-  group('the deck', () {
-    testWidgets('never rides inside the hero', (tester) async {
-      const deckKey = Key('deck');
-      await tester.pumpWidget(
-        _wrap(
-          _detailView(
-            staggerSections: false,
-            body: const MediaDetailBody(
-              deck: SizedBox(key: deckKey, height: 40, width: double.infinity),
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      // A do-not-regress line, not a new rule. The action row is region 1 of the
-      // *body*; put it in the collapsing header and it becomes cargo on the Hero
-      // flight — a live control animating between two routes, resizing as the
-      // header collapses, and tappable mid-flight.
-      expect(find.byKey(deckKey), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byType(SliverPersistentHeader),
-          matching: find.byKey(deckKey),
-        ),
-        findsNothing,
-      );
     });
   });
 

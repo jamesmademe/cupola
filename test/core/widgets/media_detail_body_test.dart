@@ -390,8 +390,7 @@ void main() {
 
       expect(find.text('12'), findsOneWidget);
       expect(find.text('Missing'), findsOneWidget);
-      // The deck says it in words one region below; a reader does not need it
-      // twice.
+      // The hero's chip says it in words; a reader does not need it twice.
       expect(find.semantics.byLabel('12'), findsNothing);
       expect(tester.takeException(), isNull);
     });

@@ -18,8 +18,8 @@ import 'package:cupola/core/theme.dart';
 /// the only question the page answers. This makes the band *contain* the answer:
 /// `12` over the label `Missing`.
 ///
-/// Silent to assistive technology: the deck's headline says the same thing in
-/// words one region below, and a screen reader does not need it twice.
+/// Silent to assistive technology: the hero's chip says the same thing in
+/// words, and a screen reader does not need it twice.
 ///
 /// `headlineSmall` and not `displaySmall`: at the hero band's 1.6x clamp that is
 /// 38.4pt, plus a 17.6pt label and a 4pt gap — 60pt inside a 123pt box, with

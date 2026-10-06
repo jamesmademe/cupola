@@ -142,7 +142,7 @@ class MediaDetailSlot {
        measure = MediaDetailMeasure.column;
 }
 
-/// The media detail body's six regions, in canonical order.
+/// The media detail body's five regions, in canonical order.
 ///
 /// Named regions rather than one list: the order is a structural guarantee, not
 /// a per-caller declaration. A variant omits a region; it never reorders one.
@@ -160,29 +160,15 @@ class MediaDetailBody {
   /// answer needs did not answer. No label, and drawn only when there is
   /// one.
   ///
-  /// Its own slot rather than a line inside [deck], because both lines carry
+  /// Its own slot rather than a line inside a region, because both lines carry
   /// the screen gutter themselves (`space-lg` on their leading edge) so they
-  /// align on a page that has no gutter of its own. Inside the deck the
-  /// gutter was paid twice and the glyph landed 16pt inside the edge of the
-  /// actions under it. The spine hands this slot only the surplus a centred
-  /// column takes on, as it does [readout], so the glyph lands on the column
-  /// edge at every width.
+  /// align on a page that has no gutter of its own; inside a region the gutter
+  /// would be paid twice and the glyph would land 16pt inside the column edge.
+  /// The spine hands this slot only the surplus a centred column takes on, as
+  /// it does [readout], so the glyph lands on the column edge at every width.
   final Widget? band;
 
-  /// Region 1 — the answer. One box, no label: every variant is *supposed* to
-  /// have a state, even a reference page whose state is 'seven movies'.
-  ///
-  /// Null only where the status resolver a deck needs does not exist yet — the
-  /// Seerr collection and person pages and the two Bazarr pages, which have no
-  /// `seerrCollectionStatus`, `seerrPersonStatus` or `resolveBazarrAction`. It is
-  /// nullable rather than defaulted to a blank box so that gap is visible in the
-  /// type instead of hidden behind a `SizedBox.shrink()` — which is what those
-  /// four passed, and which cost them 16pt of dead air that sat their first
-  /// region lower than every other page's. **A page with a resolvable status
-  /// must pass one**; a promoted verb is the whole point of the region.
-  final Widget? deck;
-
-  /// Region 2 — the decisive facts, glyph-led, as a bleeding rail. No label.
+  /// Region 1 — the decisive facts, glyph-led, as a bleeding rail. No label.
   ///
   /// Pass it with its own default screen-gutter padding (`AppSpacing.lg`): a
   /// caller builds this above `MediaDetailView` and so cannot see the resolved
@@ -193,7 +179,7 @@ class MediaDetailBody {
   /// gutter or the two insets compound.
   final Widget? readout;
 
-  /// Region 3 — **the manifest**: the child records the service tracks under
+  /// Region 2 — **the manifest**: the child records the service tracks under
   /// this title, checked against what actually arrived.
   ///
   /// A shipping manifest is a list of what a thing is supposed to consist of,
@@ -204,23 +190,22 @@ class MediaDetailBody {
   /// `missingSubtitlesCount`), and rendering it is the reason this page is an
   /// instrument rather than an article about a film.
   ///
-  /// Region 3 sits above the synopsis on purpose: the hero says what this is
-  /// and what state it is in, the deck says what to do about it, and this is
-  /// the thing whose state that was. Prose about a film is never more
-  /// operational than the list of episodes you are missing. Where a service
-  /// tracks no children this is the file (Radarr) or the request ledger (a
-  /// Seerr movie).
+  /// Region 2 sits above the synopsis on purpose: the hero says what this is
+  /// and what state it is in, and this is the thing whose state that was. Prose
+  /// about a film is never more operational than the list of episodes you are
+  /// missing. Where a service tracks no children this is the file (Radarr) or
+  /// the request ledger (a Seerr movie).
   final List<MediaDetailSlot> operate;
 
-  /// Region 4 — running prose: the overview, or a person's biography.
+  /// Region 3 — running prose: the overview, or a person's biography.
   final List<MediaDetailSlot> synopsis;
 
-  /// Region 5 — the encyclopaedic block, in this internal order: the `DETAILS`
+  /// Region 4 — the encyclopaedic block, in this internal order: the `DETAILS`
   /// fact grid, then `WHERE TO WATCH`, then `SCORES`, then the catalogue
   /// (`GENRES` / `KEYWORDS` / `TAGS`).
   final List<MediaDetailSlot> reference;
 
-  /// Region 6 — everything that is about **other** titles: the `CAST` rail,
+  /// Region 5 — everything that is about **other** titles: the `CAST` rail,
   /// then `COLLECTION`, then `FILMOGRAPHY`.
   ///
   /// `WHERE TO WATCH` used to end this list and does not belong here: where a
@@ -256,7 +241,6 @@ class MediaDetailBody {
 
   const MediaDetailBody({
     this.band,
-    this.deck,
     this.readout,
     this.operate = const <MediaDetailSlot>[],
     this.synopsis = const <MediaDetailSlot>[],
@@ -267,9 +251,8 @@ class MediaDetailBody {
 
   /// This body with only the slots on [inSideTrack]'s side of [sideTrack].
   ///
-  /// The band, the deck and the readout never move: the answer and the
-  /// decisive facts are the top of the page in both layouts, and a line about
-  /// the whole page stays over them.
+  /// The band and the readout never move: the decisive facts are the top of
+  /// the page in both layouts, and a line about the whole page stays over them.
   MediaDetailBody partition({required bool inSideTrack}) {
     final side = sideTrack ?? const <String>{};
     List<MediaDetailSlot> keep(List<MediaDetailSlot> slots) => slots
@@ -278,7 +261,6 @@ class MediaDetailBody {
 
     return MediaDetailBody(
       band: inSideTrack ? null : band,
-      deck: inSideTrack ? null : deck,
       readout: inSideTrack ? null : readout,
       operate: keep(operate),
       synopsis: keep(synopsis),

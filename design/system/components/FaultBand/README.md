@@ -46,7 +46,7 @@ Each sheet is drawn in the dark and the light room.
 ## Do / don't
 
 - Do keep the page below the band at full ink: nothing is dimmed for being unreachable — dimming means *not configured*.
-- Do give it the page's own slot on a detail page, `MediaDetailBody.band`, never a place inside the deck. Its `space-lg` leading inset is the screen gutter: the band slot adds only the centring surplus, so the glyph lands on the column edge over the actions, where a band inside the deck paid the gutter twice.
+- Do give it the page's own slot on a detail page, `MediaDetailBody.band`, never a place inside another region. Its `space-lg` leading inset is the screen gutter: the band slot adds only the centring surplus, so the glyph lands on the column edge, where a band inside a region would pay the gutter twice.
 - Do pair `.section` with `ServiceKpi.unavailable` so the figures that source owns read `—`, never `0`.
 - Don't paint Retry or Refresh red, don't fill anything but an amber fault's remedy, and don't add a dismiss to `.stale`: a stale reading is still true after it is acknowledged.
 - Don't use it where the retry lives elsewhere (a form's submit button) — that is `FaultNote`.

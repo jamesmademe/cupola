@@ -135,10 +135,7 @@ class PersonDetailScreen extends ConsumerWidget {
             ref.invalidate(personCreditsProvider(personId));
           },
           body: MediaDetailBody(
-            // See the collection screen: a reference page's state needs a
-            // resolved person status and a status-only deck, neither of which
-            // exists yet.
-            // Region 3 — the records Seerr holds under this name. The carousel
+            // Region 2 — the records Seerr holds under this name. The carousel
             // owns its own gutter and its own heading, hence `.rail`.
             operate: [
               MediaDetailSlot.rail(

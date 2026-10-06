@@ -4,7 +4,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 
-/// A wrapped run of catalogue chips for a detail page's region 5.
+/// A wrapped run of catalogue chips for a detail page's region 4.
 ///
 /// Label-less by design — the slot owns the heading, so the same list can never
 /// reach two differently-titled sections.

@@ -52,7 +52,11 @@ MediaDetailView _detailView() {
     ),
     heroFallbackIcon: Icons.movie_outlined,
     body: const MediaDetailBody(
-      deck: SizedBox(height: 2000, width: double.infinity),
+      operate: [
+        MediaDetailSlot.box(
+          child: SizedBox(height: 2000, width: double.infinity),
+        ),
+      ],
     ),
   );
 }

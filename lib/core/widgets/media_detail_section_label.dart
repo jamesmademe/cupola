@@ -23,7 +23,7 @@ const double _stackProbeFontSize = 14.0;
 /// the page accent, or without `Semantics(header: true)`, because a caller never
 /// builds one.
 ///
-/// Why a small label and not [SectionHeader]'s `titleLarge`: on a six-region page
+/// Why a small label and not [SectionHeader]'s `titleLarge`: on a five-region page
 /// the hero title and the collapsed bar's title are the page's voice, and a
 /// stack of 22pt bold headings competes with them. An accent kicker repeated
 /// five or six times down the page reads as a *rhythm* — which is the same

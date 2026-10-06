@@ -27,7 +27,7 @@ import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/staggered_entrance.dart';
 
 /// A reusable view for displaying media details with a cinematic collapsing
-/// hero, compact poster/title block, and a six-region sliver body.
+/// hero, compact poster/title block, and a five-region sliver body.
 ///
 /// The hero is a pinned [SliverPersistentHeader]: at rest it is the full
 /// backdrop stage; on scroll the art parallaxes away, the scrim deepens, the
@@ -35,7 +35,7 @@ import 'package:cupola/core/widgets/staggered_entrance.dart';
 /// materialises with [title]. On iOS/macOS bouncing physics, pulling down
 /// stretches the backdrop.
 ///
-/// The body is declared as a [MediaDetailBody] — six named regions, emitted in
+/// The body is declared as a [MediaDetailBody] — five named regions, emitted in
 /// one fixed order, each holding [MediaDetailSlot]s. The spine owns every
 /// heading, every gap and every horizontal inset; a caller owns only content.
 /// That is what makes the section order a structural guarantee rather than
@@ -72,7 +72,7 @@ class MediaDetailView extends StatelessWidget {
   /// page (which passed one); requiring it makes that impossible.
   final IconData heroFallbackIcon;
 
-  /// The page body, in six regions.
+  /// The page body, in five regions.
   final MediaDetailBody body;
 
   /// Pull-to-refresh, available on every variant.
@@ -219,7 +219,7 @@ class MediaDetailView extends StatelessWidget {
   ///
   /// **Reading order is not visual order here.** A screen reader walks the main
   /// track and then the side track, so it hears every main-track slot in
-  /// canonical region order and then every side-track one — the spine's six
+  /// canonical region order and then every side-track one — the spine's five
   /// regions, some of them later than on the phone. Interleaving them back would
   /// need sort keys the sliver
   /// semantics tree does not honour across cross-axis groups, and a broken sort
@@ -259,7 +259,6 @@ class MediaDetailView extends StatelessWidget {
     } else {
       main = MediaDetailBody(
         band: body.band,
-        deck: body.deck,
         readout: body.readout,
         synopsis: body.synopsis,
         reference: body.reference,
@@ -349,10 +348,9 @@ class MediaDetailView extends StatelessWidget {
 
     // Above region 1 — the band. A FaultBand or an InlineErrorRetry carries
     // the screen gutter itself, so it is handed only the surplus a centred
-    // column takes on (zero on a phone): its glyph lands on the column edge,
-    // over the leading edge of the deck below it. Padded by the full gutter
-    // inside the deck, it sat 16pt in from everything it qualified. It shares
-    // the deck's clock, so the line and the actions it is about arrive as one.
+    // column takes on (zero on a phone): its glyph lands on the column edge.
+    // Padded by the full gutter inside a region, it sat 16pt in from
+    // everything it qualified.
     final band = body.band;
     if (band != null) {
       final surplus = math.max(0.0, gutter - AppSpacing.lg);
@@ -360,37 +358,13 @@ class MediaDetailView extends StatelessWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(surplus, AppSpacing.lg, surplus, 0),
-            child: stagger(band, staggerIndex),
-          ),
-        ),
-      );
-      if (body.deck == null) staggerIndex++;
-    }
-
-    // Region 1 — the deck. Never labelled: it is the answer, not a section.
-    //
-    // Skipped entirely when null rather than padded around a blank box: the four
-    // variants whose status resolver does not exist yet used to pass
-    // `SizedBox.shrink()`, and this padding then sat their first region 16pt
-    // lower than every other page's. Under a band it takes `space-sm`: the
-    // band brings its own air above.
-    if (body.deck != null) {
-      slivers.add(
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              gutter,
-              band != null ? AppSpacing.sm : AppSpacing.lg,
-              gutter,
-              0,
-            ),
-            child: stagger(body.deck!, staggerIndex++),
+            child: stagger(band, staggerIndex++),
           ),
         ),
       );
     }
 
-    // Region 2 — the readout. A bleeding rail: it owns its own horizontal
+    // Region 1 — the readout. A bleeding rail: it owns its own horizontal
     // padding so the first cell aligns to the column while the rail runs past
     // it.
     //
@@ -453,9 +427,9 @@ class MediaDetailView extends StatelessWidget {
           ),
         );
       } else {
-        // An unlabelled slot buys its own section gap: it either follows the
-        // deck or another region, or — on a deck-less variant — it is the first
-        // thing under the hero, which wants the same air.
+        // An unlabelled slot buys its own section gap: it either follows
+        // another region or it is the first thing under the hero, which wants
+        // the same air.
         slivers.add(
           const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
         );
@@ -1060,7 +1034,7 @@ class _FallbackHeroBackdrop extends StatelessWidget {
 /// [AmbientBackground], same transparent [Material], same
 /// [MediaDetailMetrics.gutterOf] column — so nothing moves sideways either.
 ///
-/// The skeleton is shaped like the body it becomes: a deck-sized card, then a
+/// The skeleton is shaped like the body it becomes: a first card, then a
 /// readout-sized rail, then a section. A generic stack of text lines and a card
 /// promised a page that no longer exists.
 ///
@@ -1145,9 +1119,8 @@ class _MediaDetailLoadingBody extends StatelessWidget {
 
   const _MediaDetailLoadingBody({required this.gutter});
 
-  /// Deck height at the default reading size: a tone well and a two-line status
-  /// run, a 48pt action band and the monitor row.
-  static const double _deckHeight = 132.0;
+  /// The first card's height at the default reading size.
+  static const double _leadHeight = 132.0;
 
   /// One row of readout cells.
   static const double _readoutHeight = 78.0;
@@ -1172,7 +1145,7 @@ class _MediaDetailLoadingBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ShimmerPlaceholder.card(height: _deckHeight),
+            ShimmerPlaceholder.card(height: _leadHeight),
             const SizedBox(height: AppSpacing.md),
             ShimmerPlaceholder.card(height: _readoutHeight),
             const SizedBox(height: AppSpacing.xl),

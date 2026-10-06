@@ -49,7 +49,11 @@ MediaDetailView _detailView({Widget? posterCard}) => MediaDetailView(
     tags: const [GenreChip(genre: 'Fantasy')],
   ),
   body: const MediaDetailBody(
-    deck: SizedBox(height: 2000, width: double.infinity),
+    operate: [
+      MediaDetailSlot.box(
+        child: SizedBox(height: 2000, width: double.infinity),
+      ),
+    ],
   ),
 );
 

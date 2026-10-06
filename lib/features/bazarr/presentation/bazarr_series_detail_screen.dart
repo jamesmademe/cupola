@@ -136,9 +136,7 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
         // the list *is* the page and holds the wide track until it can. Details
         // and Tags stand aside either way.
         sideTrack: const {'Details', 'Tags'},
-        // No deck: see the Bazarr movie screen — region 1 wants a Bazarr action
-        // resolver, and a null deck costs no air where a blank box did.
-        // Region 3 — the manifest. The lazy episode list used to be handed to the
+        // Region 2 — the manifest. The lazy episode list used to be handed to the
         // view as a sliver while the states went in as content sections, and the
         // old spine emitted every content section first — so these rows rendered
         // *after* Details and Tags. A named region makes that unreachable while

@@ -167,12 +167,11 @@ void main() {
   });
 }
 
-/// A spine with something identifiable in each of the four regions that matter.
+/// A spine with something identifiable in each region that matters.
 Widget _spine() => const MediaDetailView(
   title: 'A title',
   heroFallbackIcon: Icons.movie_rounded,
   body: MediaDetailBody(
-    deck: Text('deck region'),
     readout: Text('readout region'),
     operate: [MediaDetailSlot.box(child: Text('operate region'))],
     synopsis: [MediaDetailSlot.box(child: Text('synopsis region'))],

@@ -90,11 +90,7 @@ class CollectionDetailScreen extends ConsumerWidget {
           onRefresh: () async =>
               ref.invalidate(collectionDetailProvider(collectionId)),
           body: MediaDetailBody(
-            // Region 1 is a reference page's state — 'three of seven in your
-            // library'. That needs a resolved collection status and a
-            // status-only deck, neither of which exists yet, so the region
-            // collapses rather than inventing a state out of the parts list.
-            // Region 3 — the members. On a page *about* a collection they are
+            // Region 2 — the members. On a page *about* a collection they are
             // the content, not a teaser, so they sit above the overview.
             //
             // `.rail` rather than `.box`: the carousel owns its own gutter and
