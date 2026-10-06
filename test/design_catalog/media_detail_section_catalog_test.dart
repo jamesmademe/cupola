@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -94,7 +95,7 @@ const _episodes = [
   'The Yellow Face',
 ];
 
-/// A Sonarr page: a lazy season list in the manifest, with a count on its
+/// A Sonarr page: a lazy episode list in the manifest, with a count on its
 /// label, and real Sonarr tags under Tags. [band] is a line over the whole
 /// page.
 Widget _sonarrPage({Widget? band}) {
@@ -119,47 +120,21 @@ Widget _sonarrPage({Widget? band}) {
       band: band,
       operate: [
         MediaDetailSlot.lazy(
-          label: 'Seasons',
+          label: 'Episodes',
           count: '41 of 45 on disk',
-          sliver: MediaChildGroupSliver(
-            groups: const [
-              MediaChildGroup(
-                id: 1,
-                shortLabel: 'S1',
-                label: 'Season 1',
-                status: partial,
-                summary: '13 of 15 episodes',
-                progress: 13 / 15,
-              ),
-              MediaChildGroup(
-                id: 2,
-                shortLabel: 'S2',
-                label: 'Season 2',
+          sliver: SliverList.builder(
+            itemCount: _episodes.length,
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: MediaChildTile.numbered(
+                ordinal: formatEpisodeOrdinal(index + 1),
+                ordinalLabel: 'Episode ${index + 1}',
+                title: _episodes[index],
+                facts: ['Jan ${1 + index * 7}, 1921'],
                 status: _available,
-                summary: '15 of 15 episodes',
+                onTap: () {},
               ),
-              MediaChildGroup(
-                id: 3,
-                shortLabel: 'S3',
-                label: 'Season 3',
-                status: partial,
-                summary: '13 of 15 episodes',
-              ),
-            ],
-            accent: accent,
-            childCount: (_) => _episodes.length,
-            childBuilder: (context, group, index) => MediaChildTile.numbered(
-              ordinal: formatEpisodeOrdinal(index + 1),
-              ordinalLabel: 'Episode ${index + 1}',
-              title: _episodes[index],
-              facts: ['Jan ${1 + index * 7}, 1921'],
-              status: _available,
-              onTap: () {},
             ),
-            emptyState: const SizedBox.shrink(),
-            pickerLabel: 'All 3 seasons',
-            pickerTitle: 'Seasons',
-            childNoun: 'episodes',
           ),
         ),
       ],
@@ -272,7 +247,7 @@ void main() {
       CatalogScene(
         'MediaDetailView.body · Radarr on a phone, then Sonarr · the manifest, '
         'synopsis and reference in fixed order; space-xl above each label, '
-        'space-sm below; a .lazy season list mid-page',
+        'space-sm below; a .lazy episode list mid-page',
         (_) => _row([_phone(_radarrPage()), _phone(_sonarrPage())]),
       ),
       CatalogScene(

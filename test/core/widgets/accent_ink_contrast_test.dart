@@ -5,7 +5,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/connection_badge.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
-import 'package:cupola/core/widgets/media_child_list.dart';
 import 'package:cupola/core/widgets/rating_chip.dart';
 import 'package:cupola/core/widgets/release_list_widgets.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -106,55 +105,6 @@ void main() {
             );
           });
         }
-      }
-
-      for (final entry in worstAccents.entries) {
-        testWidgets('MediaChildList "Show all" on ${entry.key}', (
-          tester,
-        ) async {
-          tester.view.physicalSize = const Size(600, 2400);
-          tester.view.devicePixelRatio = 1.0;
-          addTearDown(tester.view.reset);
-
-          await _pump(
-            tester,
-            theme,
-            CustomScrollView(
-              slivers: [
-                MediaChildGroupSliver(
-                  groups: const [
-                    MediaChildGroup(
-                      id: 1,
-                      shortLabel: 'S1',
-                      label: 'Season 1',
-                      status: MediaStatusInfo(
-                        availability: MediaAvailability.available,
-                      ),
-                    ),
-                  ],
-                  accent: entry.value,
-                  childCount: (_) => 25,
-                  childBuilder: (context, group, index) => Text('E$index'),
-                  emptyState: const Text('No seasons'),
-                  pickerLabel: 'All seasons',
-                  pickerTitle: 'Seasons',
-                  childNoun: 'episodes',
-                ),
-              ],
-            ),
-          );
-
-          _expectLegible(
-            tester,
-            // `TextButton.icon` is a private subclass, so match by `is`.
-            root: find.ancestor(
-              of: find.text('Show all 25 episodes'),
-              matching: find.byWidgetPredicate((w) => w is TextButton),
-            ),
-            ground: scheme.surface,
-            reason: 'Show all / ${entry.key} / ${brightness.name}',
-          );
-        });
       }
 
       // The release row's score ink is a status tone on its own wash over the

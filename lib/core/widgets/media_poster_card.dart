@@ -23,7 +23,7 @@ class MediaPosterCard extends StatelessWidget {
   final BorderRadius? borderRadius;
 
   /// Private because the public name is taken by the [MediaPosterCard.circular]
-  /// constructor — the same shape `MediaChildTile._stacked` uses.
+  /// constructor.
   final bool _circular;
 
   /// The rectangular poster: rounded corners on [borderRadius].

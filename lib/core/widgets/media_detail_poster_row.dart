@@ -33,8 +33,7 @@ class MediaDetailPosterRow extends StatelessWidget {
   /// Whether the poster slot is sized for the circular artist treatment.
   ///
   /// Private because the public name is taken by the
-  /// [MediaDetailPosterRow.circular] constructor — the same shape
-  /// `MediaChildTile._stacked` uses.
+  /// [MediaDetailPosterRow.circular] constructor.
   final bool _circularPoster;
 
   /// The rectangular 82x123 poster lead.

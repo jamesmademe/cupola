@@ -98,9 +98,8 @@ class BazarrSubtitleLanguageWrap extends StatelessWidget {
 /// Was the fourth hand-rolled dense row in the app — its own `Container` shell
 /// instead of [AppCard], a fixed 36x36 leading box, a magic `vertical: 3`
 /// padding, `maxLines: 1` on a service-supplied title, and no press feedback at
-/// all. [MediaChildTile.numbered] is the same shape the Sonarr, Seerr and Lidarr
-/// child regions already speak, so a wanted episode here now looks and sounds
-/// like an episode everywhere else.
+/// all. [MediaChildTile.numbered] is the one dense child row, so a wanted
+/// episode here looks and sounds like an episode everywhere else.
 class BazarrWantedEpisodeTile extends StatelessWidget {
   final BazarrWantedItem item;
 

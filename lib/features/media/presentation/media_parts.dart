@@ -319,7 +319,7 @@ class MediaPlate extends StatelessWidget {
 }
 
 /// Past 1.4 times the reading size the page stacks what sits side by side:
-/// the answer `SectionHeader` and `MediaChildList` give at the same threshold.
+/// the answer `SectionHeader` gives at the same threshold.
 bool mediaStacked(BuildContext context) =>
     MediaQuery.textScalerOf(context).scale(14) > 14 * 1.4;
 

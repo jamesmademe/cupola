@@ -1143,10 +1143,8 @@ class _MediaBrowseFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
-      // `AppRadius.pill`, not a twice-repeated literal 20. The season selector in
-      // `media_child_list.dart` was deliberately unified onto this chip's
-      // vocabulary, so the two were pixel-identical by coincidence rather than by
-      // construction — a change to the token would have silently split them.
+      // `AppRadius.pill`, not a repeated literal 20: a change to the token has
+      // to reach this chip too.
       child: Semantics(
         button: true,
         selected: selected,

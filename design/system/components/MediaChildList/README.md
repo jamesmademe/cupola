@@ -1,28 +1,22 @@
 # MediaChildList
 
-The one `container → children` vocabulary: a season or album selector over dense child rows — episodes, tracks, albums — each carrying its status as a tone and, when it matters, as a word.
+The dense child row: an episode or a track, carrying its status as a tone and, when it matters, as a word.
 
-Rendered from `lib/core/widgets/media_child_list.dart` (`MediaChildTile`, `MediaChildGroup`, `MediaChildGroupSliver`, `mediaStatusWord`) by `test/design_catalog/media_child_list_catalog_test.dart`. It is hosted by `MediaDetailSlot.lazy`; the selector pills are `SelectionPills`.
+Rendered from `lib/core/widgets/media_child_list.dart` (`MediaChildTile`, `mediaStatusWord`) by `test/design_catalog/media_child_list_catalog_test.dart`.
 
-- **Selector** (more than one container) — `SelectionPills`, `SelectionPills.flush` so the first pill shares the column edge with the slot label and the summary (the slot is already on the gutter): min height 48, padding `space-sm` × `space-lg`, `radius-pill`, `label-medium` 600. Selected: the room's strong fill with a `line-edge` border and the label in `on-surface` — the nav pill, never the page's colour; unselected: `surface-container`, `outline-variant` border, `on-surface-variant` label. Past six containers, or past 1.4× reading size, the rail ends in a 48 × 48 `IconButton` (`Icons.unfold_more_rounded` 18, `on-surface-variant`, tooltip `pickerLabel`, e.g. *All 8 seasons*) that opens an `AppBottomSheet` titled `pickerTitle` listing every container as a `.numbered` row.
-- **Summary** — the container `label` in `title-small` 600, then `space-xs` and the `summary` in `label-small` tabular `dimText` (*13 of 15 episodes*); trailing, a full `StatusBadge`, `space-xs` and the caller's `groupAction` (a search menu). A group's `status` may be null — the queue it reads has not answered yet (`badgeOverQueue`) — and then no badge is drawn, no status word joins the picker row, and the bar takes the neutral tone. Past 1.4× reading size the trailing half drops under the text. A 3pt progress bar follows (`radius-xs`, `surface-container-highest` track, the status tone) only when `progress` is strictly between 0 and 1; `space-sm` closes the block.
 - **Rows** — `AppCard.filled` (`surface-container`, `radius-md`), padding `space-sm` × `space-md`, `space-xs` apart, dipping to 0.96 on press instead of flooding a ripple. Title in `body-medium` 600, two lines; `facts` through `MediaMetadataLine` in `body-medium` `on-surface-variant`, joined with ` · `, two lines. Then `space-sm` and the status, then `space-xs` and the `trailing` control.
 - **`MediaChildTile.numbered`** — ordinal (*E5*, the episode half of `S2 E5`, from `formatEpisodeOrdinal`) in `label-small` 600 tabular `on-surface-variant`, in a column at least 30 wide that grows with the clamped reading size, then `space-sm`. The status is an 8px `StatusBadge(iconOnly: true)` dot. `status` may be null — a Seerr episode has no status of its own — and then no dot is drawn.
-- **`MediaChildTile.stacked`** — a caller-supplied `leading` (Lidarr: a 38 × 54 cover in `radius-sm`, `BoxFit.cover`; without one, `surface-container-highest` with `Icons.album_rounded` in `outline`), `space-md`, and an optional 3pt `progress` bar under the text in the status tone. The status is a compact `StatusBadge`.
 - **Status word** — `mediaStatusWord` returns the pipeline state with its percentage (*Downloading 42%*), otherwise the status label (*Missing*, *Not released*) for anything not plainly available, and null for an available row — a wall of green dots carries no text.
-- **Collapse** — `MediaChildGroupSliver.collapsedChildCount` is 8. Past it, a full-width `TextButton.icon` (min height 48, `space-xs` above): `Icons.keyboard_arrow_down_rounded` 18 + *Show all 15 episodes*; expanded, `keyboard_arrow_up_rounded` + *Show fewer*. Label and glyph are the accent walked by `onTint` against the page surface — the primary ink, since the accent is the lamp. Choosing another container collapses again. The collapsed list builds only the rows it shows.
-- **Other states** — no containers: `emptyState` alone (Sonarr passes `AppEmptyState.compact`, *No seasons yet*). `childOverride` returning a widget replaces the rows while the selector and summary stay: a labelled `ShimmerList` while loading, `AppErrorState.compact` with *Retry* on a failure, `AppEmptyState.compact` for an empty season.
 
-The consumer provides `groups` (`id`, `shortLabel` like `S3` or `Sp`, `label`, resolved `status` or null while it waits on a queue, `summary`, `progress`) in display order, `accent` (the lamp), `childCount`, `childBuilder`, `childNoun` (*episodes*), `pickerLabel`, `pickerTitle`, `emptyState`, and optional `groupAction` and `childOverride`. It returns slivers.
+The consumer provides `ordinal` and `ordinalLabel`, `title`, `facts`, the resolved `status` (or null), and optionally `onTap`, `trailing` and `semanticHint`.
 
-Semantics: a row is one button named *ordinalLabel, title, facts* (*Episode 7, A Scandal in Bohemia, Feb 15, 1921, Missing*) with the status's `semanticLabel` as its value; the ordinal, texts and badge are silenced, and `trailing` keeps its own node. `ordinalLabel: ''` drops the ordinal from the name (the picker sheet does, since its title already says *Season 3*). Pills are buttons with a selected state. The summary is one node, *label, summary*. The toggle's name carries the noun (*Show fewer episodes*).
+Semantics: a row is one button named *ordinalLabel, title, facts* (*Episode 7, A Scandal in Bohemia, Feb 15, 1921, Missing*) with the status's `semanticLabel` as its value; the ordinal, texts and badge are silenced, and `trailing` keeps its own node. `ordinalLabel: ''` drops the ordinal from the name, for a row whose title already says what it is.
 
-Do: resolve the status in the feature's domain layer, pass a status word in `facts` for anything not available, and sort the groups before passing them. Don't: build the list in a `Column` — it is a sliver so a 250-episode season builds only the rows on screen — or pad the slot it sits in.
+Do: resolve the status in the feature's domain layer, and pass a status word in `facts` for anything not available.
 
 ## States in the catalog
 
-Each sheet is drawn in the dark and the light room; the sliver also on the desktop.
+Each sheet is drawn in the dark and the light room; the rows also on the desktop.
 
-- Three seasons collapsed to eight and expanded, eight containers, no containers, a loading, failed and empty override, a season whose status waits on the queue.
-- `MediaChildTile.stacked` for Lidarr albums, `.numbered` with no status, a two-line title and a stalled row.
-- Text at 150% (the rail ends in the picker) and at 200%: a season group, the album rows and the loose episodes.
+- `MediaChildTile.numbered` for episodes with an air date, one downloading and one missing with its search menu; with no status, a two-line title and a stalled row.
+- Text at 200%: the episode rows and the loose episodes.
