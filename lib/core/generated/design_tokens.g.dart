@@ -362,6 +362,10 @@ abstract final class DesignTokens {
   /// The widest the main content well may grow, on any shell.
   static const double breakpointContentWell = 1140;
 
+  /// The widest a page of one column grows: an artist's or an author's page,
+  /// rows read top to bottom, centred rather than stretched to the window.
+  static const double breakpointReadingWell = 720;
+
   /// Narrowest a desktop window may be dragged: a small phone's width.
   static const double breakpointDesktopMinWidth = 360;
 

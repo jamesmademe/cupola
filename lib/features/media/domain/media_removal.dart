@@ -44,18 +44,29 @@ class MediaRemoval {
 /// The removal of [title]'s copy from the connection called [name], whose
 /// files take [sizeOnDisk] bytes, while [keeping] (the other connections that
 /// hold a copy) keep theirs. [monitored] is whether the arr is looking for it.
+///
+/// [works] is for a person rather than a title, an artist or an author: what
+/// the arr looks for of theirs (`albums`), so it says `Lidarr stops looking
+/// for their albums.` and never calls the person "it".
 MediaRemoval mediaRemoval({
   required String title,
   required String name,
   required int sizeOnDisk,
   required bool monitored,
   List<String> keeping = const [],
+  String? works,
 }) {
-  final stops = monitored
-      ? '$name stops looking for it.'
-      : '$name stops tracking it.';
+  final stops = switch ((monitored, works)) {
+    (true, null) => '$name stops looking for it.',
+    (false, null) => '$name stops tracking it.',
+    (true, final works?) => '$name stops looking for their $works.',
+    (false, _) => '$name stops tracking them.',
+  };
   final rest = switch (keeping) {
-    [] when sizeOnDisk <= 0 => 'Nothing of it is on your server yet.',
+    [] when sizeOnDisk <= 0 =>
+      works == null
+          ? 'Nothing of it is on your server yet.'
+          : 'None of their $works are on your server yet.',
     [] => null,
     [final other] => '$other keeps its copy.',
     _ =>

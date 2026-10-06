@@ -578,6 +578,20 @@ mixin ArrActivityMixin {
     }
   }
 
+  /// Fetches a single item by id, letting a failure reach the caller: a page
+  /// built on the record says why it could not be read, and a record that is
+  /// gone (404) is a failure like any other rather than an empty page.
+  Future<T> fetchItemOrThrow<T>(
+    String endpoint,
+    int id,
+    T Function(Map<String, dynamic>) fromJson,
+  ) async {
+    final response = await client.get(
+      '/api/${config.apiVersion}/$endpoint/$id',
+    );
+    return fromJson(response.data as Map<String, dynamic>);
+  }
+
   /// Fetches a filtered list endpoint and maps it, letting failures propagate.
   ///
   /// Unlike [fetchAllItems] this does **not** degrade to `[]`: the episode,
@@ -769,6 +783,24 @@ mixin ArrActivityMixin {
     );
     final item = response.data as Map<String, dynamic>;
     item['qualityProfileId'] = qualityProfileId;
+    await client.put(
+      '/api/${config.apiVersion}/$resourcePath/$itemId',
+      data: item,
+    );
+  }
+
+  /// Sets [fields] on an item, read whole first and put back whole: the
+  /// \*arr replace the record they are sent.
+  Future<void> updateItemFields(
+    String resourcePath,
+    int itemId,
+    Map<String, Object?> fields,
+  ) async {
+    final response = await client.get(
+      '/api/${config.apiVersion}/$resourcePath/$itemId',
+    );
+    final item = response.data as Map<String, dynamic>;
+    item.addAll(fields);
     await client.put(
       '/api/${config.apiVersion}/$resourcePath/$itemId',
       data: item,

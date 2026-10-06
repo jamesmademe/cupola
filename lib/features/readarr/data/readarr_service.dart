@@ -8,18 +8,14 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 /// wanted, releases). Readarr is archived upstream but its v1 API is unchanged,
 /// so the same header-auth [ApiClient] and mixin apply as for Lidarr.
 ///
-/// The tab surfaces are complete for the supported Readarr v1 read contract:
-/// Calendar, Queue, Wanted and History are backed by the shared activity mixin
-/// and the dedicated presentation screens. Readarr is archived upstream, so
-/// the integration deliberately focuses on stable reads and does not invent
-/// detail or mutation promises that its contract cannot keep.
+/// The tab surfaces are backed by the shared activity mixin and the dedicated
+/// presentation screens; an author's page by the author, their books and the
+/// writes below. Readarr is archived upstream and its metadata host no longer
+/// answers, so nothing here looks a new book up: what is in the library, and
+/// searching the indexers for a book it already knows, still work.
 ///
-/// - `getAuthor(id)` and a book list remain outside the current library
-///   surface; Readarr exposes authors as the stable entity this client
-///   supports.
-/// - the writes — `PUT /api/v1/author` for monitor and profile,
-///   `POST /api/v1/command` for the searches, `DELETE /api/v1/author/{id}`,
-///   and the manual-import routes.
+/// - the writes: `PUT /api/v1/author/{id}` for monitor and profile,
+///   `POST /api/v1/command` for the searches, `DELETE /api/v1/author/{id}`.
 class ReadarrService with ArrActivityMixin {
   ReadarrService(this.client);
 
@@ -99,6 +95,54 @@ class ReadarrService with ArrActivityMixin {
   /// See [fetchAllItemsOrThrow].
   Future<List<ReadarrAuthor>> getAuthorsOrThrow() {
     return fetchAllItemsOrThrow('author', ReadarrAuthor.fromJson);
+  }
+
+  /// One author, letting a failure reach the caller: their page says why it
+  /// could not read the record rather than that there is none.
+  Future<ReadarrAuthor> getAuthorOrThrow(int authorId) =>
+      fetchItemOrThrow('author', authorId, ReadarrAuthor.fromJson);
+
+  /// An author's books, every one Readarr knows of.
+  Future<List<ReadarrBook>> getBooks(int authorId) =>
+      fetchListItems('book', {'authorId': authorId}, ReadarrBook.fromJson);
+
+  Future<List<Map<String, dynamic>>> getQualityProfiles() =>
+      fetchQualityProfiles();
+
+  Future<void> updateAuthorMonitored(int authorId, bool monitored) =>
+      updateItemMonitored('author', authorId, monitored);
+
+  Future<void> updateAuthorProfile(int authorId, int qualityProfileId) =>
+      updateItemProfile('author', authorId, qualityProfileId);
+
+  /// Asks the indexers for [bookIds], each as the book Readarr knows.
+  Future<void> searchBooks(List<int> bookIds) async {
+    await client.post(
+      '/api/v1/command',
+      data: {'name': 'BookSearch', 'bookIds': bookIds},
+    );
+  }
+
+  /// Asks the indexers for every monitored book of an author's.
+  Future<void> searchAuthor(int authorId) async {
+    await client.post(
+      '/api/v1/command',
+      data: {'name': 'AuthorSearch', 'authorId': authorId},
+    );
+  }
+
+  Future<void> deleteAuthor(
+    int authorId, {
+    bool deleteFiles = false,
+    bool addImportListExclusion = false,
+  }) async {
+    await client.delete(
+      '/api/v1/author/$authorId',
+      queryParameters: {
+        'deleteFiles': deleteFiles,
+        'addImportListExclusion': addImportListExclusion,
+      },
+    );
   }
 
   /// Fetches recent history mapped to typed items for the dashboard.

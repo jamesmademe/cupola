@@ -636,6 +636,21 @@ final radarrQueueSnapshotForProvider =
       );
     });
 
+/// The Readarr queue of one named connection, indexed by book id: an
+/// author's page badges its books with it, so a book being downloaded never
+/// reads `Wanted`. Empty id means the lens.
+final readarrQueueSnapshotForProvider =
+    FutureProvider.family<ArrQueueSnapshot, String>((ref, instanceId) async {
+      final service = instanceId.isEmpty
+          ? ref.watch(readarrServiceProvider)
+          : ref.watch(readarrServiceForProvider(instanceId));
+      return _loadArrQueueSnapshot(
+        service,
+        service.getQueuePage,
+        (item) => [intOrNull(mapOrNull(item['book'])?['id'] ?? item['bookId'])],
+      );
+    });
+
 /// The Radarr queue indexed by movie id.
 ///
 /// Every surface that badges a movie — grid, poster rail, detail page — reads

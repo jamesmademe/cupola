@@ -35,7 +35,9 @@ import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
 import 'package:cupola/features/music/presentation/music_screen.dart';
-import 'package:cupola/features/music/presentation/music_detail_screen.dart';
+import 'package:cupola/features/music/presentation/artist_page.dart';
+import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
+import 'package:cupola/features/readarr/presentation/author_page.dart';
 import 'package:cupola/features/music/presentation/lidarr_overview_screen.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
@@ -1041,7 +1043,7 @@ GoRoute _musicRoutes({required String path}) {
           state,
           heroPrefix: 'artist',
           fallbackLocation: ServiceRoutes.lidarrLibrary,
-          buildChild: (id, heroTag, artist, instanceId) => MusicDetailScreen(
+          buildChild: (id, heroTag, artist, instanceId) => ArtistPage(
             artistId: id,
             heroTag: heroTag,
             initialArtist: artist,
@@ -1132,7 +1134,7 @@ GoRoute _lidarrBranchRoot(ServiceTab tab) => switch (tab) {
           state,
           heroPrefix: 'artist',
           fallbackLocation: ServiceRoutes.lidarrLibrary,
-          buildChild: (id, heroTag, artist, instanceId) => MusicDetailScreen(
+          buildChild: (id, heroTag, artist, instanceId) => ArtistPage(
             artistId: id,
             heroTag: heroTag,
             initialArtist: artist,
@@ -1795,9 +1797,8 @@ GoRoute _prowlarrBranchRoot(ServiceTab tab) => switch (tab) {
 /// shipped are the two the model already spells: the bare service root, which
 /// this node redirects like the other three, and `/dashboard/readarr/library`,
 /// which was the pushed author list and is now the Library tab's root at the
-/// same address. And its Library pushes nothing, because there is no author
-/// detail to push: `ReadarrService` has `getAuthors()` and no
-/// `GET /api/v1/author/{id}`.
+/// same address. Its Library pushes an author's page (`author/:id`), as
+/// Lidarr's pushes an artist's.
 RouteBase _readarrRoutes() {
   const service = ServiceKey.readarr;
   final tabs = tabsFor(service)!;
@@ -1861,6 +1862,26 @@ GoRoute _readarrBranchRoot(ServiceTab tab) => switch (tab) {
         topPadding: _serviceTabTopPadding,
       ),
     ),
+    routes: [
+      GoRoute(
+        path: 'author/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.readarrLibrary
+            : null,
+        pageBuilder: (context, state) => _libraryDetailPage<ReadarrAuthor>(
+          state,
+          heroPrefix: 'author',
+          fallbackLocation: ServiceRoutes.readarrLibrary,
+          buildChild: (id, heroTag, author, instanceId) => AuthorPage(
+            authorId: id,
+            heroTag: heroTag,
+            initialAuthor: author,
+            instanceId: instanceId,
+          ),
+        ),
+      ),
+    ],
   ),
   ServiceTab.calendar => _page(
     tab.segment,

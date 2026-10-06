@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
@@ -90,8 +92,21 @@ class ReadarrLibraryScreen extends ConsumerWidget {
                   ),
                 ),
                 itemCount: sorted.length,
-                itemBuilder: (context, index) =>
-                    ReadarrAuthorTile(author: sorted[index]),
+                itemBuilder: (context, index) {
+                  final author = sorted[index];
+                  return ReadarrAuthorTile(
+                    author: author,
+                    onTap: () => context.push(
+                      ServiceRoutes.readarrAuthor(
+                        author.id,
+                        instanceId: ref
+                            .read(activeInstanceProvider(ServiceKey.readarr))
+                            ?.id,
+                      ),
+                      extra: author,
+                    ),
+                  );
+                },
               );
             },
             loading: () => const ListRowsShimmer(count: 8),

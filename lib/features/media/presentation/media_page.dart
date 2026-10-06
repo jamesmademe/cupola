@@ -650,7 +650,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         );
         final gutter = (box.maxWidth - column) / 2;
         final head = <Widget>[
-          const Align(alignment: Alignment.centerLeft, child: _BackPlate()),
+          const Align(alignment: Alignment.centerLeft, child: MediaBackPlate()),
           const SizedBox(height: AppSpacing.md),
           _Hero(
             onArtDrawn: _artDrawn,
@@ -772,7 +772,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           // where her request stands: the players' rows would repeat it.
           if (views.isNotEmpty &&
               !(audience == Audience.requester && requestLine != null)) ...[
-            _Heading('On your server', trailing: _servicesCount(shown)),
+            MediaHeading('On your server', trailing: _servicesCount(shown)),
             MediaGroup(children: views),
           ],
           if (graphSource case (:final seerr, :final tvId, :final numbers))
@@ -800,7 +800,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               ),
             ),
           if (seasons.isNotEmpty) ...[
-            const _Heading('Episodes'),
+            const MediaHeading('Episodes'),
             MediaEpisodes(
               key: ValueKey(('episodes', mediaKey)),
               seasons: seasons,
@@ -820,7 +820,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           ],
           ...manage,
           if (mediaWatchProvidersOf(rows, region) case final providers?) ...[
-            _Heading('Where to watch', trailing: regionName(region)),
+            MediaHeading('Where to watch', trailing: regionName(region)),
             MediaWatchProviders(providers: providers),
           ],
         ];
@@ -841,7 +841,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           ],
           if (mediaKey.isMovie)
             if (mediaReleasesOf(rows, region) case final releases?) ...[
-              _Heading(
+              MediaHeading(
                 'Release dates',
                 trailing: switch (releases.region) {
                   final code? => regionName(code),
@@ -851,7 +851,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               MediaReleaseDates(releases: releases),
             ],
           if (identity?.cast.isNotEmpty ?? false) ...[
-            const _Heading('Cast'),
+            const MediaHeading('Cast'),
             DiscoverCastList(cast: identity!.cast, padding: EdgeInsets.zero),
           ],
           if (identity?.collection case final collection?) ...[
@@ -1287,7 +1287,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       ];
       if (held.isEmpty) return const [];
       return [
-        _Heading('Manage', key: _manageKey),
+        MediaHeading('Manage', key: _manageKey),
         MediaSeriesManage(
           copies: held,
           title: MediaIdentity.of(rows)?.title ?? '',
@@ -1339,7 +1339,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       ],
     );
     return [
-      _Heading('Manage', key: _manageKey),
+      MediaHeading('Manage', key: _manageKey),
       MediaGroup(
         children: [
           MediaManageRow(
@@ -1482,47 +1482,6 @@ class _MediaPageState extends ConsumerState<MediaPage> {
 /// A film one Radarr holds: the connection, and its record there.
 typedef _RadarrHeld = ({ServiceInstance connection, RadarrMovie movie});
 
-/// The back control: a 44 plate at rest over the room. In a tablet's pane it
-/// goes back to the title opened before, or closes the pane.
-class _BackPlate extends StatelessWidget {
-  const _BackPlate();
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final pane = MediaPane.maybeOf(context);
-    final closes = pane != null && !pane.canGoBack;
-    final words = MaterialLocalizations.of(context);
-    // Its own node: merged into the page's first row, it read as wide as
-    // the page and a pointer aimed at its middle missed the plate.
-    return Semantics(
-      container: true,
-      button: true,
-      label: closes ? words.closeButtonTooltip : words.backButtonTooltip,
-      child: PressableScale(
-        onTap: pane?.onBack ?? () => Navigator.of(context).maybePop(),
-        child: Container(
-          width: DesignTokens.sizeTouch,
-          height: DesignTokens.sizeTouch,
-          decoration: BoxDecoration(
-            color: room.fillControl,
-            borderRadius: BorderRadius.circular(AppRadius.control),
-            border: Border.all(color: room.edge),
-          ),
-          child: closes
-              ? Icon(Icons.close_rounded, size: 22, color: room.ink)
-              : Icon(Icons.chevron_left_rounded, size: 26, color: room.ink),
-        ),
-      ),
-    );
-  }
-}
-
-/// Past 1.4 times the reading size the page stacks what sits side by side:
-/// the answer `SectionHeader` and `MediaChildList` give at the same threshold.
-bool _stacked(BuildContext context) =>
-    MediaQuery.textScalerOf(context).scale(14) > 14 * 1.4;
-
 /// Artwork, poster and title: the backdrop in a slab, the poster rising out
 /// of its foot, the title beside the poster, then the meta line.
 class _Hero extends StatelessWidget {
@@ -1571,7 +1530,7 @@ class _Hero extends StatelessWidget {
     final posterHeight = 132.0 * scale;
     final rise = 52.0 * scale;
 
-    final stacked = _stacked(context);
+    final stacked = mediaStacked(context);
     final backdrop = Container(
       height: backdropHeight,
       decoration: BoxDecoration(
@@ -1967,7 +1926,7 @@ class _Scores extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.door),
         border: Border.all(color: room.hair),
       ),
-      child: _stacked(context) && cells.length > 2
+      child: mediaStacked(context) && cells.length > 2
           // At a large reading size, two to a line.
           ? Column(
               children: [
@@ -2222,7 +2181,7 @@ class _LeadBar extends StatelessWidget {
         const SizedBox(height: AppSpacing.row),
         // At a large reading size, one to a line: three side by side cut
         // their words.
-        if (_stacked(context))
+        if (mediaStacked(context))
           for (final (index, (text, icon, onPressed, spoken))
               in secondaries.indexed) ...[
             if (index > 0) const SizedBox(height: AppSpacing.sm),
@@ -2258,44 +2217,6 @@ class _LeadBar extends StatelessWidget {
   }
 }
 
-class _Heading extends StatelessWidget {
-  const _Heading(this.text, {super.key, this.trailing});
-
-  final String text;
-  final String? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(
-        top: AppSpacing.section,
-        bottom: AppSpacing.md,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Expanded(
-            child: Semantics(
-              header: true,
-              child: Text(
-                text,
-                style: AppType.section.copyWith(color: room.ink),
-              ),
-            ),
-          ),
-          if (trailing != null)
-            Text(
-              trailing!,
-              style: AppType.meta.copyWith(color: room.inkTertiary),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// One row of "On your server", in the shape its case takes
 /// ([MediaRowShape]): the connection on the left, a fixed 92; what it holds;
 /// on the right the state, or the row's one way forward. A row with a way
@@ -2311,7 +2232,7 @@ class _ServerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
-    final stacked = _stacked(context);
+    final stacked = mediaStacked(context);
     final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
       child: view.shape == MediaRowShape.notSetUp

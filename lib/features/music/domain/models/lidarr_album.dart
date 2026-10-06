@@ -11,6 +11,10 @@ class LidarrAlbum {
   final List<dynamic> images;
   final Map<String, dynamic>? statistics;
 
+  /// The album's length in milliseconds, as Lidarr adds up its tracks; 0
+  /// when it does not say.
+  final int duration;
+
   const LidarrAlbum({
     required this.id,
     this.foreignAlbumId = '',
@@ -19,6 +23,7 @@ class LidarrAlbum {
     required this.monitored,
     required this.images,
     this.statistics,
+    this.duration = 0,
   });
 
   String get year {
@@ -50,6 +55,7 @@ class LidarrAlbum {
       monitored: json['monitored'] as bool? ?? false,
       images: json['images'] as List<dynamic>? ?? const [],
       statistics: rawStatistics is Map<String, dynamic> ? rawStatistics : null,
+      duration: (json['duration'] as num?)?.toInt() ?? 0,
     );
   }
 }

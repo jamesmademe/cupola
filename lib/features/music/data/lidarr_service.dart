@@ -192,6 +192,11 @@ class LidarrService with ArrActivityMixin {
     return fetchItem('artist', artistId, LidarrArtist.fromJson);
   }
 
+  /// One artist, letting a failure reach the caller: the artist's page says
+  /// why it could not read the record rather than that there is none.
+  Future<LidarrArtist> getArtistOrThrow(int artistId) =>
+      fetchItemOrThrow('artist', artistId, LidarrArtist.fromJson);
+
   /// Fetches all albums for an artist.
   ///
   /// Artist-scoped, and that is the whole of what Lidarr answers here today.
@@ -362,6 +367,11 @@ class LidarrService with ArrActivityMixin {
   Future<void> updateArtistMonitored(int artistId, bool monitored) async {
     await updateItemMonitored('artist', artistId, monitored);
   }
+
+  /// Sets whether Lidarr monitors the albums it learns of for an artist:
+  /// `all` or `none`, or `new` (only those released from now on).
+  Future<void> updateArtistMonitorNewItems(int artistId, String value) =>
+      updateItemFields('artist', artistId, {'monitorNewItems': value});
 
   /// Deletes an artist from Lidarr.
   Future<void> deleteArtist(

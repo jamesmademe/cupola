@@ -29,6 +29,10 @@ class LidarrArtist {
   final String? added;
   final String? path;
 
+  /// Which albums Lidarr monitors when it learns of them: `all`, `none`, or
+  /// `new` (released from now on). Null on a server that does not say.
+  final String? monitorNewItems;
+
   const LidarrArtist({
     required this.id,
     required this.artistName,
@@ -46,6 +50,7 @@ class LidarrArtist {
     this.links,
     this.added,
     this.path,
+    this.monitorNewItems,
   });
 
   int get albumCount => (statistics?['albumCount'] as num?)?.toInt() ?? 0;
@@ -56,6 +61,9 @@ class LidarrArtist {
       (statistics?['trackFileCount'] as num?)?.toInt() ?? 0;
 
   bool get hasFiles => trackFileCount > 0;
+
+  /// What the artist's files take on disk, in bytes.
+  int get sizeOnDisk => (statistics?['sizeOnDisk'] as num?)?.toInt() ?? 0;
 
   factory LidarrArtist.fromJson(Map<String, dynamic> json) {
     final ratings = parseArrRatings(
@@ -83,6 +91,7 @@ class LidarrArtist {
           .toList(),
       added: json['added'],
       path: json['path'],
+      monitorNewItems: json['monitorNewItems'] as String?,
     );
   }
 

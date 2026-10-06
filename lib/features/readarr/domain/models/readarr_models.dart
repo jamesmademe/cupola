@@ -2,7 +2,7 @@
 ///
 /// Readarr shares the *arr contract with Radarr/Sonarr/Lidarr. The project is
 /// archived upstream, but the v1 API remains functional; these models cover the
-/// read-only dashboard (authors + recent history).
+/// dashboard (authors, recent history) and an author's page (their books).
 library;
 
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -18,6 +18,11 @@ class ReadarrAuthor {
     required this.bookFileCount,
     this.overview,
     this.status,
+    this.path,
+    this.images = const [],
+    this.qualityProfileId,
+    this.titleSlug,
+    this.sizeOnDisk = 0,
   });
 
   final int id;
@@ -32,6 +37,20 @@ class ReadarrAuthor {
 
   final String? overview;
   final String? status;
+
+  /// Where the author's books are filed on the server.
+  final String? path;
+
+  /// Readarr's pictures of the author: `poster` is their photo.
+  final List<dynamic> images;
+
+  final int? qualityProfileId;
+
+  /// The author's address in Readarr's own web app: `/author/<titleSlug>`.
+  final String? titleSlug;
+
+  /// What the author's files take on disk, in bytes.
+  final int sizeOnDisk;
 
   /// Monitored books still missing a file.
   int get missingBookCount => (bookCount - bookFileCount).clamp(0, bookCount);
@@ -54,6 +73,53 @@ class ReadarrAuthor {
       bookFileCount: intOrNull(statsMap['bookFileCount']) ?? 0,
       overview: json['overview']?.toString(),
       status: json['status']?.toString(),
+      path: json['path']?.toString(),
+      images: json['images'] is List ? json['images'] as List : const [],
+      qualityProfileId: intOrNull(json['qualityProfileId']),
+      titleSlug: json['titleSlug']?.toString(),
+      sizeOnDisk: intOrNull(statsMap['sizeOnDisk']) ?? 0,
+    );
+  }
+}
+
+/// A book of an author's, as `GET /api/v1/book?authorId=` lists it.
+class ReadarrBook {
+  const ReadarrBook({
+    required this.id,
+    required this.title,
+    required this.monitored,
+    required this.bookFileCount,
+    this.releaseDate,
+    this.images = const [],
+  });
+
+  final int id;
+  final String title;
+  final bool monitored;
+
+  /// How many files of the book are on disk: a book with one is on disk.
+  final int bookFileCount;
+
+  final String? releaseDate;
+
+  /// Readarr's pictures of the book: `cover` is its cover.
+  final List<dynamic> images;
+
+  bool get onDisk => bookFileCount > 0;
+
+  /// The year it came out, or null when Readarr does not say.
+  int? get year => DateTime.tryParse(releaseDate ?? '')?.year;
+
+  factory ReadarrBook.fromJson(Map<String, dynamic> json) {
+    final stats = json['statistics'];
+    final title = json['title']?.toString().trim() ?? '';
+    return ReadarrBook(
+      id: intOrNull(json['id']) ?? 0,
+      title: title.isEmpty ? 'Unknown book' : title,
+      monitored: json['monitored'] == true,
+      bookFileCount: stats is Map ? intOrNull(stats['bookFileCount']) ?? 0 : 0,
+      releaseDate: json['releaseDate']?.toString(),
+      images: json['images'] is List ? json['images'] as List : const [],
     );
   }
 }

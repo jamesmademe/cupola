@@ -96,7 +96,7 @@ class MediaNextAiringCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            _StateWord(
+            MediaStateWord(
               StateWord.notAired.label,
               tone: StatusTone.neutral,
               hollow: true,
@@ -332,7 +332,7 @@ class _EpisodeRow extends StatelessWidget {
                     const SizedBox(width: AppSpacing.md),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 170),
-                      child: _StateWord(
+                      child: MediaStateWord(
                         episode.state,
                         tone: episode.tone,
                         hollow: episode.tone == StatusTone.neutral,
@@ -378,50 +378,6 @@ class _EpisodeRow extends StatelessWidget {
       semanticLabel: episode.spoken,
       excludeChildSemantics: true,
       child: row,
-    );
-  }
-}
-
-/// A state's word after its 7 dot, in its tone; the backlog's ring when
-/// [hollow].
-class _StateWord extends StatelessWidget {
-  const _StateWord(this.word, {required this.tone, required this.hollow});
-
-  final String word;
-  final StatusTone tone;
-  final bool hollow;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final color = statusToneColor(scheme, tone, surface: room.ground);
-    // The info tone colours its word too, as the rows do with a download.
-    final ink = tone == StatusTone.info || tone == StatusTone.warning
-        ? color
-        : room.inkSecondary;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: hollow ? null : color,
-            border: hollow
-                ? Border.all(color: room.inkSecondary, width: 1.5)
-                : null,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.s),
-        Flexible(
-          child: Text(
-            word,
-            style: AppType.meta.weight(FontWeight.w600).copyWith(color: ink),
-          ),
-        ),
-      ],
     );
   }
 }

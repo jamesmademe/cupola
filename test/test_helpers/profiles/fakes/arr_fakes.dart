@@ -936,6 +936,7 @@ class LidarrFake extends ArrFake {
     'foreignArtistId': 'b3c7d8e9-0000-4000-8000-00000000jm01',
     'status': 'continuing',
     'monitored': true,
+    'monitorNewItems': 'all',
     'path': '/mnt/tank/media/music/Jan Morgenstern',
     'qualityProfileId': 1,
     'metadataProfileId': 1,
@@ -950,6 +951,30 @@ class LidarrFake extends ArrFake {
       'percentOfTracks': 75.0,
     },
   };
+
+  /// Sintel's five tracks, as `GET /api/v1/track?albumId=3` sends them; the
+  /// other albums list none.
+  static const _sintelTracks = [
+    (1, 'Opening', 168000),
+    (2, 'Scales', 252000),
+    (3, 'The Dragon', 336000),
+    (4, 'Snow', 234000),
+    (5, 'Finale', 270000),
+  ];
+
+  List<JsonMap> _tracks(NetworkRequest r) => [
+    if (r.uri.queryParameters['albumId'] == '3')
+      for (final (number, title, duration) in _sintelTracks)
+        {
+          'id': 300 + number,
+          'albumId': 3,
+          'mediumNumber': 1,
+          'trackNumber': '$number',
+          'title': title,
+          'duration': duration,
+          'hasFile': true,
+        },
+  ];
 
   List<JsonMap> _albums(ServerContext c) => [
     for (final (id, title, year, onDisk) in const [
@@ -969,6 +994,7 @@ class LidarrFake extends ArrFake {
             ? c.ahead(const Duration(days: 2, hours: 3))
             : '$year-01-01T00:00:00Z',
         'images': const <Object?>[],
+        'duration': id == 3 ? 1260000 : 0,
         'artist': _artist(c),
         'statistics': {
           'trackFileCount': onDisk ? 5 : 0,
@@ -999,7 +1025,7 @@ class LidarrFake extends ArrFake {
       '/api/v1/metadataprofile' => NetworkReply.json([
         {'id': 1, 'name': 'Standard'},
       ]),
-      '/api/v1/track' ||
+      '/api/v1/track' => NetworkReply.json(_tracks(r)),
       '/api/v1/trackfile' => NetworkReply.json(const <Object?>[]),
       _ => null,
     };
@@ -1019,11 +1045,73 @@ class ReadarrFake extends ArrFake {
   String get version => '0.4.3.2665';
 
   @override
+  String rootFolder(ServerContext c) => '/mnt/user/media/books';
+
+  /// Jules Verne, as the board draws him: seven books, six on disk.
+  JsonMap _author(ServerContext c) => {
+    'id': 1,
+    'authorName': 'Jules Verne',
+    'authorNameLastFirst': 'Verne, Jules',
+    'titleSlug': 'jules-verne',
+    'status': 'ended',
+    'monitored': true,
+    'path': '/mnt/user/media/books/Jules Verne',
+    'qualityProfileId': 1,
+    'images': const <Object?>[],
+    'statistics': {
+      'bookCount': 7,
+      'bookFileCount': 6,
+      'totalBookCount': 7,
+      'sizeOnDisk': 42000000,
+    },
+  };
+
+  /// His books; Five Weeks in a Balloon is wanted.
+  static const _books = [
+    (1, 'Five Weeks in a Balloon', 1863, false),
+    (2, 'Journey to the Centre of the Earth', 1864, true),
+    (3, 'From the Earth to the Moon', 1865, true),
+    (4, 'Twenty Thousand Leagues Under the Seas', 1870, true),
+    (5, 'Around the World in Eighty Days', 1872, true),
+    (6, 'The Mysterious Island', 1875, true),
+    (7, 'Michael Strogoff', 1876, true),
+  ];
+
+  @override
+  NetworkReply? answer(NetworkRequest r, ServerContext c) {
+    // Readarr's own profile, for books.
+    if (r.method == 'GET' && r.path == '/api/v1/qualityprofile') {
+      return NetworkReply.json([
+        {'id': 1, 'name': 'eBook'},
+        {'id': 2, 'name': 'Spoken'},
+      ]);
+    }
+    return super.answer(r, c);
+  }
+
+  @override
   NetworkReply? own(NetworkRequest r, ServerContext c) {
     if (r.method != 'GET') return null;
     return switch (r.path) {
-      '/api/v1/author' ||
-      '/api/v1/book' => NetworkReply.json(const <Object?>[]),
+      '/api/v1/author' => NetworkReply.json([_author(c)]),
+      '/api/v1/author/1' => NetworkReply.json(_author(c)),
+      '/api/v1/book' => NetworkReply.json([
+        if (r.query['authorId'] case null || '1')
+          for (final (id, title, year, onDisk) in _books)
+            {
+              'id': id,
+              'authorId': 1,
+              'title': title,
+              'monitored': true,
+              'releaseDate': '$year-01-01T00:00:00Z',
+              'images': const <Object?>[],
+              'statistics': {
+                'bookFileCount': onDisk ? 1 : 0,
+                'bookCount': 1,
+                'totalBookCount': 1,
+              },
+            },
+      ]),
       _ => null,
     };
   }

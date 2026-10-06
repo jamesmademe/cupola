@@ -100,6 +100,7 @@ _tabDetailPaths = [
   (service: ServiceKey.radarr, tab: ServiceTab.library, path: 'movie/:id'),
   (service: ServiceKey.sonarr, tab: ServiceTab.library, path: 'series/:id'),
   (service: ServiceKey.lidarr, tab: ServiceTab.library, path: 'artist/:id'),
+  (service: ServiceKey.readarr, tab: ServiceTab.library, path: 'author/:id'),
   // Bazarr's bar names the record types themselves, so the detail is `:id`
   // under the tab rather than `<record>/:id` under it — `series/series/42`
   // would be a stutter nobody would type.
@@ -140,12 +141,10 @@ const List<String> _mediaPaths = [
 /// these is a list of rows that expand in place or a service whose read layer
 /// has no second document to open:
 ///
-///  * Readarr — the author list has no detail screen written yet;
 ///  * Transmission, SABnzbd, NZBGet — a queue slot is one row that expands;
 ///  * Unraid, NPM — both were one page, and the split produced sections rather
 ///    than pages.
 const List<ServiceKey> _servicesWithoutTabDetails = [
-  ServiceKey.readarr,
   ServiceKey.transmission,
   ServiceKey.sabnzbd,
   ServiceKey.nzbget,
@@ -158,6 +157,8 @@ const Map<ServiceKey, String> _libraryDetailPaths = {
   ServiceKey.radarr: 'movie/:id',
   ServiceKey.sonarr: 'series/:id',
   ServiceKey.lidarr: 'artist/:id',
+  // Readarr's author page is in its branch too (the table above); it is not
+  // here because it has no old spelling to keep a tail for.
 };
 
 /// The job each download client's Queue pushes, by the path it is mounted at.

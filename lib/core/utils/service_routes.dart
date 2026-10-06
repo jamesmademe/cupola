@@ -403,6 +403,9 @@ class ServiceRoutes {
   static const readarrOverview = '$readarr/overview';
   static const readarrLibrary = '$readarr/library';
 
+  /// An author's page, pushed over the Library tab.
+  static const readarrAuthorBase = '$readarrLibrary/author';
+
   // ── The infrastructure three, under the tab model ─────────────────────────
   //
   // Literals, like every other service's, and tied to their tabs by a test: an
@@ -499,6 +502,13 @@ class ServiceRoutes {
 
   static String lidarrArtist(int id, {String? heroTag, String? instanceId}) {
     return _withQuery('$lidarrArtistBase/$id', {
+      'heroTag': heroTag,
+      'i': instanceId,
+    });
+  }
+
+  static String readarrAuthor(int id, {String? heroTag, String? instanceId}) {
+    return _withQuery('$readarrAuthorBase/$id', {
       'heroTag': heroTag,
       'i': instanceId,
     });

@@ -553,6 +553,11 @@
       "$value": "1140px",
       "$description": "The widest the main content well may grow, on any shell."
     },
+    "reading-well": {
+      "$type": "dimension",
+      "$value": "720px",
+      "$description": "The widest a page of one column grows: an artist's or an author's page, rows read top to bottom, centred rather than stretched to the window."
+    },
     "desktop-min-width": {
       "$type": "dimension",
       "$value": "360px",

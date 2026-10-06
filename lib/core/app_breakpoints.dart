@@ -107,6 +107,11 @@ abstract final class AppBreakpoints {
   /// whatever is left after the rail and the inspector.
   static const double contentWell = DesignTokens.breakpointContentWell;
 
+  /// Widest a page of one column grows (an artist's, an author's): its rows
+  /// are read top to bottom, and stretched to a desktop window they would be
+  /// a line too long to follow.
+  static const double readingWell = DesignTokens.breakpointReadingWell;
+
   /// Width below which a desktop window paints the touch shell.
   ///
   /// 720 is the compact artboard, the narrowest frame the window shell is drawn

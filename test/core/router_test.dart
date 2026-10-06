@@ -20,7 +20,8 @@ import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/presentation/lidarr_overview_screen.dart';
-import 'package:cupola/features/music/presentation/music_detail_screen.dart';
+import 'package:cupola/features/music/presentation/artist_page.dart';
+import 'package:cupola/features/readarr/presentation/author_page.dart';
 import 'package:cupola/features/npm/presentation/npm_overview_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_overview_screen.dart';
@@ -226,12 +227,18 @@ void main() {
         router.go('${ServiceRoutes.lidarrArtistBase}/9');
         await tester.pumpAndSettle();
 
-        final musicScreen = tester.widget<MusicDetailScreen>(
-          find.byType(MusicDetailScreen),
-        );
-        expect(musicScreen.heroTag, 'artist_9');
-        expect(musicScreen.artistId, 9);
-        expect(musicScreen.initialArtist, isNull);
+        final artistPage = tester.widget<ArtistPage>(find.byType(ArtistPage));
+        expect(artistPage.heroTag, 'artist_9');
+        expect(artistPage.artistId, 9);
+        expect(artistPage.initialArtist, isNull);
+
+        router.go('${ServiceRoutes.readarrAuthorBase}/7?i=readarr-2');
+        await tester.pumpAndSettle();
+
+        final authorPage = tester.widget<AuthorPage>(find.byType(AuthorPage));
+        expect(authorPage.heroTag, 'author_7');
+        expect(authorPage.authorId, 7);
+        expect(authorPage.instanceId, 'readarr-2');
       },
     );
 
@@ -891,7 +898,7 @@ void main() {
         router.state.uri.toString(),
         '${ServiceRoutes.lidarrArtistBase}/9?heroTag=legacy_artist',
       );
-      expect(find.byType(MusicDetailScreen), findsOneWidget);
+      expect(find.byType(ArtistPage), findsOneWidget);
     });
   });
 

@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
-import 'package:cupola/core/widgets/library_detail_actions.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
@@ -19,8 +18,8 @@ import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/music/domain/lidarr_queue_snapshots.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
-import 'package:cupola/features/music/presentation/music_detail_provider.dart';
-import 'package:cupola/features/music/presentation/music_detail_screen.dart';
+import 'package:cupola/features/music/presentation/artist_page.dart';
+import 'package:cupola/features/music/presentation/artist_page_providers.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -83,22 +82,6 @@ Future<void> _pump(
       child: MaterialApp.router(routerConfig: _router(page)),
     ),
   );
-  await tester.pumpAndSettle();
-}
-
-/// Runs the page's Manual import exactly as the action band would.
-Future<void> _import(WidgetTester tester) async {
-  // The band sits below the hero, past the first screen of a phone.
-  await tester.scrollUntilVisible(
-    find.byType(LibraryDetailActions),
-    200,
-    scrollable: find.byType(Scrollable).first,
-  );
-  final actions = tester.widget<LibraryDetailActions>(
-    find.byType(LibraryDetailActions),
-  );
-  expect(actions.onImport, isNotNull);
-  actions.onImport!();
   await tester.pumpAndSettle();
 }
 
@@ -166,30 +149,31 @@ void main() {
       expect(_opened?.queryParameters, containsPair('i', 'radarr-4k'));
     });
 
-    testWidgets('Lidarr', (tester) async {
+    testWidgets('Lidarr, from the artist\'s actions', (tester) async {
       await _pump(
         tester,
-        const MusicDetailScreen(
-          artistId: 9,
-          heroTag: 'artist-9',
-          instanceId: 'lidarr-vinyl',
-        ),
+        const ArtistPage(artistId: 9, instanceId: 'lidarr-vinyl'),
         overrides: [
-          musicDetailForProvider.overrideWith(
+          lidarrArtistProvider.overrideWith(
             (ref, item) async => LidarrArtist.fromJson({
               'id': 9,
               'artistName': 'Tears of Steel',
               'path': '/music/Tears of Steel',
             }),
           ),
-          musicAlbumsForProvider.overrideWith((ref, item) async => []),
+          lidarrArtistAlbumsProvider.overrideWith((ref, item) async => []),
           lidarrQueueSnapshotsForProvider.overrideWith(
             (ref, instanceId) async => LidarrQueueSnapshots.empty,
           ),
         ],
       );
 
-      await _import(tester);
+      await tester.tap(
+        find.bySemanticsLabel('More actions for Tears of Steel'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import files'));
+      await tester.pumpAndSettle();
 
       expect(_opened?.queryParameters['service'], 'lidarr');
       expect(_opened?.queryParameters['targetId'], '9');
