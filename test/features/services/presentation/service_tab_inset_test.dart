@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -22,44 +23,44 @@ import 'package:cupola/features/bazarr/presentation/bazarr_library_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_providers_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
-import 'package:cupola/features/movies/data/radarr_service.dart';
-import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/service_home_screen.dart';
-import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
-import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
-import 'package:cupola/features/prowlarr/presentation/prowlarr_history_screen.dart';
-import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
-import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
-import 'package:cupola/features/prowlarr/presentation/prowlarr_stats_screen.dart';
-import 'package:cupola/features/readarr/data/readarr_service.dart';
-import 'package:cupola/features/readarr/presentation/readarr_activity_screen.dart';
-import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart';
-import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
-import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
-import 'package:cupola/features/nzbget/presentation/nzbget_tab_screens.dart';
-import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_provider.dart';
-import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
-import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
-import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_terminal_screen.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_tab_screens.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_tab_screens.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_tab_screens.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_history_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_stats_screen.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_provider.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
+import 'package:cupola/features/readarr/data/readarr_service.dart';
+import 'package:cupola/features/readarr/presentation/readarr_activity_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
-import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
-import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 import 'package:cupola/features/transmission/presentation/transmission_tab_screens.dart';
+import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
+import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 
 import '../../../test_helpers/capability_overrides.dart';
 import '../../../test_helpers/fake_api_client.dart';
@@ -102,8 +103,9 @@ void main() {
     required ServiceTab tab,
     required Widget child,
     List<Override> overrides = const [],
+    bool phone = true,
   }) async {
-    usePhone(tester);
+    if (phone) usePhone(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -252,6 +254,47 @@ void main() {
 
       expect(find.byType(AppEmptyState), findsNothing);
       expectClearsTheBar(tester, find.byType(ShimmerList));
+    });
+  });
+
+  group('on a desktop window the inset adds nothing', () {
+    testWidgets('an empty queue still sits right under the tab row', (
+      tester,
+    ) async {
+      // A desktop window has no status bar, so the inset the fix adds is zero
+      // there and the hosted screen lands exactly where it did: the phone's
+      // band and bar reserved, and the screen lifted by the band the window
+      // does not draw.
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        tester.view
+          ..devicePixelRatio = 1
+          ..physicalSize = const Size(1200, 800);
+        addTearDown(tester.view.reset);
+
+        await pumpHosted(
+          tester,
+          service: ServiceKey.radarr,
+          tab: ServiceTab.queue,
+          phone: false,
+          overrides: [
+            radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
+          ],
+          child: const ArrTabScreen(
+            serviceType: ServiceType.movies,
+            mode: ArrTabMode.queue,
+            topPadding: _hostedTopPadding,
+          ),
+        );
+
+        expect(find.text('Queue is empty'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byType(AppEmptyState)).dy,
+          ServiceTabBar.height,
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
   });
 
