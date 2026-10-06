@@ -42,6 +42,7 @@ cards live in [`../motion/`](../motion/).
 | Overlays | [AppDialog](AppDialog/README.md) | `lib/core/widgets/app_dialog.dart` |
 | Forms | [TextField](TextField/README.md) | `lib/core/theme.dart` |
 | Iconography | [ServiceGlyphs](ServiceGlyphs/README.md) | `lib/core/service_glyphs.dart`, `lib/features/settings/domain/service_key.dart` |
+| Media | [CatalogPoster](CatalogPoster/README.md) | `lib/features/discover/presentation/widgets/catalog_poster.dart` |
 | Media | [ContentCard](ContentCard/README.md) | `lib/core/widgets/content_card.dart` |
 | Media | [MediaBrowseScaffold](MediaBrowseScaffold/README.md) | `lib/core/widgets/media_browse_scaffold.dart`, `lib/core/widgets/search_bar_header.dart` |
 | Media | [MediaPosterCard](MediaPosterCard/README.md) | `lib/core/widgets/media_poster_card.dart`, `lib/core/widgets/media_grid.dart` |

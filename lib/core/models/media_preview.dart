@@ -7,6 +7,11 @@ class MediaPreview {
   final String mediaType; // 'movie' or 'tv'
   final double? voteAverage;
 
+  /// What Seerr holds of this title (`mediaInfo`: its status, its 4K status,
+  /// the downloads it forwards), as Seerr sent it; null when Seerr holds
+  /// nothing. Read through `seerrCatalogStatus`, never directly.
+  final Map<String, dynamic>? mediaInfo;
+
   const MediaPreview({
     required this.id,
     required this.title,
@@ -15,6 +20,7 @@ class MediaPreview {
     this.releaseDate,
     required this.mediaType,
     this.voteAverage,
+    this.mediaInfo,
   });
 
   factory MediaPreview.fromJson(
@@ -36,6 +42,7 @@ class MediaPreview {
     final overview = json['overview'];
     final voteAverage = (json['voteAverage'] ?? json['vote_average'])
         ?.toDouble();
+    final mediaInfo = json['mediaInfo'];
 
     // Determine media type
     var mediaType = forcedMediaType ?? json['mediaType'] ?? json['media_type'];
@@ -58,6 +65,7 @@ class MediaPreview {
       releaseDate: releaseDate,
       mediaType: mediaType,
       voteAverage: voteAverage,
+      mediaInfo: mediaInfo is Map ? Map<String, dynamic>.from(mediaInfo) : null,
     );
   }
 

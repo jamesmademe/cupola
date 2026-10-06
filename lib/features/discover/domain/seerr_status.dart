@@ -326,3 +326,31 @@ ArrQueueEntry? seerrDownloadEntry(dynamic rawDownloadStatus) {
 
   return mergeArrQueueEntries(entries);
 }
+
+/// What a poster in Seerr's catalogue says of its title, or null when it
+/// should say nothing.
+///
+/// The title's first state as its page reads it ([seerrTitleStatuses]: the
+/// standard copy, or the 4K one when only that is held). Nothing for a title
+/// Seerr holds no record of, which is most of a catalogue: a badge on every
+/// poster saying it can be asked for is noise, and the poster's page says it
+/// with its Request. Nothing either for Seerr's own `Unknown`, which states
+/// no fact.
+MediaStatusInfo? seerrCatalogStatus(
+  Map<String, dynamic>? mediaInfo, {
+  SeerrNumbering? numbering,
+  Audience audience = Audience.operator,
+}) {
+  if (mediaInfo == null) return null;
+  final info = seerrTitleStatuses(
+    mediaInfo,
+    numbering: numbering,
+    audience: audience,
+  ).first;
+  final saysNothing =
+      info.availability == MediaAvailability.notTracked ||
+      (info.availability == MediaAvailability.unknown &&
+          info.pipeline == null &&
+          info.labelOverride == null);
+  return saysNothing ? null : info;
+}

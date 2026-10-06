@@ -3,19 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
-import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
-import 'package:cupola/core/widgets/media_poster_card.dart';
-import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/staggered_entrance.dart';
+import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/media/presentation/open_media.dart';
 
 /// A single premium discover row: a section header + horizontal poster
 /// carousel. Collapses to nothing when Seerr answered with nothing (an empty
@@ -93,7 +89,7 @@ class DiscoverCarousel extends StatelessWidget {
         if (list.isEmpty) return const SizedBox.shrink();
         return _shell(
           child: SizedBox(
-            height: _posterHeight,
+            height: CatalogPoster.heightFor(context, _posterWidth),
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -127,27 +123,13 @@ class DiscoverCarousel extends StatelessWidget {
   }
 
   Widget _tile(BuildContext context, MediaPreview item, int index) {
-    final mediaType = forcedMediaType ?? item.mediaType;
-    final imageUrl = ImageUtils.buildTmdbPosterUrl(item.posterPath);
-    final heroTag = 'discover_${sectionId}_${item.id}';
-
     return StaggeredEntrance(
       index: index,
-      child: SizedBox(
+      child: CatalogPoster(
+        item: item,
+        heroTag: 'discover_${sectionId}_${item.id}',
         width: _posterWidth,
-        child: PressableScale(
-          onTap: () => context.openSeerrTitle(
-            mediaType: mediaType,
-            id: item.id,
-            heroTag: heroTag,
-            posterUrl: imageUrl,
-          ),
-          child: Hero(
-            tag: heroTag,
-            transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
-            child: ContentCard(imageUrl: imageUrl, paneTag: heroTag),
-          ),
-        ),
+        mediaType: forcedMediaType,
       ),
     );
   }

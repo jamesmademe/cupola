@@ -5,16 +5,13 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/content_card.dart';
-import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/media_grid.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
-import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/media/presentation/open_media.dart';
 
 class DiscoverSeeAllScreen extends ConsumerStatefulWidget {
   final String type; // 'movies', 'tv', 'trending', 'genre'
@@ -100,62 +97,57 @@ class _DiscoverSeeAllScreenState extends ConsumerState<DiscoverSeeAllScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      body: PagingListener<int, MediaPreview>(
-        controller: _pagingController,
-        builder: (context, state, fetchNextPage) =>
-            PagedGridView<int, MediaPreview>(
-              state: state,
-              fetchNextPage: fetchNextPage,
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 2 / 3,
-                crossAxisSpacing: AppSpacing.gridGap,
-                mainAxisSpacing: AppSpacing.gridGap,
-              ),
-              builderDelegate: PagedChildBuilderDelegate<MediaPreview>(
-                // A first page Seerr did not give is a failure in its own
-                // words, not the pager's stock message — and never the "no
-                // items" of a list that answered empty.
-                firstPageErrorIndicatorBuilder: (_) => AppErrorState(
-                  error:
-                      state.error ??
-                      const ClassifiedFailure(ServiceFailureReason.unknown),
-                  serviceName: ServiceKey.seerr.title,
-                  service: ServiceKey.seerr,
-                  onRetry: _pagingController.refresh,
-                ),
-                itemBuilder: (context, item, index) {
-                  final imageUrl = ImageUtils.buildTmdbPosterUrl(
-                    item.posterPath,
-                  );
-
-                  // For genre rows the media type is fixed by the row; trending
-                  // stays mixed per-item.
-                  final mediaType =
-                      widget.genreKey?.mediaType ?? item.mediaType;
-                  final heroTag =
-                      'discover_seeall_${mediaType}_${item.id}_$index';
-
-                  return PressableScale(
-                    onTap: () {
-                      context.openSeerrTitle(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // The grid every poster grid in the app uses: fewer tiles in a
+          // narrower frame, never smaller ones (`MediaGrid.columnsFor`), and
+          // each tile as tall as its poster and the words under it.
+          final inner = constraints.maxWidth - 2 * AppSpacing.lg;
+          final columns = MediaGrid.columnsFor(inner, 3);
+          final tileWidth =
+              (inner - (columns - 1) * AppSpacing.gridGap) / columns;
+          return PagingListener<int, MediaPreview>(
+            controller: _pagingController,
+            builder: (context, state, fetchNextPage) =>
+                PagedGridView<int, MediaPreview>(
+                  state: state,
+                  fetchNextPage: fetchNextPage,
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisExtent: CatalogPoster.heightFor(context, tileWidth),
+                    crossAxisSpacing: AppSpacing.gridGap,
+                    mainAxisSpacing: AppSpacing.lg,
+                  ),
+                  builderDelegate: PagedChildBuilderDelegate<MediaPreview>(
+                    // A first page Seerr did not give is a failure in its own
+                    // words, not the pager's stock message — and never the
+                    // "no items" of a list that answered empty.
+                    firstPageErrorIndicatorBuilder: (_) => AppErrorState(
+                      error:
+                          state.error ??
+                          const ClassifiedFailure(ServiceFailureReason.unknown),
+                      serviceName: ServiceKey.seerr.title,
+                      service: ServiceKey.seerr,
+                      onRetry: _pagingController.refresh,
+                    ),
+                    itemBuilder: (context, item, index) {
+                      // For genre rows the media type is fixed by the row;
+                      // trending stays mixed per-item.
+                      final mediaType =
+                          widget.genreKey?.mediaType ?? item.mediaType;
+                      return CatalogPoster(
+                        item: item,
+                        heroTag:
+                            'discover_seeall_${mediaType}_${item.id}_$index',
+                        width: tileWidth,
                         mediaType: mediaType,
-                        id: item.id,
-                        heroTag: heroTag,
-                        posterUrl: imageUrl,
                       );
                     },
-                    child: Hero(
-                      tag: heroTag,
-                      transitionOnUserGestures:
-                          MediaPosterCard.flightOnUserGestures,
-                      child: ContentCard(imageUrl: imageUrl, paneTag: heroTag),
-                    ),
-                  );
-                },
-              ),
-            ),
+                  ),
+                ),
+          );
+        },
       ),
     );
   }

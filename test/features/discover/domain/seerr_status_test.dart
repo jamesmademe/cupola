@@ -487,4 +487,50 @@ void main() {
       expect(statuses[3]!.label, 'Not requested');
     });
   });
+
+  // A poster in the catalogue says what Seerr holds, and nothing when Seerr
+  // holds nothing: most of a catalogue is titles nobody has asked for.
+  group('seerrCatalogStatus', () {
+    test('a title Seerr holds no record of says nothing', () {
+      expect(seerrCatalogStatus(null), isNull);
+      expect(seerrCatalogStatus(const {}), isNull);
+    });
+
+    test("Seerr's own Unknown states no fact, and says nothing", () {
+      expect(seerrCatalogStatus(const {'status': 1}), isNull);
+    });
+
+    test('a title on the server says so, in each reader\'s words', () {
+      final operator = seerrCatalogStatus(const {'status': 5})!;
+      expect(operator.availability, MediaAvailability.available);
+      expect(operator.label, 'Available');
+
+      final requester = seerrCatalogStatus(const {
+        'status': 5,
+      }, audience: Audience.requester)!;
+      expect(requester.label, 'On the server');
+    });
+
+    test('a title waiting for approval says so', () {
+      expect(
+        seerrCatalogStatus(const {'status': 2})!.label,
+        'Waiting for approval',
+      );
+    });
+
+    test('a removed title is one the requester can ask for again, and says '
+        'nothing to her', () {
+      expect(
+        seerrCatalogStatus(const {'status': 7}, audience: Audience.requester),
+        isNull,
+      );
+    });
+
+    test('a title held only in 4K reads the 4K copy', () {
+      expect(
+        seerrCatalogStatus(const {'status': 1, 'status4k': 5})!.label,
+        '4K: Available',
+      );
+    });
+  });
 }

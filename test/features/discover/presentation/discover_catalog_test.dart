@@ -12,6 +12,7 @@ import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_catalog.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -136,6 +137,9 @@ Future<void> _pumpDiscover(
         // `sharedPreferencesProvider` — wired in main.dart and throwing
         // anywhere else. One value is all this screen needs from it.
         regionProvider.overrideWithValue('IT'),
+        // Which numbering Seerr's codes follow: asked of the service, which
+        // this test has none of.
+        seerrNumberingProvider.overrideWith((ref) async => null),
         // The catalogue is drawn only once there is a Seerr to ask.
         currentSettingsProvider.overrideWith(
           (ref) => settingsWithServices([ServiceKey.seerr]),
