@@ -46,7 +46,6 @@ export 'media_detail_body_metrics.dart';
 export 'media_detail_header_metrics.dart';
 export 'media_detail_section_label.dart';
 export 'media_child_list.dart';
-export 'media_detail_sections.dart';
 export 'media_detail_hero_summary.dart';
 export 'media_detail_poster_row.dart';
 export 'media_detail_figure_plate.dart';

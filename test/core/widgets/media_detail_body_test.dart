@@ -8,7 +8,6 @@ import 'package:cupola/core/widgets/media_chip_section.dart';
 import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
 import 'package:cupola/core/widgets/media_detail_figure_plate.dart';
 import 'package:cupola/core/widgets/media_detail_section_label.dart';
-import 'package:cupola/core/widgets/media_detail_sections.dart';
 import 'package:cupola/core/widgets/media_prose_section.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 
@@ -418,21 +417,6 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('148'), findsOneWidget);
       expect(find.text('Missing'), findsOneWidget);
-    });
-  });
-
-  group('MediaDetailUnavailableSection', () {
-    testWidgets('is headless — the slot owns the heading', (tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          const MediaDetailUnavailableSection(
-            message: 'Radarr is tracking this but no file has been imported.',
-          ),
-        ),
-      );
-
-      expect(find.textContaining('no file has been imported'), findsOneWidget);
-      expect(find.byType(MediaDetailSectionLabel), findsNothing);
     });
   });
 }
