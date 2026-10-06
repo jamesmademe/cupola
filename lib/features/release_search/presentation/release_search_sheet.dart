@@ -86,17 +86,6 @@ class ReleaseSearchHandoffCopy {
           'until it finishes.',
   };
 
-  /// What the detail-page status card says while a search is running.
-  ///
-  /// Lives here, beside the explainer and the confirmation, because it is the
-  /// same claim on a third surface — and a third surface with its own hard-coded
-  /// sentence is how this feature's copy drifted apart the first time. The card
-  /// used to say "while Cupola is open" unconditionally, which contradicted the
-  /// confirmation the moment a search could actually outlive the app.
-  static String runningConsequence(ReleaseSearchReach reach) =>
-      '${reach == ReleaseSearchReach.beyondTheApp ? 'Running in the background.' : 'Running while Cupola is open.'} '
-      'Tap to watch it, or find it in Activity.';
-
   static const emptyStateHint =
       'Start an interactive search and tap $action to move around the app '
       'without losing it.';

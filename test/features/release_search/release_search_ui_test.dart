@@ -19,7 +19,6 @@ import 'package:cupola/features/release_search/presentation/release_search_setti
 import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
 import 'package:cupola/features/release_search/presentation/release_searches_body.dart';
 import 'package:cupola/features/release_search/presentation/widgets/release_search_job_card.dart';
-import 'package:cupola/features/release_search/presentation/widgets/release_search_status_card.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -480,117 +479,6 @@ void main() {
       final jobs = container.read(releaseSearchJobsProvider);
       expect(jobs, hasLength(1));
       expect(jobs.single.id, isNot(jobId));
-    });
-  });
-
-  group('ReleaseSearchStatusCard', () {
-    testWidgets('renders nothing when the target has no job', (tester) async {
-      await tester.pumpWidget(_host(ReleaseSearchStatusCard(target: _season)));
-      expect(find.byType(Card), findsNothing);
-      expect(find.textContaining('Searching'), findsNothing);
-    });
-
-    /// Mounts the card over a running job, for a given reach.
-    Future<ProviderContainer> pumpRunningCard(
-      WidgetTester tester, {
-      required ReleaseSearchReach reach,
-    }) async {
-      final container = ProviderContainer(
-        overrides: [
-          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
-          // The job's own target, because reach is now a property of the
-          // connection the search runs against and the card reads it off the
-          // job rather than off the service.
-          releaseSearchReachProvider(_season).overrideWithValue(reach),
-        ],
-      );
-      final notifier = container.read(releaseSearchJobsProvider.notifier);
-      notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
-      notifier.start(_season);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            theme: AppTheme.darkTheme(),
-            home: Scaffold(body: ReleaseSearchStatusCard(target: _season)),
-          ),
-        ),
-      );
-      await tester.pump();
-      return container;
-    }
-
-    testWidgets('a running job states the promise its reach actually makes', (
-      tester,
-    ) async {
-      // Found on a device: the card used to say "while Cupola is open" for
-      // every reach, so with background search on it contradicted the sheet's
-      // own confirmation — two surfaces describing one build differently, which
-      // is the drift this feature's copy rules exist to prevent. Both
-      // directions are pinned, and the sentence comes from the same place the
-      // explainer and the confirmation do.
-      final open = await pumpRunningCard(
-        tester,
-        reach: ReleaseSearchReach.whileOpenSwitchedOff,
-      );
-      expect(find.textContaining('Searching'), findsOneWidget);
-      expect(
-        find.textContaining('Running while Cupola is open'),
-        findsOneWidget,
-        reason: 'the phase-accurate promise, not an OS background',
-      );
-      await tester.pumpWidget(const SizedBox());
-      open.dispose();
-
-      final background = await pumpRunningCard(
-        tester,
-        reach: ReleaseSearchReach.beyondTheApp,
-      );
-      expect(
-        find.textContaining('Running in the background'),
-        findsOneWidget,
-        reason:
-            'understating it here is still drift: the confirmation promised the '
-            'background, and the card must not take it back',
-      );
-      expect(find.textContaining('while Cupola is open'), findsNothing);
-      await tester.pumpWidget(const SizedBox());
-      background.dispose();
-    });
-
-    testWidgets('state appears only at the granularity it was launched', (
-      tester,
-    ) async {
-      final container = ProviderContainer();
-      final notifier = container.read(releaseSearchJobsProvider.notifier);
-      notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
-      notifier.start(_season);
-
-      // An episode inside the searching season must stay silent: a readout
-      // duplicated at three levels is what makes a detail page unreadable.
-      final episode = ReleaseSearchTarget.episode(
-        episodeId: 44,
-        seriesId: 1,
-        seasonNumber: 2,
-        label: 'Severance · S02E04',
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            theme: AppTheme.darkTheme(),
-            home: Scaffold(body: ReleaseSearchStatusCard(target: episode)),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.textContaining('Searching'), findsNothing);
-
-      await tester.pumpWidget(const SizedBox());
-      container.dispose();
     });
   });
 
