@@ -224,6 +224,7 @@ class CalendarEvent {
     this.sources = const [],
     this.note,
     this.target,
+    this.region,
   });
 
   /// What makes two connections' records one row: the movie and the
@@ -262,6 +263,11 @@ class CalendarEvent {
 
   final CalendarState state;
   final CalendarTarget? target;
+
+  /// The country a requester's movie is dated for (`Italy`): her row says
+  /// the release in its [note] (`On digital in Italy today`), and its
+  /// status only where it stands (`Downloading 62%`).
+  final String? region;
 
   /// `S2 E5`, for an episode.
   String? get code => formatArrEpisodeCode(season, episode);
@@ -306,6 +312,11 @@ class CalendarEvent {
         );
         return [?code, ?mark?.words, standing].join(' · ');
       case CalendarKind.movie:
+        if (region != null) {
+          return _capitalised(
+            state.words(notYet: StateWord.notOutYet.inline, outWord: outWord),
+          );
+        }
         // A movie on its day says it is out before what came of it; one on
         // the server says only that.
         standing = switch (state.stand) {
@@ -355,9 +366,12 @@ class CalendarEvent {
       ].join(' '),
       CalendarKind.movie => [
         title,
-        release == null || release == Lexicon.inCinemas
-            ? 'movie ${release ?? 'out'}'
-            : 'movie out $release',
+        [
+          release == null || release == Lexicon.inCinemas
+              ? '${region == null ? 'movie ' : ''}${release ?? 'out'}'
+              : '${region == null ? 'movie ' : ''}out $release',
+          if (region case final region?) 'in $region',
+        ].join(' '),
       ].join(', '),
       CalendarKind.album => [
         title,
@@ -390,7 +404,7 @@ class CalendarEvent {
       what,
       standing,
       if (sources.isNotEmpty) 'in ${joinWithAnd(sources)}',
-      ?note,
+      if (region == null) ?note,
     ].join(', ');
   }
 
@@ -416,6 +430,7 @@ class CalendarEvent {
     note: note ?? other.note,
     state: CalendarState.furthest(state, other.state),
     target: target ?? other.target,
+    region: region ?? other.region,
   );
 }
 
@@ -807,6 +822,12 @@ String calendarDayDate(DateTime day, DateTime now) {
       : '${day.day} ${_months[day.month - 1]}';
 }
 
+/// `14 Oct`, and `14 Oct 2027` when it is not in [now]'s year.
+String calendarDayMonth(DateTime day, DateTime now) => [
+  '${day.day} ${_months[day.month - 1]}',
+  if (day.year != now.year) '${day.year}',
+].join(' ');
+
 /// `Wed 21 Oct`.
 String calendarShortDate(DateTime day) =>
     '${_weekdays[day.weekday - 1]} ${day.day} ${_months[day.month - 1]}';
@@ -1046,6 +1067,7 @@ class CalendarDigest {
   /// Fright` · `, on digital.`
   ({String figure, String words, String? name, String tail}) answer({
     required bool countKnown,
+    bool requester = false,
   }) {
     final event = lead;
     if (event == null) {
@@ -1060,7 +1082,10 @@ class CalendarDigest {
     final when = today.isNotEmpty
         ? 'Today:'
         : 'Next, ${calendarDayName(next.day, now) == 'Tomorrow' ? 'tomorrow' : calendarShortDate(next.day)}:';
-    final rest = calendarAnswerTail(next);
+    // Hers says when it will be ready, when the download says.
+    final rest = requester && next.state.finishesAt != null
+        ? ', ready around ${formatClockTime(next.state.finishesAt!)}'
+        : calendarAnswerTail(next);
     if (thisWeek == 0) {
       return (
         figure: '',
@@ -1069,11 +1094,14 @@ class CalendarDigest {
         tail: '$rest.',
       );
     }
+    final one = thisWeek == 1 && countKnown;
     return (
       figure: countKnown ? '$thisWeek' : Lexicon.noFigure,
-      words:
-          '${thisWeek == 1 && countKnown ? 'thing comes out or airs' : 'things come out or air'} '
-          'this week. $when',
+      words: requester
+          ? '${one ? 'of your requests has' : 'of your requests have'} a date '
+                'this week. $when'
+          : '${one ? 'thing comes out or airs' : 'things come out or air'} '
+                'this week. $when',
       name: next.title,
       tail: '$rest.',
     );
@@ -1106,3 +1134,182 @@ String calendarAnswerTail(CalendarEvent event) => switch (event.kind) {
   CalendarKind.album => ', album',
   CalendarKind.book => ', book',
 };
+
+/// TMDB's release types the calendar dates a movie by, and their words.
+const _tmdbReleases = [
+  (3, Lexicon.inCinemas),
+  (4, Lexicon.onDigital),
+  (5, Lexicon.onDisc),
+];
+
+/// Where a requester's title stands, from Seerr's record of it: [status]
+/// in her own words, [entry] its download. A day that has not come reads as
+/// one; a download that moves, as its words.
+CalendarState requesterState({
+  required DateTime day,
+  required DateTime now,
+  required MediaStatusInfo status,
+  ArrQueueEntry? entry,
+}) {
+  if (!CalendarEvent.hasCome(day, null, now)) {
+    return const CalendarState.notYet();
+  }
+  if (status.isAvailable) return const CalendarState.onServer();
+  if (entry != null && status.pipeline != null) {
+    return CalendarState.inFlight(status, finishesAt: entry.finishesAt);
+  }
+  return const CalendarState.out(missingKnown: false);
+}
+
+/// The rows a requester's movie makes: one per release of [details] (Seerr's
+/// `/movie/:id`) inside [window], dated for her [region], or for the US,
+/// named, when her country has no date. [countryName] names a country code.
+List<CalendarEvent> requesterMovieEvents(
+  Map<String, dynamic> details, {
+  required String region,
+  required String Function(String code) countryName,
+  required CalendarWindow window,
+  required DateTime now,
+  required MediaStatusInfo status,
+  ArrQueueEntry? entry,
+}) {
+  final tmdb = intOrNull(details['id']);
+  if (tmdb == null) return const [];
+  final byCountry = <String, List<Map<String, dynamic>>>{};
+  final results = mapOrNull(details['releases'])?['results'];
+  for (final country in results is List ? results : const []) {
+    final map = mapOrNull(country);
+    final code = stringOrNull(map?['iso_3166_1'])?.toUpperCase();
+    final dates = map?['release_dates'];
+    if (code == null || dates is! List) continue;
+    byCountry[code] = [for (final date in dates) ?mapOrNull(date)];
+  }
+  final home = region.toUpperCase();
+  final country = byCountry.containsKey(home) ? home : 'US';
+  final releases = byCountry[country] ?? const [];
+  final today = DateTime(now.year, now.month, now.day);
+  final title = stringOrNull(details['title']) ?? 'Movie';
+  final poster = stringOrNull(details['posterPath']);
+  final events = <CalendarEvent>[];
+  for (final (type, release) in _tmdbReleases) {
+    final day = releases
+        .where((r) => intOrNull(r['type']) == type)
+        .map((r) => arrCalendarDate(r['release_date'] ?? r['releaseDate']))
+        .nonNulls
+        .where(window.contains)
+        .firstOrNull;
+    if (day == null) continue;
+    final name = countryName(country);
+    events.add(
+      CalendarEvent(
+        identity: 'movie:$tmdb:$type',
+        kind: CalendarKind.movie,
+        day: day,
+        title: title,
+        release: release,
+        region: name,
+        poster: poster == null
+            ? null
+            : (
+                url: ImageUtils.buildTmdbPosterUrl(poster, size: 'w185'),
+                headers: null,
+              ),
+        note: _capitalised('$release in $name${day == today ? ' today' : ''}'),
+        state: requesterState(day: day, now: now, status: status, entry: entry),
+        target: CalendarMediaTarget(MediaKey.movie(tmdb)),
+      ),
+    );
+  }
+  return events;
+}
+
+/// The rows a requester's series makes: one per episode of the [seasons]
+/// she asked for (Seerr's `/tv/:id/season/:n`, each) that airs inside
+/// [window], on its date and with no time. The first of them says when she
+/// asked, [askedOn].
+List<CalendarEvent> requesterEpisodeEvents(
+  Map<String, dynamic> series,
+  List<Map<String, dynamic>> seasons, {
+  required CalendarWindow window,
+  required DateTime now,
+  required MediaStatusInfo status,
+  required List<int> asked,
+  DateTime? askedOn,
+  ArrQueueEntry? entry,
+}) {
+  final tmdb = intOrNull(series['id']);
+  if (tmdb == null) return const [];
+  final title = stringOrNull(series['name']) ?? 'Series';
+  final poster = stringOrNull(series['posterPath']);
+  final events = <CalendarEvent>[];
+  for (final season in seasons) {
+    final number = intOrNull(season['seasonNumber']);
+    final episodes = season['episodes'];
+    for (final raw in episodes is List ? episodes : const []) {
+      final episode = mapOrNull(raw);
+      final day = arrCalendarDate(episode?['airDate'] ?? episode?['air_date']);
+      if (episode == null || day == null || !window.contains(day)) continue;
+      final ordinal = intOrNull(episode['episodeNumber']);
+      final type = stringOrNull(
+        episode['episodeType'] ?? episode['episode_type'],
+      );
+      events.add(
+        CalendarEvent(
+          identity: 'episode:$tmdb:${number ?? '-'}:${ordinal ?? '-'}',
+          kind: CalendarKind.episode,
+          day: day,
+          title: title,
+          season: number,
+          episode: ordinal,
+          mark: type == 'finale'
+              ? CalendarMark.seasonFinale
+              : type == 'mid_season'
+              ? CalendarMark.midseasonFinale
+              : ordinal == 1 && (number ?? 0) > 0
+              ? CalendarMark.premiere
+              : null,
+          poster: poster == null
+              ? null
+              : (
+                  url: ImageUtils.buildTmdbPosterUrl(poster, size: 'w185'),
+                  headers: null,
+                ),
+          state: requesterState(
+            day: day,
+            now: now,
+            status: status,
+            entry: entry,
+          ),
+          target: CalendarMediaTarget(MediaKey.tv(tmdb)),
+        ),
+      );
+    }
+  }
+  events.sort(compareCalendarEvents);
+  if (events.isEmpty || askedOn == null || asked.isEmpty) return events;
+  // The seasons the calendar dates, of those she asked for: a request for
+  // three seasons with one still to air says the one.
+  final dated = [
+    for (final season in asked)
+      if (events.any((event) => event.season == season)) season,
+  ];
+  if (dated.isEmpty) return events;
+  final seasonsWord = dated.length == 1
+      ? 'season ${dated.single}'
+      : 'seasons ${joinWithAnd([for (final s in dated) '$s'])}';
+  final first = events.first;
+  events[0] = CalendarEvent(
+    identity: first.identity,
+    kind: first.kind,
+    day: first.day,
+    title: first.title,
+    season: first.season,
+    episode: first.episode,
+    mark: first.mark,
+    poster: first.poster,
+    state: first.state,
+    target: first.target,
+    note: 'You asked for $seasonsWord on ${calendarShortDate(askedOn)}',
+  );
+  return events;
+}

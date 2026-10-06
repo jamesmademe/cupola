@@ -31,6 +31,7 @@ class CatalogPoster extends ConsumerWidget {
     required this.heroTag,
     required this.width,
     this.mediaType,
+    this.meta,
   });
 
   final MediaPreview item;
@@ -42,6 +43,10 @@ class CatalogPoster extends ConsumerWidget {
   /// The kind the row is about, when the row fixes it (a movie rail); else
   /// the item's own.
   final String? mediaType;
+
+  /// The line under the title in place of TMDB's score: when the title comes
+  /// out (`Out 14 Oct`), on a shelf ordered by it.
+  final String? meta;
 
   /// Two lines of title and one of score, at the reading size the user chose
   /// up to the compact tile's ceiling (`TextScaleMetrics.clampedScalerOf`):
@@ -73,9 +78,11 @@ class CatalogPoster extends ConsumerWidget {
     );
     final vote = item.voteAverage;
     // TMDB's zero is a title nobody has rated, not a score of nothing.
-    final score = vote == null || vote <= 0
-        ? null
-        : 'TMDB$unitSpace${vote.toStringAsFixed(1)}';
+    final score =
+        meta ??
+        (vote == null || vote <= 0
+            ? null
+            : 'TMDB$unitSpace${vote.toStringAsFixed(1)}');
 
     return SizedBox(
       width: width,

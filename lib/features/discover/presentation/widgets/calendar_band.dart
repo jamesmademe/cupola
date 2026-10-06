@@ -7,7 +7,6 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
-import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -16,9 +15,10 @@ import 'package:cupola/features/discover/presentation/widgets/calendar_week_stri
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/media/presentation/shelf_page.dart';
 
-/// A connection the band names because its calendar did not arrive: its
-/// name in a sentence, the failure, and when.
-typedef CalendarBandSilence = ({String name, Object error, DateTime at});
+/// A calendar that did not arrive, as the band says it: [words] in the
+/// reader's voice (`Lidarr did not answer at 20:53`, `Can't reach the server
+/// since 20:41`), [error] for its tone and glyph.
+typedef CalendarBandSilence = ({String words, Object error});
 
 /// The calendar's way in from the top of the Discover atrium: the one live
 /// object there. Lit by the next release's artwork, it names the next thing
@@ -252,12 +252,7 @@ class _CalendarBandState extends ConsumerState<CalendarBand> {
             : unknown
             ? [
                 'Calendar',
-                for (final silence in widget.silent)
-                  failureHeadline(
-                    classifyConnectionFailure(silence.error),
-                    subject: silence.name,
-                    gateway: accessGatewayOf(silence.error),
-                  ),
+                for (final silence in widget.silent) silence.words,
               ].join('. ')
             : digest.spokenBand(silent: widget.silentKinds),
         excludeChildSemantics: true,
@@ -267,7 +262,7 @@ class _CalendarBandState extends ConsumerState<CalendarBand> {
   }
 }
 
-/// `Lidarr did not answer at 20:53`, in the tone of its cause.
+/// A calendar that did not arrive, in the tone of its cause.
 class _SilentLine extends StatelessWidget {
   const _SilentLine({required this.silence});
 
@@ -278,11 +273,6 @@ class _SilentLine extends StatelessWidget {
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final reason = classifyConnectionFailure(silence.error);
-    final words = failureHeadline(
-      reason,
-      subject: silence.name,
-      gateway: accessGatewayOf(silence.error),
-    );
     return Row(
       children: [
         Icon(
@@ -297,9 +287,7 @@ class _SilentLine extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Flexible(
           child: Text(
-            failureDidNotAnswer(reason)
-                ? '$words at ${formatClockTime(silence.at)}'
-                : words,
+            silence.words,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppType.meta.copyWith(color: room.inkSecondary),

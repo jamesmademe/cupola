@@ -7,7 +7,14 @@ import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_status.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/media/presentation/media_facts_sections.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
@@ -228,3 +235,122 @@ final libraryCalendarProvider = FutureProvider.autoDispose<LibraryCalendar>((
 final hasLibraryCalendarProvider = Provider<bool>(
   (ref) => ref.watch(calendarConnectionsProvider).isNotEmpty,
 );
+
+/// The requester's calendar: her requests still on their way that have a
+/// date in the next thirty days, from her Seerr. A movie by its releases in
+/// her region (the US's, named, when hers has none), a series by the
+/// episodes of the seasons she asked for, each on its date and with no time:
+/// Seerr and TMDB have none. A title whose record did not arrive is left
+/// out; the requests themselves not arriving is the calendar's failure.
+final requesterCalendarProvider = FutureProvider.autoDispose<LibraryCalendar>((
+  ref,
+) async {
+  final from = ref.watch(calendarDayProvider);
+  final window = CalendarWindow.from(from);
+  final seerr = ref.watch(activeInstanceProvider(ServiceKey.seerr));
+  if (seerr == null || !seerr.isConfigured) {
+    throw Exception('Seerr not configured');
+  }
+  final service = ref.watch(seerrServiceForProvider(seerr.id));
+  final region = ref.watch(regionProvider);
+  final me = ref.watch(seerrAccountUserIdProvider(seerr.id));
+  final numbering = await ref.watch(seerrNumberingProvider.future);
+  final requests = await ref.watch(activeRequestsForProvider(seerr.id).future);
+  final now = ref.read(calendarClockProvider)();
+  final mine = [
+    for (final request in requests)
+      if ((me == null || request.requestedBy?.id == me) &&
+          (request.status == RequestStatus.pendingApproval ||
+              request.status == RequestStatus.approved))
+        request,
+  ];
+
+  Future<List<CalendarEvent>> eventsOf(SeerrRequest request) async {
+    final tmdb = request.media?.tmdbId;
+    if (tmdb == null) return const [];
+    try {
+      final tv = request.type == 'tv';
+      final details = tv
+          ? await service.getTv(tmdb)
+          : await service.getMovie(tmdb);
+      final media = mapOrNull(details['mediaInfo']);
+      final status = seerrMediaStatus(
+        media,
+        is4k: request.is4k,
+        numbering: numbering,
+        audience: Audience.requester,
+      );
+      final entry = seerrDownloadEntry(
+        media?[request.is4k ? 'downloadStatus4k' : 'downloadStatus'],
+      );
+      if (!tv) {
+        return requesterMovieEvents(
+          details,
+          region: region,
+          countryName: regionName,
+          window: window,
+          now: now,
+          status: status,
+          entry: entry,
+        );
+      }
+      final asked = [
+        for (final season in request.seasons ?? const <RequestSeason>[])
+          season.seasonNumber,
+      ]..sort();
+      final seasons = await Future.wait([
+        for (final number in asked) service.getTvSeason(tmdb, number),
+      ]);
+      return requesterEpisodeEvents(
+        details,
+        seasons,
+        window: window,
+        now: now,
+        status: status,
+        asked: asked,
+        askedOn: DateTime.tryParse(request.createdAt)?.toLocal(),
+        entry: entry,
+      );
+    } catch (_) {
+      // That title's record did not arrive; the others' rows stand.
+      return const [];
+    }
+  }
+
+  final byIdentity = <String, CalendarEvent>{};
+  for (final rows in await Future.wait(mine.map(eventsOf))) {
+    for (final event in rows) {
+      byIdentity.update(
+        event.identity,
+        (held) => held.mergedWith(event),
+        ifAbsent: () => event,
+      );
+    }
+  }
+  return LibraryCalendar(
+    window: window,
+    events: byIdentity.values.toList()..sort(compareCalendarEvents),
+    answered: const [],
+    silent: const [],
+    kinds: const {CalendarKind.movie, CalendarKind.episode},
+    readAt: now,
+  );
+}, retry: noProviderRetry);
+
+/// The calendar of whoever reads it: the operator's from the arrs, the
+/// requester's from her requests.
+final calendarProvider = FutureProvider.autoDispose<LibraryCalendar>((ref) {
+  return ref.watch(audienceProvider) == Audience.requester
+      ? ref.watch(requesterCalendarProvider.future)
+      : ref.watch(libraryCalendarProvider.future);
+}, retry: noProviderRetry);
+
+/// Whether the reader has a calendar: the operator with any arr, the
+/// requester with her Seerr.
+final hasCalendarProvider = Provider<bool>((ref) {
+  if (ref.watch(audienceProvider) == Audience.requester) {
+    return ref.watch(activeInstanceProvider(ServiceKey.seerr))?.isConfigured ??
+        false;
+  }
+  return ref.watch(hasLibraryCalendarProvider);
+});

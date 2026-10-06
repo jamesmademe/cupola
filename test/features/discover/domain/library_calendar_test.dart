@@ -301,4 +301,84 @@ void main() {
       ));
     },
   );
+
+  test("a requester's movie is dated for her country, another's named when "
+      'hers has none; what she reads is where it stands', () {
+    const waiting = MediaStatusInfo(availability: MediaAvailability.missing);
+    Map<String, dynamic> movie(String country) => {
+      'id': 508947,
+      'title': 'Sprite Fright',
+      'releases': {
+        'results': [
+          {
+            'iso_3166_1': country,
+            'release_dates': [
+              {'type': 4, 'release_date': day(0)},
+              {'type': 5, 'release_date': day(13)},
+              // Long before the window: no row.
+              {'type': 3, 'release_date': '2021-10-29T00:00:00.000Z'},
+            ],
+          },
+        ],
+      },
+    };
+    String name(String code) => code == 'IT' ? 'Italy' : 'the US';
+
+    final italy = requesterMovieEvents(
+      movie('IT'),
+      region: 'it',
+      countryName: name,
+      window: window,
+      now: now,
+      status: waiting,
+    );
+    expect(
+      [for (final e in italy) e.note],
+      ['On digital in Italy today', 'On disc in Italy'],
+    );
+    expect(italy.first.statusLine(now), 'Out today');
+    expect(italy.last.statusLine(now), 'Not out yet');
+    expect(italy.first.sources, isEmpty);
+
+    final elsewhere = requesterMovieEvents(
+      movie('US'),
+      region: 'IT',
+      countryName: name,
+      window: window,
+      now: now,
+      status: waiting,
+    );
+    expect(elsewhere.first.note, 'On digital in the US today');
+  });
+
+  test("a requester's series: the episodes of the seasons she asked for, "
+      'on their dates, the first saying when she asked', () {
+    const waiting = MediaStatusInfo(availability: MediaAvailability.missing);
+    final events = requesterEpisodeEvents(
+      {'id': 900, 'name': 'Cosmos Laundromat'},
+      [
+        {
+          'seasonNumber': 3,
+          'episodes': [
+            {'episodeNumber': 1, 'airDate': '2026-10-02'},
+            {'episodeNumber': 2, 'airDate': '2026-10-09'},
+            // Past the thirty days.
+            {'episodeNumber': 8, 'airDate': '2026-11-20'},
+          ],
+        },
+      ],
+      window: window,
+      now: now,
+      status: waiting,
+      asked: const [1, 2, 3],
+      askedOn: DateTime(2026, 9, 26),
+    );
+
+    expect([for (final e in events) e.code], ['S3 E1', 'S3 E2']);
+    expect(events.first.airsAt, isNull);
+    expect(events.first.statusLine(now), 'S3 E1 · premiere · not aired');
+    // Only the season the calendar dates.
+    expect(events.first.note, 'You asked for season 3 on Sat 26 Sep');
+    expect(events.last.note, isNull);
+  });
 }

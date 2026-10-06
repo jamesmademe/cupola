@@ -268,6 +268,10 @@ class SeerrFake extends ServiceFake {
           : [
               {'id': 1, 'seasonNumber': 1, 'status': 5},
               {'id': 2, 'seasonNumber': 2, 'status': 3},
+              // And the third, not out yet: the requester's calendar dates
+              // its episodes.
+              if (title == WorldTitles.cosmosLaundromat)
+                {'id': 4, 'seasonNumber': 3, 'status': 2},
             ],
     };
   }
@@ -333,7 +337,16 @@ class SeerrFake extends ServiceFake {
               'iso_3166_1': 'IT',
               'release_dates': [
                 {'type': 3, 'release_date': '${t.year}-09-26T00:00:00.000Z'},
-                {'type': 4, 'release_date': '${t.year}-11-12T00:00:00.000Z'},
+                // Sprite Fright is out on digital today and on disc in
+                // thirteen days, as Radarr dates it.
+                if (t == WorldTitles.spriteFright) ...[
+                  {'type': 4, 'release_date': c.ago(const Duration(hours: 6))},
+                  {
+                    'type': 5,
+                    'release_date': c.ahead(const Duration(days: 13)),
+                  },
+                ] else
+                  {'type': 4, 'release_date': '${t.year}-11-12T00:00:00.000Z'},
               ],
             },
           ],
@@ -755,8 +768,10 @@ class SeerrFake extends ServiceFake {
                   (2, 6) => 'The Seventh Cycle',
                   _ => 'Episode ${i + 1}',
                 },
-                'airDate':
-                    '2025-0${number + 1}-${(i + 1).toString().padLeft(2, '0')}',
+                // The third season weekly from its premiere, three days on.
+                'airDate': number == 3
+                    ? c.ahead(Duration(days: 3 + 7 * i)).substring(0, 10)
+                    : '2025-0${number + 1}-${(i + 1).toString().padLeft(2, '0')}',
                 'overview': number == 2 && i == 2
                     ? 'Franck wakes up in the second life Tachyon sold him.'
                     : '',

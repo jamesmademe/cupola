@@ -40,6 +40,13 @@ class DiscoverCarousel extends StatelessWidget {
   /// control that fails.
   final VoidCallback? onRetry;
 
+  /// A line under the title: where the row comes from, how it is ordered.
+  final String? subtitle;
+
+  /// The line under a title in place of TMDB's score (`Out 14 Oct`), or
+  /// null to keep the score.
+  final String? Function(MediaPreview item)? metaOf;
+
   static const double _posterWidth = 104;
   static const double _posterHeight = 156;
 
@@ -51,6 +58,8 @@ class DiscoverCarousel extends StatelessWidget {
     this.forcedMediaType,
     this.onSeeAll,
     this.onRetry,
+    this.subtitle,
+    this.metaOf,
   });
 
   @override
@@ -111,6 +120,7 @@ class DiscoverCarousel extends StatelessWidget {
       children: [
         SectionHeader(
           title: title,
+          subtitle: subtitle,
           // Nothing to see all of when the row failed.
           showChevron: onSeeAll != null && !compact,
           onTap: compact ? null : onSeeAll,
@@ -130,6 +140,7 @@ class DiscoverCarousel extends StatelessWidget {
         heroTag: 'discover_${sectionId}_${item.id}',
         width: _posterWidth,
         mediaType: forcedMediaType,
+        meta: metaOf?.call(item),
       ),
     );
   }

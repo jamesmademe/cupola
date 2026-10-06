@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
@@ -52,6 +53,25 @@ final comingSoonProvider = FutureProvider<List<MediaPreview>>((ref) async {
       service.getCatalogPage(CatalogQuery.upcoming(kind)),
   ]);
   return interleave([for (final page in pages) page.items]);
+}, retry: noProviderRetry);
+
+/// What is coming out that the server does not hold, the calendar's last
+/// shelf: Coming soon without what Seerr says is on the server, and without
+/// anything whose day has come (TMDB's upcoming lists keep a title a while
+/// after it opens).
+final comingOutProvider = FutureProvider.autoDispose<List<MediaPreview>>((
+  ref,
+) async {
+  final numbering = await ref.watch(seerrNumberingProvider.future);
+  final soon = await ref.watch(comingSoonProvider.future);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  return [
+    for (final item in soon)
+      if (!seerrHolds(item.mediaInfo, numbering: numbering) &&
+          (arrCalendarDate(item.releaseDate)?.isAfter(today) ?? false))
+        item,
+  ];
 }, retry: noProviderRetry);
 
 /// The genres of one kind, each with a few backdrops to light its tile.

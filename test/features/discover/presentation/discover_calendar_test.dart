@@ -117,20 +117,68 @@ void main() {
     expect(find.text('The catalogue comes from Seerr'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('Calendar')).dy,
-      lessThan(tester.getTopLeft(find.text('The catalogue comes from Seerr')).dy),
+      lessThan(
+        tester.getTopLeft(find.text('The catalogue comes from Seerr')).dy,
+      ),
     );
 
     await harness.unmount(tester);
   });
 
-  testWidgets('P2, the requester: no band from the arrs', (tester) async {
+  testWidgets('P2, the requester: her band comes from her requests, and '
+      'names no service', (tester) async {
     final harness = await pump(
       tester,
       Profiles.p2,
       const Scaffold(body: DiscoverAtrium()),
     );
 
-    expect(find.text('Calendar'), findsNothing);
+    expect(
+      band(tester),
+      'Calendar: today Sprite Fright, on digital, and 1 more day this week '
+      'has something',
+    );
+    for (final service in ['Radarr', 'Sonarr', 'Seerr']) {
+      expect(find.textContaining(service), findsNothing);
+    }
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P2, the requester: her requests with a date, in her words '
+      'and her country', (tester) async {
+    final harness = await pump(tester, Profiles.p2, const CalendarPage());
+
+    expect(
+      find.textContaining(
+        '2 of your requests have a date this week. Today: Sprite Fright, '
+        'ready around',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Your requests on their way · checked at 20:53'),
+      findsOneWidget,
+    );
+    expect(find.text('Downloading 62%'), findsOneWidget);
+    expect(find.text('On digital in Italy today'), findsOneWidget);
+    expect(find.text('S3 E1 · premiere · not aired'), findsOneWidget);
+    expect(find.textContaining('You asked for season 3 on '), findsOneWidget);
+    expect(
+      find.text('Dates are for Italy. Episodes have a date here, not a time.'),
+      findsOneWidget,
+    );
+    // No line about the kinds no service of hers dates, no service named.
+    expect(find.textContaining('appear here when'), findsNothing);
+    for (final service in ['Radarr', 'Sonarr', 'Lidarr', 'Seerr']) {
+      expect(find.textContaining(service), findsNothing);
+    }
+    expect(
+      find.bySemanticsLabel(
+        RegExp(r'^Today, Sprite Fright, out on digital in Italy, downloading'),
+      ),
+      findsOneWidget,
+    );
 
     await harness.unmount(tester);
   });

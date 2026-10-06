@@ -7,9 +7,11 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -23,11 +25,17 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
+import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/calendar_agenda.dart';
 import 'package:cupola/features/discover/presentation/widgets/calendar_week_strip.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
+import 'package:cupola/features/media/presentation/media_facts_sections.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -63,7 +71,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   void _readAgain() {
     ref.invalidate(calendarDayProvider);
     ref.invalidate(calendarSourceProvider);
-    ref.invalidate(libraryCalendarProvider);
+    ref.invalidate(activeRequestsForProvider);
+    ref.invalidate(requesterCalendarProvider);
   }
 
   bool get _reduceMotion => MediaQuery.disableAnimationsOf(context);
@@ -125,14 +134,14 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
     final requester = ref.watch(audienceProvider) == Audience.requester;
-    final calendar = ref.watch(libraryCalendarProvider);
+    final calendar = ref.watch(calendarProvider);
     final value = calendar.value;
     final now = ref.watch(calendarClockProvider)();
     final window = value?.window ?? CalendarWindow.from(now);
     final top = MediaQuery.paddingOf(context).top;
     final bottom = FloatingNavBarMetrics.getScrollViewBottomPadding(context);
 
-    if (!requester && !ref.watch(hasLibraryCalendarProvider)) {
+    if (!ref.watch(hasCalendarProvider)) {
       return AmbientScaffold(
         body: ListView(
           padding: EdgeInsets.fromLTRB(
@@ -194,6 +203,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             calendar: value,
             digest: digest,
             loading: calendar.isLoading && value == null,
+            requester: requester,
             onToday: () => _today(window),
           ),
         ),
@@ -278,12 +288,31 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             padding: const EdgeInsets.only(top: AppSpacing.lg),
             child: _Kinds(
               calendar: value,
+              requester: requester,
               selected: _kind,
               onSelected: (kind) => setState(() => _kind = kind),
             ),
           ),
         ),
-      if (value == null)
+      if (value == null && calendar.error != null)
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.xl,
+            AppSpacing.lg,
+            0,
+          ),
+          // Only the requester's calendar fails whole: her Seerr is its one
+          // source.
+          sliver: SliverToBoxAdapter(
+            child: BriefFailureLine.line(
+              error: calendar.error,
+              onRetry: _readAgain,
+              service: ServiceKey.seerr,
+            ),
+          ),
+        )
+      else if (value == null)
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
@@ -335,8 +364,30 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           ),
           sliver: SliverToBoxAdapter(
             child: Text(
-              _timesNote(value.kinds, requester: requester),
+              requester
+                  ? 'Dates are for ${regionName(ref.watch(regionProvider))}. '
+                        'Episodes have a date here, not a time.'
+                  : _timesNote(value.kinds),
               style: AppType.meta.copyWith(color: room.inkTertiary),
+            ),
+          ),
+        ),
+      if (watchSeerrConfigured(ref))
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xxl),
+            child: DiscoverCarousel(
+              title: requester
+                  ? 'Coming out, not on the server'
+                  : 'Coming out, not on your server',
+              subtitle: requester
+                  ? 'Most popular first. Ask for one and you’ll be told when '
+                        'it’s ready.'
+                  : 'From Seerr, most popular first.',
+              sectionId: 'coming_out',
+              items: ref.watch(comingOutProvider),
+              onRetry: () => ref.invalidate(comingSoonProvider),
+              metaOf: (item) => _comingOut(item, now),
             ),
           ),
         ),
@@ -351,7 +402,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             edgeOffset: top,
             onRefresh: () async {
               _readAgain();
-              await ref.read(libraryCalendarProvider.future);
+              await ref.read(calendarProvider.future);
             },
             child: CustomScrollView(
               controller: _scroll,
@@ -385,17 +436,24 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       ].join(' · ');
     }
     final next = events.where((event) => event.day.isAfter(day)).firstOrNull;
+    final nothing = name == 'Today' ? 'Nothing today' : 'Nothing on $name';
     return next == null
-        ? 'Nothing on $name, nor after it in the next '
-              '${CalendarWindow.days} days'
-        : 'Nothing on $name · next on ${calendarShortDate(next.day)}';
+        ? nothing
+        : '$nothing · next on ${calendarShortDate(next.day)}';
+  }
+
+  /// When a title of the last shelf comes out: `Out 14 Oct`, `New series ·
+  /// 1 Oct`.
+  static String? _comingOut(MediaPreview item, DateTime now) {
+    final day = arrCalendarDate(item.releaseDate);
+    final tv = item.mediaType == 'tv';
+    if (day == null) return tv ? 'New series' : null;
+    final date = calendarDayMonth(day, now);
+    return tv ? 'New series · $date' : 'Out $date';
   }
 
   /// When the rows' times are: the note under the agenda.
-  static String _timesNote(Set<CalendarKind> kinds, {required bool requester}) {
-    if (requester) {
-      return 'Episodes have a date here, not a time.';
-    }
+  static String _timesNote(Set<CalendarKind> kinds) {
     final dated = [
       for (final kind in const [
         CalendarKind.movie,
@@ -425,12 +483,14 @@ class _Head extends StatelessWidget {
     required this.calendar,
     required this.digest,
     required this.loading,
+    required this.requester,
     required this.onToday,
   });
 
   final LibraryCalendar? calendar;
   final CalendarDigest digest;
   final bool loading;
+  final bool requester;
   final VoidCallback onToday;
 
   @override
@@ -440,6 +500,7 @@ class _Head extends StatelessWidget {
     final calendar = this.calendar;
     final answer = digest.answer(
       countKnown: calendar != null && calendar.silent.isEmpty,
+      requester: requester,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,11 +549,14 @@ class _Head extends StatelessWidget {
             ),
             style: AppType.body.copyWith(color: room.inkSecondary),
           ),
-          if (calendar.answered.isNotEmpty) ...[
+          if (requester || calendar.answered.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'From ${joinWithAnd(calendar.answered)} at '
-              '${formatClockTime(calendar.readAt)}',
+              requester
+                  ? 'Your requests on their way · checked at '
+                        '${formatClockTime(calendar.readAt)}'
+                  : 'From ${joinWithAnd(calendar.answered)} at '
+                        '${formatClockTime(calendar.readAt)}',
               style: AppType.caption.copyWith(color: room.inkTertiary),
             ),
           ],
@@ -601,11 +665,16 @@ class _WeekPager extends StatelessWidget {
 class _Kinds extends StatelessWidget {
   const _Kinds({
     required this.calendar,
+    required this.requester,
     required this.selected,
     required this.onSelected,
   });
 
   final LibraryCalendar calendar;
+
+  /// The requester reads no service's name, so no line about the kinds no
+  /// service of hers dates.
+  final bool requester;
   final CalendarKind? selected;
   final ValueChanged<CalendarKind?> onSelected;
 
@@ -669,7 +738,9 @@ class _Kinds extends StatelessWidget {
               ],
             ),
           ),
-        if (missing.isNotEmpty && missing.length < CalendarKind.values.length)
+        if (!requester &&
+            missing.isNotEmpty &&
+            missing.length < CalendarKind.values.length)
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,
