@@ -29,6 +29,10 @@ typedef ShelfArt = ({String url, Map<String, String>? headers});
 /// tone, and whether it is the backlog's ring rather than a dot.
 typedef ShelfState = ({String word, StatusTone tone, bool hollow});
 
+/// How many of a shelf's works are on the server, of how many: the dots
+/// beside the summary, one per work.
+typedef ShelfTally = ({int held, int of});
+
 /// A page about someone and their shelf: an artist and the albums, an author
 /// and the books. The Media page's room without its slab: the person's
 /// photo or initials, their name, what the shelf holds in one line, then the
@@ -44,14 +48,54 @@ class ShelfPage extends StatelessWidget {
     required this.summary,
     required this.slivers,
     this.photo,
+    this.role,
+    this.tally,
     this.light,
     this.heroTag,
+    this.onArtDrawn,
     this.moreLabel,
     this.onMore,
     this.onRefresh,
-  });
+  }) : banner = null,
+       _bannered = false;
+
+  /// A shelf that is a set of works rather than someone's: a collection. Its
+  /// [banner], a wide still, heads the page in the disc's place, the name and
+  /// summary under it.
+  const ShelfPage.banner({
+    super.key,
+    required this.name,
+    required this.summary,
+    required this.slivers,
+    required this.banner,
+    this.light,
+    this.heroTag,
+    this.onArtDrawn,
+    this.onRefresh,
+  }) : photo = null,
+       role = null,
+       tally = null,
+       moreLabel = null,
+       onMore = null,
+       _bannered = true;
 
   final String name;
+
+  /// What the person does, under their name: `Director`.
+  final String? role;
+
+  /// The dots beside [summary], when the shelf is short enough to count
+  /// them out.
+  final ShelfTally? tally;
+
+  /// The still that heads a [ShelfPage.banner].
+  final ShelfArt? banner;
+
+  /// Told once the photo or the banner is drawn, with its address: the room
+  /// is lit from a picture the page has drawn.
+  final ValueChanged<String>? onArtDrawn;
+
+  final bool _bannered;
 
   /// What the shelf holds: `3 albums on disk · 1 announced`. Empty while it
   /// is being read.
@@ -125,13 +169,25 @@ class ShelfPage extends StatelessWidget {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.md),
-                      child: ShelfIdentity(
-                        name: name,
-                        summary: summary,
-                        photo: photo,
-                        light: light,
-                        heroTag: heroTag,
-                      ),
+                      child: _bannered
+                          ? ShelfBanner(
+                              name: name,
+                              summary: summary,
+                              banner: banner,
+                              light: light,
+                              heroTag: heroTag,
+                              onDrawn: onArtDrawn,
+                            )
+                          : ShelfIdentity(
+                              name: name,
+                              summary: summary,
+                              photo: photo,
+                              role: role,
+                              tally: tally,
+                              light: light,
+                              heroTag: heroTag,
+                              onDrawn: onArtDrawn,
+                            ),
                     ),
                   ),
                   ...slivers,
@@ -184,17 +240,32 @@ class ShelfIdentity extends StatelessWidget {
     required this.name,
     required this.summary,
     this.photo,
+    this.role,
+    this.tally,
     this.light,
     this.heroTag,
+    this.onDrawn,
   });
 
   final String name;
   final String summary;
   final ShelfArt? photo;
+
+  /// What the person does, under the name: `Director`.
+  final String? role;
+
+  /// One dot per work beside [summary], filled for each on the server; drawn
+  /// only up to [ShelfTally.of] of eight, past which dots stop being
+  /// countable at a glance.
+  final ShelfTally? tally;
   final TitleLight? light;
   final String? heroTag;
+  final ValueChanged<String>? onDrawn;
 
   static const double _disc = 92;
+
+  /// The most works the dots count out.
+  static const int maxDots = 8;
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +287,7 @@ class ShelfIdentity extends StatelessWidget {
         child: ShelfArtwork(
           art: photo,
           box: const Size.square(_disc),
+          onDrawn: onDrawn,
           fallback: Text(
             initials,
             style: AppType.feature.copyWith(color: room.ink),
@@ -247,13 +319,33 @@ class ShelfIdentity extends StatelessWidget {
             ),
           ),
         ),
-        if (summary.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
+        if (role case final role? when role.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            summary,
+            role,
             style: AppType.label
                 .weight(FontWeight.w400)
                 .copyWith(color: room.inkSecondary),
+          ),
+        ],
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              if (tally case final tally?
+                  when tally.of > 0 && tally.of <= maxDots) ...[
+                ExcludeSemantics(child: _TallyDots(tally: tally)),
+                const SizedBox(width: AppSpacing.sm),
+              ],
+              Flexible(
+                child: Text(
+                  summary,
+                  style: AppType.label
+                      .weight(FontWeight.w400)
+                      .copyWith(color: room.inkSecondary),
+                ),
+              ),
+            ],
           ),
         ],
       ],
@@ -273,6 +365,133 @@ class ShelfIdentity extends StatelessWidget {
         disc,
         const SizedBox(width: AppSpacing.lg),
         Expanded(child: words),
+      ],
+    );
+  }
+}
+
+/// One dot per work, filled in the available tone for each on the server,
+/// a ring in the backlog's ink for each that is not.
+class _TallyDots extends StatelessWidget {
+  const _TallyDots({required this.tally});
+
+  final ShelfTally tally;
+
+  static const double _dot = 7;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final held = statusToneColor(
+      Theme.of(context).colorScheme,
+      StatusTone.success,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < tally.of; i++)
+          Padding(
+            padding: EdgeInsetsDirectional.only(
+              start: i == 0 ? 0 : AppSpacing.xs,
+            ),
+            child: Container(
+              width: _dot,
+              height: _dot,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: i < tally.held ? held : null,
+                border: i < tally.held
+                    ? null
+                    : Border.all(color: room.inkTertiary, width: 1.2),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A collection's head: its still, wide and rounded, lit from under by the
+/// room, then the name and what the collection holds. Without a still, the
+/// name alone.
+class ShelfBanner extends StatelessWidget {
+  const ShelfBanner({
+    super.key,
+    required this.name,
+    required this.summary,
+    this.banner,
+    this.light,
+    this.heroTag,
+    this.onDrawn,
+  });
+
+  final String name;
+  final String summary;
+  final ShelfArt? banner;
+  final TitleLight? light;
+  final String? heroTag;
+  final ValueChanged<String>? onDrawn;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    Widget? still;
+    if (banner case final banner? when banner.url.isNotEmpty) {
+      still = AspectRatio(
+        aspectRatio: 16 / 9,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: room.raised,
+            borderRadius: BorderRadius.circular(AppRadius.door),
+            boxShadow: AppElevation.poster(scheme, light: light?.light),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.door),
+            child: ExcludeSemantics(
+              child: LayoutBuilder(
+                builder: (context, box) => ShelfArtwork(
+                  art: banner,
+                  box: Size(box.maxWidth, box.maxWidth * 9 / 16),
+                  onDrawn: onDrawn,
+                  fallback: const SizedBox.expand(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      if (heroTag case final tag?) {
+        still = Hero(
+          tag: tag,
+          transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
+          child: still,
+        );
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (still != null) ...[still, const SizedBox(height: AppSpacing.lg)],
+        Semantics(
+          header: true,
+          child: Text(
+            name,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: (mediaStacked(context) ? AppType.room : AppType.screen)
+                .copyWith(color: room.ink),
+          ),
+        ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            summary,
+            style: AppType.label
+                .weight(FontWeight.w400)
+                .copyWith(color: room.inkSecondary),
+          ),
+        ],
       ],
     );
   }

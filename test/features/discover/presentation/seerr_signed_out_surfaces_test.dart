@@ -17,10 +17,10 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
-import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
+import 'package:cupola/features/discover/presentation/collection_page.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
-import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
+import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
@@ -51,8 +51,8 @@ void main() {
     final pages = <String, Widget>{
       'the Discover tab': const DiscoverPage(),
       'a movie': MediaPage(mediaKey: MediaKey.movie(10378)),
-      'a person': const PersonDetailScreen(personId: 17),
-      'a collection': const CollectionDetailScreen(collectionId: 3),
+      'a person': const PersonPage(personId: 17),
+      'a collection': const CollectionPage(collectionId: 3),
       'a catalogue page': const CatalogPage(
         query: CatalogQuery.genre(CatalogKind.movie, 16, 'Animation'),
       ),

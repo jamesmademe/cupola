@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/collection_detail.dart';
+import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/person_detail.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
@@ -47,12 +47,13 @@ final personDetailProvider = FutureProvider.autoDispose
       return PersonDetail.fromJson(await service.getPerson(id));
     }, retry: noProviderRetry);
 
-/// A person's combined filmography for the Person page. Fails like
-/// [personDetailProvider], so a dark Seerr is not an empty filmography.
+/// A person's credits, in front of the camera and behind it, each with what
+/// Seerr holds of the title. Fails like [personDetailProvider], so a dark
+/// Seerr is not an empty filmography.
 final personCreditsProvider = FutureProvider.autoDispose
-    .family<List<MediaPreview>, int>((ref, id) async {
+    .family<PersonCombinedCredits, int>((ref, id) async {
       final service = ref.watch(seerrServiceProvider);
-      return service.getPersonCombinedCredits(id);
+      return service.getPersonCredits(id);
     }, retry: noProviderRetry);
 
 /// Full collection (with member movies) for the Collection page. Fails like

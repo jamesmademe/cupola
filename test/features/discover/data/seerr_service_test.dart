@@ -7,6 +7,8 @@ import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/person_shelf.dart';
+import 'package:cupola/features/discover/domain/seerr_status.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 import '../../../test_helpers/fixtures.dart';
@@ -659,13 +661,15 @@ void main() {
         'seerr/person_combined_credits.json',
       );
 
-      final items = await service.getPersonCombinedCredits(1203);
+      final credits = await service.getPersonCredits(1203);
 
       expect(client.lastGetPath, '/api/v1/person/1203/combined_credits');
-      // Cast only, one entry per title, best rated first; the person row that
-      // is not a title is dropped.
-      expect(items.map((item) => item.title), ['Sintel', 'Cosmos Laundromat']);
-      expect(items.last.mediaType, 'tv');
+      // The person row that is not a title is dropped.
+      expect(
+        credits.cast.map((credit) => credit.media.title),
+        containsAll(['Sintel', 'Cosmos Laundromat']),
+      );
+      expect(credits.cast.every((c) => c.media.mediaType != 'person'), isTrue);
     });
 
     test(
@@ -687,21 +691,23 @@ void main() {
         expect(credits.cast.first.character, 'Guard');
         expect(credits.cast.first.job, isNull);
 
-        // "Director · 1 of 3 on your server": one row per title, TMDB's job
-        // name matched without regard to case, and Seerr's `mediaInfo` read
-        // per credit.
-        final directed = credits.crewAs('Director');
-        expect(directed.map((credit) => credit.media.title), [
-          'Tears of Steel',
-          'Dynamo Dream',
-          'Prelude',
-        ]);
-        expect(directed.where((credit) => credit.isOnServer), hasLength(1));
-        expect(directed[0].status.availability, MediaAvailability.available);
-        expect(directed[1].status.availability, MediaAvailability.notTracked);
-        expect(directed[2].status.availability, MediaAvailability.missing);
+        // "Director · 1 of 3 on your server": one row per title, and Seerr's
+        // `mediaInfo` read per credit.
+        final directed = PersonShelf.of(credits, knownFor: 'Directing').lead!;
+        expect(
+          directed.works.map((work) => work.media.title),
+          unorderedEquals(['Tears of Steel', 'Dynamo Dream', 'Prelude']),
+        );
+        expect(directed.onServer(), 1);
+        MediaAvailability statusOf(String title) => credits.crew
+            .firstWhere((credit) => credit.media.title == title)
+            .status
+            .availability;
+        expect(statusOf('Tears of Steel'), MediaAvailability.available);
+        expect(statusOf('Dynamo Dream'), MediaAvailability.notTracked);
+        expect(statusOf('Prelude'), MediaAvailability.missing);
         // A partly available series is on the server, in part.
-        expect(credits.cast[1].isOnServer, isTrue);
+        expect(seerrHolds(credits.cast[1].media.mediaInfo), isTrue);
       },
     );
 
@@ -711,10 +717,6 @@ void main() {
         client.getException = Exception('offline');
 
         await expectLater(service.getPersonCredits(1203), throwsException);
-        await expectLater(
-          service.getPersonCombinedCredits(1203),
-          throwsException,
-        );
       },
     );
   });

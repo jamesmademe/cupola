@@ -126,8 +126,8 @@ import 'package:cupola/features/truenas/presentation/system/truenas_system_hub_s
 import 'package:cupola/features/truenas/presentation/system/truenas_services_screen.dart';
 import 'package:cupola/features/truenas/presentation/system/truenas_credentials_screen.dart';
 import 'package:cupola/features/truenas/presentation/system/truenas_system_config_screens.dart';
-import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
-import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
+import 'package:cupola/features/discover/presentation/collection_page.dart';
+import 'package:cupola/features/discover/presentation/person_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
@@ -237,7 +237,7 @@ List<GoRoute> _mediaRoutes({String prefix = ''}) => [
   // returns to the title (`ServiceRoutes.person`, `ServiceRoutes.collection`).
   _page(
     '${prefix}media/person/:id',
-    (state) => PersonDetailScreen(
+    (state) => PersonPage(
       personId: RouteUtils.safeIntParam(state, 'id')!,
       heroTag: state.uri.queryParameters['heroTag'],
       initialProfileUrl: state.uri.queryParameters['posterUrl'],
@@ -248,7 +248,7 @@ List<GoRoute> _mediaRoutes({String prefix = ''}) => [
   ),
   _page(
     '${prefix}media/collection/:id',
-    (state) => CollectionDetailScreen(
+    (state) => CollectionPage(
       collectionId: RouteUtils.safeIntParam(state, 'id')!,
       heroTag: state.uri.queryParameters['heroTag'],
     ),

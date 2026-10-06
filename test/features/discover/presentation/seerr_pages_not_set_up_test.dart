@@ -7,9 +7,9 @@ import 'package:cupola/features/discover/presentation/catalog_page.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/media_detail_view.dart';
-import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
+import 'package:cupola/features/discover/presentation/collection_page.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
-import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
+import 'package:cupola/features/discover/presentation/person_page.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -26,8 +26,8 @@ void main() {
   // Seerr as one row to set up: the Media page's tests hold it.
   group('P4, no Seerr', () {
     final pages = <String, Widget>{
-      'a person': const PersonDetailScreen(personId: 17),
-      'a collection': const CollectionDetailScreen(collectionId: 3),
+      'a person': const PersonPage(personId: 17),
+      'a collection': const CollectionPage(collectionId: 3),
       'a catalogue page': const CatalogPage(
         query: CatalogQuery.genre(CatalogKind.movie, 16, 'Animation'),
       ),

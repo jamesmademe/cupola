@@ -355,16 +355,25 @@ MediaStatusInfo? seerrCatalogStatus(
   return saysNothing ? null : info;
 }
 
-/// Whether Seerr says the server holds the title, whole or in part: what
-/// "Hide what I have" takes off a catalogue page and "The best you're
-/// missing" leaves out. Read from the same record as the badge, so a title
-/// that is hidden is one whose badge would say it is there.
+/// Whether Seerr says the server holds the title, whole or in part, in
+/// either copy: what "Hide what I have" takes off a catalogue page, "The
+/// best you're missing" leaves out and a person's or a collection's page
+/// counts as on the server. Read from the same record as the badge, so a
+/// title that is hidden is one whose badge would say it is there; a title
+/// held in 4K alone is there too, as its badge says.
 bool seerrHolds(Map<String, dynamic>? mediaInfo, {SeerrNumbering? numbering}) {
-  final code = intOrNull(mediaInfo?['status']);
-  if (code == null) return false;
-  return switch (SeerrMediaAvailability.fromCode(code, numbering: numbering)) {
-    SeerrMediaAvailability.available ||
-    SeerrMediaAvailability.partiallyAvailable => true,
-    _ => false,
-  };
+  bool holds(Object? raw) {
+    final code = intOrNull(raw);
+    if (code == null) return false;
+    return switch (SeerrMediaAvailability.fromCode(
+      code,
+      numbering: numbering,
+    )) {
+      SeerrMediaAvailability.available ||
+      SeerrMediaAvailability.partiallyAvailable => true,
+      _ => false,
+    };
+  }
+
+  return holds(mediaInfo?['status']) || holds(mediaInfo?['status4k']);
 }

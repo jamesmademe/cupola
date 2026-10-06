@@ -8,8 +8,17 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/features/discover/domain/models/collection_detail.dart';
+import 'package:cupola/features/discover/domain/models/person_credits.dart';
+import 'package:cupola/features/discover/domain/models/person_detail.dart';
+import 'package:cupola/features/discover/presentation/collection_page.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/presentation/person_page.dart';
+import 'package:cupola/features/discover/presentation/widgets/catalog_title_row.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/media/presentation/shelf_page.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -24,6 +33,7 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/author_page.dart';
 import 'package:cupola/features/readarr/presentation/author_page_providers.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -231,6 +241,113 @@ CatalogScene _authorScene(
   ],
 );
 
+/// The catalog's TMDB pictures, lit as the app lights them.
+Future<TitleLight?> _tmdbLight(String url) async =>
+    _lights[url.contains(CatalogArt.tmdbBackdrop)
+        ? CatalogArt.backdrop
+        : url.contains(CatalogArt.tmdbPoster)
+        ? CatalogArt.poster
+        : url];
+
+Map<String, Object?> _directed(
+  int id,
+  String title,
+  String date, {
+  String type = 'movie',
+  int? status,
+  bool art = false,
+}) => {
+  'id': id,
+  'mediaType': type,
+  if (type == 'tv') 'name': title else 'title': title,
+  type == 'tv' ? 'firstAirDate' : 'releaseDate': date,
+  'voteAverage': type == 'tv' ? null : 6.6,
+  'posterPath': art ? CatalogArt.tmdbPoster : null,
+  'job': 'Director',
+  'department': 'Directing',
+  if (status != null) 'mediaInfo': {'status': status, 'status4k': 5},
+};
+
+CatalogScene _personScene(
+  String caption, {
+  double height = 1100,
+  double textScale = 1,
+  bool seerrSends = true,
+}) => CatalogScene(
+  caption,
+  (_) => const PersonPage(personId: 1),
+  width: 390,
+  height: height,
+  textScale: textScale,
+  overrides: [
+    personDetailProvider.overrideWith(
+      (ref, id) async => const PersonDetail(
+        id: 1,
+        name: 'Ian Hubert',
+        knownForDepartment: 'Directing',
+        biography:
+            'Filmmaker and visual effects artist, known for short films made '
+            'with free software and for the lazy tutorials.',
+        placeOfBirth: 'Seattle, Washington, USA',
+      ),
+    ),
+    personCreditsProvider.overrideWith(
+      (ref, id) async => PersonCombinedCredits.fromJson({
+        'crew': [
+          _directed(1, 'Dynamo Dream', '2019-02-01', type: 'tv'),
+          _directed(2, 'Tears of Steel', '2012-09-26', status: 5, art: true),
+          _directed(3, 'Project London', '2011-06-01'),
+        ],
+      }),
+    ),
+    seerrNumberingProvider.overrideWith((ref) async => null),
+    seerrSendsToProvider.overrideWith((ref, arr) async => seerrSends),
+    seriesForProvider.overrideWith((ref, id) async => const []),
+    titleLightProvider.overrideWith((ref, url) => _tmdbLight(url)),
+  ],
+);
+
+CatalogScene _collectionScene(String caption, {double height = 1700}) =>
+    CatalogScene(
+      caption,
+      (_) => const CollectionPage(collectionId: 1),
+      width: 390,
+      height: height,
+      overrides: [
+        collectionDetailProvider.overrideWith(
+          (ref, id) async => CollectionDetail(
+            id: 1,
+            name: 'Blender Open Movies',
+            backdropPath: CatalogArt.tmdbBackdrop,
+            parts: [
+              for (final (id, title, year, status) in const [
+                (1, 'Elephants Dream', 2006, 5),
+                (2, 'Big Buck Bunny', 2008, 3),
+                (3, 'Sintel', 2010, 5),
+                (4, 'Tears of Steel', 2012, 5),
+                (5, 'Spring', 2019, 5),
+                (6, 'Coffee Run', 2020, 5),
+                (7, 'Sprite Fright', 2021, 3),
+                (8, 'Charge', 2022, 2),
+              ])
+                MediaPreview(
+                  id: id,
+                  title: title,
+                  mediaType: 'movie',
+                  releaseDate: '$year-04-10',
+                  voteAverage: 7.4,
+                  posterPath: CatalogArt.tmdbPoster,
+                  mediaInfo: {'status': status},
+                ),
+            ],
+          ),
+        ),
+        seerrNumberingProvider.overrideWith((ref) async => null),
+        activeRequestsForProvider.overrideWith((ref, id) async => const []),
+        titleLightProvider.overrideWith((ref, url) => _tmdbLight(url)),
+      ],
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(_readLights);
@@ -238,9 +355,12 @@ void main() {
     'ShelfPage',
     width: 1240,
     overrides: () => settingsScopeOverrides(
+      // Seerr and Sonarr for the person and the collection, Radarr not.
       customize: (settings) => [
         _connection(ServiceKey.lidarr),
         _connection(ServiceKey.readarr),
+        _connection(ServiceKey.seerr),
+        _connection(ServiceKey.sonarr),
       ].fold(settings, (s, c) => s.copyWithInstance(c)),
     ),
     scenes: [
@@ -293,6 +413,26 @@ void main() {
       _authorScene(
         'AuthorPage · Readarr retired, said once; the books by year, the '
         'wanted one dashed and searched for from its card',
+      ),
+      _personScene(
+        'PersonPage · a director by Seerr\'s credits: the role, one dot per '
+        'title, the plus to Sonarr, Request where Seerr sends a movie to its '
+        'Radarr, then who they are and where the credits come from',
+      ),
+      _personScene(
+        'PersonPage where nothing set up can add a movie · the plus stays, '
+        'dimmed',
+        height: 760,
+        seerrSends: false,
+      ),
+      _collectionScene(
+        'CollectionPage (ShelfPage.banner) · the still lights the room; how '
+        'much is on the server, the strip, the movies in release order',
+      ),
+      _personScene(
+        'PersonPage at twice the reading size',
+        height: 2000,
+        textScale: catalogTextScale,
       ),
       _artistScene(
         'ArtistPage at twice the reading size · the name under the disc, the '

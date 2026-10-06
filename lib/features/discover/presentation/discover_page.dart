@@ -413,8 +413,12 @@ class _TitleRow extends ConsumerWidget {
       posterHeaders: title.imageHeaders,
       heroTag: title.canFlyPoster ? title.heroTag : null,
       onTap: () => context.pushMounted(title.route, extra: title.routeExtra),
-      onAdd: connections.isEmpty ? null : () => _add(context, ref),
-      addLabel: 'Add ${title.title} to $where',
+      action: connections.isEmpty
+          ? null
+          : SearchRowAdd(
+              label: 'Add ${title.title} to $where',
+              onTap: () => _add(context, ref),
+            ),
     );
   }
 

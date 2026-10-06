@@ -3,22 +3,67 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
+import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// What a title's row offers at its end, beside the row itself.
+sealed class SearchRowAction {
+  const SearchRowAction({required this.label});
+
+  /// What it says to a screen reader: `Add Arrival to Radarr`.
+  final String label;
+}
+
+/// The plus: adds the title to its arr.
+final class SearchRowAdd extends SearchRowAction {
+  const SearchRowAdd({required super.label, required this.onTap});
+
+  final VoidCallback onTap;
+}
+
+/// `Request`: asks Seerr for the title, as far as the account may, so
+/// [verdict] is the gate's for a request of its kind.
+final class SearchRowRequest extends SearchRowAction {
+  const SearchRowRequest({
+    required super.label,
+    required this.verdict,
+    required this.onTap,
+  });
+
+  final GateVerdict verdict;
+  final VoidCallback onTap;
+}
+
+/// The plus where nothing set up can add the title: dimmed but tappable,
+/// its hint names [service], and a tap answers with [blockedMessage] and
+/// the way to set [service] up.
+final class SearchRowSetUp extends SearchRowAction {
+  const SearchRowSetUp({
+    required super.label,
+    required this.service,
+    required this.blockedMessage,
+  });
+
+  final ServiceKey service;
+  final String blockedMessage;
+}
 
 /// One row of a search by kind, and of the atrium's people: a
 /// title with its poster, what it is and where it stands, or a person with
 /// their face and what they are known for.
 ///
 /// Flat on the page, no card: the section heading above groups the rows.
-/// The row is one control that speaks one sentence; a title the operator may
-/// add carries a second control at its end, the plus, which names what it
-/// adds and where.
+/// The row is one control that speaks one sentence; a title that can be
+/// added or asked for carries a second control at its end ([SearchRowAction]),
+/// which names what it does and where.
 class SearchRow extends StatelessWidget {
   /// A movie or a series: [poster] (empty for none, drawn as the title's
   /// initials), [meta] (`Movie · 1996 · TMDB 8.0`), and where it stands,
@@ -32,12 +77,10 @@ class SearchRow extends StatelessWidget {
     this.posterHeaders,
     this.heroTag,
     required this.onTap,
-    this.onAdd,
-    this.addLabel,
+    this.action,
     this.padding = EdgeInsets.zero,
   }) : imageUrl = poster,
-       _person = false,
-       assert(onAdd == null || addLabel != null, 'a plus names what it adds');
+       _person = false;
 
   /// A person: their [face] (empty for none, drawn as their initials) and
   /// one line under the name.
@@ -54,8 +97,7 @@ class SearchRow extends StatelessWidget {
        status = null,
        posterHeaders = null,
        heroTag = null,
-       onAdd = null,
-       addLabel = null,
+       action = null,
        _person = true;
 
   final String title;
@@ -72,12 +114,9 @@ class SearchRow extends StatelessWidget {
 
   final VoidCallback onTap;
 
-  /// The plus: adds the title to its arr. Null where there is no add to
-  /// honour, and then there is no plus at all.
-  final VoidCallback? onAdd;
-
-  /// What the plus says to a screen reader: `Add Cosmic Voyage to Radarr`.
-  final String? addLabel;
+  /// What the row offers at its end. Null where there is nothing to add or
+  /// ask for, and then there is no control at all.
+  final SearchRowAction? action;
 
   /// Around the row, beside the list's own gutter: none in a search, the
   /// slab's inset among the atrium's people.
@@ -179,18 +218,74 @@ class SearchRow extends StatelessWidget {
       ),
     );
 
-    final onAdd = this.onAdd;
+    final action = this.action;
+    final trailing = switch (action) {
+      null => null,
+      SearchRowAdd(:final label, :final onTap) => PressableScale(
+        onTap: onTap,
+        semanticLabel: label,
+        excludeChildSemantics: true,
+        child: const _Plus(),
+      ),
+      SearchRowSetUp(:final label, :final service, :final blockedMessage) =>
+        CrossServiceAction(
+          target: service,
+          label: label,
+          blockedMessage: blockedMessage,
+          // Never reached: once the service is set up the row offers its add.
+          onTap: () {},
+          child: const _Plus(),
+        ),
+      SearchRowRequest(:final label, :final verdict, :final onTap) =>
+        RoleGatedAction.builder(
+          verdict: verdict,
+          onTap: onTap,
+          builder: (context, onPressed, annotate) => OutlinedButton(
+            onPressed: onPressed,
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 44),
+              visualDensity: VisualDensity.standard,
+              backgroundColor: room.fillQuiet,
+              foregroundColor: room.ink,
+              side: BorderSide(color: room.hair),
+              textStyle: AppType.button,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            ),
+            child: annotate(
+              Semantics(
+                label: label,
+                excludeSemantics: true,
+                child: const Text('Request'),
+              ),
+            ),
+          ),
+        ),
+    };
+    // A worded control at a large reading size takes the line under the
+    // row, at its end: beside it, it left the title three letters.
+    final under =
+        action is SearchRowRequest &&
+        MediaQuery.textScalerOf(context).scale(14) > 14 * 1.4;
     return Padding(
       padding: padding,
-      child: onAdd == null
-          ? row
-          : Row(
-              children: [
-                Expanded(child: row),
-                const SizedBox(width: AppSpacing.sm),
-                _AddButton(onTap: onAdd, label: addLabel!),
-              ],
-            ),
+      child: switch (trailing) {
+        null => row,
+        final trailing when under => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            row,
+            Align(alignment: AlignmentDirectional.centerEnd, child: trailing),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ),
+        final trailing => Row(
+          children: [
+            Expanded(child: row),
+            const SizedBox(width: AppSpacing.sm),
+            trailing,
+          ],
+        ),
+      },
     );
   }
 
@@ -270,29 +365,21 @@ class SearchRow extends StatelessWidget {
 }
 
 /// The plus at a row's end: a 44 disc in the room's quiet fill.
-class _AddButton extends StatelessWidget {
-  const _AddButton({required this.onTap, required this.label});
-
-  final VoidCallback onTap;
-  final String label;
+class _Plus extends StatelessWidget {
+  const _Plus();
 
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
-    return PressableScale(
-      onTap: onTap,
-      semanticLabel: label,
-      excludeChildSemantics: true,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: room.fillQuiet,
-          shape: BoxShape.circle,
-          border: Border.all(color: room.hair),
-        ),
-        child: Icon(Icons.add_rounded, size: 20, color: room.ink),
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: room.fillQuiet,
+        shape: BoxShape.circle,
+        border: Border.all(color: room.hair),
       ),
+      child: Icon(Icons.add_rounded, size: 20, color: room.ink),
     );
   }
 }

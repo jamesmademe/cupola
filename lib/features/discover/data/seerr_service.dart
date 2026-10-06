@@ -1071,12 +1071,6 @@ class SeerrService {
     }
   }
 
-  /// A person's combined movie + TV cast filmography, de-duped by id and sorted
-  /// by rating so the strongest credits lead. Returns `[]` on error.
-  Future<List<MediaPreview>> getPersonCombinedCredits(int personId) async {
-    return (await getPersonCredits(personId)).castFilmography;
-  }
-
   /// Searches TMDB through Seerr: the first page of movies, series and
   /// people, each in Seerr's order. A Seerr that did not answer, or refused,
   /// throws: a Seerr that found nothing is an empty answer, never the same

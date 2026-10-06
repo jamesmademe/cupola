@@ -17,6 +17,7 @@ class PersonCredit {
     this.character,
     this.job,
     this.department,
+    this.genreIds = const [],
   });
 
   final MediaPreview media;
@@ -31,16 +32,14 @@ class PersonCredit {
   /// TMDB's department — `Directing`, `Writing`, `Production`. Crew only.
   final String? department;
 
+  /// TMDB's genres for the title: a talk show (10767) is how a person page
+  /// tells an appearance as themselves from a role.
+  final List<int> genreIds;
+
   /// What Seerr holds for this title, from the `mediaInfo` it attaches to every
   /// credit, read through the same resolver the detail page uses.
   /// `notTracked` when Seerr has no record of it.
   final MediaStatusInfo status;
-
-  /// On the user's server, whole or in part. What "3 of 4 on your server"
-  /// counts.
-  bool get isOnServer =>
-      status.availability == MediaAvailability.available ||
-      status.availability == MediaAvailability.partial;
 
   /// Null for a row that is not a film or a series, or has no id.
   ///
@@ -70,6 +69,10 @@ class PersonCredit {
       department: role == PersonCreditRole.crew
           ? stringOrNull(json['department'])
           : null,
+      genreIds: [
+        if (json['genreIds'] case final List<dynamic> ids)
+          for (final id in ids) ?intOrNull(id),
+      ],
     );
   }
 }
@@ -108,32 +111,4 @@ class PersonCombinedCredits {
   final List<PersonCredit> crew;
 
   bool get isEmpty => cast.isEmpty && crew.isEmpty;
-
-  /// The acting filmography, once per title, strongest-rated first.
-  ///
-  /// What the Person page's rail shows. It folds on the TMDB id alone, as it
-  /// always has: the rail builds its Hero tags from that id, and a film and a
-  /// series sharing one would put two heroes under one tag.
-  List<MediaPreview> get castFilmography {
-    final seen = <int>{};
-    final items = [
-      for (final credit in cast)
-        if (seen.add(credit.media.id)) credit.media,
-    ];
-    items.sort((a, b) => (b.voteAverage ?? 0).compareTo(a.voteAverage ?? 0));
-    return items;
-  }
-
-  /// Every title credited to them as [job] (`Director`), once per title, in
-  /// Seerr's order. Matches TMDB's job name exactly, ignoring case.
-  List<PersonCredit> crewAs(String job) {
-    final wanted = job.trim().toLowerCase();
-    final seen = <String>{};
-    return [
-      for (final credit in crew)
-        if (credit.job?.trim().toLowerCase() == wanted &&
-            seen.add('${credit.media.mediaType}:${credit.media.id}'))
-          credit,
-    ];
-  }
 }

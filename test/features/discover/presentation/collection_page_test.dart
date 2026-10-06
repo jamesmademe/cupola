@@ -7,11 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/models/collection_detail.dart';
-import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
+import 'package:cupola/features/discover/presentation/collection_page.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/media/presentation/media_decision_card.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/profiles/fakes/media_fakes.dart';
+import '../../../test_helpers/profiles/profiles.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 const _collectionId = 42;
@@ -39,16 +42,25 @@ Future<void> _pump(
           (ref) => settingsWithServices([ServiceKey.seerr]),
         ),
         collectionDetailProvider.overrideWith(builder),
+        seerrNumberingProvider.overrideWith((ref) async => null),
       ],
       child: const MaterialApp(
-        home: CollectionDetailScreen(collectionId: _collectionId),
+        home: CollectionPage(collectionId: _collectionId),
       ),
     ),
   );
 }
 
+Future<ProfileHarness> _blender(WidgetTester tester, ConfigProfile profile) =>
+    pumpWithProfile(
+      tester,
+      profile,
+      child: const CollectionPage(collectionId: SeerrFake.collectionId),
+      surfaceSize: const Size(430, 2400),
+    );
+
 void main() {
-  group('CollectionDetailScreen', () {
+  group('CollectionPage', () {
     testWidgets('a failed lookup names Seerr and is not a dead end', (
       tester,
     ) async {
@@ -68,9 +80,6 @@ void main() {
       // nobody can attribute adds no sentence that repeats the headline.
       expect(find.textContaining('Connection refused'), findsNothing);
       expect(find.text('The request did not complete.'), findsNothing);
-      // The empty-title bar is gone: the failure wears the same chrome as the
-      // loaded page.
-      expect(find.byType(GlassAppBar), findsOneWidget);
       expect(loads, 1);
 
       await tester.tap(find.text('Retry'));
@@ -89,7 +98,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Empty-state voice, and copy that says which nothing this is — it must
+      // Empty-state voice, and copy that says which nothing this is: it must
       // not read like the network error above.
       expect(find.byType(AppEmptyState), findsOneWidget);
       expect(find.byType(AppErrorState), findsNothing);
@@ -98,16 +107,24 @@ void main() {
       expect(find.text('Retry'), findsNothing);
     });
 
-    testWidgets('a loaded collection renders its movies rail', (tester) async {
+    testWidgets('a loaded collection lists its movies, oldest first', (
+      tester,
+    ) async {
       await _pump(
         tester,
         (ref, id) async => _collection(
           parts: const [
             MediaPreview(
+              id: 8,
+              mediaType: 'movie',
+              title: 'Part Two',
+              releaseDate: '2004-05-01',
+            ),
+            MediaPreview(
               id: 7,
               mediaType: 'movie',
               title: 'Part One',
-              posterPath: null,
+              releaseDate: '2001-05-01',
             ),
           ],
         ),
@@ -116,10 +133,14 @@ void main() {
 
       expect(find.byType(AppErrorState), findsNothing);
       expect(find.byType(AppEmptyState), findsNothing);
-      expect(find.text('The Trilogy'), findsAtLeastNWidgets(1));
-      // Pull-to-refresh reaches every variant now, not only the two Bazarr
-      // screens; elsewhere the gesture was accepted by the hero's overscroll
-      // stretch and then did nothing.
+      expect(find.text('The Trilogy'), findsOneWidget);
+      expect(find.text('Collection · 2 movies · 2001–2004'), findsOneWidget);
+      expect(find.text('0 of 2 on your server'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Part One')).dy,
+        lessThan(tester.getTopLeft(find.text('Part Two')).dy),
+      );
+      // A pull reads the page again.
       expect(find.byType(RefreshIndicator), findsOneWidget);
     });
 
@@ -131,8 +152,46 @@ void main() {
 
       // A valid collection with zero parts used to render a full hero over an
       // empty rail that collapsed to nothing.
-      expect(find.text('Movies'), findsOneWidget);
-      expect(find.text('No movies listed'), findsOneWidget);
+      expect(find.text('In release order'), findsOneWidget);
+      expect(
+        find.text('TMDB lists no movies in this collection yet.'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('on the profiles', () {
+    testWidgets('P1: how much is on the server, and the request to approve', (
+      tester,
+    ) async {
+      final harness = await _blender(tester, Profiles.p1);
+
+      expect(find.text(SeerrFake.collectionName), findsOneWidget);
+      expect(find.text('5 of 8 on your server'), findsOneWidget);
+      expect(find.text('2 on the way'), findsOneWidget);
+      expect(find.text('1 waiting for approval'), findsOneWidget);
+      // The request for Charge, answered here as on its own page.
+      expect(find.byType(MediaDecisionCard), findsOneWidget);
+      expect(find.text('Approve'), findsOneWidget);
+      // In release order.
+      expect(
+        tester.getTopLeft(find.text('Elephants Dream')).dy,
+        lessThan(tester.getTopLeft(find.text('Charge').last).dy),
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P2: the collection without anyone else\'s requests, and no '
+        'service named', (tester) async {
+      final harness = await _blender(tester, Profiles.p2);
+
+      expect(find.text('5 of 8 on your server'), findsOneWidget);
+      expect(find.byType(MediaDecisionCard), findsNothing);
+      expect(find.textContaining('Seerr'), findsNothing);
+      expect(find.textContaining('Radarr'), findsNothing);
+
+      await harness.unmount(tester);
     });
   });
 }
