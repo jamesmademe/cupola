@@ -95,7 +95,10 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
                 // disappear; left at the top of the body it would sit frosted
                 // under the service tab bar.
                 if (!widget.showAppBar) ...[
-                  SizedBox(height: widget.topPadding),
+                  SizedBox(
+                    height:
+                        widget.topPadding + MediaQuery.paddingOf(context).top,
+                  ),
                   tabBar,
                 ],
                 Expanded(

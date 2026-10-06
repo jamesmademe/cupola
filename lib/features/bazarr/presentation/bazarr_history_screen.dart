@@ -189,7 +189,11 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(height: widget.topPadding),
+          // The host's two bands, and the status bar the upper one consumes:
+          // no `SafeArea` and no app bar on this page takes the inset first.
+          SizedBox(
+            height: widget.topPadding + MediaQuery.paddingOf(context).top,
+          ),
           SelectionPills<_HistoryFilter>(
             values: _HistoryFilter.values,
             selected: _filter,

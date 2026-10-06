@@ -8,10 +8,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
+import 'package:cupola/features/bazarr/data/bazarr_service.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_history_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_library_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_providers_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
@@ -81,6 +89,7 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
   }
 
   /// Where the tab bar ends: the line no hosted content may start above.
@@ -208,6 +217,128 @@ void main() {
       expectClearsTheBar(tester, find.byType(ShimmerList));
     });
   });
+
+  group('Bazarr tabs clear the glass bars', () {
+    List<Override> over(FakeBazarrService service) => [
+      bazarrServiceProvider.overrideWith((ref) => service),
+    ];
+
+    testWidgets('Wanted draws its Episodes and Movies bar below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.bazarr,
+        tab: ServiceTab.wanted,
+        overrides: over(FakeBazarrService()),
+        child: const BazarrWantedScreen(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(TabBar));
+    });
+
+    testWidgets('the Series library starts below the tab bar', (tester) async {
+      final service = FakeBazarrService()
+        ..seriesResult = const BazarrPagedResult(
+          data: [
+            BazarrSeries(
+              sonarrSeriesId: 1,
+              title: 'Foundation',
+              year: 2021,
+              monitored: true,
+            ),
+          ],
+          total: 1,
+        );
+      await pumpHosted(
+        tester,
+        service: ServiceKey.bazarr,
+        tab: ServiceTab.series,
+        overrides: over(service),
+        child: const BazarrLibraryScreen.series(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expect(find.text('Foundation'), findsOneWidget);
+      expectClearsTheBar(tester, find.text('Foundation'));
+    });
+
+    testWidgets('the Movies library starts below the tab bar', (tester) async {
+      final service = FakeBazarrService()
+        ..moviesResult = const BazarrPagedResult(
+          data: [
+            BazarrMovie(
+              radarrId: 1,
+              title: 'Arrival',
+              year: 2016,
+              monitored: true,
+            ),
+          ],
+          total: 1,
+        );
+      await pumpHosted(
+        tester,
+        service: ServiceKey.bazarr,
+        tab: ServiceTab.movies,
+        overrides: over(service),
+        child: const BazarrLibraryScreen.movies(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expect(find.textContaining('Arrival'), findsOneWidget);
+      expectClearsTheBar(tester, find.textContaining('Arrival'));
+    });
+
+    testWidgets('a library still loading starts below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.bazarr,
+        tab: ServiceTab.series,
+        overrides: over(_BazarrNeverAnswers()),
+        child: const BazarrLibraryScreen.series(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(ShimmerPlaceholder));
+    });
+
+    testWidgets('History draws its filter pills below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.bazarr,
+        tab: ServiceTab.history,
+        overrides: over(FakeBazarrService()),
+        child: const BazarrHistoryScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, _selectionPills);
+    });
+
+    testWidgets('Providers starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.bazarr,
+        tab: ServiceTab.providers,
+        overrides: over(FakeBazarrService()),
+        child: const BazarrProvidersScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+  });
 }
 
 /// A Radarr that never answers its queue, so the screen stays on its skeleton.
@@ -216,3 +347,19 @@ class _NeverAnswers extends FakeRadarrService {
   Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) =>
       Completer<List<dynamic>>().future;
 }
+
+/// A Bazarr that never answers a library page, so the list stays on its shimmer.
+class _BazarrNeverAnswers extends FakeBazarrService {
+  @override
+  Future<BazarrPagedResult<BazarrSeries>> getSeries({
+    int start = 0,
+    int length = 50,
+  }) => Completer<BazarrPagedResult<BazarrSeries>>().future;
+}
+
+/// The filter pills a screen leads with. `SelectionPills` is generic over a
+/// screen's private enum, so it can only be found by its name.
+final _selectionPills = find.byWidgetPredicate(
+  (widget) => widget.runtimeType.toString().startsWith('SelectionPills'),
+  description: 'SelectionPills',
+);

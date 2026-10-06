@@ -214,7 +214,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
       return ListView.separated(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
-          AppSpacing.md + widget.topPadding,
+          AppSpacing.md + widget.topPadding + MediaQuery.paddingOf(context).top,
           AppSpacing.lg,
           AppSpacing.md,
         ),
@@ -259,7 +259,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
-          AppSpacing.md + widget.topPadding,
+          AppSpacing.md + widget.topPadding + MediaQuery.paddingOf(context).top,
           AppSpacing.lg,
           AppSpacing.md,
         ),
