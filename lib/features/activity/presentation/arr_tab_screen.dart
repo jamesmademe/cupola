@@ -146,7 +146,10 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
 
   EdgeInsets _padding(BuildContext context) => EdgeInsets.fromLTRB(
     0,
-    widget.topPadding,
+    // The inset is part of the room the host's bands take: the band consumes
+    // it, so the tab bar under it sits an inset lower than `topPadding` alone
+    // says, and nothing here (no `SafeArea`, no app bar) takes it off first.
+    widget.topPadding + MediaQuery.paddingOf(context).top,
     0,
     FloatingNavBarMetrics.getScrollViewBottomPadding(context),
   );
