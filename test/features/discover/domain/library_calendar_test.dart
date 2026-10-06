@@ -415,4 +415,40 @@ void main() {
     );
     expect(events.last.code, 'S1 E9');
   });
+
+  test(
+    'a release date is the day it spells, whatever the hour or the '
+    "device's time zone; a record dated outside the thirty days is no row",
+    () {
+      final events = libraryCalendarEvents(
+        [
+          reading(ServiceKey.radarr, 'Radarr', [
+            {'id': 1, 'tmdbId': 1, 'title': 'A', 'digitalRelease': day(13)},
+            {
+              'id': 2,
+              'tmdbId': 2,
+              'title': 'B',
+              'digitalRelease': '2026-10-12T23:30:00Z',
+            },
+            // A server reading the window in its own time zone can send one
+            // a day past ours: the calendar says thirty days, and keeps to it.
+            {
+              'id': 3,
+              'tmdbId': 3,
+              'title': 'Edge',
+              'physicalRelease': '2026-10-30T00:00:00Z',
+            },
+            {'id': 4, 'tmdbId': 4, 'title': 'Undated'},
+          ]),
+        ],
+        window,
+        now,
+      );
+
+      expect(
+        [for (final e in events) (e.title, e.day)],
+        [('A', DateTime(2026, 10, 12)), ('B', DateTime(2026, 10, 12))],
+      );
+    },
+  );
 }

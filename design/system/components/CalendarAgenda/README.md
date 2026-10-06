@@ -2,7 +2,7 @@
 
 The calendar's agenda, day by day: a row per dated thing (a movie's release, an episode's airing, an album, a book), the days that have something under their headings, and quiet lines for the stretches with nothing.
 
-Rendered from `lib/features/discover/presentation/widgets/calendar_agenda.dart` (`CalendarRow`, `CalendarDayGroup`, `CalendarQuietLine`), with each row's words from `lib/features/discover/domain/library_calendar.dart` (`CalendarEvent`, `CalendarState`, `calendarAgenda`), by `test/design_catalog/calendar_agenda_catalog_test.dart`. The page is `lib/features/discover/presentation/calendar_page.dart`, at `/discover/calendar`.
+Rendered from `lib/features/discover/presentation/widgets/calendar_agenda.dart` (`CalendarRow`, `CalendarDayGroup`, `CalendarQuietLine`), with each row's words from `lib/features/discover/domain/library_calendar.dart` (`CalendarEvent`, `CalendarState`, `calendarAgenda`), by `test/design_catalog/calendar_agenda_catalog_test.dart`. The page is `lib/features/discover/presentation/calendar_page.dart`, at `/discover/calendar`; the Calendar tab of Radarr, Sonarr, Lidarr and Readarr (`lib/features/activity/presentation/arr_calendar_screen.dart`) draws the same agenda filtered to the connection the lens is on, with no connection named on its rows.
 
 ## CalendarRow
 
@@ -24,7 +24,7 @@ While a download moves, a 3pt bar in its tone and `around 21:10` (the requester'
 | In the queue | `Out today · downloading 62%`, `· stuck 62%`, the words in the tone at 600 | blue, amber for a fault |
 | On the server | `On your server`, the words quiet | green |
 
-A release still to come reads as one whatever the file says. An episode's mark follows its code: `premiere` for the first of a season, `season finale`, `midseason finale`, `series finale` from Sonarr's `finaleType`. A thing held by two connections is one row naming both, at the furthest on of the two.
+A run of a series' episodes that air together (one season, one after another, the same moment, standing the same) is one row: `S1 E1–E8 · whole season · not aired`, never eight. A release still to come reads as one whatever the file says. An episode's mark follows its code: `premiere` for the first of a season, `season finale`, `midseason finale`, `series finale` from Sonarr's `finaleType`. A thing held by two connections is one row naming both, at the furthest on of the two.
 
 ## CalendarDayGroup
 

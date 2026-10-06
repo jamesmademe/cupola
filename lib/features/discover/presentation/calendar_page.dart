@@ -113,23 +113,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     }
   }
 
-  void _open(CalendarEvent event) {
-    switch (event.target) {
-      case CalendarMediaTarget(:final key, :final connectionId):
-        context.openMedia(key, focus: connectionId);
-      case CalendarShelfTarget(:final service, :final connectionId, :final id):
-        // A person's shelf lives under its service's tab, in another branch.
-        context.go(switch (service) {
-          ServiceKey.readarr => ServiceRoutes.readarrAuthor(
-            id,
-            instanceId: connectionId,
-          ),
-          _ => ServiceRoutes.lidarrArtist(id, instanceId: connectionId),
-        });
-      case null:
-        break;
-    }
-  }
+  void _open(CalendarEvent event) => openCalendarEvent(context, event);
 
   @override
   Widget build(BuildContext context) {
@@ -880,5 +864,25 @@ class _SilentSource extends ConsumerWidget {
               ),
             ],
           );
+  }
+}
+
+/// Opens what a calendar row is about: a movie's or a series' page under the
+/// tab the row is in, an artist's or an author's shelf under its service.
+void openCalendarEvent(BuildContext context, CalendarEvent event) {
+  switch (event.target) {
+    case CalendarMediaTarget(:final key, :final connectionId):
+      context.openMedia(key, focus: connectionId);
+    case CalendarShelfTarget(:final service, :final connectionId, :final id):
+      // A person's shelf lives under its service's tab, in another branch.
+      context.go(switch (service) {
+        ServiceKey.readarr => ServiceRoutes.readarrAuthor(
+          id,
+          instanceId: connectionId,
+        ),
+        _ => ServiceRoutes.lidarrArtist(id, instanceId: connectionId),
+      });
+    case null:
+      break;
   }
 }
