@@ -3,6 +3,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/focus_ring.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/widgets/themed_system_bars.dart';
 
 /// Builds a [TextStyle] for one role of the type system.
 ///
@@ -1174,6 +1175,10 @@ class AppTheme {
       // AppBar
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
+        // A transparent bar would guess its glyphs from its own colour, and
+        // transparent reads as dark: white glyphs on the light room. The
+        // room decides, as it does for every screen without a bar.
+        systemOverlayStyle: ThemedSystemBars.styleFor(brightness),
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,

@@ -10,8 +10,9 @@ import 'package:cupola/core/widgets/themed_system_bars.dart';
 void main() {
   Future<SystemUiOverlayStyle?> styleIn(
     WidgetTester tester,
-    Brightness brightness,
-  ) async {
+    Brightness brightness, {
+    bool appBar = false,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.lightTheme(),
@@ -20,8 +21,12 @@ void main() {
             ? ThemeMode.dark
             : ThemeMode.light,
         builder: (context, child) => ThemedSystemBars(child: child!),
-        // No AppBar, like the media page and the shelf page.
-        home: const Scaffold(body: SizedBox.expand()),
+        // No AppBar, like the media page and the shelf page; or the
+        // transparent one most screens have.
+        home: Scaffold(
+          appBar: appBar ? AppBar(title: const Text('Dashboard')) : null,
+          body: const SizedBox.expand(),
+        ),
       ),
     );
     await tester.pump();
@@ -32,6 +37,14 @@ void main() {
 
   testWidgets('the light room gets dark glyphs', (tester) async {
     final style = await styleIn(tester, Brightness.light);
+    expect(style?.statusBarBrightness, Brightness.light);
+    expect(style?.statusBarIconBrightness, Brightness.dark);
+  }, variant: ios);
+
+  testWidgets('a transparent AppBar in the light room gets dark glyphs too', (
+    tester,
+  ) async {
+    final style = await styleIn(tester, Brightness.light, appBar: true);
     expect(style?.statusBarBrightness, Brightness.light);
     expect(style?.statusBarIconBrightness, Brightness.dark);
   }, variant: ios);

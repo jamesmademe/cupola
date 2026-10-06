@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 ///
 /// Wraps the whole app once (`CupolaApp`'s builder). Most screens have no
 /// `AppBar`, the only widget that tells the system on its own, so without this
-/// the light room kept the dark room's white clock and battery on cream. A
-/// screen with an `AppBar` still answers for the strip under it.
+/// the light room kept the dark room's white clock and battery on cream. An
+/// `AppBar` answers for the strip under it, so the theme's `appBarTheme`
+/// carries the same [styleFor]: a transparent bar would otherwise guess white
+/// glyphs from its own colour.
 class ThemedSystemBars extends StatelessWidget {
   const ThemedSystemBars({super.key, required this.child});
 
