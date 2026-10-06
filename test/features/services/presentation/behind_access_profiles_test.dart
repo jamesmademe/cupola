@@ -258,36 +258,39 @@ void main() {
       behind.connection(WorldIds.jellyfin).withAccess(password),
     );
 
-    test(
-      'takes Authorization, and Jellyfin\'s token moves to X-Emby-Token',
-      () async {
-        final harness = await ProfileHarness.start(configured);
-        final summary = await harness
-            .container(retry: (_, _) => null)
-            .read(
-              instanceSummaryProvider((
-                service: ServiceKey.jellyfin,
-                instanceId: WorldIds.jellyfin,
-              )).future,
-            );
+    test('takes Authorization, and Jellyfin\'s token moves to X-Emby-Token and '
+        'the ApiKey parameter, which recent servers read instead', () async {
+      final harness = await ProfileHarness.start(configured);
+      final summary = await harness
+          .container(retry: (_, _) => null)
+          .read(
+            instanceSummaryProvider((
+              service: ServiceKey.jellyfin,
+              instanceId: WorldIds.jellyfin,
+            )).future,
+          );
 
-        expect(summary.isOnline, isTrue, reason: '${summary.failureReason}');
-        final requests = harness.network.requestsTo(WorldIds.jellyfin);
-        expect(requests, isNotEmpty);
-        for (final request in requests) {
-          expect(
-            request.headers['authorization'],
-            password.headers()['Authorization'],
-            reason: '$request',
-          );
-          expect(
-            request.headers['x-emby-token'],
-            worldKey(WorldIds.jellyfin),
-            reason: '$request',
-          );
-        }
-      },
-    );
+      expect(summary.isOnline, isTrue, reason: '${summary.failureReason}');
+      final requests = harness.network.requestsTo(WorldIds.jellyfin);
+      expect(requests, isNotEmpty);
+      for (final request in requests) {
+        expect(
+          request.headers['authorization'],
+          password.headers()['Authorization'],
+          reason: '$request',
+        );
+        expect(
+          request.headers['x-emby-token'],
+          worldKey(WorldIds.jellyfin),
+          reason: '$request',
+        );
+        expect(
+          request.uri.queryParameters['ApiKey'],
+          worldKey(WorldIds.jellyfin),
+          reason: '$request',
+        );
+      }
+    });
 
     test('and its artwork goes the same way', () {
       final client = JellyfinClient(
@@ -297,10 +300,10 @@ void main() {
       );
       addTearDown(client.close);
 
-      expect(client.imageFor('/Items/1/Images/Primary')?.headers, {
-        ...password.headers(),
-        'X-Emby-Token': 'token',
-      });
+      final image = client.imageFor('/Items/1/Images/Primary');
+      expect(image?.headers, {...password.headers(), 'X-Emby-Token': 'token'});
+      // Never in the URL: it would name a file in the image cache.
+      expect(image?.url, isNot(contains('token')));
     });
 
     test('without a proxy, Jellyfin keeps Authorization', () {

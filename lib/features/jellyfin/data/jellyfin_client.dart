@@ -112,6 +112,9 @@ class JellyfinClient implements StreamServerClient {
       headers: _serviceHeaders,
       pinnedCertFingerprint: pinnedCertFingerprint,
       accessHeaders: accessHeaders,
+      interceptors: _proxyHoldsAuthorization
+          ? (_) => [_JellyfinApiKeyQuery(_token)]
+          : null,
     );
   }
 
@@ -127,17 +130,18 @@ class JellyfinClient implements StreamServerClient {
   ///
   /// `Authorization: MediaBrowser …` as a rule. When the connection's access
   /// holds `Authorization` for a proxy in front (its password), the token
-  /// travels in `X-Emby-Token` instead, which Jellyfin reads as the same
-  /// credential, and `Authorization` is left to the proxy. Automatic: the
-  /// user never sees a clash.
-  Map<String, String> get _serviceHeaders {
-    final proxyHoldsAuthorization = _accessHeaders.keys.any(
-      (name) => name.toLowerCase() == 'authorization',
-    );
-    return proxyHoldsAuthorization
-        ? {'X-Emby-Token': _token}
-        : {'Authorization': _authHeader};
-  }
+  /// travels in `X-Emby-Token` instead, and `Authorization` is left to the
+  /// proxy. Recent servers no longer read that header (legacy authorization
+  /// is off by default: Jellyfin 12.1 answers it with 401), so the API
+  /// requests also carry the token as the `ApiKey` parameter
+  /// ([_JellyfinApiKeyQuery]), the one form left besides `Authorization`.
+  /// Automatic: the user never sees a clash.
+  Map<String, String> get _serviceHeaders => _proxyHoldsAuthorization
+      ? {'X-Emby-Token': _token}
+      : {'Authorization': _authHeader};
+
+  bool get _proxyHoldsAuthorization =>
+      _accessHeaders.keys.any((name) => name.toLowerCase() == 'authorization');
 
   final String _userId;
   final String _authHeader;
@@ -1276,4 +1280,21 @@ String buildJellyfinAuthorizationHeader({
       .map((entry) => '${entry.key}="${Uri.encodeComponent(entry.value)}"')
       .join(', ');
   return 'MediaBrowser $encoded';
+}
+
+/// Adds the token as the `ApiKey` parameter to every API request, for a
+/// connection whose proxy holds `Authorization` (see
+/// `JellyfinClient._serviceHeaders`). Only the API client carries it: artwork
+/// keeps the token out of its URLs, which become the image cache's file
+/// names, and Jellyfin serves images without it.
+class _JellyfinApiKeyQuery extends Interceptor {
+  _JellyfinApiKeyQuery(this._token);
+
+  final String _token;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    options.queryParameters = {...options.queryParameters, 'ApiKey': _token};
+    handler.next(options);
+  }
 }
