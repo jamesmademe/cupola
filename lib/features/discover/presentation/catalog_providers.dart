@@ -7,6 +7,7 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -55,10 +56,11 @@ final comingSoonProvider = FutureProvider<List<MediaPreview>>((ref) async {
   return interleave([for (final page in pages) page.items]);
 }, retry: noProviderRetry);
 
-/// What is coming out that the server does not hold, the calendar's last
-/// shelf: Coming soon without what Seerr says is on the server, and without
-/// anything whose day has come (TMDB's upcoming lists keep a title a while
-/// after it opens).
+/// What is coming out that nobody has asked for yet, the calendar's last
+/// shelf: Coming soon without anything Seerr holds a record of (asked for,
+/// on its way, on the server) and without anything whose day has come
+/// (TMDB's upcoming lists keep a title a while after it opens). A removed
+/// title can be asked for again, and stays.
 final comingOutProvider = FutureProvider.autoDispose<List<MediaPreview>>((
   ref,
 ) async {
@@ -66,9 +68,21 @@ final comingOutProvider = FutureProvider.autoDispose<List<MediaPreview>>((
   final soon = await ref.watch(comingSoonProvider.future);
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
+  bool asked(MediaPreview item) {
+    final code = intOrNull(item.mediaInfo?['status']);
+    if (code == null) return false;
+    return switch (SeerrMediaAvailability.fromCode(
+      code,
+      numbering: numbering,
+    )) {
+      SeerrMediaAvailability.unknown || SeerrMediaAvailability.deleted => false,
+      _ => true,
+    };
+  }
+
   return [
     for (final item in soon)
-      if (!seerrHolds(item.mediaInfo, numbering: numbering) &&
+      if (!asked(item) &&
           (arrCalendarDate(item.releaseDate)?.isAfter(today) ?? false))
         item,
   ];

@@ -381,4 +381,38 @@ void main() {
     expect(events.first.note, 'You asked for season 3 on Sat 26 Sep');
     expect(events.last.note, isNull);
   });
+
+  test('a season dropped at once is one row; episodes at other times are '
+      'their own', () {
+    Map<String, dynamic> drop(int episode, {int hour = 9, String? finale}) => {
+      'id': 8000 + episode,
+      'seasonNumber': 1,
+      'episodeNumber': episode,
+      'finaleType': ?finale,
+      'airDateUtc': DateTime(2026, 9, 30, hour).toUtc().toIso8601String(),
+      'series': {'title': 'Carrie', 'tvdbId': 455755},
+    };
+    final events = libraryCalendarEvents(
+      [
+        reading(ServiceKey.sonarr, 'Sonarr', [
+          for (var e = 1; e <= 7; e++) drop(e),
+          drop(8, finale: 'series'),
+          // Same day, another hour: its own row.
+          drop(9, hour: 21),
+        ]),
+      ],
+      window,
+      now,
+    );
+
+    expect(events, hasLength(2));
+    expect(events.first.code, 'S1 E1–E8');
+    expect(events.first.statusLine(now), 'S1 E1–E8 · whole season · not aired');
+    expect(
+      events.first.spoken(now),
+      'Tomorrow at 09:00, Carrie season 1 episodes 1 to 8, whole season, '
+      'not aired yet, in Sonarr',
+    );
+    expect(events.last.code, 'S1 E9');
+  });
 }

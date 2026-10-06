@@ -49,6 +49,9 @@ class CalendarRow extends StatelessWidget {
   final bool _requester;
 
   static const Size _poster = Size(36, 54);
+
+  /// The lead column: an episode's `22:00`, or `Digital` over `all day`.
+  static const double _leadWidth = 54;
   static const Size _posterLarge = Size(44, 66);
 
   @override
@@ -87,7 +90,7 @@ class CalendarRow extends StatelessWidget {
         Flexible(
           child: Text(
             event.statusLine(now),
-            maxLines: stacked ? 3 : 1,
+            maxLines: stacked ? 3 : 2,
             overflow: TextOverflow.ellipsis,
             style: (toned ? AppType.meta.weight(FontWeight.w600) : AppType.meta)
                 .copyWith(color: toned ? tone : room.inkSecondary),
@@ -202,7 +205,7 @@ class CalendarRow extends StatelessWidget {
       body = Row(
         children: [
           SizedBox(
-            width: 50,
+            width: _leadWidth,
             child: lead.under == null
                 ? Text(
                     lead.lead,
@@ -212,12 +215,16 @@ class CalendarRow extends StatelessWidget {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        lead.lead,
-                        maxLines: 1,
-                        overflow: TextOverflow.fade,
-                        softWrap: false,
-                        style: AppType.label.copyWith(color: room.ink),
+                      // `Cinemas` is the longest word: it scales down
+                      // rather than lose a letter.
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          lead.lead,
+                          maxLines: 1,
+                          style: AppType.label.copyWith(color: room.ink),
+                        ),
                       ),
                       Text(
                         lead.under!,

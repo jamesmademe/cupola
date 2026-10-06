@@ -329,7 +329,9 @@ final requesterCalendarProvider = FutureProvider.autoDispose<LibraryCalendar>((
   }
   return LibraryCalendar(
     window: window,
-    events: byIdentity.values.toList()..sort(compareCalendarEvents),
+    events: collapseCalendarRuns(
+      byIdentity.values.toList()..sort(compareCalendarEvents),
+    ),
     answered: const [],
     silent: const [],
     kinds: const {CalendarKind.movie, CalendarKind.episode},

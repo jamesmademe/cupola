@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -385,7 +386,21 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         'it’s ready.'
                   : 'From Seerr, most popular first.',
               sectionId: 'coming_out',
-              items: ref.watch(comingOutProvider),
+              // What is on the calendar already is not coming out for you.
+              items: ref
+                  .watch(comingOutProvider)
+                  .whenData(
+                    (items) => [
+                      for (final item in items)
+                        if (!all.any(
+                          (event) =>
+                              event.tmdbId == item.id &&
+                              (event.kind == CalendarKind.movie) ==
+                                  (item.mediaType == 'movie'),
+                        ))
+                          item,
+                    ],
+                  ),
               onRetry: () => ref.invalidate(comingSoonProvider),
               metaOf: (item) => _comingOut(item, now),
             ),
@@ -398,6 +413,27 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       accent: light?.light,
       body: Stack(
         children: [
+          // The next release lights the head of the page, as it lit the
+          // band that opened it.
+          if (light != null)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: top + 420,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppGradients.serviceGlow(
+                      light.light,
+                      center: const Alignment(0.6, -1),
+                      radius: 1.3,
+                      alpha: 0.28,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           RefreshIndicator(
             edgeOffset: top,
             onRefresh: () async {
@@ -442,14 +478,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         : '$nothing · next on ${calendarShortDate(next.day)}';
   }
 
-  /// When a title of the last shelf comes out: `Out 14 Oct`, `New series ·
-  /// 1 Oct`.
+  /// When a title of the last shelf comes out: a movie `Out 14 Oct`, a new
+  /// series `From 1 Oct`.
   static String? _comingOut(MediaPreview item, DateTime now) {
     final day = arrCalendarDate(item.releaseDate);
-    final tv = item.mediaType == 'tv';
-    if (day == null) return tv ? 'New series' : null;
+    if (day == null) return null;
     final date = calendarDayMonth(day, now);
-    return tv ? 'New series · $date' : 'Out $date';
+    return item.mediaType == 'tv' ? 'From $date' : 'Out $date';
   }
 
   /// When the rows' times are: the note under the agenda.

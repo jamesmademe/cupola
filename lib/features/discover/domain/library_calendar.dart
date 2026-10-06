@@ -43,7 +43,10 @@ enum CalendarMark {
   premiere('premiere'),
   seasonFinale('season finale'),
   midseasonFinale('midseason finale'),
-  seriesFinale('series finale');
+  seriesFinale('series finale'),
+
+  /// A season dropped whole: its premiere to its finale at once.
+  wholeSeason('whole season');
 
   const CalendarMark(this.words);
   final String words;
@@ -225,6 +228,8 @@ class CalendarEvent {
     this.note,
     this.target,
     this.region,
+    this.lastEpisode,
+    this.tmdbId,
   });
 
   /// What makes two connections' records one row: the movie and the
@@ -248,7 +253,16 @@ class CalendarEvent {
 
   final int? season;
   final int? episode;
+
+  /// The last of a run of episodes that air together, as one row: a season
+  /// dropped at once is `S1 E1–E8`, never eight rows.
+  final int? lastEpisode;
+
   final CalendarMark? mark;
+
+  /// TMDB's id of the movie or the series, when its record says: what the
+  /// calendar's last shelf leaves out, being on the calendar already.
+  final int? tmdbId;
 
   /// The artist of an album, the author of a book.
   final String? byline;
@@ -270,7 +284,11 @@ class CalendarEvent {
   final String? region;
 
   /// `S2 E5`, for an episode.
-  String? get code => formatArrEpisodeCode(season, episode);
+  String? get code => switch ((season, episode, lastEpisode)) {
+    (final season?, final first?, final last?) when last > first =>
+      formatEpisodeRange(season, [first, last]),
+    _ => formatArrEpisodeCode(season, episode),
+  };
 
   /// Whether the thing's moment has passed at [now]: an episode by its
   /// airing, anything else by its day.
@@ -357,9 +375,12 @@ class CalendarEvent {
         else ...[
           if (season != null) 'season $season',
           ?switch (mark) {
-            CalendarMark.premiere => 'premiere',
-            CalendarMark.seasonFinale => 'finale',
-            CalendarMark.midseasonFinale => 'midseason finale',
+            CalendarMark.premiere when lastEpisode == null => 'premiere',
+            CalendarMark.seasonFinale when lastEpisode == null => 'finale',
+            CalendarMark.midseasonFinale when lastEpisode == null =>
+              'midseason finale',
+            _ when lastEpisode != null =>
+              'episodes $episode to $lastEpisode${mark == null ? '' : ', ${mark!.words}'}',
             _ => episode == null ? null : 'episode $episode',
           },
         ],
@@ -431,6 +452,8 @@ class CalendarEvent {
     state: CalendarState.furthest(state, other.state),
     target: target ?? other.target,
     region: region ?? other.region,
+    lastEpisode: lastEpisode ?? other.lastEpisode,
+    tmdbId: tmdbId ?? other.tmdbId,
   );
 }
 
@@ -548,8 +571,68 @@ List<CalendarEvent> libraryCalendarEvents(
       }
     }
   }
-  return byIdentity.values.toList()..sort(compareCalendarEvents);
+  return collapseCalendarRuns(
+    byIdentity.values.toList()..sort(compareCalendarEvents),
+  );
 }
+
+/// [events] (sorted) with every run of a series' episodes that air
+/// together (one season, one after another, the same moment, standing the
+/// same) as one row: `S1 E1–E8 · whole season`.
+List<CalendarEvent> collapseCalendarRuns(List<CalendarEvent> events) {
+  final rows = <CalendarEvent>[];
+  for (final event in events) {
+    final held = rows.lastOrNull;
+    if (held != null && _continues(held, event)) {
+      final first =
+          held.mark == CalendarMark.premiere ||
+          held.mark == CalendarMark.wholeSeason;
+      final finale =
+          event.mark == CalendarMark.seasonFinale ||
+          event.mark == CalendarMark.seriesFinale;
+      rows[rows.length - 1] = CalendarEvent(
+        identity: '${held.identity}..${event.episode}',
+        kind: held.kind,
+        day: held.day,
+        airsAt: held.airsAt,
+        title: held.title,
+        season: held.season,
+        episode: held.episode,
+        lastEpisode: event.episode,
+        mark: first && finale
+            ? CalendarMark.wholeSeason
+            : finale
+            ? event.mark
+            : held.mark,
+        poster: held.poster,
+        sources: held.sources,
+        note: held.note,
+        state: held.state,
+        target: held.target,
+        region: held.region,
+        tmdbId: held.tmdbId,
+      );
+    } else {
+      rows.add(event);
+    }
+  }
+  return rows;
+}
+
+bool _continues(CalendarEvent held, CalendarEvent next) =>
+    held.kind == CalendarKind.episode &&
+    next.kind == CalendarKind.episode &&
+    held.title == next.title &&
+    held.season != null &&
+    held.season == next.season &&
+    next.episode != null &&
+    (held.lastEpisode ?? held.episode) == next.episode! - 1 &&
+    held.day == next.day &&
+    held.airsAt == next.airsAt &&
+    held.state.stand == next.state.stand &&
+    held.state.stand != CalendarStand.inFlight &&
+    listEquals(held.sources, next.sources) &&
+    held.target == next.target;
 
 /// Date order; within a day, the dated things before the timed ones.
 int compareCalendarEvents(CalendarEvent a, CalendarEvent b) {
@@ -645,6 +728,7 @@ Iterable<CalendarEvent> _eventsOf(
           day: day,
           title: title,
           release: release,
+          tmdbId: tmdb != null && tmdb > 0 ? tmdb : null,
           poster: poster,
           sources: sources,
           state: stateOf(day: day, onDisk: record['hasFile'] == true),
@@ -678,6 +762,7 @@ Iterable<CalendarEvent> _eventsOf(
         day: day,
         airsAt: airsAt,
         title: title,
+        tmdbId: tmdb != null && tmdb > 0 ? tmdb : null,
         season: season,
         episode: episode,
         mark: CalendarMark.of(record),
@@ -1208,6 +1293,7 @@ List<CalendarEvent> requesterMovieEvents(
         title: title,
         release: release,
         region: name,
+        tmdbId: tmdb,
         poster: poster == null
             ? null
             : (
@@ -1259,6 +1345,7 @@ List<CalendarEvent> requesterEpisodeEvents(
           kind: CalendarKind.episode,
           day: day,
           title: title,
+          tmdbId: tmdb,
           season: number,
           episode: ordinal,
           mark: type == 'finale'
@@ -1309,6 +1396,7 @@ List<CalendarEvent> requesterEpisodeEvents(
     poster: first.poster,
     state: first.state,
     target: first.target,
+    tmdbId: first.tmdbId,
     note: 'You asked for $seasonsWord on ${calendarShortDate(askedOn)}',
   );
   return events;

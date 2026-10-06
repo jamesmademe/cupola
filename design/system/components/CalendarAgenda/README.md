@@ -6,8 +6,8 @@ Rendered from `lib/features/discover/presentation/widgets/calendar_agenda.dart` 
 
 ## CalendarRow
 
-- **The operator's** (`CalendarRow`): a 50pt lead column, then the poster, then the words.
-  - The lead: an episode's time in the small figure role (`22:00`, on the device's clock, from Sonarr's `airDateUtc`); anything else what kind of day it is in the label role (`Digital`, `Disc`, `Cinemas`, `Album`, `Book`) over `all day` in the caption role. Movies, albums and books have a date and never a time.
+- **The operator's** (`CalendarRow`): a 54pt lead column, then the poster, then the words.
+  - The lead: an episode's time in the small figure role (`22:00`, on the device's clock, from Sonarr's `airDateUtc`); anything else what kind of day it is in the label role (`Digital`, `Disc`, `Cinemas`, `Album`, `Book`) over `all day` in the caption role; `Cinemas`, the longest, scales down rather than lose a letter. Movies, albums and books have a date and never a time.
   - The poster: 36 × 54 (an album's cover square), `AppRadius.thumb`, from the arr's own artwork; the title's initials on the plate without one.
   - The title in the row role; under it where the thing stands after a 7pt dot; under that the connections that hold it after the service's glyph, `Radarr · Radarr 4K`, in `inkTertiary`.
 - **The requester's** (`CalendarRow.requester`): no lead column and no service name; the poster 44 × 66; her note in the connections' place, `On digital in Italy today`, `You asked for season 3 on Sat 26 Sep`.
