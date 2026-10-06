@@ -2,7 +2,7 @@
 
 The action band on a media detail page: one wide control that fills the row, optional square discs beside it, and the consequence sentence underneath.
 
-Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `ActionStateGlyph`, `HeaderActionButton`) by `test/design_catalog/header_action_row_catalog_test.dart`. The library bands compose the row the way `lib/core/widgets/library_detail_actions.dart` does, with the real ladder strings from `lib/core/status/media_action.dart`. A movie's or a series' page has its own lead and buttons: see [MediaPage](../MediaPage/README.md).
+Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `ActionStateGlyph`, `HeaderActionButton`) by `test/design_catalog/header_action_row_catalog_test.dart`. The catalog composes the library band from these pieces, with the ladder's strings from `lib/core/status/media_action.dart`. A movie's or a series' page has its own lead and buttons: see [MediaPage](../MediaPage/README.md).
 
 ## The row
 

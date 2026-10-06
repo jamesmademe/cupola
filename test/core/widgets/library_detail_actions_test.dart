@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/media_action.dart';
-import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/core/widgets/library_detail_actions.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -251,220 +250,9 @@ void main() {
     });
   });
 
-  group('LibraryDetailActions', () {
-    testWidgets('a missing item promotes one search and nothing else', (
-      tester,
-    ) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-      );
-
-      expect(find.text('Automatic search'), findsOneWidget);
-      expect(
-        find.text('Radarr is hunting a release for this title.'),
-        findsOneWidget,
-      );
-      expect(_primary, findsOneWidget);
-      // With a primary holding the wide slot, exactly one secondary earns a
-      // visible slot and it is icon-only, so its name is a semantics label and
-      // never a visible caption to ellipsise.
-      expect(find.bySemanticsLabel('Interactive search'), findsOneWidget);
-      // Everything else stays in the sheet, unrendered until it is opened. The
-      // promoted primary's own label is 'Automatic search', so that one is scoped to
-      // the button rather than counted globally.
-      expect(find.text('Automatic search'), findsOneWidget);
-      expect(find.text('Interactive search'), findsNothing);
-      expect(find.text('Manual import'), findsNothing);
-      expect(find.text('Delete from Radarr'), findsNothing);
-    });
-
-    testWidgets('while busy the promoted button keeps its fill, so the '
-        'spinner it carries stays legible', (tester) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-        isBusy: true,
-      );
-
-      final button = tester.widget<ButtonStyleButton>(_primary);
-      expect(button.onPressed, isNull, reason: 'busy takes no second tap');
-      final fill = button.style!.backgroundColor!.resolve({
-        WidgetState.disabled,
-      })!;
-      final spinner = tester.widget<CircularProgressIndicator>(
-        find.descendant(
-          of: _primary,
-          matching: find.byType(CircularProgressIndicator),
-        ),
-      );
-      // The ink button, never the service's colour (the brand book: the primary is ink).
-      final scheme = Theme.of(
-        tester.element(find.byType(LibraryDetailActions)),
-      ).colorScheme;
-      expect(fill, scheme.primary);
-      expect(fill, isNot(ServiceKey.radarr.brandAccent));
-      expect(_contrast(spinner.color!, fill), greaterThanOrEqualTo(3));
-    });
-
-    testWidgets('an in-flight download promotes the queue', (tester) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.missing,
-          pipeline: MediaPipeline.downloading,
-          progress: 0.43,
-        ),
-      );
-
-      expect(find.text('Open queue'), findsOneWidget);
-      expect(
-        find.text('The download client has it, 43% through.'),
-        findsOneWidget,
-      );
-      expect(find.text('Automatic search'), findsNothing);
-    });
-
-    testWidgets('an available item promotes nothing and explains itself', (
-      tester,
-    ) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.available,
-        ),
-        isMonitored: true,
-      );
-
-      // The loudest element on this page used to read "Unmonitor".
-      expect(_primary, findsNothing);
-      expect(find.text('Unmonitor'), findsNothing);
-      expect(find.text('Stop monitoring'), findsNothing);
-      expect(
-        find.text("Radarr has everything it expects, so it isn't searching."),
-        findsOneWidget,
-      );
-      // The overflow is still reachable.
-      expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
-    });
-
-    testWidgets('an unmonitored item promotes monitoring', (tester) async {
-      var monitored = false;
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.missing,
-          unmonitored: true,
-        ),
-        onMonitoredChanged: (value) => monitored = value,
-      );
-
-      expect(find.text('Monitor'), findsOneWidget);
-      await tester.tap(find.text('Monitor'));
-      await tester.pump();
-      expect(monitored, isTrue);
-    });
-
-    testWidgets('an untracked item offers a sentence, not an Add CTA', (
-      tester,
-    ) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.notTracked,
-        ),
-      );
-
-      // The full-width accent CTA whose only behaviour was an info snackbar
-      // reading "Add Movie is not available yet from this view."
-      expect(_primary, findsNothing);
-      expect(find.textContaining('Add'), findsNothing);
-      expect(
-        find.text('Nothing happens until Radarr is tracking this title.'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('the overflow holds exactly the non-promoted actions', (
-      tester,
-    ) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-        isMonitored: true,
-      );
-
-      // Interactive search won the one visible slot a primary leaves, so the
-      // sheet must not offer it a second time.
-      expect(find.bySemanticsLabel('Interactive search'), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Stop monitoring'), findsOneWidget);
-      expect(find.text('Manual import'), findsOneWidget);
-      // Decision 25: the band is whole-item actions only. `Quality profile:
-      // HD-1080p` used to sit here *and* claim a visible slot; it is a field,
-      // and a field is edited on its own row in the Details card.
-      expect(find.textContaining('Quality profile'), findsNothing);
-      expect(find.text('Delete from Radarr'), findsOneWidget);
-      // Automatic search is promoted; Interactive search took the visible slot.
-      // Neither is a row in the sheet — the one 'Automatic search' on screen is the
-      // primary button behind it.
-      expect(
-        find.descendant(
-          of: find.byType(BottomSheet),
-          matching: find.text('Automatic search'),
-        ),
-        findsNothing,
-      );
-      expect(find.text('Interactive search'), findsNothing);
-    });
-
-    testWidgets('the promoted interactive search leaves the overflow', (
-      tester,
-    ) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.upgradable,
-        ),
-      );
-      expect(find.text('Interactive search'), findsOneWidget);
-
-      // Promoted, so it is not a candidate at all; the next-ranked one takes
-      // the single visible slot instead.
-      expect(find.bySemanticsLabel('Automatic search'), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.descendant(
-          of: find.byType(BottomSheet),
-          matching: find.text('Interactive search'),
-        ),
-        findsNothing,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(BottomSheet),
-          matching: find.text('Automatic search'),
-        ),
-        findsNothing,
-      );
-    });
-
+  group('showMediaDetailActions', () {
     testWidgets('Delete is not a peer of Import', (tester) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.available,
-        ),
-      );
-
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pumpAndSettle();
+      await _openSheet(tester);
 
       final divider = find.byType(Divider);
       expect(divider, findsOneWidget);
@@ -489,14 +277,7 @@ void main() {
     testWidgets('a destructive row takes the same ink as every other row', (
       tester,
     ) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.available,
-        ),
-      );
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pumpAndSettle();
+      await _openSheet(tester);
 
       // Red means unreachable and nothing else. Delete is set apart by where
       // it sits — below the divider, last — never by colour.
@@ -529,38 +310,9 @@ void main() {
       }
     });
 
-    testWidgets('every control clears the 44pt touch minimum', (tester) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-      );
+    testWidgets('every row clears the 44pt touch minimum', (tester) async {
+      await _openSheet(tester);
 
-      final primary = tester.getSize(_primary);
-      expect(primary.height, greaterThanOrEqualTo(44));
-
-      // Every disc in the band, visible secondary and overflow alike.
-      final discs = find.byType(OutlinedButton);
-      expect(discs, findsNWidgets(2));
-      for (var i = 0; i < 2; i++) {
-        final disc = tester.getSize(discs.at(i));
-        expect(disc.width, greaterThanOrEqualTo(44));
-        expect(disc.height, greaterThanOrEqualTo(44));
-      }
-
-      // And nothing in the band crowds its neighbour.
-      final rects = <Rect>[
-        tester.getRect(_primary),
-        tester.getRect(discs.at(0)),
-        tester.getRect(discs.at(1)),
-      ]..sort((a, b) => a.left.compareTo(b.left));
-      for (var i = 1; i < rects.length; i++) {
-        expect(rects[i].left - rects[i - 1].right, greaterThanOrEqualTo(8));
-      }
-
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pumpAndSettle();
-      // Interactive search took the visible slot, so the sheet's own rows are
-      // what is left: check the top one and the destructive one.
       for (final label in const ['Manual import', 'Delete from Radarr']) {
         expect(
           tester.getSize(_rowOf(tester, label)).height,
@@ -569,118 +321,15 @@ void main() {
       }
     });
 
-    testWidgets('the promoted action spins for its own work', (tester) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-        isBusy: true,
-      );
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(tester.widget<FilledButton>(_primary).onPressed, isNull);
-    });
-
-    testWidgets('a busy band accepts a tap on no rung at all', (tester) async {
-      var searches = 0;
-      var interactiveSearches = 0;
-
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-        isBusy: true,
-        onSearch: () => searches++,
-        onInteractiveSearch: () => interactiveSearches++,
-      );
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // One flag, every rung: the promoted button, the visible secondary disc
-      // and the overflow trigger. Before this, only the promoted button read
-      // `isBusy`, so a triple tap on the auto-search secondary sent three
-      // commands to the service.
-      expect(tester.widget<FilledButton>(_primary).onPressed, isNull);
-      final discs = tester.widgetList<OutlinedButton>(
-        find.byType(OutlinedButton),
-      );
-      expect(discs, hasLength(2));
-      for (final disc in discs) {
-        expect(disc.onPressed, isNull);
-      }
-
-      await tester.tap(find.byIcon(Icons.search_rounded), warnIfMissed: false);
-      await tester.tap(
-        find.byIcon(Icons.more_horiz_rounded),
-        warnIfMissed: false,
-      );
-      // Not `pumpAndSettle`: the promoted glyph spins on an indeterminate
-      // indicator for as long as the band is busy, so nothing ever settles.
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-
-      expect(searches, 0);
-      expect(interactiveSearches, 0);
-      // And the overflow sheet cannot be opened on top of a running write, so
-      // Delete is out of reach while a delete is in flight.
-      expect(find.text('Delete from Radarr'), findsNothing);
-    });
-
-    testWidgets('a secondary fires once under a triple tap', (tester) async {
-      var searches = 0;
-      var busy = false;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StatefulBuilder(
-              builder: (context, setState) => LibraryDetailActions(
-                service: ServiceKey.radarr,
-                status: const MediaStatusInfo(
-                  availability: MediaAvailability.upgradable,
-                ),
-                mediaTitle: 'Inception',
-                isBusy: busy,
-                // Exactly what every host does: flip an in-flight flag and fire
-                // the service command, with no re-entrancy guard of its own.
-                onSearch: () {
-                  searches++;
-                  setState(() => busy = true);
-                },
-                onInteractiveSearch: () {},
-                onDelete: () {},
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      // Interactive search is promoted on this rung, so the visible secondary
-      // disc is the automatic one.
-      final autoSearch = find.byIcon(Icons.saved_search_rounded);
-      await tester.tap(autoSearch);
-      await tester.pump();
-      await tester.tap(autoSearch, warnIfMissed: false);
-      await tester.tap(autoSearch, warnIfMissed: false);
-      await tester.pump();
-
-      expect(searches, 1);
-    });
-
     testWidgets('a spent sheet goes inert while it leaves', (tester) async {
       var imports = 0;
       var deletes = 0;
 
-      await _pumpActions(
+      await _openSheet(
         tester,
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.available,
-        ),
         onImport: () => imports++,
         onDelete: () => deletes++,
       );
-
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Manual import'));
       // One frame in: the sheet has popped but is still on screen for the
@@ -699,112 +348,61 @@ void main() {
 
       expect(imports, 1);
       expect(deletes, 0);
-      // ...and the detail page underneath is still there.
-      expect(find.byType(LibraryDetailActions), findsOneWidget);
-    });
-
-    testWidgets('the confirmation morph is held and announced', (tester) async {
-      final handle = tester.ensureSemantics();
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-        isConfirmed: true,
-      );
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.saved_search_rounded), findsNothing);
-      expect(
-        find.semantics.byLabel(RegExp('Automatic search complete')),
-        findsOne,
-      );
-      handle.dispose();
-    });
-
-    testWidgets('reduce motion renders the confirmation without an animator', (
-      tester,
-    ) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-        isConfirmed: true,
-        reduceMotion: true,
-      );
-
-      expect(find.byType(AnimatedSwitcher), findsNothing);
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-    });
-
-    testWidgets('the band never pads itself', (tester) async {
-      await _pumpActions(
-        tester,
-        status: const MediaStatusInfo(availability: MediaAvailability.missing),
-      );
-
-      // The detail spine owns the gutter. A self-inset band is the mid-page jog
-      // this composition exists to remove.
-      final band = tester.getRect(find.byType(LibraryDetailActions));
-      final row = tester.getRect(find.byType(HeaderActionRow));
-      expect(row.left, band.left);
-      expect(row.right, band.right);
+      // ...and the page underneath is still there.
+      expect(find.text('Open actions'), findsOneWidget);
     });
   });
 }
-
-/// `FilledButton.icon` builds a private subclass, so an exact type finder
-/// misses it.
-final Finder _primary = find.byWidgetPredicate(
-  (widget) => widget is FilledButton,
-);
 
 Finder _rowOf(WidgetTester tester, String label) => find
     .ancestor(of: find.text(label), matching: find.byType(PressableScale))
     .first;
 
-Future<void> _pumpActions(
+/// Opens the actions sheet over a page with one button, the way a detail page
+/// does, with every row a service can offer and Delete the one destructive.
+Future<void> _openSheet(
   WidgetTester tester, {
-  required MediaStatusInfo status,
-  bool isMonitored = false,
-  bool isBusy = false,
-  bool isConfirmed = false,
-  bool reduceMotion = false,
-  ValueChanged<bool>? onMonitoredChanged,
-  VoidCallback? onSearch,
-  VoidCallback? onInteractiveSearch,
   VoidCallback? onImport,
   VoidCallback? onDelete,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
-        child: child!,
-      ),
       home: Scaffold(
-        body: LibraryDetailActions(
-          service: ServiceKey.radarr,
-          status: status,
-          mediaTitle: 'Inception',
-          isMonitored: isMonitored,
-          isBusy: isBusy,
-          isConfirmed: isConfirmed,
-          onSearch: onSearch ?? () {},
-          onInteractiveSearch: onInteractiveSearch ?? () {},
-          onImport: onImport ?? () {},
-          onOpenQueue: () {},
-          onMonitoredChanged: onMonitoredChanged ?? (_) {},
-          onDelete: onDelete ?? () {},
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showMediaDetailActions(
+              context,
+              accent: ServiceKey.radarr.accent,
+              title: 'Inception',
+              actions: [
+                MediaOverflowAction(
+                  label: 'Interactive search',
+                  icon: Icons.search_rounded,
+                  onInvoke: () {},
+                ),
+                MediaOverflowAction(
+                  label: 'Automatic search',
+                  icon: Icons.saved_search_rounded,
+                  onInvoke: () {},
+                ),
+                MediaOverflowAction(
+                  label: 'Manual import',
+                  icon: Icons.download_for_offline_outlined,
+                  onInvoke: onImport ?? () {},
+                ),
+                MediaOverflowAction.destructive(
+                  label: 'Delete from Radarr',
+                  icon: Icons.delete_outline_rounded,
+                  onInvoke: onDelete ?? () {},
+                ),
+              ],
+            ),
+            child: const Text('Open actions'),
+          ),
         ),
       ),
     ),
   );
-  await tester.pump();
-}
-
-double _contrast(Color a, Color b) {
-  final la = a.computeLuminance();
-  final lb = b.computeLuminance();
-  final hi = la > lb ? la : lb;
-  final lo = la > lb ? lb : la;
-  return (hi + 0.05) / (lo + 0.05);
+  await tester.tap(find.text('Open actions'));
+  await tester.pumpAndSettle();
 }

@@ -63,16 +63,6 @@ Widget _radarrPage({Widget? band}) {
     body: MediaDetailBody(
       sideTrack: const {'Overview', 'Details', 'Genres'},
       band: band,
-      deck: LibraryDetailActions(
-        service: ServiceKey.radarr,
-        status: _available,
-        mediaTitle: 'Nosferatu',
-        isMonitored: true,
-        onSearch: () {},
-        onInteractiveSearch: () {},
-        onMonitoredChanged: (_) {},
-        onDelete: () {},
-      ),
       operate: [
         MediaDetailSlot.box(
           label: 'File',
@@ -146,17 +136,6 @@ Widget _sonarrPage({Widget? band}) {
     ),
     body: MediaDetailBody(
       band: band,
-      deck: LibraryDetailActions(
-        service: ServiceKey.sonarr,
-        status: partial,
-        mediaTitle: 'The Adventures of Sherlock Holmes',
-        isMonitored: true,
-        partialSummary: '41 of 45 episodes',
-        onSearch: () {},
-        onInteractiveSearch: () {},
-        onMonitoredChanged: (_) {},
-        onDelete: () {},
-      ),
       operate: [
         MediaDetailSlot.lazy(
           label: 'Seasons',
@@ -310,17 +289,16 @@ void main() {
     width: 1328,
     scenes: [
       CatalogScene(
-        'MediaDetailView.body · Radarr on a phone, then Sonarr · deck, then '
-        'the manifest, synopsis and reference in fixed order; space-xl above '
-        'each label, space-sm below; a .lazy season list mid-page',
+        'MediaDetailView.body · Radarr on a phone, then Sonarr · the manifest, '
+        'synopsis and reference in fixed order; space-xl above each label, '
+        'space-sm below; a .lazy season list mid-page',
         (_) => _row([_phone(_radarrPage()), _phone(_sonarrPage())]),
       ),
       CatalogScene(
-        'MediaDetailBody.band · a line over the whole page, above the deck · '
-        'Radarr did not answer (FaultBand.unreachable), then Sonarr\'s queue '
-        'answered with an error (InlineErrorRetry); the slot hands the line '
-        'only the column\'s surplus, so its glyph lands on the leading edge '
-        'of the actions below it',
+        'MediaDetailBody.band · a line over the whole page · Radarr did not '
+        'answer (FaultBand.unreachable), then Sonarr\'s queue answered with an '
+        'error (InlineErrorRetry); the slot hands the line only the column\'s '
+        'surplus, so its glyph lands on the column edge',
         (_) => _row([
           _phone(
             _radarrPage(
@@ -377,7 +355,7 @@ void main() {
       CatalogScene(
         'MediaDetailView.body · Radarr in a 1280 desktop window · two tracks '
         'past 1140: the slots named in sideTrack stand in the 380 column, '
-        'band, deck and manifest stay wide',
+        'band and manifest stay wide',
         (_) => _radarrPage(
           band: FaultBand.unreachable(serviceName: 'Radarr', onRetry: () {}),
         ),
@@ -386,8 +364,8 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'Text at 200% · the Radarr page on a phone: the deck, the manifest, '
-        'the synopsis and the reference at twice the reading size',
+        'Text at 200% · the Radarr page on a phone: the manifest, the '
+        'synopsis and the reference at twice the reading size',
         (_) => _row([_phone(_radarrPage(), height: 1400)]),
         textScale: catalogTextScale,
       ),
