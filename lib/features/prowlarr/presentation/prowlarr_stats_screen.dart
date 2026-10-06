@@ -69,7 +69,11 @@ class _ProwlarrStatsScreenState extends ConsumerState<ProwlarrStatsScreen> {
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(height: widget.topPadding),
+          // The host's two bands and the status bar the upper one consumes:
+          // no `SafeArea` and no app bar on this page takes the inset first.
+          SizedBox(
+            height: widget.topPadding + MediaQuery.paddingOf(context).top,
+          ),
           SelectionPills<ProwlarrStatsWindow>(
             values: ProwlarrStatsWindow.values,
             selected: _window,

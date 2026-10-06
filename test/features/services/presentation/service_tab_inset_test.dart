@@ -24,6 +24,11 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_history_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_stats_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/fake_services.dart';
@@ -337,6 +342,73 @@ void main() {
       );
 
       expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+  });
+
+  group('Prowlarr tabs clear the glass bars', () {
+    testWidgets('Indexers draws its actions row below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.prowlarr,
+        tab: ServiceTab.indexers,
+        overrides: [
+          prowlarrIndexersProvider.overrideWith(
+            (ref) async => const <ProwlarrIndexer>[],
+          ),
+          prowlarrIndexerStatusProvider.overrideWith(
+            (ref) async => const <ProwlarrIndexerStatus>[],
+          ),
+          prowlarrTagsProvider.overrideWith(
+            (ref) async => const <ProwlarrTag>[],
+          ),
+        ],
+        child: const ProwlarrLibraryScreen(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byTooltip('Add indexer'));
+    });
+
+    testWidgets('History draws its filter pills below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.prowlarr,
+        tab: ServiceTab.history,
+        overrides: [
+          prowlarrHistoryPageProvider((
+            page: 1,
+            pageSize: 50,
+            eventType: null,
+          )).overrideWith((ref) async => const ProwlarrHistoryPage()),
+        ],
+        child: const ProwlarrHistoryScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, _selectionPills);
+    });
+
+    testWidgets('Stats draws its window pills below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.prowlarr,
+        tab: ServiceTab.stats,
+        overrides: [
+          prowlarrIndexerStatsForWindowProvider(
+            ProwlarrStatsWindow.day,
+          ).overrideWith((ref) => Completer<ProwlarrIndexerStats>().future),
+        ],
+        child: const ProwlarrStatsScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, _selectionPills);
     });
   });
 }

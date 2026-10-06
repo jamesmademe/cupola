@@ -402,7 +402,11 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
       body: Column(
         children: [
           if (!widget.showAppBar) ...[
-            SizedBox(height: widget.topPadding),
+            // The host's two bands and the status bar the upper one consumes:
+            // hosted there is no app bar to strip the inset from the body.
+            SizedBox(
+              height: widget.topPadding + MediaQuery.paddingOf(context).top,
+            ),
             // No back chevron and no 'Indexers' title here: the service band
             // above owns both, and repeating them is the two-titles-in-one-
             // corner problem this mode exists to avoid. The count and the
