@@ -6,7 +6,6 @@ library;
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
-import 'package:cupola/features/music/domain/models/lidarr_track.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
@@ -143,24 +142,6 @@ LidarrAlbum buildAlbum({
     monitored: monitored,
     images: const [],
     statistics: statistics,
-  );
-}
-
-LidarrTrack buildTrack({
-  int id = 1,
-  int? mediumNumber,
-  dynamic trackNumber = 1,
-  String title = 'Track',
-  bool hasFile = true,
-  int duration = 180000,
-}) {
-  return LidarrTrack(
-    id: id,
-    mediumNumber: mediumNumber,
-    trackNumber: trackNumber,
-    title: title,
-    hasFile: hasFile,
-    duration: duration,
   );
 }
 
