@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/widgets/media_detail_value_row.dart';
 import 'package:cupola/core/widgets/media_profile_selector.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -11,7 +12,28 @@ const _profiles = <Map<String, dynamic>>[
 ];
 
 void main() {
-  group('showMediaProfileSelector', () {
+  group('qualityProfileOptions', () {
+    test("keeps the server's own names and ids, in order", () {
+      final options = qualityProfileOptions(_profiles);
+
+      expect(options.map((option) => option.value), [1, 2]);
+      expect(options.map((option) => option.label), ['HD-1080p', 'Ultra-HD']);
+    });
+
+    test('drops an entry missing its id or its name', () {
+      final options = qualityProfileOptions(const [
+        {'id': 1, 'name': 'HD-1080p'},
+        {'name': 'No id'},
+        {'id': 3},
+        {'id': '4', 'name': 'Id as text'},
+        {'id': 5, 'name': 5},
+      ]);
+
+      expect(options.map((option) => option.value), [1]);
+    });
+  });
+
+  group('the quality profile sheet (showMediaValueSheet)', () {
     testWidgets('every row is a PressableScale target of at least 44pt', (
       tester,
     ) async {
@@ -28,6 +50,13 @@ void main() {
             .first;
         expect(tester.getSize(row).height, greaterThanOrEqualTo(44));
       }
+    });
+
+    testWidgets('names the field and the value it holds now', (tester) async {
+      await _pumpPicker(tester);
+
+      expect(find.text('Quality profile'), findsOneWidget);
+      expect(find.text('Currently HD-1080p'), findsOneWidget);
     });
 
     testWidgets('the selected row is announced, not only coloured', (
@@ -55,28 +84,33 @@ void main() {
       expect(check.color, isNot(Theme.of(context).colorScheme.primary));
     });
 
-    testWidgets('re-picking the current profile writes nothing', (
-      tester,
-    ) async {
-      var writes = 0;
-      await _pumpPicker(tester, onProfileSelected: (_) async => writes++);
-
-      await tester.tap(find.text('HD-1080p'));
-      await tester.pumpAndSettle();
-      // A no-op write to a quality profile can still queue an upgrade sweep.
-      expect(writes, 0);
-    });
-
-    testWidgets('picking a different profile writes once', (tester) async {
-      var written = <int>[];
-      await _pumpPicker(
-        tester,
-        onProfileSelected: (id) async => written.add(id),
-      );
+    testWidgets('picking a row answers with that option', (tester) async {
+      final answers = <MediaDetailValueOption<int>?>[];
+      await _pumpPicker(tester, onAnswer: answers.add);
 
       await tester.tap(find.text('Ultra-HD'));
       await tester.pumpAndSettle();
-      expect(written, [2]);
+
+      expect(answers.single?.value, 2);
+      expect(answers.single?.label, 'Ultra-HD');
+    });
+
+    testWidgets('dismissing the sheet answers with nothing', (tester) async {
+      final answers = <MediaDetailValueOption<int>?>[];
+      await _pumpPicker(tester, onAnswer: answers.add);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(answers, [null]);
+    });
+
+    testWidgets('no options, no sheet', (tester) async {
+      final answers = <MediaDetailValueOption<int>?>[];
+      await _pumpPicker(tester, profiles: const [], onAnswer: answers.add);
+
+      expect(find.byType(PressableScale), findsNothing);
+      expect(answers, [null]);
     });
   });
 }
@@ -84,21 +118,25 @@ void main() {
 Future<void> _pumpPicker(
   WidgetTester tester, {
   Color? accent,
-  Future<void> Function(int profileId)? onProfileSelected,
+  List<Map<String, dynamic>> profiles = _profiles,
+  void Function(MediaDetailValueOption<int>? picked)? onAnswer,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
         body: Builder(
           builder: (context) => TextButton(
-            onPressed: () => showMediaProfileSelector(
-              context,
-              currentProfileName: 'HD-1080p',
-              currentProfileId: 1,
-              qualityProfiles: _profiles,
-              onProfileSelected: onProfileSelected ?? (_) async {},
-              accent: accent,
-            ),
+            onPressed: () async {
+              final picked = await showMediaValueSheet<int>(
+                context,
+                title: 'Quality profile',
+                value: 1,
+                currentLabel: 'HD-1080p',
+                options: qualityProfileOptions(profiles),
+                accent: accent,
+              );
+              onAnswer?.call(picked);
+            },
             child: const Text('open'),
           ),
         ),
