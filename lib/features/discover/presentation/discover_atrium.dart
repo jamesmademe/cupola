@@ -25,7 +25,9 @@ import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/library_shelves_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
+import 'package:cupola/features/discover/presentation/widgets/collection_tally.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_door.dart';
 import 'package:cupola/features/discover/presentation/widgets/search_row.dart';
@@ -93,6 +95,8 @@ class DiscoverAtrium extends ConsumerStatefulWidget {
     ref.invalidate(catalogGenresProvider);
     ref.invalidate(trendingPeopleProvider);
     ref.invalidate(seerrNumberingProvider);
+    ref.invalidate(completeTheCollectionProvider);
+    ref.invalidate(becauseYouWatchedProvider);
   }
 
   @override
@@ -139,6 +143,8 @@ class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
         const _Doors(),
         const _QuietLinks(),
         const SizedBox(height: AppSpacing.xl),
+        const _CompleteTheCollection(),
+        const _BecauseYouWatched(),
         DiscoverCarousel(
           title: 'The best you’re missing',
           sectionId: 'best_missing',
@@ -188,6 +194,54 @@ class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
           children: children,
         ),
       ),
+    );
+  }
+}
+
+/// The collection the operator is part way through, the nearest to whole:
+/// the strip of its movies and where each stands, one tap from its page.
+/// Drawn only once it has one to show.
+class _CompleteTheCollection extends ConsumerWidget {
+  const _CompleteTheCollection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(mayCompleteCollectionsProvider)) {
+      return const SizedBox.shrink();
+    }
+    final invitation = ref.watch(completeTheCollectionProvider).value;
+    if (invitation == null) return const SizedBox.shrink();
+    final (:detail, :shelf) = invitation;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
+      child: CollectionTally.invitation(
+        shelf: shelf,
+        name: detail.name,
+        onTap: () => context.openCollection(detail.id),
+      ),
+    );
+  }
+}
+
+/// TMDB's recommendations for what the household finished last on its media
+/// server. Drawn only once there is something to recommend from.
+class _BecauseYouWatched extends ConsumerWidget {
+  const _BecauseYouWatched();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(hasWatchHistoryProvider)) return const SizedBox.shrink();
+    final shelf = ref.watch(becauseYouWatchedProvider).value;
+    if (shelf == null) return const SizedBox.shrink();
+    return DiscoverCarousel(
+      title: 'Because you watched ${shelf.watched}',
+      sectionId: 'because_you_watched',
+      items: AsyncData(shelf.items),
     );
   }
 }

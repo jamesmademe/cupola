@@ -152,6 +152,13 @@ class _ScriptedServer implements StreamServerClient {
   Future<List<StreamViewer>> getViewers() async => const [];
 
   @override
+  Future<List<StreamWatched>> getRecentlyWatched({
+    String? viewerId,
+    int limit = 5,
+    CancelToken? cancelToken,
+  }) async => const [];
+
+  @override
   Future<String?> probeVersion() async => '10.11.0';
 
   @override

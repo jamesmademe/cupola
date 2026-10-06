@@ -62,6 +62,14 @@ class CollectionShelf {
   int count(CollectionPartStand stand) =>
       parts.where((part) => part.stand == stand).length;
 
+  /// Whether the atrium may invite the operator to complete it: some of it
+  /// is on the server, and its page has something left to do, a movie to add
+  /// or a request to answer. Movies on their way leave nothing to do.
+  bool get invitesCompletion =>
+      count(CollectionPartStand.onServer) > 0 &&
+      count(CollectionPartStand.missing) + count(CollectionPartStand.waiting) >
+          0;
+
   /// The years the collection spans, `2006–2022`; one year when they all
   /// came out in it; empty with no dates.
   String get span {

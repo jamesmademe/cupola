@@ -859,6 +859,92 @@ class JellyfinClient implements StreamServerClient {
   /// Throws on a remote failure: an empty list is only ever a server that
   /// answered with no users. Swallowed, a server that was down read "This
   /// server reports no users" in the viewer picker, a claim nobody made.
+  /// `/Items` played by the viewer, by `DatePlayed`; an episode is looked up
+  /// as its series in one more read of the series it names.
+  ///
+  /// The order and the played flag are checked on the answer as well as
+  /// asked for: a filter a server ignores would otherwise send its whole
+  /// library back as what the viewer watched.
+  @override
+  Future<List<StreamWatched>> getRecentlyWatched({
+    String? viewerId,
+    int limit = 5,
+    CancelToken? cancelToken,
+  }) async {
+    final userId = _resolveViewerId(viewerId);
+    if (userId == null) return const [];
+    try {
+      final played = await _api.get(
+        '/Items',
+        queryParameters: {
+          'userId': userId,
+          'recursive': true,
+          'includeItemTypes': 'Movie,Episode',
+          'isPlayed': true,
+          'sortBy': 'DatePlayed',
+          'sortOrder': 'Descending',
+          // Several episodes of one series fold into one title.
+          'limit': limit * 4,
+          'fields': _browseFields,
+          'enableUserData': true,
+        },
+        cancelToken: cancelToken,
+      );
+      final watched = <(String, Map<String, dynamic>, DateTime)>[];
+      for (final raw in _itemsOf(played.data)) {
+        final user = raw['UserData'];
+        if (user is! Map || user['Played'] != true) continue;
+        final at = DateTime.tryParse('${user['LastPlayedDate'] ?? ''}');
+        if (at == null) continue;
+        final series = raw['Type'] == 'Episode' ? raw['SeriesId'] : null;
+        watched.add((series is String ? series : '', raw, at));
+      }
+      watched.sort((a, b) => b.$3.compareTo(a.$3));
+
+      final seriesIds = {
+        for (final (series, _, _) in watched)
+          if (series.isNotEmpty) series,
+      };
+      final seriesById = <String, Map<String, dynamic>>{};
+      if (seriesIds.isNotEmpty) {
+        final answer = await _api.get(
+          '/Items',
+          queryParameters: {
+            'userId': userId,
+            'ids': seriesIds.join(','),
+            'fields': _browseFields,
+          },
+          cancelToken: cancelToken,
+        );
+        for (final raw in _itemsOf(answer.data)) {
+          final id = raw['Id'];
+          if (id is String) seriesById[id] = raw;
+        }
+      }
+
+      final seen = <String>{};
+      final result = <StreamWatched>[];
+      for (final (series, raw, at) in watched) {
+        final title = series.isEmpty ? raw : seriesById[series];
+        final id = title?['Id'];
+        if (title == null || id is! String || !seen.add(id)) continue;
+        result.add((item: jellyfinStreamItemFromJson(title), playedAt: at));
+        if (result.length == limit) break;
+      }
+      return result;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static Iterable<Map<String, dynamic>> _itemsOf(Object? data) sync* {
+    final items = data is Map ? data['Items'] : null;
+    if (items is! List) return;
+    for (final item in items) {
+      if (item is Map) yield item.cast<String, dynamic>();
+    }
+  }
+
   @override
   Future<List<StreamViewer>> getViewers() async {
     try {

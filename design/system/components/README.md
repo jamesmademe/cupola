@@ -43,6 +43,7 @@ cards live in [`../motion/`](../motion/).
 | Forms | [TextField](TextField/README.md) | `lib/core/theme.dart` |
 | Iconography | [ServiceGlyphs](ServiceGlyphs/README.md) | `lib/core/service_glyphs.dart`, `lib/features/settings/domain/service_key.dart` |
 | Media | [CatalogPoster](CatalogPoster/README.md) | `lib/features/discover/presentation/widgets/catalog_poster.dart` |
+| Media | [CollectionTally](CollectionTally/README.md) | `lib/features/discover/presentation/widgets/collection_tally.dart` |
 | Media | [DiscoverDoor](DiscoverDoor/README.md) | `lib/features/discover/presentation/widgets/discover_door.dart` |
 | Media | [SearchRow](SearchRow/README.md) | `lib/features/discover/presentation/widgets/search_row.dart` |
 | Media | [ContentCard](ContentCard/README.md) | `lib/core/widgets/content_card.dart` |

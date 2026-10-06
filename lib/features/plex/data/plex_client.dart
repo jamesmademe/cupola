@@ -1002,6 +1002,57 @@ class PlexClient implements StreamServerClient {
   ///
   /// Throws on a remote failure, like Jellyfin's: an empty list would be a
   /// server that answered with nobody on it.
+  /// Each film and series section by `lastViewedAt`, the latest across them
+  /// first. A series is watched when an episode of it is, which Plex says on
+  /// the show itself. Only items Plex says were viewed count: the sort alone
+  /// puts the never watched after them, not out.
+  @override
+  Future<List<StreamWatched>> getRecentlyWatched({
+    String? viewerId,
+    int limit = 5,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final sections = [
+        for (final library in await getLibrariesOrThrow(
+          cancelToken: cancelToken,
+        ))
+          if (library.kind == StreamLibraryKind.movies ||
+              library.kind == StreamLibraryKind.shows)
+            library,
+      ];
+      final answers = await Future.wait([
+        for (final section in sections)
+          _container(
+            '/library/sections/${_pathSegment(section.id)}/all',
+            queryParameters: {
+              'type': ?_primaryTypeFor(section.kind),
+              'sort': 'lastViewedAt:desc',
+              'includeGuids': 1,
+              'X-Plex-Container-Start': 0,
+              'X-Plex-Container-Size': limit,
+            },
+            cancelToken: cancelToken,
+          ),
+      ]);
+      final result = <StreamWatched>[];
+      for (final container in answers) {
+        final metadata = container['Metadata'];
+        if (metadata is! List) continue;
+        for (final raw in metadata.whereType<Map>()) {
+          final json = raw.cast<String, dynamic>();
+          final at = plexEpochSeconds(json['lastViewedAt']);
+          final item = at == null ? null : plexItemFromJson(json);
+          if (item != null) result.add((item: item, playedAt: at!));
+        }
+      }
+      result.sort((a, b) => b.playedAt.compareTo(a.playedAt));
+      return result.take(limit).toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
   @override
   Future<List<StreamViewer>> getViewers() async {
     final capabilities = await getCapabilities();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_collection.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -322,6 +323,20 @@ class RadarrService with ArrActivityMixin {
       if (movie.tmdbId == tmdbId) return movie;
     }
     return null;
+  }
+
+  /// The collections the library has a movie of (`GET /api/v3/collection`).
+  /// A failure travels.
+  Future<List<RadarrCollection>> getCollections() async {
+    final response = await client.get('/api/v3/collection');
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Radarr answered without a collection list');
+    }
+    return [
+      for (final item in data.whereType<Map>())
+        RadarrCollection.fromJson(item.cast<String, dynamic>()),
+    ];
   }
 
   /// One film's history, newest first (`GET /api/v3/history/movie`,

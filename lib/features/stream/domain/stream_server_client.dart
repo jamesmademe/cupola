@@ -40,6 +40,12 @@ class StreamViewer {
   const StreamViewer({required this.id, required this.name});
 }
 
+/// A title the viewer finished, and when.
+///
+/// An episode stands for its series: what someone watched is the series, and
+/// that is what a recommendation is asked of.
+typedef StreamWatched = ({StreamItem item, DateTime playedAt});
+
 /// Resolved artwork: the URL plus whatever headers authenticate it.
 ///
 /// A record rather than a bare URL because the credential must stay in a header
@@ -261,6 +267,19 @@ abstract interface class StreamServerClient {
     StreamItemKind? kind,
     String? title,
     int? year,
+    CancelToken? cancelToken,
+  });
+
+  /// What the viewer finished last, the latest first: movies, and series by
+  /// their latest episode, each once, at most [limit].
+  ///
+  /// [viewerId] is required by Jellyfin, where the API key has no user of its
+  /// own, and ignored by Plex, whose token is its user. Degrades to `[]`: it
+  /// fills one shelf of a page drawn otherwise, and a shelf with nothing to
+  /// say is not drawn.
+  Future<List<StreamWatched>> getRecentlyWatched({
+    String? viewerId,
+    int limit = 5,
     CancelToken? cancelToken,
   });
 

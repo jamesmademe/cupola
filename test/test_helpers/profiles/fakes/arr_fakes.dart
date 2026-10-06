@@ -12,6 +12,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import '../profile_network.dart';
 import '../service_fakes.dart';
 import '../world.dart';
+import 'media_fakes.dart' show SeerrFake;
 
 /// The shared arr surface: status, health, queue, history, calendar, wanted,
 /// profiles, root folders, commands.
@@ -413,6 +414,31 @@ class RadarrFake extends ArrFake {
 
   @override
   NetworkReply? own(NetworkRequest r, ServerContext c) {
+    if (r.method == 'GET' && r.path == '/api/v3/collection') {
+      // Every Blender film belongs to one collection; Radarr lists it once
+      // it holds one of them.
+      final held = {for (final entry in _library(c)) entry.$2.tmdbId};
+      final parts = SeerrFake.collectionParts;
+      return NetworkReply.json([
+        {
+          'id': 1,
+          'title': SeerrFake.collectionName,
+          'tmdbId': SeerrFake.collectionId,
+          'monitored': false,
+          'movies': [
+            for (final t in parts)
+              {
+                'tmdbId': t.tmdbId,
+                'title': t.title,
+                'year': t.year,
+                'isExisting': held.contains(t.tmdbId),
+                'isExcluded': false,
+              },
+          ],
+          'missingMovies': parts.where((t) => !held.contains(t.tmdbId)).length,
+        },
+      ]);
+    }
     if (r.method == 'GET' && r.path == '/api/v3/movie') {
       final tmdb = r.query['tmdbId'];
       final all = movies(c);

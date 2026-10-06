@@ -64,6 +64,49 @@ void main() {
     );
   });
 
+  test('worth completing while a movie is missing or waits for approval, '
+      'not once the rest is only on its way', () {
+    CollectionShelf of(List<Map<String, dynamic>?> infos) => CollectionShelf.of(
+      CollectionDetail(
+        id: 1,
+        name: 'C',
+        parts: [
+          for (final (i, info) in infos.indexed)
+            part(i + 1, 'P$i', date: '200$i-01-01', info: info),
+        ],
+      ),
+    );
+
+    expect(shelf.invitesCompletion, isTrue);
+    expect(
+      of([
+        {'status': 5},
+        {'status': 2},
+      ]).invitesCompletion,
+      isTrue,
+    );
+    expect(
+      of([
+        {'status': 5},
+        {'status': 3},
+      ]).invitesCompletion,
+      isFalse,
+    );
+    expect(
+      of([
+        null,
+        {'status': 2},
+      ]).invitesCompletion,
+      isFalse,
+    );
+    expect(
+      of([
+        {'status': 5},
+      ]).invitesCompletion,
+      isFalse,
+    );
+  });
+
   test('a title held in 4K alone is held', () {
     expect(seerrHolds({'status': 1, 'status4k': 5}), isTrue);
     expect(seerrHolds({'status': 3, 'status4k': 1}), isFalse);

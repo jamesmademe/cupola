@@ -831,7 +831,22 @@ class SeerrFake extends ServiceFake {
       final rail = RegExp(
         r'^/api/v1/(movie|tv)/\d+/(recommendations|similar)$',
       ).firstMatch(path);
-      if (rail != null) return NetworkReply.json(_discoverPage(const []));
+      // The household watched Tears of Steel: what TMDB recommends after it
+      // is the atrium's Because you watched.
+      if (rail != null) {
+        return NetworkReply.json(
+          _discoverPage(
+            path ==
+                    '/api/v1/movie/${WorldTitles.tearsOfSteel.tmdbId}/recommendations'
+                ? const [
+                    WorldTitles.sintel,
+                    WorldTitles.elephantsDream,
+                    WorldTitles.charge,
+                  ]
+                : const [],
+          ),
+        );
+      }
       if (path.startsWith('/api/v1/discover/')) {
         return NetworkReply.json(_discoverPage(const []));
       }
@@ -1057,6 +1072,8 @@ class JellyfinFake extends ServiceFake {
       },
       'UserData': {
         'Played': t == WorldTitles.tearsOfSteel,
+        if (t == WorldTitles.tearsOfSteel)
+          'LastPlayedDate': c.ago(const Duration(days: 1)),
         'PlaybackPositionTicks': 0,
         'IsFavorite': false,
       },
@@ -1374,6 +1391,12 @@ class PlexFake extends ServiceFake {
       'addedAt':
           c.now.subtract(const Duration(days: 30)).millisecondsSinceEpoch ~/
           1000,
+      // The household watched Tears of Steel on Plex too, a day before
+      // Jellyfin.
+      if (t == WorldTitles.tearsOfSteel)
+        'lastViewedAt':
+            c.now.subtract(const Duration(days: 2)).millisecondsSinceEpoch ~/
+            1000,
       'Guid': [
         {'id': 'tmdb://${unverified ? t.tmdbId + 1000000 : t.tmdbId}'},
         if (t.imdbId != null && !unverified) {'id': 'imdb://${t.imdbId}'},
