@@ -29,8 +29,13 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_history_screen.da
 import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_stats_screen.dart';
+import 'package:cupola/features/readarr/data/readarr_service.dart';
+import 'package:cupola/features/readarr/presentation/readarr_activity_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/fake_api_client.dart';
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
 
@@ -411,6 +416,57 @@ void main() {
       expectClearsTheBar(tester, _selectionPills);
     });
   });
+
+  group('Readarr tabs clear the glass bars', () {
+    final overrides = <Override>[
+      readarrServiceProvider.overrideWith((ref) => _EmptyReadarr()),
+    ];
+
+    testWidgets('an empty queue starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.readarr,
+        tab: ServiceTab.queue,
+        overrides: overrides,
+        child: const ReadarrActivityScreen(
+          mode: ReadarrActivityMode.queue,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expect(find.text('Queue is empty'), findsOneWidget);
+      expectClearsTheBar(tester, find.byType(AppEmptyState));
+    });
+
+    testWidgets('an empty Wanted starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.readarr,
+        tab: ServiceTab.wanted,
+        overrides: overrides,
+        child: const ReadarrActivityScreen(
+          mode: ReadarrActivityMode.wanted,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expect(find.text('Nothing missing'), findsOneWidget);
+      expectClearsTheBar(tester, find.byType(AppEmptyState));
+    });
+
+    testWidgets('an empty history starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.readarr,
+        tab: ServiceTab.history,
+        overrides: overrides,
+        child: const ReadarrHistoryScreen(topPadding: _hostedTopPadding),
+      );
+
+      expect(find.text('No history yet'), findsOneWidget);
+      expectClearsTheBar(tester, find.byType(AppEmptyState));
+    });
+  });
 }
 
 /// A Radarr that never answers its queue, so the screen stays on its skeleton.
@@ -435,3 +491,25 @@ final _selectionPills = find.byWidgetPredicate(
   (widget) => widget.runtimeType.toString().startsWith('SelectionPills'),
   description: 'SelectionPills',
 );
+
+/// A Readarr with nothing in its queue, its wanted list or its history.
+class _EmptyReadarr extends ReadarrService {
+  _EmptyReadarr() : super(FakeApiClient());
+
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
+
+  @override
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
+
+  @override
+  Future<List<dynamic>> getHistory({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
+}

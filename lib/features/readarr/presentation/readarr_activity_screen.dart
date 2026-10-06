@@ -69,6 +69,9 @@ class _ReadarrActivityScreenState extends ConsumerState<ReadarrActivityScreen> {
     }
 
     final future = _future ??= _load();
+    // The host's two bands and the status bar the upper one consumes: this
+    // page has no `SafeArea` and no app bar to take the inset off first.
+    final top = widget.topPadding + MediaQuery.paddingOf(context).top;
     return AmbientScaffold(
       accent: ServiceKey.readarr.accent,
       body: RefreshIndicator(
@@ -79,14 +82,14 @@ class _ReadarrActivityScreenState extends ConsumerState<ReadarrActivityScreen> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(top: widget.topPadding),
+                padding: EdgeInsets.only(top: top),
                 children: [AppSkeleton.listRows(count: 6)],
               );
             }
             if (snapshot.hasError) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(top: widget.topPadding),
+                padding: EdgeInsets.only(top: top),
                 children: [
                   AppErrorState(
                     error: snapshot.error!,
@@ -101,7 +104,7 @@ class _ReadarrActivityScreenState extends ConsumerState<ReadarrActivityScreen> {
             if (items.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(top: widget.topPadding),
+                padding: EdgeInsets.only(top: top),
                 children: [
                   AppEmptyState(
                     icon: widget.mode == ReadarrActivityMode.queue
@@ -119,7 +122,7 @@ class _ReadarrActivityScreenState extends ConsumerState<ReadarrActivityScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(
                 0,
-                widget.topPadding + AppSpacing.md,
+                top + AppSpacing.md,
                 0,
                 FloatingNavBarMetrics.getScrollViewBottomPadding(context),
               ),
