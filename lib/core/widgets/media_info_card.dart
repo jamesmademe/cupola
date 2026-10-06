@@ -6,51 +6,18 @@ import 'package:cupola/core/theme.dart';
 class MediaInfoCard extends StatelessWidget {
   final List<MediaInfoGroup> groups;
 
-  /// Fields the page can write, each on its own full-width row above the grid.
-  ///
-  /// Rows rather than grid cells, and that is decision 25 rather than a layout
-  /// preference: **a detail edits in place**, with a select on its own row on a
-  /// window and a 44pt target opening one sheet per field on a phone. A cell in
-  /// a two-column grid is neither — it is half a column wide, and its label is
-  /// drawn by the grid rather than by the control, so the button would be
-  /// announced by its value alone with the field name floating beside it as an
-  /// unrelated fragment.
-  ///
-  /// Editable first, read-only under it: what you can change is worth more than
-  /// what you can only read, and a control buried under eight facts is a control
-  /// nobody finds.
-  final List<Widget> rows;
-
-  const MediaInfoCard({
-    super.key,
-    required this.groups,
-    this.rows = const <Widget>[],
-  });
+  const MediaInfoCard({super.key, required this.groups});
 
   @override
   Widget build(BuildContext context) {
-    if (groups.isEmpty && rows.isEmpty) {
+    if (groups.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final grid = _InfoGrid(
+    return _InfoGrid(
       cells: groups
           .map((group) => _InfoGridCell(label: group.title, child: group.child))
           .toList(growable: false),
-    );
-
-    if (rows.isEmpty) return grid;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) const SizedBox(height: AppSpacing.sm),
-          rows[i],
-        ],
-        if (groups.isNotEmpty) ...[const SizedBox(height: AppSpacing.md), grid],
-      ],
     );
   }
 }
