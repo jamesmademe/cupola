@@ -57,7 +57,7 @@ export 'media_poster_card.dart';
 export 'media_info_card.dart';
 export 'media_metadata_line.dart';
 export 'header_action_row.dart';
-export 'library_detail_actions.dart';
+export 'media_detail_actions.dart';
 export 'download_queue_tile.dart';
 
 // Form & Input
@@ -84,8 +84,7 @@ export 'app_bottom_sheet.dart';
 export 'app_dialog.dart';
 export 'delete_media_dialog.dart';
 export 'interactive_search_sheet.dart';
-export 'media_detail_value_row.dart';
-export 'media_profile_selector.dart';
+export 'media_value_sheet.dart';
 export 'media_search_popup_menu.dart';
 
 // Navigation

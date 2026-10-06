@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
-import 'package:cupola/core/widgets/media_detail_value_row.dart';
+import 'package:cupola/core/widgets/media_value_sheet.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
