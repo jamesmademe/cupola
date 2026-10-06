@@ -23,7 +23,6 @@ import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -232,6 +231,30 @@ List<GoRoute> _mediaRoutes({String prefix = ''}) => [
               ),
             ),
     ),
+  // The two pages a title links to, hung beside it: a cast member or a
+  // collection opened from a title stays in the tab the title is in, and Back
+  // returns to the title (`ServiceRoutes.person`, `ServiceRoutes.collection`).
+  _page(
+    '${prefix}media/person/:id',
+    (state) => PersonDetailScreen(
+      personId: RouteUtils.safeIntParam(state, 'id')!,
+      heroTag: state.uri.queryParameters['heroTag'],
+      initialProfileUrl: state.uri.queryParameters['posterUrl'],
+    ),
+    redirect: (context, state) => RouteUtils.safeIntParam(state, 'id') == null
+        ? _mediaMountOrHome(state.uri.path)
+        : null,
+  ),
+  _page(
+    '${prefix}media/collection/:id',
+    (state) => CollectionDetailScreen(
+      collectionId: RouteUtils.safeIntParam(state, 'id')!,
+      heroTag: state.uri.queryParameters['heroTag'],
+    ),
+    redirect: (context, state) => RouteUtils.safeIntParam(state, 'id') == null
+        ? _mediaMountOrHome(state.uri.path)
+        : null,
+  ),
 ];
 
 /// The mount a title's location hangs off, or the Dashboard for the root one.
@@ -322,63 +345,65 @@ Page<void> _manualImportPage(
   );
 }
 
-/// The pre-rename `/discover` tree, which now exists only to redirect.
+/// A tree of link shapes the app no longer draws at, kept so each one lands
+/// where its page lives now, in one hop with its query intact.
 ///
-/// Seerr itself lives in [_seerrRoutes]. Every node here is redirect-only, and
-/// the children exist for one reason: a redirect cannot run until something
-/// matches, so a shape with no route to match would 404 instead of being
-/// rewritten. Nothing in this tree ever builds.
-///
-/// `tv/all` is declared before `tv/:id` for the reason it is in [_seerrRoutes]:
-/// routes are matched in declaration order, and the other way round
-/// `/discover/tv/all` is a media detail whose id is the word `all`.
-GoRoute _legacyDiscoverRoutes({required String path}) {
-  String? rewrite(BuildContext context, GoRouterState state) =>
-      _redirectLegacyDiscover(state);
-
+/// Every node is redirect-only, and the children exist for one reason: a
+/// redirect cannot run until something matches, so a shape with no route to
+/// match would 404 instead of being rewritten. Nothing in this tree builds.
+GoRoute _rewriteTree(
+  String path,
+  List<String> tails,
+  String Function(Uri uri) rewrite,
+) {
+  String? redirect(BuildContext context, GoRouterState state) =>
+      rewrite(state.uri);
   return GoRoute(
     path: path,
-    redirect: rewrite,
-    routes: [
-      for (final tail in const [
-        'requests',
-        'movies/all',
-        'tv/all',
-        'trending/all',
-        'genre/:mediaType/:genreId',
-        'movie/:id',
-        'tv/:id',
-        'person/:id',
-        'collection/:id',
-      ])
-        GoRoute(path: tail, redirect: rewrite),
-    ],
+    redirect: redirect,
+    routes: [for (final tail in tails) GoRoute(path: tail, redirect: redirect)],
   );
 }
 
-/// One Seerr compatibility tail whose target is a fixed location.
-///
-/// Childless on purpose, like every other tail in this file: the matcher treats
-/// a prefix hit with no complete match as no match at all, which is what stops
-/// these from shadowing the real routes inside the shell.
-GoRoute _seerrTail(String path, String target) => GoRoute(
-  path: path,
-  redirect: (context, state) => _preserveQuery(state.uri, target),
-);
+/// Where Discover used to live: the fourth tab of Seerr's room.
+const _seerrDiscover = '${ServiceRoutes.seerr}/discover';
 
-/// One Seerr compatibility tail for a `<segment>/:id` detail.
-///
-/// The four detail shapes Seerr shipped — `movie`, `tv`, `person`,
-/// `collection` — differ only in the segment, and each lands on the same
-/// segment under `discover/`. No id validation: the canonical route inside the
-/// branch owns it, and doing it twice is two places to get it wrong.
-GoRoute _seerrIdTail(String segment) => GoRoute(
-  path: '$segment/:id',
-  redirect: (context, state) => _preserveQuery(
-    state.uri,
-    '${ServiceRoutes.seerrDiscover}/$segment/${state.pathParameters['id']}',
-  ),
-);
+/// Every shape Seerr's room ever linked to under Discover, as tails of the
+/// node it hung off. `tv/all` before `tv/:id`: routes match in declaration
+/// order, and the other way round `tv/all` is a title whose id is `all`.
+const _discoverTails = [
+  'movies/all',
+  'tv/all',
+  'trending/all',
+  'genre/:mediaType/:genreId',
+  'movie/:id',
+  'tv/:id',
+  'person/:id',
+  'collection/:id',
+  'media/movie/:id',
+  'media/tv/tvdb/:id',
+  'media/tv/:id',
+  'media/person/:id',
+  'media/collection/:id',
+];
+
+/// [uri], a link under [base] in one of the [_discoverTails] shapes, rewritten
+/// to the same page in the Discover tab. The bare details Seerr shipped
+/// (`movie/603`, `person/287`) are pages hung beside a title now
+/// (`media/movie/603`, `media/person/287`).
+String _toDiscover(Uri uri, String base) {
+  final tail = Uri.parse(uri.path.substring(base.length)).pathSegments;
+  final path = switch (tail) {
+    [] => ServiceRoutes.discover,
+    // `tv/all` is a see-all, not a series whose id is the word `all`.
+    [final kind, final id]
+        when id != 'all' &&
+            const {'movie', 'tv', 'person', 'collection'}.contains(kind) =>
+      '${ServiceRoutes.discover}/media/$kind/$id',
+    _ => '${ServiceRoutes.discover}/${tail.join('/')}',
+  };
+  return _preserveQuery(uri, path);
+}
 
 /// Seerr: one shell, one branch per tab.
 ///
@@ -390,13 +415,10 @@ GoRoute _seerrIdTail(String segment) => GoRoute(
 /// What is Seerr's own is the *number* of those tails. It shipped more link
 /// shapes than any other service — three see-alls, a genre tree, two media
 /// details, a person and a collection — and every one of them hung off the
-/// service root, because the service root **was** the Discover page. They now
-/// hang off the Discover tab's branch, exactly as Radarr's film moved inside
-/// Library and for the same two reasons: leaving Seerr and coming back returns
-/// to the page rather than to the top of the carousel, and the poster's Hero
-/// still flies because the row it left and the page it lands on share one
-/// Navigator. Each old spelling keeps a tail that rewrites to the new one in a
-/// single hop, query intact.
+/// service root, because the service root **was** the Discover page. Then they
+/// hung off its Discover tab; now Discover is a tab of the app, and each old
+/// spelling keeps a tail that rewrites to the Discover tab in a single hop,
+/// query intact (`_toDiscover`).
 RouteBase _seerrRoutes() {
   const service = ServiceKey.seerr;
   final tabs = tabsFor(service)!;
@@ -409,26 +431,19 @@ RouteBase _seerrRoutes() {
     routes: [
       // `requests` needs no tail: the all-requests list was already a page at
       // `/dashboard/seerr/requests`, which is exactly where its tab mounts.
-      //
-      // Order is load-bearing here. Routes match in declaration order, so the
-      // three `.../all` literals come before `movie/:id` and `tv/:id` — the
-      // other way round, `/dashboard/seerr/tv/all` rewrites as a media detail
-      // whose id is the word `all`.
-      _seerrTail('movies/all', ServiceRoutes.seerrMoviesAll),
-      _seerrTail('tv/all', ServiceRoutes.seerrTvAll),
-      _seerrTail('trending/all', ServiceRoutes.seerrTrendingAll),
-      GoRoute(
-        path: 'genre/:mediaType/:genreId',
-        redirect: (context, state) => _preserveQuery(
-          state.uri,
-          '${ServiceRoutes.seerrGenreBase}/${state.pathParameters['mediaType']}'
-          '/${state.pathParameters['genreId']}',
-        ),
+      // Every other shape Seerr shipped hung off the service root, then off
+      // its Discover tab; both now land in the Discover tab of the app.
+      _rewriteTree(
+        'discover',
+        _discoverTails,
+        (uri) => _toDiscover(uri, _seerrDiscover),
       ),
-      _seerrIdTail('movie'),
-      _seerrIdTail('tv'),
-      _seerrIdTail('person'),
-      _seerrIdTail('collection'),
+      for (final tail in _discoverTails.where((t) => !t.startsWith('media/')))
+        GoRoute(
+          path: tail,
+          redirect: (context, state) =>
+              _toDiscover(state.uri, ServiceRoutes.seerr),
+        ),
       StatefulShellRoute(
         navigatorContainerBuilder: buildBranchTransition,
         // `pageBuilder`, not `builder`: without it the shell's page takes the
@@ -480,109 +495,6 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
         topPadding: _serviceTabTopPadding,
       ),
     ),
-  ),
-  // Discover, and the whole tree that used to hang off the service root with
-  // it. Every one of these is reached by tapping a row of the Discover page,
-  // which is what makes this the tab that owns them.
-  ServiceTab.discover => _titledTab(
-    tab.segment,
-    (state) => const ServiceTabScaffold(
-      service: ServiceKey.seerr,
-      tab: ServiceTab.discover,
-      child: DiscoverScreen(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
-    ),
-    routes: [
-      GoRoute(
-        path: 'movies/all',
-        builder: (context, state) =>
-            const DiscoverSeeAllScreen(type: 'movies', title: 'Movies'),
-      ),
-      GoRoute(
-        path: 'tv/all',
-        builder: (context, state) =>
-            const DiscoverSeeAllScreen(type: 'tv', title: 'TV series'),
-      ),
-      GoRoute(
-        path: 'trending/all',
-        builder: (context, state) =>
-            const DiscoverSeeAllScreen(type: 'trending', title: 'Trending'),
-      ),
-      GoRoute(
-        path: 'genre/:mediaType/:genreId',
-        redirect: (context, state) {
-          final genreId = RouteUtils.safeIntParam(state, 'genreId');
-          return genreId == null ? ServiceRoutes.seerrDiscover : null;
-        },
-        builder: (context, state) {
-          final mediaType = state.pathParameters['mediaType'] == 'tv'
-              ? 'tv'
-              : 'movie';
-          final genreId = RouteUtils.safeIntParam(state, 'genreId')!;
-          final title = state.uri.queryParameters['title'] ?? 'Genre';
-          return DiscoverSeeAllScreen(
-            type: 'genre',
-            title: title,
-            genreKey: (mediaType: mediaType, genreId: genreId),
-          );
-        },
-      ),
-      // A title is its own page now, mounted in this tab: the link every
-      // Seerr row makes lands there in one hop, its tile's hero tag and
-      // poster carried in the query. A bad id falls back to the tab this page
-      // was pushed from, not to the app home: the branch is where the user
-      // still is, and sending them out of the service would be a bigger move
-      // than the mistake.
-      GoRoute(
-        path: 'movie/:id',
-        redirect: (context, state) =>
-            switch (RouteUtils.safeIntParam(state, 'id')) {
-              null => ServiceRoutes.seerrDiscover,
-              final id => _preserveQuery(
-                state.uri,
-                '${ServiceRoutes.seerrDiscover}'
-                '${MediaKey.movie(id).location}',
-              ),
-            },
-      ),
-      GoRoute(
-        path: 'tv/:id',
-        redirect: (context, state) =>
-            switch (RouteUtils.safeIntParam(state, 'id')) {
-              null => ServiceRoutes.seerrDiscover,
-              final id => _preserveQuery(
-                state.uri,
-                '${ServiceRoutes.seerrDiscover}'
-                '${MediaKey.tv(id).location}',
-              ),
-            },
-      ),
-      _page(
-        'person/:id',
-        (state) => PersonDetailScreen(
-          personId: RouteUtils.safeIntParam(state, 'id')!,
-          heroTag: state.uri.queryParameters['heroTag'],
-          initialProfileUrl: state.uri.queryParameters['posterUrl'],
-        ),
-        redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.seerrDiscover
-            : null,
-      ),
-      _page(
-        'collection/:id',
-        (state) => CollectionDetailScreen(
-          collectionId: RouteUtils.safeIntParam(state, 'id')!,
-          heroTag: state.uri.queryParameters['heroTag'],
-        ),
-        redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.seerrDiscover
-            : null,
-      ),
-    ],
   ),
   ServiceTab.issues => _titledTab(
     tab.segment,
@@ -2815,25 +2727,6 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
   ),
 ];
 
-String? _redirectLegacyDiscover(GoRouterState state) {
-  final path = state.uri.path;
-  if (path == '/discover') return ServiceRoutes.dashboard;
-
-  const legacyBase = '/discover/';
-  if (!path.startsWith(legacyBase)) return null;
-
-  final suffix = path.substring(legacyBase.length);
-  if (suffix == 'movies/all' ||
-      suffix == 'tv/all' ||
-      suffix == 'trending/all' ||
-      suffix.startsWith('movie/') ||
-      suffix.startsWith('tv/')) {
-    return _preserveQuery(state.uri, '${ServiceRoutes.seerr}/$suffix');
-  }
-
-  return ServiceRoutes.dashboard;
-}
-
 String? _redirectLegacyLibrary(
   GoRouterState state, {
   required String legacyBase,
@@ -2900,10 +2793,61 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
         _tabPage(state, const GlobalActivityScreen()),
     routes: _mediaRoutes(),
   ),
-  NavTab.search => GoRoute(
-    path: ServiceRoutes.search,
+  // The catalogue, browsed at rest and searched by typing. Its see-alls hang
+  // under it; the bare details Seerr's room and the pre-rename `/discover`
+  // tree linked to (`movie/603`, `person/287`, `requests`) rewrite to where
+  // those pages live now.
+  NavTab.discover => GoRoute(
+    path: ServiceRoutes.discover,
     pageBuilder: (context, state) => _tabPage(state, const SearchScreen()),
-    routes: _mediaRoutes(),
+    routes: [
+      _page(
+        'movies/all',
+        (state) => const DiscoverSeeAllScreen(type: 'movies', title: 'Movies'),
+      ),
+      _page(
+        'tv/all',
+        (state) => const DiscoverSeeAllScreen(type: 'tv', title: 'TV series'),
+      ),
+      _page(
+        'trending/all',
+        (state) =>
+            const DiscoverSeeAllScreen(type: 'trending', title: 'Trending'),
+      ),
+      _page(
+        'genre/:mediaType/:genreId',
+        (state) => DiscoverSeeAllScreen(
+          type: 'genre',
+          title: state.uri.queryParameters['title'] ?? 'Genre',
+          genreKey: (
+            mediaType: state.pathParameters['mediaType'] == 'tv'
+                ? 'tv'
+                : 'movie',
+            genreId: RouteUtils.safeIntParam(state, 'genreId')!,
+          ),
+        ),
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'genreId') == null
+            ? ServiceRoutes.discover
+            : null,
+      ),
+      for (final tail in const [
+        'movie/:id',
+        'tv/:id',
+        'person/:id',
+        'collection/:id',
+      ])
+        GoRoute(
+          path: tail,
+          redirect: (context, state) =>
+              _toDiscover(state.uri, ServiceRoutes.discover),
+        ),
+      GoRoute(
+        path: 'requests',
+        redirect: (context, state) => ServiceRoutes.seerrRequests,
+      ),
+      ..._mediaRoutes(),
+    ],
   ),
   NavTab.settings => GoRoute(
     path: '/settings',
@@ -3113,7 +3057,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       // A title opened from a page above the tabs (`/activity/movies`, the
       // import flow): pushed into a tab, it would open underneath that page.
       ..._mediaRoutes(prefix: '/'),
-      _legacyDiscoverRoutes(path: '/discover'),
+      // The Search tab Discover replaced: its field is Discover's field now,
+      // and a title opened from it lives under Discover.
+      _rewriteTree('/search', const [
+        'media/movie/:id',
+        'media/tv/tvdb/:id',
+        'media/tv/:id',
+        'media/person/:id',
+        'media/collection/:id',
+      ], (uri) => _toDiscover(uri, '/search')),
       _moviesRoutes(path: '/movies'),
       _seriesRoutes(path: '/series'),
       _musicRoutes(path: '/music'),

@@ -156,7 +156,7 @@ void main() {
     expect(find.text('No Seerr results'), findsNothing);
 
     container
-        .read(navigationRefreshProvider(NavigationSection.search).notifier)
+        .read(navigationRefreshProvider(NavigationSection.discover).notifier)
         .state++;
     await tester.pump();
     expect(container.read(globalSearchQueryProvider), isEmpty);

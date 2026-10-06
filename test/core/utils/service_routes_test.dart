@@ -264,10 +264,6 @@ void main() {
         '${ServiceRoutes.seerr}/${ServiceTab.issues.segment}',
       );
       expect(
-        ServiceRoutes.seerrDiscover,
-        '${ServiceRoutes.seerr}/${ServiceTab.discover.segment}',
-      );
-      expect(
         ServiceRoutes.seerrUsers,
         '${ServiceRoutes.seerr}/${ServiceTab.users.segment}',
       );
@@ -277,31 +273,45 @@ void main() {
       expect(ServiceRoutes.seerrRequests, '/dashboard/seerr/requests');
     });
 
-    test('every Seerr see-all and detail hangs off the Discover tab', () {
-      // Eight link shapes moved at once, and they moved because one constant
-      // each says so: nothing in the app builds a Seerr path by hand. A drift
-      // here silently retargets every poster tap in Discover.
+    test('every catalogue see-all hangs off the Discover tab', () {
+      // Discover was Seerr's fourth tab; it is the app's own now, and nothing
+      // in the app builds one of these paths by hand.
       for (final base in [
-        ServiceRoutes.seerrMoviesAll,
-        ServiceRoutes.seerrTvAll,
-        ServiceRoutes.seerrTrendingAll,
-        ServiceRoutes.seerrGenreBase,
-        ServiceRoutes.seerrPersonBase,
-        ServiceRoutes.seerrCollectionBase,
+        ServiceRoutes.discoverMoviesAll,
+        ServiceRoutes.discoverTvAll,
+        ServiceRoutes.discoverTrendingAll,
+        ServiceRoutes.discoverGenreBase,
       ]) {
-        expect(base, startsWith('${ServiceRoutes.seerrDiscover}/'));
+        expect(base, startsWith('${ServiceRoutes.discover}/'));
       }
       expect(
-        ServiceRoutes.seerrPerson(287),
-        '/dashboard/seerr/discover/person/287',
+        ServiceRoutes.discoverGenre(
+          mediaType: 'tv',
+          genreId: 28,
+          title: 'Action',
+        ),
+        '/discover/genre/tv/28?title=Action',
+      );
+    });
+
+    test('a person and a collection hang beside the title they came from', () {
+      // The same mount a title opened there would take: a cast member tapped
+      // on a title in Activity opens in Activity, and Back returns to it.
+      expect(
+        ServiceRoutes.person(287, from: '/activity/media/movie/653'),
+        '/activity/media/person/287',
       );
       expect(
-        ServiceRoutes.seerrCollection(10),
-        '/dashboard/seerr/discover/collection/10',
+        ServiceRoutes.collection(10, from: '/discover/media/movie/653'),
+        '/discover/media/collection/10',
       );
       expect(
-        ServiceRoutes.seerrGenre(mediaType: 'tv', genreId: 28, title: 'Action'),
-        '/dashboard/seerr/discover/genre/tv/28?title=Action',
+        ServiceRoutes.person(
+          287,
+          from: '${ServiceRoutes.seerrRequests}/media/tv/1399',
+          heroTag: 'cast_287',
+        ),
+        '/dashboard/seerr/requests/media/person/287?heroTag=cast_287',
       );
     });
 
@@ -657,9 +667,9 @@ void main() {
         expect(
           ServiceRoutes.media(
             film,
-            from: '${ServiceRoutes.seerrDiscover}/person/42',
+            from: '${ServiceRoutes.seerrRequests}/media/person/42',
           ),
-          '/dashboard/seerr/discover/media/movie/653',
+          '/dashboard/seerr/requests/media/movie/653',
         );
         // From a title's page, its own mount: More like this stays put.
         expect(
@@ -694,8 +704,13 @@ void main() {
           '/activity/media/movie/653',
         );
         expect(
-          ServiceRoutes.media(film, from: ServiceRoutes.search),
-          '/search/media/movie/653',
+          ServiceRoutes.media(film, from: ServiceRoutes.discover),
+          '/discover/media/movie/653',
+        );
+        expect(
+          ServiceRoutes.media(film, from: '/discover/media/person/287'),
+          '/discover/media/movie/653',
+          reason: 'a title opened from a person stays in the tab',
         );
       });
 

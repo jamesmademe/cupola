@@ -471,9 +471,10 @@ void main() {
 
       await _press(tester, LogicalKeyboardKey.digit2, meta: true);
 
+      // Discover is the second tab.
       expect(
         harness.routerDelegate.currentConfiguration.uri.path,
-        NavTab.activity.routePath,
+        NavTab.discover.routePath,
       );
     });
   });
@@ -614,18 +615,21 @@ Future<_Harness> _pumpShell(
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.discover),
+            routes: [
+              GoRoute(
+                path: '/discover',
+                builder: (_, _) => const Placeholder(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
             navigatorKey: branchNavigatorKeyFor(NavTab.activity),
             routes: [
               GoRoute(
                 path: '/activity',
                 builder: (_, _) => const Placeholder(),
               ),
-            ],
-          ),
-          StatefulShellBranch(
-            navigatorKey: branchNavigatorKeyFor(NavTab.search),
-            routes: [
-              GoRoute(path: '/search', builder: (_, _) => const Placeholder()),
             ],
           ),
           StatefulShellBranch(

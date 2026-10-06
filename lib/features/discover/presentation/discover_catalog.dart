@@ -3,163 +3,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_gradients.dart';
-import 'package:cupola/core/capability/audience.dart';
-import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
-import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/core/widgets/ambient_scaffold.dart';
-import 'package:cupola/core/widgets/app_empty_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/content_card.dart';
-import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
-import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
-import 'package:cupola/core/widgets/search_bar_header.dart';
-import 'package:cupola/core/widgets/service_kpi_peek.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_region_chip.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
-import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 
-/// Premium Seerr discover catalog: featured banner, curated rows and per-genre
-/// carousels. Falls back to a grid of results while searching.
-class DiscoverScreen extends ConsumerWidget {
-  final bool showAppBar;
-  final double topPadding;
+/// Seerr's catalogue as rails: what the Discover tab shows at rest, before
+/// anything is typed into its field. The tab decides whether Seerr is there to
+/// ask; this draws the rails once it is.
+class DiscoverCatalog extends ConsumerWidget {
+  const DiscoverCatalog({super.key, this.bottomPadding = 0});
 
-  const DiscoverScreen({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  });
+  /// The room the floating bar takes at the foot of the list.
+  final double bottomPadding;
 
   /// How many genre rows to render on the catalog.
   static const _genreRowLimit = 8;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final searchQuery = ref.watch(discoverSearchQueryProvider);
-
-    ref.listen<int>(navigationRefreshProvider(NavigationSection.dashboard), (
-      previous,
-      next,
-    ) {
-      ref.read(discoverSearchQueryProvider.notifier).state = '';
-      _invalidateCatalog(ref);
-    });
-
-    // Before a rail is asked for anything. With no Seerr every one of them
-    // could only fail, each rail stood aside so the page could say it once,
-    // and the page never did: a search bar, a region chip and nothing under
-    // them, for a service nobody had added.
-    if (!watchSeerrConfigured(ref)) {
-      return AmbientScaffold(
-        accent: ServiceKey.seerr.accent,
-        appBar: showAppBar ? const GlassAppBar(title: Text('Discover')) : null,
-        // `.forService`: the door goes to Seerr's own form, as the Overview
-        // tab beside this one does.
-        body: SafeArea(
-          child: NotConfiguredPlaceholder.forService(ServiceKey.seerr),
-        ),
-      );
-    }
-
-    return AmbientScaffold(
-      accent: ServiceKey.seerr.accent,
-      appBar: showAppBar
-          ? GlassAppBar(
-              leading: searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      onPressed: () =>
-                          ref.read(discoverSearchQueryProvider.notifier).state =
-                              '',
-                      tooltip: 'Exit search',
-                    )
-                  : null,
-              title: const Text('Discover'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.history_rounded),
-                  onPressed: () => context.push('/activity/discover'),
-                  tooltip: 'Activity',
-                ),
-              ],
-            )
-          : null,
-      // Header (search + KPI) scrolls away with the catalog, consistent with
-      // the arr library screens.
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          if (topPadding > 0)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: topPadding + MediaQuery.paddingOf(context).top,
-              ),
-            ),
-          SliverToBoxAdapter(
-            child: SearchBarHeader(
-              hintText: Lexicon.searchToAsk,
-              onQueryChanged: (query) {
-                ref.read(discoverSearchQueryProvider.notifier).state = query;
-              },
-            ),
-          ),
-          // Seerr's counts are the operator's: to the requester they are
-          // figures to act on with no way to act, in Seerr's words.
-          if (searchQuery.isEmpty &&
-              ref.watch(audienceProvider) == Audience.operator)
-            SliverToBoxAdapter(
-              child: ServiceKpiPeek(
-                kpis: ref.watch(serviceKpiProvider(ServiceKey.seerr)),
-                accent: ServiceKey.seerr.accent,
-              ),
-            ),
-        ],
-        body: searchQuery.isEmpty
-            ? _buildCatalog(context, ref)
-            : const _DiscoverSearchResults(),
-      ),
-    );
-  }
-
-  Widget _buildCatalog(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
-      onRefresh: () async => _invalidateCatalog(ref),
+      onRefresh: () async => invalidate(ref),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
           top: AppSpacing.sm,
-          bottom:
-              AppSpacing.xl +
-              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          bottom: AppSpacing.xl + bottomPadding,
         ),
         children: [
-          // Decisions first, rails after. Seerr is the one media service whose
-          // home is not its catalogue: what is waiting on an approval is the
-          // reason the page is opened, and a trending rail is not. The section
-          // draws nothing at all when nothing is waiting, so on a stack with
-          // auto-approvals this page is exactly what it was.
+          // Decisions first, rails after: what is waiting on an approval is a
+          // reason to open the catalogue that a trending rail is not. The
+          // section draws nothing at all when nothing is waiting.
           const SeerrDecisionsSection(),
           // The readout that labels the rails below it — and not the decisions
-          // above it, which no region touches. It sits here rather than in the
-          // header band for that reason. Decision 32: a label with a door, never
-          // a filter.
+          // above it, which no region touches: a label with a door, never a
+          // filter.
           const Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
@@ -178,7 +67,7 @@ class DiscoverScreen extends ConsumerWidget {
             sectionId: 'trending',
             items: ref.watch(discoverTrendingProvider),
             onRetry: () => ref.invalidate(discoverTrendingProvider),
-            onSeeAll: () => context.push(ServiceRoutes.seerrTrendingAll),
+            onSeeAll: () => context.push(ServiceRoutes.discoverTrendingAll),
           ),
           DiscoverCarousel(
             title: 'Popular movies',
@@ -186,7 +75,7 @@ class DiscoverScreen extends ConsumerWidget {
             items: ref.watch(discoverMoviesProvider),
             forcedMediaType: 'movie',
             onRetry: () => ref.invalidate(discoverMoviesProvider),
-            onSeeAll: () => context.push(ServiceRoutes.seerrMoviesAll),
+            onSeeAll: () => context.push(ServiceRoutes.discoverMoviesAll),
           ),
           DiscoverCarousel(
             title: 'Popular series',
@@ -194,7 +83,7 @@ class DiscoverScreen extends ConsumerWidget {
             items: ref.watch(discoverTVProvider),
             forcedMediaType: 'tv',
             onRetry: () => ref.invalidate(discoverTVProvider),
-            onSeeAll: () => context.push(ServiceRoutes.seerrTvAll),
+            onSeeAll: () => context.push(ServiceRoutes.discoverTvAll),
           ),
           DiscoverCarousel(
             title: 'Upcoming movies',
@@ -223,7 +112,8 @@ class DiscoverScreen extends ConsumerWidget {
     );
   }
 
-  void _invalidateCatalog(WidgetRef ref) {
+  /// Asks Seerr for every rail again, the genre rows included.
+  static void invalidate(WidgetRef ref) {
     ref.invalidate(discoverTrendingProvider);
     ref.invalidate(discoverMoviesProvider);
     ref.invalidate(discoverTVProvider);
@@ -231,6 +121,7 @@ class DiscoverScreen extends ConsumerWidget {
     ref.invalidate(discoverUpcomingTvProvider);
     ref.invalidate(discoverTopRatedMoviesProvider);
     ref.invalidate(movieGenresProvider);
+    ref.invalidate(discoverByGenreProvider);
     ref.invalidate(requestsProvider);
   }
 }
@@ -284,7 +175,7 @@ class _GenreCarousel extends ConsumerWidget {
       forcedMediaType: mediaType,
       onRetry: () => ref.invalidate(discoverByGenreProvider(key)),
       onSeeAll: () => context.push(
-        ServiceRoutes.seerrGenre(
+        ServiceRoutes.discoverGenre(
           mediaType: mediaType,
           genreId: genre.id,
           title: genre.name,
@@ -419,78 +310,6 @@ class _FeaturedBanner extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Search results grid with premium loading/empty/error states.
-class _DiscoverSearchResults extends ConsumerWidget {
-  const _DiscoverSearchResults();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final searchResults = ref.watch(discoverSearchResultsProvider);
-
-    return searchResults.when(
-      loading: () => AppSkeleton.posterGrid(),
-      // A search Seerr did not answer is not a search with no results: it
-      // says why, in the classified words, and offers to ask again.
-      error: (error, _) => error.toString().contains('not configured')
-          ? NotConfiguredPlaceholder.forService(ServiceKey.seerr)
-          : AppErrorState(
-              error: error,
-              serviceName: ServiceKey.seerr.title,
-              service: ServiceKey.seerr,
-              onRetry: () => ref.invalidate(discoverSearchResultsProvider),
-            ),
-      data: (results) {
-        // "No results" only after Seerr answered with none.
-        if (results == null || results.isEmpty) {
-          return const AppEmptyState(
-            icon: Icons.search_off_rounded,
-            title: 'No results',
-            message: 'Try a different title or spelling.',
-          );
-        }
-
-        return GridView.builder(
-          padding: EdgeInsets.only(
-            left: AppSpacing.lg,
-            right: AppSpacing.lg,
-            top: AppSpacing.lg,
-            bottom:
-                AppSpacing.lg +
-                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-          ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 2 / 3,
-            crossAxisSpacing: AppSpacing.gridGap,
-            mainAxisSpacing: AppSpacing.gridGap,
-          ),
-          itemCount: results.length,
-          itemBuilder: (context, index) {
-            final item = results[index];
-            final imageUrl = ImageUtils.buildTmdbPosterUrl(item.posterPath);
-            final heroTag =
-                'discover_search_${item.mediaType}_${item.id}_$index';
-
-            return PressableScale(
-              onTap: () => context.openSeerrTitle(
-                mediaType: item.mediaType,
-                id: item.id,
-                heroTag: heroTag,
-                posterUrl: imageUrl,
-              ),
-              child: Hero(
-                tag: heroTag,
-                transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
-                child: ContentCard(imageUrl: imageUrl, paneTag: heroTag),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }

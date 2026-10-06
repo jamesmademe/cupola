@@ -10,9 +10,9 @@ import 'catalog.dart';
 
 void _ignore(String _) {}
 
-/// The Search tab's field. Monochrome like every other: the magnifier is the
+/// The Discover tab's field. Monochrome like every other: the magnifier is the
 /// secondary ink whichever screen it searches.
-Widget _searchTab({String? query}) => SearchBarHeader(
+Widget _discoverTab({String? query}) => SearchBarHeader(
   hintText: 'Movies, series, artists',
   initialQuery: query,
   onQueryChanged: _ignore,
@@ -20,18 +20,15 @@ Widget _searchTab({String? query}) => SearchBarHeader(
 
 List<CatalogScene> _scenes(CatalogPlatform platform, double width) => [
   CatalogScene(
-    'Seerr Discover · empty, hint only · the magnifier in the secondary ink, '
+    'Discover tab · empty, hint only · the magnifier in the secondary ink, '
     'the same on every service',
-    (_) => const SearchBarHeader(
-      hintText: 'Search movies and series',
-      onQueryChanged: _ignore,
-    ),
+    (_) => _discoverTab(),
     width: width,
     platform: platform,
   ),
   CatalogScene(
-    'Search tab · with a query · the clear button appears only with text',
-    (_) => _searchTab(query: 'Nosferatu'),
+    'Discover tab · with a query · the clear button appears only with text',
+    (_) => _discoverTab(query: 'Nosferatu'),
     width: width,
     platform: platform,
   ),
@@ -64,7 +61,7 @@ void main() {
       CatalogScene(
         'Long query · the text scrolls inside the field, the clear button '
         'keeps its place',
-        (_) => _searchTab(
+        (_) => _discoverTab(
           query: 'The Cabinet of Dr. Caligari 1920 restoration tinted',
         ),
         width: 390,

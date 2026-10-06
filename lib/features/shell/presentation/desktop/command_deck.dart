@@ -9,6 +9,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/command_deck_entry.dart';
@@ -72,8 +73,8 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
       CommandDeckEntry(
         kind: CommandDeckKind.screen,
         label: 'Search everything for “$typed”',
-        location: '/search',
-        detail: 'Search',
+        location: ServiceRoutes.discover,
+        detail: 'Discover',
         icon: Icons.search_rounded,
         searchQuery: typed,
       ),

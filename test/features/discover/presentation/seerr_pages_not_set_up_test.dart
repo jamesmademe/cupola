@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/media_detail_view.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_catalog.dart';
+import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 
@@ -24,7 +25,6 @@ void main() {
   // Seerr as one row to set up: the Media page's tests hold it.
   group('P4, no Seerr', () {
     final pages = <String, Widget>{
-      'the Discover tab': const DiscoverScreen(showAppBar: false),
       'a person': const PersonDetailScreen(personId: 17),
       'a collection': const CollectionDetailScreen(collectionId: 3),
       'See all': const DiscoverSeeAllScreen(type: 'movies', title: 'Movies'),
@@ -63,6 +63,33 @@ void main() {
     }
   });
 
+  // The Discover tab is not a Seerr page: without Seerr it still searches
+  // the services there are, and only the catalogue is missing.
+  testWidgets('P4: the Discover tab without Seerr searches what there is and '
+      'asks Seerr nothing', (tester) async {
+    final harness = await ProfileHarness.start(Profiles.p4);
+    final failures = _FailureLog();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: harness.overrides,
+        observers: [failures],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: const SearchScreen(),
+        ),
+      ),
+    );
+
+    expect(find.text('Seerr is not set up'), findsNothing);
+    expect(find.text('Discover'), findsOneWidget);
+    await tester.pump(const Duration(minutes: 1));
+    expect(failures.providers, isEmpty);
+    expect(harness.network.requestsTo(WorldIds.seerr), isEmpty);
+    expect(tester.takeException(), isNull);
+
+    await harness.unmount(tester);
+  });
+
   // P5 knows its Radarr only through Seerr, so Cupola has no Radarr of its
   // own: `/activity/movies` has nothing to read.
   testWidgets('P3: with Seerr set up the Discover tab draws its catalogue', (
@@ -71,11 +98,11 @@ void main() {
     final harness = await pumpWithProfile(
       tester,
       Profiles.p3,
-      child: const DiscoverScreen(showAppBar: false),
+      child: const SearchScreen(),
     );
 
     expect(find.text('Seerr is not set up'), findsNothing);
-    expect(find.text('Search movies and series'), findsOneWidget);
+    expect(find.byType(DiscoverCatalog), findsOneWidget);
     expect(harness.network.requestsTo(WorldIds.seerr), isNotEmpty);
 
     await harness.unmount(tester);

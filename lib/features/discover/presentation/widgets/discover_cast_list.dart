@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/media_detail_section_label.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 
 /// The horizontal `CAST` rail: a face, a name and a character per tile.
 ///
@@ -160,12 +159,10 @@ class _CastTile extends StatelessWidget {
       padding: const EdgeInsets.only(right: AppSpacing.sm),
       child: tappable
           ? PressableScale(
-              onTap: () => context.push(
-                ServiceRoutes.seerrPerson(
-                  member.id,
-                  heroTag: heroTag,
-                  posterUrl: imageUrl,
-                ),
+              onTap: () => context.openPerson(
+                member.id,
+                heroTag: heroTag,
+                posterUrl: imageUrl,
               ),
               child: tile,
             )

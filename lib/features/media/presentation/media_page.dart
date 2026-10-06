@@ -39,6 +39,7 @@ import 'package:cupola/features/discover/presentation/widgets/discover_videos_bu
 import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:cupola/features/media/presentation/media_episode_sheet.dart';
 import 'package:cupola/features/media/presentation/media_episodes_graph.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
@@ -1809,11 +1810,9 @@ class _CollectionBand extends StatelessWidget {
         : '${count.held} of ${count.total} on your server';
     final art = collection.backdropPath ?? collection.posterPath;
     return PressableScale(
-      onTap: () => context.push(
-        ServiceRoutes.seerrCollection(
-          collection.id,
-          heroTag: 'collection_${collection.id}',
-        ),
+      onTap: () => context.openCollection(
+        collection.id,
+        heroTag: 'collection_${collection.id}',
       ),
       semanticLabel: '${collection.name}, $words',
       excludeChildSemantics: true,

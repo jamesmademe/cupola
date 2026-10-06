@@ -21,19 +21,22 @@ enum NavTab {
     railIcon: Symbols.view_list_rounded,
     routePath: ServiceRoutes.dashboard,
   ),
+
+  /// The catalogue: browsed at rest, searched by typing (it took the Search
+  /// tab's place, and its search with it).
+  discover(
+    label: 'Discover',
+    icon: Icons.explore_outlined,
+    selectedIcon: Icons.explore_rounded,
+    railIcon: Symbols.explore_rounded,
+    routePath: ServiceRoutes.discover,
+  ),
   activity(
     label: 'Activity',
     icon: Icons.monitor_heart_outlined,
     selectedIcon: Icons.monitor_heart_rounded,
     railIcon: Symbols.monitor_heart_rounded,
     routePath: '/activity',
-  ),
-  search(
-    label: 'Search',
-    icon: Icons.search_outlined,
-    selectedIcon: Icons.search_rounded,
-    railIcon: Symbols.search_rounded,
-    routePath: '/search',
   ),
   settings(
     label: 'Settings',

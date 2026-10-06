@@ -51,7 +51,7 @@ void main() {
       expect(find.byType(FloatingBottomNavBar), findsOneWidget);
       expect(_navItem('Dashboard'), findsOneWidget);
       expect(_navItem('Activity'), findsOneWidget);
-      expect(_navItem('Search'), findsOneWidget);
+      expect(_navItem('Discover'), findsOneWidget);
       expect(_navItem('Settings'), findsOneWidget);
     });
 
@@ -93,15 +93,15 @@ void main() {
       expect(find.byType(ShellScreen), findsNothing);
     });
 
-    testWidgets('tapping Search navigates to /search', (tester) async {
+    testWidgets('tapping Discover navigates to /discover', (tester) async {
       final harness = await _pumpShell(tester);
 
-      await tester.tap(_navItem('Search'));
+      await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/search');
-      expect(find.text('SearchPage'), findsOneWidget);
-      expect(find.byIcon(Icons.search_rounded), findsOneWidget);
+      expect(harness.router.state.uri.path, '/discover');
+      expect(find.text('DiscoverPage'), findsOneWidget);
+      expect(find.byIcon(Icons.explore_rounded), findsOneWidget);
     });
 
     testWidgets('tapping the current Services tab triggers a refresh', (
@@ -160,9 +160,9 @@ void main() {
         initialLocation: '/dashboard/radarr/movie/42',
       );
 
-      await tester.tap(_navItem('Search'));
+      await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
-      expect(find.text('SearchPage'), findsOneWidget);
+      expect(find.text('DiscoverPage'), findsOneWidget);
 
       await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
@@ -178,7 +178,7 @@ void main() {
       await _pumpShell(tester);
       expect(_ProbePage.mounts['ServicesPage'], 1);
 
-      await tester.tap(_navItem('Search'));
+      await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
       await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
@@ -188,7 +188,7 @@ void main() {
       // subscribed — the 26 provider fetches a rebuilt /services used to re-run
       // never happen.
       expect(_ProbePage.mounts['ServicesPage'], 1);
-      expect(_ProbePage.mounts['SearchPage'], 1);
+      expect(_ProbePage.mounts['DiscoverPage'], 1);
     });
 
     testWidgets('returning to a branch root pops it and refreshes nothing', (
@@ -219,13 +219,13 @@ void main() {
     ) async {
       // With four stacks the location can belong to a branch other than the
       // visible one, which is why the shell asks the navigator rather than the
-      // path. Services is deep here while Search shows: tapping Services must
+      // path. Services is deep here while Discover shows: tapping Services must
       // land on its own root.
       final harness = await _pumpShell(
         tester,
         initialLocation: '/dashboard/radarr/movie/42',
       );
-      await tester.tap(_navItem('Search'));
+      await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
 
       await tester.tap(_navItem('Dashboard'));
@@ -311,7 +311,7 @@ void main() {
       final announcements = SemanticsAnnouncementRecorder.install(tester);
       await _pumpShell(tester, initialLocation: '/dashboard');
 
-      await tester.tap(_navItem('Search'));
+      await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
 
       expect(announcements.messages, isEmpty);
@@ -334,7 +334,7 @@ void main() {
       await _pumpShell(tester, initialLocation: '/dashboard');
       haptics.clear();
 
-      await tester.tap(_navItem('Search'));
+      await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
 
       expect(haptics, ['HapticFeedbackType.selectionClick']);
@@ -363,7 +363,7 @@ void main() {
       );
       expect(
         harness.container.read(
-          navigationRefreshProvider(NavigationSection.search),
+          navigationRefreshProvider(NavigationSection.discover),
         ),
         0,
       );
@@ -1248,20 +1248,20 @@ Future<_ShellHarness> _pumpShell(
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.discover),
+            routes: [
+              GoRoute(
+                path: '/discover',
+                builder: (_, _) => const _ProbePage('DiscoverPage'),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
             navigatorKey: branchNavigatorKeyFor(NavTab.activity),
             routes: [
               GoRoute(
                 path: '/activity',
                 builder: (_, _) => const _ProbePage('ActivityPage'),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            navigatorKey: branchNavigatorKeyFor(NavTab.search),
-            routes: [
-              GoRoute(
-                path: '/search',
-                builder: (_, _) => const _ProbePage('SearchPage'),
               ),
             ],
           ),

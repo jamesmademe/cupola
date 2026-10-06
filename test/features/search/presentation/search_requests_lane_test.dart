@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/discover/presentation/discover_catalog.dart';
+
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 
@@ -89,33 +91,24 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('P2, before a word: what she can find, never which service', (
+  testWidgets('P2, before a word: the catalogue, never which service', (
     tester,
   ) async {
     final harness = await _search(tester, Profiles.p2, query: '');
 
-    expect(find.text('Search movies and series'), findsOneWidget);
-    expect(
-      find.text('Enter a title to find something to ask for.'),
-      findsOneWidget,
-    );
+    // At rest the tab browses what she can ask for; the field says what it
+    // finds, and nothing names Seerr.
+    expect(find.byType(DiscoverCatalog), findsOneWidget);
+    expect(find.text('Movies and series'), findsOneWidget);
     expect(find.textContaining('Seerr'), findsNothing);
 
     await harness.unmount(tester);
   });
 
-  testWidgets('P2 with her Jellyfin: the player is named, Seerr is not', (
-    tester,
-  ) async {
+  testWidgets('P2 with her Jellyfin: Seerr is still not named', (tester) async {
     final harness = await _search(tester, Profiles.p2WithJellyfin, query: '');
 
-    expect(
-      find.text(
-        'Enter a title to find something to ask for, or to watch on '
-        'Jellyfin.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.byType(DiscoverCatalog), findsOneWidget);
     expect(find.textContaining('Seerr'), findsNothing);
 
     await harness.unmount(tester);
@@ -127,7 +120,6 @@ void main() {
     expect(find.text('Seerr'), findsWidgets);
     expect(find.text('Requests'), findsNothing);
     expect(find.text('All services'), findsOneWidget);
-    expect(find.text('across every service'), findsOneWidget);
 
     await harness.unmount(tester);
   });

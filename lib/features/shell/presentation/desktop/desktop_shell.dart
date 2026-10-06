@@ -134,8 +134,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
         NavTab.values[widget.selectedIndex.clamp(0, NavTab.values.length - 1)];
     final section = switch (tab) {
       NavTab.dashboard => NavigationSection.dashboard,
+      NavTab.discover => NavigationSection.discover,
       NavTab.activity => NavigationSection.activity,
-      NavTab.search => NavigationSection.search,
       NavTab.settings => null,
     };
     if (section != null) {

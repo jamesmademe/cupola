@@ -81,22 +81,6 @@ const List<ServiceKey> _tabbedServices = [
 /// `'<record>/:id'` where it does not.
 const List<({ServiceKey service, ServiceTab tab, String path})>
 _tabDetailPaths = [
-  // Seerr moved a whole tree in: three see-alls, the genre list and four
-  // details, every one of them reached by tapping a row of Discover. The three
-  // `.../all` literals come before `movie/:id` and `tv/:id` or
-  // `/discover/tv/all` resolves as a media detail whose id is the word `all`.
-  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'movies/all'),
-  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'tv/all'),
-  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'trending/all'),
-  (
-    service: ServiceKey.seerr,
-    tab: ServiceTab.discover,
-    path: 'genre/:mediaType/:genreId',
-  ),
-  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'movie/:id'),
-  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'tv/:id'),
-  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'person/:id'),
-  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'collection/:id'),
   (service: ServiceKey.radarr, tab: ServiceTab.library, path: 'movie/:id'),
   (service: ServiceKey.sonarr, tab: ServiceTab.library, path: 'series/:id'),
   (service: ServiceKey.lidarr, tab: ServiceTab.library, path: 'artist/:id'),
@@ -132,6 +116,9 @@ const List<String> _mediaPaths = [
   'media/movie/:id',
   'media/tv/tvdb/:id',
   'media/tv/:id',
+  // The two pages a title links to, hung beside it.
+  'media/person/:id',
+  'media/collection/:id',
 ];
 
 /// The services with nothing pushed from any of their tabs, and why.
@@ -141,10 +128,15 @@ const List<String> _mediaPaths = [
 /// these is a list of rows that expand in place or a service whose read layer
 /// has no second document to open:
 ///
+///  * Seerr — its catalogue is the Discover tab of the app now;
 ///  * Transmission, SABnzbd, NZBGet — a queue slot is one row that expands;
 ///  * Unraid, NPM — both were one page, and the split produced sections rather
 ///    than pages.
 const List<ServiceKey> _servicesWithoutTabDetails = [
+  // Seerr's see-alls, person and collection went with Discover to the app's
+  // own tab; a title, a person and a collection hang under every tab of its
+  // bar like everywhere else (`_mediaPaths`).
+  ServiceKey.seerr,
   ServiceKey.transmission,
   ServiceKey.sabnzbd,
   ServiceKey.nzbget,
@@ -540,11 +532,10 @@ void main() {
           .toList(growable: false);
 
       // Redirect-only scaffolding: four dead trees inside the services branch
-      // would read as part of that tab's subtree.
-      expect(
-        atRoot,
-        containsAll(['/discover', '/movies', '/series', '/music']),
-      );
+      // would read as part of that tab's subtree. `/discover` is a tab now;
+      // `/search`, the tab it replaced, is the retired one.
+      expect(atRoot, containsAll(['/search', '/movies', '/series', '/music']));
+      expect(atRoot, isNot(contains('/discover')));
       expect(
         atRoot,
         contains('/activity/:type'),

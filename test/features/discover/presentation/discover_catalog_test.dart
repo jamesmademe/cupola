@@ -11,8 +11,7 @@ import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/discover/presentation/discover_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_catalog.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -30,7 +29,7 @@ const _trending = [
 ];
 
 void main() {
-  group('DiscoverScreen catalog', () {
+  group('DiscoverCatalog', () {
     testWidgets('renders curated section headers when data loads', (
       tester,
     ) async {
@@ -93,84 +92,6 @@ void main() {
       expect(decisions, lessThan(tester.getTopLeft(find.text('Trending')).dy));
     });
 
-    testWidgets('renders app bar with title and activity button', (
-      tester,
-    ) async {
-      await _pumpDiscover(tester);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Discover'), findsOneWidget);
-      expect(find.byIcon(Icons.history_rounded), findsOneWidget);
-    });
-  });
-
-  group('DiscoverScreen search', () {
-    testWidgets('shows search results grid when query is non-empty', (
-      tester,
-    ) async {
-      await _pumpDiscover(
-        tester,
-        searchQueryBuilder: (ref) => 'batman',
-        searchResultsBuilder: (ref) async => _movies,
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byType(GridView), findsOneWidget);
-      expect(find.byType(ContentCard), findsNWidgets(2));
-      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
-    });
-
-    testWidgets('shows no results message when search returns empty', (
-      tester,
-    ) async {
-      await _pumpDiscover(
-        tester,
-        searchQueryBuilder: (ref) => 'xyz',
-        searchResultsBuilder: (ref) async => const <MediaPreview>[],
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('No results'), findsOneWidget);
-      expect(find.byIcon(Icons.search_off_rounded), findsOneWidget);
-    });
-
-    testWidgets('shows error state when search fails', (tester) async {
-      await _pumpDiscover(
-        tester,
-        searchQueryBuilder: (ref) => 'fail',
-        searchResultsBuilder: (ref) =>
-            Future<List<MediaPreview>?>.error(Exception('Network error')),
-      );
-      await tester.pumpAndSettle();
-
-      // A search Seerr did not complete is not "No results found": the leaf
-      // says what happened, in the classified words, and never the
-      // exception's own.
-      expect(
-        find.text('The request to Seerr did not complete'),
-        findsOneWidget,
-      );
-      expect(find.text('No results'), findsNothing);
-      expect(find.textContaining('Network error'), findsNothing);
-      expect(find.text('Retry'), findsOneWidget);
-    });
-
-    testWidgets('a search nothing answered says so, in red words', (
-      tester,
-    ) async {
-      await _pumpDiscover(
-        tester,
-        searchQueryBuilder: (ref) => 'fail',
-        searchResultsBuilder: (ref) => Future<List<MediaPreview>?>.error(
-          const SocketException('Connection refused'),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Seerr did not answer'), findsOneWidget);
-      expect(find.text('No results'), findsNothing);
-    });
-
     testWidgets('a rail whose source failed says so, under its header', (
       tester,
     ) async {
@@ -190,34 +111,6 @@ void main() {
         findsOneWidget,
       );
     });
-
-    testWidgets('uses unique hero tags for mixed media search results', (
-      tester,
-    ) async {
-      await _pumpDiscover(
-        tester,
-        searchQueryBuilder: (ref) => 'same-id',
-        searchResultsBuilder: (ref) async => const [
-          MediaPreview(id: 42, title: 'Movie 42', mediaType: 'movie'),
-          MediaPreview(id: 42, title: 'Show 42', mediaType: 'tv'),
-        ],
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Hero && widget.tag == 'discover_search_movie_42_0',
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.byWidgetPredicate(
-          (widget) => widget is Hero && widget.tag == 'discover_search_tv_42_1',
-        ),
-        findsOneWidget,
-      );
-    });
   });
 }
 
@@ -226,8 +119,6 @@ Future<void> _pumpDiscover(
   Future<List<MediaPreview>> Function(Ref ref)? trendingBuilder,
   Future<List<MediaPreview>> Function(Ref ref)? moviesBuilder,
   Future<List<MediaPreview>> Function(Ref ref)? tvBuilder,
-  String Function(Ref ref)? searchQueryBuilder,
-  Future<List<MediaPreview>?> Function(Ref ref)? searchResultsBuilder,
   List<SeerrRequest> requests = const [],
 }) async {
   // Tall viewport so all catalog rows build (the vertical ListView is lazy).
@@ -268,14 +159,8 @@ Future<void> _pumpDiscover(
         ),
         movieGenresProvider.overrideWith((ref) async => const <SeerrGenre>[]),
         requestsProvider.overrideWith((ref) async => requests),
-        discoverSearchQueryProvider.overrideWith(
-          searchQueryBuilder ?? (ref) => '',
-        ),
-        discoverSearchResultsProvider.overrideWith(
-          searchResultsBuilder ?? (ref) async => null,
-        ),
       ],
-      child: const MaterialApp(home: DiscoverScreen()),
+      child: const MaterialApp(home: Scaffold(body: DiscoverCatalog())),
     ),
   );
 }

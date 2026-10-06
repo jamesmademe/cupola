@@ -58,15 +58,15 @@ void main() {
     tester,
   ) async {
     final router = GoRouter(
-      initialLocation: '/search',
+      initialLocation: '/discover',
       routes: [
         GoRoute(
-          path: '/search',
+          path: '/discover',
           builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
-          // The film's own page, under the Search tab it is opened from.
-          path: '${ServiceRoutes.search}/media/movie/:id',
+          // The film's own page, under the Discover tab it is opened from.
+          path: '${ServiceRoutes.discover}/media/movie/:id',
           builder: (context, state) {
             final movie = state.extra as RadarrMovie?;
             return Scaffold(
@@ -92,7 +92,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Its own page by TMDB's id, opened on the Radarr that listed it.
-    expect(router.state.uri.path, '${ServiceRoutes.search}/media/movie/123');
+    expect(router.state.uri.path, '${ServiceRoutes.discover}/media/movie/123');
     // The poster's shared-element tag travels with the route so the detail
     // page's Hero has a matching destination.
     expect(
@@ -134,15 +134,15 @@ void main() {
     tester,
   ) async {
     final router = GoRouter(
-      initialLocation: '/search',
+      initialLocation: '/discover',
       routes: [
         GoRoute(
-          path: '/search',
+          path: '/discover',
           builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
-          // The film's own page, under the Search tab it is opened from.
-          path: '${ServiceRoutes.search}/media/movie/:id',
+          // The film's own page, under the Discover tab it is opened from.
+          path: '${ServiceRoutes.discover}/media/movie/:id',
           builder: (context, state) => Scaffold(
             body: SizedBox(
               width: 82,

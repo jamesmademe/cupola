@@ -48,9 +48,9 @@ void searchEverythingFor(WidgetRef ref, String query) {
 
 /// Bumped to run the query already in the field again, without touching it.
 ///
-/// ⌘R and re-tapping the Search tab are opposite commands — one re-runs, the
-/// other clears — and they used to share one channel,
-/// `navigationRefreshProvider(NavigationSection.search)`, whose only listener
+/// ⌘R and re-tapping the Discover tab are opposite commands — one re-runs,
+/// the other clears — and they used to share one channel,
+/// `navigationRefreshProvider(NavigationSection.discover)`, whose only listener
 /// cleared the query. So ⌘R silently erased what the user had typed. This is
 /// the other half of that split: the window's Refresh command bumps this, the
 /// tab re-tap keeps the clear, and neither can be mistaken for the other.
@@ -558,7 +558,7 @@ GlobalSearchResult _seerrResult(
     // Seerr has no `routeExtra` to preload from, so the poster travels in the
     // URL: the detail page paints real art during its lookup instead of
     // landing the flight on an empty gradient.
-    // The title's own page, under the Search tab (`pushMounted`).
+    // The title's own page, under the Discover tab (`pushMounted`).
     route: ServiceRoutes.mediaRoot(
       item.mediaType == 'tv' ? MediaKey.tv(item.id) : MediaKey.movie(item.id),
       heroTag: heroTag,
@@ -607,7 +607,7 @@ GlobalSearchResult _radarrResult(
         : RadarrAddRequest(instanceId: instance.id, movie: item),
     heroTag: heroTag,
     // The film's own page, opened on this Radarr's copy, or on Add to Radarr
-    // when it holds none: under the Search tab (`pushMounted`).
+    // when it holds none: under the Discover tab (`pushMounted`).
     route: item.tmdbId > 0
         ? ServiceRoutes.mediaRoot(
             MediaKey.movie(item.tmdbId),
@@ -662,7 +662,7 @@ GlobalSearchResult _sonarrResult(
         : SonarrAddRequest(instanceId: instance.id, series: item),
     heroTag: heroTag,
     // The series' own page, opened on this Sonarr's copy, or on Add to Sonarr
-    // when it holds none: under the Search tab (`pushMounted`). A series it
+    // when it holds none: under the Discover tab (`pushMounted`). A series it
     // holds with no TMDB id goes the way of its id there, where a Seerr can
     // name TMDB's from TVDB's.
     route: switch (MediaKey.ofSeries(
@@ -762,7 +762,7 @@ GlobalSearchResult _streamResult(
     // there is no library on a media server this app can write into.
     heroTag: heroTag,
     // A movie or a series is its own page, this server's copy leading, under
-    // the Search tab (`pushMounted`): no poster travels, since the server's artwork
+    // the Discover tab (`pushMounted`): no poster travels, since the server's artwork
     // needs its credential. Anything else is the server's own page, with the
     // item itself so it can draw before its own fetch lands.
     route: switch (MediaKey.ofStreamItem(item)) {

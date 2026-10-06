@@ -5,9 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/models/media_preview.dart';
-import 'package:cupola/features/discover/data/seerr_service.dart';
-import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movies_search_provider.dart';
@@ -203,95 +200,6 @@ void main() {
       );
     });
   });
-
-  group('discover', () {
-    test('hands the lookup a cancel token', () async {
-      final seerr = _GateSeerrService();
-      final container = ProviderContainer(
-        overrides: [seerrServiceProvider.overrideWithValue(seerr)],
-      );
-      addTearDown(container.dispose);
-
-      container.read(discoverSearchQueryProvider.notifier).state = 'arrival';
-      await container.read(discoverSearchResultsProvider.future);
-
-      expect(seerr.tokens.single, isNotNull);
-    });
-
-    test('cancels the superseded round when the query moves on', () async {
-      final gate = Completer<void>();
-      addTearDown(() {
-        if (!gate.isCompleted) gate.complete();
-      });
-      final seerr = _GateSeerrService(gate: gate);
-      final container = ProviderContainer(
-        overrides: [seerrServiceProvider.overrideWithValue(seerr)],
-      );
-      addTearDown(container.dispose);
-
-      final sub = container.listen(discoverSearchResultsProvider, (_, _) {});
-      addTearDown(sub.close);
-
-      container.read(discoverSearchQueryProvider.notifier).state = 'arr';
-      await Future<void>.delayed(Duration.zero);
-      container.read(discoverSearchQueryProvider.notifier).state = 'arrival';
-      await Future<void>.delayed(Duration.zero);
-
-      expect(seerr.tokens, hasLength(2));
-      expect(seerr.tokens.first!.isCancelled, isTrue);
-      expect(seerr.tokens.last!.isCancelled, isFalse);
-    });
-
-    test(
-      'an empty query resolves to null without reaching the service',
-      () async {
-        final seerr = _GateSeerrService();
-        final container = ProviderContainer(
-          overrides: [seerrServiceProvider.overrideWithValue(seerr)],
-        );
-        addTearDown(container.dispose);
-
-        expect(
-          await container.read(discoverSearchResultsProvider.future),
-          isNull,
-        );
-        expect(seerr.tokens, isEmpty);
-      },
-    );
-
-    test('a failing lookup is a failure, never "no results"', () async {
-      // It used to degrade to `[]`, and the page said "No results found"
-      // about a search Seerr never answered.
-      final seerr = _GateSeerrService(fails: true);
-      final container = ProviderContainer(
-        overrides: [seerrServiceProvider.overrideWithValue(seerr)],
-      );
-      addTearDown(container.dispose);
-
-      container.read(discoverSearchQueryProvider.notifier).state = 'arrival';
-
-      await expectLater(
-        container.read(discoverSearchResultsProvider.future),
-        throwsException,
-      );
-      expect(seerr.reportedFailure, isTrue);
-    });
-
-    test('an answer with nothing in it is "no results"', () async {
-      final seerr = _GateSeerrService();
-      final container = ProviderContainer(
-        overrides: [seerrServiceProvider.overrideWithValue(seerr)],
-      );
-      addTearDown(container.dispose);
-
-      container.read(discoverSearchQueryProvider.notifier).state = 'arrival';
-
-      expect(
-        await container.read(discoverSearchResultsProvider.future),
-        isEmpty,
-      );
-    });
-  });
 }
 
 /// Records the token of every lookup and, with a [gate], parks the request so
@@ -362,32 +270,6 @@ class _GateLidarrService extends FakeLidarrService {
     if (fails && reportFailure) {
       throw const SocketException('Connection refused');
     }
-    return const [];
-  }
-}
-
-class _GateSeerrService extends FakeSeerrService {
-  _GateSeerrService({this.gate, this.fails = false});
-
-  final Completer<void>? gate;
-  final bool fails;
-  final List<CancelToken?> tokens = [];
-
-  /// Whether the last caller asked for the failure to travel.
-  bool reportedFailure = false;
-
-  @override
-  Future<List<MediaPreview>> search(
-    String query, {
-    int page = 1,
-    CancelToken? cancelToken,
-    bool reportFailure = false,
-  }) async {
-    tokens.add(cancelToken);
-    reportedFailure = reportFailure;
-    await gate?.future;
-    // The real service's contract: a failure travels only when asked.
-    if (fails && reportFailure) throw Exception('Seerr unreachable');
     return const [];
   }
 }

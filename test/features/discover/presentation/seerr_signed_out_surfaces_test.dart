@@ -16,7 +16,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
@@ -49,7 +48,7 @@ Finder _filled(String label) => find.ancestor(
 void main() {
   group('Seerr pages, before they ask Seerr anything', () {
     final pages = <String, Widget>{
-      'the Discover tab': const DiscoverScreen(showAppBar: false),
+      'the Discover tab': const SearchScreen(),
       'a movie': MediaPage(mediaKey: MediaKey.movie(10378)),
       'a person': const PersonDetailScreen(personId: 17),
       'a collection': const CollectionDetailScreen(collectionId: 3),

@@ -54,15 +54,15 @@ void main() {
       _scene(
         'Activity selected, 3 finished searches · the count on the ink disc, '
         'never a status tone and never a section colour',
-        1,
+        NavTab.activity.index,
         searchesWaiting: 3,
       ),
       _scene(
-        'Search selected, badge on Activity · a count past nine reads 9+',
-        2,
+        'Discover selected, badge on Activity · a count past nine reads 9+',
+        NavTab.discover.index,
         searchesWaiting: 12,
       ),
-      _scene('Settings selected', 3),
+      _scene('Settings selected', NavTab.settings.index),
       _scene(
         '320pt window · the bar fills the width and the items tighten',
         0,

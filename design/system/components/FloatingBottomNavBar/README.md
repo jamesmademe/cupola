@@ -1,6 +1,6 @@
 # FloatingBottomNavBar
 
-The detached glass bar that carries the four canonical tabs on phones: Dashboard, Activity, Search, Settings.
+The detached glass bar that carries the four canonical tabs on phones: Dashboard, Discover, Activity, Settings.
 
 Rendered from `lib/core/widgets/floating_bottom_nav_bar.dart` by `test/design_catalog/floating_bottom_nav_bar_catalog_test.dart`, with the destinations of `lib/features/settings/domain/nav_tab.dart` as `lib/features/shell/presentation/shell_screen.dart` builds them.
 
@@ -44,7 +44,7 @@ Each sheet is drawn in the dark and the light room.
 - Each of the four destinations selected; a badge on Activity (3, and 9+ past nine).
 - A 320pt window, where the bar fills the width and the items tighten.
 - Over artwork, where the glass is a tint.
-- Text at 200%: Activity with a badge, and Search selected with 9+.
+- Text at 200%: Activity with a badge, and Discover selected with 9+.
 
 ## Do / don't
 

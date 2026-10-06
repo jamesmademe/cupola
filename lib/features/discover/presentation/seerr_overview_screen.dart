@@ -279,7 +279,6 @@ class _TrendingSection extends ConsumerWidget {
       // Seerr's `/discover/trending` proxies TMDB's *weekly* list, so the label
       // and the window agree.
       subtitle: 'this week',
-      destination: ServiceTab.discover,
       child: AsyncValueWidget<List<MediaPreview>>(
         value: trending,
         serviceName: 'Seerr',

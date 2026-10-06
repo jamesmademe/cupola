@@ -51,7 +51,9 @@ void main() {
       [
         'opens the Seerr Requests tab',
         'opens the Seerr Requests tab',
-        'opens the Seerr Discover tab',
+        // Trending opens no tab of Seerr's: Discover is a tab of the app now,
+        // and each of its titles opens on its own.
+        null,
       ],
     );
   });

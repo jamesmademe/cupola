@@ -75,6 +75,21 @@ extension OpenMedia on BuildContext {
         null => push(ServiceRoutes.streamItem(service, item.id)),
       };
 
+  /// Pushes a person's page under the tab the user is on, as a title opened
+  /// here would be (`ServiceRoutes.person`).
+  Future<void> openPerson(int id, {String? heroTag, String? posterUrl}) => push(
+    ServiceRoutes.person(
+      id,
+      from: _here,
+      heroTag: heroTag,
+      posterUrl: posterUrl,
+    ),
+  );
+
+  /// Pushes a collection's page under the tab the user is on.
+  Future<void> openCollection(int id, {String? heroTag}) =>
+      push(ServiceRoutes.collection(id, from: _here, heroTag: heroTag));
+
   /// Pushes [location], a title's page in root form moved under the tab the
   /// user is on (`ServiceRoutes.mounted`); any other location as it is.
   Future<void> pushMounted(String location, {Object? extra}) {

@@ -1,6 +1,6 @@
 # DesktopNavRail
 
-The desktop window's 56pt section rail: four glyphs for Dashboard, Activity, Search and Settings, and the ⌘K key at its foot.
+The desktop window's 56pt section rail: four glyphs for Dashboard, Discover, Activity and Settings, and the ⌘K key at its foot.
 
 Rendered from `lib/features/shell/presentation/desktop/desktop_nav_rail.dart` by `test/design_catalog/desktop_nav_rail_catalog_test.dart`; the destinations are built from `NavTab` (`lib/features/settings/domain/nav_tab.dart`) exactly as `shell_screen.dart` builds them.
 

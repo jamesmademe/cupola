@@ -36,6 +36,8 @@ import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/discover/presentation/discover_catalog.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
 import 'package:cupola/features/search/presentation/arr_add_sheet.dart';
@@ -62,7 +64,7 @@ class SearchScreen extends ConsumerWidget {
       context,
     );
 
-    ref.listen<int>(navigationRefreshProvider(NavigationSection.search), (
+    ref.listen<int>(navigationRefreshProvider(NavigationSection.discover), (
       previous,
       next,
     ) {
@@ -105,19 +107,17 @@ class SearchScreen extends ConsumerWidget {
         !requester &&
         AppBreakpoints.isDesktopShell(context) &&
         width >= AppBreakpoints.desktopCompact;
-    final stacked = !requester && !AppBreakpoints.isDesktopShell(context);
+    final searching = query.trim().isNotEmpty;
 
     return AmbientScaffold(
       appBar: GlassAppBar(
         toolbarHeight: _SearchHeading.toolbarHeight(
           context,
-          showsReadout: showsReadout,
-          stacked: stacked,
+          showsReadout: showsReadout && searching,
         ),
         title: _SearchHeading(
           lanes: lanes,
-          showsReadout: showsReadout,
-          stacked: stacked,
+          showsReadout: showsReadout && searching,
         ),
       ),
       body: Column(
@@ -133,26 +133,40 @@ class SearchScreen extends ConsumerWidget {
               ref.read(globalSearchQueryProvider.notifier).state = value;
             },
           ),
-          _ServiceFilterChips(
-            selectedService: selectedService,
-            onSelected: (service) {
-              ref.read(_selectedSearchServiceProvider.notifier).state = service;
-            },
-          ),
-          Divider(
-            height: 1,
-            indent: AppSpacing.lg,
-            endIndent: AppSpacing.lg,
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
+          // The filters belong to a search: at rest there is nothing to
+          // filter, and the catalogue below is Seerr's alone.
+          if (searching) ...[
+            _ServiceFilterChips(
+              selectedService: selectedService,
+              onSelected: (service) {
+                ref.read(_selectedSearchServiceProvider.notifier).state =
+                    service;
+              },
+            ),
+            Divider(
+              height: 1,
+              indent: AppSpacing.lg,
+              endIndent: AppSpacing.lg,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ],
           Expanded(
-            child: query.trim().isEmpty
-                ? const _SearchEmptyState()
-                : _SearchResultsList(
+            child: searching
+                ? _SearchResultsList(
                     lanes: lanes,
                     selectedService: selectedService,
                     bottomPadding: bottomPadding,
-                  ),
+                  )
+                // At rest the tab browses: Seerr's catalogue when there is a
+                // Seerr to ask; a Seerr whose session ended says so, with the
+                // way back; with no Seerr, what a search here would reach.
+                : watchSeerrConfigured(ref)
+                ? DiscoverCatalog(bottomPadding: bottomPadding)
+                : ref
+                      .watch(currentSettingsProvider)
+                      .hasServiceConnection(ServiceKey.seerr)
+                ? NotConfiguredPlaceholder.forService(ServiceKey.seerr)
+                : const _SearchEmptyState(),
           ),
         ],
       ),
@@ -172,31 +186,21 @@ final _selectedSearchServiceProvider = StateProvider<ServiceKey?>(
 class _SearchHeading extends StatelessWidget {
   final List<GlobalSearchServiceResults> lanes;
   final bool showsReadout;
-  final bool stacked;
 
-  const _SearchHeading({
-    required this.lanes,
-    required this.showsReadout,
-    required this.stacked,
-  });
+  const _SearchHeading({required this.lanes, required this.showsReadout});
 
   /// How much bar this heading needs.
   ///
   /// Measured rather than a constant, because the constant is what breaks
   /// Dynamic Type: a bar fixed at 68 clips the second line at an accessibility
-  /// reading size, and the second line is the one that says what the field
-  /// searches. Each term is a role's own size times its own leading — 32/1.15
-  /// for the headline, 22/1.25 and 12/1.4 for the stacked pair — so the bar
-  /// grows exactly as fast as the type in it.
+  /// reading size. The term is the headline's own size times its own leading,
+  /// 32/1.15, so the bar grows exactly as fast as the type in it.
   static double toolbarHeight(
     BuildContext context, {
     required bool showsReadout,
-    required bool stacked,
   }) {
     final scaler = MediaQuery.textScalerOf(context);
-    final needed = stacked
-        ? scaler.scale(22) * 1.25 + scaler.scale(12) * 1.4 + AppSpacing.xl
-        : showsReadout
+    final needed = showsReadout
         ? scaler.scale(32) * 1.15 + AppSpacing.xl
         : kToolbarHeight;
     return needed < kToolbarHeight ? kToolbarHeight : needed;
@@ -208,7 +212,7 @@ class _SearchHeading extends StatelessWidget {
     final dim = CupolaThemeColors.of(context).dimText;
 
     final heading = Text(
-      'Search',
+      'Discover',
       style: showsReadout
           ? theme.textTheme.headlineLarge
           : theme.textTheme.titleLarge,
@@ -235,21 +239,7 @@ class _SearchHeading extends StatelessWidget {
       );
     }
 
-    if (!stacked) return heading;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        heading,
-        Text(
-          'across every service',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall?.copyWith(color: dim),
-        ),
-      ],
-    );
+    return heading;
   }
 }
 
@@ -1287,7 +1277,7 @@ class _SearchEmptyState extends ConsumerWidget {
           Center(
             child: FilledButton(
               // `go`, not `push`: a push keeps the *origin* branch's
-              // navigator, so Connections would render inside the Search tab
+              // navigator, so Connections would render inside the Discover tab
               // while the bar stayed lit on Search. `go` switches to the
               // Settings branch, where it lives.
               onPressed: () => context.go(ServiceRoutes.settingsConnections),

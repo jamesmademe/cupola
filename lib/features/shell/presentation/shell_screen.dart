@@ -487,10 +487,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     switch (tab) {
       case NavTab.dashboard:
         return NavigationSection.dashboard;
+      case NavTab.discover:
+        return NavigationSection.discover;
       case NavTab.activity:
         return NavigationSection.activity;
-      case NavTab.search:
-        return NavigationSection.search;
       case NavTab.settings:
         return null;
     }

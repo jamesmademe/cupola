@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -102,23 +101,6 @@ void main() {
         );
       },
     );
-
-    test('"No results" only after Seerr answered', () async {
-      final dark = await _start(_seerr(ConnectionBehaviour.didNotAnswer));
-      dark.read(discoverSearchQueryProvider.notifier).state = 'sprite';
-      expect(
-        await _reasonOf(dark.read(discoverSearchResultsProvider.future)),
-        ServiceFailureReason.unreachable,
-      );
-
-      final answering = await _start(Profiles.p1);
-      answering.read(discoverSearchQueryProvider.notifier).state =
-          'zzz-nothing';
-      expect(
-        await answering.read(discoverSearchResultsProvider.future),
-        isEmpty,
-      );
-    });
   });
 
   group('the global-search Seerr lane', () {

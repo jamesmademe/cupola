@@ -272,18 +272,17 @@ void main() {
 
   group('NavTab', () {
     test('matches the approved four-tab navigation model', () {
+      // Discover took Search's place, second as in the direction's bar.
       expect(NavTab.values, [
         NavTab.dashboard,
+        NavTab.discover,
         NavTab.activity,
-        NavTab.search,
         NavTab.settings,
       ]);
       expect(NavTab.values.map((tab) => tab.label), [
-        // The label moved to Dashboard; the enum *name* deliberately did not,
-        // because the selected tab is persisted by name.
         'Dashboard',
+        'Discover',
         'Activity',
-        'Search',
         'Settings',
       ]);
       // No colour per tab any more: the chrome is monochrome, and the

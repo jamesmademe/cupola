@@ -44,7 +44,6 @@ import 'package:cupola/features/bazarr/presentation/bazarr_history_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_library_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_providers_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
 import 'package:cupola/features/dockge/presentation/dockge_terminal_screen.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_tab_screens.dart';
@@ -113,7 +112,7 @@ void main() {
         final container = await _pumpRouter(tester, onboardingCompleted: false);
         final router = container.read(routerProvider);
 
-        router.go('/search');
+        router.go('/discover');
         await tester.pumpAndSettle();
 
         expect(router.state.uri.toString(), '/onboarding');
@@ -139,18 +138,17 @@ void main() {
     testWidgets('redirects invalid discover detail ids back to Discover', (
       tester,
     ) async {
-      // Two hops now, and both are the point: the pre-tab spelling rewrites to
-      // the detail inside the Discover branch, and *that* route rejects the id.
+      // Two hops, and both are the point: the old Seerr spelling rewrites to
+      // the title's page in the Discover tab, and *that* route rejects the id.
       // It falls back to the tab the page would have been pushed from rather
-      // than to the app home — the branch is where the user still is, and
-      // sending them out of the service is a bigger move than the mistake.
+      // than to the app home.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
       router.go('/dashboard/seerr/movie/not-a-number');
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), ServiceRoutes.seerrDiscover);
+      expect(router.state.uri.toString(), ServiceRoutes.discover);
       expect(find.byType(MediaPage), findsNothing);
     });
 
@@ -162,7 +160,8 @@ void main() {
         const encodedPosterUrl =
             'https%3A%2F%2Fcdn.example.com%2Fposter%20image.jpg';
 
-        // A series is its own page in the same tab, the poster decoded once.
+        // A series is its own page in the Discover tab, the poster decoded
+        // once.
         router.go(
           '/dashboard/seerr/discover/tv/123?posterUrl=$encodedPosterUrl',
         );
@@ -170,7 +169,7 @@ void main() {
 
         expect(
           router.state.uri.toString(),
-          '/dashboard/seerr/discover/media/tv/123?posterUrl=$encodedPosterUrl',
+          '/discover/media/tv/123?posterUrl=$encodedPosterUrl',
         );
         final series = tester.widget<MediaPage>(
           find.byType(MediaPage).hitTestable(),
@@ -178,7 +177,8 @@ void main() {
         expect(series.mediaKey, const MediaKey.tv(123));
         expect(series.posterUrl, 'https://cdn.example.com/poster image.jpg');
 
-        // A movie is its own page in the same tab, the poster decoded once.
+        // A movie is its own page in the Discover tab, the poster decoded
+        // once.
         router.go(
           '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
         );
@@ -186,8 +186,7 @@ void main() {
 
         expect(
           router.state.uri.toString(),
-          '/dashboard/seerr/discover/media/movie/123'
-          '?posterUrl=$encodedPosterUrl',
+          '/discover/media/movie/123?posterUrl=$encodedPosterUrl',
         );
         final page = tester.widget<MediaPage>(
           find.byType(MediaPage).hitTestable(),
@@ -360,15 +359,30 @@ void main() {
       expect(router.state.uri.toString(), '/settings/connections');
     });
 
-    testWidgets('supports global search route', (tester) async {
+    testWidgets('Discover is a tab, and the Search tab it replaced lands '
+        'on it', (tester) async {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      router.go('/search');
+      router.go('/discover');
       await tester.pumpAndSettle();
-
-      expect(router.state.uri.toString(), '/search');
+      expect(router.state.uri.toString(), '/discover');
       expect(find.byType(SearchScreen), findsOneWidget);
+
+      // One hop, query and all, for the tab and for a title opened from it.
+      for (final (from, to) in [
+        ('/search', '/discover'),
+        (
+          '/search/media/movie/603?heroTag=t',
+          '/discover/media/movie/603?heroTag=t',
+        ),
+        ('/discover/movie/603', '/discover/media/movie/603'),
+        ('/discover/requests', ServiceRoutes.seerrRequests),
+      ]) {
+        router.go(from);
+        await tester.pumpAndSettle();
+        expect(router.state.uri.toString(), to, reason: from);
+      }
     });
 
     testWidgets('supports service dashboard routes', (tester) async {
@@ -452,10 +466,10 @@ void main() {
     testWidgets('every pre-tab Seerr path still resolves', (tester) async {
       // Seerr shipped more link shapes than any other service, all of them
       // hanging off the service root because the service root *was* Discover.
-      // Every one of them moved under the Discover tab, so every one needs a
-      // tail — and the two `.../all` literals need to be matched before the
-      // `:id` details, or `/dashboard/seerr/tv/all` becomes a media detail
-      // whose id is the word `all`. Both spellings of the prefix, because the
+      // Every one of them lives in the app's Discover tab now, so every one
+      // needs a tail — and the `.../all` literals need to be matched before
+      // the `:id` details, or `/dashboard/seerr/tv/all` becomes a title whose
+      // id is the word `all`. Both spellings of the prefix, because the
       // `/services` rewrite chains into these rather than duplicating them.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
@@ -464,22 +478,27 @@ void main() {
         for (final entry in {
           '': ServiceRoutes.seerrOverview,
           '/requests': ServiceRoutes.seerrRequests,
-          '/movies/all': ServiceRoutes.seerrMoviesAll,
-          '/tv/all': ServiceRoutes.seerrTvAll,
-          '/trending/all': ServiceRoutes.seerrTrendingAll,
-          '/genre/tv/28?title=Action': ServiceRoutes.seerrGenre(
+          '/movies/all': ServiceRoutes.discoverMoviesAll,
+          '/tv/all': ServiceRoutes.discoverTvAll,
+          '/trending/all': ServiceRoutes.discoverTrendingAll,
+          '/genre/tv/28?title=Action': ServiceRoutes.discoverGenre(
             mediaType: 'tv',
             genreId: 28,
             title: 'Action',
           ),
-          // A title is its own page now, in the same tab.
-          '/movie/42': '${ServiceRoutes.seerrDiscover}/media/movie/42',
-          '/tv/55': '${ServiceRoutes.seerrDiscover}/media/tv/55',
-          '/person/287?heroTag=cast_287': ServiceRoutes.seerrPerson(
-            287,
-            heroTag: 'cast_287',
-          ),
-          '/collection/10': ServiceRoutes.seerrCollection(10),
+          // A title is its own page, and a person and a collection hang
+          // beside it.
+          '/movie/42': '/discover/media/movie/42',
+          '/tv/55': '/discover/media/tv/55',
+          '/person/287?heroTag=cast_287':
+              '/discover/media/person/287?heroTag=cast_287',
+          '/collection/10': '/discover/media/collection/10',
+          // The same shapes under the Discover tab Seerr's room used to have.
+          '/discover': ServiceRoutes.discover,
+          '/discover/trending/all': ServiceRoutes.discoverTrendingAll,
+          '/discover/person/287': '/discover/media/person/287',
+          '/discover/media/movie/42?heroTag=t':
+              '/discover/media/movie/42?heroTag=t',
         }.entries) {
           final from = '$prefix${entry.key}';
           router.go(from);
@@ -830,8 +849,8 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
+      // `/discover` was one of these; it is a tab of the app now.
       const routes = {
-        '/discover': ServiceRoutes.dashboard,
         '/movies': ServiceRoutes.radarrLibrary,
         '/series': ServiceRoutes.sonarrLibrary,
         '/music': ServiceRoutes.lidarrLibrary,
@@ -841,11 +860,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(router.state.uri.toString(), entry.value);
-        if (entry.key == '/discover') {
-          expect(find.byType(DashboardScreen), findsOneWidget);
-        } else {
-          expect(find.byType(DashboardScreen), findsNothing);
-        }
+        expect(find.byType(DashboardScreen), findsNothing);
       }
     });
 
@@ -860,14 +875,13 @@ void main() {
       router.go('/discover/movie/123?posterUrl=$encodedPosterUrl');
       await tester.pumpAndSettle();
 
-      // Three hops: the `/discover` tree rewrites onto the pre-tab Seerr
-      // spelling, which rewrites onto the detail inside the Discover branch,
-      // which is the movie's own page in that tab now. What this asserts is
-      // that the chain finishes, query and all: a rewrite that stopped early
-      // would leave the user on a path that draws nothing.
+      // One hop: the pre-rename detail is the movie's own page in the
+      // Discover tab. What this asserts is that it lands, query and all: a
+      // rewrite that stopped early would leave the user on a path that draws
+      // nothing.
       expect(
         router.state.uri.toString(),
-        '/dashboard/seerr/discover/media/movie/123?posterUrl=$encodedPosterUrl',
+        '/discover/media/movie/123?posterUrl=$encodedPosterUrl',
       );
       expect(find.byType(MediaPage), findsOneWidget);
 
@@ -1036,7 +1050,7 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      router.go('/search');
+      router.go(ServiceRoutes.discover);
       await tester.pumpAndSettle();
       router.push(ServiceRoutes.jellyfinItem('abc-123'));
       await tester.pumpAndSettle();
@@ -1342,7 +1356,6 @@ void main() {
       ServiceKey.seerr: {
         ServiceTab.overview: find.byType(SeerrOverviewScreen),
         ServiceTab.requests: find.byType(ServiceAllRequestsScreen),
-        ServiceTab.discover: find.byType(DiscoverScreen),
         ServiceTab.issues: find.byType(SeerrIssuesScreen),
         ServiceTab.users: find.byType(SeerrUsersScreen),
       },
@@ -1575,7 +1588,7 @@ void main() {
               '${ServiceRoutes.forService(service)}/${tab.segment}',
           ServiceRoutes.dashboard,
           ServiceRoutes.activity,
-          ServiceRoutes.search,
+          ServiceRoutes.discover,
           '/activity/movies',
         ];
         for (final (index, from) in froms.indexed) {
@@ -1620,7 +1633,7 @@ void main() {
             '${ServiceRoutes.sonarrLibrary}/media/tv/tvdb/0',
             ServiceRoutes.sonarrLibrary,
           ),
-          ('${ServiceRoutes.search}/media/movie/x', ServiceRoutes.search),
+          ('${ServiceRoutes.discover}/media/movie/x', ServiceRoutes.discover),
           ('/media/movie/-1', ServiceRoutes.dashboard),
         ]) {
           router.go(location);
@@ -1662,7 +1675,7 @@ void main() {
         router.go(
           ServiceRoutes.media(
             const MediaKey.movie(653),
-            from: ServiceRoutes.seerrDiscover,
+            from: ServiceRoutes.discover,
             heroTag: 'discover_trending_653',
             posterUrl: posterUrl,
           ),

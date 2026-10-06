@@ -18,7 +18,6 @@ enum ServiceTab {
   // ── Seerr ────────────────────────────────────────────────────────────────
   requests('requests', 'Requests'),
   issues('issues', 'Issues'),
-  discover('discover', 'Discover'),
   users('users', 'Users'),
 
   // ── The \*arr family ──────────────────────────────────────────────────────
@@ -103,7 +102,6 @@ const Map<ServiceKey, List<ServiceTab>> serviceTabs = {
     ServiceTab.overview,
     ServiceTab.requests,
     ServiceTab.issues,
-    ServiceTab.discover,
     ServiceTab.users,
   ],
   ServiceKey.radarr: _arrTabs,

@@ -2,7 +2,7 @@
 
 The always-visible search field at the top of a browsable screen: a monochrome magnifier and a clear button once there is a query.
 
-Rendered from `lib/core/widgets/search_bar_header.dart` (a Material 3 `SearchBar`) by `test/design_catalog/search_bar_header_catalog_test.dart`. Hints are the callers' real strings: *Search movies and series* (Seerr Discover), *Search torrents* (qBittorrent), *Movies, series, artists* (Search tab), *Search movies* / *Search series* / *Search artists* (the library screens); the default is *Search*. No hint ends in an ellipsis.
+Rendered from `lib/core/widgets/search_bar_header.dart` (a Material 3 `SearchBar`) by `test/design_catalog/search_bar_header_catalog_test.dart`. Hints are the callers' real strings: *Movies, series, artists* (the Discover tab; *Movies and series* for the requester), *Search torrents* (qBittorrent), *Search movies* / *Search series* / *Search artists* (the library screens); the default is *Search*. No hint ends in an ellipsis.
 
 - Outer padding `AppSpacing.sm` top, `AppSpacing.lg` sides, `AppSpacing.lg` bottom.
 - Field: minimum height 52, `surfaceContainer` fill, 1px `outlineVariant` side, `AppRadius.borderRadiusMd` (14) — the control radius; the theme's own text fields take the 16 field radius — elevation 0, horizontal padding `AppSpacing.sm`. Focused, the side is 1.5px `line.focus`, as every focused field's is, so the keyboard's place is never only a caret.
@@ -24,7 +24,7 @@ The field speaks as *Search*, hint *Type &lt;hintText&gt;*. The clear button is 
 
 Each sheet is drawn in the dark and the light room, on the phone and on the desktop.
 
-- Empty with a hint (Seerr Discover, qBittorrent, Lidarr), with a query, with a long query that scrolls inside the field.
+- Empty with a hint (the Discover tab, qBittorrent, Lidarr), with a query, with a long query that scrolls inside the field.
 - `autofocus: true`: the field holding focus, on the phone and on the desktop.
 - A long hint on a 320pt phone, ellipsised inside the field.
 - Text at 200%: the hint and a query.

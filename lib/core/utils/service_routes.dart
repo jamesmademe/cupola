@@ -117,7 +117,7 @@ class ServiceRoutes {
   /// `/dashboard/jellyfin/libraries/f137a2dd`.
   ///
   /// The id travels as a path segment and the display name as a query parameter,
-  /// following [seerrGenre]: a deep link has to resolve from the path alone, but
+  /// following [discoverGenre]: a deep link has to resolve from the path alone, but
   /// a caller that already knows the name can spare the destination a fetch
   /// before its first frame.
   static String jellyfinLibrary(String id, {String? title}) =>
@@ -203,40 +203,28 @@ class ServiceRoutes {
   /// still points at it, this time at a tab rather than at a pushed page.
   static const seerrRequests = '$seerr/requests';
   static const seerrIssues = '$seerr/issues';
-  static const seerrDiscover = '$seerr/discover';
   static const seerrUsers = '$seerr/users';
 
-  static const seerrMoviesAll = '$seerrDiscover/movies/all';
-  static const seerrTvAll = '$seerrDiscover/tv/all';
-  static const seerrTrendingAll = '$seerrDiscover/trending/all';
-  static const seerrGenreBase = '$seerrDiscover/genre';
-  static const seerrPersonBase = '$seerrDiscover/person';
-  static const seerrCollectionBase = '$seerrDiscover/collection';
-
-  /// Person (cast member) detail page, e.g.
-  /// `/dashboard/seerr/discover/person/287`.
-  static String seerrPerson(int id, {String? heroTag, String? posterUrl}) {
-    return _withQuery('$seerrPersonBase/$id', {
-      'heroTag': heroTag,
-      'posterUrl': posterUrl,
-    });
-  }
-
-  /// Movie collection detail page, e.g.
-  /// `/dashboard/seerr/discover/collection/10`.
-  static String seerrCollection(int id, {String? heroTag}) {
-    return _withQuery('$seerrCollectionBase/$id', {'heroTag': heroTag});
-  }
+  // ── Discover, the app's catalogue tab ────────────────────────────────────
+  //
+  // Discover was the fourth tab of Seerr's room; it is a tab of the app now,
+  // because the catalogue is where a title is found, not a corner of one
+  // service. Every link Seerr's room ever made still resolves: `router.dart`
+  // rewrites each old spelling here in one hop.
+  static const discoverMoviesAll = '$discover/movies/all';
+  static const discoverTvAll = '$discover/tv/all';
+  static const discoverTrendingAll = '$discover/trending/all';
+  static const discoverGenreBase = '$discover/genre';
 
   /// See-all for a single genre row, e.g.
-  /// `/dashboard/seerr/discover/genre/movie/28?title=Action`.
-  static String seerrGenre({
+  /// `/discover/genre/movie/28?title=Action`.
+  static String discoverGenre({
     required String mediaType,
     required int genreId,
     String? title,
   }) {
     final normalizedMediaType = mediaType == 'tv' ? 'tv' : 'movie';
-    return _withQuery('$seerrGenreBase/$normalizedMediaType/$genreId', {
+    return _withQuery('$discoverGenreBase/$normalizedMediaType/$genreId', {
       'title': title,
     });
   }
@@ -535,13 +523,13 @@ class ServiceRoutes {
 
   /// The two top-level tabs a title can be opened from besides the Dashboard.
   static const activity = '/activity';
-  static const search = '/search';
+  static const discover = '/discover';
 
   /// ## The one page a title has
   ///
   /// A title's page hangs off every branch that opens titles, at the title's
   /// own location (`MediaKey.location`, `/media/movie/653`): the Dashboard,
-  /// Activity, Search, and every tab of the services in [mediaMountServices].
+  /// Activity, Discover, and every tab of the services in [mediaMountServices].
   /// One page mounted many times rather than one route at the root, for the
   /// two reasons the arr details moved inside Library: the poster's Hero flies
   /// only when the tile it left and the page it lands on share one Navigator,
@@ -569,7 +557,7 @@ class ServiceRoutes {
           '$dashboard/$service/$tab',
         ['dashboard', ...] => dashboard,
         ['activity'] || ['activity', 'media', ...] => activity,
-        ['search', ...] => search,
+        ['discover', ...] => discover,
         _ => '',
       };
 
@@ -604,6 +592,26 @@ class ServiceRoutes {
     heroTag: heroTag,
     posterUrl: posterUrl,
   );
+
+  /// A person's page, opened from the page at [from]: hung under the same
+  /// mount a title opened there would be, so a cast member tapped on a title
+  /// in Activity opens in Activity, and Back returns to the title.
+  static String person(
+    int id, {
+    required String from,
+    String? heroTag,
+    String? posterUrl,
+  }) => _withQuery('${mediaMountFor(from)}/media/person/$id', {
+    'heroTag': heroTag,
+    'posterUrl': posterUrl,
+  });
+
+  /// A collection's page, opened from the page at [from], under the same
+  /// mount as [person].
+  static String collection(int id, {required String from, String? heroTag}) =>
+      _withQuery('${mediaMountFor(from)}/media/collection/$id', {
+        'heroTag': heroTag,
+      });
 
   /// [location] as it is opened from the page at [from]: a title's page in
   /// root form ([mediaRoot]) moves under the mount [from] is in; anything

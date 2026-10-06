@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/features/discover/presentation/discover_catalog.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/theme.dart';
@@ -92,11 +94,14 @@ void main() {
     expect(landedOn?.path, ServiceRoutes.settingsConnections);
   });
 
-  testWidgets('P3, with Radarr, Sonarr and Seerr: no Set up, the services '
-      'it will ask', (tester) async {
+  testWidgets('P3, with Radarr, Sonarr and Seerr: at rest the tab browses '
+      'the catalogue, no Set up', (tester) async {
     await pumpSearch(tester, Profiles.p3);
 
-    expect(find.text('Search across every service'), findsOneWidget);
+    // The empty state is what a search here would reach when there is no
+    // catalogue to browse; with Seerr there is one.
+    expect(find.byType(DiscoverCatalog), findsOneWidget);
+    expect(find.text('Search across every service'), findsNothing);
     expect(find.textContaining('Set up'), findsNothing);
   });
 }

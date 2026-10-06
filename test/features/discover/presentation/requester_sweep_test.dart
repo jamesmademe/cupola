@@ -17,7 +17,6 @@ import 'package:cupola/features/media/presentation/media_page.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
@@ -79,7 +78,7 @@ void _expectNothingOfTheOperators(WidgetTester tester, String where) {
 }
 
 final _pages = <String, Widget>{
-  'the Discover tab': const DiscoverScreen(showAppBar: false),
+  'the Discover tab': const SearchScreen(),
   // The one page a title has: the requester's reads no service but the
   // players, and no copy's fault, whatever the household holds.
   'the Media page, a movie of hers': MediaPage(

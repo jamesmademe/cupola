@@ -228,7 +228,7 @@ void main() {
       'in the pane is pushed on it, and Back returns', (tester) async {
     final semantics = tester.ensureSemantics();
     final (harness, router, container) = await _app(tester);
-    router.go(ServiceRoutes.seerrDiscover);
+    router.go(ServiceRoutes.discover);
     await _answer(tester);
 
     await tester.tap(find.text('Charge (2022)'));
@@ -252,7 +252,7 @@ void main() {
     // Metropolis replaced Charge: Close leaves the list, not Charge.
     await _tapPaneControl(tester, 'Close');
     expect(_shown(tester), isEmpty);
-    expect(router.state.uri.path, ServiceRoutes.seerrDiscover);
+    expect(router.state.uri.path, ServiceRoutes.discover);
 
     semantics.dispose();
     await _close(tester, harness, container);
