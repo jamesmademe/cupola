@@ -42,10 +42,7 @@ class SelectionPills<T> extends StatelessWidget {
   ///
   /// The default puts the first pill on the screen gutter while the row itself
   /// runs edge to edge, so a scrolled pill bleeds off the screen instead of
-  /// clipping at the column — right for a host that spans the screen. A host
-  /// that already sits on the gutter (a detail slot, a padded card) passes
-  /// [SelectionPills.flush], or its pills land a second gutter in from the
-  /// label and summary above and below them.
+  /// clipping at the column — right for a host that spans the screen.
   final EdgeInsetsGeometry padding;
 
   /// The screen-gutter inset, for a row that spans the screen.
@@ -56,8 +53,8 @@ class SelectionPills<T> extends StatelessWidget {
     AppSpacing.sm,
   );
 
-  /// No side inset, for a row whose host is already on the gutter.
-  static const EdgeInsetsGeometry flush = EdgeInsets.only(
+  /// No side inset: [SelectionPills.wrap] sits on its host's gutter.
+  static const EdgeInsetsGeometry _wrapPadding = EdgeInsets.only(
     bottom: AppSpacing.sm,
   );
 
@@ -76,15 +73,14 @@ class SelectionPills<T> extends StatelessWidget {
   /// answers, where a pill scrolled off the edge is an answer that does not
   /// exist (the Access row's four, `Custom headers` cut to `Cust…` on a
   /// 390pt phone). A view switcher keeps the scrolling row, which is the one
-  /// line a section can spare. Sits on its host's gutter, like
-  /// [SelectionPills.flush].
+  /// line a section can spare. Sits on its host's gutter, with no side inset.
   const SelectionPills.wrap({
     super.key,
     required this.values,
     required this.selected,
     required this.labelBuilder,
     required this.onSelected,
-  }) : padding = flush,
+  }) : padding = _wrapPadding,
        _wraps = true;
 
   final bool _wraps;

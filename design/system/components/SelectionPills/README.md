@@ -6,8 +6,8 @@ Rendered from `lib/core/widgets/selection_pills.dart` by `test/design_catalog/se
 
 ## Anatomy
 
-- Row: `SingleChildScrollView` scrolling horizontally; `padding` defaults to `SelectionPills.gutter` — `AppSpacing.lg` leading and trailing inside a row that runs edge to edge, so the first pill sits on the screen gutter and a scrolled pill bleeds off the screen — with `AppSpacing.sm` under the row; pills `AppSpacing.sm` apart. A host already on the gutter (a detail slot, a padded header) passes `SelectionPills.flush` (no side inset, `AppSpacing.sm` under), never wraps the default in a second side padding.
-- Wrap (`SelectionPills.wrap`): no scroll; the pills flow onto further lines, `AppSpacing.sm` apart in both directions, with the `flush` inset (the host is on the gutter). For a setting with a handful of answers, where a pill scrolled off the edge is an answer the user cannot see: the Access row's four choices take a second line on a 320–390pt phone.
+- Row: `SingleChildScrollView` scrolling horizontally; `padding` defaults to `SelectionPills.gutter` — `AppSpacing.lg` leading and trailing inside a row that runs edge to edge, so the first pill sits on the screen gutter and a scrolled pill bleeds off the screen — with `AppSpacing.sm` under the row; pills `AppSpacing.sm` apart. A host never wraps the default in a second side padding.
+- Wrap (`SelectionPills.wrap`): no scroll; the pills flow onto further lines, `AppSpacing.sm` apart in both directions, with no side inset and `AppSpacing.sm` under (the host is on the gutter). For a setting with a handful of answers, where a pill scrolled off the edge is an answer the user cannot see: the Access row's four choices take a second line on a 320–390pt phone.
 - Pill: drawn at least `size.chip` 36 tall, centred in a target at least `size.touch` 44 tall (the area grows, the drawing does not; it was drawn at 48 itself), padding `AppSpacing.lg` horizontal × `AppSpacing.sm` vertical, `AppRadius.borderRadiusPill` (fully rounded) — the same radius the navigation bar's selected state uses. `AppRadius.pill` and `AppRadius.full` resolve to the same value now; `pill` is the name for the interactive one. Sized by its label, not fixed, so a pill grows with the reading size or a long label instead of overflowing.
 - Label in `textTheme.labelMedium` at weight 600.
 - Unselected: `colorScheme.surfaceContainer` fill, 1px `outlineVariant` border, `onSurfaceVariant` label.
@@ -27,7 +27,6 @@ Each pill is one `Semantics` node: `button: true`, `selected: <bool>`, labelled 
 Each sheet is drawn in the dark and the light room.
 
 - Scrolling row: one selected, on a service page, a long label.
-- `SelectionPills.flush` in a host already on the gutter.
 - `SelectionPills.wrap` on a 320pt phone.
 
 ## Do / don't

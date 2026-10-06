@@ -141,39 +141,50 @@ void main() {
       });
     }
 
-    testWidgets('sits on the screen gutter by default, flush when asked', (
+    testWidgets('the row sits on the screen gutter, the wrap on its host\'s', (
       tester,
     ) async {
-      // A host already on the gutter (a detail slot) takes `flush`; the default
-      // inset there drew the pills a second gutter in from the column.
-      Future<double> firstPillLeft(EdgeInsetsGeometry padding) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SelectionPills<_Segment>(
-                values: _Segment.values,
-                selected: _Segment.history,
-                labelBuilder: (value) => value.name,
-                onSelected: (_) {},
-                padding: padding,
-              ),
-            ),
-          ),
-        );
+      // A scrolling row runs edge to edge and insets its first pill by the
+      // screen gutter; a wrap is placed by a host already on the gutter, so it
+      // adds no side inset of its own.
+      Future<double> pillsLeft(Widget pills, Type layout) async {
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: pills)));
         return tester
             .getTopLeft(
               find
                   .descendant(
                     of: find.byType(SelectionPills<_Segment>),
-                    matching: find.byType(Row),
+                    matching: find.byType(layout),
                   )
                   .first,
             )
             .dx;
       }
 
-      expect(await firstPillLeft(SelectionPills.gutter), 16);
-      expect(await firstPillLeft(SelectionPills.flush), 0);
+      expect(
+        await pillsLeft(
+          SelectionPills<_Segment>(
+            values: _Segment.values,
+            selected: _Segment.history,
+            labelBuilder: (value) => value.name,
+            onSelected: (_) {},
+          ),
+          Row,
+        ),
+        16,
+      );
+      expect(
+        await pillsLeft(
+          SelectionPills<_Segment>.wrap(
+            values: _Segment.values,
+            selected: _Segment.history,
+            labelBuilder: (value) => value.name,
+            onSelected: (_) {},
+          ),
+          Wrap,
+        ),
+        0,
+      );
     });
   });
 }
