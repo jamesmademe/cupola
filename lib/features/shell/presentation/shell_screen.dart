@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
@@ -310,7 +311,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                         _onItemTapped(idx, context, selectedIndex),
                   ),
                 ),
-                Expanded(child: widget.navigationShell),
+                // A title opened here is drawn beside the page it came
+                // from once the window is wide enough.
+                Expanded(
+                  child: MediaSplitLayout(
+                    location: GoRouterState.of(context).uri,
+                    child: widget.navigationShell,
+                  ),
+                ),
               ],
             ),
           )

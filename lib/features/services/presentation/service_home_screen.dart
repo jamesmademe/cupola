@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -46,6 +47,15 @@ class ServiceHomeScreen extends StatelessWidget {
     this.showAppBar = true,
   });
 
+  /// [showAppBar], or a tab's root on screen beside a tablet's pane: the
+  /// title is pushed under the tab as on a phone, but drawn beside it, so the
+  /// root it was opened from keeps its band.
+  bool _bandShown(BuildContext context) {
+    if (showAppBar) return true;
+    final beside = SidePaneScope.hostNameOf(context);
+    return beside != null && isServiceTabRoot(service, beside);
+  }
+
   /// The room the band occupies measured from the very top of the screen —
   /// the top inset included.
   ///
@@ -74,7 +84,7 @@ class ServiceHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!showAppBar || !drawsBand(context, service)) return child;
+    if (!_bandShown(context) || !drawsBand(context, service)) return child;
 
     return Stack(
       children: [

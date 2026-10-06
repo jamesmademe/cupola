@@ -1250,6 +1250,7 @@ class _BrowsePosterTile extends StatelessWidget {
               child: ContentCard(
                 imageUrl: imageSource.url,
                 httpHeaders: imageSource.headers,
+                paneTag: heroTag,
               ),
             ),
           ),

@@ -34,12 +34,24 @@ abstract final class AppBreakpoints {
   ///
   /// The number stays, on the other half of its justification: 840 is
   /// Material's expanded-window breakpoint, which is where a touch surface
-  /// stops being one-handed — a tablet, an unfolded foldable. That is also the
-  /// width at which a touch build leaves the drawn design entirely (decision 7:
-  /// out of scope at or above 840), so this is less a switch between two
-  /// supported layouts than the edge of the supported range, with the rail as
-  /// the least-wrong thing on the far side.
+  /// stops being one-handed — a tablet, an unfolded foldable. Tablets are a
+  /// supported layout now: the rail here, and from [touchSplit] a title
+  /// opened beside the page it came from.
   static const double touchRail = DesignTokens.breakpointTouchRail;
+
+  /// Width at or above which a *touch* build opens a title beside the page it
+  /// was opened from (`MediaSplit`): that page in [splitList] on the left, the
+  /// title's page on the right.
+  ///
+  /// 1024 because below it the title would get less than a phone's column:
+  /// the rail's 104 and the list's 440 leave 480 at 1024. An iPad on its side
+  /// and a 13-inch one upright clear it; an 11-inch one upright (834) keeps
+  /// the full page, as a phone does.
+  static const double touchSplit = DesignTokens.breakpointTouchSplit;
+
+  /// The column a page keeps beside an open title: the widest phone, so the
+  /// page reads exactly as it does on one.
+  static const double splitList = DesignTokens.breakpointSplitList;
 
   /// Width below which the desktop shell uses its compact variants.
   ///

@@ -9,8 +9,9 @@ class RouteUtils {
   static Page<void> cupertinoPage({
     required LocalKey key,
     required Widget child,
+    String? name,
   }) {
-    return CupertinoPage(key: key, child: child);
+    return CupertinoPage(key: key, name: name, child: child);
   }
 
   static void popOrGo(BuildContext context, String fallbackLocation) {

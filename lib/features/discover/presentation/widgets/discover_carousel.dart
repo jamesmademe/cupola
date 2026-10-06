@@ -145,7 +145,7 @@ class DiscoverCarousel extends StatelessWidget {
           child: Hero(
             tag: heroTag,
             transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
-            child: ContentCard(imageUrl: imageUrl),
+            child: ContentCard(imageUrl: imageUrl, paneTag: heroTag),
           ),
         ),
       ),

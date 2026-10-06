@@ -65,6 +65,7 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_removal.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
+import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/media/presentation/media_series_manage.dart';
 import 'package:cupola/features/media/presentation/media_series_sections.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
@@ -636,364 +637,364 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       _ => null,
     };
 
-    return Scaffold(
-      backgroundColor: room.ground,
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: AppGradients.ambientBackground(
-            scheme,
-            accent: light?.light,
+    final ambient = BoxDecoration(
+      gradient: AppGradients.ambientBackground(scheme, accent: light?.light),
+    );
+    final page = LayoutBuilder(
+      builder: (context, box) {
+        // The page's own width, not the window's: in a tablet's detail
+        // pane it is a phone's column, full screen it takes two tracks.
+        final column = (box.maxWidth - 2 * AppSpacing.lg).clamp(
+          0.0,
+          AppBreakpoints.contentWell,
+        );
+        final gutter = (box.maxWidth - column) / 2;
+        final head = <Widget>[
+          const Align(alignment: Alignment.centerLeft, child: _BackPlate()),
+          const SizedBox(height: AppSpacing.md),
+          _Hero(
+            onArtDrawn: _artDrawn,
+            backdropHeight: (column / 2.6).clamp(214, 420),
+            identity: identity,
+            kind: mediaKey.kind,
+            heroTag: widget.heroTag,
+            posterUrl: widget.posterUrl,
+            waiting: identity == null && waiting,
+            marks: mediaFormatMarks(rows),
+            light: light,
           ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, box) {
-            // The page's own width, not the window's: in a tablet's detail
-            // pane it is a phone's column, full screen it takes two tracks.
-            final column = (box.maxWidth - 2 * AppSpacing.lg).clamp(
-              0.0,
-              AppBreakpoints.contentWell,
-            );
-            final gutter = (box.maxWidth - column) / 2;
-            final head = <Widget>[
-              const Align(alignment: Alignment.centerLeft, child: _BackPlate()),
-              const SizedBox(height: AppSpacing.md),
-              _Hero(
-                onArtDrawn: _artDrawn,
-                backdropHeight: (column / 2.6).clamp(214, 420),
-                identity: identity,
-                kind: mediaKey.kind,
-                heroTag: widget.heroTag,
-                posterUrl: widget.posterUrl,
-                waiting: identity == null && waiting,
-                marks: mediaFormatMarks(rows),
-                light: light,
+        ];
+        final act = <Widget>[
+          if (scored) ...[
+            const SizedBox(height: AppSpacing.lg),
+            _Scores(
+              scores: mediaScoresOf(rows, identity),
+              showMetacritic: audience == Audience.operator,
+              series: !mediaKey.isMovie,
+            ),
+          ],
+          const SizedBox(height: AppSpacing.slabY),
+          // A Radarr copy that needs something says so where the lead
+          // stands, and what can be done.
+          if (lead case MediaLeadCopy(
+            :final connection,
+            :final status,
+          ) when _radarrMovieOf(rows, connection.id) != null)
+            MediaCopyPanelCard(
+              connection: connection,
+              name: settings.connectionTitle(connection.id, connection.service),
+              movie: _radarrMovieOf(rows, connection.id)!,
+              status: status,
+              onChanged: () => _readArrsAgain(rows),
+            )
+          else
+            _LeadBar(
+              lead: lead,
+              light: light,
+              onPlay: (lead) => _play(
+                lead,
+                settings.connectionTitle(lead.server.id, lead.server.service),
               ),
-            ];
-            final act = <Widget>[
-              if (scored) ...[
-                const SizedBox(height: AppSpacing.lg),
-                _Scores(
-                  scores: mediaScoresOf(rows, identity),
-                  showMetacritic: audience == Audience.operator,
-                  series: !mediaKey.isMovie,
-                ),
-              ],
-              const SizedBox(height: AppSpacing.slabY),
-              // A Radarr copy that needs something says so where the lead
-              // stands, and what can be done.
-              if (lead case MediaLeadCopy(
-                :final connection,
-                :final status,
-              ) when _radarrMovieOf(rows, connection.id) != null)
-                MediaCopyPanelCard(
-                  connection: connection,
-                  name: settings.connectionTitle(
-                    connection.id,
-                    connection.service,
-                  ),
-                  movie: _radarrMovieOf(rows, connection.id)!,
-                  status: status,
-                  onChanged: () => _readArrsAgain(rows),
-                )
-              else
-                _LeadBar(
-                  lead: lead,
-                  light: light,
-                  onPlay: (lead) => _play(
-                    lead,
-                    settings.connectionTitle(
-                      lead.server.id,
-                      lead.server.service,
+              onTrailer: identity?.videos.isNotEmpty ?? false
+                  ? () => DiscoverVideosButton.show(context, identity!.videos)
+                  : null,
+              onManage: _toManage,
+              watchlist: watchlistSeerr == null || watchlisted == null
+                  ? null
+                  : (
+                      on: watchlisted,
+                      onTap: () => _toggleWatchlist(
+                        watchlistSeerr,
+                        watchlisted,
+                        identity,
+                        rows,
+                      ),
                     ),
-                  ),
-                  onTrailer: identity?.videos.isNotEmpty ?? false
-                      ? () =>
-                            DiscoverVideosButton.show(context, identity!.videos)
+              request: request,
+              onRequest: request == null
+                  ? null
+                  : () => _request(request, identity, rows),
+              onWatch: request?.watch == null
+                  ? null
+                  : () => _watch(request!.watch!.url),
+              onWatchAt: _watch,
+              onAdd: (lead) => _add(lead, rows, identity, light),
+              hasTrailer: identity?.videos.isNotEmpty ?? false,
+              showManage: manage.isNotEmpty,
+              primary: decisionLeads
+                  ? _decisionCards(
+                      decisions,
+                      title: identity?.title ?? '',
+                      leads: true,
+                      light: light,
+                      rows: rows,
+                    )
+                  : null,
+              serverName: (lead) =>
+                  settings.connectionTitle(lead.server.id, lead.server.service),
+            ),
+          if (decisions.isNotEmpty && !decisionLeads) ...[
+            const SizedBox(height: AppSpacing.md),
+            _decisionCards(
+              decisions,
+              title: identity?.title ?? '',
+              leads: false,
+              light: light,
+              rows: rows,
+            ),
+          ],
+          if (nextAiring != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            MediaNextAiringCard(
+              next: nextAiring,
+              now: now,
+              operator: audience == Audience.operator,
+            ),
+          ],
+          if (requestLine != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _StateLine(
+              requestLine,
+              tone: switch (request?.gate.state) {
+                SeerrRequestState.waitingForApproval ||
+                SeerrRequestState.onItsWay => StatusTone.info,
+                SeerrRequestState.failed => StatusTone.warning,
+                SeerrRequestState.available => StatusTone.success,
+                SeerrRequestState.blocklisted => StatusTone.neutral,
+                // Not there yet: the backlog's ring.
+                _ => null,
+              },
+            ),
+          ],
+        ];
+        final serve = <Widget>[
+          // The requester's line already says the title is not there, or
+          // where her request stands: the players' rows would repeat it.
+          if (views.isNotEmpty &&
+              !(audience == Audience.requester && requestLine != null)) ...[
+            _Heading('On your server', trailing: _servicesCount(shown)),
+            MediaGroup(children: views),
+          ],
+          if (graphSource case (:final seerr, :final tvId, :final numbers))
+            MediaEpisodesGraphPanel(
+              connectionId: seerr,
+              tvId: tvId,
+              seasons: numbers,
+              light: light,
+              upcoming: switch (nextAiring) {
+                final next? when next.premiere => (
+                  season: next.season,
+                  day: mediaAiringDay(next, now),
+                ),
+                _ => null,
+              },
+              onOpen: () => _openGraph(
+                seerr: seerr,
+                tvId: tvId,
+                numbers: numbers,
+                seasons: seasons,
+                rows: rows,
+                title: identity?.title ?? '',
+                light: light,
+                operator: audience == Audience.operator,
+              ),
+            ),
+          if (seasons.isNotEmpty) ...[
+            const _Heading('Episodes'),
+            MediaEpisodes(
+              key: ValueKey(('episodes', mediaKey)),
+              seasons: seasons,
+              initialSeason: _initialSeason(lead, seasons),
+              onSearchMissing: audience == Audience.operator
+                  ? (season) => _searchMissing(season, rows)
+                  : null,
+              onOpen: (episode) => _openEpisode(
+                episode,
+                seasons: seasons,
+                rows: rows,
+                title: identity?.title ?? '',
+                light: light,
+                operator: audience == Audience.operator,
+              ),
+            ),
+          ],
+          ...manage,
+          if (mediaWatchProvidersOf(rows, region) case final providers?) ...[
+            _Heading('Where to watch', trailing: regionName(region)),
+            MediaWatchProviders(providers: providers),
+          ],
+        ];
+        final reference = <Widget>[
+          if ((identity?.overview ?? '').isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.section),
+            Text(
+              identity!.overview,
+              style: AppType.body.copyWith(color: room.ink),
+            ),
+          ],
+          if ((identity?.creditsLine ?? '').isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              identity!.creditsLine,
+              style: AppType.meta.copyWith(color: room.inkSecondary),
+            ),
+          ],
+          if (mediaKey.isMovie)
+            if (mediaReleasesOf(rows, region) case final releases?) ...[
+              _Heading(
+                'Release dates',
+                trailing: switch (releases.region) {
+                  final code? => regionName(code),
+                  null => null,
+                },
+              ),
+              MediaReleaseDates(releases: releases),
+            ],
+          if (identity?.cast.isNotEmpty ?? false) ...[
+            const _Heading('Cast'),
+            DiscoverCastList(cast: identity!.cast, padding: EdgeInsets.zero),
+          ],
+          if (identity?.collection case final collection?) ...[
+            const SizedBox(height: AppSpacing.section),
+            _CollectionBand(
+              collection: collection,
+              held: switch (_recommender(settings)) {
+                final seerr? =>
+                  ref
+                      .watch(
+                        mediaCollectionHeldProvider((
+                          connectionId: seerr,
+                          collectionId: collection.id,
+                        )),
+                      )
+                      .value,
+                null => null,
+              },
+            ),
+          ],
+        ];
+        final recommendations = switch (_recommender(settings)) {
+          final seerr? => ref.watch(
+            mediaRecommendationsProvider((key: mediaKey, connectionId: seerr)),
+          ),
+          null => null,
+        };
+        final more = <Widget>[
+          // A Seerr that did not answer says so once, on its row or as
+          // the page: More like this steps aside rather than say it again.
+          if (recommendations != null && !recommendations.hasError) ...[
+            const SizedBox(height: AppSpacing.section),
+            DiscoverCarousel(
+              title: 'More like this',
+              sectionId: 'media-more-like-this',
+              forcedMediaType: mediaKey.isMovie ? 'movie' : 'tv',
+              items: recommendations,
+            ),
+          ],
+        ];
+        if ((silentSeerr, silence) case (final row?, final failure?)) {
+          return CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  gutter,
+                  top + AppSpacing.md,
+                  gutter,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(child: head.first),
+              ),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: AppErrorState(
+                  service: ServiceKey.seerr,
+                  instanceId: row.connection.id,
+                  error: failure,
+                  onRetry: failureRetryHelps(failure.reason)
+                      ? () => retryMediaRow(ref, mediaKey, row)
                       : null,
-                  onManage: _toManage,
-                  watchlist: watchlistSeerr == null || watchlisted == null
-                      ? null
-                      : (
-                          on: watchlisted,
-                          onTap: () => _toggleWatchlist(
-                            watchlistSeerr,
-                            watchlisted,
-                            identity,
-                            rows,
+                ),
+              ),
+            ],
+          );
+        }
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                gutter,
+                top + AppSpacing.md,
+                gutter,
+                // Clear of the floating bar, which grows with the
+                // reading size; where there is none, a margin.
+                math.max(
+                  AppSpacing.xxxl,
+                  FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+                ),
+              ),
+              sliver: SliverList.list(
+                children: [
+                  ...head,
+                  if (box.maxWidth >= AppBreakpoints.touchRail)
+                    // Two tracks: who the title is and what to do with it
+                    // on the left, the servers and Manage beside it.
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [...act, ...reference],
                           ),
                         ),
-                  request: request,
-                  onRequest: request == null
-                      ? null
-                      : () => _request(request, identity, rows),
-                  onWatch: request?.watch == null
-                      ? null
-                      : () => _watch(request!.watch!.url),
-                  onWatchAt: _watch,
-                  onAdd: (lead) => _add(lead, rows, identity, light),
-                  hasTrailer: identity?.videos.isNotEmpty ?? false,
-                  showManage: manage.isNotEmpty,
-                  primary: decisionLeads
-                      ? _decisionCards(
-                          decisions,
-                          title: identity?.title ?? '',
-                          leads: true,
-                          light: light,
-                          rows: rows,
-                        )
-                      : null,
-                  serverName: (lead) => settings.connectionTitle(
-                    lead.server.id,
-                    lead.server.service,
-                  ),
-                ),
-              if (decisions.isNotEmpty && !decisionLeads) ...[
-                const SizedBox(height: AppSpacing.md),
-                _decisionCards(
-                  decisions,
-                  title: identity?.title ?? '',
-                  leads: false,
-                  light: light,
-                  rows: rows,
-                ),
-              ],
-              if (nextAiring != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                MediaNextAiringCard(
-                  next: nextAiring,
-                  now: now,
-                  operator: audience == Audience.operator,
-                ),
-              ],
-              if (requestLine != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                _StateLine(
-                  requestLine,
-                  tone: switch (request?.gate.state) {
-                    SeerrRequestState.waitingForApproval ||
-                    SeerrRequestState.onItsWay => StatusTone.info,
-                    SeerrRequestState.failed => StatusTone.warning,
-                    SeerrRequestState.available => StatusTone.success,
-                    SeerrRequestState.blocklisted => StatusTone.neutral,
-                    // Not there yet: the backlog's ring.
-                    _ => null,
-                  },
-                ),
-              ],
-            ];
-            final serve = <Widget>[
-              // The requester's line already says the title is not there, or
-              // where her request stands: the players' rows would repeat it.
-              if (views.isNotEmpty &&
-                  !(audience == Audience.requester && requestLine != null)) ...[
-                _Heading('On your server', trailing: _servicesCount(shown)),
-                MediaGroup(children: views),
-              ],
-              if (graphSource case (:final seerr, :final tvId, :final numbers))
-                MediaEpisodesGraphPanel(
-                  connectionId: seerr,
-                  tvId: tvId,
-                  seasons: numbers,
-                  light: light,
-                  upcoming: switch (nextAiring) {
-                    final next? when next.premiere => (
-                      season: next.season,
-                      day: mediaAiringDay(next, now),
-                    ),
-                    _ => null,
-                  },
-                  onOpen: () => _openGraph(
-                    seerr: seerr,
-                    tvId: tvId,
-                    numbers: numbers,
-                    seasons: seasons,
-                    rows: rows,
-                    title: identity?.title ?? '',
-                    light: light,
-                    operator: audience == Audience.operator,
-                  ),
-                ),
-              if (seasons.isNotEmpty) ...[
-                const _Heading('Episodes'),
-                MediaEpisodes(
-                  key: ValueKey(('episodes', mediaKey)),
-                  seasons: seasons,
-                  initialSeason: _initialSeason(lead, seasons),
-                  onSearchMissing: audience == Audience.operator
-                      ? (season) => _searchMissing(season, rows)
-                      : null,
-                  onOpen: (episode) => _openEpisode(
-                    episode,
-                    seasons: seasons,
-                    rows: rows,
-                    title: identity?.title ?? '',
-                    light: light,
-                    operator: audience == Audience.operator,
-                  ),
-                ),
-              ],
-              ...manage,
-              if (mediaWatchProvidersOf(rows, region)
-                  case final providers?) ...[
-                _Heading('Where to watch', trailing: regionName(region)),
-                MediaWatchProviders(providers: providers),
-              ],
-            ];
-            final reference = <Widget>[
-              if ((identity?.overview ?? '').isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.section),
-                Text(
-                  identity!.overview,
-                  style: AppType.body.copyWith(color: room.ink),
-                ),
-              ],
-              if ((identity?.creditsLine ?? '').isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  identity!.creditsLine,
-                  style: AppType.meta.copyWith(color: room.inkSecondary),
-                ),
-              ],
-              if (mediaKey.isMovie)
-                if (mediaReleasesOf(rows, region) case final releases?) ...[
-                  _Heading(
-                    'Release dates',
-                    trailing: switch (releases.region) {
-                      final code? => regionName(code),
-                      null => null,
-                    },
-                  ),
-                  MediaReleaseDates(releases: releases),
-                ],
-              if (identity?.cast.isNotEmpty ?? false) ...[
-                const _Heading('Cast'),
-                DiscoverCastList(
-                  cast: identity!.cast,
-                  padding: EdgeInsets.zero,
-                ),
-              ],
-              if (identity?.collection case final collection?) ...[
-                const SizedBox(height: AppSpacing.section),
-                _CollectionBand(
-                  collection: collection,
-                  held: switch (_recommender(settings)) {
-                    final seerr? =>
-                      ref
-                          .watch(
-                            mediaCollectionHeldProvider((
-                              connectionId: seerr,
-                              collectionId: collection.id,
-                            )),
-                          )
-                          .value,
-                    null => null,
-                  },
-                ),
-              ],
-            ];
-            final recommendations = switch (_recommender(settings)) {
-              final seerr? => ref.watch(
-                mediaRecommendationsProvider((
-                  key: mediaKey,
-                  connectionId: seerr,
-                )),
-              ),
-              null => null,
-            };
-            final more = <Widget>[
-              // A Seerr that did not answer says so once, on its row or as
-              // the page: More like this steps aside rather than say it again.
-              if (recommendations != null && !recommendations.hasError) ...[
-                const SizedBox(height: AppSpacing.section),
-                DiscoverCarousel(
-                  title: 'More like this',
-                  sectionId: 'media-more-like-this',
-                  forcedMediaType: mediaKey.isMovie ? 'movie' : 'tv',
-                  items: recommendations,
-                ),
-              ],
-            ];
-            if ((silentSeerr, silence) case (final row?, final failure?)) {
-              return CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
-                      gutter,
-                      top + AppSpacing.md,
-                      gutter,
-                      0,
-                    ),
-                    sliver: SliverToBoxAdapter(child: head.first),
-                  ),
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: AppErrorState(
-                      service: ServiceKey.seerr,
-                      instanceId: row.connection.id,
-                      error: failure,
-                      onRetry: failureRetryHelps(failure.reason)
-                          ? () => retryMediaRow(ref, mediaKey, row)
-                          : null,
-                    ),
-                  ),
-                ],
-              );
-            }
-            return CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    gutter,
-                    top + AppSpacing.md,
-                    gutter,
-                    // Clear of the floating bar, which grows with the
-                    // reading size; where there is none, a margin.
-                    math.max(
-                      AppSpacing.xxxl,
-                      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                    ),
-                  ),
-                  sliver: SliverList.list(
-                    children: [
-                      ...head,
-                      if (box.maxWidth >= AppBreakpoints.touchRail)
-                        // Two tracks: who the title is and what to do with it
-                        // on the left, the servers and Manage beside it.
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [...act, ...reference],
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.xl),
-                            SizedBox(
-                              width: _sideTrack,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: serve,
-                              ),
-                            ),
-                          ],
-                        )
-                      else ...[
-                        ...act,
-                        ...serve,
-                        ...reference,
+                        const SizedBox(width: AppSpacing.xl),
+                        SizedBox(
+                          width: _sideTrack,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: serve,
+                          ),
+                        ),
                       ],
-                      ...more,
-                    ],
-                  ),
+                    )
+                  else ...[
+                    ...act,
+                    ...serve,
+                    ...reference,
+                  ],
+                  ...more,
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    return Scaffold(
+      backgroundColor: room.ground,
+      body: MediaPane.maybeOf(context) == null
+          ? DecoratedBox(decoration: ambient, child: page)
+          // Beside the list the title's light comes up from the list's side
+          // rather than starting at an edge.
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                ShaderMask(
+                  blendMode: BlendMode.dstIn,
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: const [Color(0x00000000), Color(0xFF000000)],
+                    stops: [0, (_paneLightRise / bounds.width).clamp(0, 1)],
+                  ).createShader(bounds),
+                  child: DecoratedBox(decoration: ambient),
                 ),
+                page,
               ],
-            );
-          },
-        ),
-      ),
+            ),
     );
   }
+
+  /// How far into a pane its title light takes to come up.
+  static const double _paneLightRise = 110;
 
   /// The season the episodes open on: the one Play would continue, else the
   /// latest with an episode that has aired, else the first.
@@ -1481,18 +1482,25 @@ class _MediaPageState extends ConsumerState<MediaPage> {
 /// A film one Radarr holds: the connection, and its record there.
 typedef _RadarrHeld = ({ServiceInstance connection, RadarrMovie movie});
 
-/// The back control: a 44 plate at rest over the room.
+/// The back control: a 44 plate at rest over the room. In a tablet's pane it
+/// goes back to the title opened before, or closes the pane.
 class _BackPlate extends StatelessWidget {
   const _BackPlate();
 
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
+    final pane = MediaPane.maybeOf(context);
+    final closes = pane != null && !pane.canGoBack;
+    final words = MaterialLocalizations.of(context);
+    // Its own node: merged into the page's first row, it read as wide as
+    // the page and a pointer aimed at its middle missed the plate.
     return Semantics(
+      container: true,
       button: true,
-      label: MaterialLocalizations.of(context).backButtonTooltip,
+      label: closes ? words.closeButtonTooltip : words.backButtonTooltip,
       child: PressableScale(
-        onTap: () => Navigator.of(context).maybePop(),
+        onTap: pane?.onBack ?? () => Navigator.of(context).maybePop(),
         child: Container(
           width: DesignTokens.sizeTouch,
           height: DesignTokens.sizeTouch,
@@ -1501,7 +1509,9 @@ class _BackPlate extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.control),
             border: Border.all(color: room.edge),
           ),
-          child: Icon(Icons.chevron_left_rounded, size: 26, color: room.ink),
+          child: closes
+              ? Icon(Icons.close_rounded, size: 22, color: room.ink)
+              : Icon(Icons.chevron_left_rounded, size: 26, color: room.ink),
         ),
       ),
     );

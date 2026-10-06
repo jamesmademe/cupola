@@ -150,7 +150,7 @@ class _DiscoverSeeAllScreenState extends ConsumerState<DiscoverSeeAllScreen> {
                       tag: heroTag,
                       transitionOnUserGestures:
                           MediaPosterCard.flightOnUserGestures,
-                      child: ContentCard(imageUrl: imageUrl),
+                      child: ContentCard(imageUrl: imageUrl, paneTag: heroTag),
                     ),
                   );
                 },

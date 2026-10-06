@@ -23,6 +23,7 @@ import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
@@ -865,9 +866,16 @@ CatalogScene _scene(
   Audience audience = Audience.operator,
   double textScale = 1,
   MediaKey key = _key,
+  bool paned = false,
 }) => CatalogScene(
   caption,
-  (_) => MediaPage(mediaKey: key),
+  (_) => paned
+      ? MediaPane(
+          canGoBack: false,
+          onBack: () {},
+          child: MediaPage(mediaKey: key),
+        )
+      : MediaPage(mediaKey: key),
   width: width,
   height: height,
   textScale: textScale,
@@ -1002,13 +1010,16 @@ void main() {
         audience: Audience.requester,
       ),
       _scene(
-        'Tablet · a detail pane: the phone column, wider',
+        'Tablet · beside the list: the phone column, wider, Close, the '
+        "light rising from the list's side",
         _withSeerr(),
-        width: 592,
+        width: 660,
         height: 2480,
+        paned: true,
       ),
       _scene(
-        'Tablet · full screen: two tracks, the servers and Manage beside',
+        'Desktop and an upright tablet · full screen: two tracks, the '
+        'servers and Manage beside',
         _withSeerr(),
         width: 1180,
         height: 1700,

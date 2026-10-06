@@ -9,10 +9,12 @@ import 'package:cupola/features/services/presentation/service_bar_action.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/media/presentation/arr_title_opener.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
@@ -176,8 +178,13 @@ GoRoute _page(
   path: path,
   redirect: redirect,
   routes: routes,
-  pageBuilder: (context, state) =>
-      RouteUtils.cupertinoPage(key: state.pageKey, child: child(state)),
+  // Named by its location, so a header above the navigator can tell which
+  // page stands beside a tablet's pane (`SidePaneScope.hostNameOf`).
+  pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+    key: state.pageKey,
+    name: state.matchedLocation,
+    child: child(state),
+  ),
 );
 
 /// The one page a title has, at the title's own location (`MediaKey.location`)
@@ -201,21 +208,27 @@ List<GoRoute> _mediaRoutes({String prefix = ''}) => [
               null
           ? _mediaMountOrHome(state.uri.path)
           : null,
-      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-        key: state.pageKey,
-        child: MediaPage(
-          mediaKey: MediaKey.parse(
-            kind,
-            state.pathParameters['id']!,
-            byTvdb: byTvdb,
-          )!,
-          focus: state.uri.queryParameters['i'],
-          heroTag: state.uri.queryParameters['heroTag'],
-          // go_router has already decoded it; decoding again would break a
-          // poster URL with a literal `%` in it.
-          posterUrl: state.uri.queryParameters['posterUrl'],
-        ),
-      ),
+      // On a tablet the title is drawn beside the page it was opened from,
+      // and its place in this navigator is an empty slot (`MediaSplit`). The
+      // root mount is outside the shell, with no pane to draw it in.
+      pageBuilder: (context, state) =>
+          prefix.isEmpty && MediaSplit.splits(context)
+          ? SidePaneSlotPage(key: state.pageKey, name: state.uri.toString())
+          : RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: MediaPage(
+                mediaKey: MediaKey.parse(
+                  kind,
+                  state.pathParameters['id']!,
+                  byTvdb: byTvdb,
+                )!,
+                focus: state.uri.queryParameters['i'],
+                heroTag: state.uri.queryParameters['heroTag'],
+                // go_router has already decoded it; decoding again would break a
+                // poster URL with a literal `%` in it.
+                posterUrl: state.uri.queryParameters['posterUrl'],
+              ),
+            ),
     ),
 ];
 

@@ -216,6 +216,7 @@ class MediaGrid<T> extends StatelessWidget {
                 imageUrl: imageSource.url,
                 httpHeaders: imageSource.headers,
                 badge: badge,
+                paneTag: heroTag,
               ),
             ),
           ),

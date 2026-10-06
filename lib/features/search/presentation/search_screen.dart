@@ -1084,6 +1084,7 @@ class _ResultPoster extends StatelessWidget {
     final card = ContentCard(
       imageUrl: result.imageUrl,
       httpHeaders: result.imageHeaders,
+      paneTag: result.heroTag,
       badge: Align(
         alignment: Alignment.bottomLeft,
         child: Container(

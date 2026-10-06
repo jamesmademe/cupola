@@ -348,6 +348,14 @@ abstract final class DesignTokens {
   /// rail.
   static const double breakpointTouchRail = 840;
 
+  /// At or above this width a touch build opens a title beside the page it was
+  /// opened from: the phone's column on the left, the title on the right.
+  static const double breakpointTouchSplit = 1024;
+
+  /// The column a page keeps beside an open title on a tablet: the widest
+  /// phone.
+  static const double breakpointSplitList = 440;
+
   /// Below this width the desktop shell uses its compact variants.
   static const double breakpointDesktopCompact = 1100;
 

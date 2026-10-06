@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -20,7 +22,7 @@ extension OpenMedia on BuildContext {
     String? focus,
     String? heroTag,
     String? posterUrl,
-  }) => push(
+  }) => _openTitle(
     ServiceRoutes.media(
       key,
       from: _here,
@@ -29,6 +31,21 @@ extension OpenMedia on BuildContext {
       posterUrl: posterUrl,
     ),
   );
+
+  /// Pushes a title's [location]. On a tablet with a title open beside the
+  /// list (`MediaSplit`), one chosen from the list takes that title's place,
+  /// with the pane's own history; one opened from inside the pane is pushed
+  /// on it, so Back in the pane returns to the title before.
+  Future<void> _openTitle(String location, {Object? extra}) {
+    final router = GoRouter.of(this);
+    if (MediaPane.maybeOf(this) == null &&
+        SidePaneScope.selectedOf(this) != null) {
+      while (MediaSplit.targetOf(router.state.uri) != null && router.canPop()) {
+        router.pop();
+      }
+    }
+    return router.push(location, extra: extra);
+  }
 
   /// Opens a title Seerr names on its own page, under the tab the user is
   /// on: [mediaType] is Seerr's `movie` or `tv`, [id] TMDB's.
@@ -60,6 +77,10 @@ extension OpenMedia on BuildContext {
 
   /// Pushes [location], a title's page in root form moved under the tab the
   /// user is on (`ServiceRoutes.mounted`); any other location as it is.
-  Future<void> pushMounted(String location, {Object? extra}) =>
-      push(ServiceRoutes.mounted(location, from: _here), extra: extra);
+  Future<void> pushMounted(String location, {Object? extra}) {
+    final mounted = ServiceRoutes.mounted(location, from: _here);
+    return MediaSplit.targetOf(Uri.parse(mounted)) == null
+        ? push(mounted, extra: extra)
+        : _openTitle(mounted, extra: extra);
+  }
 }

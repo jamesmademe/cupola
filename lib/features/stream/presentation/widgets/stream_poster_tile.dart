@@ -79,6 +79,7 @@ class StreamPosterTile extends ConsumerWidget {
               child: ContentCard(
                 imageUrl: poster?.url,
                 httpHeaders: poster?.headers,
+                paneTag: heroTag,
                 badge: unplayed != null && unplayed > 0
                     ? _UnplayedBadge(count: unplayed)
                     : null,

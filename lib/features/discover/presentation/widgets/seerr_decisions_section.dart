@@ -204,7 +204,10 @@ class _DecisionRow extends ConsumerWidget {
                         tag: heroTag,
                         transitionOnUserGestures:
                             MediaPosterCard.flightOnUserGestures,
-                        child: ContentCard(imageUrl: posterUrl),
+                        child: ContentCard(
+                          imageUrl: posterUrl,
+                          paneTag: heroTag,
+                        ),
                       ),
               ),
             ),

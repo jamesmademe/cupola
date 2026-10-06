@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
 
 /// Why a page is not allowed to spend anything.
@@ -92,7 +93,11 @@ class PageActivity {
 PageActivity watchPageActivity(BuildContext context, WidgetRef ref) =>
     PageActivity(
       branchActive: BranchActivityScope.isActiveOf(context),
-      routeIsCurrent: ModalRoute.isCurrentOf(context) ?? true,
+      // A page beside a tablet's pane is on screen though the slot over it
+      // is the current route (`SidePaneSlotRoute`).
+      routeIsCurrent:
+          (ModalRoute.isCurrentOf(context) ?? true) ||
+          SidePaneScope.hostsOf(context),
       appInForeground: ref.watch(appInForegroundProvider),
       portalCovering: PageCoverageScope.coveringOf(context),
     );

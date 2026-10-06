@@ -1358,7 +1358,7 @@ class _HeroContentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = ContentCard(imageUrl: imageUrl);
+    final card = ContentCard(imageUrl: imageUrl, paneTag: heroTag);
     // Only fly a Hero when there is both a tag AND an image on this end. An
     // empty image would produce a blank/orphaned Hero whose destination has no
     // matching poster, which shows up as a fade instead of a shared-element

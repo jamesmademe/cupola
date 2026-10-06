@@ -533,6 +533,16 @@
       "$value": "840px",
       "$description": "At or above this width a touch build moves from the bottom bar to a side rail."
     },
+    "touch-split": {
+      "$type": "dimension",
+      "$value": "1024px",
+      "$description": "At or above this width a touch build opens a title beside the page it was opened from: the phone's column on the left, the title on the right."
+    },
+    "split-list": {
+      "$type": "dimension",
+      "$value": "440px",
+      "$description": "The column a page keeps beside an open title on a tablet: the widest phone."
+    },
     "desktop-compact": {
       "$type": "dimension",
       "$value": "1100px",

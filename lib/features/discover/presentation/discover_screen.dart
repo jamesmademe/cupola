@@ -369,7 +369,10 @@ class _FeaturedBanner extends StatelessWidget {
                           tag: heroTag,
                           transitionOnUserGestures:
                               MediaPosterCard.flightOnUserGestures,
-                          child: ContentCard(imageUrl: imageUrl),
+                          child: ContentCard(
+                            imageUrl: imageUrl,
+                            paneTag: heroTag,
+                          ),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.md),
@@ -482,7 +485,7 @@ class _DiscoverSearchResults extends ConsumerWidget {
               child: Hero(
                 tag: heroTag,
                 transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
-                child: ContentCard(imageUrl: imageUrl),
+                child: ContentCard(imageUrl: imageUrl, paneTag: heroTag),
               ),
             );
           },

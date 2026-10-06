@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' show Client;
 
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 
@@ -169,6 +170,33 @@ void main() {
             ),
             _cell(const ContentCard(imageUrl: _missing, badge: _stalled)),
           ],
+        ),
+      ),
+      CatalogScene(
+        'ContentCard(paneTag:) · beside a tablet\'s pane · the poster whose '
+        'title the pane shows wears a ring in the ink, a hair outside its '
+        'edge; its neighbour wears none',
+        (_) => SidePaneScope(
+          selected: 'shown',
+          selectedTag: 'poster-1',
+          location: '/dashboard/radarr/library/media/movie/1',
+          child: Wrap(
+            spacing: 16,
+            children: [
+              _cell(
+                const ContentCard(
+                  imageUrl: CatalogArt.poster,
+                  paneTag: 'poster-1',
+                ),
+              ),
+              _cell(
+                const ContentCard(
+                  imageUrl: CatalogArt.poster,
+                  paneTag: 'poster-2',
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       CatalogScene(
