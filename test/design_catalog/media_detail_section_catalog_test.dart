@@ -21,24 +21,6 @@ const _overview =
 
 const _available = MediaStatusInfo(availability: MediaAvailability.available);
 
-const _profiles = [
-  MediaDetailValueOption(value: 1, label: 'HD-1080p'),
-  MediaDetailValueOption(value: 2, label: 'Ultra-HD'),
-];
-
-Widget _profileRow(
-  ServiceKey service, {
-  bool editable = true,
-  int? value = 1,
-}) => MediaDetailValueRow<int>(
-  label: 'Quality profile',
-  value: value,
-  options: _profiles,
-  onChanged: editable ? (_) async {} : null,
-  accent: service.accent,
-  hint: 'Changes it on ${service.title}',
-);
-
 /// Radarr's page for a movie on disk, region by region, with the side track
 /// Radarr declares. [band] is a line over the whole page.
 Widget _radarrPage({Widget? band}) {
@@ -84,9 +66,8 @@ Widget _radarrPage({Widget? band}) {
         MediaDetailSlot.box(
           label: 'Details',
           child: AppCard.surfaceOutlined(
-            child: MediaInfoCard(
-              rows: [_profileRow(ServiceKey.radarr)],
-              groups: const [
+            child: const MediaInfoCard(
+              groups: [
                 MediaInfoGroup(title: 'Monitored', child: Text('Yes')),
                 MediaInfoGroup(title: 'In cinemas', child: Text('Mar 4, 1922')),
                 MediaInfoGroup(title: 'Studio', child: Text('Prana-Film')),
@@ -338,21 +319,6 @@ void main() {
         _labels,
       ),
       CatalogScene(
-        'MediaDetailValueRow · editable, the source did not answer, no write '
-        'behind it · chevron only when it can write; a dash, never a blank',
-        (_) => SizedBox(
-          width: 358,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _profileRow(ServiceKey.radarr),
-              _profileRow(ServiceKey.radarr, value: null),
-              _profileRow(ServiceKey.radarr, editable: false),
-            ],
-          ),
-        ),
-      ),
-      CatalogScene(
         'MediaDetailView.body · Radarr in a 1280 desktop window · two tracks '
         'past 1140: the slots named in sideTrack stand in the 380 column, '
         'band and manifest stay wide',
@@ -370,26 +336,8 @@ void main() {
         textScale: catalogTextScale,
       ),
       CatalogScene(
-        'Text at 200% · MediaDetailSectionLabel in each form and '
-        'MediaDetailValueRow editable, unanswered and read-only',
-        (context) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _labels(context),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: 358,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _profileRow(ServiceKey.radarr),
-                  _profileRow(ServiceKey.radarr, value: null),
-                  _profileRow(ServiceKey.radarr, editable: false),
-                ],
-              ),
-            ),
-          ],
-        ),
+        'Text at 200% · MediaDetailSectionLabel in each form',
+        _labels,
         textScale: catalogTextScale,
       ),
     ],

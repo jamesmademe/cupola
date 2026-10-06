@@ -6,14 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
-import 'package:cupola/core/widgets/media_detail_value_row.dart';
 import 'package:cupola/core/widgets/media_info_card.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
 
 /// The cells Radarr's Details card builds for a movie in the library, in its
-/// order — the quality profile is a row above them, not a cell.
+/// order.
 const _details = [
   MediaInfoGroup(title: 'Monitored', child: Text('Yes')),
   MediaInfoGroup(title: 'In cinemas', child: Text('Mar 4, 1922')),
@@ -23,22 +22,6 @@ const _details = [
   MediaInfoGroup(title: 'Certification', child: Text('Not Rated')),
   MediaInfoGroup(title: 'Language', child: Text('German')),
 ];
-
-const _profiles = [
-  MediaDetailValueOption(value: 1, label: 'HD-1080p'),
-  MediaDetailValueOption(value: 2, label: 'Ultra-HD'),
-  MediaDetailValueOption(value: 3, label: 'Any'),
-];
-
-Widget _profileRow({bool editable = true, int? value = 1}) =>
-    MediaDetailValueRow<int>(
-      label: 'Quality profile',
-      value: value,
-      options: _profiles,
-      onChanged: editable ? (_) async {} : null,
-      accent: ServiceKey.radarr.accent,
-      hint: 'Changes it on Radarr',
-    );
 
 /// The Details slot on a phone: the 390 screen less the 16 gutters, in the
 /// host card Radarr uses.
@@ -52,20 +35,8 @@ void main() {
     'MediaInfoCard',
     scenes: [
       CatalogScene(
-        'MediaInfoCard(rows:) · Radarr Details: the editable profile row, '
-        'then the two-column fact grid · edits above what can only be read',
-        (_) => _hosted(MediaInfoCard(rows: [_profileRow()], groups: _details)),
-      ),
-      CatalogScene(
-        'MediaInfoCard(rows:) · a read-only row (no write) and a value that '
-        'matches no option · a plain fact with no chevron; the dash, never a '
-        'blank',
-        (_) => _hosted(
-          MediaInfoCard(
-            rows: [_profileRow(editable: false), _profileRow(value: 99)],
-            groups: _details.sublist(0, 2),
-          ),
-        ),
+        'MediaInfoCard · Radarr Details: the two-column fact grid',
+        (_) => _hosted(const MediaInfoCard(groups: _details)),
       ),
       CatalogScene(
         'MediaInfoCard · a 360pt phone, 296 of grid width · under two 144pt '
@@ -157,13 +128,9 @@ void main() {
         ),
       ),
       CatalogScene(
-        'MediaInfoCard(rows:) · desktop, the 380 side track (348 inside its '
-        'gutters, 316 of grid) · two 150pt columns, as the boards draw; the '
-        'row opens an anchored select instead of a sheet',
-        (_) => _hosted(
-          MediaInfoCard(rows: [_profileRow()], groups: _details),
-          width: 380 - 32,
-        ),
+        'MediaInfoCard · desktop, the 380 side track (348 inside its '
+        'gutters, 316 of grid) · two 150pt columns, as the boards draw',
+        (_) => _hosted(const MediaInfoCard(groups: _details), width: 380 - 32),
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
@@ -172,7 +139,7 @@ void main() {
         (_) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _hosted(MediaInfoCard(rows: [_profileRow()], groups: _details)),
+            _hosted(const MediaInfoCard(groups: _details)),
             const SizedBox(height: 16),
             _hosted(
               const MediaInfoCard(
