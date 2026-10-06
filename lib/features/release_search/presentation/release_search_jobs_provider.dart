@@ -87,21 +87,6 @@ final unseenReleaseSearchCountProvider = Provider<int>((ref) {
       .length;
 });
 
-/// The live job for exactly this target, if any.
-///
-/// Exact match on purpose: §4d of the brief puts job state only at the
-/// granularity it was launched at, so an episode row does not light up because
-/// its season is being searched. Adoption is a different question, and it is
-/// [ReleaseSearchJobsNotifier.activeJobCovering]'s.
-final jobForTargetProvider =
-    Provider.family<ReleaseSearchJob?, ReleaseSearchTarget>((ref, target) {
-      final jobs = ref.watch(releaseSearchJobsProvider);
-      for (final job in jobs) {
-        if (job.target == target) return job;
-      }
-      return null;
-    });
-
 class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
   /// Cancel tokens for jobs that are running, keyed by job id.
   final Map<String, CancelToken> _tokens = {};

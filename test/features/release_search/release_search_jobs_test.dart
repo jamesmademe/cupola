@@ -113,9 +113,8 @@ void main() {
 
     test('the target a page watches and the one it started agree', () {
       // `showReleaseSearch` stamps before it starts the job, so a page looking
-      // a job up with an UNSTAMPED target (`jobForTargetProvider`) matches
-      // nothing for the whole search. Both sides stamp with the page's
-      // connection.
+      // a job up with an UNSTAMPED target matches nothing for the whole
+      // search. Both sides stamp with the page's connection.
       final started = movie.stampedWith('radarr');
       final watched = ReleaseSearchTarget.movie(
         movieId: 9,
