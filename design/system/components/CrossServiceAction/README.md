@@ -23,7 +23,7 @@ Rendered from `lib/core/widgets/cross_service_action.dart` (`GatedAffordance`, `
 | `CapabilityGatedMenuLabel` | same | on the menu item's label; the item stays enabled and its `onSelected` asks `capabilityWriteAllowed` | same |
 | `RoleGatedAction.builder` | the verdict a Seerr connection's `RoleGate` gives the control: `Live`, `Dimmed` with its reason, or `Absent` | the reason, while dimmed: *Your account on Seerr can't manage media.*, *You can't ask for series on this server.* | Toast with the reason and no action: the fix is on the server, with whoever runs it. `Absent` draws nothing, the one gate that may leave a control out, because the control is not part of the requester's app |
 
-The cell draws its child through `PressableScale`: a 44 × 44 minimum target around the child, a 0.96 press dip, and the haptic only when it can act. The builder shapes hand the caller's button the gated `onPressed` and an `annotate` function that dims and hints the button's **content** — `HeaderActionButton` (an outlined 48pt square with a caption under it) takes it as its `annotate` parameter and dims glyph and caption together; a `TextButton` or `FilledButton` wraps its label in it. `.icon` keeps the `IconButton`'s own target.
+The cell draws its child through `PressableScale`: a 44 × 44 minimum target around the child, a 0.96 press dip, and the haptic only when it can act. The builder shapes hand the caller's button the gated `onPressed` and an `annotate` function that dims and hints the button's **content** — an `OutlinedButton` with a glyph wraps glyph and label in it and dims them together; a `TextButton` or `FilledButton` wraps its label in it. `.icon` keeps the `IconButton`'s own target.
 
 When Cupola could not ask the service (`CapabilityBasis.unanswered`), every capability shape switches to the hint *this key's permissions are unknown* and the toast *Cupola could not check this key's permissions, so it's holding changes back.* with **Check again**, which re-asks instead of sending the user to replace a key that may work. Nginx Proxy Manager says *account* where the others say *key*. While the probe is still out the grant is `unknown`, which stays live.
 
@@ -41,7 +41,7 @@ One node per control: button, enabled, the name, and the hint. A cross-service j
 
 Each sheet is drawn in the dark and the light room.
 
-- Each shape enabled and blocked: the cell around a glyph, the builder around a header button and a text button, the capability icon, switch, filled button and menu label (read-write, read-only and not yet checked keys), and the role-gated Manage (live, dimmed, absent).
+- Each shape enabled and blocked: the cell around a glyph, the builder around a glyph button and a text button, the capability icon, switch, filled button and menu label (read-write, read-only and not yet checked keys), and the role-gated Manage (live, dimmed, absent).
 - The toast a blocked tap raises: a cross-service jump, a read-only key, permissions unknown.
 - Text at 200%: the blocked shapes together, and the toast with its action moved under the sentence.
 

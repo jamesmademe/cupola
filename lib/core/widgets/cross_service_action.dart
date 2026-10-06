@@ -52,7 +52,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The default constructor draws the whole cell itself, around a
 /// **non-interactive** child — a glyph, a caption — through [PressableScale].
 /// [GatedAffordance.builder] is for a control that is already a button (a
-/// `TextButton`, a FAB, a `HeaderActionButton`): it hands the builder the
+/// `TextButton`, a FAB, an `OutlinedButton`): it hands the builder the
 /// gated `onPressed` and an `annotate` function, and the builder's own button
 /// keeps its role, name and target. Wrapping a Material button in the default
 /// shape would nest a button inside a button, which a screen reader reads as

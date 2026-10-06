@@ -2,7 +2,7 @@
 
 The action band on a media detail page: one wide control that fills the row, optional square discs beside it, and the consequence sentence underneath.
 
-Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `ActionStateGlyph`, `HeaderActionButton`) by `test/design_catalog/header_action_row_catalog_test.dart`. The catalog composes the library band from these pieces, with the ladder's strings from `lib/core/status/media_action.dart`. A movie's or a series' page has its own lead and buttons: see [MediaPage](../MediaPage/README.md).
+Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `ActionStateGlyph`) by `test/design_catalog/header_action_row_catalog_test.dart`. The catalog composes the library band from these pieces, with the ladder's strings from `lib/core/status/media_action.dart`. A movie's or a series' page has its own lead and buttons: see [MediaPage](../MediaPage/README.md).
 
 ## The row
 
@@ -21,19 +21,13 @@ Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `Act
 
 Idle icon (18pt) → busy spinner (16pt, 2pt stroke, this control's work only) → confirmed `check_rounded`, the theme's success green (`tertiary`) walked through `ServiceTheme.onTint` against the fill it sits on. The host holds the check for `AppAnimation.confirmationHold` (1600 ms). Faces cross-fade with a 0.7 → 1 scale over `AppAnimation.durationSm` (320 ms); with Reduce Motion they swap. While a band is busy the host passes `onPressed: null`, so the primary and its discs take Material's disabled colours and stay in place — nothing reflows under the thumb.
 
-## HeaderActionButton
-
-A disc in a 72pt column (`captionMeasure`, the 48 square plus `AppSpacing.xl`), with a `labelSmall` caption at 600 `AppSpacing.xs` below it: two lines, wrapping, centred, under the 1.6× clamp. The measure does not grow with the reading size — three of these beside a primary are a fixed budget on a 360pt phone — so a long caption takes its second line instead. `isBusy` and `isConfirmed` drive the glyph; `onPressed: null` dims the glyph only.
-
-**Gated** (`annotate`, handed in by `CrossServiceAction.builder` or `CapabilityGatedAction.builder`): glyph and caption drain to 38% together while the plate and the 52pt target stay; the button keeps its name and gains the hint (*Open in Radarr*, *requires Radarr*). A tap raises the toast whose action opens that service's settings.
-
 ## Rungs
 
 A primary takes one visible secondary (Interactive search first) plus `more_horiz`; a withheld primary frees both slots as labelled tonal buttons. Delete is never visible — sheet only.
 
 ## Semantics
 
-Discs carry their name on the icon (`More actions`, `Interactive search`). A `HeaderActionButton` caption is excluded because the button already speaks its name (`semanticLabel` when the caption is shorter, e.g. *Trailers and teasers*). The confirmed glyph speaks *&lt;label&gt; complete*.
+Discs carry their name on the icon (`More actions`, `Interactive search`). The confirmed glyph speaks *&lt;label&gt; complete*.
 
 ## The consumer provides
 
@@ -44,7 +38,6 @@ The controls, their callbacks, the busy and confirmed flags, and the consequence
 Each sheet is drawn in the dark and the light room; the bands also on the desktop.
 
 - The library band: primary with two discs, busy, confirmed, withheld (two tonal buttons), nothing to promote.
-- `HeaderActionButton`: idle, busy, confirmed, `onPressed: null`, a long caption.
 - Text at 200%: the library band.
 
 ## Do / don't

@@ -11,7 +11,6 @@ import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
-import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -56,16 +55,36 @@ Widget _decisionButton(
   child: annotate(Text(label, maxLines: 1)),
 );
 
+/// A button with a glyph and a word: the gate dims both through [annotate],
+/// and the button keeps its own plate, target and role.
+Widget _glyphButton(
+  IconData icon,
+  String label,
+  VoidCallback onPressed,
+  Widget Function(Widget) annotate,
+) => OutlinedButton(
+  onPressed: onPressed,
+  child: annotate(
+    Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18),
+        const SizedBox(width: AppSpacing.xs),
+        Text(label, maxLines: 1),
+      ],
+    ),
+  ),
+);
+
 Widget _openIn(ServiceKey target) => CrossServiceAction.builder(
   target: target,
   blockedMessage: 'Connect ${target.title} to open this movie',
   onTap: () {},
-  builder: (context, onPressed, annotate) => HeaderActionButton(
-    icon: Icons.open_in_new_rounded,
-    label: 'Open',
-    semanticLabel: 'Open in ${target.title}',
-    onPressed: onPressed,
-    annotate: annotate,
+  builder: (context, onPressed, annotate) => _glyphButton(
+    Icons.open_in_new_rounded,
+    'Open in ${target.title}',
+    onPressed,
+    annotate,
   ),
 );
 
@@ -123,13 +142,8 @@ Widget _save(String connectionId) => CapabilityGatedAction.builder(
 Widget _manage(GateVerdict verdict) => RoleGatedAction.builder(
   verdict: verdict,
   onTap: () {},
-  builder: (context, onPressed, annotate) => HeaderActionButton(
-    icon: Icons.settings_outlined,
-    label: 'Manage',
-    semanticLabel: 'Manage movie',
-    onPressed: onPressed,
-    annotate: annotate,
-  ),
+  builder: (context, onPressed, annotate) =>
+      _glyphButton(Icons.settings_outlined, 'Manage', onPressed, annotate),
 );
 
 /// A popup menu's panel, drawn in place: an open menu is a route of its own
@@ -245,9 +259,9 @@ void main() {
     ],
     scenes: [
       CatalogScene(
-        'CrossServiceAction.builder · HeaderActionButton, Radarr set up vs '
-        'Sonarr not · glyph and caption drain to 38%, the plate and its 48pt '
-        'square stay',
+        'CrossServiceAction.builder · an OutlinedButton with a glyph, Radarr '
+        'set up vs Sonarr not · glyph and label drain to 38%, the plate and '
+        'its target stay',
         (_) => _row([
           _labelled('Radarr set up', _openIn(ServiceKey.radarr)),
           _labelled('Sonarr not set up', _openIn(ServiceKey.sonarr)),

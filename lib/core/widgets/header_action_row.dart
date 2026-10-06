@@ -5,7 +5,6 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/focus_ring.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
-import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 
@@ -46,10 +45,7 @@ class HeaderActionRow extends StatelessWidget {
   /// promoted primary action takes, so an action band has one height rather
   /// than two.
   ///
-  /// Adjacent targets are separated by [AppSpacing.sm] (8dp) or more, at every
-  /// reading size — a captioned button's column grows *wider* than its own
-  /// square as the caption grows, so the gap between two targets only ever
-  /// opens up. Locked by `header_action_row_test.dart`.
+  /// Adjacent targets are separated by [AppSpacing.sm] (8dp) or more.
   ///
   /// 52 now, `size.button-l`: the brand book's primary, which the promoted
   /// action is, and the band keeps one height, so its discs grow with it.
@@ -173,7 +169,7 @@ class HeaderActionRow extends StatelessWidget {
 /// The idle → busy → held-confirmation glyph for a detail action control.
 ///
 /// One implementation, so the morph cannot drift between the promoted primary
-/// action and a captioned icon button. The confirmation is the best interaction
+/// action and the discs beside it. The confirmation is the best interaction
 /// on this surface and it has three moving parts that are easy to lose
 /// separately: the spinner has to spin for *this* control's work only, the
 /// check has to be held long enough to be seen after the eye comes back from
@@ -280,144 +276,6 @@ class ActionStateGlyph extends StatelessWidget {
         ),
       ),
       child: face,
-    );
-  }
-}
-
-/// A captioned icon action button for a detail action band.
-///
-/// The caption is the whole point of the widget. The column this replaces was a
-/// hard `SizedBox(width: 58)` holding a `fontSize: 9` label at `maxLines: 1`
-/// with an ellipsis, so at an accessibility reading size "Interactive" and
-/// "Auto Search" both rendered as "Inter…" / "Auto…" — while "Delete", the one
-/// control that should be hardest to hit, kept its full label. And because the
-/// caption is `ExcludeSemantics`'d while the icon carries the accessible name,
-/// VoiceOver stayed perfectly correct: the low-vision *sighted* user was the
-/// only one who lost the disambiguator.
-///
-/// So the caption is `labelSmall` at the 11pt floor, two lines, **wrapping**
-/// rather than eliding, in a measure that grows with the reading size on the
-/// same clamp the caption is painted at.
-class HeaderActionButton extends StatelessWidget {
-  /// The resting glyph.
-  final IconData icon;
-
-  /// The visible caption, and the accessible name unless [semanticLabel]
-  /// overrides it. Keep it to one or two short words.
-  final String label;
-
-  /// A richer spoken name, when the caption has to stay short.
-  final String? semanticLabel;
-
-  final VoidCallback? onPressed;
-
-  /// Work for this button is in flight.
-  final bool isBusy;
-
-  /// The work just landed; holds a success check.
-  final bool isConfirmed;
-
-  /// The dim and hint of a gated control (`CrossServiceAction.builder`,
-  /// `CapabilityGatedAction.builder`), applied to the glyph and caption
-  /// *inside* the button. Wrapping the whole button instead would put the hint
-  /// on a node Material drops, and would dim the plate the 44pt target lives
-  /// in. Null for an ungated button.
-  final Widget Function(Widget content)? annotate;
-
-  const HeaderActionButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    this.semanticLabel,
-    this.onPressed,
-    this.isBusy = false,
-    this.isConfirmed = false,
-    this.annotate,
-  });
-
-  /// Measure the caption wraps inside.
-  ///
-  /// The square plus one `xl` step. Wide enough for a single word of a dozen
-  /// characters at the 11pt floor, so a one-word caption sits on one line rather
-  /// than being broken mid-word — Flutter's answer to a word too wide for its
-  /// line is to split it, and "Trailer / s" is worse than a second line.
-  ///
-  /// **Deliberately not grown by the reading size.** Three of these in a row
-  /// alongside an expanded primary is a fixed horizontal budget on a 360dp
-  /// phone; letting each column widen 1.6× would take 90pt off the primary and
-  /// squeeze *its* label into breaking instead. The caption takes a second line
-  /// instead, which is the same trade the Column Floor Rule makes — give up
-  /// density, never legibility. Its growth is bounded by the clamped scaler
-  /// below rather than by this number.
-  static const double captionMeasure =
-      HeaderActionRow.buttonHeight + AppSpacing.xl;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    // Compact chrome cannot usefully track a 3x reading size. There is no fixed
-    // height here to grow — the column is free — so the clamp is all that is
-    // needed: past 1.6x the caption stops growing and keeps both of its lines
-    // instead of eliding one.
-    final scaler = TextScaleMetrics.clampedScalerOf(context);
-    final foreground = colorScheme.onSurfaceVariant;
-    final annotateContent = annotate ?? (Widget content) => content;
-
-    return SizedBox(
-      width: captionMeasure,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox.square(
-            dimension: HeaderActionRow.buttonHeight,
-            child: OutlinedButton(
-              onPressed: isBusy ? null : onPressed,
-              style: HeaderActionRow.tonalIconButtonStyle(
-                context,
-                foregroundColor: foreground,
-                backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
-                borderColor: colorScheme.outlineVariant,
-              ),
-              child: annotateContent(
-                ActionStateGlyph(
-                  icon: icon,
-                  label: semanticLabel ?? label,
-                  isBusy: isBusy,
-                  isConfirmed: isConfirmed,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          // The button node above already carries the spoken name, so the
-          // caption is excluded rather than announced twice. It exists for the
-          // eye — which is exactly the reader the old 9pt ellipsised label
-          // failed.
-          ExcludeSemantics(
-            child: MediaQuery(
-              data: MediaQuery.of(context).copyWith(textScaler: scaler),
-              // Dimmed with the glyph, so the caption never reads as live
-              // beside a drained icon. Its hint, inside ExcludeSemantics, is
-              // not spoken twice.
-              child: annotateContent(
-                Text(
-                  label,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  // Ellipsis is the floor, not the behaviour: two lines in a
-                  // measure that grows to 1.6x holds every caption this app
-                  // ships.
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall!
-                      .weight(FontWeight.w600)
-                      .copyWith(color: foreground),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

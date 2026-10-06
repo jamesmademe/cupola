@@ -176,46 +176,6 @@ Widget _sentenceBand() => Builder(
   ),
 );
 
-/// The captioned button's own states, side by side.
-Widget _buttonStates() => const Wrap(
-  spacing: AppSpacing.sm,
-  runSpacing: AppSpacing.md,
-  children: [
-    HeaderActionButton(
-      icon: Icons.saved_search_rounded,
-      label: 'Auto search',
-      semanticLabel: 'Automatic search',
-      onPressed: _noop,
-    ),
-    HeaderActionButton(
-      icon: Icons.saved_search_rounded,
-      label: 'Auto search',
-      semanticLabel: 'Automatic search',
-      onPressed: _noop,
-      isBusy: true,
-    ),
-    HeaderActionButton(
-      icon: Icons.saved_search_rounded,
-      label: 'Auto search',
-      semanticLabel: 'Automatic search',
-      onPressed: _noop,
-      isConfirmed: true,
-    ),
-    HeaderActionButton(
-      icon: Icons.saved_search_rounded,
-      label: 'Auto search',
-      semanticLabel: 'Automatic search',
-    ),
-    HeaderActionButton(
-      icon: Icons.manage_search_rounded,
-      label: 'Interactive search',
-      onPressed: _noop,
-    ),
-  ],
-);
-
-void _noop() {}
-
 List<CatalogScene> _bands(CatalogPlatform platform, double width) => [
   CatalogScene(
     'Primary + two discs · Radarr, Automatic search · the ink fill with the '
@@ -277,11 +237,6 @@ void main() {
     width: 720,
     scenes: [
       ..._bands(CatalogPlatform.phone, 390),
-      CatalogScene(
-        'HeaderActionButton · idle, busy, confirmed, onPressed: null, long '
-        'caption · a 52pt square in a 72pt measure, caption wraps to two lines',
-        (_) => _buttonStates(),
-      ),
       CatalogScene(
         'At 2× reading size · the library band: the primary label and the '
         'consequence sentence take the lines they need, the discs keep 52pt',
