@@ -139,6 +139,10 @@ const double _serviceHomeTopPadding = kToolbarHeight;
 /// Composed rather than written out: the two bands stack, so a hosted screen
 /// inside a tabbed service has to clear both, and a literal here would be a
 /// second place for the bar's height to be wrong.
+///
+/// It does not count the status bar's inset, which the band consumes: a
+/// hosted screen with no `SafeArea` adds `MediaQuery.paddingOf(context).top`
+/// to it, or its first row starts under the tab bar on a phone.
 const double _serviceTabTopPadding =
     _serviceHomeTopPadding + ServiceTabBar.height;
 
