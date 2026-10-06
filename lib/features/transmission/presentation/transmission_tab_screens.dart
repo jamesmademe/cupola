@@ -53,7 +53,11 @@ class _TransmissionLabelsScreenState
     return AmbientScaffold(
       accent: ServiceKey.transmission.accent,
       body: Padding(
-        padding: EdgeInsets.only(top: widget.topPadding),
+        // The host's two bands and the status bar the upper one consumes:
+        // this page has no `SafeArea` and no app bar to take the inset off.
+        padding: EdgeInsets.only(
+          top: widget.topPadding + MediaQuery.paddingOf(context).top,
+        ),
         child: AsyncValueWidget<List<TransmissionTorrent>>(
           value: torrents,
           serviceName: 'Transmission labels',
@@ -431,7 +435,11 @@ class TransmissionSessionScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.transmission.accent,
       body: Padding(
-        padding: EdgeInsets.only(top: topPadding),
+        // The host's two bands and the status bar the upper one consumes:
+        // this page has no `SafeArea` and no app bar to take the inset off.
+        padding: EdgeInsets.only(
+          top: topPadding + MediaQuery.paddingOf(context).top,
+        ),
         child: AsyncValueWidget<TransmissionSession>(
           value: session,
           serviceName: 'Transmission session',

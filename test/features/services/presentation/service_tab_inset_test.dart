@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/list_rows_shimmer.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
@@ -33,7 +34,15 @@ import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/presentation/readarr_activity_screen.dart';
 import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_tab_screens.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_provider.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
+import 'package:cupola/features/transmission/presentation/transmission_tab_screens.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 import '../../../test_helpers/fake_services.dart';
@@ -467,6 +476,119 @@ void main() {
       expectClearsTheBar(tester, find.byType(AppEmptyState));
     });
   });
+
+  group('The download clients\' tabs clear the glass bars', () {
+    testWidgets('qBittorrent RSS starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.qbittorrent,
+        tab: ServiceTab.rss,
+        overrides: [
+          qbittorrentRssFeedsProvider.overrideWith((ref) => _pending()),
+          qbittorrentRssRulesProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const QbittorrentRssScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+
+    testWidgets('SABnzbd History draws its filter pills below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.sabnzbd,
+        tab: ServiceTab.history,
+        overrides: [sabnzbdHistoryProvider.overrideWith((ref) => _pending())],
+        child: const SabnzbdHistoryScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, _selectionPills);
+    });
+
+    testWidgets('SABnzbd Servers starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.sabnzbd,
+        tab: ServiceTab.servers,
+        overrides: [
+          sabnzbdServersProvider.overrideWith((ref) => _pending()),
+          sabnzbdServerStatsProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const SabnzbdServersScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+
+    testWidgets('NZBGet History starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.nzbget,
+        tab: ServiceTab.history,
+        overrides: [nzbgetHistoryProvider.overrideWith((ref) => _pending())],
+        child: const NzbgetHistoryScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets('NZBGet Feeds starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.nzbget,
+        tab: ServiceTab.feeds,
+        overrides: [nzbgetFeedsProvider.overrideWith((ref) => _pending())],
+        child: const NzbgetFeedsScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets('NZBGet Messages starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.nzbget,
+        tab: ServiceTab.messages,
+        overrides: [nzbgetMessagesProvider.overrideWith((ref) => _pending())],
+        child: const NzbgetMessagesScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets('Transmission Labels starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.transmission,
+        tab: ServiceTab.labels,
+        overrides: [
+          transmissionTorrentsProvider.overrideWith((ref) => _pending()),
+          transmissionSessionProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const TransmissionLabelsScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets('Transmission Session starts below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.transmission,
+        tab: ServiceTab.session,
+        overrides: [
+          transmissionSessionProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const TransmissionSessionScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+  });
 }
 
 /// A Radarr that never answers its queue, so the screen stays on its skeleton.
@@ -513,3 +635,6 @@ class _EmptyReadarr extends ReadarrService {
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 }
+
+/// A read that never answers, so a screen stays on its loading state.
+Future<T> _pending<T>() => Completer<T>().future;

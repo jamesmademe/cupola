@@ -55,7 +55,9 @@ class QbittorrentRssScreen extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            topPadding + AppSpacing.md,
+            // Under the host's bands, the status bar the upper one consumes
+            // included: nothing on this page takes the inset off first.
+            topPadding + MediaQuery.paddingOf(context).top + AppSpacing.md,
             AppSpacing.lg,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),

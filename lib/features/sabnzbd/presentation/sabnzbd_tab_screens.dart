@@ -65,7 +65,11 @@ class _SabnzbdHistoryScreenState extends ConsumerState<SabnzbdHistoryScreen> {
       accent: ServiceKey.sabnzbd.accent,
       body: Column(
         children: [
-          SizedBox(height: widget.topPadding),
+          // The host's two bands and the status bar the upper one consumes:
+          // this page has no `SafeArea` and no app bar to take the inset off.
+          SizedBox(
+            height: widget.topPadding + MediaQuery.paddingOf(context).top,
+          ),
           SelectionPills<_SabnzbdHistoryFilter>(
             values: _SabnzbdHistoryFilter.values,
             selected: _filter,
@@ -252,12 +256,15 @@ class SabnzbdServersScreen extends ConsumerWidget {
 
     final configs = ref.watch(sabnzbdServersProvider);
     final stats = ref.watch(sabnzbdServerStatsProvider);
+    // The host's two bands and the status bar the upper one consumes: this
+    // page has no `SafeArea` and no app bar to take the inset off.
+    final top = topPadding + MediaQuery.paddingOf(context).top;
 
     if (configs.hasError && stats.hasError) {
       return AmbientScaffold(
         accent: ServiceKey.sabnzbd.accent,
         body: Padding(
-          padding: EdgeInsets.only(top: topPadding),
+          padding: EdgeInsets.only(top: top),
           child: AppErrorState(
             error: configs.error!,
             serviceName: 'SABnzbd servers',
@@ -279,7 +286,7 @@ class SabnzbdServersScreen extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             0,
-            topPadding,
+            top,
             0,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
