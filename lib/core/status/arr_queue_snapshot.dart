@@ -36,21 +36,27 @@ class ArrQueueEntry {
   /// entitled to discard. It is [MediaPipeline.clientUnavailable] now.
   final String? label;
 
+  /// When the download client says the transfer will be done
+  /// (`estimatedCompletionTime`), or null when it does not say. The
+  /// calendar's `around 21:10`.
+  final DateTime? finishesAt;
+
   const ArrQueueEntry({
     required this.pipeline,
     this.progress,
     this.severity = ArrQueueSeverity.ok,
     this.detail,
     this.label,
+    this.finishesAt,
   });
 
   bool get hasWarning => severity != ArrQueueSeverity.ok;
 
   /// This record as a stale reading keeps it: the state stays, the progress
-  /// goes. A percentage that is no longer moving must not look live, the
+  /// and the time it said it would finish go. A percentage that is no longer moving must not look live, the
   /// same reason a row under `FaultBand.stale` trades its time left for the
   /// reading's age.
-  ArrQueueEntry withoutProgress() => progress == null
+  ArrQueueEntry withoutProgress() => progress == null && finishesAt == null
       ? this
       : ArrQueueEntry(
           pipeline: pipeline,
@@ -113,6 +119,9 @@ class ArrQueueEntry {
       severity: severity,
       detail:
           stringOrNull(item['errorMessage']) ?? arrQueueWarningMessage(item),
+      finishesAt: DateTime.tryParse(
+        stringOrNull(item['estimatedCompletionTime']) ?? '',
+      )?.toLocal(),
     );
   }
 
@@ -460,6 +469,7 @@ class _EntryAccumulator {
   int _progressSamples = 0;
   ArrQueueSeverity _severity = ArrQueueSeverity.ok;
   String? _detail;
+  DateTime? _finishesAt;
 
   _EntryAccumulator(this.pipeline);
 
@@ -468,6 +478,7 @@ class _EntryAccumulator {
       pipeline = entry.pipeline;
       _label = null;
       _detail = null;
+      _finishesAt = null;
       _progressSum = 0;
       _progressSamples = 0;
     }
@@ -480,6 +491,13 @@ class _EntryAccumulator {
       // the error message belonging to a different episode — the label was reset
       // when the headline changed and the detail was not.
       _detail ??= entry.detail;
+      // The last of the headline's transfers to finish: the item is done
+      // when all of them are.
+      final finishes = entry.finishesAt;
+      if (finishes != null &&
+          (_finishesAt == null || finishes.isAfter(_finishesAt!))) {
+        _finishesAt = finishes;
+      }
       if (entry.progress != null) {
         _progressSum += entry.progress!;
         _progressSamples++;
@@ -499,6 +517,7 @@ class _EntryAccumulator {
       progress: _progressSamples == 0 ? null : _progressSum / _progressSamples,
       severity: _severity,
       detail: _detail,
+      finishesAt: _finishesAt,
     );
   }
 }

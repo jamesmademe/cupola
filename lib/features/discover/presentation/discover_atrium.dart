@@ -24,7 +24,9 @@ import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/discover/presentation/discover_calendar_band.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/discover/presentation/library_shelves_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
 import 'package:cupola/features/discover/presentation/widgets/collection_tally.dart';
@@ -73,10 +75,10 @@ class DiscoverIndexNotifier extends Notifier<DiscoverIndex?> {
 /// typed into its field. The tab decides whether Seerr is there to ask; this
 /// draws the atrium once it is.
 ///
-/// From the top: six doors (Trending, Genres, Networks, Studios, People,
-/// Decades), the quiet links to Moods and Languages, then the shelves, each
-/// only where it has titles. A door opens its index in place, under a row
-/// that switches between the indexes and leads back.
+/// From the top: the calendar's band, six doors (Trending, Genres, Networks,
+/// Studios, People, Decades), the quiet links to Moods and Languages, then
+/// the shelves, each only where it has titles. A door opens its index in
+/// place, under a row that switches between the indexes and leads back.
 ///
 /// Trending is the canary. When it fails, Seerr did not give the atrium
 /// anything, and the atrium says so once, in the classified words, instead of
@@ -87,7 +89,8 @@ class DiscoverAtrium extends ConsumerStatefulWidget {
   /// The room the floating bar takes at the foot of the list.
   final double bottomPadding;
 
-  /// Asks Seerr for everything on the atrium again.
+  /// Asks Seerr, and the arrs the calendar's band reads, for everything on
+  /// the atrium again.
   static void invalidate(WidgetRef ref) {
     ref.invalidate(atriumTrendingProvider);
     ref.invalidate(bestMissingProvider);
@@ -97,6 +100,8 @@ class DiscoverAtrium extends ConsumerStatefulWidget {
     ref.invalidate(seerrNumberingProvider);
     ref.invalidate(completeTheCollectionProvider);
     ref.invalidate(becauseYouWatchedProvider);
+    ref.invalidate(calendarDayProvider);
+    ref.invalidate(calendarSourceProvider);
   }
 
   @override
@@ -137,9 +142,14 @@ class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
 
     final List<Widget> children;
     if (failed) {
-      children = [_SeerrSilent(error: trending.error!)];
+      // The calendar comes from the arrs: Seerr's silence leaves it be.
+      children = [
+        const DiscoverCalendarBand(),
+        _SeerrSilent(error: trending.error!),
+      ];
     } else if (open == null) {
       children = [
+        const DiscoverCalendarBand(),
         const _Doors(),
         const _QuietLinks(),
         const SizedBox(height: AppSpacing.xl),

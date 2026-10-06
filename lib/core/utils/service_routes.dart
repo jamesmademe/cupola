@@ -542,6 +542,10 @@ class ServiceRoutes {
   static const activity = '/activity';
   static const discover = '/discover';
 
+  /// The calendar of everything the household's arrs date in the next
+  /// thirty days, which the atrium's band opens.
+  static const discoverCalendar = '$discover/calendar';
+
   /// ## The one page a title has
   ///
   /// A title's page hangs off every branch that opens titles, at the title's

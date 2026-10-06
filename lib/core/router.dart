@@ -43,6 +43,7 @@ import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/presentation/calendar_page.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
@@ -2819,6 +2820,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
     path: ServiceRoutes.discover,
     pageBuilder: (context, state) => _tabPage(state, const DiscoverPage()),
     routes: [
+      _page('calendar', (state) => const CalendarPage()),
       _catalogPage('all/:kind', CatalogBase.all),
       _catalogPage('trending', CatalogBase.trending),
       _catalogPage('upcoming/:kind', CatalogBase.upcoming),

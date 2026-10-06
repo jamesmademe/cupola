@@ -26,6 +26,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/seerr_numbering.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/discover/presentation/discover_atrium.dart';
+import 'package:cupola/features/discover/presentation/discover_calendar_band.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_region_chip.dart';
 import 'package:cupola/features/discover/presentation/widgets/search_row.dart';
@@ -778,6 +779,8 @@ class _WithoutSeerr extends ConsumerWidget {
         bottomPadding,
       ),
       children: [
+        // The calendar comes from the arrs, and needs no Seerr.
+        const DiscoverCalendarBand(),
         Container(
           padding: const EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
