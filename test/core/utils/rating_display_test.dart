@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/models/rating_source.dart';
-import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 
 void main() {
@@ -40,54 +38,6 @@ void main() {
       // Inventing a brand name for an unknown source would be worse than
       // repeating the server's own answer.
       expect(ratingSourceLabel(icon: 'LE', name: 'LETTERBOXD'), 'LE');
-    });
-  });
-
-  group('legibleRatings', () {
-    test('relabels both the pill and the spoken name', () {
-      // `RatingChip` renders `icon` and speaks `name`, so a Sonarr rating read
-      // `TVDB 7.2` on screen and announced itself as "145000 voti rating 7.2" —
-      // a vote count where a source name belongs, in the wrong language.
-      final relabelled = legibleRatings(const [
-        RatingSource(
-          name: '145000 voti',
-          value: 7.2,
-          votes: 145000,
-          icon: 'TVDB',
-        ),
-      ]);
-
-      expect(relabelled.single.icon, 'TVDB');
-      expect(relabelled.single.name, 'TVDB');
-      expect(relabelled.single.value, 7.2);
-      expect(relabelled.single.votes, 145000);
-    });
-
-    test('leaves no two-letter badge in a real Radarr payload', () {
-      final ratings = legibleRatings(
-        parseArrRatings(const {
-          'imdb': {'value': 6.9, 'votes': 317100},
-          'tmdb': {'value': 7.1, 'votes': 10700},
-          'metacritic': {'value': 53.0, 'votes': 0},
-          'rottenTomatoes': {'value': 57.0, 'votes': 0},
-          'trakt': {'value': 7.1, 'votes': 15000},
-        }, allowSingleSource: false),
-      );
-
-      expect(ratings, hasLength(5));
-      expect(ratings.map((rating) => rating.icon), [
-        'IMDb',
-        'TMDB',
-        'Metacritic',
-        'Rotten Tomatoes',
-        'Trakt',
-      ]);
-      // Nothing left that a reader has to decode.
-      expect(ratings.every((rating) => rating.icon.length > 2), isTrue);
-    });
-
-    test('keeps an empty list empty', () {
-      expect(legibleRatings(const []), isEmpty);
     });
   });
 

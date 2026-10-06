@@ -71,7 +71,6 @@ export 'artwork_decode.dart';
 export 'status_badge.dart';
 export 'tag_chip.dart';
 export 'rating_chip.dart';
-export 'rating_chips_row.dart';
 export 'release_list_widgets.dart';
 export 'file_info_section.dart';
 export 'machine_name.dart';

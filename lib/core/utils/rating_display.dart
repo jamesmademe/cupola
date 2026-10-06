@@ -1,4 +1,3 @@
-import 'package:cupola/core/models/rating_source.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 
 /// Display vocabulary for rating pills.
@@ -26,27 +25,6 @@ import 'package:cupola/core/utils/percent_format.dart';
 /// showing what the server said.
 String ratingSourceLabel({required String icon, required String name}) {
   return _knownSourceLabel(icon) ?? _knownSourceLabel(name) ?? icon;
-}
-
-/// Re-labels every rating in [ratings] so the pill, its tooltip and its spoken
-/// name all say the same legible thing.
-///
-/// Both fields are replaced on purpose. `RatingChip` renders `icon` and speaks
-/// `name`, so today a Sonarr rating reads `TVDB 7.2` on screen and announces
-/// itself to a screen reader as "145000 voti rating 7.2" — a vote count where a
-/// source name belongs, in the wrong language.
-List<RatingSource> legibleRatings(List<RatingSource> ratings) {
-  return ratings
-      .map((rating) {
-        final label = ratingSourceLabel(icon: rating.icon, name: rating.name);
-        return RatingSource(
-          name: label,
-          value: rating.value,
-          votes: rating.votes,
-          icon: label,
-        );
-      })
-      .toList(growable: false);
 }
 
 /// A score formatted for a pill, plus the scale it is measured on.
