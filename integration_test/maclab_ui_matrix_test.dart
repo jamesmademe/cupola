@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -252,13 +253,14 @@ List<String> _routes() {
       for (final tab in tabsFor(service) ?? const <ServiceTab>[])
         '${ServiceRoutes.forService(service)}/${tab.segment}',
     ServiceRoutes.discover,
-    ServiceRoutes.discoverMoviesAll,
-    ServiceRoutes.discoverTvAll,
-    ServiceRoutes.discoverTrendingAll,
-    ServiceRoutes.discoverGenre(
-      mediaType: 'movie',
-      genreId: 28,
-      title: 'Action',
+    ServiceRoutes.discoverCatalog(const CatalogQuery.all(CatalogKind.movie)),
+    ServiceRoutes.discoverCatalog(const CatalogQuery.trending()),
+    ServiceRoutes.discoverCatalog(
+      const CatalogQuery.genre(CatalogKind.movie, 28, 'Action'),
+    ),
+    ServiceRoutes.discoverCatalog(const CatalogQuery.network(213, 'Netflix')),
+    ServiceRoutes.discoverCatalog(
+      const CatalogQuery.decade(CatalogKind.tv, 1990),
     ),
     ServiceRoutes.mediaRoot(const MediaKey.movie(42)),
     ServiceRoutes.mediaRoot(const MediaKey.tv(55)),

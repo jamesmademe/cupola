@@ -86,12 +86,19 @@ class ContentCard extends StatelessWidget {
                 ),
               ),
             ),
+            // Held to the card's width, at its top right: a badge whose
+            // word is longer than the poster is wide wraps inside it rather
+            // than running off the card's other edge.
             Positioned(
               top: 0,
+              left: 0,
               right: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                child: badge!,
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: badge!,
+                ),
               ),
             ),
           ],

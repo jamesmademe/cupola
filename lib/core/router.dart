@@ -43,7 +43,8 @@ import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
+import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/presentation/catalog_page.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_hints_screen.dart';
@@ -365,6 +366,19 @@ GoRoute _rewriteTree(
   );
 }
 
+/// A catalogue page of the Discover tab, its question read from the path
+/// alone (`catalogQueryFor`); parameters it cannot read go back to the atrium.
+GoRoute _catalogPage(String path, CatalogBase base) {
+  CatalogQuery? read(GoRouterState state) =>
+      catalogQueryFor(base, state.pathParameters, state.uri.queryParameters);
+  return _page(
+    path,
+    (state) => CatalogPage(query: read(state)!),
+    redirect: (context, state) =>
+        read(state) == null ? ServiceRoutes.discover : null,
+  );
+}
+
 /// Where Discover used to live: the fourth tab of Seerr's room.
 const _seerrDiscover = '${ServiceRoutes.seerr}/discover';
 
@@ -395,6 +409,10 @@ String _toDiscover(Uri uri, String base) {
   final tail = Uri.parse(uri.path.substring(base.length)).pathSegments;
   final path = switch (tail) {
     [] => ServiceRoutes.discover,
+    // The three see-alls are catalogue pages now.
+    ['movies', 'all'] => '${ServiceRoutes.discover}/all/movie',
+    ['tv', 'all'] => '${ServiceRoutes.discover}/all/tv',
+    ['trending', 'all'] => '${ServiceRoutes.discover}/trending',
     // `tv/all` is a see-all, not a series whose id is the word `all`.
     [final kind, final id]
         when id != 'all' &&
@@ -2801,36 +2819,23 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
     path: ServiceRoutes.discover,
     pageBuilder: (context, state) => _tabPage(state, const SearchScreen()),
     routes: [
-      _page(
-        'movies/all',
-        (state) => const DiscoverSeeAllScreen(type: 'movies', title: 'Movies'),
-      ),
-      _page(
-        'tv/all',
-        (state) => const DiscoverSeeAllScreen(type: 'tv', title: 'TV series'),
-      ),
-      _page(
-        'trending/all',
-        (state) =>
-            const DiscoverSeeAllScreen(type: 'trending', title: 'Trending'),
-      ),
-      _page(
-        'genre/:mediaType/:genreId',
-        (state) => DiscoverSeeAllScreen(
-          type: 'genre',
-          title: state.uri.queryParameters['title'] ?? 'Genre',
-          genreKey: (
-            mediaType: state.pathParameters['mediaType'] == 'tv'
-                ? 'tv'
-                : 'movie',
-            genreId: RouteUtils.safeIntParam(state, 'genreId')!,
-          ),
+      _catalogPage('all/:kind', CatalogBase.all),
+      _catalogPage('trending', CatalogBase.trending),
+      _catalogPage('upcoming/:kind', CatalogBase.upcoming),
+      _catalogPage('genre/:kind/:id', CatalogBase.genre),
+      _catalogPage('network/:id', CatalogBase.network),
+      _catalogPage('studio/:id', CatalogBase.studio),
+      _catalogPage('keyword/:kind/:id', CatalogBase.keyword),
+      _catalogPage('language/:kind/:code', CatalogBase.language),
+      _catalogPage('decade/:kind/:start', CatalogBase.decade),
+      // The see-alls the first catalogue shipped. Before `tv/:id`: routes
+      // match in declaration order.
+      for (final tail in const ['movies/all', 'tv/all', 'trending/all'])
+        GoRoute(
+          path: tail,
+          redirect: (context, state) =>
+              _toDiscover(state.uri, ServiceRoutes.discover),
         ),
-        redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'genreId') == null
-            ? ServiceRoutes.discover
-            : null,
-      ),
       for (final tail in const [
         'movie/:id',
         'tv/:id',

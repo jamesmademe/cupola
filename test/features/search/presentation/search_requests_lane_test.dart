@@ -6,8 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/discover/presentation/discover_catalog.dart';
-
+import 'package:cupola/features/discover/presentation/discover_atrium.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 
@@ -98,7 +97,7 @@ void main() {
 
     // At rest the tab browses what she can ask for; the field says what it
     // finds, and nothing names Seerr.
-    expect(find.byType(DiscoverCatalog), findsOneWidget);
+    expect(find.byType(DiscoverAtrium), findsOneWidget);
     expect(find.text('Movies and series'), findsOneWidget);
     expect(find.textContaining('Seerr'), findsNothing);
 
@@ -108,7 +107,7 @@ void main() {
   testWidgets('P2 with her Jellyfin: Seerr is still not named', (tester) async {
     final harness = await _search(tester, Profiles.p2WithJellyfin, query: '');
 
-    expect(find.byType(DiscoverCatalog), findsOneWidget);
+    expect(find.byType(DiscoverAtrium), findsOneWidget);
     expect(find.textContaining('Seerr'), findsNothing);
 
     await harness.unmount(tester);

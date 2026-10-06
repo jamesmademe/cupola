@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/discover/presentation/discover_catalog.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/discover/presentation/discover_atrium.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
@@ -100,7 +100,7 @@ void main() {
 
     // The empty state is what a search here would reach when there is no
     // catalogue to browse; with Seerr there is one.
-    expect(find.byType(DiscoverCatalog), findsOneWidget);
+    expect(find.byType(DiscoverAtrium), findsOneWidget);
     expect(find.text('Search across every service'), findsNothing);
     expect(find.textContaining('Set up'), findsNothing);
   });

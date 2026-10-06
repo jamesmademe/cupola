@@ -38,7 +38,12 @@ Widget _onPoster(Widget badge) => SizedBox(
       fit: StackFit.expand,
       children: [
         Image(image: CatalogArt.posterImage, fit: BoxFit.cover),
-        Positioned(top: 8, right: 8, child: badge),
+        Positioned(
+          top: 8,
+          left: 8,
+          right: 8,
+          child: Align(alignment: Alignment.topRight, child: badge),
+        ),
       ],
     ),
   ),
@@ -96,6 +101,45 @@ void main() {
             ),
           ],
         ),
+      ),
+      CatalogScene(
+        'StatusBadge.poster() over artwork · the word on a catalogue poster: '
+        'Available, 62% while it downloads, Waiting for approval on two '
+        'lines, Stuck',
+        (_) => Wrap(
+          spacing: 12,
+          children: [
+            _onPoster(
+              const StatusBadge.poster(
+                info: MediaStatusInfo(
+                  availability: MediaAvailability.available,
+                ),
+              ),
+            ),
+            _onPoster(
+              const StatusBadge.poster(
+                info: MediaStatusInfo(
+                  pipeline: MediaPipeline.downloading,
+                  progress: 0.62,
+                ),
+              ),
+            ),
+            _onPoster(
+              const StatusBadge.poster(
+                info: MediaStatusInfo(
+                  labelOverride: 'Waiting for approval',
+                  toneOverride: StatusTone.info,
+                ),
+              ),
+            ),
+            _onPoster(
+              const StatusBadge.poster(
+                info: MediaStatusInfo(pipeline: MediaPipeline.stalled),
+              ),
+            ),
+          ],
+        ),
+        width: 560,
       ),
       CatalogScene(
         'Text at 200% · every arm of the tone rule, and a long label '

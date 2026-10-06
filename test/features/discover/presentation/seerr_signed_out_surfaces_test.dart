@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/discover/presentation/catalog_page.dart';
+import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
@@ -18,7 +20,6 @@ import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
-import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
@@ -52,7 +53,9 @@ void main() {
       'a movie': MediaPage(mediaKey: MediaKey.movie(10378)),
       'a person': const PersonDetailScreen(personId: 17),
       'a collection': const CollectionDetailScreen(collectionId: 3),
-      'See all': const DiscoverSeeAllScreen(type: 'movies', title: 'Movies'),
+      'a catalogue page': const CatalogPage(
+        query: CatalogQuery.genre(CatalogKind.movie, 16, 'Animation'),
+      ),
       "Seerr's overview": const SeerrOverviewScreen(topPadding: 0),
     };
 

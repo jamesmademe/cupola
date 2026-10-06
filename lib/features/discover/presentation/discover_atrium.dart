@@ -1,0 +1,1038 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/artwork_decode.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
+import 'package:cupola/core/widgets/media_grid.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
+import 'package:cupola/features/discover/domain/catalog_curation.dart';
+import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_door.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
+import 'package:cupola/features/movies/presentation/movies_provider.dart';
+import 'package:cupola/features/series/presentation/series_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// The atrium's indexes, each a door of the lobby or a link under it.
+enum DiscoverIndex {
+  trending('Trending'),
+  genres('Genres'),
+  networks('Networks'),
+  studios('Studios'),
+  people('People'),
+  decades('Decades'),
+  moods('Moods'),
+  languages('Languages');
+
+  const DiscoverIndex(this.label);
+  final String label;
+}
+
+/// The index the atrium has open; null is the lobby. A provider rather than
+/// the page's own state so a second tap on the tab can close it.
+final discoverIndexProvider =
+    NotifierProvider<DiscoverIndexNotifier, DiscoverIndex?>(
+      DiscoverIndexNotifier.new,
+    );
+
+class DiscoverIndexNotifier extends Notifier<DiscoverIndex?> {
+  @override
+  DiscoverIndex? build() => null;
+
+  void open(DiscoverIndex index) => state = index;
+
+  void close() => state = null;
+}
+
+/// Seerr's catalogue at rest: what the Discover tab shows before anything is
+/// typed into its field. The tab decides whether Seerr is there to ask; this
+/// draws the atrium once it is.
+///
+/// From the top: six doors (Trending, Genres, Networks, Studios, People,
+/// Decades), the quiet links to Moods and Languages, then the shelves, each
+/// only where it has titles. A door opens its index in place, under a row
+/// that switches between the indexes and leads back.
+///
+/// Trending is the canary. When it fails, Seerr did not give the atrium
+/// anything, and the atrium says so once, in the classified words, instead of
+/// a failure under every door and shelf.
+class DiscoverAtrium extends ConsumerStatefulWidget {
+  const DiscoverAtrium({super.key, this.bottomPadding = 0});
+
+  /// The room the floating bar takes at the foot of the list.
+  final double bottomPadding;
+
+  /// Asks Seerr for everything on the atrium again.
+  static void invalidate(WidgetRef ref) {
+    ref.invalidate(atriumTrendingProvider);
+    ref.invalidate(bestMissingProvider);
+    ref.invalidate(comingSoonProvider);
+    ref.invalidate(catalogGenresProvider);
+    ref.invalidate(trendingPeopleProvider);
+    ref.invalidate(seerrNumberingProvider);
+  }
+
+  @override
+  ConsumerState<DiscoverAtrium> createState() => _DiscoverAtriumState();
+}
+
+class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // A door opened from halfway down the lobby opens its index at the top.
+    ref.listen(discoverIndexProvider, (previous, next) {
+      if (previous != next && _scroll.hasClients) _scroll.jumpTo(0);
+    });
+    // The tab tapped again is the top of the lobby.
+    ref.listen(navigationRefreshProvider(NavigationSection.discover), (_, _) {
+      if (!_scroll.hasClients) return;
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _scroll.jumpTo(0);
+      } else {
+        _scroll.animateTo(
+          0,
+          duration: AppAnimation.durationMd,
+          curve: AppAnimation.standardCurve,
+        );
+      }
+    });
+    final open = ref.watch(discoverIndexProvider);
+    final trending = ref.watch(atriumTrendingProvider);
+    final failed = trending.hasError && !trending.isLoading;
+
+    final List<Widget> children;
+    if (failed) {
+      children = [_SeerrSilent(error: trending.error!)];
+    } else if (open == null) {
+      children = [
+        const _Doors(),
+        const _QuietLinks(),
+        const SizedBox(height: AppSpacing.xl),
+        DiscoverCarousel(
+          title: 'The best you’re missing',
+          sectionId: 'best_missing',
+          items: ref.watch(bestMissingProvider),
+          onRetry: () => ref.invalidate(bestMissingProvider),
+        ),
+        DiscoverCarousel(
+          title: 'Trending this week',
+          sectionId: 'trending',
+          items: trending,
+          onRetry: () => ref.invalidate(atriumTrendingProvider),
+          onSeeAll: () => ref
+              .read(discoverIndexProvider.notifier)
+              .open(DiscoverIndex.trending),
+        ),
+        DiscoverCarousel(
+          title: 'Coming soon',
+          sectionId: 'coming_soon',
+          items: ref.watch(comingSoonProvider),
+          onRetry: () => ref.invalidate(comingSoonProvider),
+          onSeeAll: () => context.push(
+            ServiceRoutes.discoverCatalog(
+              const CatalogQuery.upcoming(CatalogKind.movie),
+            ),
+          ),
+        ),
+      ];
+    } else {
+      children = [_IndexRail(open: open), _IndexBody(index: open)];
+    }
+
+    return PopScope(
+      // Back from an index is the lobby, not the tab before this one.
+      canPop: open == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) ref.read(discoverIndexProvider.notifier).close();
+      },
+      child: RefreshIndicator(
+        onRefresh: () async => DiscoverAtrium.invalidate(ref),
+        child: ListView(
+          controller: _scroll,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(
+            top: AppSpacing.sm,
+            bottom: AppSpacing.xl + widget.bottomPadding,
+          ),
+          children: children,
+        ),
+      ),
+    );
+  }
+}
+
+/// Seerr gave the atrium nothing: one line under the field, with the remedy
+/// its cause names, and none of Seerr's doors or shelves under it.
+class _SeerrSilent extends ConsumerWidget {
+  const _SeerrSilent({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: InlineErrorRetry(
+        message:
+            '${describeFailureOf(ServiceKey.seerr, error).headline}, '
+            'so the catalogue is missing.',
+        error: error,
+        service: ServiceKey.seerr,
+        onRetry: () => DiscoverAtrium.invalidate(ref),
+      ),
+    );
+  }
+}
+
+/// [children] two to a row, each row as tall as its taller tile: index
+/// tiles grow with their words, so a fixed grid extent would clip them.
+class _TileRows extends StatelessWidget {
+  const _TileRows({required this.children, this.columns = 2});
+
+  final List<Widget> children;
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Column(
+        children: [
+          for (var start = 0; start < children.length; start += columns)
+            Padding(
+              padding: EdgeInsets.only(top: start == 0 ? 0 : AppSpacing.sm),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = start; i < start + columns; i++) ...[
+                      if (i > start) const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: i < children.length
+                            ? children[i]
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+String? _poster(MediaPreview? item, {String size = 'w154'}) {
+  final path = item?.posterPath;
+  if (path == null || path.isEmpty) return null;
+  return ImageUtils.buildTmdbPosterUrl(path, size: size);
+}
+
+/// The six doors.
+class _Doors extends ConsumerWidget {
+  const _Doors();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trending = ref.watch(atriumTrendingProvider).value ?? const [];
+    final best = ref.watch(bestMissingProvider).value ?? const [];
+    final genres = ref.watch(catalogGenresProvider(CatalogKind.movie)).value;
+    final backdrop = genres?.expand((genre) => genre.backdrops).firstOrNull;
+    final networks = _libraryNetworks(ref);
+    final studios = _libraryStudios(ref);
+    MediaPreview? at(List<MediaPreview> list, int i) =>
+        i < list.length ? list[i] : null;
+    void open(DiscoverIndex index) =>
+        ref.read(discoverIndexProvider.notifier).open(index);
+
+    // Three to a row; two once the words are large, where three narrow
+    // doors would cut every name short.
+    final large =
+        TextScaleMetrics.clampedScalerOf(context).scale(1) >
+        DiscoverDoor.largeTextScale;
+    return Semantics(
+      container: true,
+      label: 'Browse by',
+      child: _TileRows(
+        columns: large ? 2 : 3,
+        children: [
+          DiscoverDoor.lobby(
+            title: 'Trending',
+            subtitle: 'This week',
+            lightUrl: _poster(at(trending, 0), size: 'w92'),
+            posterUrls: [?_poster(at(trending, 1)), ?_poster(at(trending, 2))],
+            onTap: () => open(DiscoverIndex.trending),
+          ),
+          DiscoverDoor.lobby(
+            title: 'Genres',
+            // How many there are, once Seerr said: a complete list, so a
+            // count of it is a fact.
+            subtitle: genres == null ? 'Movies, series' : '${genres.length}',
+            lightUrl: backdrop == null
+                ? null
+                : ImageUtils.buildTmdbPosterUrl(backdrop, size: 'w300'),
+            onTap: () => open(DiscoverIndex.genres),
+          ),
+          DiscoverDoor.lobby(
+            title: 'Networks',
+            subtitle: 'Series',
+            names: [for (final entry in networks.take(3)) entry.name],
+            onTap: () => open(DiscoverIndex.networks),
+          ),
+          DiscoverDoor.lobby(
+            title: 'Studios',
+            subtitle: 'Movies',
+            names: [for (final entry in studios.take(3)) entry.name],
+            onTap: () => open(DiscoverIndex.studios),
+          ),
+          DiscoverDoor.lobby(
+            title: 'People',
+            subtitle: 'Directors, cast',
+            lightUrl: _poster(at(trending, 3), size: 'w92'),
+            onTap: () => open(DiscoverIndex.people),
+          ),
+          DiscoverDoor.lobby(
+            title: 'Decades',
+            subtitle: '1920s to now',
+            lightUrl: _poster(at(best, 0), size: 'w92'),
+            posterUrls: [?_poster(at(best, 1)), ?_poster(at(best, 2))],
+            onTap: () => open(DiscoverIndex.decades),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The networks, those the operator's series come from first.
+///
+/// Read from Sonarr only when it is set up and the reader is the operator
+/// (a requester has no Sonarr to ask), and only from a library another
+/// screen already loaded: the order settles once it arrives, and nothing
+/// waits for it or asks for it.
+List<CatalogEntity> _libraryNetworks(WidgetRef ref) {
+  final settings = ref.watch(currentSettingsProvider);
+  if (ref.watch(audienceProvider) != Audience.operator ||
+      !settings.isServiceConfigured(ServiceKey.sonarr)) {
+    return curatedNetworks;
+  }
+  // Only a library something else already asked for: the atrium never
+  // starts a read of the whole of Sonarr to order four names.
+  final series = ref.exists(seriesProvider)
+      ? ref.watch(seriesProvider).value ?? const []
+      : const [];
+  return libraryFirst(curatedNetworks, [
+    for (final show in series) ?show.network,
+  ]);
+}
+
+/// The studios, those the operator's movies come from first; see
+/// [_libraryNetworks].
+List<CatalogEntity> _libraryStudios(WidgetRef ref) {
+  final settings = ref.watch(currentSettingsProvider);
+  if (ref.watch(audienceProvider) != Audience.operator ||
+      !settings.isServiceConfigured(ServiceKey.radarr)) {
+    return curatedStudios;
+  }
+  final movies = ref.exists(moviesProvider)
+      ? ref.watch(moviesProvider).value ?? const []
+      : const [];
+  return libraryFirst(curatedStudios, [
+    for (final movie in movies) ?movie.studio,
+  ]);
+}
+
+/// "Moods ›  Languages ›": the two indexes with no door of their own.
+class _QuietLinks extends ConsumerWidget {
+  const _QuietLinks();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    Widget link(DiscoverIndex index) => _QuietLink(
+      label: index.label,
+      onTap: () => ref.read(discoverIndexProvider.notifier).open(index),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Row(
+        children: [
+          link(DiscoverIndex.moods),
+          const SizedBox(width: AppSpacing.xl),
+          link(DiscoverIndex.languages),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuietLink extends StatelessWidget {
+  const _QuietLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = CupolaRoom.of(context).inkSecondary;
+    return PressableScale(
+      onTap: onTap,
+      semanticLabel: label,
+      excludeChildSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label, style: AppType.label.copyWith(color: color)),
+            const SizedBox(width: AppSpacing.xxs),
+            Icon(Icons.chevron_right_rounded, size: 18, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The row over an open index: the way back, then the indexes, the open one
+/// first so it is never scrolled off the edge.
+class _IndexRail extends ConsumerWidget {
+  const _IndexRail({required this.open});
+
+  final DiscoverIndex open;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(discoverIndexProvider.notifier);
+    return SelectionPills<DiscoverIndex>(
+      // A new index starts the row at its head, where the open one is.
+      key: ValueKey(open),
+      values: [open, ...DiscoverIndex.values.where((index) => index != open)],
+      selected: open,
+      labelBuilder: (index) => index.label,
+      onSelected: notifier.open,
+      leading: _BackPill(onTap: notifier.close),
+    );
+  }
+}
+
+/// `‹ Discover`: the lobby again.
+class _BackPill extends StatelessWidget {
+  const _BackPill({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return PressableScale(
+      onTap: onTap,
+      semanticLabel: 'Back to Discover',
+      excludeChildSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Center(
+          heightFactor: 1,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 36),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.sm,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainer,
+              borderRadius: AppRadius.borderRadiusPill,
+              border: Border.all(color: colorScheme.outlineVariant),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.chevron_left_rounded,
+                  size: 18,
+                  color: colorScheme.onSurface,
+                ),
+                Text(
+                  'Discover',
+                  style: Theme.of(context).textTheme.labelMedium!
+                      .weight(FontWeight.w600)
+                      .copyWith(color: colorScheme.onSurface),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// What an open index lists.
+class _IndexBody extends ConsumerWidget {
+  const _IndexBody({required this.index});
+
+  final DiscoverIndex index;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return switch (index) {
+      DiscoverIndex.trending => const _TrendingIndex(),
+      DiscoverIndex.genres => const _GenresIndex(),
+      DiscoverIndex.networks => _EntityIndex(
+        lead: 'Series by where they first aired',
+        entries: _libraryNetworks(ref),
+        query: (entry) => CatalogQuery.network(entry.id, entry.name),
+      ),
+      DiscoverIndex.studios => _EntityIndex(
+        lead: 'Movies by the studio that made them',
+        entries: _libraryStudios(ref),
+        query: (entry) => CatalogQuery.studio(entry.id, entry.name),
+      ),
+      DiscoverIndex.people => const _PeopleIndex(),
+      DiscoverIndex.decades => _PlainIndex(
+        lead: 'Movies and series by the decade they came out',
+        tiles: [
+          for (final start in catalogDecades(today: DateTime.now()))
+            (
+              title: decadeLabel(start),
+              query: CatalogQuery.decade(CatalogKind.movie, start),
+            ),
+        ],
+      ),
+      DiscoverIndex.moods => _PlainIndex(
+        lead: 'Movies and series by what they are about',
+        tiles: [
+          for (final mood in curatedMoods)
+            (
+              title: mood.name,
+              query: CatalogQuery.keyword(
+                CatalogKind.movie,
+                mood.id,
+                mood.name,
+              ),
+            ),
+        ],
+      ),
+      DiscoverIndex.languages => _PlainIndex(
+        lead: 'Movies and series by the language they were made in',
+        tiles: [
+          for (final language in curatedLanguages)
+            (
+              title: language.name,
+              query: CatalogQuery.language(
+                CatalogKind.movie,
+                language.code,
+                language.name,
+              ),
+            ),
+        ],
+      ),
+    };
+  }
+}
+
+/// The line that says what an index lists.
+class _Lead extends StatelessWidget {
+  const _Lead(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: CupolaThemeColors.of(context).dimText,
+        ),
+      ),
+    );
+  }
+}
+
+/// Plain tiles, each opening a catalogue page.
+class _PlainIndex extends StatelessWidget {
+  const _PlainIndex({required this.lead, required this.tiles});
+
+  final String lead;
+  final List<({String title, CatalogQuery query})> tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Lead(lead),
+        _TileRows(
+          children: [
+            for (final tile in tiles)
+              DiscoverDoor.index(
+                title: tile.title,
+                onTap: () =>
+                    context.push(ServiceRoutes.discoverCatalog(tile.query)),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Networks or studios, the library's first.
+class _EntityIndex extends StatelessWidget {
+  const _EntityIndex({
+    required this.lead,
+    required this.entries,
+    required this.query,
+  });
+
+  final String lead;
+  final List<CatalogEntity> entries;
+  final CatalogQuery Function(CatalogEntity entry) query;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PlainIndex(
+      lead: lead,
+      tiles: [
+        for (final entry in entries) (title: entry.name, query: query(entry)),
+      ],
+    );
+  }
+}
+
+/// The genres of the kind chosen, each lit by one of its backdrops.
+class _GenresIndex extends ConsumerStatefulWidget {
+  const _GenresIndex();
+
+  @override
+  ConsumerState<_GenresIndex> createState() => _GenresIndexState();
+}
+
+class _GenresIndexState extends ConsumerState<_GenresIndex> {
+  CatalogKind _kind = CatalogKind.movie;
+
+  @override
+  Widget build(BuildContext context) {
+    final genres = ref.watch(catalogGenresProvider(_kind));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        SelectionPills<CatalogKind>(
+          values: CatalogKind.values,
+          selected: _kind,
+          labelBuilder: (kind) => kind.label,
+          onSelected: (kind) => setState(() => _kind = kind),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        genres.when(
+          loading: () => const _TilesLoading(),
+          error: (error, _) => _IndexFailure(
+            error: error,
+            what: 'the genres',
+            onRetry: () => ref.invalidate(catalogGenresProvider(_kind)),
+          ),
+          data: (list) {
+            final lights = _distinctLights(list);
+            return _TileRows(
+              children: [
+                for (final genre in list)
+                  DiscoverDoor.index(
+                    title: genre.name,
+                    lightUrl: lights[genre.id] == null
+                        ? null
+                        : ImageUtils.buildTmdbPosterUrl(
+                            lights[genre.id],
+                            size: 'w300',
+                          ),
+                    onTap: () => context.push(
+                      ServiceRoutes.discoverCatalog(
+                        CatalogQuery.genre(_kind, genre.id, genre.name),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Each genre's light: its first backdrop no genre before it took. A popular
+/// title is in several genres, and Action beside Adventure lit by the same
+/// picture reads as one tile drawn twice.
+Map<int, String?> _distinctLights(List<SeerrGenre> genres) {
+  final taken = <String>{};
+  return {
+    for (final genre in genres)
+      genre.id:
+          genre.backdrops.where(taken.add).firstOrNull ??
+          genre.backdrops.firstOrNull,
+  };
+}
+
+/// Trending today or this week: the first page as a grid, and the rest on a
+/// catalogue page.
+class _TrendingIndex extends ConsumerStatefulWidget {
+  const _TrendingIndex();
+
+  @override
+  ConsumerState<_TrendingIndex> createState() => _TrendingIndexState();
+}
+
+class _TrendingIndexState extends ConsumerState<_TrendingIndex> {
+  TrendingWindow _window = TrendingWindow.week;
+
+  @override
+  Widget build(BuildContext context) {
+    final query = CatalogQuery.trending(window: _window);
+    // This week's first page is the shelf's own read; today's is its own.
+    final items = _window == TrendingWindow.week
+        ? ref.watch(atriumTrendingProvider)
+        : ref.watch(_trendingTodayProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        SelectionPills<TrendingWindow>(
+          values: TrendingWindow.values,
+          selected: _window,
+          labelBuilder: (window) => window.label,
+          onSelected: (window) => setState(() => _window = window),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        items.when(
+          loading: () => const _TilesLoading(),
+          error: (error, _) => _IndexFailure(
+            error: error,
+            what: 'the trending titles',
+            onRetry: () => ref.invalidate(_trendingTodayProvider),
+          ),
+          data: (list) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _PosterGrid(items: list, sectionId: 'trending_${_window.param}'),
+              _MoreLink(
+                label: 'More of what is trending',
+                onTap: () => context.push(ServiceRoutes.discoverCatalog(query)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final _trendingTodayProvider = FutureProvider.autoDispose<List<MediaPreview>>(
+  (ref) async =>
+      (await ref
+              .watch(seerrServiceProvider)
+              .getCatalogPage(
+                const CatalogQuery.trending(window: TrendingWindow.day),
+              ))
+          .items,
+  retry: noProviderRetry,
+);
+
+/// [items] in the poster grid every grid of the app uses.
+class _PosterGrid extends StatelessWidget {
+  const _PosterGrid({required this.items, required this.sectionId});
+
+  final List<MediaPreview> items;
+  final String sectionId;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final inner = constraints.maxWidth - 2 * AppSpacing.lg;
+        final columns = MediaGrid.columnsFor(inner, 3);
+        final tileWidth =
+            (inner - (columns - 1) * AppSpacing.gridGap) / columns;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Wrap(
+            spacing: AppSpacing.gridGap,
+            runSpacing: AppSpacing.lg,
+            children: [
+              for (final item in items)
+                CatalogPoster(
+                  item: item,
+                  heroTag: 'discover_${sectionId}_${item.id}',
+                  width: tileWidth,
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// "More of …›" at the foot of an index.
+class _MoreLink extends StatelessWidget {
+  const _MoreLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        0,
+      ),
+      child: _QuietLink(label: label, onTap: onTap),
+    );
+  }
+}
+
+/// The people behind this week's trending titles.
+class _PeopleIndex extends ConsumerWidget {
+  const _PeopleIndex();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final people = ref.watch(trendingPeopleProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _Lead('Who is behind this week’s trending titles'),
+        people.when(
+          loading: () => const _TilesLoading(),
+          error: (error, _) => _IndexFailure(
+            error: error,
+            what: 'the people',
+            onRetry: () => ref.invalidate(trendingPeopleProvider),
+          ),
+          data: (list) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: CupolaRoom.of(context).slab,
+                borderRadius: BorderRadius.circular(AppRadius.group),
+                border: Border.all(color: CupolaRoom.of(context).hair),
+              ),
+              child: Column(
+                children: [
+                  for (var i = 0; i < list.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                        height: 1,
+                        indent: AppSpacing.lg,
+                        endIndent: AppSpacing.lg,
+                        color: CupolaRoom.of(context).hair,
+                      ),
+                    _PersonRow(person: list[i]),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PersonRow extends StatelessWidget {
+  const _PersonRow({required this.person});
+
+  final CatalogPerson person;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final dim = CupolaThemeColors.of(context).dimText;
+    final photo = person.profilePath == null
+        ? null
+        : ImageUtils.buildTmdbPosterUrl(person.profilePath, size: 'w185');
+    final line = '${person.role} · ${person.title}';
+    return PressableScale(
+      onTap: () => context.openPerson(person.id, posterUrl: photo),
+      semanticLabel: person.name,
+      semanticValue: line,
+      excludeChildSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 70),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              _Face(name: person.name, url: photo),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      person.name,
+                      style: AppType.row.copyWith(color: room.ink),
+                    ),
+                    Text(
+                      line,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppType.meta.copyWith(color: dim),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: dim),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A person's photo, or their initials where TMDB has none.
+class _Face extends StatelessWidget {
+  const _Face({required this.name, required this.url});
+
+  final String name;
+  final String? url;
+
+  static const double _size = 44;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final initials = name
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((part) => part.characters.first.toUpperCase())
+        .join();
+    return Container(
+      width: _size,
+      height: _size,
+      clipBehavior: Clip.antiAlias,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: room.fillQuiet,
+        shape: BoxShape.circle,
+        border: Border.all(color: room.hair),
+      ),
+      child: url == null
+          ? Text(initials, style: AppType.label.copyWith(color: room.ink))
+          : ArtworkDecodeBox(
+              box: const Size.square(_size),
+              builder: (context, decode) => CachedNetworkImage(
+                imageUrl: url!,
+                cacheManager: pinnedImageCacheFor(url),
+                memCacheWidth: decode.width,
+                memCacheHeight: decode.height,
+                width: _size,
+                height: _size,
+                fit: BoxFit.cover,
+                errorWidget: (_, _, _) => Text(
+                  initials,
+                  style: AppType.label.copyWith(color: room.ink),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+/// A skeleton the height of a few tiles while an index loads.
+class _TilesLoading extends StatelessWidget {
+  const _TilesLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: AppSkeleton.posterRow(height: 156),
+    );
+  }
+}
+
+/// An index Seerr did not give, in the classified words.
+class _IndexFailure extends StatelessWidget {
+  const _IndexFailure({
+    required this.error,
+    required this.what,
+    required this.onRetry,
+  });
+
+  final Object error;
+  final String what;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: InlineErrorRetry(
+        message:
+            '${describeFailureOf(ServiceKey.seerr, error).headline}, '
+            'so $what are missing.',
+        error: error,
+        service: ServiceKey.seerr,
+        onRetry: onRetry,
+      ),
+    );
+  }
+}

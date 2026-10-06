@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/discover/presentation/discover_atrium.dart';
+import 'package:cupola/features/discover/presentation/catalog_page.dart';
+import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/media_detail_view.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_catalog.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
-import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -27,7 +28,9 @@ void main() {
     final pages = <String, Widget>{
       'a person': const PersonDetailScreen(personId: 17),
       'a collection': const CollectionDetailScreen(collectionId: 3),
-      'See all': const DiscoverSeeAllScreen(type: 'movies', title: 'Movies'),
+      'a catalogue page': const CatalogPage(
+        query: CatalogQuery.genre(CatalogKind.movie, 16, 'Animation'),
+      ),
     };
 
     for (final MapEntry(key: name, value: page) in pages.entries) {
@@ -102,7 +105,7 @@ void main() {
     );
 
     expect(find.text('Seerr is not set up'), findsNothing);
-    expect(find.byType(DiscoverCatalog), findsOneWidget);
+    expect(find.byType(DiscoverAtrium), findsOneWidget);
     expect(harness.network.requestsTo(WorldIds.seerr), isNotEmpty);
 
     await harness.unmount(tester);

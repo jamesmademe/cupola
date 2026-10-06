@@ -36,7 +36,8 @@ import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/discover/presentation/discover_catalog.dart';
+import 'package:cupola/features/discover/presentation/discover_atrium.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_region_chip.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
@@ -75,6 +76,8 @@ class SearchScreen extends ConsumerWidget {
       // since gone, to a screen with nothing on it at all.
       ref.read(_selectedSearchServiceProvider.notifier).state = null;
       ref.read(globalSearchFieldVersionProvider.notifier).state++;
+      // And an open index of the atrium closes: the tab again is the lobby.
+      ref.read(discoverIndexProvider.notifier).close();
     });
 
     // ⌘R's own channel. It is the opposite command to the tab re-tap above —
@@ -119,6 +122,15 @@ class SearchScreen extends ConsumerWidget {
           lanes: lanes,
           showsReadout: showsReadout && searching,
         ),
+        // Where the catalogue's dates and providers are read for, beside
+        // the heading while the tab browses it.
+        actions: [
+          if (!searching && watchSeerrConfigured(ref))
+            const Padding(
+              padding: EdgeInsets.only(right: AppSpacing.lg),
+              child: DiscoverRegionChip(),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -161,7 +173,7 @@ class SearchScreen extends ConsumerWidget {
                 // Seerr to ask; a Seerr whose session ended says so, with the
                 // way back; with no Seerr, what a search here would reach.
                 : watchSeerrConfigured(ref)
-                ? DiscoverCatalog(bottomPadding: bottomPadding)
+                ? DiscoverAtrium(bottomPadding: bottomPadding)
                 : ref
                       .watch(currentSettingsProvider)
                       .hasServiceConnection(ServiceKey.seerr)

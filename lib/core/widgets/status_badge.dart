@@ -47,13 +47,32 @@ class StatusBadge extends StatelessWidget {
   /// would be noise.
   final bool _animated;
 
+  /// Set only by [StatusBadge.poster].
+  final bool _poster;
+
   const StatusBadge({
     super.key,
     required this.info,
     this.compact = false,
     this.iconOnly = false,
     this.excludeFromSemantics = false,
-  }) : _animated = false;
+  }) : _animated = false,
+       _poster = false;
+
+  /// The word on a catalogue poster: a dot in the tone and the state word
+  /// (or the percentage, while bytes arrive) on the plate, so a grid of
+  /// posters reads without a legend. Between [compact], which is a glyph a
+  /// reader has to learn, and the full badge, whose icon a poster corner
+  /// has no room for. A word too long for the poster wraps to a second line
+  /// inside the plate rather than losing its end.
+  const StatusBadge.poster({
+    super.key,
+    required this.info,
+    this.excludeFromSemantics = false,
+  }) : compact = false,
+       iconOnly = false,
+       _animated = false,
+       _poster = true;
 
   /// Full badge that cross-fades between resolved statuses and sweeps its
   /// progress ring (see [_animated] for exactly what moves). Used on the media
@@ -66,7 +85,12 @@ class StatusBadge extends StatelessWidget {
     this.excludeFromSemantics = false,
   }) : compact = false,
        iconOnly = false,
-       _animated = true;
+       _animated = true,
+       _poster = false;
+
+  /// The poster word's dot, a step under the dense rail's 8: it sits beside
+  /// a word, not alone on the artwork.
+  static const double _posterDot = 7;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +134,55 @@ class StatusBadge extends StatelessWidget {
               BoxShadow(
                 color: colorScheme.shadow.withValues(alpha: 0.35),
                 spreadRadius: 1.5,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_poster) {
+      final percent = _percentText;
+      return _spoken(
+        Container(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.s,
+            AppSpacing.xxs,
+            AppSpacing.sm,
+            AppSpacing.xxs,
+          ),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(AppRadius.thumb),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // The tone lives on the dot alone, as on every badge's glyph:
+              // the word stays in the plate's ink.
+              Container(
+                width: _posterDot,
+                height: _posterDot,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  percent ?? info.label,
+                  maxLines: 2,
+                  style: percent != null
+                      ? theme.textTheme.labelSmall!
+                            .weight(FontWeight.w600)
+                            .tabular
+                            .copyWith(color: textColor)
+                      : theme.textTheme.labelSmall!
+                            .weight(FontWeight.w600)
+                            .copyWith(color: textColor),
+                ),
               ),
             ],
           ),

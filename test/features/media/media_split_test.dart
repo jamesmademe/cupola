@@ -10,6 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/presentation/catalog_page.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -228,14 +230,29 @@ void main() {
       'in the pane is pushed on it, and Back returns', (tester) async {
     final semantics = tester.ensureSemantics();
     final (harness, router, container) = await _app(tester);
-    router.go(ServiceRoutes.discover);
+    // A catalogue page: every movie of the catalogue in a grid.
+    router.go(
+      ServiceRoutes.discoverCatalog(const CatalogQuery.all(CatalogKind.movie)),
+    );
     await _answer(tester);
 
-    await tester.tap(find.text('Charge (2022)'));
+    final charge = find.text('Charge');
+    await tester.ensureVisible(charge);
+    await _answer(tester);
+    await tester.tap(charge);
     await _answer(tester);
     expect(_shown(tester), [_charge]);
 
-    await tester.tap(find.text('Metropolis (1927)'));
+    // Beside the pane the grid is narrower: further down it.
+    final metropolis = find
+        .descendant(
+          of: find.byType(CatalogPage),
+          matching: find.text('Metropolis'),
+        )
+        .first;
+    await tester.ensureVisible(metropolis);
+    await _answer(tester);
+    await tester.tap(metropolis);
     await _answer(tester);
     expect(_shown(tester), [_metropolis]);
     expect(_paneControl('Close'), findsOneWidget);
@@ -252,7 +269,7 @@ void main() {
     // Metropolis replaced Charge: Close leaves the list, not Charge.
     await _tapPaneControl(tester, 'Close');
     expect(_shown(tester), isEmpty);
-    expect(router.state.uri.path, ServiceRoutes.discover);
+    expect(router.state.uri.path, '/discover/all/movie');
 
     semantics.dispose();
     await _close(tester, harness, container);

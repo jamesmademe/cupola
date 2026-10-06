@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
@@ -273,26 +274,46 @@ void main() {
       expect(ServiceRoutes.seerrRequests, '/dashboard/seerr/requests');
     });
 
-    test('every catalogue see-all hangs off the Discover tab', () {
-      // Discover was Seerr's fourth tab; it is the app's own now, and nothing
-      // in the app builds one of these paths by hand.
-      for (final base in [
-        ServiceRoutes.discoverMoviesAll,
-        ServiceRoutes.discoverTvAll,
-        ServiceRoutes.discoverTrendingAll,
-        ServiceRoutes.discoverGenreBase,
-      ]) {
-        expect(base, startsWith('${ServiceRoutes.discover}/'));
+    test('every catalogue page hangs off the Discover tab', () {
+      // Discover was Seerr's fourth tab; it is the app's own now, and every
+      // door and see-all of it builds its path here.
+      final paths = {
+        const CatalogQuery.all(CatalogKind.movie): '/discover/all/movie',
+        const CatalogQuery.trending(): '/discover/trending',
+        const CatalogQuery.trending(window: TrendingWindow.day):
+            '/discover/trending?window=day',
+        const CatalogQuery.upcoming(CatalogKind.tv): '/discover/upcoming/tv',
+        const CatalogQuery.genre(CatalogKind.tv, 16, 'Animation'):
+            '/discover/genre/tv/16?title=Animation',
+        const CatalogQuery.network(213, 'Netflix'): '/discover/network/213',
+        const CatalogQuery.studio(41077, 'A24'): '/discover/studio/41077',
+        const CatalogQuery.keyword(CatalogKind.movie, 4379, 'Time travel'):
+            '/discover/keyword/movie/4379?title=Time+travel',
+        const CatalogQuery.language(CatalogKind.tv, 'ko', 'Korean'):
+            '/discover/language/tv/ko',
+        const CatalogQuery.decade(CatalogKind.movie, 1990):
+            '/discover/decade/movie/1990',
+      };
+      for (final MapEntry(key: query, value: path) in paths.entries) {
+        expect(ServiceRoutes.discoverCatalog(query), path);
       }
-      expect(
-        ServiceRoutes.discoverGenre(
-          mediaType: 'tv',
-          genreId: 28,
-          title: 'Action',
-        ),
-        '/discover/genre/tv/28?title=Action',
-      );
     });
+
+    test(
+      'the order and the filters are the page\'s own, never the path\'s',
+      () {
+        const query = CatalogQuery.genre(CatalogKind.movie, 16, 'Animation');
+        expect(
+          ServiceRoutes.discoverCatalog(
+            query
+                .withSort(CatalogSort.topRated)
+                .withRated(true)
+                .withDecade(1990),
+          ),
+          ServiceRoutes.discoverCatalog(query),
+        );
+      },
+    );
 
     test('a person and a collection hang beside the title they came from', () {
       // The same mount a title opened there would take: a cast member tapped

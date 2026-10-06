@@ -13,6 +13,7 @@ import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -446,30 +447,20 @@ class FakeSeerrService extends SeerrService {
   bool resolveIssueCalled = false;
 
   @override
-  Future<List<MediaPreview>> getDiscoverMovies({
-    int page = 1,
-    int? genre,
-    String? sortBy,
-  }) async => const [];
-
-  @override
-  Future<List<MediaPreview>> getDiscoverTV({
-    int page = 1,
-    int? genre,
-    String? sortBy,
-  }) async => const [];
-
-  @override
   Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) async =>
       const [];
 
   @override
-  Future<List<MediaPreview>> getDiscoverUpcomingMovies({int page = 1}) async =>
-      const [];
-
-  @override
-  Future<List<MediaPreview>> getDiscoverUpcomingTv({int page = 1}) async =>
-      const [];
+  Future<CatalogPageResult> getCatalogPage(
+    CatalogQuery query, {
+    int page = 1,
+    DateTime? today,
+  }) async => CatalogPageResult(
+    items: const [],
+    page: page,
+    totalPages: page,
+    totalResults: 0,
+  );
 
   @override
   Future<List<SeerrGenre>> getMovieGenres() async => const [];

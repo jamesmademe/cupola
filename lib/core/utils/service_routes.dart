@@ -1,3 +1,4 @@
+import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
@@ -211,22 +212,38 @@ class ServiceRoutes {
   // because the catalogue is where a title is found, not a corner of one
   // service. Every link Seerr's room ever made still resolves: `router.dart`
   // rewrites each old spelling here in one hop.
-  static const discoverMoviesAll = '$discover/movies/all';
-  static const discoverTvAll = '$discover/tv/all';
-  static const discoverTrendingAll = '$discover/trending/all';
-  static const discoverGenreBase = '$discover/genre';
-
-  /// See-all for a single genre row, e.g.
-  /// `/discover/genre/movie/28?title=Action`.
-  static String discoverGenre({
-    required String mediaType,
-    required int genreId,
-    String? title,
-  }) {
-    final normalizedMediaType = mediaType == 'tv' ? 'tv' : 'movie';
-    return _withQuery('$discoverGenreBase/$normalizedMediaType/$genreId', {
-      'title': title,
-    });
+  /// A catalogue page of the Discover tab, from its question: every door of
+  /// the atrium and every "See all" lands on one. Each resolves from the
+  /// path alone (`catalogQueryFor`); the name rides as `title` only where no
+  /// curated list or Seerr list holds it.
+  ///
+  /// `/discover/all/movie`, `/discover/trending?window=day`,
+  /// `/discover/upcoming/tv`, `/discover/genre/movie/16?title=Animation`,
+  /// `/discover/network/213`, `/discover/studio/41077`,
+  /// `/discover/keyword/movie/4379`, `/discover/language/tv/ko`,
+  /// `/discover/decade/movie/1990`. The order and the filters are the
+  /// page's own and travel with nothing.
+  static String discoverCatalog(CatalogQuery query) {
+    final kind = query.kind.mediaType;
+    return switch (query.base) {
+      CatalogBase.all => '$discover/all/$kind',
+      CatalogBase.trending => _withQuery('$discover/trending', {
+        'window': query.window == TrendingWindow.day
+            ? TrendingWindow.day.param
+            : null,
+      }),
+      CatalogBase.upcoming => '$discover/upcoming/$kind',
+      CatalogBase.genre => _withQuery('$discover/genre/$kind/${query.id}', {
+        'title': query.name,
+      }),
+      CatalogBase.network => '$discover/network/${query.id}',
+      CatalogBase.studio => '$discover/studio/${query.id}',
+      CatalogBase.keyword => _withQuery('$discover/keyword/$kind/${query.id}', {
+        'title': query.name,
+      }),
+      CatalogBase.language => '$discover/language/$kind/${query.code}',
+      CatalogBase.decade => '$discover/decade/$kind/${query.id}',
+    };
   }
 
   // ── The \*arr family, under the tab model ─────────────────────────────────

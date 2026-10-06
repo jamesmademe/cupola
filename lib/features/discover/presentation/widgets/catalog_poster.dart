@@ -17,7 +17,8 @@ import 'package:cupola/features/discover/presentation/discover_details_provider.
 import 'package:cupola/features/media/presentation/open_media.dart';
 
 /// One title of Seerr's catalogue as a tile: the poster with what Seerr holds
-/// of it in the corner, the title under it, and TMDB's score.
+/// of it written in the corner (`StatusBadge.poster`), the title under it,
+/// and TMDB's score.
 ///
 /// The state comes from the catalogue's own answer (`mediaInfo`), in the
 /// words of whoever reads it (`seerrCatalogStatus`): nothing at all for a
@@ -104,9 +105,8 @@ class CatalogPoster extends ConsumerWidget {
                   paneTag: heroTag,
                   badge: status == null
                       ? null
-                      : StatusBadge(
+                      : StatusBadge.poster(
                           info: status,
-                          compact: true,
                           excludeFromSemantics: true,
                         ),
                 ),

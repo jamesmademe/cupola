@@ -354,3 +354,17 @@ MediaStatusInfo? seerrCatalogStatus(
           info.labelOverride == null);
   return saysNothing ? null : info;
 }
+
+/// Whether Seerr says the server holds the title, whole or in part: what
+/// "Hide what I have" takes off a catalogue page and "The best you're
+/// missing" leaves out. Read from the same record as the badge, so a title
+/// that is hidden is one whose badge would say it is there.
+bool seerrHolds(Map<String, dynamic>? mediaInfo, {SeerrNumbering? numbering}) {
+  final code = intOrNull(mediaInfo?['status']);
+  if (code == null) return false;
+  return switch (SeerrMediaAvailability.fromCode(code, numbering: numbering)) {
+    SeerrMediaAvailability.available ||
+    SeerrMediaAvailability.partiallyAvailable => true,
+    _ => false,
+  };
+}

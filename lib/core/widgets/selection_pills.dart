@@ -65,6 +65,7 @@ class SelectionPills<T> extends StatelessWidget {
     required this.labelBuilder,
     required this.onSelected,
     this.padding = gutter,
+    this.leading,
   }) : _wraps = false;
 
   /// The pills on as many lines as they need, with no row to scroll.
@@ -81,9 +82,15 @@ class SelectionPills<T> extends StatelessWidget {
     required this.labelBuilder,
     required this.onSelected,
   }) : padding = _wrapPadding,
+       leading = null,
        _wraps = true;
 
   final bool _wraps;
+
+  /// A control that rides at the head of the scrolling row, before the
+  /// pills: the way back out of the choice (the atrium's `Discover` in front
+  /// of its indexes). Not one of the values, so never selected.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +107,7 @@ class SelectionPills<T> extends StatelessWidget {
               // header that sets its height) is its own width; a wrap gives
               // it the whole line, so it is held to its label's width here.
               IntrinsicWidth(
-                child: _Pill(
+                child: SelectionPill(
                   label: labelBuilder(value),
                   selected: value == selected,
                   onTap: () => onSelected(value),
@@ -115,10 +122,15 @@ class SelectionPills<T> extends StatelessWidget {
       padding: padding,
       child: Row(
         children: [
+          if (leading case final leading?)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: leading,
+            ),
           for (final value in values)
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.sm),
-              child: _Pill(
+              child: SelectionPill(
                 label: labelBuilder(value),
                 selected: value == selected,
                 onTap: () => onSelected(value),
@@ -130,7 +142,10 @@ class SelectionPills<T> extends StatelessWidget {
   }
 }
 
-class _Pill extends StatelessWidget {
+/// One pill of the row, on its own: a toggle (`Under 100 min`) or a pill
+/// that opens a choice (`Popular`, with [trailing]'s chevron), in the same
+/// drawing as the row's so the controls of one page speak one language.
+class SelectionPill extends StatelessWidget {
   /// The finger's target, `size.touch` 44: the area grows, the drawing does
   /// not (brand book *Targets*). A floor, so it grows with the reading size.
   static const double _minTouchTarget = 44;
@@ -143,10 +158,15 @@ class _Pill extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _Pill({
+  /// A glyph after the label: the chevron of a pill that opens a choice.
+  final IconData? trailing;
+
+  const SelectionPill({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,
+    this.trailing,
   });
 
   @override
@@ -203,12 +223,23 @@ class _Pill extends StatelessWidget {
       borderRadius: AppRadius.borderRadiusPill,
       border: Border.all(color: border),
     ),
-    child: Text(
-      label,
-      maxLines: 1,
-      style: theme.textTheme.labelMedium!
-          .weight(FontWeight.w600)
-          .copyWith(color: labelColor),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            style: theme.textTheme.labelMedium!
+                .weight(FontWeight.w600)
+                .copyWith(color: labelColor),
+          ),
+        ),
+        if (trailing case final trailing?) ...[
+          const SizedBox(width: AppSpacing.xxs),
+          Icon(trailing, size: 18, color: labelColor),
+        ],
+      ],
     ),
   );
 }

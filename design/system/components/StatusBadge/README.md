@@ -8,6 +8,7 @@ Rendered from `lib/core/widgets/status_badge.dart` by `test/design_catalog/statu
 
 - **Full** (`StatusBadge(info:)`) — `surface` at 80% (`opacityStatusBadge`) with a 1px `on-surface` 12% border, `radius-sm`, padding `space-xs` × `space-sm`. A 12px glyph in the tone colour, `space-xs`, the label in `label-small` at 600 in `on-surface`, then an optional tabular percentage (glued, `62%`, through `formatPercent`: nearest whole percent, never `100%` while the transfer is still copying). While bytes are moving the glyph becomes a 12px determinate ring (2px stroke, track at 25% of the tone).
 - **Compact** (`compact: true`) — poster overlay: the default badge's plate and edge, padding `space-xs` × 2px. A 10px glyph in the tone and, when known, the percentage in the plate's ink (2px apart). Never a tone fill: only an amber fault's remedy is filled (brand book, *The tone rule*); it used to be the tone at 90%.
+- **Poster** (`StatusBadge.poster`) — the word on a catalogue poster: the default badge's plate and edge, `radius-thumb`, padding 2px × `space-s` leading, `space-sm` trailing. A 7px dot in the tone, `space-xs`, then the label in `label-small` at 600 in the plate's ink, or, while bytes arrive, the percentage alone (tabular, `62%`). The tone is on the dot only, as on every badge's glyph. A word too long for the poster wraps to a second line inside the plate; it is never cut. Between Compact, a glyph a reader has to learn, and Full, whose icon a poster corner has no room for.
 - **Icon only** (`iconOnly: true`) — an 8px tone dot with a 1.5px `shadow` ring at 35%, so it survives artwork of its own tone.
 - **Animated** (`StatusBadge.animated`) — for the detail hero only. A new status cross-fades glyph, label and percentage together (`durationSm`, emphasized curve); the ring sweeps to each new value (`durationMd`, standard curve). No colour is tweened. Renders exactly like Full under Reduce Motion.
 
@@ -40,7 +41,7 @@ Every variant speaks `MediaStatusInfo.semanticLabel` as one container node and s
 Each sheet is drawn in the dark and the light room.
 
 - Every arm of the tone rule: green, blue, amber, red, primary, neutral.
-- `compact: true` and `iconOnly: true` over artwork.
+- `compact: true`, `StatusBadge.poster` and `iconOnly: true` over artwork.
 - Text at 200%: every state.
 - A long label and a figure, each in a 150pt room: the label wraps inside the badge (a state word cut short loses the state), the figure stays whole.
 

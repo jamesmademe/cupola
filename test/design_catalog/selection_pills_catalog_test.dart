@@ -1,6 +1,7 @@
 @Tags(['catalog'])
 library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/selection_pills.dart';
@@ -42,6 +43,52 @@ void main() {
           onSelected: (_) {},
         ),
         width: 280,
+      ),
+      CatalogScene(
+        'SelectionPills<int>(leading:) · a way back at the head of the row, '
+        'never one of the values; then the lone SelectionPill of a '
+        'catalogue page: a choice with its chevron, a toggle off and on',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SelectionPills<int>(
+              values: const [0, 1, 2],
+              selected: 0,
+              labelBuilder: (i) => const ['Networks', 'Trending', 'Genres'][i],
+              onSelected: (_) {},
+              leading: SelectionPill(
+                label: 'Discover',
+                selected: false,
+                onTap: () {},
+              ),
+            ),
+            Padding(
+              padding: SelectionPills.gutter,
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  SelectionPill(
+                    label: 'Popular',
+                    selected: false,
+                    trailing: Icons.expand_more_rounded,
+                    onTap: () {},
+                  ),
+                  SelectionPill(
+                    label: 'Rating 7+ · 100+ votes',
+                    selected: false,
+                    onTap: () {},
+                  ),
+                  SelectionPill(
+                    label: 'Under 100\u00A0min',
+                    selected: true,
+                    onTap: () {},
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        width: 420,
       ),
       CatalogScene(
         'SelectionPills.wrap() · a choice that must be seen whole, on a 320pt '

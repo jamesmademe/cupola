@@ -83,7 +83,8 @@ void main() {
       CatalogScene(
         'CatalogPoster · the operator · on the server, waiting for approval, '
         'downloading at 62%, and a title Seerr holds nothing of (no badge) · '
-        'compact badge top-right, two lines of title, TMDB score in dim ink',
+        'the poster word top-right, two lines of title, TMDB score in dim '
+        'ink',
         (_) => _rail(),
         width: 500,
         overrides: [audienceProvider.overrideWithValue(Audience.operator)],

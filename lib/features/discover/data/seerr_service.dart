@@ -6,6 +6,7 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
@@ -868,13 +869,10 @@ class SeerrService {
     }
   }
 
-  /// The one discover body: every `/discover/*` row differs only in path, in
-  /// the media type it forces onto rows that do not carry one, and in whether
-  /// the caller filters or sorts.
-  ///
-  /// The conditional spreads are what keep the query maps identical to the
-  /// per-row methods they replaced — the upcoming and trending rows take no
-  /// genre or sort, so they still send `page` alone.
+  /// The one body of a list of titles that is not a catalogue page: Seerr
+  /// room's trending rail and a title's recommendations. They differ only in
+  /// path and in the media type forced onto rows that carry none; a
+  /// catalogue page, with its filters and its totals, is [getCatalogPage].
   ///
   /// **Throws when Seerr did not answer, or answered with a failure.** It used
   /// to answer every failure with `[]`, so a rail whose source was dark was a
@@ -883,14 +881,9 @@ class SeerrService {
   Future<List<MediaPreview>> _discover(
     String path, {
     required int page,
-    int? genre,
-    String? sortBy,
     String? forcedMediaType,
   }) async {
-    final response = await _client.get(
-      path,
-      queryParameters: {'page': page, 'genre': ?genre, 'sortBy': ?sortBy},
-    );
+    final response = await _client.get(path, queryParameters: {'page': page});
     // Every rail this reads is a rail of titles, and trending is TMDB's,
     // which mixes people in with them. A person kept here opened as the movie
     // her id happens to name, and led the featured banner when she trended
@@ -921,56 +914,10 @@ class SeerrService {
   static bool _isNotFound(Object error) =>
       error is DioException && error.response?.statusCode == 404;
 
-  Future<List<MediaPreview>> getDiscoverMovies({
-    int page = 1,
-    int? genre,
-    String? sortBy,
-  }) {
-    return _discover(
-      '/api/v1/discover/movies',
-      page: page,
-      genre: genre,
-      sortBy: sortBy,
-      forcedMediaType: 'movie',
-    );
-  }
-
-  Future<List<MediaPreview>> getDiscoverTV({
-    int page = 1,
-    int? genre,
-    String? sortBy,
-  }) {
-    return _discover(
-      '/api/v1/discover/tv',
-      page: page,
-      genre: genre,
-      sortBy: sortBy,
-      forcedMediaType: 'tv',
-    );
-  }
-
-  /// Upcoming movies (Overseerr/Jellyseerr `/discover/movies/upcoming`).
-  Future<List<MediaPreview>> getDiscoverUpcomingMovies({int page = 1}) {
-    return _discover(
-      '/api/v1/discover/movies/upcoming',
-      page: page,
-      forcedMediaType: 'movie',
-    );
-  }
-
-  /// Upcoming TV (Overseerr/Jellyseerr `/discover/tv/upcoming`).
-  Future<List<MediaPreview>> getDiscoverUpcomingTv({int page = 1}) {
-    return _discover(
-      '/api/v1/discover/tv/upcoming',
-      page: page,
-      forcedMediaType: 'tv',
-    );
-  }
-
-  /// Available movie genres (used to build per-genre discover rows).
+  /// The movie genres, each with a few backdrops (`/discover/genreslider`).
   Future<List<SeerrGenre>> getMovieGenres() => _getGenres('movie');
 
-  /// Available TV genres.
+  /// The series genres, the same way.
   Future<List<SeerrGenre>> getTvGenres() => _getGenres('tv');
 
   /// Throws when Seerr did not answer or answered with a failure, like
@@ -994,6 +941,36 @@ class SeerrService {
   /// declares.
   Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) {
     return _discover('/api/v1/discover/trending', page: page);
+  }
+
+  /// One page of a catalogue: a door of the atrium, a "See all", a filter
+  /// over either. The titles come with what Seerr says of the whole list,
+  /// which the page's foot states (`catalogCountPhrase`).
+  ///
+  /// Throws when Seerr did not answer or answered with a failure, as
+  /// [_discover] does. Trending mixes films and series, and each title keeps
+  /// the type it declares; every other base fixes it.
+  Future<CatalogPageResult> getCatalogPage(
+    CatalogQuery query, {
+    int page = 1,
+    DateTime? today,
+  }) async {
+    final response = await _client.get(
+      query.path,
+      queryParameters: query.parameters(page, today: today ?? DateTime.now()),
+    );
+    final data = response.data;
+    final items = await _mapPreviews(
+      _resultsOf(data).where(_isTitle).toList(growable: false),
+      query.base == CatalogBase.trending ? null : query.kind.mediaType,
+    );
+    final body = data as Map;
+    return CatalogPageResult(
+      items: items,
+      page: intOrNull(body['page']) ?? page,
+      totalPages: intOrNull(body['totalPages']) ?? page,
+      totalResults: intOrNull(body['totalResults']) ?? items.length,
+    );
   }
 
   /// TMDB's recommendations for a title, as Seerr relays them: the first

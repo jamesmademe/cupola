@@ -256,6 +256,16 @@ const _gluedAllowed = <({String file, String literal, String reason})>[
     literal: 'Redirections, 404s and streams',
     reason: 'the plural of an HTTP status, not seconds',
   ),
+  (
+    file: 'lib/features/discover/domain/catalog_query.dart',
+    literal: '${copyHole}s',
+    reason: 'a decade, the 1990s: the plural of a year, not seconds',
+  ),
+  (
+    file: 'lib/features/discover/presentation/discover_atrium.dart',
+    literal: '1920s to now',
+    reason: 'the decades the catalogue runs through, not seconds',
+  ),
 ];
 
 bool _isGluedAllowed(CopyLiteral literal) => _gluedAllowed.any(

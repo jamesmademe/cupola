@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -141,18 +142,51 @@ void main() {
   });
 
   group('discover endpoints', () {
-    test('getDiscoverMovies hits the correct path', () async {
-      client.getResponseData = {'results': const []};
-      await service.getDiscoverMovies(page: 2);
+    test('a catalogue page reads its base, filters and order', () async {
+      client.getResponseData = {
+        'page': 2,
+        'totalPages': 9,
+        'totalResults': 179,
+        'results': const [],
+      };
+      final page = await service.getCatalogPage(
+        const CatalogQuery.studio(41077, 'A24').withRated(true),
+        page: 2,
+        today: DateTime(2026, 10, 6),
+      );
       expect(client.lastGetPath, '/api/v1/discover/movies');
-      expect(client.lastGetQueryParameters, {'page': 2});
+      expect(client.lastGetQueryParameters, {
+        'page': 2,
+        'studio': 41077,
+        'voteAverageGte': 7,
+        'voteCountGte': 100,
+        'sortBy': 'popularity.desc',
+      });
+      expect(page.totalResults, 179);
+      expect(page.totalPages, 9);
     });
 
-    test('getDiscoverTV hits the correct path', () async {
-      client.getResponseData = {'results': const []};
-      await service.getDiscoverTV();
-      expect(client.lastGetPath, '/api/v1/discover/tv');
-    });
+    test(
+      'trending keeps the type each title declares, and no person',
+      () async {
+        client.getResponseData = {
+          'results': [
+            {'id': 1, 'mediaType': 'tv', 'name': 'Lanterns'},
+            {'id': 2, 'mediaType': 'person', 'name': 'Elena Varga'},
+            {'id': 3, 'mediaType': 'movie', 'title': 'Spring'},
+          ],
+        };
+        final page = await service.getCatalogPage(
+          const CatalogQuery.trending(window: TrendingWindow.day),
+        );
+        expect(client.lastGetPath, '/api/v1/discover/trending');
+        expect(client.lastGetQueryParameters, {'page': 1, 'timeWindow': 'day'});
+        expect(page.items.map((item) => (item.title, item.mediaType)), [
+          ('Lanterns', 'tv'),
+          ('Spring', 'movie'),
+        ]);
+      },
+    );
 
     test('getDiscoverTrending hits the correct path', () async {
       client.getResponseData = {'results': const []};
@@ -160,19 +194,24 @@ void main() {
       expect(client.lastGetPath, '/api/v1/discover/trending');
     });
 
-    test('a discover rail that failed throws, never reads as empty', () async {
+    test('a discover read that failed throws, never reads as empty', () async {
       // `[]` is Seerr answering with nothing. A failure used to be `[]` too,
       // so a dark Seerr's rails vanished as if there were nothing to show.
       client.getException = Exception('boom');
-      await expectLater(service.getDiscoverMovies(), throwsException);
-      await expectLater(service.getDiscoverTV(), throwsException);
+      await expectLater(
+        service.getCatalogPage(const CatalogQuery.all(CatalogKind.movie)),
+        throwsException,
+      );
       await expectLater(service.getDiscoverTrending(), throwsException);
       await expectLater(service.getMovieGenres(), throwsException);
     });
 
-    test('a discover rail Seerr answered with nothing is empty', () async {
+    test('a catalogue page Seerr answered with nothing is empty', () async {
       client.getResponseData = {'results': const []};
-      expect(await service.getDiscoverMovies(), isEmpty);
+      final page = await service.getCatalogPage(
+        const CatalogQuery.all(CatalogKind.tv),
+      );
+      expect(page.items, isEmpty);
     });
 
     test('a body that is not a results list is an unreadable answer', () async {
@@ -181,6 +220,23 @@ void main() {
         service.getDiscoverTrending(),
         throwsA(isA<FormatException>()),
       );
+      await expectLater(
+        service.getCatalogPage(const CatalogQuery.all(CatalogKind.movie)),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('the genres come with their backdrops', () async {
+      client.getResponseData = [
+        {
+          'id': 16,
+          'name': 'Animation',
+          'backdrops': ['/a.jpg', '/b.jpg'],
+        },
+      ];
+      final genres = await service.getTvGenres();
+      expect(client.lastGetPath, '/api/v1/discover/genreslider/tv');
+      expect(genres.single.backdrops, ['/a.jpg', '/b.jpg']);
     });
   });
 

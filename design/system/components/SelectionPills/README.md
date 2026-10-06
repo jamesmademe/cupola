@@ -13,10 +13,12 @@ Rendered from `lib/core/widgets/selection_pills.dart` by `test/design_catalog/se
 - Unselected: `colorScheme.surfaceContainer` fill, 1px `outlineVariant` border, `onSurfaceVariant` label.
 - Selected: the room's strong fill (`fill-strong`: white at 12% dark, ink at 12% light) with a 1px `line-edge` border, the label in `on-surface` (the primary ink) — the nav bar's pill, the same on every screen. Monochrome: no service or section colours it, so there is no hue to walk.
 - Press: `PressableScale` (dip, light haptic, Reduce Motion respected).
+- Leading (`leading:`, the row only): a control at the head of the row, before the pills and never one of the values: the way back out of the choice, as the Discover atrium's `‹ Discover` in front of its indexes.
+- One pill alone (`SelectionPill`): the same drawing for a page's other controls, so a page speaks one language. A toggle (`Under 100 min`, selected while on) or a pill that opens a choice, with a trailing chevron (`trailing: Icons.expand_more_rounded`, 18px, in the label's colour, `space-xxs` after it).
 
 ## The consumer provides
 
-`values`, the `selected` value, a `labelBuilder`, `onSelected`, and optionally `padding`. No colour: the pill takes none.
+`values`, the `selected` value, a `labelBuilder`, `onSelected`, and optionally `padding` and `leading`. A `SelectionPill` takes its `label`, whether it is `selected`, `onTap` and an optional `trailing` glyph. No colour: the pill takes none.
 
 ## Semantics
 
@@ -28,6 +30,7 @@ Each sheet is drawn in the dark and the light room.
 
 - Scrolling row: one selected, on a service page, a long label.
 - `SelectionPills.wrap` on a 320pt phone.
+- A row led by a way back, and the lone pills of a catalogue page: a choice with its chevron, a toggle off and on.
 
 ## Do / don't
 

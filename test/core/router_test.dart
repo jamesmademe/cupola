@@ -478,14 +478,11 @@ void main() {
         for (final entry in {
           '': ServiceRoutes.seerrOverview,
           '/requests': ServiceRoutes.seerrRequests,
-          '/movies/all': ServiceRoutes.discoverMoviesAll,
-          '/tv/all': ServiceRoutes.discoverTvAll,
-          '/trending/all': ServiceRoutes.discoverTrendingAll,
-          '/genre/tv/28?title=Action': ServiceRoutes.discoverGenre(
-            mediaType: 'tv',
-            genreId: 28,
-            title: 'Action',
-          ),
+          // The three see-alls are catalogue pages, in one hop.
+          '/movies/all': '/discover/all/movie',
+          '/tv/all': '/discover/all/tv',
+          '/trending/all': '/discover/trending',
+          '/genre/tv/28?title=Action': '/discover/genre/tv/28?title=Action',
           // A title is its own page, and a person and a collection hang
           // beside it.
           '/movie/42': '/discover/media/movie/42',
@@ -495,7 +492,7 @@ void main() {
           '/collection/10': '/discover/media/collection/10',
           // The same shapes under the Discover tab Seerr's room used to have.
           '/discover': ServiceRoutes.discover,
-          '/discover/trending/all': ServiceRoutes.discoverTrendingAll,
+          '/discover/trending/all': '/discover/trending',
           '/discover/person/287': '/discover/media/person/287',
           '/discover/media/movie/42?heroTag=t':
               '/discover/media/movie/42?heroTag=t',
@@ -506,6 +503,40 @@ void main() {
 
           expect(router.state.uri.toString(), entry.value, reason: from);
         }
+      }
+    });
+
+    testWidgets('every catalogue page resolves from its path, and a path it '
+        'cannot read goes back to the atrium', (tester) async {
+      // No Seerr is set up, so each page draws its placeholder and asks
+      // nothing: what is asserted is where the path lands.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final entry in {
+        '/discover/all/movie': '/discover/all/movie',
+        '/discover/trending?window=day': '/discover/trending?window=day',
+        '/discover/upcoming/tv': '/discover/upcoming/tv',
+        '/discover/genre/tv/16?title=Animation':
+            '/discover/genre/tv/16?title=Animation',
+        '/discover/network/213': '/discover/network/213',
+        '/discover/studio/41077': '/discover/studio/41077',
+        '/discover/keyword/movie/4379': '/discover/keyword/movie/4379',
+        '/discover/language/tv/ko': '/discover/language/tv/ko',
+        '/discover/decade/movie/1990': '/discover/decade/movie/1990',
+        // The first catalogue's see-alls.
+        '/discover/movies/all': '/discover/all/movie',
+        '/discover/tv/all': '/discover/all/tv',
+        '/discover/trending/all': '/discover/trending',
+        // Parameters no page can be built from.
+        '/discover/all/book': ServiceRoutes.discover,
+        '/discover/genre/movie/x': ServiceRoutes.discover,
+        '/discover/decade/movie/1995': ServiceRoutes.discover,
+      }.entries) {
+        router.go(entry.key);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), entry.value, reason: entry.key);
       }
     });
 
