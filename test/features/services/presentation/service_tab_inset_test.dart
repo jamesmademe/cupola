@@ -46,13 +46,16 @@ import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_terminal_screen.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_tab_screens.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_tab_screens.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
@@ -727,6 +730,133 @@ void main() {
       );
 
       expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+  });
+
+  group('The media servers\' tabs clear the glass bars', () {
+    testWidgets('Jellyfin Users starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.jellyfin,
+        tab: ServiceTab.users,
+        overrides: [
+          jellyfinLacksAdministratorProvider.overrideWithValue(false),
+          jellyfinUsersProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const JellyfinUsersScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets('Jellyfin Devices starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.jellyfin,
+        tab: ServiceTab.devices,
+        overrides: [
+          jellyfinLacksAdministratorProvider.overrideWithValue(false),
+          jellyfinDevicesProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const JellyfinDevicesScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets('Jellyfin Tasks starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.jellyfin,
+        tab: ServiceTab.tasks,
+        overrides: [
+          jellyfinLacksAdministratorProvider.overrideWithValue(false),
+          jellyfinTasksProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const JellyfinTasksScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets(
+      'a household member\'s Devices placeholder starts below the bar',
+      (tester) async {
+        await pumpHosted(
+          tester,
+          service: ServiceKey.jellyfin,
+          tab: ServiceTab.devices,
+          overrides: [
+            jellyfinLacksAdministratorProvider.overrideWithValue(true),
+          ],
+          child: const JellyfinDevicesScreen(topPadding: _hostedTopPadding),
+        );
+
+        expectClearsTheBar(tester, find.byType(AppEmptyStatePage));
+      },
+    );
+
+    testWidgets('Jellyfin Activity starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.jellyfin,
+        tab: ServiceTab.activity,
+        overrides: [
+          jellyfinLacksAdministratorProvider.overrideWithValue(false),
+          jellyfinSessionsProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const JellyfinActivityScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(StreamNowPlayingSection));
+    });
+
+    testWidgets('Plex On deck starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.plex,
+        tab: ServiceTab.onDeck,
+        overrides: [plexOnDeckTabProvider.overrideWith((ref) => _pending())],
+        child: const PlexOnDeckScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ShimmerGrid));
+    });
+
+    testWidgets('Plex Activities starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.plex,
+        tab: ServiceTab.activities,
+        overrides: [plexSessionsProvider.overrideWith((ref) => _pending())],
+        child: const PlexActivitiesScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(StreamNowPlayingSection));
+    });
+
+    testWidgets('Plex Devices starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.plex,
+        tab: ServiceTab.devices,
+        overrides: [plexDevicesProvider.overrideWith((ref) => _pending())],
+        child: const PlexDevicesScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets('Plex Playlists starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.plex,
+        tab: ServiceTab.playlists,
+        overrides: [plexPlaylistsProvider.overrideWith((ref) => _pending())],
+        child: const PlexPlaylistsScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
     });
   });
 }

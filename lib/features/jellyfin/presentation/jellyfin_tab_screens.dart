@@ -33,11 +33,12 @@ class JellyfinUsersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
     if (ref.watch(jellyfinLacksAdministratorProvider)) {
-      return _needsAdministrator(ref, 'users', topPadding);
+      return _needsAdministrator(context, ref, 'users', topPadding);
     }
     return ServiceListPage<JellyfinUserDto>(
       service: ServiceKey.jellyfin,
-      topPadding: topPadding,
+      // The host's two bands and the status bar the upper one consumes.
+      topPadding: topPadding + MediaQuery.paddingOf(context).top,
       value: ref.watch(jellyfinUsersProvider),
       serviceName: 'Jellyfin users',
       emptyIcon: Icons.people_outline_rounded,
@@ -60,11 +61,12 @@ class JellyfinDevicesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
     if (ref.watch(jellyfinLacksAdministratorProvider)) {
-      return _needsAdministrator(ref, 'devices', topPadding);
+      return _needsAdministrator(context, ref, 'devices', topPadding);
     }
     return ServiceListPage<JellyfinDevice>(
       service: ServiceKey.jellyfin,
-      topPadding: topPadding,
+      // The host's two bands and the status bar the upper one consumes.
+      topPadding: topPadding + MediaQuery.paddingOf(context).top,
       value: ref.watch(jellyfinDevicesProvider),
       serviceName: 'Jellyfin devices',
       emptyIcon: Icons.devices_other_rounded,
@@ -90,11 +92,12 @@ class JellyfinTasksScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
     if (ref.watch(jellyfinLacksAdministratorProvider)) {
-      return _needsAdministrator(ref, 'scheduled tasks', topPadding);
+      return _needsAdministrator(context, ref, 'scheduled tasks', topPadding);
     }
     return ServiceListPage<JellyfinScheduledTask>(
       service: ServiceKey.jellyfin,
-      topPadding: topPadding,
+      // The host's two bands and the status bar the upper one consumes.
+      topPadding: topPadding + MediaQuery.paddingOf(context).top,
       value: ref.watch(jellyfinTasksProvider),
       serviceName: 'Jellyfin tasks',
       emptyIcon: Icons.task_alt_rounded,
@@ -132,13 +135,16 @@ class _JellyfinActivityBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(jellyfinSessionsProvider);
+    // The host's two bands and the status bar the upper one consumes: this
+    // page has no `SafeArea` and no app bar to take the inset off first.
+    final top = topPadding + MediaQuery.paddingOf(context).top;
     // The tab is this one read: a dark server is its leaf, never "Nobody is
     // watching right now".
     if (sessions.hasError && !sessions.hasValue) {
       return AmbientScaffold(
         accent: ServiceKey.jellyfin.accent,
         body: Padding(
-          padding: EdgeInsets.only(top: topPadding),
+          padding: EdgeInsets.only(top: top),
           child: ServiceOfflineState.failure(
             service: ServiceKey.jellyfin,
             error: sessions.error!,
@@ -155,7 +161,7 @@ class _JellyfinActivityBody extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             0,
-            topPadding + AppSpacing.md,
+            top + AppSpacing.md,
             0,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
@@ -181,16 +187,21 @@ Widget _notConfigured() =>
 
 /// The Devices and Tasks tabs on a non-administrator token: `/Devices` and
 /// `/ScheduledTasks` are elevated, so the list would only ever be a refusal.
-Widget _needsAdministrator(WidgetRef ref, String what, double topPadding) =>
-    AmbientScaffold(
-      accent: ServiceKey.jellyfin.accent,
-      body: JellyfinAdminPlaceholder(
-        what: what,
-        topPadding: topPadding,
-        connectionId:
-            ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '',
-      ),
-    );
+Widget _needsAdministrator(
+  BuildContext context,
+  WidgetRef ref,
+  String what,
+  double topPadding,
+) => AmbientScaffold(
+  accent: ServiceKey.jellyfin.accent,
+  body: JellyfinAdminPlaceholder(
+    what: what,
+    // The host's two bands and the status bar the upper one consumes.
+    topPadding: topPadding + MediaQuery.paddingOf(context).top,
+    connectionId:
+        ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '',
+  ),
+);
 
 class _UserRow extends StatelessWidget {
   const _UserRow({required this.user});

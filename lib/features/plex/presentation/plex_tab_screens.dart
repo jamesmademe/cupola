@@ -61,7 +61,8 @@ class PlexDevicesScreen extends ConsumerWidget {
     if (!_isConfigured(ref)) return _notConfigured();
     return ServiceListPage<PlexDevice>(
       service: ServiceKey.plex,
-      topPadding: topPadding,
+      // The host's two bands and the status bar the upper one consumes.
+      topPadding: topPadding + MediaQuery.paddingOf(context).top,
       value: ref.watch(plexDevicesProvider),
       serviceName: 'Plex devices',
       emptyIcon: Icons.devices_other_rounded,
@@ -84,7 +85,8 @@ class PlexPlaylistsScreen extends ConsumerWidget {
     if (!_isConfigured(ref)) return _notConfigured();
     return ServiceListPage<PlexPlaylist>(
       service: ServiceKey.plex,
-      topPadding: topPadding,
+      // The host's two bands and the status bar the upper one consumes.
+      topPadding: topPadding + MediaQuery.paddingOf(context).top,
       value: ref.watch(plexPlaylistsProvider),
       serviceName: 'Plex playlists',
       emptyIcon: Icons.playlist_play_rounded,
@@ -110,12 +112,15 @@ class _PlexOnDeckBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(plexOnDeckTabProvider);
+    // The host's two bands and the status bar the upper one consumes: this
+    // page has no `SafeArea` and no app bar to take the inset off first.
+    final top = topPadding + MediaQuery.paddingOf(context).top;
     // The tab is this one read, so a cold failure is the server's leaf.
     if (items.hasError && !items.hasValue) {
       return AmbientScaffold(
         accent: ServiceKey.plex.accent,
         body: Padding(
-          padding: EdgeInsets.only(top: topPadding),
+          padding: EdgeInsets.only(top: top),
           child: ServiceOfflineState.failure(
             service: ServiceKey.plex,
             error: items.error!,
@@ -127,7 +132,7 @@ class _PlexOnDeckBody extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.plex.accent,
       body: Padding(
-        padding: EdgeInsets.only(top: topPadding),
+        padding: EdgeInsets.only(top: top),
         child: AsyncValueWidget<List<StreamItem>>(
           value: items,
           serviceName: 'Plex on deck',
@@ -158,6 +163,9 @@ class _PlexActivitiesBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(plexSessionsProvider);
+    // The host's two bands and the status bar the upper one consumes: this
+    // page has no `SafeArea` and no app bar to take the inset off first.
+    final top = topPadding + MediaQuery.paddingOf(context).top;
     // A refusal that turns out to be a shared account's token is Now
     // playing's to say, in blue, and so is the moment before the probe has
     // said: the page is not offline.
@@ -172,7 +180,7 @@ class _PlexActivitiesBody extends ConsumerWidget {
       return AmbientScaffold(
         accent: ServiceKey.plex.accent,
         body: Padding(
-          padding: EdgeInsets.only(top: topPadding),
+          padding: EdgeInsets.only(top: top),
           child: ServiceOfflineState.failure(
             service: ServiceKey.plex,
             error: sessions.error!,
@@ -189,7 +197,7 @@ class _PlexActivitiesBody extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             0,
-            topPadding + AppSpacing.md,
+            top + AppSpacing.md,
             0,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
