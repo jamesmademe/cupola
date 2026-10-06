@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+
 /// A near-transparent app-bar surface that lets the page's ambient gradient
 /// read continuously behind it — no opaque strip and no hairline border that
 /// would visually "cut" the gradient.
@@ -38,6 +41,43 @@ class GlassSurface extends StatelessWidget {
         ),
       ),
       child: child,
+    );
+  }
+}
+
+/// The glass under the status bar, on a page that scrolls beneath it with no
+/// bar of its own (the media page, a person's page): a heading passing under
+/// the clock fades into the room instead of colliding with it. The room's
+/// ground, nearly opaque behind the clock and gone a little below it; no
+/// blur, for the reason [GlassSurface] gives. Ignores touches, and draws
+/// nothing where there is no top inset.
+class StatusBarScrim extends StatelessWidget {
+  const StatusBarScrim({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    if (top <= 0) return const SizedBox.shrink();
+    final ground = CupolaRoom.of(context).ground;
+    final height = top + AppSpacing.lg;
+    return IgnorePointer(
+      child: SizedBox(
+        height: height,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                ground.withValues(alpha: 0.92),
+                ground.withValues(alpha: 0.72),
+                ground.withValues(alpha: 0),
+              ],
+              stops: [0, top / height, 1],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

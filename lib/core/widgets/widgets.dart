@@ -66,6 +66,9 @@ export 'search_bar_header.dart';
 // Artwork
 export 'artwork_decode.dart';
 
+// System bars
+export 'themed_system_bars.dart';
+
 // Status & Tags
 export 'status_badge.dart';
 export 'tag_chip.dart';

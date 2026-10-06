@@ -1,5 +1,6 @@
 import 'package:cupola/core/models/rating_source.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
@@ -95,18 +96,20 @@ class MediaIdentity {
   /// The line under the title: who made it, when, how long, what it is.
   /// `Ian Hubert · 2012 · 12 min · Science fiction`; a series says it is
   /// one, its years and seasons, and two genres: `Series · 2015– · 3 seasons
-  /// · Animation · Sci-Fi & Fantasy`.
+  /// · Animation · Sci-Fi & Fantasy`. A figure keeps its word on its line:
+  /// `2 h 19 min` never breaks after the `h`.
   String get metaLine => switch (series) {
     (:final span, :final seasons) => [
       'Series',
       ?(span ?? year),
-      if (seasons != null && seasons > 0) countLabel(seasons, 'season'),
+      if (seasons != null && seasons > 0)
+        countLabel(seasons, 'season').replaceAll(' ', unitSpace),
       ...genres.take(2),
     ].join(' · '),
     null => [
       if (directors.isNotEmpty) directors.first,
       ?year,
-      if ((runtime ?? '').isNotEmpty) runtime!,
+      if ((runtime ?? '').isNotEmpty) runtime!.replaceAll(' ', unitSpace),
       if (genres.isNotEmpty) genres.first,
     ].join(' · '),
   };

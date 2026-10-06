@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
@@ -200,8 +201,10 @@ class _MediaEpisodesState extends State<MediaEpisodes> {
 }
 
 /// The seasons as one track: a segment each, the chosen one in the ink. The
-/// segments share the width when they fit and scroll when they do not.
-class _SeasonTrack extends StatelessWidget {
+/// segments share the width when they fit and scroll when they do not; a
+/// track that scrolls brings the chosen one into view, on opening (the latest
+/// season sits at the far end) and whenever the choice changes.
+class _SeasonTrack extends StatefulWidget {
   const _SeasonTrack({
     required this.seasons,
     required this.selected,
@@ -216,11 +219,66 @@ class _SeasonTrack extends StatelessWidget {
   static const double _segment = 104;
 
   @override
+  State<_SeasonTrack> createState() => _SeasonTrackState();
+}
+
+class _SeasonTrackState extends State<_SeasonTrack> {
+  final _chosenKey = GlobalKey();
+
+  /// The track's own scroll, so revealing a season never moves the page.
+  final _track = ScrollController();
+
+  @override
+  void dispose() {
+    _track.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _revealChosen(animate: false);
+  }
+
+  @override
+  void didUpdateWidget(_SeasonTrack old) {
+    super.didUpdateWidget(old);
+    if (old.selected != widget.selected) _revealChosen(animate: true);
+  }
+
+  void _revealChosen({required bool animate}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final chosen = _chosenKey.currentContext?.findRenderObject();
+      // A track that fits has nothing to scroll.
+      if (!mounted || chosen is! RenderBox || !_track.hasClients) return;
+      final position = _track.position;
+      final target = RenderAbstractViewport.of(chosen)
+          .getOffsetToReveal(chosen, 0.5)
+          .offset
+          .clamp(position.minScrollExtent, position.maxScrollExtent);
+      if (animate) {
+        _track.animateTo(
+          target,
+          duration: AppAnimation.emphasized,
+          curve: AppAnimation.standardCurve,
+        );
+      } else {
+        _track.jumpTo(target);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
+    final seasons = widget.seasons;
+    final selected = widget.selected;
+    final onSelected = widget.onSelected;
+    const segmentWidth = _SeasonTrack._segment;
     Widget segment(MediaSeason season) {
       final chosen = season.number == selected;
       return Semantics(
+        key: chosen ? _chosenKey : null,
         container: true,
         button: true,
         selected: chosen,
@@ -261,7 +319,7 @@ class _SeasonTrack extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, box) {
-          if (box.maxWidth / seasons.length >= _segment) {
+          if (box.maxWidth / seasons.length >= segmentWidth) {
             return Row(
               children: [
                 for (final season in seasons) Expanded(child: segment(season)),
@@ -269,12 +327,13 @@ class _SeasonTrack extends StatelessWidget {
             );
           }
           return SingleChildScrollView(
+            controller: _track,
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
                 for (final season in seasons)
                   ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: _segment),
+                    constraints: const BoxConstraints(minWidth: segmentWidth),
                     child: segment(season),
                   ),
               ],

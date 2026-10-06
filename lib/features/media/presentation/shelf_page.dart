@@ -14,6 +14,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
@@ -157,7 +158,18 @@ class ShelfPage extends StatelessWidget {
             accent: light?.light,
           ),
         ),
-        child: page,
+        // The clock stays legible over whatever scrolls under it.
+        child: Stack(
+          children: [
+            page,
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: StatusBarScrim(),
+            ),
+          ],
+        ),
       ),
     );
   }

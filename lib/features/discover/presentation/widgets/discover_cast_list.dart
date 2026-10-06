@@ -38,13 +38,15 @@ class DiscoverCastList extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
   });
 
-  /// Rail height at the default reading size: a 64pt avatar, a 4pt gap and two
-  /// lines of `labelSmall`, with a little slack.
-  static const double _railBaseHeight = 108;
+  /// Rail height at the default reading size: a 64pt avatar, a 4pt gap and up
+  /// to four lines of `labelSmall`, with a little slack.
+  static const double _railBaseHeight = 135;
 
-  /// The growing half of [_railBaseHeight]: two lines of `labelSmall` (11pt at
-  /// 1.22 leading) — the actor's name and their character.
-  static const double _labelBlockHeight = 27;
+  /// The growing half of [_railBaseHeight]: up to four lines of `labelSmall`
+  /// (11pt at 1.22 leading) — the actor's name and their character, each
+  /// allowed a second line so `Edward Norton` and `Robert Paulson` are read
+  /// whole rather than cut.
+  static const double _labelBlockHeight = 54;
 
   @override
   Widget build(BuildContext context) {
@@ -127,21 +129,21 @@ class _CastTile extends StatelessWidget {
     }
 
     final tile = SizedBox(
-      width: 64,
+      width: 76,
       child: Column(
         children: [
           avatar,
           const SizedBox(height: AppSpacing.xs),
           Text(
             member.name,
-            maxLines: 1,
+            maxLines: 2,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.weight(FontWeight.w600),
           ),
           Text(
             member.character,
-            maxLines: 1,
+            maxLines: 2,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             // Same role as the name above; the character reads as secondary

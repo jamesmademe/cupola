@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +14,10 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
 import 'package:cupola/core/widgets/machine_name.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/domain/media_series.dart';
+import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/media_series_sections.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
@@ -29,8 +33,9 @@ Future<ProfileHarness> _pump(
   List<Override> overrides = const [],
   MediaKey? key,
   double height = 2400,
+  double width = 390,
 }) async {
-  tester.view.physicalSize = Size(390, height);
+  tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final harness = await pumpWithProfile(
@@ -773,7 +778,10 @@ void main() {
         find.text('The Second Cycle · 5\u00A0min\u00A0left'),
         findsOneWidget,
       );
-      expect(find.textContaining('Series · 2015– · 3 seasons'), findsOneWidget);
+      expect(
+        find.textContaining('Series · 2015– · 3\u00A0seasons'),
+        findsOneWidget,
+      );
       expect(find.textContaining('S3 E1 · premiere at'), findsOneWidget);
       expect(find.text('Sonarr looks for it once it airs'), findsOneWidget);
       // Two scores: TMDB's, and Rotten Tomatoes' through Seerr.
@@ -1334,5 +1342,175 @@ void main() {
 
       await harness.unmount(tester);
     });
+  });
+
+  group('as a real screen shows it', () {
+    testWidgets('the quiet actions keep every word: on a phone their glyphs '
+        'go before Watchlist is cut', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.tearsOfSteel,
+      );
+
+      final word = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.widgetWithText(OutlinedButton, 'Watchlist'),
+          matching: find.text('Watchlist'),
+        ),
+      );
+      expect(word.didExceedMaxLines, isFalse);
+      expect(find.byIcon(Icons.bookmark_border_rounded), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('with room to spare the glyphs stay', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.tearsOfSteel,
+        width: 560,
+      );
+
+      expect(find.byIcon(Icons.bookmark_border_rounded), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('the scores share one line, whatever their labels take', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.tearsOfSteel,
+      );
+
+      // The figure is the first line of the column its label closes.
+      double figureTop(String source) => tester
+          .getTopLeft(
+            find
+                .descendant(
+                  of: find
+                      .ancestor(
+                        of: find.text(source),
+                        matching: find.byType(Column),
+                      )
+                      .first,
+                  matching: find.byType(Text),
+                )
+                .first,
+          )
+          .dy;
+      // `Rotten Tomatoes` takes two lines at 390; its figure does not drop.
+      expect(figureTop('Rotten Tomatoes'), figureTop('TMDB'));
+
+      semantics.dispose();
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a Bazarr that does not follow the movie draws no row, and '
+        'the heading does not count it', (tester) async {
+      final semantics = tester.ensureSemantics();
+      tester.view.physicalSize = const Size(390, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final harness = await ProfileHarness.start(Profiles.p1);
+      harness.network
+        ..followFakeTime(tester.binding)
+        ..on(
+          WorldIds.bazarr,
+          'GET',
+          '/api/movies',
+          (_) => NetworkReply.json({'data': <Object?>[], 'total': 0}),
+        );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: harness.overrides,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: MediaPage(
+              mediaKey: MediaKey.movie(WorldTitles.tearsOfSteel.tmdbId),
+            ),
+          ),
+        ),
+      );
+      await _answer(tester);
+
+      expect(find.bySemanticsLabel(RegExp(r'^Bazarr\.')), findsNothing);
+      final drawn = <String>{
+        for (final name in ['Jellyfin', 'Plex', 'Radarr', 'Seerr', 'Bazarr'])
+          if (find.bySemanticsLabel(RegExp('^$name[ .]')).evaluate().isNotEmpty)
+            name,
+      };
+      expect(drawn, isNot(contains('Bazarr')));
+      expect(find.text('${drawn.length} services'), findsOneWidget);
+
+      semantics.dispose();
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a season track that scrolls opens on the chosen season, '
+        'and leaves the page where it was', (tester) async {
+      tester.view.physicalSize = const Size(390, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final page = ScrollController();
+      addTearDown(page.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: Scaffold(
+            body: ListView(
+              controller: page,
+              padding: const EdgeInsets.all(20),
+              children: [
+                // In view, below the middle: a reveal that moved the page
+                // would scroll it to centre the track.
+                const SizedBox(height: 700),
+                MediaEpisodes(
+                  seasons: [
+                    for (var number = 1; number <= 6; number++)
+                      MediaSeason(number, const []),
+                  ],
+                  initialSeason: 6,
+                ),
+                const SizedBox(height: 1200),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(page.offset, 0, reason: 'the page did not move');
+      final chosen = tester.getRect(find.text('Season 6'));
+      expect(chosen.left, greaterThanOrEqualTo(0));
+      expect(chosen.right, lessThanOrEqualTo(390));
+    });
+
+    test(
+      'a running time and a season count keep their words on their line',
+      () {
+        const movie = MediaIdentity(
+          title: 'Fight Club',
+          year: '1999',
+          runtime: '2 h 19 min',
+          directors: ['David Fincher'],
+          genres: ['Drama'],
+        );
+        expect(
+          movie.metaLine,
+          'David Fincher · 1999 · 2\u00A0h\u00A019\u00A0min · Drama',
+        );
+        const series = MediaIdentity(
+          title: 'Breaking Bad',
+          series: (span: '2008–2013', seasons: 5),
+        );
+        expect(series.metaLine, 'Series · 2008–2013 · 5\u00A0seasons');
+      },
+    );
   });
 }

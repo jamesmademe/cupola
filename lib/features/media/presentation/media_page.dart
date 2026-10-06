@@ -526,15 +526,24 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final lit = _drawn.contains(lightSource) ? lightSource : null;
     final light = lit == null ? null : ref.watch(titleLightProvider(lit)).value;
     final now = DateTime.now();
-    final views = [
+    // Each row with what it draws: a row with nothing to show (Bazarr's,
+    // which Manage carries) is not counted among the services either.
+    final drawn = [
       for (final row in shown)
-        for (final view in mediaRowViews(
+        (
           row,
-          title: (connection) =>
-              settings.connectionTitle(connection.id, connection.service),
-          now: now,
-          rows: rows,
-        ))
+          mediaRowViews(
+            row,
+            title: (connection) =>
+                settings.connectionTitle(connection.id, connection.service),
+            now: now,
+            rows: rows,
+          ),
+        ),
+    ];
+    final views = [
+      for (final (row, rowViews) in drawn)
+        for (final view in rowViews)
           _ServerRow(
             view,
             onTap: _wayOf(
@@ -772,7 +781,13 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           // where her request stands: the players' rows would repeat it.
           if (views.isNotEmpty &&
               !(audience == Audience.requester && requestLine != null)) ...[
-            MediaHeading('On your server', trailing: _servicesCount(shown)),
+            MediaHeading(
+              'On your server',
+              trailing: _servicesCount([
+                for (final (row, rowViews) in drawn)
+                  if (rowViews.isNotEmpty) row,
+              ]),
+            ),
             MediaGroup(children: views),
           ],
           if (graphSource case (:final seerr, :final tvId, :final numbers))
@@ -970,10 +985,17 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         );
       },
     );
+    // The clock stays legible over whatever scrolls under it.
+    final framed = Stack(
+      children: [
+        page,
+        const Positioned(top: 0, left: 0, right: 0, child: StatusBarScrim()),
+      ],
+    );
     return Scaffold(
       backgroundColor: room.ground,
       body: MediaPane.maybeOf(context) == null
-          ? DecoratedBox(decoration: ambient, child: page)
+          ? DecoratedBox(decoration: ambient, child: framed)
           // Beside the list the title's light comes up from the list's side
           // rather than starting at an edge.
           : Stack(
@@ -987,7 +1009,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   ).createShader(bounds),
                   child: DecoratedBox(decoration: ambient),
                 ),
-                page,
+                framed,
               ],
             ),
     );
@@ -1959,9 +1981,11 @@ class _ScoresLine extends StatelessWidget {
                 excludeSemantics: true,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.row),
+                  // The figures share a line, so they compare at a glance;
+                  // a label that needs two lines (`Rotten Tomatoes`) grows
+                  // down, under its own figure.
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
                         cell.$2,
@@ -2179,40 +2203,100 @@ class _LeadBar extends StatelessWidget {
             label: const Text('Trailer'),
           ),
         const SizedBox(height: AppSpacing.row),
-        // At a large reading size, one to a line: three side by side cut
-        // their words.
-        if (mediaStacked(context))
-          for (final (index, (text, icon, onPressed, spoken))
-              in secondaries.indexed) ...[
-            if (index > 0) const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: onPressed,
-              icon: Icon(icon, size: 17),
-              label: Text(text, semanticsLabel: spoken),
-            ),
-          ]
-        else
-          Row(
-            children: [
-              for (final (index, (text, icon, onPressed, spoken))
-                  in secondaries.indexed) ...[
-                if (index > 0) const SizedBox(width: AppSpacing.row),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onPressed,
-                    icon: Icon(icon, size: 17),
-                    label: Text(
-                      text,
-                      semanticsLabel: spoken,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+        _SecondaryActions(secondaries),
       ],
+    );
+  }
+}
+
+/// The quiet actions under the lead, side by side, each the same width.
+///
+/// They keep their glyphs while every label fits beside one; a phone too
+/// narrow for `Watchlist` and its glyph drops the glyphs before it cuts a
+/// word, and one too narrow even for the words (or a large reading size)
+/// puts them one to a line.
+class _SecondaryActions extends StatelessWidget {
+  const _SecondaryActions(this.actions);
+
+  final List<(String, IconData, VoidCallback?, String?)> actions;
+
+  static const double _glyph = 17;
+
+  @override
+  Widget build(BuildContext context) {
+    if (actions.isEmpty) return const SizedBox.shrink();
+    Widget button(
+      (String, IconData, VoidCallback?, String?) action, {
+      required bool glyph,
+      bool clip = false,
+    }) {
+      final (text, icon, onPressed, spoken) = action;
+      final label = Text(
+        text,
+        semanticsLabel: spoken,
+        maxLines: clip ? 1 : null,
+        overflow: clip ? TextOverflow.ellipsis : null,
+      );
+      return glyph
+          ? OutlinedButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: _glyph),
+              label: label,
+            )
+          : OutlinedButton(onPressed: onPressed, child: label);
+    }
+
+    Widget column() => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (index, action) in actions.indexed) ...[
+          if (index > 0) const SizedBox(height: AppSpacing.sm),
+          button(action, glyph: true),
+        ],
+      ],
+    );
+
+    if (mediaStacked(context)) return column();
+    return LayoutBuilder(
+      builder: (context, box) {
+        final gaps = AppSpacing.row * (actions.length - 1);
+        final each = (box.maxWidth - gaps) / actions.length;
+        final style = OutlinedButtonTheme.of(context).style;
+        final textStyle =
+            style?.textStyle?.resolve(const {}) ??
+            DefaultTextStyle.of(context).style;
+        final padding =
+            style?.padding?.resolve(const {})?.horizontal ?? 2 * AppSpacing.lg;
+        final scaler = MediaQuery.textScalerOf(context);
+        final direction = Directionality.of(context);
+        double widthOf(String text) {
+          final painter = TextPainter(
+            text: TextSpan(text: text, style: textStyle),
+            textDirection: direction,
+            textScaler: scaler,
+            maxLines: 1,
+          )..layout();
+          final width = painter.width;
+          painter.dispose();
+          return width;
+        }
+
+        final widest = actions
+            .map((action) => widthOf(action.$1))
+            .reduce((a, b) => a > b ? a : b);
+        // The glyph, and the gap Material keeps between it and the label.
+        const glyphRoom = _glyph + AppSpacing.sm;
+        final glyph = widest + glyphRoom + padding <= each;
+        if (!glyph && widest + padding > each) return column();
+        return Row(
+          children: [
+            for (final (index, action) in actions.indexed) ...[
+              if (index > 0) const SizedBox(width: AppSpacing.row),
+              Expanded(child: button(action, glyph: glyph, clip: true)),
+            ],
+          ],
+        );
+      },
     );
   }
 }
