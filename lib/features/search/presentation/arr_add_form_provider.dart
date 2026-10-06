@@ -17,35 +17,6 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// One selectable option: a quality profile, or a metadata profile.
 typedef ArrProfileOption = ({int id, String name});
 
-/// Rows added in this session, keyed by [ArrAddRequest.libraryKey].
-///
-/// Why this rather than invalidating `globalSearchResultsProvider`: that
-/// provider is the whole fan-out. Rebuilding it re-runs a lookup against every
-/// configured connection — four legs at a time against somebody's home servers
-/// — to change one boolean whose value we already hold, because the add's
-/// response came back carrying the library id it was given. It is also
-/// `autoDispose`, so the invalidation would be a cold rebuild rather than a
-/// refresh.
-///
-/// Navigating to the new detail page was the other candidate and is a worse
-/// answer for the same reason: the user asked to add a film, not to leave the
-/// list of search results they were working through. This keeps them on it.
-///
-/// Kept for the life of the app rather than the life of one query. The claim it
-/// makes — "this connection holds this title" — does not stop being true when
-/// the query changes, and the set holds one short string per add.
-final libraryAdditionsProvider =
-    NotifierProvider<LibraryAdditions, Set<String>>(LibraryAdditions.new);
-
-class LibraryAdditions extends Notifier<Set<String>> {
-  @override
-  Set<String> build() => const {};
-
-  void markAdded(String libraryKey) {
-    state = {...state, libraryKey};
-  }
-}
-
 /// Which connection the add sheet is filling in for.
 ///
 /// The item itself is not part of the key: the sheet is modal, so only one is
@@ -403,11 +374,6 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
     }
 
     state = state.copyWith(isSubmitting: true, clearError: true);
-    // Resolved before the await, not after. `libraryAdditionsProvider` outlives
-    // this sheet, but reaching it through a `ref` that has been disposed does
-    // not — and the whole point of remembering the add is that it survives the
-    // sheet closing on top of it.
-    final additions = ref.read(libraryAdditionsProvider.notifier);
     try {
       switch (request) {
         case RadarrAddRequest(:final movie):
@@ -444,7 +410,6 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
                 searchForMissingAlbums: state.searchOnAdd,
               );
       }
-      additions.markAdded(request.libraryKey);
       // Cleared on the way out as well as on the way in. This entry is keyed on
       // the connection, not on the item, and outlives the sheet by however long
       // `autoDispose` takes: leaving the flag set means the next row's sheet

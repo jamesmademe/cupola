@@ -11,11 +11,13 @@ import 'catalog.dart';
 void _ignore(String _) {}
 
 /// The Discover tab's field. Monochrome like every other: the magnifier is the
-/// secondary ink whichever screen it searches.
+/// secondary ink whichever screen it searches. It offers Cancel while it
+/// holds a query.
 Widget _discoverTab({String? query}) => SearchBarHeader(
-  hintText: 'Movies, series, artists',
+  hintText: 'Movies, series, people',
   initialQuery: query,
   onQueryChanged: _ignore,
+  onCancel: () {},
 );
 
 List<CatalogScene> _scenes(CatalogPlatform platform, double width) => [
@@ -27,7 +29,8 @@ List<CatalogScene> _scenes(CatalogPlatform platform, double width) => [
     platform: platform,
   ),
   CatalogScene(
-    'Discover tab · with a query · the clear button appears only with text',
+    'Discover tab · with a query · the clear button appears only with '
+    'text, and Cancel after the field puts the search away',
     (_) => _discoverTab(query: 'Nosferatu'),
     width: width,
     platform: platform,

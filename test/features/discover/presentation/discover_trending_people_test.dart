@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/search/presentation/search_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_page.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -34,7 +34,7 @@ void main() {
     final harness = await pumpWithProfile(
       tester,
       Profiles.p1,
-      child: const SearchScreen(),
+      child: const DiscoverPage(),
       surfaceSize: const Size(430, 3000),
     );
 

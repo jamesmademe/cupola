@@ -34,7 +34,7 @@ import 'package:cupola/features/readarr/presentation/readarr_overview_screen.dar
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:cupola/features/search/presentation/search_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -117,7 +117,7 @@ void main() {
 
         expect(router.state.uri.toString(), '/onboarding');
         expect(find.byType(OnboardingScreen), findsOneWidget);
-        expect(find.byType(SearchScreen), findsNothing);
+        expect(find.byType(DiscoverPage), findsNothing);
       },
     );
 
@@ -367,7 +367,7 @@ void main() {
       router.go('/discover');
       await tester.pumpAndSettle();
       expect(router.state.uri.toString(), '/discover');
-      expect(find.byType(SearchScreen), findsOneWidget);
+      expect(find.byType(DiscoverPage), findsOneWidget);
 
       // One hop, query and all, for the tab and for a title opened from it.
       for (final (from, to) in [

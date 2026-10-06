@@ -22,7 +22,7 @@ import 'package:cupola/features/discover/presentation/collection_detail_screen.d
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
-import 'package:cupola/features/search/presentation/search_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/fakes/media_fakes.dart';
@@ -79,7 +79,7 @@ void _expectNothingOfTheOperators(WidgetTester tester, String where) {
 }
 
 final _pages = <String, Widget>{
-  'the Discover tab': const SearchScreen(),
+  'the Discover tab': const DiscoverPage(),
   // The one page a title has: the requester's reads no service but the
   // players, and no copy's fault, whatever the household holds.
   'the Media page, a movie of hers': MediaPage(
@@ -125,7 +125,7 @@ final _pages = <String, Widget>{
       ),
     ),
   ),
-  'the global search': const SearchScreen(),
+  'the global search': const DiscoverPage(),
 };
 
 Future<ProfileHarness> _pump(

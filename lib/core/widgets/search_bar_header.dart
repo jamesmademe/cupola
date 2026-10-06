@@ -28,6 +28,16 @@ class SearchBarHeader extends StatefulWidget {
   /// Whether to autofocus the search field
   final bool autofocus;
 
+  /// The field's focus, when the screen needs to know where the keyboard is
+  /// (the Discover tab shows recent searches while the field is focused and
+  /// empty). The field makes its own otherwise.
+  final FocusNode? focusNode;
+
+  /// Shows `Cancel` beside the field while it is focused or holds a query:
+  /// it clears the query, lets go of the keyboard and then calls this. Null
+  /// for no `Cancel`, as on a library, where the field is part of the page.
+  final VoidCallback? onCancel;
+
   const SearchBarHeader({
     super.key,
     required this.onQueryChanged,
@@ -35,6 +45,8 @@ class SearchBarHeader extends StatefulWidget {
     this.initialQuery,
     this.debounceDuration = const Duration(milliseconds: 400),
     this.autofocus = false,
+    this.focusNode,
+    this.onCancel,
   });
 
   @override
@@ -50,17 +62,39 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
   /// means this field, and there are twenty-odd screens whose only search field
   /// is this widget. See [ScreenSearchTarget] for why the registry is explicit
   /// rather than a walk of the tree.
-  late final FocusNode _focusNode;
+  FocusNode? _ownFocusNode;
   Timer? _debounceTimer;
   bool _hasText = false;
+
+  FocusNode get _focusNode => widget.focusNode ?? _ownFocusNode!;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialQuery);
-    _focusNode = FocusNode(debugLabel: 'screen search');
+    if (widget.focusNode == null) {
+      _ownFocusNode = FocusNode(debugLabel: 'screen search');
+    }
+    _focusNode.addListener(_onFocusChanged);
     _hasText = _controller.text.isNotEmpty;
     _controller.addListener(_onTextChanged);
+  }
+
+  /// A query set from outside while the field is not in use (a link that
+  /// opens this screen on a word) reaches the field; while the user types,
+  /// the field is theirs.
+  @override
+  void didUpdateWidget(SearchBarHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final query = widget.initialQuery ?? '';
+    if (query != (oldWidget.initialQuery ?? '') &&
+        !_focusNode.hasFocus &&
+        _controller.text.trim() != query) {
+      _controller.removeListener(_onTextChanged);
+      _controller.text = query;
+      _hasText = query.isNotEmpty;
+      _controller.addListener(_onTextChanged);
+    }
   }
 
   @override
@@ -68,8 +102,22 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
     _debounceTimer?.cancel();
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
-    _focusNode.dispose();
+    _focusNode.removeListener(_onFocusChanged);
+    _ownFocusNode?.dispose();
     super.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (widget.onCancel != null && mounted) setState(() {});
+  }
+
+  void _cancel() {
+    if (_controller.text.isNotEmpty) _controller.clear();
+    // Clearing schedules a debounced empty query; this reports it now.
+    _debounceTimer?.cancel();
+    widget.onQueryChanged('');
+    _focusNode.unfocus();
+    widget.onCancel?.call();
   }
 
   void _onTextChanged() {
@@ -109,52 +157,57 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
           AppSpacing.lg,
           AppSpacing.lg,
         ),
-        child: SearchBar(
-          controller: _controller,
-          focusNode: _focusNode,
-          hintText: widget.hintText,
-          autoFocus: widget.autofocus,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: AppSpacing.sm),
-            child: Icon(Icons.search_rounded, color: glyph),
-          ),
-          trailing: [
-            if (_hasText)
-              Semantics(
-                button: true,
-                label: 'Clear search',
-                hint: 'Remove the current search query',
-                onTap: _clearQuery,
-                child: ExcludeSemantics(
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: colorScheme.onSurfaceVariant,
+        child: _withCancel(
+          SearchBar(
+            controller: _controller,
+            focusNode: _focusNode,
+            hintText: widget.hintText,
+            autoFocus: widget.autofocus,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.sm),
+              child: Icon(Icons.search_rounded, color: glyph),
+            ),
+            trailing: [
+              if (_hasText)
+                Semantics(
+                  button: true,
+                  label: 'Clear search',
+                  hint: 'Remove the current search query',
+                  onTap: _clearQuery,
+                  child: ExcludeSemantics(
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: _clearQuery,
+                      tooltip: 'Clear search',
                     ),
-                    onPressed: _clearQuery,
-                    tooltip: 'Clear search',
                   ),
                 ),
-              ),
-          ],
-          elevation: WidgetStateProperty.all(0),
-          backgroundColor: WidgetStateProperty.all(
-            colorScheme.surfaceContainer,
-          ),
-          // A focused field's edge is `line.focus`, as every focused field's
-          // is (`inputDecorationTheme`): the keyboard's place is never only a
-          // caret.
-          shape: WidgetStateProperty.resolveWith(
-            (states) => RoundedRectangleBorder(
-              borderRadius: AppRadius.borderRadiusMd,
-              side: states.contains(WidgetState.focused)
-                  ? BorderSide(color: CupolaRoom.of(context).focus, width: 1.5)
-                  : BorderSide(color: colorScheme.outlineVariant),
+            ],
+            elevation: WidgetStateProperty.all(0),
+            backgroundColor: WidgetStateProperty.all(
+              colorScheme.surfaceContainer,
             ),
-          ),
-          constraints: const BoxConstraints(minHeight: 52),
-          padding: WidgetStateProperty.all(
-            const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            // A focused field's edge is `line.focus`, as every focused field's
+            // is (`inputDecorationTheme`): the keyboard's place is never only a
+            // caret.
+            shape: WidgetStateProperty.resolveWith(
+              (states) => RoundedRectangleBorder(
+                borderRadius: AppRadius.borderRadiusMd,
+                side: states.contains(WidgetState.focused)
+                    ? BorderSide(
+                        color: CupolaRoom.of(context).focus,
+                        width: 1.5,
+                      )
+                    : BorderSide(color: colorScheme.outlineVariant),
+              ),
+            ),
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: WidgetStateProperty.all(
+              const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            ),
           ),
         ),
       ),
@@ -165,5 +218,29 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
     // dependency at all.
     if (!AppBreakpoints.isDesktopShell(context)) return field;
     return ScreenSearchTarget(focusNode: _focusNode, child: field);
+  }
+
+  /// The field, and `Cancel` after it while the search is engaged.
+  Widget _withCancel(Widget field) {
+    if (widget.onCancel == null || !(_focusNode.hasFocus || _hasText)) {
+      return field;
+    }
+    return Row(
+      children: [
+        Expanded(child: field),
+        const SizedBox(width: AppSpacing.xs),
+        TextButton(
+          onPressed: _cancel,
+          style: TextButton.styleFrom(
+            minimumSize: const Size(44, 44),
+            visualDensity: VisualDensity.standard,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            textStyle: AppType.button,
+          ),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
   }
 }

@@ -18,6 +18,7 @@ import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
+import 'package:cupola/features/discover/domain/seerr_search.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -469,12 +470,10 @@ class FakeSeerrService extends SeerrService {
   Future<List<SeerrGenre>> getTvGenres() async => const [];
 
   @override
-  Future<List<MediaPreview>> search(
+  Future<SeerrSearchAnswer> search(
     String query, {
-    int page = 1,
     CancelToken? cancelToken,
-    bool reportFailure = false,
-  }) async => const [];
+  }) async => const SeerrSearchAnswer();
 
   @override
   Future<List<SeerrRequest>> getRequests() async => const [];

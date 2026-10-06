@@ -27,19 +27,6 @@ sealed class ArrAddRequest {
 
   /// What the user is adding, for the sheet's header and the failure sentence.
   String get title;
-
-  /// The id the *metadata* source gives this title, stable across servers.
-  ///
-  /// Used only to remember a completed add — see `libraryAdditionsProvider`.
-  /// Deliberately not the library id, which is `0` on every row that can be
-  /// added and would collide with every other one.
-  String get externalId;
-
-  /// The key a completed add is remembered under.
-  ///
-  /// Carries the connection because adding a film to one Radarr says nothing
-  /// about the other, and both are on screen at once.
-  String get libraryKey => '$instanceId:${service.name}:$externalId';
 }
 
 class RadarrAddRequest extends ArrAddRequest {
@@ -52,9 +39,6 @@ class RadarrAddRequest extends ArrAddRequest {
 
   @override
   String get title => movie.title;
-
-  @override
-  String get externalId => '${movie.tmdbId}';
 }
 
 class SonarrAddRequest extends ArrAddRequest {
@@ -67,9 +51,6 @@ class SonarrAddRequest extends ArrAddRequest {
 
   @override
   String get title => series.title;
-
-  @override
-  String get externalId => '${series.tvdbId}';
 }
 
 class LidarrAddRequest extends ArrAddRequest {
@@ -82,7 +63,4 @@ class LidarrAddRequest extends ArrAddRequest {
 
   @override
   String get title => artist.artistName;
-
-  @override
-  String get externalId => artist.foreignArtistId;
 }

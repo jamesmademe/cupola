@@ -23,7 +23,7 @@ import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
-import 'package:cupola/features/search/presentation/search_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/services/presentation/widgets/instance_lens_badge.dart';
@@ -49,7 +49,7 @@ Finder _filled(String label) => find.ancestor(
 void main() {
   group('Seerr pages, before they ask Seerr anything', () {
     final pages = <String, Widget>{
-      'the Discover tab': const SearchScreen(),
+      'the Discover tab': const DiscoverPage(),
       'a movie': MediaPage(mediaKey: MediaKey.movie(10378)),
       'a person': const PersonDetailScreen(personId: 17),
       'a collection': const CollectionDetailScreen(collectionId: 3),
@@ -311,7 +311,7 @@ void main() {
     final harness = await pumpWithProfile(
       tester,
       _p2SignedOut,
-      child: const SearchScreen(),
+      child: const DiscoverPage(),
     );
 
     expect(find.textContaining('Set up Seerr'), findsNothing);

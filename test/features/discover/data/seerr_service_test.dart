@@ -73,28 +73,61 @@ void main() {
   });
 
   group('search', () {
-    test('returns empty list when query is empty (no network call)', () async {
-      final results = await service.search('');
-      expect(results, isEmpty);
+    test('an empty query asks nothing', () async {
+      final answer = await service.search('');
+      expect(answer.isEmpty, isTrue);
       expect(client.getCallCount, 0);
     });
 
-    test('filters out person results and keeps movies & tv', () async {
+    test('splits titles from people, each in Seerr\'s order', () async {
       client.getResponseData = {
         'results': [
           {'id': 1, 'mediaType': 'movie', 'title': 'Movie'},
-          {'id': 2, 'mediaType': 'person', 'name': 'Actor'},
+          {
+            'id': 31,
+            'mediaType': 'person',
+            'name': 'Tom Hanks',
+            'profilePath': '/tom.jpg',
+            'knownFor': [
+              {'mediaType': 'movie', 'title': 'Forrest Gump'},
+              {'mediaType': 'tv', 'name': 'Band of Brothers'},
+            ],
+          },
           {'id': 3, 'mediaType': 'tv', 'name': 'Show'},
           {'id': 4, 'media_type': 'person', 'name': 'Another Actor'},
           {'id': 5, 'media_type': 'movie', 'title': 'Snake Case Movie'},
+          {'id': 6, 'mediaType': 'person', 'name': ''},
         ],
       };
 
-      final results = await service.search('test');
+      final answer = await service.search('test');
 
-      expect(results.length, 3);
-      expect(results.any((r) => r.mediaType == 'person'), isFalse);
+      expect(answer.titles.map((t) => t.id), [1, 3, 5]);
+      expect(answer.people.map((p) => p.name), ['Tom Hanks', 'Another Actor']);
+      expect(answer.people.first.knownFor, [
+        'Forrest Gump',
+        'Band of Brothers',
+      ]);
+      expect(answer.people.first.profilePath, '/tom.jpg');
       expect(client.lastGetPath, '/api/v1/search');
+    });
+
+    test('a person ranked above every title leads the answer', () async {
+      client.getResponseData = {
+        'results': [
+          {'id': 31, 'mediaType': 'person', 'name': 'Tom Hanks'},
+          {'id': 1, 'mediaType': 'movie', 'title': 'The Tom Hanks Story'},
+        ],
+      };
+      expect((await service.search('tom hanks')).leadsWithPeople, isTrue);
+
+      client.getResponseData = {
+        'results': [
+          {'id': 13, 'mediaType': 'movie', 'title': 'Forrest Gump'},
+          {'id': 31, 'mediaType': 'person', 'name': 'Tom Hanks'},
+        ],
+      };
+      expect((await service.search('forrest')).leadsWithPeople, isFalse);
     });
 
     test('url-encodes the query', () async {
@@ -133,11 +166,6 @@ void main() {
       await service.search('dune', cancelToken: cancelToken);
 
       expect(client.lastGetCancelToken, same(cancelToken));
-    });
-
-    test('returns empty list on network error', () async {
-      client.getException = Exception('network down');
-      expect(await service.search('anything'), isEmpty);
     });
   });
 
@@ -727,41 +755,22 @@ void main() {
   });
 
   group('search reachability', () {
-    // The rule: a Seerr that did not answer and a Seerr that found nothing are
-    // different facts, and the caller decides which of them it can render. Both
-    // used to come back as `[]`, so the global search could only ever draw "no
-    // results" for a dead server and had nothing to colour.
-    test('reports the failure when the caller asks for it', () async {
+    // A Seerr that did not answer and a Seerr that found nothing are
+    // different facts: the search draws the first as a source that is
+    // silent, the second as nothing by that name.
+    test('a Seerr that did not answer throws', () async {
       client.getException = DioException(
         requestOptions: RequestOptions(path: '/api/v1/search'),
         type: DioExceptionType.connectionError,
       );
 
-      expect(
-        () => service.search('dune', reportFailure: true),
-        throwsA(isA<DioException>()),
-      );
-    });
-
-    test('degrades to an empty list by default', () async {
-      // Seerr's own search-as-you-type field keeps the old behaviour: the user
-      // is mid-word and an error card between keystrokes is noise.
-      client.getException = Exception('boom');
-
-      expect(await service.search('dune'), isEmpty);
+      expect(() => service.search('dune'), throwsA(isA<DioException>()));
     });
 
     test('an answer with no matches is not a failure', () async {
       client.getResponseData = {'results': const <dynamic>[]};
 
-      expect(await service.search('dune', reportFailure: true), isEmpty);
-    });
-
-    test('an empty query is still not a failure', () async {
-      // The empty-term guard runs before the try, so `reportFailure` has
-      // nothing to report and the field starts quiet rather than red.
-      expect(await service.search('', reportFailure: true), isEmpty);
-      expect(client.getCallCount, 0);
+      expect((await service.search('dune')).isEmpty, isTrue);
     });
   });
 }

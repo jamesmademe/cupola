@@ -1,5 +1,5 @@
-/// A search lane that stopped offers what its cause allows, as every failure
-/// line does: the remedy the cause names in the amber fill, `Retry` only where
+/// A search source that stopped says so on one quiet line above the answer,
+/// and offers what its cause allows, as every failure line does: the remedy the cause names in the amber fill, `Retry` only where
 /// the same request can still succeed, and beside a red lane `Retry` as text
 /// in ink.
 library;
@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
-import 'package:cupola/features/search/presentation/search_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_page.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -20,7 +20,7 @@ Future<ProfileHarness> _search(
   final harness = await pumpWithProfile(
     tester,
     profile,
-    child: const SearchScreen(),
+    child: const DiscoverPage(),
     overrides: [globalSearchQueryProvider.overrideWith((ref) => 'sprite')],
     surfaceSize: const Size(430, 2400),
   );
@@ -83,11 +83,12 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('P8: a stopped lane states its cause once, in its card, and not '
-      'again on its heading', (tester) async {
-    // The heading said `Behind Cloudflare Access` one line above a card that
-    // said `Cloudflare Access answered instead of Sonarr`: the same cause,
-    // twice, with the remedy beside only one of them.
+  testWidgets('P8: a stopped source states its cause once, on its line', (
+    tester,
+  ) async {
+    // A heading once said `Behind Cloudflare Access` one line above a card
+    // that said `Cloudflare Access answered instead of Sonarr`: the same
+    // cause, twice, with the remedy beside only one of them.
     final harness = await _search(tester, Profiles.p8);
 
     expect(
@@ -98,10 +99,8 @@ void main() {
     );
     expect(find.text('Behind Cloudflare Access'), findsNothing);
     expect(find.text('Service token not accepted'), findsNothing);
-    // Each stopped lane's cause, on screen once: in its card's sentence.
+    // Each stopped source's cause, on screen once: in its line's sentence.
     expect(find.textContaining('Cloudflare Access'), findsNWidgets(2));
-    // A lane that answered keeps its count on the heading.
-    expect(find.bySemanticsLabel(RegExp(r'^\d+ results?$')), findsWidgets);
 
     await harness.unmount(tester);
   });

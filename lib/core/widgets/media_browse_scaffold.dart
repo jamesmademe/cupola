@@ -484,6 +484,9 @@ class _MediaBrowseScaffoldState<T>
           SliverToBoxAdapter(
             child: SearchBarHeader(
               hintText: widget.searchHint,
+              // A word the Discover tab sends here ("Search Lidarr for …")
+              // shows in the field it searches.
+              initialQuery: ref.watch(widget.searchQueryProvider),
               onQueryChanged: (query) {
                 ref.read(widget.searchQueryProvider.notifier).state = query;
               },

@@ -8,7 +8,7 @@ import 'package:cupola/features/discover/presentation/discover_atrium.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
-import 'package:cupola/features/search/presentation/search_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -25,9 +25,9 @@ void main() {
     Uri? landedOn;
     final harness = await ProfileHarness.start(profile);
     final router = GoRouter(
-      initialLocation: '/search',
+      initialLocation: '/discover',
       routes: [
-        GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
+        GoRoute(path: '/discover', builder: (_, _) => const DiscoverPage()),
         GoRoute(
           path: ServiceRoutes.settingsConnections,
           builder: (_, state) {
@@ -67,8 +67,8 @@ void main() {
     expect(find.text('No searchable service is set up'), findsOneWidget);
     expect(
       find.text(
-        'Set up Seerr, Radarr, Sonarr, Lidarr, Bazarr, Jellyfin or Plex to '
-        'search your libraries from here.',
+        'Set up Seerr, Radarr, Sonarr, Jellyfin or Plex to search your '
+        'libraries from here.',
       ),
       findsOneWidget,
     );
@@ -101,7 +101,7 @@ void main() {
     // The empty state is what a search here would reach when there is no
     // catalogue to browse; with Seerr there is one.
     expect(find.byType(DiscoverAtrium), findsOneWidget);
-    expect(find.text('Search across every service'), findsNothing);
+    expect(find.text('The catalogue comes from Seerr'), findsNothing);
     expect(find.textContaining('Set up'), findsNothing);
   });
 }

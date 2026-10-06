@@ -39,12 +39,12 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/author_page.dart';
 import 'package:cupola/features/music/presentation/lidarr_overview_screen.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
-import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
+import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_hints_screen.dart';
@@ -2817,7 +2817,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
   // those pages live now.
   NavTab.discover => GoRoute(
     path: ServiceRoutes.discover,
-    pageBuilder: (context, state) => _tabPage(state, const SearchScreen()),
+    pageBuilder: (context, state) => _tabPage(state, const DiscoverPage()),
     routes: [
       _catalogPage('all/:kind', CatalogBase.all),
       _catalogPage('trending', CatalogBase.trending),

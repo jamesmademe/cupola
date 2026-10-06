@@ -8,7 +8,7 @@ import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/media_detail_view.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
-import 'package:cupola/features/search/presentation/search_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -78,7 +78,7 @@ void main() {
         observers: [failures],
         child: MaterialApp(
           theme: AppTheme.darkTheme(),
-          home: const SearchScreen(),
+          home: const DiscoverPage(),
         ),
       ),
     );
@@ -101,7 +101,7 @@ void main() {
     final harness = await pumpWithProfile(
       tester,
       Profiles.p3,
-      child: const SearchScreen(),
+      child: const DiscoverPage(),
     );
 
     expect(find.text('Seerr is not set up'), findsNothing);

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +8,6 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
-import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/text_scale.dart';
@@ -17,7 +15,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
-import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/media_grid.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -31,6 +28,7 @@ import 'package:cupola/features/discover/presentation/discover_details_provider.
 import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_door.dart';
+import 'package:cupola/features/discover/presentation/widgets/search_row.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
@@ -898,100 +896,15 @@ class _PersonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final dim = CupolaThemeColors.of(context).dimText;
     final photo = person.profilePath == null
         ? null
         : ImageUtils.buildTmdbPosterUrl(person.profilePath, size: 'w185');
-    final line = '${person.role} · ${person.title}';
-    return PressableScale(
+    return SearchRow.person(
+      name: person.name,
+      line: '${person.role} · ${person.title}',
+      face: photo ?? '',
       onTap: () => context.openPerson(person.id, posterUrl: photo),
-      semanticLabel: person.name,
-      semanticValue: line,
-      excludeChildSemantics: true,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 70),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
-          child: Row(
-            children: [
-              _Face(name: person.name, url: photo),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      person.name,
-                      style: AppType.row.copyWith(color: room.ink),
-                    ),
-                    Text(
-                      line,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppType.meta.copyWith(color: dim),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: dim),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A person's photo, or their initials where TMDB has none.
-class _Face extends StatelessWidget {
-  const _Face({required this.name, required this.url});
-
-  final String name;
-  final String? url;
-
-  static const double _size = 44;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final initials = name
-        .split(' ')
-        .where((part) => part.isNotEmpty)
-        .take(2)
-        .map((part) => part.characters.first.toUpperCase())
-        .join();
-    return Container(
-      width: _size,
-      height: _size,
-      clipBehavior: Clip.antiAlias,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: room.fillQuiet,
-        shape: BoxShape.circle,
-        border: Border.all(color: room.hair),
-      ),
-      child: url == null
-          ? Text(initials, style: AppType.label.copyWith(color: room.ink))
-          : ArtworkDecodeBox(
-              box: const Size.square(_size),
-              builder: (context, decode) => CachedNetworkImage(
-                imageUrl: url!,
-                cacheManager: pinnedImageCacheFor(url),
-                memCacheWidth: decode.width,
-                memCacheHeight: decode.height,
-                width: _size,
-                height: _size,
-                fit: BoxFit.cover,
-                errorWidget: (_, _, _) => Text(
-                  initials,
-                  style: AppType.label.copyWith(color: room.ink),
-                ),
-              ),
-            ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
     );
   }
 }

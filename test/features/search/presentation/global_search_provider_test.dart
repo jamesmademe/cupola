@@ -10,14 +10,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/features/bazarr/data/bazarr_service.dart';
-import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/seerr_search.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
-import 'package:cupola/features/music/data/lidarr_service.dart';
-import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -64,15 +61,6 @@ void main() {
       sonarr: _SearchSonarrService(
         results: [buildSeries(id: 20, title: 'The Boys', year: 2024)],
       ),
-      lidarr: _SearchLidarrService(
-        results: [
-          buildArtist(
-            id: 30,
-            artistName: 'Charli XCX',
-            statistics: const {'albumCount': 6, 'trackFileCount': 90},
-          ),
-        ],
-      ),
     );
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
@@ -83,18 +71,29 @@ void main() {
     // per searchable service. `globalSearchServices` now also names Jellyfin and
     // Plex, which this container does not set up, and a lane for a connection
     // nobody has configured would be a section that can only ever be empty.
+    // Lidarr and Bazarr are set up here too, and are not asked: music is not
+    // in the catalogue, and Bazarr's titles are Radarr's and Sonarr's.
     expect(lanes.map((lane) => lane.service), [
       ServiceKey.seerr,
       ServiceKey.radarr,
       ServiceKey.sonarr,
-      ServiceKey.lidarr,
-      ServiceKey.bazarr,
     ]);
     expect(lanes.expand((lane) => lane.results).map((item) => item.title), [
       'Dune: Part Two',
       'Dune',
       'The Boys',
-      'Charli XCX',
+    ]);
+    // Each row says what it is and which title it names, so the page can lay
+    // the answer out by kind and fold the same title found twice.
+    expect(lanes.expand((lane) => lane.results).map((item) => item.kind), [
+      SearchHitKind.movie,
+      SearchHitKind.movie,
+      SearchHitKind.series,
+    ]);
+    expect(lanes.expand((lane) => lane.results).map((item) => item.key), [
+      const MediaKey.movie(101),
+      const MediaKey.movie(123),
+      isNotNull,
     ]);
     // Each route carries its poster's shared-element tag, so the detail page it
     // opens has a matching Hero destination to fly into.
@@ -109,7 +108,6 @@ void main() {
       '/media/movie/101',
       '/media/movie/123',
       '/dashboard/sonarr/library/series/20',
-      '/dashboard/lidarr/library/artist/30',
     ]);
     // Keyed on the CONNECTION and on the row's position, not on the service:
     // the same id names different things on two servers, and a lookup result
@@ -119,7 +117,6 @@ void main() {
       'search_seerr_movie_101_0',
       'search_radarr_movie_10_0',
       'search_sonarr_series_20_0',
-      'search_lidarr_artist_30_0',
     ]);
     // And the connection travels with the row, so the detail page it opens
     // reads the server that listed it.
@@ -131,7 +128,6 @@ void main() {
       null,
       'radarr',
       'sonarr',
-      'lidarr',
     ]);
     // The tag on the model and the tag in its route are the same string —
     // a mismatch would silently produce a flightless navigation.
@@ -208,26 +204,13 @@ void main() {
           buildMovie(id: 0, title: 'Aladdin', year: 1992, hasFile: false),
         ],
       ),
-      // Same endpoint shape: Sonarr and Lidarr attach `statistics` in the
+      // Same endpoint shape: Sonarr attaches `statistics` in the
       // library controller, never in the lookup one, so anything read off it
       // is false for every row here too.
       sonarr: _SearchSonarrService(
         results: [
           buildSeries(id: 7, title: 'Foundation', year: 2021),
           buildSeries(id: 0, title: 'Foundation', year: 1988),
-        ],
-      ),
-      lidarr: _SearchLidarrService(
-        results: [
-          buildArtist(id: 9, artistName: 'Boards of Canada'),
-          buildArtist(id: 0, artistName: 'Boards of Canada Tribute'),
-          // The one shape that does carry statistics: an album count only
-          // appears when the payload actually has one.
-          buildArtist(
-            id: 11,
-            artistName: 'Bibio',
-            statistics: const {'albumCount': 3},
-          ),
         ],
       ),
     );
@@ -251,15 +234,6 @@ void main() {
     expect(series.map((r) => r.inLibrary), [true, false]);
     expect(series.first.tags, ['Series', 'continuing', 'In library']);
     expect(series.last.tags, ['Series', 'continuing']);
-
-    final artists = lane(ServiceKey.lidarr).results;
-    expect(artists.map((r) => r.inLibrary), [true, false, true]);
-    expect(artists.first.tags, ['Artist', 'In library']);
-    expect(artists[1].tags, ['Artist']);
-    // `albumCount` is 0 for every statistics-less lookup row, so "0 albums"
-    // was a fact about the endpoint rather than about the artist.
-    expect(artists.first.subtitle, '');
-    expect(artists.last.subtitle, '3 albums');
   });
 
   test('the plus is offered only where an add can really happen', () async {
@@ -268,15 +242,6 @@ void main() {
         results: [
           buildMovie(id: 42, title: 'Aladdin'),
           buildMovie(id: 0, title: 'Aladdin'),
-        ],
-      ),
-      lidarr: _SearchLidarrService(
-        results: [
-          // Lidarr keys an artist on its MusicBrainz id and refuses an add
-          // without one, so a lookup row that arrives without it gets no
-          // affordance rather than one that cannot be honoured.
-          buildArtist(id: 0, artistName: 'Nameless'),
-          buildArtist(id: 0, artistName: 'Bibio', foreignArtistId: 'mbid-9'),
         ],
       ),
     );
@@ -293,11 +258,6 @@ void main() {
     expect(movies.last.addRequest, isA<RadarrAddRequest>());
     // Bound to the CONNECTION that listed it, which is what the sheet posts to.
     expect(movies.last.addRequest!.instanceId, 'radarr');
-
-    final artists = lane(ServiceKey.lidarr).results;
-    expect(artists.first.addRequest, isNull);
-    expect(artists.last.addRequest, isA<LidarrAddRequest>());
-    expect(artists.last.addRequest!.externalId, 'mbid-9');
 
     // Seerr's rows are untouched: its request flow lives on its detail page.
     for (final row in lane(ServiceKey.seerr).results) {
@@ -409,7 +369,7 @@ void main() {
       radarr: _SearchRadarrService(
         results: [buildMovie(id: 10, title: 'Dune', year: 2024)],
       ),
-      bazarr: _SearchBazarrService(gate: gate),
+      sonarr: _SearchSonarrService(gate: gate),
     );
     addTearDown(container.dispose);
 
@@ -417,9 +377,9 @@ void main() {
     addTearDown(sub.close);
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
 
-    // Everything except the parked Bazarr leg.
+    // Everything except the parked Sonarr leg.
     for (final leg in container.read(globalSearchLegsProvider)) {
-      if (leg.instance.service == ServiceKey.bazarr) continue;
+      if (leg.instance.service == ServiceKey.sonarr) continue;
       await container.read(globalSearchLegProvider(leg).future);
     }
     await _settle();
@@ -427,12 +387,12 @@ void main() {
     final lanes = container.read(globalSearchLanesProvider);
     expect(
       lanes
-          .where((lane) => lane.service != ServiceKey.bazarr)
+          .where((lane) => lane.service != ServiceKey.sonarr)
           .map((lane) => lane.state),
       everyElement(SearchLaneState.answered),
     );
     expect(
-      lanes.singleWhere((l) => l.service == ServiceKey.bazarr).state,
+      lanes.singleWhere((l) => l.service == ServiceKey.sonarr).state,
       SearchLaneState.searching,
     );
     // And the answered lane really carries its rows while the other is out.
@@ -483,13 +443,7 @@ void main() {
     final seerr = _SearchSeerrService();
     final radarr = _SearchRadarrService();
     final sonarr = _SearchSonarrService();
-    final lidarr = _SearchLidarrService();
-    final container = _container(
-      seerr: seerr,
-      radarr: radarr,
-      sonarr: sonarr,
-      lidarr: lidarr,
-    );
+    final container = _container(seerr: seerr, radarr: radarr, sonarr: sonarr);
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
 
@@ -499,7 +453,6 @@ void main() {
       seerr.leg.tokens.single,
       radarr.leg.tokens.single,
       sonarr.leg.tokens.single,
-      lidarr.leg.tokens.single,
     ];
     expect(tokens, everyElement(isNotNull));
     expect(tokens.toSet(), hasLength(tokens.length));
@@ -517,27 +470,32 @@ void main() {
     final seerr = _SearchSeerrService(gate: gate);
     final radarr = _SearchRadarrService(gate: gate);
     final sonarr = _SearchSonarrService(gate: gate);
-    final lidarr = _SearchLidarrService(gate: gate);
-    final bazarr = _SearchBazarrService(gate: gate);
+    final jellyfin = _ScriptedStreamServer(const [], gate: gate);
+    final plex = _ScriptedStreamServer(const [], gate: gate);
     final container = _container(
       seerr: seerr,
       radarr: radarr,
       sonarr: sonarr,
-      lidarr: lidarr,
-      bazarr: bazarr,
+      extra: [
+        jellyfinServerProvider.overrideWithValue(jellyfin),
+        plexServerProvider.overrideWithValue(plex),
+      ],
     );
     addTearDown(container.dispose);
+    _addMediaServers(container);
 
     final sub = container.listen(globalSearchLanesProvider, (_, _) {});
     addTearDown(sub.close);
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
     await _settle();
 
-    for (final leg in [seerr.leg, radarr.leg, sonarr.leg, lidarr.leg]) {
+    // The registry's order: Radarr, Sonarr, Seerr, Jellyfin, then Plex.
+    for (final leg in [seerr.leg, radarr.leg, sonarr.leg]) {
       expect(leg.tokens, hasLength(1));
     }
+    expect(jellyfin.queries.length + plex.queries.length, 1);
     expect(
-      bazarr.leg.tokens,
+      plex.queries,
       isEmpty,
       reason:
           'the fifth leg waits for a slot rather than opening a fifth '
@@ -626,24 +584,7 @@ void main() {
           plexServerProvider.overrideWithValue(plex),
         ],
       );
-      container.read(_testSettings.notifier).state = container
-          .read(_testSettings)
-          .copyWithInstance(
-            const ServiceInstance(
-              id: 'jellyfin',
-              service: ServiceKey.jellyfin,
-              url: 'http://jellyfin.local:8096',
-              credential: 'key',
-            ),
-          )
-          .copyWithInstance(
-            const ServiceInstance(
-              id: 'plex',
-              service: ServiceKey.plex,
-              url: 'http://plex.local:32400',
-              credential: 'token',
-            ),
-          );
+      _addMediaServers(container);
       return container;
     }
 
@@ -910,27 +851,46 @@ final _testSettings = StateProvider<SettingsModel>(
     radarrApiKey: 'key',
     sonarrUrl: 'http://sonarr.local:8989',
     sonarrApiKey: 'key',
+    // Set up, and never asked: music is not in the catalogue, and Bazarr's
+    // titles are Radarr's and Sonarr's.
     lidarrUrl: 'http://lidarr.local:8686',
     lidarrApiKey: 'key',
-    // Configured like the rest: the fan-out only runs a leg per CONFIGURED
-    // connection, so a service left out of here has no section to assert on.
     bazarrUrl: 'http://bazarr.local:6767',
     bazarrApiKey: 'key',
   ),
 );
 
+/// Sets Jellyfin and Plex up on top of the shared settings.
+void _addMediaServers(ProviderContainer container) {
+  container.read(_testSettings.notifier).state = container
+      .read(_testSettings)
+      .copyWithInstance(
+        const ServiceInstance(
+          id: 'jellyfin',
+          service: ServiceKey.jellyfin,
+          url: 'http://jellyfin.local:8096',
+          credential: 'key',
+        ),
+      )
+      .copyWithInstance(
+        const ServiceInstance(
+          id: 'plex',
+          service: ServiceKey.plex,
+          url: 'http://plex.local:32400',
+          credential: 'token',
+        ),
+      );
+}
+
 ProviderContainer _container({
   SeerrService? seerr,
   RadarrService? radarr,
   SonarrService? sonarr,
-  LidarrService? lidarr,
-  BazarrService? bazarr,
   List<Override> extra = const [],
 }) {
   return ProviderContainer(
     overrides: [
       ...extra,
-      bazarrServiceProvider.overrideWithValue(bazarr ?? _SearchBazarrService()),
       currentSettingsProvider.overrideWith((ref) => ref.watch(_testSettings)),
       seerrServiceProvider.overrideWith(
         (ref) => seerr ?? _SearchSeerrService(),
@@ -940,9 +900,6 @@ ProviderContainer _container({
       ),
       sonarrServiceProvider.overrideWith(
         (ref) => sonarr ?? _SearchSonarrService(),
-      ),
-      lidarrServiceProvider.overrideWith(
-        (ref) => lidarr ?? _SearchLidarrService(),
       ),
     ],
   );
@@ -984,14 +941,12 @@ class _SearchSeerrService extends FakeSeerrService {
     : leg = _LegRecorder(gate);
 
   @override
-  Future<List<MediaPreview>> search(
+  Future<SeerrSearchAnswer> search(
     String query, {
-    int page = 1,
     CancelToken? cancelToken,
-    bool reportFailure = false,
   }) async {
     await leg.record(cancelToken);
-    return results;
+    return SeerrSearchAnswer(titles: results);
   }
 }
 
@@ -1036,40 +991,6 @@ class _SearchSonarrService extends FakeSonarrService {
   }
 }
 
-class _SearchLidarrService extends FakeLidarrService {
-  final List<LidarrArtist> results;
-  final _LegRecorder leg;
-
-  _SearchLidarrService({this.results = const [], Completer<void>? gate})
-    : leg = _LegRecorder(gate);
-
-  @override
-  Future<List<LidarrArtist>> lookupArtists(
-    String term, {
-    CancelToken? cancelToken,
-    bool reportFailure = false,
-  }) async {
-    await leg.record(cancelToken);
-    return results;
-  }
-}
-
-class _SearchBazarrService extends FakeBazarrService {
-  final _LegRecorder leg;
-
-  _SearchBazarrService({Completer<void>? gate}) : leg = _LegRecorder(gate);
-
-  @override
-  Future<List<BazarrSearchHit>> searchLibrary(
-    String query, {
-    int length = 500,
-    CancelToken? cancelToken,
-  }) async {
-    await leg.record(cancelToken);
-    return const [];
-  }
-}
-
 /// One scripted band, with the items named by title alone.
 StreamSearchGroup _band(
   String label,
@@ -1101,13 +1022,18 @@ StreamSearchGroup _band(
 /// row, `imageFor` — so `noSuchMethod` covers the other eleven futures rather
 /// than the test pretending to implement a media server.
 class _ScriptedStreamServer implements StreamServerClient {
-  _ScriptedStreamServer(this.groups) : failure = null;
+  _ScriptedStreamServer(this.groups, {this.gate}) : failure = null;
 
   /// A server whose search fails with [failure], as the clients throw it.
-  _ScriptedStreamServer.failing(Object this.failure) : groups = const [];
+  _ScriptedStreamServer.failing(Object this.failure)
+    : groups = const [],
+      gate = null;
 
   final List<StreamSearchGroup> groups;
   final Object? failure;
+
+  /// Parks every search here, for a round that is still in flight.
+  final Completer<void>? gate;
   final List<String> queries = [];
 
   @override
@@ -1117,6 +1043,7 @@ class _ScriptedStreamServer implements StreamServerClient {
     CancelToken? cancelToken,
   }) async {
     queries.add(query);
+    await gate?.future;
     final failure = this.failure;
     if (failure != null) throw failure;
     return groups;

@@ -6,16 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
-import 'package:cupola/features/bazarr/data/bazarr_service.dart';
-import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/seerr_search.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
-import 'package:cupola/features/music/data/lidarr_service.dart';
-import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
@@ -79,40 +78,29 @@ const _maxLegsInFlight = 4;
 /// pool slot and the socket are both released rather than held to 15 s.
 const _laneDeadline = Duration(seconds: 10);
 
-/// The services the global search fans out to, in the order their sections
-/// appear.
+/// The services the global search asks, in the registry's order.
 ///
-/// Read off the registry rather than repeated here. It used to be a private
-/// const beside a `ServiceKey.isSearchable` the chip strip and the empty-state
-/// copy read instead — two lists that agreed only by coincidence, so adding a
-/// service to one promised a lane the other never ran (or hid one it did).
+/// The search is by kind (movies, series, people), so it asks what answers a
+/// title: Seerr for the catalogue and its people, Radarr and Sonarr for what
+/// their libraries hold and what they could add, Jellyfin and Plex for what is
+/// on the server. **Bazarr is not in it**: its titles are Radarr's and Sonarr's.
+/// **Lidarr is not in it either**: music is not in the catalogue, and the page
+/// offers Lidarr's own search for the word instead. **Prowlarr is not in it**:
+/// an indexer search is a release search against trackers, rate-limited
+/// against its owner, and belongs on Prowlarr's own page.
 ///
-/// **Prowlarr is deliberately not in it**, and that is the registry's answer
-/// too: an indexer search is a release search against trackers, not a title
-/// lookup, and it belongs on Prowlarr's own page. A tracker query is also the
-/// one leg that is rate-limited against its owner, which is the second reason
-/// it is not fired on every keystroke of a global search.
-///
-/// **Jellyfin and Plex are added on top of `isSearchable`, not through it.**
-/// Both now answer a title query — `GET /Search/Hints` and `GET /hubs/search`,
-/// behind the one `StreamServerClient.search` — so the registry flag is simply
-/// stale: it still carries the argument that a media server has nothing to look
-/// up, which stopped being true when those two reads landed. Correcting the
-/// flag is a registry edit and belongs with the registry; naming the two here
-/// keeps one list for the whole feature in the meantime, because the chip strip
-/// and the empty-state copy read *this* and not the flag. If the flag is ever
-/// widened, this predicate collapses back to `isSearchable` alone and nothing
-/// else moves. It stays a single `where` over `ServiceKey.values` rather than a
-/// spread of two lists so that section order is the registry's own by
-/// construction, however the predicate grows.
+/// A `where` over `ServiceKey.values`, so the order is the registry's own.
 final globalSearchServices = ServiceKey.values
-    .where(
-      (service) =>
-          service.isSearchable ||
-          service == ServiceKey.jellyfin ||
-          service == ServiceKey.plex,
-    )
+    .where(_catalogSources.contains)
     .toList(growable: false);
+
+const _catalogSources = {
+  ServiceKey.seerr,
+  ServiceKey.radarr,
+  ServiceKey.sonarr,
+  ServiceKey.jellyfin,
+  ServiceKey.plex,
+};
 
 /// The connections the global search asks, in section order.
 ///
@@ -154,9 +142,14 @@ final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
   );
 
   final settings = ref.read(currentSettingsProvider);
+  // The requester searches Seerr alone: what she can ask for, and whether the
+  // server has it, are both Seerr's answer.
+  final requester = ref.watch(audienceProvider) == Audience.requester;
   return <SearchLeg>[
     for (final service in globalSearchServices)
-      if (service.searchesPerConnection)
+      if (requester && service != ServiceKey.seerr)
+        ...const <SearchLeg>[]
+      else if (service.searchesPerConnection)
         for (final instance in settings.configuredInstancesOf(service))
           (
             instance: instance,
@@ -340,16 +333,28 @@ Future<GlobalSearchServiceResults> _runLeg(
 ) {
   final instance = leg.instance;
   return switch (instance.service) {
-    ServiceKey.seerr => _loadLeg(
+    ServiceKey.seerr => _loadLeg<Object>(
       leg: leg,
       cancelToken: cancelToken,
-      // `reportFailure`, like the arr lanes: without it a Seerr that did not
-      // answer, or refused the key, came back as `[]` — a lane reading
-      // "0 results" and counted as answered.
-      loadItems: () => ref
-          .read(seerrServiceProvider)
-          .search(query, cancelToken: cancelToken, reportFailure: true),
-      toResult: (item, index) => _seerrResult(item, instance, index),
+      // Titles, then people, each in Seerr's order; the people first when
+      // Seerr ranked a person first. A Seerr that did not answer throws, so its
+      // lane says so instead of "0 results".
+      loadItems: () async {
+        final answer = await ref
+            .read(seerrServiceProvider)
+            .search(query, cancelToken: cancelToken);
+        return answer.leadsWithPeople
+            ? [...answer.people, ...answer.titles]
+            : [...answer.titles, ...answer.people];
+      },
+      toResult: (item, index) => switch (item) {
+        final SeerrSearchPerson person => _personResult(
+          person,
+          instance,
+          index,
+        ),
+        _ => _seerrResult(item as MediaPreview, instance, index),
+      },
     ),
     ServiceKey.radarr => _loadLeg(
       leg: leg,
@@ -366,28 +371,6 @@ Future<GlobalSearchServiceResults> _runLeg(
           .read(sonarrServiceForProvider(instance.id))
           .lookupSeries(query, cancelToken: cancelToken, reportFailure: true),
       toResult: (item, index) => _sonarrResult(item, instance, index),
-    ),
-    ServiceKey.lidarr => _loadLeg(
-      leg: leg,
-      cancelToken: cancelToken,
-      loadItems: () => ref
-          .read(lidarrServiceForProvider(instance.id))
-          .lookupArtists(query, cancelToken: cancelToken, reportFailure: true),
-      toResult: (item, index) => _lidarrResult(item, instance, index),
-    ),
-    // Bazarr is the one leg with no server-side search: `searchLibrary` matches
-    // client side against a snapshot of the library it caches for a short
-    // window, so a debounced round of keystrokes costs one download rather than
-    // one each. Which is also why its token cannot abort the transfer — the
-    // download in flight belongs to the next query as much as to this one. It
-    // still stops the match once the round is superseded.
-    ServiceKey.bazarr => _loadLeg(
-      leg: leg,
-      cancelToken: cancelToken,
-      loadItems: () => ref
-          .read(bazarrServiceProvider)
-          .searchLibrary(query, cancelToken: cancelToken),
-      toResult: (item, index) => _bazarrResult(item, instance, index),
     ),
     // The two media servers share one arm because they share one interface:
     // `StreamServerClient.search` is the whole difference between them, and it
@@ -546,6 +529,9 @@ GlobalSearchResult _seerrResult(
   final year = item.year;
   final imageUrl = ImageUtils.buildTmdbPosterUrl(item.posterPath);
   final heroTag = _heroTag(instance, item.mediaType, item.id, index);
+  final key = item.mediaType == 'tv'
+      ? MediaKey.tv(item.id)
+      : MediaKey.movie(item.id);
   return GlobalSearchResult(
     service: ServiceKey.seerr,
     id: item.id,
@@ -555,14 +541,47 @@ GlobalSearchResult _seerrResult(
     imageHeaders: null,
     tags: [type, if (year.isNotEmpty) year],
     heroTag: heroTag,
+    kind: item.mediaType == 'tv' ? SearchHitKind.series : SearchHitKind.movie,
+    key: key,
+    year: int.tryParse(year),
+    // TMDB's zero is a title nobody has rated, not a score of nothing.
+    score: (item.voteAverage ?? 0) > 0 ? item.voteAverage : null,
+    seerrInfo: item.mediaInfo,
     // Seerr has no `routeExtra` to preload from, so the poster travels in the
     // URL: the detail page paints real art during its lookup instead of
     // landing the flight on an empty gradient.
     // The title's own page, under the Discover tab (`pushMounted`).
-    route: ServiceRoutes.mediaRoot(
-      item.mediaType == 'tv' ? MediaKey.tv(item.id) : MediaKey.movie(item.id),
-      heroTag: heroTag,
-      posterUrl: imageUrl,
+    route: ServiceRoutes.mediaRoot(key, heroTag: heroTag, posterUrl: imageUrl),
+  );
+}
+
+/// The poster width asked of TMDB for a person's face: a 44pt circle at 3x.
+const _faceSize = 'w185';
+
+GlobalSearchResult _personResult(
+  SeerrSearchPerson person,
+  ServiceInstance instance,
+  int index,
+) {
+  final imageUrl = person.profilePath == null
+      ? ''
+      : ImageUtils.buildTmdbPosterUrl(person.profilePath, size: _faceSize);
+  return GlobalSearchResult(
+    service: ServiceKey.seerr,
+    id: person.id,
+    title: person.name,
+    subtitle: '',
+    imageUrl: imageUrl,
+    imageHeaders: null,
+    tags: const [],
+    heroTag: _heroTag(instance, 'person', person.id, index),
+    kind: SearchHitKind.person,
+    knownFor: person.knownFor,
+    // Their page, under the Discover tab, as the atrium's people open.
+    route: ServiceRoutes.person(
+      person.id,
+      from: '',
+      posterUrl: imageUrl.isEmpty ? null : imageUrl,
     ),
   );
 }
@@ -595,6 +614,9 @@ GlobalSearchResult _radarrResult(
     imageHeaders: image.headers,
     tags: ['Movie', if (inLibrary) _inLibraryTag],
     inLibrary: inLibrary,
+    kind: SearchHitKind.movie,
+    key: item.tmdbId > 0 ? MediaKey.movie(item.tmdbId) : null,
+    year: item.year > 0 ? item.year : null,
     // The connection that listed it. A row in the Away section adds to Away,
     // whatever the lens is pointing at.
     // No TMDB id, no add: the id is what Radarr keys the new entry on, and it
@@ -655,6 +677,12 @@ GlobalSearchResult _sonarrResult(
     imageHeaders: image.headers,
     tags: ['Series', item.status, if (inLibrary) _inLibraryTag],
     inLibrary: inLibrary,
+    kind: SearchHitKind.series,
+    key: MediaKey.ofSeries(
+      tmdbId: item.tmdbId,
+      tvdbId: item.tvdbId > 0 ? item.tvdbId : null,
+    ),
+    year: item.year > 0 ? item.year : null,
     // No TVDB id, no add — and Sonarr really does return such rows, for shows
     // it can only match on TMDB. See the note in `_radarrResult`.
     addRequest: inLibrary || item.tvdbId <= 0
@@ -682,35 +710,6 @@ GlobalSearchResult _sonarrResult(
       ),
     },
     routeExtra: item,
-  );
-}
-
-GlobalSearchResult _bazarrResult(
-  BazarrSearchHit item,
-  ServiceInstance instance,
-  int index,
-) {
-  final type = item.isMovie ? 'Movie' : 'Series';
-  final kind = item.isMovie ? 'movie' : 'series';
-  final heroTag = _heroTag(instance, kind, item.id, index);
-  return GlobalSearchResult(
-    service: ServiceKey.bazarr,
-    id: item.id,
-    title: item.title,
-    subtitle: 'Subtitles · $type',
-    // Bazarr's API carries no artwork, so this row does not fly (see
-    // `canFlyPoster`); the tag still travels for the day it does.
-    imageUrl: '',
-    imageHeaders: null,
-    tags: ['Subtitles', type],
-    heroTag: heroTag,
-    // Bazarr's id is a THIRD server's — `radarrId` / `sonarrSeriesId` — so the
-    // connection stamped here is Bazarr's own, and the arr page it lands on
-    // resolves through its own lens. Two Bazarr paired to two different arrs
-    // would collide on the route itself, which is a knot this does not untie.
-    route: item.isMovie
-        ? ServiceRoutes.bazarrMovie(item.id, heroTag: heroTag)
-        : ServiceRoutes.bazarrSeries(item.id, heroTag: heroTag),
   );
 }
 
@@ -757,6 +756,13 @@ GlobalSearchResult _streamResult(
     // `kind` instead would rename the server's own vocabulary — and a localised
     // Plex titles its hubs in its own language.
     tags: [group.label],
+    kind: switch (item.kind) {
+      StreamItemKind.movie => SearchHitKind.movie,
+      StreamItemKind.series => SearchHitKind.series,
+      _ => SearchHitKind.other,
+    },
+    key: MediaKey.ofStreamItem(item),
+    year: year,
     // No "In library" and no plus. Every row here is *already* on the server
     // that listed it, so the tag would repeat the heading on every row, and
     // there is no library on a media server this app can write into.
@@ -770,53 +776,5 @@ GlobalSearchResult _streamResult(
       null => ServiceRoutes.streamItem(instance.service, item.id),
     },
     routeExtra: MediaKey.ofStreamItem(item) == null ? item : null,
-  );
-}
-
-GlobalSearchResult _lidarrResult(
-  LidarrArtist item,
-  ServiceInstance instance,
-  int index,
-) {
-  final image = ImageUtils.extractPosterUrl(
-    item.images,
-    baseUrl: instance.url,
-    apiKey: instance.credential,
-    coverTypes: const ['poster', 'fanart', 'banner'],
-  );
-  // Only when the payload carries one. `albumCount` reads `statistics`, which
-  // the lookup controller does not attach, so every row said "0 albums" — a
-  // fact about the endpoint dressed up as a fact about the artist.
-  final albumLabel = switch (item.albumCount) {
-    0 => '',
-    1 => '1 album',
-    final count => '$count albums',
-  };
-  final heroTag = _heroTag(instance, 'artist', item.id, index);
-  // Same statistics gap as the album count: `hasFiles` counts track files and
-  // is false for every lookup row. See [_inLibraryTag].
-  final inLibrary = item.id > 0;
-  return GlobalSearchResult(
-    service: ServiceKey.lidarr,
-    id: item.id,
-    title: item.artistName,
-    subtitle: albumLabel,
-    imageUrl: image.url,
-    imageHeaders: image.headers,
-    tags: ['Artist', if (inLibrary) _inLibraryTag],
-    inLibrary: inLibrary,
-    // No id, no plus. Lidarr keys an artist on its MusicBrainz id and refuses
-    // an add without one, so a row the lookup returned without it gets no
-    // affordance rather than one that cannot be honoured.
-    addRequest: inLibrary || item.foreignArtistId.isEmpty
-        ? null
-        : LidarrAddRequest(instanceId: instance.id, artist: item),
-    heroTag: heroTag,
-    route: ServiceRoutes.lidarrArtist(
-      item.id,
-      heroTag: heroTag,
-      instanceId: instance.id,
-    ),
-    routeExtra: item,
   );
 }

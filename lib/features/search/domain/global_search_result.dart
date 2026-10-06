@@ -4,11 +4,23 @@ import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+
+/// What a search hit is, which decides the section it is drawn in.
+enum SearchHitKind {
+  movie,
+  series,
+  person,
+
+  /// Anything else a media server finds (an episode, a track): not a title
+  /// of the catalogue, so the search by kind leaves it out.
+  other,
+}
 
 class GlobalSearchResult {
   final ServiceKey service;
@@ -55,6 +67,28 @@ class GlobalSearchResult {
   /// sections and the user chose one by choosing where to touch.
   final ArrAddRequest? addRequest;
 
+  /// Movie, series, person or neither.
+  final SearchHitKind kind;
+
+  /// The title across services, where the row carries the ids to name it:
+  /// what folds the same film found by Seerr, Radarr and Jellyfin into one
+  /// row. Null for a person, and for a title whose source gave no TMDB or
+  /// TVDB id.
+  final MediaKey? key;
+
+  /// The year it came out, when the source says.
+  final int? year;
+
+  /// TMDB's score, from Seerr's row; null for a title nobody rated.
+  final double? score;
+
+  /// Seerr's record of the title (`mediaInfo`): what the server holds of it
+  /// and what was asked, in Seerr's words. Only on Seerr's own rows.
+  final Map<String, dynamic>? seerrInfo;
+
+  /// A person's best known titles, TMDB's order first.
+  final List<String> knownFor;
+
   const GlobalSearchResult({
     required this.service,
     required this.id,
@@ -68,6 +102,12 @@ class GlobalSearchResult {
     this.inLibrary = false,
     this.addRequest,
     this.routeExtra,
+    this.kind = SearchHitKind.other,
+    this.key,
+    this.year,
+    this.score,
+    this.seerrInfo,
+    this.knownFor = const [],
   });
 
   /// Whether this result has artwork worth flying.
@@ -142,12 +182,6 @@ extension SearchLaneStateVocabulary on SearchLaneState {
     SearchLaneState.timedOut || SearchLaneState.failed => StatusTone.warning,
     SearchLaneState.unreachable => StatusTone.error,
   };
-
-  /// Whether the lane's word is preceded by a coloured pip.
-  ///
-  /// An answered lane prints its count and nothing else: a pip beside every
-  /// heading is a pip that marks nothing.
-  bool get showsPip => this != SearchLaneState.answered;
 
   /// Whether this lane owes the user a Retry.
   ///
@@ -253,23 +287,6 @@ class GlobalSearchServiceResults {
   /// four stopped states are amber.
   bool get hasFault => state.canRetry;
 
-  /// The word on the lane's heading: what the lane is doing, while it is out
-  /// or once it has answered.
-  ///
-  /// Null once it stopped. The fault card under the heading says what went
-  /// wrong ([faultSentence]) beside the remedy that cause names, and a heading
-  /// that said it too stated the cause twice, one line apart (`Behind
-  /// Cloudflare Access` over `No Radarr results: Cloudflare Access answered
-  /// instead of Radarr.`). The heading keeps the lane's tone on its pip.
-  String? get stateWord => switch (state) {
-    SearchLaneState.searching => 'Searching…',
-    SearchLaneState.answered =>
-      '${results.length} result${results.length == 1 ? '' : 's'}',
-    SearchLaneState.timedOut ||
-    SearchLaneState.unreachable ||
-    SearchLaneState.failed => null,
-  };
-
   /// The sentence the lane's fault card prints, in place of rows: what is
   /// missing, and why, in one shape for every way a lane stops.
   ///
@@ -309,48 +326,4 @@ class GlobalSearchServiceResults {
         ? headline
         : '${headline[0].toLowerCase()}${headline.substring(1)}';
   }
-}
-
-/// "7 connections asked · 5 answered · 1 still searching · 1 timed out".
-///
-/// A fold over the lane states and nothing else, so the line beside the heading
-/// can never disagree with the sections under it — which is the whole reason it
-/// is a function over the lanes rather than a counter the page keeps.
-///
-/// Zero counts are left out: "0 timed out" is a word about nothing. *Answered*
-/// always prints, because it is the number the line exists to report and
-/// "0 answered" is the entire story while a stack is down.
-///
-/// Null for no lanes at all — there is nothing to census before a query, and a
-/// readout saying "0 connections asked" would state a fact about the query
-/// rather than about the stack.
-String? searchLaneCensus(List<GlobalSearchServiceResults> lanes) {
-  if (lanes.isEmpty) return null;
-  var answered = 0;
-  var searching = 0;
-  var timedOut = 0;
-  var unreachable = 0;
-  var failed = 0;
-  for (final lane in lanes) {
-    switch (lane.state) {
-      case SearchLaneState.answered:
-        answered++;
-      case SearchLaneState.searching:
-        searching++;
-      case SearchLaneState.timedOut:
-        timedOut++;
-      case SearchLaneState.unreachable:
-        unreachable++;
-      case SearchLaneState.failed:
-        failed++;
-    }
-  }
-  return [
-    '${lanes.length} connection${lanes.length == 1 ? '' : 's'} asked',
-    '$answered answered',
-    if (searching > 0) '$searching still searching',
-    if (timedOut > 0) '$timedOut timed out',
-    if (unreachable > 0) '$unreachable did not answer',
-    if (failed > 0) '$failed failed',
-  ].join(' · ');
 }

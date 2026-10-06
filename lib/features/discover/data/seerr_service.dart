@@ -16,6 +16,7 @@ import 'package:cupola/features/discover/domain/seerr_known_arr.dart';
 import 'package:cupola/features/discover/domain/seerr_quota.dart';
 import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/domain/seerr_request_update.dart';
+import 'package:cupola/features/discover/domain/seerr_search.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -1076,58 +1077,51 @@ class SeerrService {
     return (await getPersonCredits(personId)).castFilmography;
   }
 
-  /// Searches for movies and TV shows by query string.
-  /// Filters out 'person' results to only return movies and TV shows.
+  /// Searches TMDB through Seerr: the first page of movies, series and
+  /// people, each in Seerr's order. A Seerr that did not answer, or refused,
+  /// throws: a Seerr that found nothing is an empty answer, never the same
+  /// fact as one that is off.
   ///
   /// [cancelToken] aborts the request once the search that asked for it has
-  /// been superseded: global search re-runs every service leg on each debounced
-  /// keystroke, and a discarded round should stop paying for itself rather than
-  /// run to completion.
+  /// been superseded: the global search runs again on each debounced
+  /// keystroke, and a discarded round should stop paying for itself. A
+  /// superseded round is a `DioException` of type `cancel`, which the caller
+  /// that cancelled it knows how to tell from a dead server.
   ///
-  /// [reportFailure] decides whether a Seerr that did not answer is allowed to
-  /// look like a Seerr that found nothing — the same switch, the same default
-  /// and the same reasoning as `BaseArrService.lookupItems`, which the three arr
-  /// lookups already took and this one did not.
-  ///
-  /// The default keeps the old behaviour on purpose: inside Seerr's own
-  /// search-as-you-type field the user is mid-word, the box is theirs, and an
-  /// error card that appears and vanishes between keystrokes is noise. It was
-  /// the wrong behaviour for the **global** search, which draws one lane per
-  /// connection. This method used to swallow every failure unconditionally, so
-  /// an unreachable Seerr, a Seerr that refused the API key and a Seerr with no
-  /// match all produced one empty list: the lane could only ever say "no
-  /// results", and there was nothing for it to colour red. Pass true and the
-  /// failure travels, cancellation included — a superseded round is a
-  /// `DioException` of type `cancel`, which the caller that cancelled it already
-  /// knows how to tell from a dead server.
-  Future<List<MediaPreview>> search(
+  /// The text is encoded here and again by Dio: Seerr refuses a space, an `&`
+  /// or an apostrophe encoded once ("must be url encoded").
+  Future<SeerrSearchAnswer> search(
     String query, {
-    int page = 1,
     CancelToken? cancelToken,
-    bool reportFailure = false,
   }) async {
-    if (query.isEmpty) return [];
-    try {
-      // URL-encode the query to handle spaces and special characters
-      final encodedQuery = Uri.encodeComponent(query);
-      final response = await _client.get(
-        '/api/v1/search',
-        queryParameters: {'query': encodedQuery, 'page': page},
-        cancelToken: cancelToken,
-      );
-      final results = response.data['results'] as List<dynamic>;
-      // Filter out 'person' results - only keep movies and TV shows
-      return results
-          .where((e) {
-            final mediaType = e['mediaType'] ?? e['media_type'];
-            return mediaType == 'movie' || mediaType == 'tv';
-          })
-          .map((e) => MediaPreview.fromJson(e))
-          .toList();
-    } catch (_) {
-      if (reportFailure) rethrow;
-      return [];
+    if (query.isEmpty) return const SeerrSearchAnswer();
+    final response = await _client.get(
+      '/api/v1/search',
+      queryParameters: {'query': Uri.encodeComponent(query), 'page': 1},
+      cancelToken: cancelToken,
+    );
+    final titles = <MediaPreview>[];
+    final people = <SeerrSearchPerson>[];
+    bool? personFirst;
+    for (final result in _resultsOf(response.data)) {
+      if (result is! Map) continue;
+      final json = result.cast<String, dynamic>();
+      final mediaType = json['mediaType'] ?? json['media_type'];
+      if (mediaType == 'movie' || mediaType == 'tv') {
+        titles.add(MediaPreview.fromJson(json));
+        personFirst ??= false;
+      } else if (mediaType == 'person') {
+        if (SeerrSearchPerson.fromJson(json) case final person?) {
+          people.add(person);
+          personFirst ??= true;
+        }
+      }
     }
+    return SeerrSearchAnswer(
+      titles: titles,
+      people: people,
+      leadsWithPeople: personFirst ?? false,
+    );
   }
 
   /// TMDB's id of the series TVDB knows as [tvdbId], by Seerr's `tvdb:`

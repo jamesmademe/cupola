@@ -104,8 +104,6 @@ void main() {
       expect(lane.state, SearchLaneState.timedOut);
       expect(lane.state.tone, StatusTone.warning);
       expect(lane.faultSentence, contains('timed out'));
-      // The card says it; the heading above it does not say it again.
-      expect(lane.stateWord, isNull);
     });
 
     test('red is a connection nothing answered at, and nothing else', () {
@@ -138,24 +136,20 @@ void main() {
       expect(lane.faultSentence, contains('refused the key'));
     });
 
-    test('an answered lane counts, wears no pip and offers no Retry', () {
+    test('an answered lane offers no Retry', () {
       final empty = _lane(_sonarr);
       expect(empty.state.tone, StatusTone.neutral);
-      expect(empty.state.showsPip, isFalse);
       expect(empty.state.canRetry, isFalse);
       expect(empty.hasFault, isFalse);
-      expect(empty.stateWord, '0 results');
     });
 
     test('a lane still in flight is informational, not a fault', () {
       final lane = _lane(_sonarr, state: SearchLaneState.searching);
       expect(lane.state.tone, StatusTone.info);
-      expect(lane.state.showsPip, isTrue);
       // Retrying a lane still in flight would cancel the request the user is
       // waiting on and start it again a keystroke behind.
       expect(lane.state.canRetry, isFalse);
       expect(lane.hasFault, isFalse);
-      expect(lane.stateWord, 'Searching…');
     });
 
     test('every stopped lane offers the Retry that concerns only it', () {
@@ -165,37 +159,7 @@ void main() {
         SearchLaneState.failed,
       ]) {
         expect(_lane(_sonarr, state: state).state.canRetry, isTrue);
-        expect(_lane(_sonarr, state: state).state.showsPip, isTrue);
       }
-    });
-  });
-
-  group('the census beside the heading', () {
-    // A fold over the lane states and nothing else, so the line can never
-    // disagree with the sections under it.
-    test('nothing to census before a query', () {
-      expect(searchLaneCensus(const []), isNull);
-    });
-
-    test('names every state that is actually happening', () {
-      expect(
-        searchLaneCensus([
-          _lane(_fourK, named: true),
-          _lane(_hd, named: true),
-          _lane(_sonarr, state: SearchLaneState.searching),
-          _lane(_sonarr, state: SearchLaneState.timedOut),
-        ]),
-        '4 connections asked · 2 answered · 1 still searching · 1 timed out',
-      );
-    });
-
-    test('a count of zero is a word about nothing, except "answered"', () {
-      // "0 timed out" is noise; "0 answered" is the entire story while a stack
-      // is down.
-      expect(
-        searchLaneCensus([_lane(_fourK, state: SearchLaneState.unreachable)]),
-        '1 connection asked · 0 answered · 1 did not answer',
-      );
     });
   });
 

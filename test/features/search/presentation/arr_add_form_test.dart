@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
@@ -387,46 +386,7 @@ void main() {
       expect(lidarr.added, isEmpty);
     },
   );
-
-  test('a completed add is remembered under its connection', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
-    const request = RadarrAddRequest(
-      instanceId: 'radarr-away111',
-      movie: _dune,
-    );
-    container
-        .read(libraryAdditionsProvider.notifier)
-        .markAdded(request.libraryKey);
-
-    expect(
-      container.read(libraryAdditionsProvider),
-      contains('radarr-away111:radarr:438631'),
-    );
-    // The same film on the OTHER Radarr is a different claim, and both rows are
-    // on screen at once.
-    expect(
-      container.read(libraryAdditionsProvider),
-      isNot(contains('radarr:radarr:438631')),
-    );
-  });
 }
-
-const _dune = RadarrMovie(
-  id: 0,
-  title: 'Dune',
-  sortTitle: 'dune',
-  sizeOnDisk: 0,
-  status: 'released',
-  hasFile: false,
-  monitored: false,
-  year: 2021,
-  images: [],
-  tmdbId: 438631,
-  runtime: 155,
-  genres: [],
-);
 
 /// Lets the notifier's deferred load run to completion.
 ///

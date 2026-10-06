@@ -140,7 +140,7 @@ void main() {
       );
       expect(lane.state, SearchLaneState.unreachable);
       expect(lane.faultSentence, 'No Seerr results: Seerr did not answer.');
-      expect(searchLaneCensus([lane]), contains('0 answered'));
+      expect(lane.hasFault, isTrue);
     });
 
     test('an answer is an answered lane with its rows', () async {
