@@ -260,6 +260,26 @@ mixin ArrActivityMixin {
     return ArrRecordPage.fromEnvelope(response.data);
   }
 
+  /// Every record since [date], in one answer: `/history/since` has no
+  /// pages, so what it returns is the whole of the window and a count over it
+  /// is a total. [queryParameters] narrow it (`eventType`) and embed the media
+  /// (`includeMovie`, `includeSeries`, `includeAlbum`), each fork by its own
+  /// names.
+  Future<List<dynamic>> getHistorySince(
+    DateTime date, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final response = await client.get(
+      '/api/${config.apiVersion}/history/since',
+      queryParameters: {
+        'date': date.toUtc().toIso8601String(),
+        ...?queryParameters,
+      },
+    );
+    final data = response.data;
+    return data is List ? data : const [];
+  }
+
   /// Newest first, asked for rather than assumed.
   ///
   /// Every reader of a history page treats it as the most recent records: the
