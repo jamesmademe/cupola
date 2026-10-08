@@ -12,6 +12,8 @@ import 'catalog.dart';
 void main() {
   catalogCard(
     'CalendarBand',
+    // Wide enough for the scene of a tablet on its side.
+    width: 1160,
     scenes: [
       CatalogScene(
         'CalendarBand · the operator\'s week: today\'s release named, its '
@@ -71,6 +73,17 @@ void main() {
           onTap: () {},
         ),
         width: 390,
+      ),
+      CatalogScene(
+        'A tablet on its side · the week beside the words, at the widest '
+        'phone\'s measure, the band one line tall',
+        (_) => CalendarBand(
+          events: CalendarWorld.events,
+          window: CalendarWorld.window,
+          now: CalendarWorld.now,
+          onTap: () {},
+        ),
+        width: 1100,
       ),
       CatalogScene(
         'Text at 200% · the line wraps, the strip scales its dates',
