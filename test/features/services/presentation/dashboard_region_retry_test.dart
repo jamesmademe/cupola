@@ -135,14 +135,7 @@ void main() {
     await tester.tap(_within(HomeArrivedModule, find.text('Retry')));
     await harness.settle(tester);
 
-    // PORT: fails until this is fixed in lib. Arrived reads `servicesArrivalsProvider`, and
-    // `retryDashboardServices` (dashboard_retry.dart) drops the probes, the
-    // queue and `servicesArrHistoryProvider` but not the week: after Retry
-    // the arrs are asked `/system/status`, `/queue` and `/history` again and
-    // never `/history/since`, so the module keeps its silent frame (`Radarr 1,
-    // Radarr 4K and 2 others did not answer.` and Retry) instead of
-    // `Last 7 days · 4 new`. The old rail read the history page, which that
-    // function does drop.
+    // The Retry drops the week Arrived reads, not only the history page.
     expect(
       _within(HomeArrivedModule, find.text('Last 7 days · 4 new')),
       findsOne,

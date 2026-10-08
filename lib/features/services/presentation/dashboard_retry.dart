@@ -15,8 +15,12 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/features/discover/domain/library_calendar.dart'
+    show CalendarKind;
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -120,4 +124,26 @@ void retryDashboardServices(WidgetRef ref, Iterable<ServiceKey> services) {
   for (final source in DecisionSource.values) {
     if (reads(source)) ref.invalidate(dashboardDecisionSourceProvider(source));
   }
+
+  // What the Home's other modules read of these, each keeping an answer of
+  // its own: Arrived's week, Coming up's calendar, Continue watching's
+  // resume. Left cached, a Retry from Needs you brought the service back and
+  // left those modules saying it did not answer.
+  if (asked.any(_arrivalSources.contains)) {
+    ref.invalidate(servicesArrivalsProvider);
+  }
+  if (asked.any((service) => CalendarKind.of(service) != null)) {
+    ref.invalidate(calendarSourceProvider);
+    ref.invalidate(libraryCalendarProvider);
+  }
+  if (asked.contains(ServiceKey.jellyfin) || asked.contains(ServiceKey.plex)) {
+    ref.invalidate(homeResumeProvider);
+  }
 }
+
+/// The libraries Arrived reads its week from.
+const _arrivalSources = {
+  ServiceKey.radarr,
+  ServiceKey.sonarr,
+  ServiceKey.lidarr,
+};
