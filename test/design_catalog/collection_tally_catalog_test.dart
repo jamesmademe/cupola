@@ -45,6 +45,8 @@ CollectionShelf _shelf(List<(int, String, int, int?)> parts) =>
 void main() {
   catalogCard(
     'CollectionTally',
+    // Wide enough for the scene of a tablet on its side.
+    width: 1160,
     scenes: [
       CatalogScene(
         'CollectionTally · on the collection\'s page: how much is on the '
@@ -61,6 +63,16 @@ void main() {
           onTap: () {},
         ),
         width: 390,
+      ),
+      CatalogScene(
+        'The invitation on a tablet on its side · the strip beside the '
+        'words, the legend under them',
+        (_) => CollectionTally.invitation(
+          shelf: _shelf(_blender),
+          name: 'Blender Open Movies',
+          onTap: () {},
+        ),
+        width: 1068,
       ),
       CatalogScene(
         'Whole · all on the server, the legend one word',

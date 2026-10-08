@@ -11,6 +11,8 @@ Rendered from `lib/features/discover/presentation/widgets/collection_tally.dart`
 
 Both are a slab: `fillQuiet`, `AppRadius.door`, a hairline edge, padding `AppSpacing.lg`.
 
+**Wide**: once the inside of the slab is `CollectionTally.besideFrom` (776) wide, the strip goes beside the words, at the end of the slab and at its own width (its covers at 44, never more than `CollectionTally.stripMeasure`, 376, the widest phone's strip), with the legend under the words. The atrium's invitation reaches it on a tablet on its side and in a desktop window; a collection's page never does, its column stopping at the reading well.
+
 ## The strip
 
 The movies in release order, side by side, each cover at most 44 wide (`w92`, 2:3, `AppRadius.thumb`) over a 3pt bar in the tone of where it stands: green on the server (either copy, 4K included), blue on its way, a blue ring while it waits for approval, the hairline when it is neither. Past ten movies the covers would be too small to read and the bars stand alone, filling the width.
@@ -40,6 +42,7 @@ Each sheet is drawn in the dark and the light room.
 - Whole: all on the server.
 - Past ten movies: the bars alone.
 - Text at 200%: the invitation.
+- The invitation on a tablet on its side: the strip beside the words.
 
 ## Do / don't
 

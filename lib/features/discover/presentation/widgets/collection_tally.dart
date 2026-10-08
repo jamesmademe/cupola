@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -39,6 +40,19 @@ class CollectionTally extends StatelessWidget {
 
   static const String invitationTitle = 'Complete the collection';
 
+  /// The widest the strip is drawn beside the words: as the widest phone
+  /// draws it ([AppBreakpoints.splitList], less the atrium's margins and the
+  /// slab's padding). Its covers stop at 44 wide, so eight of them never need
+  /// more; past ten movies the bars alone fill it.
+  static const double stripMeasure =
+      AppBreakpoints.splitList - 4 * AppSpacing.lg;
+
+  /// The width inside the slab from which the strip goes beside the words:
+  /// where the words keep at least the strip's own measure. A tablet on its
+  /// side or a desktop window draws one that wide in the atrium; no phone,
+  /// no tablet's list beside a title and no collection's page does.
+  static const double besideFrom = 2 * stripMeasure + AppSpacing.xl;
+
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
@@ -71,6 +85,64 @@ class CollectionTally extends StatelessWidget {
       headline,
       for (final (words, _, _) in coming) words,
     ].join(', ');
+    final heading = <Widget>[
+      if (invitation == null)
+        Text(headline, style: AppType.section.copyWith(color: room.ink))
+      else ...[
+        // The chevron is the slab's way in, as on a shelf's header.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Flexible(
+              child: Text(
+                invitationTitle,
+                style: AppType.section.copyWith(color: room.ink),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: scheme.primary),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          '$invitation · $headline',
+          style: AppType.label
+              .weight(FontWeight.w400)
+              .copyWith(color: room.inkSecondary),
+        ),
+      ],
+    ];
+    final legendLine = legend.isEmpty
+        ? null
+        : Wrap(
+            spacing: AppSpacing.lg,
+            runSpacing: AppSpacing.xs,
+            children: [
+              for (final (words, color, hollow) in legend)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: hollow ? null : color,
+                        border: hollow
+                            ? Border.all(color: color, width: 1.2)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      words,
+                      style: AppType.label
+                          .weight(FontWeight.w400)
+                          .copyWith(color: room.inkSecondary),
+                    ),
+                  ],
+                ),
+            ],
+          );
     final slab = Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -78,69 +150,48 @@ class CollectionTally extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.door),
         border: Border.all(color: room.hair),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (invitation == null)
-            Text(headline, style: AppType.section.copyWith(color: room.ink))
-          else ...[
-            // The chevron is the slab's way in, as on a shelf's header.
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      // The phone's slab: the words, the strip under them, the legend under
+      // that. Where the words keep at least the strip's own measure beside
+      // it, the strip goes beside them instead, at the end of the slab.
+      child: LayoutBuilder(
+        builder: (context, box) {
+          if (box.maxWidth >= besideFrom) {
+            return Row(
               children: [
-                Flexible(
-                  child: Text(
-                    invitationTitle,
-                    style: AppType.section.copyWith(color: room.ink),
-                  ),
-                ),
-                Icon(Icons.chevron_right_rounded, color: scheme.primary),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              '$invitation · $headline',
-              style: AppType.label
-                  .weight(FontWeight.w400)
-                  .copyWith(color: room.inkSecondary),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.md),
-          _Strip(shelf: shelf),
-          if (legend.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.lg,
-              runSpacing: AppSpacing.xs,
-              children: [
-                for (final (words, color, hollow) in legend)
-                  Row(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: hollow ? null : color,
-                          border: hollow
-                              ? Border.all(color: color, width: 1.2)
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        words,
-                        style: AppType.label
-                            .weight(FontWeight.w400)
-                            .copyWith(color: room.inkSecondary),
-                      ),
+                      ...heading,
+                      if (legendLine != null) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        legendLine,
+                      ],
                     ],
                   ),
+                ),
+                const SizedBox(width: AppSpacing.xl),
+                SizedBox(
+                  width: _Strip.widthOf(shelf.parts.length),
+                  child: _Strip(shelf: shelf),
+                ),
               ],
-            ),
-          ],
-        ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...heading,
+              const SizedBox(height: AppSpacing.md),
+              _Strip(shelf: shelf),
+              if (legendLine != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                legendLine,
+              ],
+            ],
+          );
+        },
       ),
     );
     final tap = onTap;
@@ -175,6 +226,18 @@ class _Strip extends StatelessWidget {
   static const double _gap = AppSpacing.s;
   static const double _bar = 3;
   static const double _maxPoster = 44;
+
+  /// The strip's own width beside the words: its covers at their widest,
+  /// up to [CollectionTally.stripMeasure]; bars alone take the whole of it.
+  static double widthOf(int parts) {
+    if (parts == 0 || parts > _postersUpTo) {
+      return CollectionTally.stripMeasure;
+    }
+    return math.min(
+      CollectionTally.stripMeasure,
+      parts * _maxPoster + (parts - 1) * _gap,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
