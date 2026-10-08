@@ -1,4 +1,4 @@
-/// On the phone, a Recently added tile says which connection imported it.
+/// On the phone, an Arrived tile says which connection imported it.
 ///
 /// The desktop rows already did, in their subtitle. The phone's tiles carry
 /// only a poster and a title, so the HD and the 4K copy of one movie were two
@@ -14,16 +14,14 @@ import '../../../test_helpers/profiles/profiles.dart';
 
 const _phone = Size(375, 1200);
 
-/// The region alone, as the phone's Home lays it out: the rail is what is
+/// The module alone, as the phone's Home lays it out: the rail is what is
 /// under test, and the rest of Home is measured elsewhere.
 const _region = Scaffold(
-  body: SingleChildScrollView(child: ServicesRecentlyAddedSection()),
+  body: SingleChildScrollView(child: HomeArrivedModule()),
 );
 
-Finder _inRail(Finder matching) => find.descendant(
-  of: find.byType(ServicesRecentlyAddedSection),
-  matching: matching,
-);
+Finder _inRail(Finder matching) =>
+    find.descendant(of: find.byType(HomeArrivedModule), matching: matching);
 
 /// The tile's own box: the 60×90 the poster and its scrim live in.
 Finder _tileOf(String title) => find
