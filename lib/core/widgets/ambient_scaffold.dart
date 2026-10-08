@@ -37,8 +37,8 @@ class AmbientScaffold extends StatelessWidget {
 
   /// Widest the well may grow, when the archetype's own measure differs.
   ///
-  /// The library passes 1160 because eight 130pt posters and their gaps come to
-  /// that; everything else takes the default.
+  /// Every page takes the default today; a page read as one column draws its
+  /// own [AppBreakpoints.readingWell] inside it rather than narrowing this.
   final double contentWellWidth;
 
   const AmbientScaffold({

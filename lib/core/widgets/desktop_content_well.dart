@@ -12,10 +12,11 @@ import 'package:cupola/core/app_breakpoints.dart';
 ///
 /// Deliberately a *wrapper around the body* rather than something the shell
 /// imposes. Two reasons: an app bar, an ambient gradient and a sticky filter bar
-/// must stay full-bleed, and the width itself is the archetype's own — the media
-/// spine is 1040 because its side track is 300, the library is 1160 because
-/// eight 130pt posters and their gaps come to that. One number for all of them
-/// would be a number that fits none of them.
+/// must stay full-bleed, and the width can be the archetype's own. Most pages
+/// take [AppBreakpoints.contentWell], the widest the main well grows on any
+/// shell; a page read as one column (an artist's shelf, a search's rows, the
+/// calendar's agenda) stops at [AppBreakpoints.readingWell], because its rows
+/// stretched wider are a line too long to follow.
 class DesktopContentWell extends StatelessWidget {
   const DesktopContentWell({
     super.key,
