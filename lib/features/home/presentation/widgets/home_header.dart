@@ -66,9 +66,14 @@ class HomeHeader extends ConsumerWidget {
           else
             title,
           if (line.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.xs),
-              child: Text(month, style: monthStyle),
+            // The same height as the line with the health on it, so the
+            // first module stands where it does on every Home.
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(month, style: monthStyle),
+              ),
             )
           else
             Semantics(
