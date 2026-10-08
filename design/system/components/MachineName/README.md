@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/machine_name.dart` by `test/design_catalog/machi
 
 ## Where it goes
 
-Only in a row about a **copy**, under its title: a download (In flight, the Activity queues, a client's page), an acquisition (history, the Recently added rows), a refused release (the blocklist), a file to import, the file a session is playing. A row about a **title** never carries one: library grids, Discover, the calendar, Seerr requests, Wanted, the Recently added tiles. The requester never sees one. On a detail page the File section shows the file in full. **Today** only the File section of a movie's detail page uses it; the other surfaces take it up as they are redrawn.
+Only in a row about a **copy**, under its title: a download (In flight, the Activity queues, a client's page), an acquisition (history, the Recently added rows), a refused release (the blocklist), a file to import, the file a session is playing. A row about a **title** never carries one: library grids, Discover, the calendar, Seerr requests, Wanted, the Home's Arrived cards. The requester never sees one. On a detail page the File section shows the file in full. **Today** only the File section of a movie's detail page uses it; the other surfaces take it up as they are redrawn.
 
 ## Anatomy
 

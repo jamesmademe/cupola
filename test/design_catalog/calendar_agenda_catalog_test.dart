@@ -92,6 +92,24 @@ void main() {
         width: 390,
       ),
       CatalogScene(
+        'CalendarRow.home · Coming up on the Home: the day leads, an '
+        'episode\'s time opens its status, two lines and no bar',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final event in [
+              CalendarWorld.spriteFright(),
+              CalendarWorld.events.firstWhere(
+                (event) => event.title == 'Cosmos Laundromat',
+              ),
+              CalendarWorld.album,
+            ])
+              CalendarRow.home(event: event, now: CalendarWorld.now),
+          ],
+        ),
+        width: 358,
+      ),
+      CatalogScene(
         'CalendarQuietLine · three empty days or more, and the end of the '
         'thirty days',
         (_) => Column(

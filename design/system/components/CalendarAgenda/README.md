@@ -11,6 +11,7 @@ Rendered from `lib/features/discover/presentation/widgets/calendar_agenda.dart` 
   - The poster: 36 × 54 (an album's cover square), `AppRadius.thumb`, from the arr's own artwork; the title's initials on the plate without one.
   - The title in the row role; under it where the thing stands after a 7pt dot; under that the connections that hold it after the service's glyph, `Radarr · Radarr 4K`, in `inkTertiary`.
 - **The requester's** (`CalendarRow.requester`): no lead column and no service name; the poster 44 × 66; her note in the connections' place, `On digital in Italy today`, `You asked for season 3 on Sat 26 Sep`.
+- **The Home's** (`CalendarRow.home`, Coming up's rows): the lead column carries the day, `Today` over `29 Sep`, `Fri` over `2 Oct`, since the rows of three days share no heading; an episode's time moves to the head of its status, `21:00 · S3 E1 · premiere · not aired`. Two lines and nothing under them: no connections, no bar (the download's figure is already in the status), and no margin of its own inside the module's slab.
 
 While a download moves, a 3pt bar in its tone and `around 21:10` (the requester's `ready around 21:10`) close the row; the time keeps at most 70% of the line and is cut before it overflows (a narrow panel, a large reading size), the bar taking the rest.
 

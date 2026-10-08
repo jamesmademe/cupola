@@ -7,8 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/discover/domain/library_calendar.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
+import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/needs_you.dart';
+import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
+import 'package:cupola/features/home/presentation/widgets/coming_up_module.dart';
+import 'package:cupola/features/home/presentation/widgets/continue_watching_module.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
@@ -22,10 +28,12 @@ import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 
 import '../test_helpers/settings_scope.dart';
+import 'calendar_world.dart';
 import 'catalog.dart';
 
 final _now = DateTime(2026, 9, 29, 20, 53);
@@ -183,6 +191,86 @@ StreamActivityRow _playing(
     progress: progress,
     isPaused: paused,
     remaining: Duration(minutes: minutesLeft),
+  ),
+);
+
+/// The calendar of the boards' household, as Coming up reads it.
+LibraryCalendar _calendar(
+  List<CalendarEvent> events, {
+  List<CalendarSilence> silent = const [],
+}) => LibraryCalendar(
+  window: CalendarWorld.window,
+  events: events,
+  answered: const ['Radarr', 'Radarr 4K', 'Sonarr'],
+  silent: silent,
+  kinds: const {CalendarKind.movie, CalendarKind.episode, CalendarKind.album},
+  readAt: CalendarWorld.now,
+);
+
+ArrHistoryEntry _arrival(
+  String title, {
+  required Duration ago,
+  required int tmdbId,
+  String? connectionName,
+}) => ArrHistoryEntry(
+  service: ServiceKey.radarr,
+  id: tmdbId,
+  mediaId: tmdbId,
+  title: title,
+  unitId: null,
+  detail: null,
+  posterUrl: CatalogArt.poster,
+  backdropUrl: CatalogArt.backdrop,
+  outcome: ArrImportOutcome.imported,
+  at: _now.subtract(ago),
+  reason: null,
+  instanceId: connectionName ?? 'radarr',
+  connectionName: connectionName,
+  tmdbId: tmdbId,
+);
+
+/// The week the boards' household had: four titles, two on the 4K Radarr.
+final _week = [
+  _arrival(
+    'Spring',
+    ago: const Duration(hours: 2),
+    tmdbId: 1,
+    connectionName: '4K',
+  ),
+  _arrival('Coffee Run', ago: const Duration(hours: 9), tmdbId: 2),
+  _arrival(
+    'Tears of Steel',
+    ago: const Duration(days: 1),
+    tmdbId: 3,
+    connectionName: '4K',
+  ),
+  _arrival('Sintel', ago: const Duration(days: 2), tmdbId: 4),
+];
+
+ResumeRow _resume(
+  String title,
+  String subtitle, {
+  required int season,
+  required int episode,
+  required int runtimeMinutes,
+  required int atMinute,
+}) => (
+  service: ServiceKey.jellyfin,
+  instanceId: '',
+  connectionName: null,
+  item: StreamItem(
+    id: '$title-$season-$episode',
+    title: title,
+    subtitle: subtitle,
+    kind: StreamItemKind.episode,
+    posterPath: null,
+    year: null,
+    runtimeMs: runtimeMinutes * 60000,
+    isPlayed: false,
+    resumeOffsetMs: atMinute * 60000,
+    unplayedChildCount: null,
+    seasonNumber: season,
+    episodeNumber: episode,
   ),
 );
 
@@ -460,6 +548,134 @@ void main() {
         ],
       ),
       CatalogScene(
+        'Continue watching · the series, the episode and how long is left, '
+        'over an ink bar',
+        (_) => const HomeContinueWatchingModule(),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          homeResumeProvider.overrideWith(
+            (ref) async => (
+              rows: [
+                _resume(
+                  'The Second Cycle',
+                  'Cosmos Laundromat · S2 E3',
+                  season: 2,
+                  episode: 3,
+                  runtimeMinutes: 24,
+                  atMinute: 19,
+                ),
+                _resume(
+                  'Harbour Lights',
+                  'Night Shift · S1 E2',
+                  season: 1,
+                  episode: 2,
+                  runtimeMinutes: 48,
+                  atMinute: 12,
+                ),
+              ],
+              coverage: SourceCoverage.answeredBy(ServiceKey.jellyfin),
+              viewerMissing: const <String>[],
+            ),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Continue watching · a server key and nobody chosen: Which Jellyfin '
+        'user are you?',
+        (_) => const HomeContinueWatchingModule(),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          homeResumeProvider.overrideWith(
+            (ref) async => (
+              rows: const <ResumeRow>[],
+              coverage: SourceCoverage.none,
+              viewerMissing: const ['jellyfin'],
+            ),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Coming up · today to Friday, three rows, the day leading and an '
+        'episode\'s time in its status',
+        (_) => const HomeComingUpModule(),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          libraryCalendarProvider.overrideWith(
+            (ref) async => _calendar(CalendarWorld.events),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Coming up · Lidarr did not answer, and nothing else by Friday: named, '
+        'then the calm line',
+        (_) => const HomeComingUpModule(),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          libraryCalendarProvider.overrideWith(
+            (ref) async => _calendar(
+              [CalendarWorld.disc],
+              silent: const [
+                (
+                  service: ServiceKey.lidarr,
+                  connectionId: 'lidarr',
+                  name: 'Lidarr',
+                  error: ClassifiedFailure(ServiceFailureReason.unreachable),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Arrived · the last seven days, one wide card per title, the newest '
+        'first',
+        (_) => const HomeArrivedModule(),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          arrivalsClockProvider.overrideWithValue(() => _now),
+          servicesArrivalsProvider.overrideWith(
+            (ref) async => (
+              entries: _week,
+              coverage: SourceCoverage.answeredBy(ServiceKey.radarr),
+            ),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Arrived · Radarr 4K did not answer: the count says who it is from',
+        (_) => const HomeArrivedModule(),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          arrivalsClockProvider.overrideWithValue(() => _now),
+          servicesArrivalsProvider.overrideWith(
+            (ref) async => (
+              entries: [
+                for (final entry in _week)
+                  if (entry.connectionName == null) entry,
+              ],
+              coverage: SourceCoverage.merge([
+                SourceCoverage.answeredBy(
+                  ServiceKey.radarr,
+                  instanceId: 'radarr',
+                ),
+                SourceCoverage.failure(
+                  ServiceKey.radarr,
+                  const ClassifiedFailure(ServiceFailureReason.unreachable),
+                  instanceId: '4K',
+                  name: '4K',
+                ),
+              ]),
+            ),
+          ),
+        ],
+      ),
+      CatalogScene(
         'EditHomeRow · the way to Edit Home, at the foot of the operator\'s '
         'Home',
         (_) => const EditHomeRow(),
@@ -489,6 +705,47 @@ void main() {
           currentSettingsProvider.overrideWith((ref) => _clientSettings),
           servicesInFlightProvider.overrideWith((ref) async => _evening),
           servicesArrHistoryProvider.overrideWith((ref) async => _noHistory),
+        ],
+      ),
+      CatalogScene(
+        'Text at 200% · Continue watching, Coming up and Arrived',
+        (_) => const Column(
+          children: [
+            HomeContinueWatchingModule(),
+            HomeComingUpModule(),
+            HomeArrivedModule(),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          homeResumeProvider.overrideWith(
+            (ref) async => (
+              rows: [
+                _resume(
+                  'The Second Cycle',
+                  'Cosmos Laundromat · S2 E3',
+                  season: 2,
+                  episode: 3,
+                  runtimeMinutes: 24,
+                  atMinute: 19,
+                ),
+              ],
+              coverage: SourceCoverage.answeredBy(ServiceKey.jellyfin),
+              viewerMissing: const <String>[],
+            ),
+          ),
+          libraryCalendarProvider.overrideWith(
+            (ref) async => _calendar(CalendarWorld.events),
+          ),
+          arrivalsClockProvider.overrideWithValue(() => _now),
+          servicesArrivalsProvider.overrideWith(
+            (ref) async => (
+              entries: _week,
+              coverage: SourceCoverage.answeredBy(ServiceKey.radarr),
+            ),
+          ),
         ],
       ),
     ],
