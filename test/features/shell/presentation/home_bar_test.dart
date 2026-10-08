@@ -1,0 +1,331 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+// ignore: implementation_imports
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/router.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
+import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
+import 'package:cupola/features/requests/presentation/requests_screen.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
+
+import '../../../test_helpers/fake_services.dart';
+
+/// The bar the Home arrives with: the operator's Home · Discover · Activity ·
+/// Stack, the requester's Home · Discover · Requests, Settings in neither, and
+/// the routes each may reach.
+void main() {
+  group('NavTab.barFor', () {
+    test('the operator has the control room, the requester has her '
+        'requests', () {
+      expect(NavTab.barFor(Audience.operator), [
+        NavTab.home,
+        NavTab.discover,
+        NavTab.activity,
+        NavTab.stack,
+      ]);
+      expect(NavTab.barFor(Audience.requester), [
+        NavTab.home,
+        NavTab.discover,
+        NavTab.requests,
+      ]);
+    });
+
+    test('Settings is in no bar', () {
+      for (final audience in Audience.values) {
+        expect(NavTab.barFor(audience), isNot(contains(NavTab.settings)));
+      }
+    });
+  });
+
+  group('the operator', () {
+    testWidgets('opens on the Home, with four tabs and no Settings', (
+      tester,
+    ) async {
+      final container = await _pump(tester, _operator);
+
+      expect(_location(container), ServiceRoutes.home);
+      expect(find.byType(HomeScreen), findsOneWidget);
+      for (final tab in NavTab.barFor(Audience.operator)) {
+        expect(_tab(tab), findsOneWidget, reason: tab.label);
+      }
+      expect(_tab(NavTab.requests), findsNothing);
+      expect(_tab(NavTab.settings), findsNothing);
+    });
+
+    testWidgets('Stack is the stack, and its gear opens Settings', (
+      tester,
+    ) async {
+      final container = await _pump(tester, _operator);
+
+      await tester.tap(_tab(NavTab.stack));
+      await tester.pumpAndSettle();
+      expect(_location(container), ServiceRoutes.stack);
+      expect(find.byType(StackScreen), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      expect(_location(container), ServiceRoutes.settings);
+      expect(find.byType(SettingsHomeScreen), findsOneWidget);
+    });
+
+    testWidgets('a location from the Dashboard lands on Stack in one hop, '
+        'query and all', (tester) async {
+      final container = await _pump(tester, _operator);
+
+      container.read(routerProvider).go('/dashboard/radarr/wanted?i=radarr');
+      await tester.pumpAndSettle();
+
+      expect(_location(container), '/stack/radarr/wanted?i=radarr');
+    });
+
+    testWidgets('a location from before the Dashboard lands there too', (
+      tester,
+    ) async {
+      final container = await _pump(tester, _operator);
+
+      container.read(routerProvider).go('/services/sonarr');
+      await tester.pumpAndSettle();
+
+      // Sonarr's node opens its first tab.
+      expect(_location(container), startsWith('/stack/sonarr'));
+    });
+
+    testWidgets('the requester\'s tab sends the operator to Seerr\'s '
+        'requests', (tester) async {
+      final container = await _pump(tester, _operator);
+
+      container.read(routerProvider).go(ServiceRoutes.requests);
+      await tester.pumpAndSettle();
+
+      expect(_location(container), ServiceRoutes.seerrRequests);
+    });
+  });
+
+  group('the requester', () {
+    testWidgets('opens on her Home, with Home, Discover and Requests', (
+      tester,
+    ) async {
+      final container = await _pump(tester, _requester);
+
+      expect(_location(container), ServiceRoutes.home);
+      for (final tab in NavTab.barFor(Audience.requester)) {
+        expect(_tab(tab), findsOneWidget, reason: tab.label);
+      }
+      for (final tab in [NavTab.activity, NavTab.stack, NavTab.settings]) {
+        expect(_tab(tab), findsNothing, reason: tab.label);
+      }
+    });
+
+    testWidgets('her account opens Settings', (tester) async {
+      final container = await _pump(tester, _requester);
+
+      await tester.tap(find.bySemanticsLabel('Anna, your account'));
+      await tester.pumpAndSettle();
+
+      expect(_location(container), ServiceRoutes.settings);
+    });
+
+    testWidgets('Requests is her tab', (tester) async {
+      final container = await _pump(tester, _requester);
+
+      await tester.tap(_tab(NavTab.requests));
+      await tester.pumpAndSettle();
+
+      expect(_location(container), ServiceRoutes.requests);
+      expect(find.byType(RequestsScreen), findsOneWidget);
+    });
+
+    for (final denied in [
+      '/activity',
+      '/activity/discover',
+      '/stack',
+      '/stack/radarr',
+      '/dashboard/sonarr',
+      '/import/review',
+    ]) {
+      testWidgets('$denied is the operator\'s, so she lands Home', (
+        tester,
+      ) async {
+        final container = await _pump(tester, _requester);
+
+        container.read(routerProvider).go(denied);
+        await tester.pumpAndSettle();
+
+        expect(_location(container), ServiceRoutes.home);
+      });
+    }
+  });
+
+  group('the desktop window', () {
+    setUp(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (_) async => null);
+    });
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    testWidgets('Settings waits at the foot of the rail, one ⌘, away', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      try {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final container = await _pump(
+          tester,
+          _operator,
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
+        expect(find.byTooltip('Settings  ⌘,'), findsOneWidget);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.comma);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+        await tester.pumpAndSettle();
+        expect(_location(container), ServiceRoutes.settings);
+
+        // ⌘1 is the first tab of the bar, the Home.
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+        await tester.pumpAndSettle();
+        expect(_location(container), ServiceRoutes.home);
+
+        await tester.tap(find.byTooltip('Settings  ⌘,'));
+        await tester.pumpAndSettle();
+        expect(_location(container), ServiceRoutes.settings);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  });
+
+  group('the shell\'s hold', () {
+    testWidgets('a new audience waits for the app to come back', (
+      tester,
+    ) async {
+      final container = await _pump(tester, _operator);
+      expect(container.read(shellAudienceProvider), Audience.operator);
+
+      // The operator signs in to a requester's account in Settings: every
+      // other connection goes, and the app is now for a requester.
+      container.read(_settings.notifier).state = _requester;
+      await tester.pumpAndSettle();
+      expect(container.read(audienceProvider), Audience.requester);
+      expect(container.read(shellAudienceProvider), Audience.operator);
+      expect(_tab(NavTab.stack), findsOneWidget);
+
+      final foreground = container.read(appInForegroundProvider.notifier);
+      foreground.set(false);
+      foreground.set(true);
+      await tester.pumpAndSettle();
+
+      expect(container.read(shellAudienceProvider), Audience.requester);
+      expect(_tab(NavTab.stack), findsNothing);
+      expect(_tab(NavTab.requests), findsOneWidget);
+    });
+  });
+}
+
+const _operator = SettingsModel(
+  instances: [
+    ServiceInstance(
+      id: 'radarr',
+      service: ServiceKey.radarr,
+      url: 'http://radarr.test',
+      credential: 'key',
+    ),
+  ],
+);
+
+const _requester = SettingsModel(
+  instances: [
+    ServiceInstance(
+      id: 'seerr',
+      service: ServiceKey.seerr,
+      url: 'http://seerr.test',
+      account: SeerrAccountSignIn(
+        kind: SeerrAccountKind.local,
+        login: 'anna@home.test',
+        userId: 7,
+        displayName: 'Anna',
+        session: 'session',
+        // REQUEST only: a household member, not a manager.
+        permissions: 32,
+      ),
+    ),
+  ],
+);
+
+/// The settings a test can change while the app runs.
+final _settings = StateProvider<SettingsModel>((ref) => _operator);
+
+/// A tab of the bar, by its glyph: the pill writes only the selected tab's
+/// name.
+Finder _tab(NavTab tab) => find.byWidgetPredicate(
+  (widget) =>
+      widget is Icon &&
+      (widget.icon == tab.icon || widget.icon == tab.selectedIcon),
+);
+
+String _location(ProviderContainer container) =>
+    container.read(routerProvider).state.uri.toString();
+
+Future<ProviderContainer> _pump(
+  WidgetTester tester,
+  SettingsModel settings, {
+  List<Override> overrides = const [],
+}) async {
+  final container = ProviderContainer(
+    overrides: [
+      ...overrides,
+      initialOnboardingCompletedProvider.overrideWith((ref) => true),
+      _settings.overrideWith((ref) => settings),
+      currentSettingsProvider.overrideWith((ref) => ref.watch(_settings)),
+      seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+      atriumTrendingProvider.overrideWith((ref) async => const []),
+      comingSoonProvider.overrideWith((ref) async => const []),
+    ],
+  );
+  addTearDown(container.dispose);
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(
+        routerConfig: container.read(routerProvider),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return container;
+}
