@@ -143,9 +143,9 @@ void main() {
     expect(
       arrivedCardLine(
         _import('Spring', ago: Duration.zero, connectionName: '4K'),
-        when: '2 h ago',
+        when: '2\u00A0h ago',
       ),
-      '2 h ago · Radarr 4K',
+      '2\u00A0h ago · Radarr 4K',
     );
     expect(
       arrivedCardLine(_import('Sintel', ago: Duration.zero), when: 'Sunday'),

@@ -68,7 +68,7 @@ void main() {
     expect(find.text('Jellyfin'), findsOne);
     expect(find.text('Cosmos Laundromat'), findsOne);
     expect(find.text('S2 E3 · The Second Cycle'), findsOne);
-    expect(find.text('5 min left'), findsOne);
+    expect(find.text('5\u00A0min left'), findsOne);
   });
 
   testWidgets('a Jellyfin that does not know who you are asks, once', (

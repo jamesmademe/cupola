@@ -78,13 +78,13 @@ void main() {
     ));
 
     expect(find.text('Last 7 days · 2 new'), findsOne);
-    expect(find.text('2 h ago · Radarr 4K'), findsOne);
+    expect(find.text('2\u00A0h ago · Radarr 4K'), findsOne);
     expect(
       tester.getTopLeft(find.text('Spring')).dx,
       lessThan(tester.getTopLeft(find.text('Sintel')).dx),
     );
     expect(
-      find.bySemanticsLabel(RegExp(r'^Spring, 2 h ago, Radarr 4K$')),
+      find.bySemanticsLabel(RegExp(r'^Spring, 2\u00A0h ago, Radarr 4K$')),
       findsOne,
     );
     handle.dispose();

@@ -60,8 +60,8 @@ void main() {
   });
 
   test('how long is left, only when both halves are known', () {
-    expect(resumeLeft(jellyfinEpisode), '5 min left');
-    expect(resumeLeft(movie), '10 min left');
+    expect(resumeLeft(jellyfinEpisode), '5\u00A0min left');
+    expect(resumeLeft(movie), '10\u00A0min left');
     expect(resumeLeft(plexEpisode), isNull);
   });
 }
