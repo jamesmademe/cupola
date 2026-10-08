@@ -462,6 +462,10 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
       runtime: nowPlaying['RunTimeTicks'],
     ),
     isPaused: playState['IsPaused'] == true,
+    remaining: jellyfinRemainingFromTicks(
+      position: playState['PositionTicks'],
+      runtime: nowPlaying['RunTimeTicks'],
+    ),
   );
 }
 

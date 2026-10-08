@@ -94,6 +94,21 @@ double? jellyfinFractionFromTicks({
   return (positionTicks / runtimeTicks).clamp(0.0, 1.0);
 }
 
+/// What is left of a runtime at a position, both in ticks, or null when
+/// either is missing or the pair makes no sense.
+Duration? jellyfinRemainingFromTicks({
+  required Object? position,
+  required Object? runtime,
+}) {
+  final positionTicks = jellyfinTicks(position);
+  final runtimeTicks = jellyfinTicks(runtime);
+  if (positionTicks == null || runtimeTicks == null) return null;
+  if (runtimeTicks <= 0 || positionTicks < 0) return null;
+  final left = runtimeTicks - positionTicks;
+  // A tick is 100 ns: ten to a microsecond.
+  return Duration(microseconds: (left < 0 ? 0 : left) ~/ 10);
+}
+
 /// `PlayedPercentage` (0–100) → a 0–1 fraction.
 ///
 /// The scale is the trap: this field is a percentage while every other progress

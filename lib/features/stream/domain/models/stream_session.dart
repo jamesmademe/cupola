@@ -105,6 +105,11 @@ class StreamSession {
 
   final bool isPaused;
 
+  /// How long is left of the item, from its runtime and the position the
+  /// server reports, or null when it reports either not. Not a clock: a
+  /// session paused for an hour still has nine minutes left.
+  final Duration? remaining;
+
   const StreamSession({
     required this.id,
     required this.userName,
@@ -118,6 +123,7 @@ class StreamSession {
     required this.bitrateIsNominal,
     required this.progress,
     required this.isPaused,
+    this.remaining,
   });
 
   /// Whether this session is the reason you would look at the board.

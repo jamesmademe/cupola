@@ -328,6 +328,11 @@ StreamSession? plexSessionFromJson(Map<String, dynamic> json) {
         ? (viewOffsetMs / durationMs).clamp(0.0, 1.0)
         : null,
     isPaused: plexString(player?['state'])?.toLowerCase() == 'paused',
+    remaining: durationMs != null && durationMs > 0 && viewOffsetMs != null
+        ? Duration(
+            milliseconds: (durationMs - viewOffsetMs).clamp(0, durationMs),
+          )
+        : null,
   );
 }
 
