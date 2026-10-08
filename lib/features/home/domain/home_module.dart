@@ -73,6 +73,14 @@ enum HomeModule {
     services: [ServiceKey.seerr],
   ),
 
+  /// Who is watching what, and on which screen.
+  nowPlaying(
+    audience: Audience.operator,
+    label: 'Now playing',
+    line: 'Who is watching, and on which screen',
+    services: [ServiceKey.jellyfin, ServiceKey.plex],
+  ),
+
   /// The services that would add to this Home.
   setUpNext(
     audience: Audience.operator,

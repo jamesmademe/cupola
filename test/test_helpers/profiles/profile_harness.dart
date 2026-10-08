@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_access_registry.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import '../settings_scope.dart';
@@ -15,7 +16,8 @@ import 'profile_network.dart';
 /// start the app on its settings and its lens.
 ///
 /// The overrides are **only the startup ones** — settings, secure store,
-/// onboarding, the lens map. No service provider is overridden: every Radarr,
+/// onboarding, the lens map — and the Home's poll. No service provider is
+/// overridden: every Radarr,
 /// Seerr, qBittorrent, TrueNAS and Dockge client is the app's own, built by
 /// the app's own providers, and reaches [network] through `HttpOverrides`.
 /// A test that needs to pin something higher up passes it in `overrides`.
@@ -36,6 +38,10 @@ class ProfileHarness {
     return ProfileHarness._(profile, network, [
       ...await settingsScopeOverrides(customize: (_) => profile.settings),
       initialActiveInstancesProvider.overrideWithValue(profile.lens),
+      // The Home's thirty-second poll, off: a profile is read once, and the
+      // poll's timer would outlive a container disposed at teardown. The
+      // poll has its own test.
+      homeLivePollProvider.overrideWith((ref) {}),
       ...overrides,
     ]);
   }

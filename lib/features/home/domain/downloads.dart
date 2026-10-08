@@ -1,0 +1,131 @@
+/// The words of the Home's Downloads module: what is moving, what is stuck,
+/// and how fast, read at a glance from four rows.
+///
+/// The module draws the transfers that move and the ones that stopped
+/// moving, each with its remedy in the row. A finished download the arr will
+/// not import is not a download any more: Needs you leads with it, and the
+/// module names it once in its footnote.
+///
+/// No sizes: how much of a file has landed is the client's page's business.
+/// A row says how far it got and how long it has left, and the stuck one says
+/// where it stopped.
+library;
+
+import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/duration_format.dart';
+import 'package:cupola/core/utils/percent_format.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/features/services/domain/in_flight.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
+
+/// How many rows the module draws before See all in Activity.
+const downloadsRowLimit = 4;
+
+/// The faults a download row carries: the ones whose remedy is another
+/// download. A blocked import is downloaded already, and stays in Needs you.
+bool isDownloadFault(InFlightFault? fault) =>
+    fault == InFlightFault.stalled || fault == InFlightFault.failed;
+
+/// Which of [moving] and [stuck] the module draws, in drawing order: the
+/// moving ones as their queue orders them, then the stuck ones.
+///
+/// The stuck ones are chosen first, because each carries a remedy and a
+/// moving download needs nothing; the moving ones fill what is left of
+/// [limit].
+List<T> downloadRowsOf<T>(
+  List<T> moving,
+  List<T> stuck, {
+  int limit = downloadsRowLimit,
+}) {
+  final faults = stuck.take(limit).toList(growable: false);
+  return [...moving.take(limit - faults.length), ...faults];
+}
+
+/// The line under the module's name: `3 moving · 1 stuck · 40.4 MB/s`.
+///
+/// The counts are over the queues [coverage] read, a floor when a walk
+/// stopped short. The speed is the download clients' own rates added up, and
+/// only theirs: an arr reports none. It reads `—` while a client that is set
+/// up did not answer, since the sum of the others would understate it, and it
+/// is left out when no client is set up at all ([clientSetUp]): the module
+/// then says where speeds come from.
+String downloadsSubtitle({
+  required int moving,
+  required int stuck,
+  required bool clientSetUp,
+  bool clientSilent = false,
+  int? rateBytesPerSecond,
+  SourceCoverage coverage = SourceCoverage.none,
+}) {
+  if (moving == 0 && stuck == 0) return 'Nothing moving';
+  final speed = !clientSetUp
+      ? null
+      : clientSilent
+      ? Lexicon.noFigure
+      : rateBytesPerSecond == null
+      ? null
+      : formatBytesPerSecond(rateBytesPerSecond);
+  return [
+    if (moving > 0 || stuck == 0) '${coveredFigure(moving, coverage)} moving',
+    if (stuck > 0) '${coveredFigure(stuck, coverage)} stuck',
+    ?speed,
+  ].join(' · ');
+}
+
+/// [downloadsSubtitle] as a screen reader should say it: the dash as an
+/// unknown speed, each part on its own pause, a floor as `at least`.
+String spokenDownloadsSubtitle(String subtitle) => subtitle
+    .split('·')
+    .map((part) => part.trim())
+    .map(
+      (part) =>
+          part == Lexicon.noFigure ? 'speed unknown' : spokenCountPhrase(part),
+    )
+    .join(', ');
+
+/// What a moving row says beside its title: `88% · 1 min`, either half
+/// alone when the other is unknown, empty when both are.
+String movingValue({int? percent, int? etaSeconds}) => [
+  if (percent != null) formatPercent(percent),
+  if (etaSeconds != null && etaSeconds >= 0)
+    formatTimeSpan(Duration(seconds: etaSeconds)),
+].join(' · ');
+
+/// What a stuck row says beside its title: where it stopped, `Stuck at
+/// 47%`, or that it failed.
+String stuckValue(InFlightFault fault, {int? percent}) => switch (fault) {
+  InFlightFault.failed => StateWord.failed.label,
+  InFlightFault.stalled || InFlightFault.needsImport =>
+    percent == null
+        ? StateWord.stuck.label
+        : '${StateWord.stuck.label} at ${formatPercent(percent)}',
+};
+
+/// A row's value as a screen reader should say it: `88 percent, 1 min left`.
+String spokenMovingValue({int? percent, int? etaSeconds}) => [
+  if (percent != null) '${spokenPercent(percent)} done',
+  if (etaSeconds != null && etaSeconds >= 0)
+    '${formatTimeSpan(Duration(seconds: etaSeconds))} left',
+].join(', ');
+
+/// The calm line under `Nothing is downloading`: when the last download
+/// arrived in a library, from the imports Arrived reads.
+///
+/// `The last download finished at 18:52.` today, `yesterday at 18:52`, the
+/// weekday within the week; null past a week, and when nothing says.
+String? lastFinishedLine(DateTime? at, {required DateTime now}) {
+  if (at == null) return null;
+  final local = at.toLocal();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(local.year, local.month, local.day);
+  final daysAgo = today.difference(day).inDays;
+  final when = switch (daysAgo) {
+    0 => 'at ${formatClockTime(local)}',
+    1 => 'yesterday at ${formatClockTime(local)}',
+    > 1 && < 7 => 'on ${weekdayName(local)}',
+    _ => null,
+  };
+  if (when == null) return null;
+  return 'The last download finished $when.';
+}

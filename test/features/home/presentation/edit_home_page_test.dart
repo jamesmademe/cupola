@@ -25,7 +25,8 @@ void main() {
   }) async {
     SharedPreferences.setMockInitialValues(stored);
     prefs = await SharedPreferences.getInstance();
-    tester.view.physicalSize = const Size(1206, 2622);
+    // Tall enough for the whole page: a list builds only what it shows.
+    tester.view.physicalSize = const Size(1206, 3600);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final container = ProviderContainer(
@@ -56,8 +57,8 @@ void main() {
       expect(find.text(module.label), findsOneWidget, reason: module.label);
     }
     expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
-    // Needs you has no switch; the three ordered modules and Set up next do.
-    expect(find.byType(Switch), findsNWidgets(4));
+    // Needs you has no switch; the four ordered modules and Set up next do.
+    expect(find.byType(Switch), findsNWidgets(5));
     final reset = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
     expect(reset.onPressed, isNull);
     // The other person's default, from the registry.
@@ -83,6 +84,7 @@ void main() {
       HomeModule.downloads,
       HomeModule.arrived,
       HomeModule.requests,
+      HomeModule.nowPlaying,
     ]);
     final saved = HomeLayout.read(
       prefs.getString('home_layout_operator'),

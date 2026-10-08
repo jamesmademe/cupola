@@ -1,12 +1,11 @@
-/// The Home's modules that grew out of the Dashboard's regions: what waits
-/// for an answer, what is moving, what arrived.
+/// What is left of the Dashboard's regions on the Home: Arrived, and the row
+/// a decision draws (Needs you's lead, the Requests module's rows).
 ///
-/// Each draws in the module frame (`HomeModuleFrame`) and its five states:
-/// a skeleton while its sources are out, its rows when they answered, nothing
-/// when they had nothing to say, the classified fault when every one of them
-/// failed. The rows are the Dashboard's, kept until each module is redrawn on
-/// its own; what needs a decision went to Needs you, which leads with one line
-/// and opens the place a fault is fixed.
+/// Arrived draws in the module frame (`HomeModuleFrame`) and its five
+/// states: a skeleton while its sources are out, its rows when they answered,
+/// nothing when they had nothing to say, the classified fault when every one
+/// of them failed. Downloads, Requests and Now playing are drawn on their own
+/// (`lib/features/home/presentation/widgets/`).
 library;
 
 import 'package:flutter/material.dart';
@@ -15,7 +14,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
-import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
@@ -23,12 +21,10 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
-import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
-import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -42,10 +38,11 @@ import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
+import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
-import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
@@ -56,210 +53,6 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
-
-/// Requests: the requests waiting for the operator's answer, with Approve and
-/// Decline in the row.
-///
-/// Absent when nothing waits and when no Seerr is set up: a module with
-/// nothing to say steps aside. Never in Needs you: a request is somebody
-/// waiting politely, not something that stopped working.
-class HomeRequestsModule extends ConsumerWidget {
-  const HomeRequestsModule({super.key});
-
-  static const _title = 'Requests';
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.seerr),
-      ),
-    )) {
-      return const SizedBox.shrink();
-    }
-    final read = ref.watch(
-      dashboardDecisionSourceProvider(DecisionSource.requests),
-    );
-    final value = read.value;
-    if (value == null) {
-      if (read.hasError) {
-        final coverage = SourceCoverage.failure(ServiceKey.seerr, read.error);
-        return HomeModuleFrame.silent(
-          title: _title,
-          coverage: coverage,
-          onRetry: () => retryDashboardServices(ref, const [ServiceKey.seerr]),
-        );
-      }
-      return const HomeModuleFrame.loading(title: _title);
-    }
-    final coverage = value.coverage;
-    final requests = [
-      for (final decision in value.decisions)
-        if (decision.kind == DecisionKind.pendingRequest) decision,
-    ];
-    if (requests.isEmpty) {
-      // With one Seerr silent, its requests are unknown, not absent.
-      if (coverage.failed.isNotEmpty) {
-        return HomeModuleFrame.silent(
-          title: _title,
-          coverage: coverage,
-          onRetry: () => retryDashboardServices(ref, coverage.failedServices),
-        );
-      }
-      return const SizedBox.shrink();
-    }
-
-    final cap = decisionCapFor(
-      desktopShell: AppBreakpoints.isDesktopShell(context),
-      compact: AppBreakpoints.isCompactDesktop(context),
-    );
-    final shown = rankDecisions(requests, cap: cap);
-    final count = coverage.isFloor
-        ? Lexicon.floor(requests.length)
-        : '${requests.length}';
-    final waits = requests.length == 1 && !coverage.isFloor
-        ? '$count waits for you'
-        : '$count wait for you';
-    final note = coverageNote(coverage);
-
-    return HomeModuleFrame(
-      title: _title,
-      subtitle: waits,
-      semanticLabel: joinSpokenParts([
-        _title,
-        spokenCountPhrase(waits),
-        if (note != null) spokenFromDotted(note),
-      ]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (note != null) _CoverageNote(note: note, coverage: coverage),
-          for (final (index, decision) in shown.indexed)
-            DecisionRow(
-              key: ValueKey(decision.id),
-              decision: decision,
-              divided: index > 0,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Downloads: what is moving right now, from every queue.
-///
-/// Active transfers only. A stalled one is not moving, it is a fault: Needs
-/// you counts it, and the footnote here says where it went rather than letting
-/// this count disagree with the client's own queue depth. Nothing moving is a
-/// calm line, not an absence: the queue was read and is quiet.
-class HomeDownloadsModule extends ConsumerWidget {
-  const HomeDownloadsModule({super.key});
-
-  static const _title = 'Downloads';
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(currentSettingsProvider);
-    if (!HomeModule.downloads.services.any(settings.isServiceConfigured)) {
-      return const SizedBox.shrink();
-    }
-
-    final inFlight = ref.watch(servicesInFlightProvider);
-    final data = inFlight.asData?.value;
-    if (data == null) {
-      if (inFlight.hasError) {
-        return HomeModuleFrame.silent(
-          title: _title,
-          coverage: SourceCoverage.merge([
-            for (final service in HomeModule.downloads.services)
-              if (settings.isServiceConfigured(service))
-                SourceCoverage.failure(service, inFlight.error),
-          ]),
-          onRetry: () => ref.invalidate(servicesQueueProvider),
-        );
-      }
-      return const HomeModuleFrame.loading(title: _title);
-    }
-    if (data.coverage.everySourceFailed) {
-      return HomeModuleFrame.silent(
-        title: _title,
-        coverage: data.coverage,
-        onRetry: () =>
-            retryDashboardServices(ref, data.coverage.failedServices),
-      );
-    }
-
-    // The count, never the preview's length: the rows are capped and the
-    // line states a total, over the sources that answered and only them.
-    final eyebrow = inFlightEyebrow(
-      active: data.activeCount,
-      rateBytesPerSecond: data.rateBytesPerSecond,
-      clients: data.clients,
-      coverage: data.coverage,
-    );
-    final note = coverageNote(data.coverage);
-    int faultsOf(InFlightFault fault) =>
-        data.faults.where((item) => item.fault == fault).length;
-    final footnote = inFlightFaultFootnote(
-      stalled: faultsOf(InFlightFault.stalled),
-      needsImport: faultsOf(InFlightFault.needsImport),
-      failed: faultsOf(InFlightFault.failed),
-      // The faults are rows of the same walks the line counts: a walk cut
-      // short makes them floors too.
-      coverage: data.coverage,
-    );
-    final room = CupolaRoom.of(context);
-
-    return HomeModuleFrame(
-      title: _title,
-      subtitle: eyebrow,
-      semanticLabel: joinSpokenParts([
-        _title,
-        spokenCountPhrase(spokenFromDotted(eyebrow)),
-        if (note != null) spokenFromDotted(note),
-      ]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (note != null) _CoverageNote(note: note, coverage: data.coverage),
-          if (data.preview.isEmpty)
-            _SectionEmptyLabel(
-              // An empty transfer list is a fact about the queue, so name the
-              // queue, and only call it empty when it is: not over a footnote
-              // counting what it holds, nor over a source that did not answer.
-              label: inFlightEmptyLabel(
-                faults: data.faults.length,
-                held: data.held,
-                whole: data.coverage.isWhole,
-              ),
-            )
-          else
-            for (final (index, item) in data.preview.indexed)
-              _InFlightRow(
-                // With the connection: two Radarr both number their queues
-                // from one.
-                key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
-                item: item,
-                divided: index > 0,
-              ),
-          if (footnote != null)
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.xs),
-              child: Text(
-                footnote,
-                semanticsLabel: spokenFaultFootnote(footnote),
-                style: AppType.meta.copyWith(color: room.inkSecondary),
-              ),
-            ),
-          _ModuleLink(
-            label: 'See all in Activity',
-            onTap: () => context.go(ServiceRoutes.activity),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 /// Arrived: what the arrs imported, newest first.
 ///
@@ -337,7 +130,8 @@ class HomeArrivedModule extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _ImportCounts(imported: counts.imported, failed: counts.failed),
-          if (note != null) _CoverageNote(note: note, coverage: read.coverage),
+          if (note != null)
+            HomeCoverageNote(note: note, coverage: read.coverage),
           const SizedBox(height: AppSpacing.sm),
           // The phone gets the rail; anything with room gets rows, which can
           // carry the title, the time and the service without truncating any
@@ -694,9 +488,18 @@ void _openRecentlyAdded(BuildContext context, RecentlyAddedItem item) {
 /// here for the list of everything that needs the operator, which Needs you
 /// leads to and Activity will draw.
 class DecisionRow extends ConsumerWidget {
-  const DecisionRow({super.key, required this.decision, this.divided = false});
+  const DecisionRow({
+    super.key,
+    required this.decision,
+    this.divided = false,
+    this.outcome,
+  });
 
   final DashboardDecision decision;
+
+  /// What happened to it once answered here (`Approved · sent to Radarr`):
+  /// the row says so in place of its detail, without its controls.
+  final String? outcome;
 
   /// Whether a hairline separates it from the row above: every row of a
   /// module but its first.
@@ -731,15 +534,17 @@ class DecisionRow extends ConsumerWidget {
         container: true,
         button: true,
         label: decision.title,
-        value: decisionRowSpokenValue(
-          serviceTitle: decision.service.title,
-          detail: decision.detail,
-          actionLabel: decisionActionLabel(
-            decision.kind,
-            target: decision.actionTarget,
-            renewable: decision.renewable,
-          ),
-        ),
+        value: outcome != null
+            ? spokenFromDotted(outcome!)
+            : decisionRowSpokenValue(
+                serviceTitle: decision.service.title,
+                detail: decision.detail,
+                actionLabel: decisionActionLabel(
+                  decision.kind,
+                  target: decision.actionTarget,
+                  renewable: decision.renewable,
+                ),
+              ),
         onTap: open,
         child: InkWell(
           onTap: open,
@@ -781,11 +586,11 @@ class DecisionRow extends ConsumerWidget {
                                 ),
                               ),
                               Text(
-                                decision.detail,
+                                outcome ?? decision.detail,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: decision.isFault
+                                  color: decision.isFault && outcome == null
                                       ? toneColor
                                       : colorScheme.onSurfaceVariant,
                                 ),
@@ -798,7 +603,7 @@ class DecisionRow extends ConsumerWidget {
                   ),
                 ),
                 // Not excluded: these are the point of the row.
-                _DecisionControls(decision: decision),
+                if (outcome == null) _DecisionControls(decision: decision),
               ],
             ),
           ),
@@ -820,7 +625,7 @@ Future<void> openDecision(
   // A page that reads the lens opens on the connection the row came off: see
   // [DecisionKindRank.opensUnderLens].
   if (decision.kind.opensUnderLens) {
-    await _bringUnderLens(ref, decision.service, decision.instanceId);
+    await bringUnderLens(ref, decision.service, decision.instanceId);
     if (!context.mounted) return;
   }
   // A title's own page opens under this tab.
@@ -848,9 +653,12 @@ class _DecisionControls extends ConsumerWidget {
         children: [
           RoleGatedAction.builder(
             verdict: decide,
-            onTap: () {
+            onTap: () async {
               if (id == null) return;
-              ActivityActions.approveRequest(
+              // Held before the wait: the row goes once Seerr's list is
+              // read again, and its answer stays in its place.
+              final answered = ref.read(answeredRequestsProvider.notifier);
+              final outcome = await ActivityActions.approveRequest(
                 context,
                 ref,
                 // The Seerr the request came off: the region reads every
@@ -859,6 +667,7 @@ class _DecisionControls extends ConsumerWidget {
                 requestId: id,
                 title: decision.title,
               );
+              if (outcome != null) answered.answer(decision, outcome);
             },
             builder: (context, onPressed, annotate) =>
                 _RequestDecisionButton.approve(
@@ -869,15 +678,17 @@ class _DecisionControls extends ConsumerWidget {
           ),
           RoleGatedAction.builder(
             verdict: decide,
-            onTap: () {
+            onTap: () async {
               if (id == null) return;
-              ActivityActions.declineRequest(
+              final answered = ref.read(answeredRequestsProvider.notifier);
+              final declined = await ActivityActions.declineRequest(
                 context,
                 ref,
                 instanceId: decision.instanceId,
                 requestId: id,
                 title: decision.title,
               );
+              if (declined) answered.answer(decision, 'Declined');
             },
             builder: (context, onPressed, annotate) =>
                 _RequestDecisionButton.decline(
@@ -974,7 +785,7 @@ Future<void> _runDecision(
       // is brought under the lens first: with two qBittorrent, "Open in
       // qBittorrent" on the seedbox's stall opened the one at home.
       final target = decision.actionTarget;
-      await _bringUnderLens(ref, target, decision.actionInstanceId);
+      await bringUnderLens(ref, target, decision.actionInstanceId);
       if (!context.mounted) return;
       context.go(ServiceRoutes.forService(target));
     case DecisionKind.importBlocked:
@@ -1047,7 +858,7 @@ Future<void> _runDecision(
       // an uploaded certificate is listed for replacing: the service's root
       // is its Overview, which offers no writes at all. It reads the lens, so
       // the certificate's own NPM is brought under it first.
-      await _bringUnderLens(
+      await bringUnderLens(
         ref,
         ServiceKey.nginxProxyManager,
         decision.instanceId,
@@ -1064,7 +875,7 @@ Future<void> _runDecision(
 /// removed. A Dockge connection opens on its hub: the agent the lens was
 /// looking through belongs to the connection it leaves, and a decision read
 /// off another connection was read off its hub.
-Future<void> _bringUnderLens(
+Future<void> bringUnderLens(
   WidgetRef ref,
   ServiceKey service,
   String instanceId,
@@ -1227,77 +1038,6 @@ class _RequestDecisionButton extends StatelessWidget {
   }
 }
 
-/// One transfer, in the grammar every client shares.
-///
-/// `2160p · 14.0 of 15.2 GB · 3 min left · qBittorrent`, in tabular figures
-/// so a column of them lines up — see `domain/in_flight.dart` for why the four
-/// fields are the four fields.
-class _InFlightRow extends StatelessWidget {
-  const _InFlightRow({super.key, required this.item, this.divided = false});
-
-  final ServiceQueueItem item;
-  final bool divided;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final percent = item.progress == null
-        ? null
-        : wholePercent(item.progress! * 100);
-    // The primary ink, not the source service's colour, for both the figure and
-    // the bar. Contrast: SABnzbd's gold measured about 1.9:1 as `labelSmall` on
-    // the light card and NZBGet's green about 2.9:1, well under AA. Identity:
-    // eight download sources each putting a hue on a percentage said nothing
-    // the row's name did not. Walked against the row's card.
-    final accent = ServiceTheme.onTint(
-      colorScheme.primary,
-      surface: colorScheme.surfaceContainer,
-      tintAlpha: 0,
-    );
-    final line = formatInFlightLine(
-      // A client's own row is named by its client label already.
-      connection:
-          item.connectionName == null || item.clientService == item.service
-          ? null
-          : serviceWithConnection(
-              item.service,
-              item.connectionName,
-              joiner: ' ',
-            ),
-      quality: item.quality,
-      doneBytes: item.doneBytes,
-      totalBytes: item.totalBytes,
-      etaSeconds: item.etaSeconds,
-      client: item.clientLabel,
-    );
-
-    return _CompactListRow(
-      icon: item.service.icon,
-      title: item.title,
-      subtitle: line,
-      tabularSubtitle: true,
-      trailing: percent == null
-          // Nothing at all when the client reports no progress. It used to print
-          // "DL", an abbreviation that says nothing, in the slot where every
-          // other row shows a number — so it read as a value rather than as its
-          // absence.
-          ? const SizedBox.shrink()
-          : Text(
-              formatPercent(percent),
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.weight(FontWeight.w600)
-                  .tabular
-                  .copyWith(color: accent),
-            ),
-      semanticValue: inFlightRowValue(line: line, percent: percent),
-      progressValue: item.progress,
-      progressColor: item.progress == null ? null : accent,
-      onTap: () => context.go('/activity'),
-      divided: divided,
-    );
-  }
-}
-
 class _HeroContentCard extends StatelessWidget {
   final String? heroTag;
   final String imageUrl;
@@ -1327,18 +1067,9 @@ class _CompactListRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-
-  /// Whether [subtitle] is a data line rather than prose.
-  ///
-  /// The in-flight row's fields are figures that update in place, so the line
-  /// takes tabular digits (the Tabular Rule). It stays in the text face:
-  /// figures are never mono, which is for machine strings only.
-  final bool tabularSubtitle;
   final String? imageUrl;
   final String? heroTag;
   final Widget trailing;
-  final double? progressValue;
-  final Color? progressColor;
   final VoidCallback onTap;
 
   /// Whether a hairline separates it from the row above.
@@ -1359,11 +1090,8 @@ class _CompactListRow extends StatelessWidget {
     required this.trailing,
     required this.semanticValue,
     required this.onTap,
-    this.tabularSubtitle = false,
     this.imageUrl,
     this.heroTag,
-    this.progressValue,
-    this.progressColor,
     this.divided = false,
   });
 
@@ -1430,22 +1158,8 @@ class _CompactListRow extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: tabularSubtitle
-                          ? subtitleStyle?.tabular
-                          : subtitleStyle,
+                      style: subtitleStyle,
                     ),
-                    if (progressColor != null) ...[
-                      const SizedBox(height: 5),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: progressValue,
-                          minHeight: 3,
-                          color: progressColor,
-                          backgroundColor: colorScheme.outlineVariant,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -1454,108 +1168,6 @@ class _CompactListRow extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// The way from a module to the page it continues on: `See all in Activity`,
-/// a quiet row at the module's foot with its chevron, 44pt tall.
-class _ModuleLink extends StatelessWidget {
-  const _ModuleLink({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    return Semantics(
-      button: true,
-      label: label,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.borderRadiusSm,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppType.meta
-                      .weight(FontWeight.w600)
-                      .copyWith(color: room.inkSecondary),
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: room.inkSecondary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// What a dashboard section says when its sources answered and had nothing.
-///
-/// Only then. A source that did not answer, or answered with a refusal, is not
-/// an empty library, and the section says so from the read itself — the line
-/// under its figure ([_CoverageNote]) when some sources answered, the
-/// module's fault (`HomeModuleFrame.silent`) when none did. Before the read carried that, a
-/// browse that degraded to `[]` arrived here exactly like an empty one, and the
-/// merged regions printed the empty copy over a missing connection.
-class _SectionEmptyLabel extends StatelessWidget {
-  const _SectionEmptyLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// The line under a total that leaves sources out: `Not in the total:
-/// SABnzbd`.
-///
-/// A [FaultNote] — the tone on one glyph, the sentence in secondary ink — and
-/// silent to a screen reader, because the section header already speaks it as
-/// part of its one sentence: a figure and the fact that qualifies it are one
-/// thing to hear, not two stops.
-class _CoverageNote extends StatelessWidget {
-  const _CoverageNote({required this.note, required this.coverage});
-
-  final String note;
-  final SourceCoverage coverage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: ExcludeSemantics(
-        child: coverage.anyDidNotAnswer
-            ? FaultNote.unreachable(message: note)
-            : FaultNote.fault(message: note),
       ),
     );
   }

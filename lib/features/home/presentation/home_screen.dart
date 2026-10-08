@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
@@ -11,11 +12,17 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
+import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
+import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
+import 'package:cupola/features/home/presentation/widgets/now_playing_module.dart';
+import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
 import 'package:cupola/features/home/presentation/widgets/set_up_next_module.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
@@ -26,6 +33,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 
 /// The first tab: today, and the modules the person keeps on it.
 ///
@@ -63,6 +71,9 @@ class HomeScreen extends ConsumerWidget {
       (s) => !settings.hasServiceConnection(s),
     );
     final layout = ref.watch(homeLayoutProvider);
+    // Downloads and Now playing, read again every thirty seconds while this
+    // is the page on screen; the requester's Home has neither.
+    if (!requester) ref.watchWhileLive(context, homeLivePollProvider);
 
     return RefreshOnReturn(
       id: 'home',
@@ -110,6 +121,7 @@ Widget homeModuleView(HomeModule module) => switch (module) {
   HomeModule.arrived => const HomeArrivedModule(),
   HomeModule.downloads => const HomeDownloadsModule(),
   HomeModule.requests => const HomeRequestsModule(),
+  HomeModule.nowPlaying => const HomeNowPlayingModule(),
   HomeModule.setUpNext => const SetUpNextModule(),
   HomeModule.trending => const _TrendingShelf(),
   HomeModule.comingSoon => const _ComingSoonShelf(),
@@ -202,6 +214,7 @@ Future<void> _refreshHome(WidgetRef ref) async {
     for (final source in DecisionSource.values)
       settle(ref.read(dashboardDecisionSourceProvider(source).future)),
     settle(ref.read(servicesRecentlyAddedProvider.future)),
+    settle(ref.read(streamActivityProvider.future)),
   ]);
 }
 
@@ -210,6 +223,12 @@ void _invalidateHome(WidgetRef ref) {
     ref.invalidate(atriumTrendingProvider);
     ref.invalidate(comingSoonProvider);
     return;
+  }
+  // The rows answered since the last read give way to Seerr's list.
+  ref.read(answeredRequestsProvider.notifier).clear();
+  ref.invalidate(pendingRequestsForProvider);
+  for (final source in homeSessionsSources) {
+    ref.invalidate(source);
   }
   // The header's question, asked again of every server: whether it answers.
   ref.invalidate(instanceSummaryProvider);

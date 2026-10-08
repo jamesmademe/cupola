@@ -47,7 +47,7 @@ List<SetUpSuggestion> setUpNextOf(bool Function(ServiceKey) isSetUp) {
       (
         service: ServiceKey.jellyfin,
         title: Lexicon.setUp(ServiceKey.jellyfin.title),
-        line: 'Play on every title, and who is watching',
+        line: 'Play on every title, and Now playing',
       ),
     if (!any(const [
       ServiceKey.qbittorrent,

@@ -22,6 +22,7 @@ void main() {
         HomeModule.arrived,
         HomeModule.downloads,
         HomeModule.requests,
+        HomeModule.nowPlaying,
         HomeModule.setUpNext,
       ]);
       expect(HomeModule.of(requester), [
@@ -40,6 +41,7 @@ void main() {
         HomeModule.arrived,
         HomeModule.downloads,
         HomeModule.requests,
+        HomeModule.nowPlaying,
       ]);
     });
 
@@ -83,12 +85,13 @@ void main() {
       final layout = HomeLayout.read(
         stored(
           ['requests', 'featured', 'trending', 'downloads', 'arrived'],
-          hidden: ['nowPlaying', 'comingSoon'],
+          hidden: ['storage', 'comingSoon'],
         ),
         operator,
       );
       expect(layout.order, [
         HomeModule.requests,
+        HomeModule.nowPlaying,
         HomeModule.downloads,
         HomeModule.arrived,
       ]);
@@ -96,11 +99,13 @@ void main() {
     });
 
     test('a module the layout does not know enters at its default place', () {
-      // Written before Downloads existed: it lands after Arrived, which
-      // precedes it by default, wherever the person moved Arrived to.
+      // Written before Downloads and Now playing existed: each lands after
+      // the module that precedes it by default, wherever the person moved
+      // that one to.
       final layout = HomeLayout.read(stored(['requests', 'arrived']), operator);
       expect(layout.order, [
         HomeModule.requests,
+        HomeModule.nowPlaying,
         HomeModule.arrived,
         HomeModule.downloads,
       ]);
@@ -126,6 +131,7 @@ void main() {
       );
       expect(layout.order, [
         HomeModule.requests,
+        HomeModule.nowPlaying,
         HomeModule.downloads,
         HomeModule.arrived,
       ]);
@@ -143,6 +149,7 @@ void main() {
         HomeModule.downloads,
         HomeModule.arrived,
         HomeModule.requests,
+        HomeModule.nowPlaying,
       ]);
     });
 
@@ -158,6 +165,7 @@ void main() {
         HomeModule.needsYou,
         HomeModule.requests,
         HomeModule.arrived,
+        HomeModule.nowPlaying,
       ]);
     });
 
@@ -172,11 +180,12 @@ void main() {
 
     test('a move is clamped to the ends of the order', () {
       expect(layout.moved(HomeModule.arrived, -1), same(layout));
-      expect(layout.moved(HomeModule.requests, 5), same(layout));
+      expect(layout.moved(HomeModule.nowPlaying, 5), same(layout));
       expect(layout.moved(HomeModule.arrived, 1).order, [
         HomeModule.downloads,
         HomeModule.arrived,
         HomeModule.requests,
+        HomeModule.nowPlaying,
       ]);
       expect(
         layout.moved(HomeModule.requests, -9).order.first,
@@ -196,12 +205,14 @@ void main() {
         HomeModule.downloads,
         HomeModule.requests,
         HomeModule.arrived,
+        HomeModule.nowPlaying,
       ]);
       // Requests dropped on top.
       expect(layout.reordered(2, 0).order, [
         HomeModule.requests,
         HomeModule.arrived,
         HomeModule.downloads,
+        HomeModule.nowPlaying,
       ]);
       expect(layout.reordered(1, 2), same(layout));
       expect(layout.reordered(7, 0), same(layout));
@@ -226,17 +237,17 @@ void main() {
     final layout = HomeLayout.defaultFor(operator);
 
     test('how many modules, and which are off', () {
-      expect(layout.summary, '5 modules');
+      expect(layout.summary, '6 modules');
       expect(
         layout.switched(HomeModule.requests, on: false).summary,
-        '5 modules · Requests hidden',
+        '6 modules · Requests hidden',
       );
       expect(
         layout
             .switched(HomeModule.requests, on: false)
             .switched(HomeModule.setUpNext, on: false)
             .summary,
-        '5 modules · 2 hidden',
+        '6 modules · 2 hidden',
       );
       expect(HomeLayout.defaultFor(requester).summary, '2 modules');
     });

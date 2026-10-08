@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -179,10 +180,15 @@ void main() {
     // `settingsScopeOverrides` already marks onboarding complete, which is what
     // keeps the router off the onboarding gate.
     final container = ProviderContainer(
-      overrides: await settingsScopeOverrides(
-        configured: configured,
-        customize: customize,
-      ),
+      overrides: [
+        ...await settingsScopeOverrides(
+          configured: configured,
+          customize: customize,
+        ),
+        // The Home's thirty-second poll: a test about routes ends before the
+        // container that holds its timer is disposed.
+        homeLivePollProvider.overrideWith((ref) {}),
+      ],
     );
     addTearDown(container.dispose);
 

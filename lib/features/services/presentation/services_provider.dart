@@ -11,6 +11,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
@@ -1287,6 +1288,7 @@ class ServiceQueueItem {
     this.outputPath,
     this.category,
     this.held = false,
+    this.posterUrl,
     MediaNames? names,
   }) : _names = names;
 
@@ -1385,6 +1387,11 @@ class ServiceQueueItem {
   /// import is seeded from.
   final String? outputPath;
 
+  /// The title's poster, from the movie, series or artist an \*arr record
+  /// embeds, when the arr links to one off its own host: what a row on Home
+  /// shows beside the title. Null on a client's own row.
+  final String? posterUrl;
+
   final MediaNames? _names;
 
   /// What the transfer is and which copy it is ([MediaNames]): on an \*arr
@@ -1425,6 +1432,7 @@ class ServiceQueueItem {
     outputPath: outputPath,
     category: category,
     held: held,
+    posterUrl: posterUrl,
     names: names,
   );
 
@@ -1999,6 +2007,7 @@ ServiceQueueItem _joinedQueueItem(
     outputPath: arr.outputPath,
     // The client's word on a pause, which is fresher than the arr's.
     held: fault == null && client.held,
+    posterUrl: arr.posterUrl,
     // The arr's names, and the release the client is moving when the arr's
     // record did not carry one: a matched row never loses its release name.
     names: arr.names.withMachineName(client.title, MachineNameKind.release),
@@ -2579,6 +2588,7 @@ ServiceQueueItem _queueItemFromRecords(
     connectionName: connectionName,
     mediaId: mediaId,
     outputPath: stringOrNull(typedItem['outputPath']),
+    posterUrl: _queuePosterUrl(typedItem),
     names: names,
     // The arr's own record of a pause, standing until a client row says
     // otherwise.
@@ -2631,6 +2641,16 @@ ServiceQueueItem _queueItemFromRecords(
       _ => ServiceRoutes.forService(service),
     },
   );
+}
+
+/// The poster of the title a queue record embeds, when the arr links to one
+/// any client can load.
+String? _queuePosterUrl(Map<String, dynamic> record) {
+  for (final key in const ['movie', 'series', 'artist']) {
+    final images = mapOrNull(record[key])?['images'];
+    if (images is List) return remotePosterOf(images);
+  }
+  return null;
 }
 
 /// The library item a queue record belongs to, or null when it names none.
@@ -2908,8 +2928,10 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
     final decides = gate.operatorAction(SeerrAbility.approve).isDrawn;
     final namesWho = gate.showsRequesterNames;
     try {
+      // Only the requests waiting, one page: the module counts them from
+      // Seerr's own total ([pendingRequestCountProvider]), never the rows.
       final requests = await ref.watch(
-        requestsForProvider(source.instanceId).future,
+        pendingRequestsForProvider(source.instanceId).future,
       );
       return (
         decisions: [
@@ -2981,6 +3003,35 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
     coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
   );
 }
+
+/// How many requests wait for the operator's answer, across every Seerr
+/// they may answer on: Seerr's own count of each, never the length of the
+/// page read. [floor] when a Seerr gave no count and its page was full.
+/// Null while a Seerr is read, and when one did not answer.
+final pendingRequestCountProvider = FutureProvider<({int count, bool floor})?>((
+  ref,
+) async {
+  var count = 0;
+  var floor = false;
+  for (final source in _watchMergeConnections(ref, ServiceKey.seerr)) {
+    final gate = ref.watch(roleGateOfProvider(source.instanceId));
+    if (!gate.operatorAction(SeerrAbility.approve).isDrawn) continue;
+    final List<SeerrRequest> requests;
+    try {
+      requests = await ref.watch(
+        pendingRequestsForProvider(source.instanceId).future,
+      );
+    } catch (_) {
+      return null;
+    }
+    final total = requests is SeerrRequestList ? requests.total : null;
+    count += total ?? requests.length;
+    if (total == null && requests is SeerrRequestList && requests.isPartial) {
+      floor = true;
+    }
+  }
+  return (count: count, floor: floor);
+}, retry: noProviderRetry);
 
 /// The requests list of one Seerr connection, the one destination that
 /// honours a connection in its link.
