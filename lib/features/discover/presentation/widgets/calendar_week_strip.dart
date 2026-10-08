@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
@@ -63,11 +64,25 @@ class CalendarWeekStrip extends StatelessWidget {
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final today = DateTime(now.year, now.month, now.day);
-    return Row(
-      children: [
-        for (final (index, day) in days.indexed)
-          Expanded(child: _day(context, room, scheme, index, day, today)),
-      ],
+    // Seven days cannot reflow: the names, the dates and the disc follow the
+    // reading size together to the single-line ceiling and stop there, so a
+    // name never outgrows the date under it.
+    final scaler = TextScaleMetrics.clampedScalerOf(
+      context,
+      maxScaleFactor: TextScaleMetrics.singleLineChromeMaxScaleFactor,
+    );
+    final size = AppType.label.fontSize!;
+    final disc = _disc * scaler.scale(size) / size;
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: scaler),
+      child: Row(
+        children: [
+          for (final (index, day) in days.indexed)
+            Expanded(
+              child: _day(context, room, scheme, index, day, today, disc),
+            ),
+        ],
+      ),
     );
   }
 
@@ -78,6 +93,7 @@ class CalendarWeekStrip extends StatelessWidget {
     int index,
     DateTime day,
     DateTime today,
+    double disc,
   ) {
     final before = day.isBefore(today);
     final outside = !window.contains(day);
@@ -109,8 +125,8 @@ class CalendarWeekStrip extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Container(
-          width: _disc,
-          height: _disc,
+          width: disc,
+          height: disc,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,

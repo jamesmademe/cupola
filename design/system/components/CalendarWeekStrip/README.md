@@ -13,7 +13,7 @@ Rendered from `lib/features/discover/presentation/widgets/calendar_week_strip.da
 
 Seven equal columns: the name in the caption role (`inkTertiary`), a 34pt disc with the date in the label role, and a 6pt dot under it. Days before today and past the thirty days are dimmed (`inkDisabled`) and carry no dot. The dot is the most pressing tone of the day's rows (a fault, then something on its way, then on the server, then the backlog) through `statusToneColor`; a ring in `inkSecondary` when nothing of the day has come yet.
 
-At a large reading size a name scales down rather than lose letters, and a date scales down inside its disc.
+Seven days cannot reflow, so the names, the dates and the disc follow the reading size together to the single-line ceiling (1.3×, `TextScaleMetrics.singleLineChromeMaxScaleFactor`) and stop: a name never outgrows the date under it. Past that a name scales down rather than lose letters, and a date scales down inside its disc.
 
 ## The consumer provides
 

@@ -68,7 +68,7 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'Text at 200% · the dates scale down inside their disc',
+        'Text at 200% · names, dates and disc stop at 1.3x together',
         (_) => page(thisWeek, CalendarWorld.window.start),
         width: 390,
         textScale: catalogTextScale,
