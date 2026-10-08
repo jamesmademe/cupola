@@ -55,6 +55,19 @@ void main() {
       ]);
     });
 
+    test('a title\'s page under a tab says what it is, not Library', () {
+      // A movie opened from Discover read `Discover › Library`, for a title
+      // the library does not hold.
+      expect(labels('/discover/media/movie/603'), ['Discover', 'Movie']);
+      expect(labels('/discover/media/tv/1396'), ['Discover', 'Series']);
+      expect(labels('/discover/media/person/287'), ['Discover', 'Person']);
+      expect(labels('/discover/media/collection/2344'), [
+        'Discover',
+        'Collection',
+      ]);
+      expect(labels('/dashboard/media/movie/603'), ['Dashboard', 'Movie']);
+    });
+
     test('an unknown location yields nothing rather than guessing', () {
       expect(ShellBreadcrumb.of(''), isEmpty);
       expect(ShellBreadcrumb.of('/'), isEmpty);

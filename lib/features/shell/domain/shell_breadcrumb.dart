@@ -38,7 +38,6 @@ abstract final class ShellBreadcrumb {
   /// enough (`storage`, `shares`, `virt`) that enumerating every route would be
   /// upkeep with no payoff.
   static const Map<String, String> _known = {
-    'media': 'Library',
     'requests': 'Requests',
     'wanted': 'Wanted',
     'history': 'History',
@@ -71,6 +70,16 @@ abstract final class ShellBreadcrumb {
     'progress': 'Progress',
   };
 
+  /// What a title's page under a tab is (`/discover/media/movie/603`): its
+  /// kind, never a place it is not. It was `Library` once, under Discover,
+  /// for a title the library does not hold.
+  static const Map<String, String> _mediaKinds = {
+    'movie': 'Movie',
+    'tv': 'Series',
+    'person': 'Person',
+    'collection': 'Collection',
+  };
+
   static final Map<String, ServiceKey> _servicesByRouteParam = {
     for (final service in ServiceKey.values) service.routeParam: service,
   };
@@ -97,6 +106,13 @@ abstract final class ShellBreadcrumb {
         location: '${tab.routePath}/${service.routeParam}',
       ));
       consumed = 2;
+    }
+
+    // A title's page under a tab says what it is.
+    if (service == null && segments.elementAtOrNull(consumed) == 'media') {
+      final kind = _mediaKinds[segments.elementAtOrNull(consumed + 1)];
+      if (kind != null) crumbs.add((label: kind, location: null));
+      return crumbs;
     }
 
     // At most one more, and only if it is a place. The remaining segments are
