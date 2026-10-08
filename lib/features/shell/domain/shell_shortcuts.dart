@@ -72,12 +72,18 @@ class ToggleInspectorIntent extends Intent {
   const ToggleInspectorIntent();
 }
 
-/// Jump to one of the four canonical sections, by its rail position.
+/// Jump to one of the sections of the person's bar, by its rail position.
 class GoToSectionIntent extends Intent {
   const GoToSectionIntent(this.index);
 
-  /// Zero-based, matching `NavTab.values` and therefore the rail order.
+  /// Zero-based, in the order of the person's bar (`NavTab.barFor`) and
+  /// therefore of the rail.
   final int index;
+}
+
+/// Open Settings, which has no place in the bar: `⌘,`, as on every Mac.
+class OpenSettingsIntent extends Intent {
+  const OpenSettingsIntent();
 }
 
 /// Move the lens to the next or previous *configured* service.
@@ -133,6 +139,7 @@ abstract final class ShellShortcuts {
     AppModifier.cmd(LogicalKeyboardKey.digit2): const GoToSectionIntent(1),
     AppModifier.cmd(LogicalKeyboardKey.digit3): const GoToSectionIntent(2),
     AppModifier.cmd(LogicalKeyboardKey.digit4): const GoToSectionIntent(3),
+    AppModifier.cmd(LogicalKeyboardKey.comma): const OpenSettingsIntent(),
     AppModifier.cmd(LogicalKeyboardKey.arrowRight, alt: true):
         const CycleServiceIntent(1),
     AppModifier.cmd(LogicalKeyboardKey.arrowLeft, alt: true):
@@ -151,4 +158,5 @@ abstract final class ShellShortcuts {
   static String get searchScreen => AppModifier.command('F');
   static String get openInInspector => AppModifier.isApple ? '⌥⏎' : 'Alt+Enter';
   static String section(int index) => AppModifier.command('${index + 1}');
+  static String get settings => AppModifier.command(',');
 }

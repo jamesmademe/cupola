@@ -134,7 +134,7 @@ final commandDeckEntriesProvider = Provider<List<CommandDeckEntry>>((ref) {
           // The app's one rule: `Radarr` while there is one, whatever label it
           // kept, and `Radarr · 4K` or `Radarr 2` once there are two.
           label: settings.connectionTitle(instance.id, service),
-          location: '${NavTab.dashboard.routePath}/${service.routeParam}',
+          location: '${NavTab.stack.routePath}/${service.routeParam}',
           service: service,
           instanceId: instance.id,
           detail: Uri.tryParse(instance.url)?.host,

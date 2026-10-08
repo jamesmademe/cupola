@@ -61,7 +61,7 @@ class MoviesScreen extends ConsumerWidget {
       title: 'Movies',
       searchHint: 'Search movies',
       activityRoute: '/activity/movies',
-      navigationSection: NavigationSection.dashboard,
+      navigationSection: NavigationSection.stack,
       serviceName: 'Radarr',
       service: ServiceKey.radarr,
       accentColor: ServiceKey.radarr.accent,

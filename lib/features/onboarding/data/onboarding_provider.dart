@@ -29,6 +29,10 @@ class RouterRefreshNotifier extends ChangeNotifier {
       notifyListeners();
     });
   }
+
+  /// Asks the router to evaluate its redirect again, for a change it cannot
+  /// see from here (who the shell is drawn for).
+  void refresh() => notifyListeners();
 }
 
 /// Keeps [RouterRefreshNotifier] alive for the lifetime of [routerProvider].

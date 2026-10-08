@@ -19,6 +19,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_shell.dart';
@@ -195,7 +196,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // location and the visible branch can disagree — an imperative push from
     // another tab lands on this branch while the path reads like somebody
     // else's — and it is the branch that the bar must agree with.
-    final selectedIndex = widget.navigationShell.currentIndex;
+    //
+    // The branch is a [NavTab]; the bar shows the tabs of the person the shell
+    // is drawn for ([NavTab.barFor]), so the bar's selection is where that
+    // tab sits in it — none, in Settings, which has no place in the bar.
+    final currentTab = NavTab.values[widget.navigationShell.currentIndex];
+    final barTabs = NavTab.barFor(ref.watch(shellAudienceProvider));
+    final selectedIndex = barTabs.indexOf(currentTab);
     final useRail =
         MediaQuery.sizeOf(context).width >= AppBreakpoints.touchRail;
     // The Portal's drag is unusable under a screen reader; there the bar keeps
@@ -245,9 +252,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           // Spelled out rather than left to the arithmetic: a lens moving with
           // the path unchanged cannot satisfy the two tests below, but the
           // journey being counted is a *journey*, and it should say so.
-          _lastLocation == NavTab.dashboard.routePath &&
-          location.startsWith('${NavTab.dashboard.routePath}/')) {
-        // Dashboard → service without going through the Portal: exactly the
+          _lastLocation == NavTab.stack.routePath &&
+          location.startsWith('${NavTab.stack.routePath}/')) {
+        // Stack → service without going through the Portal: exactly the
         // journey the Portal replaces. The coach mark counts these.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -264,9 +271,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // where a finished search never showed a badge — the channel that has to
     // keep working when notifications are denied, off, or missed.
     final searchesWaiting = ref.watch(unseenReleaseSearchCountProvider);
-    final destinations = NavTab.values
+    final destinations = barTabs
         .map((tab) => _destinationFor(tab, searchesWaiting))
         .toList(growable: false);
+    void select(int barIndex) =>
+        _onItemTapped(barTabs[barIndex], context, currentTab);
 
     // Outside the branch, so it wraps *both* layouts and survives a resize.
     // Inside the phone branch it was two bugs at once: on macOS and tablet
@@ -283,10 +292,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       return ReleaseSearchLifecycle(
         child: DesktopShell(
           navigationShell: widget.navigationShell,
+          currentTab: currentTab,
           destinations: destinations,
           selectedIndex: selectedIndex,
-          onDestinationSelected: (int idx) =>
-              _onItemTapped(idx, context, selectedIndex),
+          onDestinationSelected: select,
+          onSettings: () => _onItemTapped(NavTab.settings, context, currentTab),
         ),
       );
     }
@@ -307,8 +317,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                   child: _ServicesNavRail(
                     selectedIndex: selectedIndex,
                     destinations: destinations,
-                    onDestinationSelected: (int idx) =>
-                        _onItemTapped(idx, context, selectedIndex),
+                    onDestinationSelected: select,
                   ),
                 ),
                 // A title opened here is drawn beside the page it came
@@ -362,11 +371,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                       ),
                   bottomNavigationBar: FloatingBottomNavBar(
                     selectedIndex: selectedIndex,
-                    onDestinationSelected: (int idx) =>
-                        _onItemTapped(idx, context, selectedIndex),
+                    onDestinationSelected: select,
                     destinations: [
                       for (final (index, destination) in destinations.indexed)
-                        NavTab.values[index] == NavTab.dashboard
+                        barTabs[index] == NavTab.stack
                             ? _withPortalAction(destination)
                             : destination,
                     ],
@@ -398,7 +406,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     );
   }
 
-  void _onItemTapped(int index, BuildContext context, int currentIndex) {
+  void _onItemTapped(NavTab tab, BuildContext context, NavTab currentTab) {
     HapticFeedback.selectionClick();
 
     // A tab tap with the Portal open always closes it; landing on the tab is
@@ -407,9 +415,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     final portalWasOpen = _portal.isOpenOrEngaged;
     if (portalWasOpen) _portal.closeFromUi();
 
-    final tab = NavTab.values[index];
+    final index = tab.index;
 
-    if (index == currentIndex) {
+    if (tab == currentTab) {
       if (portalWasOpen) return;
 
       // "Am I deep in this tab?" asked of the branch's own Navigator rather
@@ -444,10 +452,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     widget.navigationShell.goBranch(index);
   }
 
-  /// The screen reader's way into the Portal: an action on the Dashboard tab.
+  /// The screen reader's way into the Portal: an action on the Stack tab.
   ///
   /// A reader cannot perform the drag, so the bar offers the same way in as a
-  /// custom action — *Actions available: Open the Portal*. On the Dashboard tab
+  /// custom action — *Actions available: Open the Portal*. On the Stack tab
   /// because that is where the services are: every room is inside it, so it is
   /// also the tab that is selected whenever a service is on screen. Offered in
   /// every mode the phone bar is in, not only under a screen reader: Voice
@@ -483,18 +491,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     );
   }
 
-  NavigationSection? _refreshSectionFor(NavTab tab) {
-    switch (tab) {
-      case NavTab.dashboard:
-        return NavigationSection.dashboard;
-      case NavTab.discover:
-        return NavigationSection.discover;
-      case NavTab.activity:
-        return NavigationSection.activity;
-      case NavTab.settings:
-        return null;
-    }
-  }
+  NavigationSection? _refreshSectionFor(NavTab tab) => tab.refreshSection;
 }
 
 /// Escape while the Portal is up. Disabled otherwise, so the key goes on to

@@ -38,15 +38,24 @@ class DesktopShell extends ConsumerStatefulWidget {
   const DesktopShell({
     super.key,
     required this.navigationShell,
+    required this.currentTab,
     required this.destinations,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    required this.onSettings,
   });
 
   final Widget navigationShell;
+
+  /// The branch on screen, Settings included, which [selectedIndex] cannot
+  /// say: it is no tab of the bar.
+  final NavTab currentTab;
+
+  /// The person's bar, and where [currentTab] sits in it (-1 for none).
   final List<FloatingNavDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+  final VoidCallback onSettings;
 
   @override
   ConsumerState<DesktopShell> createState() => _DesktopShellState();
@@ -111,7 +120,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
         : (current + delta) % configured.length;
     GoRouter.of(
       context,
-    ).go('${NavTab.dashboard.routePath}/${configured[next].routeParam}');
+    ).go('${NavTab.stack.routePath}/${configured[next].routeParam}');
   }
 
   /// `⌘R`: ask again, whatever "again" means on the tab you are standing on.
@@ -130,14 +139,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
   /// off screen — and a command whose only feedback is below the fold is a
   /// command people press twice.
   void _refreshAll() {
-    final tab =
-        NavTab.values[widget.selectedIndex.clamp(0, NavTab.values.length - 1)];
-    final section = switch (tab) {
-      NavTab.dashboard => NavigationSection.dashboard,
-      NavTab.discover => NavigationSection.discover,
-      NavTab.activity => NavigationSection.activity,
-      NavTab.settings => null,
-    };
+    final section = widget.currentTab.refreshSection;
     if (section != null) {
       ref.triggerNavigationRefresh(section);
     } else {
@@ -194,6 +196,12 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
               if (intent.index < widget.destinations.length) {
                 widget.onDestinationSelected(intent.index);
               }
+              return null;
+            },
+          ),
+          OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
+            onInvoke: (_) {
+              widget.onSettings();
               return null;
             },
           ),
@@ -285,6 +293,14 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                     selectedIndex: widget.selectedIndex,
                     destinations: widget.destinations,
                     onDestinationSelected: widget.onDestinationSelected,
+                    settings: FloatingNavDestination(
+                      icon: NavTab.settings.icon,
+                      selectedIcon: NavTab.settings.selectedIcon,
+                      railIcon: NavTab.settings.railIcon,
+                      label: NavTab.settings.label,
+                    ),
+                    settingsSelected: widget.currentTab == NavTab.settings,
+                    onSettings: widget.onSettings,
                     onCommandDeck: _openDeck,
                   ),
                 ),

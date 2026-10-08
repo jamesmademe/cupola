@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart' show IconData, Icons;
 import 'package:material_symbols_icons/symbols.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 
-/// The four canonical tabs.
+/// The app's top-level places: one branch navigator each, and the tabs a
+/// person's bar shows ([barFor]).
+///
+/// Six branches, always: go_router fixes them when the router is built, so the
+/// operator's four and the requester's three are subsets of one list rather
+/// than two routers. Settings is a branch with no place in the phone's bar: it
+/// opens from Stack's gear, from the requester's account button, from ⌘, and
+/// from the foot of the desktop rail, and it keeps its own stack like any tab.
 ///
 /// **No colour of their own.** The chrome is monochrome (Principle 3 of the brand book:
 /// colour is information): the selected tab is the room's strong fill under the
@@ -13,13 +21,13 @@ import 'package:cupola/core/utils/service_routes.dart';
 /// the tokens stay until the palette cleanup, and nothing in `lib/` may read
 /// them (`test/core/theme/monochrome_accent_test.dart`).
 enum NavTab {
-  /// The app home.
-  dashboard(
-    label: 'Dashboard',
-    icon: Icons.view_list_outlined,
-    selectedIcon: Icons.view_list_rounded,
-    railIcon: Symbols.view_list_rounded,
-    routePath: ServiceRoutes.dashboard,
+  /// The first tab: what is new, what is coming, what needs you.
+  home(
+    label: 'Home',
+    icon: Icons.home_outlined,
+    selectedIcon: Icons.home_rounded,
+    railIcon: Symbols.home_rounded,
+    routePath: ServiceRoutes.home,
   ),
 
   /// The catalogue: browsed at rest, searched by typing (it took the Search
@@ -37,6 +45,24 @@ enum NavTab {
     selectedIcon: Icons.monitor_heart_rounded,
     railIcon: Symbols.monitor_heart_rounded,
     routePath: '/activity',
+  ),
+
+  /// Every service, and the way into each one's room: the operator's.
+  stack(
+    label: 'Stack',
+    icon: Icons.layers_outlined,
+    selectedIcon: Icons.layers_rounded,
+    railIcon: Symbols.layers_rounded,
+    routePath: ServiceRoutes.stack,
+  ),
+
+  /// The requester's own requests: what she asked for and where each stands.
+  requests(
+    label: 'Requests',
+    icon: Icons.inbox_outlined,
+    selectedIcon: Icons.inbox_rounded,
+    railIcon: Symbols.inbox_rounded,
+    routePath: ServiceRoutes.requests,
   ),
   settings(
     label: 'Settings',
@@ -67,4 +93,14 @@ enum NavTab {
   /// its size.
   final IconData railIcon;
   final String routePath;
+
+  /// The tabs [audience]'s bar shows, in order.
+  ///
+  /// The operator's is the control room's: Home · Discover · Activity · Stack.
+  /// The requester's has no control room in it: Home · Discover · Requests.
+  /// Settings is in neither (see [NavTab]).
+  static List<NavTab> barFor(Audience audience) => switch (audience) {
+    Audience.operator => const [home, discover, activity, stack],
+    Audience.requester => const [home, discover, requests],
+  };
 }

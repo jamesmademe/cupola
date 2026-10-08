@@ -7,42 +7,51 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 class ServiceRoutes {
   ServiceRoutes._();
 
-  /// The app home, and the prefix every service home hangs off.
-  ///
-  /// `/dashboard` since the rename (decision 1): the tab, the crumb and the
-  /// route all say Dashboard, one service is a *service home* at
-  /// `/dashboard/{key}`, and TrueNAS keeps the word for its own console
-  /// section because the app does not rename another product's furniture.
-  static const dashboard = '/dashboard';
+  /// The first tab: the Home of modules.
+  static const home = '/home';
 
-  /// Where the app used to live. Every path under it still resolves — see the
-  /// rewrite in `router.dart`'s top-level redirect — because a bookmark, a
-  /// deep link or a restored session from before the rename must not 404.
+  /// The Stack tab, and the prefix every service's room hangs off: one
+  /// service is a *service home* at `/stack/{key}`. TrueNAS keeps the word
+  /// "dashboard" for its own console section because the app does not rename
+  /// another product's furniture.
+  static const stack = '/stack';
+
+  /// The requester's own requests: her third tab.
+  static const requests = '/requests';
+
+  /// Where the stack lived while it was the first tab, called Dashboard.
+  /// Every path under it rewrites onto [stack] in one hop — see the redirect
+  /// in `router.dart` — because a notification, a bookmark or a restored
+  /// session from before the move must not 404.
+  static const legacyDashboard = '/dashboard';
+
+  /// Where the app lived before Dashboard. Every path under it still
+  /// resolves, onto [stack], for the same reason.
   static const legacyServices = '/services';
 
-  static const seerr = '$dashboard/seerr';
-  static const radarr = '$dashboard/radarr';
-  static const sonarr = '$dashboard/sonarr';
-  static const lidarr = '$dashboard/lidarr';
-  static const qbittorrent = '$dashboard/qbittorrent';
-  static const bazarr = '$dashboard/bazarr';
-  static const truenas = '$dashboard/truenas';
-  static const dockge = '$dashboard/dockge';
-  static const prowlarr = '$dashboard/prowlarr';
-  static const readarr = '$dashboard/readarr';
-  static const sabnzbd = '$dashboard/sabnzbd';
-  static const nzbget = '$dashboard/nzbget';
-  static const unraid = '$dashboard/unraid';
-  static const jellyfin = '$dashboard/jellyfin';
-  static const plex = '$dashboard/plex';
+  static const seerr = '$stack/seerr';
+  static const radarr = '$stack/radarr';
+  static const sonarr = '$stack/sonarr';
+  static const lidarr = '$stack/lidarr';
+  static const qbittorrent = '$stack/qbittorrent';
+  static const bazarr = '$stack/bazarr';
+  static const truenas = '$stack/truenas';
+  static const dockge = '$stack/dockge';
+  static const prowlarr = '$stack/prowlarr';
+  static const readarr = '$stack/readarr';
+  static const sabnzbd = '$stack/sabnzbd';
+  static const nzbget = '$stack/nzbget';
+  static const unraid = '$stack/unraid';
+  static const jellyfin = '$stack/jellyfin';
+  static const plex = '$stack/plex';
 
   /// The two the file was missing. Both services shipped with their callers
   /// building `'/services/transmission'` and `'/services/npm'` by hand, which
   /// is how a single source of truth stops being one — and `npm` is precisely
   /// the segment that is *not* derivable from the enum name, so a hand-built
   /// path is a spelling nobody checks.
-  static const transmission = '$dashboard/transmission';
-  static const nginxProxyManager = '$dashboard/npm';
+  static const transmission = '$stack/transmission';
+  static const nginxProxyManager = '$stack/npm';
 
   /// The home of any service, by key.
   ///
@@ -51,7 +60,7 @@ class ServiceRoutes {
   /// one irregular segment — Nginx Proxy Manager's `npm` — spelled in exactly
   /// one place.
   static String forService(ServiceKey service) =>
-      '$dashboard/${service.routeParam}';
+      '$stack/${service.routeParam}';
 
   // ── The media servers, under the tab model ────────────────────────────────
   //
@@ -573,12 +582,14 @@ class ServiceRoutes {
   /// one.
   static String mediaMountFor(String path) =>
       switch (Uri.parse(path).pathSegments) {
-        ['dashboard', final service, final tab, ...]
+        ['stack', final service, final tab, ...]
             when mediaMountServices.any((s) => s.routeParam == service) =>
-          '$dashboard/$service/$tab',
-        ['dashboard', ...] => dashboard,
+          '$stack/$service/$tab',
+        ['stack', ...] => stack,
+        ['home', ...] => home,
         ['activity'] || ['activity', 'media', ...] => activity,
         ['discover', ...] => discover,
+        ['requests', ...] => requests,
         _ => '',
       };
 

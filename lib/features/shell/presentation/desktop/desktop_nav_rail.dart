@@ -6,7 +6,8 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 
-/// The 56pt section rail: four glyphs, and the deck's key at the foot of it.
+/// The 56pt section rail: the person's sections, then Settings and the deck's
+/// key at the foot of it.
 ///
 /// Takes the *same* [FloatingNavDestination] list the phone's bottom bar does
 /// rather than rebuilding one from `NavTab`. That is the whole point: badge
@@ -23,12 +24,21 @@ class DesktopNavRail extends StatelessWidget {
     required this.selectedIndex,
     required this.destinations,
     required this.onDestinationSelected,
+    required this.settings,
+    required this.settingsSelected,
+    required this.onSettings,
     required this.onCommandDeck,
   });
 
   final int selectedIndex;
   final List<FloatingNavDestination> destinations;
   final ValueChanged<int> onDestinationSelected;
+
+  /// Settings, at the foot: it is no section of the bar, and on a Mac it is
+  /// where the window's settings always are, one `⌘,` away.
+  final FloatingNavDestination settings;
+  final bool settingsSelected;
+  final VoidCallback onSettings;
 
   /// Opening the deck from the rail's own key hint, for a pointer that has
   /// never met the shortcut.
@@ -69,6 +79,13 @@ class DesktopNavRail extends StatelessWidget {
                   ),
                 ),
               const Spacer(),
+              _RailItem(
+                destination: settings,
+                selected: settingsSelected,
+                shortcut: ShellShortcuts.settings,
+                onPressed: onSettings,
+              ),
+              const SizedBox(height: AppSpacing.sm),
               Container(
                 width: 26,
                 height: 1,

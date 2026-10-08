@@ -41,7 +41,7 @@ import 'package:cupola/features/music/presentation/lidarr_overview_screen.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/presentation/calendar_page.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
@@ -60,6 +60,10 @@ import 'package:cupola/features/import/presentation/manual_import_progress_scree
 import 'package:cupola/features/import/presentation/manual_import_review_screen.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/requests/presentation/requests_screen.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
@@ -291,10 +295,10 @@ GoRoute _besideTitle(
         ),
 );
 
-/// The mount a title's location hangs off, or the Dashboard for the root one.
+/// The mount a title's location hangs off, or the Home for the root one.
 String _mediaMountOrHome(String path) =>
     switch (ServiceRoutes.mediaMountFor(path)) {
-      '' => ServiceRoutes.dashboard,
+      '' => ServiceRoutes.home,
       final mount => mount,
     };
 
@@ -2809,9 +2813,14 @@ String _preserveQuery(Uri source, String path) {
 /// visible. Exhaustive, so a fifth tab cannot be added without deciding what
 /// its branch opens on.
 RouteBase _branchRootFor(NavTab tab) => switch (tab) {
-  NavTab.dashboard => GoRoute(
-    path: ServiceRoutes.dashboard,
-    pageBuilder: (context, state) => _tabPage(state, const DashboardScreen()),
+  NavTab.home => GoRoute(
+    path: ServiceRoutes.home,
+    pageBuilder: (context, state) => _tabPage(state, const HomeScreen()),
+    routes: _mediaRoutes(),
+  ),
+  NavTab.stack => GoRoute(
+    path: ServiceRoutes.stack,
+    pageBuilder: (context, state) => _tabPage(state, const StackScreen()),
     routes: [
       ..._mediaRoutes(),
       // Every mount takes its segment from `ServiceKey.routeParam` rather than
@@ -2888,6 +2897,12 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       ..._mediaRoutes(),
     ],
   ),
+  // The requester's own requests. A title opened from one hangs under it.
+  NavTab.requests => GoRoute(
+    path: ServiceRoutes.requests,
+    pageBuilder: (context, state) => _tabPage(state, const RequestsScreen()),
+    routes: _mediaRoutes(),
+  ),
   NavTab.settings => GoRoute(
     path: '/settings',
     pageBuilder: (context, state) =>
@@ -2961,36 +2976,67 @@ ServiceType? _activityTypeOf(GoRouterState state) {
   return null;
 }
 
-/// Rewrites a pre-rename `/services…` location onto `/dashboard…`.
+/// Rewrites a location from where the stack used to live — `/dashboard…`
+/// while it was the first tab, `/services…` before that — onto `/stack…`, in
+/// one hop with the query intact.
 ///
 /// Returns null for anything else, so the redirect callback can fall through.
 /// Matching is on the path *segment* rather than a bare `startsWith`, or a
 /// future `/services-of-mine` would be rewritten to something that does not
 /// exist.
-String? _rewriteLegacyServicesPath(Uri uri) {
-  const legacy = ServiceRoutes.legacyServices;
+String? _rewriteLegacyStackPath(Uri uri) {
   final path = uri.path;
-  if (path != legacy && !path.startsWith('$legacy/')) return null;
-  final rewritten =
-      '${ServiceRoutes.dashboard}${path.substring(legacy.length)}';
-  return uri.hasQuery ? '$rewritten?${uri.query}' : rewritten;
+  for (final legacy in const [
+    ServiceRoutes.legacyDashboard,
+    ServiceRoutes.legacyServices,
+  ]) {
+    if (path != legacy && !path.startsWith('$legacy/')) continue;
+    final rewritten = '${ServiceRoutes.stack}${path.substring(legacy.length)}';
+    return uri.hasQuery ? '$rewritten?${uri.query}' : rewritten;
+  }
+  return null;
+}
+
+/// Where [audience] may not be: the requester's app has no control room, so
+/// Activity, Stack and every service's room, and the import flow, send her
+/// Home; the operator has no tab of the requester's own requests, so that
+/// one sends him to Seerr's. Null where [audience] may be.
+///
+/// Read from the shell's held audience ([shellAudienceProvider]), so a route
+/// never disagrees with the bar on screen.
+String? _audienceRedirect(Uri uri, Audience audience) {
+  bool under(String root) => uri.path == root || uri.path.startsWith('$root/');
+  return switch (audience) {
+    Audience.requester
+        when under(ServiceRoutes.activity) ||
+            under(ServiceRoutes.stack) ||
+            under(manualImportPathPrefix) =>
+      ServiceRoutes.home,
+    Audience.operator when under(ServiceRoutes.requests) =>
+      ServiceRoutes.seerrRequests,
+    _ => null,
+  };
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerRefreshNotifierProvider);
   final onboardingDone = ref.read(onboardingCompletedProvider);
+  // The routes a person may reach follow the bar they see.
+  ref.listen<Audience>(shellAudienceProvider, (_, _) => notifier.refresh());
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     refreshListenable: notifier,
-    initialLocation: onboardingDone ? ServiceRoutes.dashboard : '/onboarding',
+    initialLocation: onboardingDone ? ServiceRoutes.home : '/onboarding',
     redirect: (context, state) {
       final done = ref.read(onboardingCompletedProvider);
       final isOnboarding = state.matchedLocation == '/onboarding';
       if (!done && !isOnboarding) return '/onboarding';
-      if (done && isOnboarding) return ServiceRoutes.dashboard;
+      if (done && isOnboarding) return ServiceRoutes.home;
+      if (state.uri.path == '/') return ServiceRoutes.home;
 
-      // Everything that used to live under `/services` still resolves.
+      // Everything that used to live under `/dashboard` or `/services` still
+      // resolves.
       //
       // One rewrite here rather than a shadow copy of the tree: the rename
       // moved thirty-four routes and every detail tail under them, and
@@ -2999,17 +3045,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       // keeps the whole subtree — `/services/radarr/movie/42?heroTag=…`
       // included — and preserves the query, which is where the instance lens
       // travels.
-      final legacy = _rewriteLegacyServicesPath(state.uri);
+      final legacy = _rewriteLegacyStackPath(state.uri);
       if (legacy != null) return legacy;
 
-      return null;
+      return _audienceRedirect(state.uri, ref.read(shellAudienceProvider));
     },
     routes: [
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
       ),
-      // One Navigator per tab, all four alive at once behind a cross-fade.
+      // One Navigator per tab, all alive at once behind a cross-fade.
       //
       // The order of [branches] is a contract, not a layout: the shell maps a
       // bar tap and `StatefulNavigationShell.currentIndex` straight onto

@@ -87,7 +87,7 @@ class MusicScreen extends ConsumerWidget {
       title: 'Music',
       searchHint: 'Search artists',
       activityRoute: '/activity/music',
-      navigationSection: NavigationSection.dashboard,
+      navigationSection: NavigationSection.stack,
       serviceName: 'Lidarr',
       service: ServiceKey.lidarr,
       accentColor: ServiceKey.lidarr.accent,
