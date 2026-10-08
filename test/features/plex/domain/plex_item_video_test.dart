@@ -23,4 +23,23 @@ void main() {
     })!;
     expect(item.video, isNull);
   });
+
+  test('the background is the backdrop, and an episode takes its show\'s', () {
+    final movie = plexItemFromJson({
+      'ratingKey': '7',
+      'type': 'movie',
+      'title': 'Sintel',
+      'art': '/library/metadata/7/art/1',
+    })!;
+    expect(movie.backdropPath, isNotNull);
+    expect(movie.backdropPath, contains('/library/metadata/7/art'));
+    final episode = plexItemFromJson({
+      'ratingKey': '9',
+      'type': 'episode',
+      'title': 'The Second Cycle',
+      'art': '/library/metadata/9/art/1',
+      'grandparentArt': '/library/metadata/3/art/1',
+    })!;
+    expect(episode.backdropPath, contains('/library/metadata/3/art'));
+  });
 }

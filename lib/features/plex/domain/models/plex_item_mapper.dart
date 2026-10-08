@@ -79,6 +79,10 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
         plexArtworkKey(json['thumb']) ??
         plexArtworkKey(json['parentThumb']) ??
         plexArtworkKey(json['grandparentThumb']),
+    // `art` is Plex's background; an episode's is its show's.
+    backdropPath: kind == StreamItemKind.episode
+        ? plexArtworkKey(json['grandparentArt']) ?? plexArtworkKey(json['art'])
+        : plexArtworkKey(json['art']),
     year: plexInt(json['year']),
     // Already milliseconds on Plex, unlike Jellyfin's 100ns ticks.
     runtimeMs: plexInt(json['duration']),

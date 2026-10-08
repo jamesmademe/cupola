@@ -127,6 +127,53 @@ void main() {
     });
   });
 
+  group('backdrop path', () {
+    test("an item's own backdrop, the first of them", () {
+      expect(
+        jellyfinBackdropPath({
+          'Id': 'm1',
+          'Type': 'Movie',
+          'ImageTags': {'Primary': 'p', 'Thumb': 't'},
+          'BackdropImageTags': ['b1', 'b2'],
+        }),
+        '/Items/m1/Images/Backdrop/0?tag=b1',
+      );
+    });
+
+    test("an episode takes its series' backdrop before its own still", () {
+      expect(
+        jellyfinBackdropPath({
+          'Id': 'ep1',
+          'Type': 'Episode',
+          'ImageTags': {'Primary': 'still'},
+          'BackdropImageTags': const <String>[],
+          'ParentBackdropItemId': 'sr1',
+          'ParentBackdropImageTags': ['sb'],
+        }),
+        '/Items/sr1/Images/Backdrop/0?tag=sb',
+      );
+      expect(
+        jellyfinBackdropPath({
+          'Id': 'ep1',
+          'Type': 'Episode',
+          'ImageTags': {'Primary': 'still'},
+        }),
+        '/Items/ep1/Images/Primary?tag=still',
+      );
+    });
+
+    test("a movie's poster is not wide: no backdrop, no path", () {
+      expect(
+        jellyfinBackdropPath({
+          'Id': 'm1',
+          'Type': 'Movie',
+          'ImageTags': {'Primary': 'p'},
+        }),
+        isNull,
+      );
+    });
+  });
+
   group('poster path', () {
     test("an item's own art beats its parent's", () {
       // A `Thumb`-only episode that also carries `SeriesPrimaryImageTag`. Asking

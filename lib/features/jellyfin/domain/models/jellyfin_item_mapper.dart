@@ -185,6 +185,42 @@ int? _resumeOffsetMs(Map<String, dynamic> userData, Object? runtimeTicks) {
   return offset > 0 ? offset : null;
 }
 
+/// The server-relative path of an item's wide artwork, or null when it has
+/// none: its own backdrop, else the one it inherits (an episode's series),
+/// else a thumb, else an episode's own still. Tagged like
+/// [jellyfinPosterPath].
+String? jellyfinBackdropPath(Map<String, dynamic> item) {
+  String? first(Object? tags) =>
+      tags is List && tags.isNotEmpty ? tags.first?.toString() : null;
+  String? path(Object? id, String type, String? tag) {
+    final owner = id?.toString();
+    if (owner == null || owner.isEmpty || tag == null || tag.isEmpty) {
+      return null;
+    }
+    return type == 'Backdrop'
+        ? '/Items/$owner/Images/Backdrop/0?tag=$tag'
+        : '/Items/$owner/Images/$type?tag=$tag';
+  }
+
+  final tags = item['ImageTags'];
+  String? own(String type) => tags is Map ? tags[type]?.toString() : null;
+  final episode = jellyfinItemKind(item['Type']) == StreamItemKind.episode;
+  return path(item['Id'], 'Backdrop', first(item['BackdropImageTags'])) ??
+      path(
+        item['ParentBackdropItemId'],
+        'Backdrop',
+        first(item['ParentBackdropImageTags']),
+      ) ??
+      path(item['Id'], 'Thumb', own('Thumb')) ??
+      path(
+        item['ParentThumbItemId'],
+        'Thumb',
+        item['ParentThumbImageTag']?.toString(),
+      ) ??
+      // An episode's primary image is a still of it, as wide as a backdrop.
+      (episode ? path(item['Id'], 'Primary', own('Primary')) : null);
+}
+
 /// One `BaseItemDto` → one [StreamItem].
 StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
   final kind = jellyfinItemKind(item['Type']);
@@ -200,6 +236,7 @@ StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
     subtitle: _itemSubtitle(item, kind),
     kind: kind,
     posterPath: jellyfinPosterPath(item),
+    backdropPath: jellyfinBackdropPath(item),
     year: jellyfinInt(item['ProductionYear']),
     runtimeMs: jellyfinMillisecondsFromTicks(runtimeTicks, zeroAsNull: true),
     // `UserData` only exists on the response when the request passed

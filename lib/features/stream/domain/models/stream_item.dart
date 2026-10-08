@@ -165,6 +165,11 @@ class StreamItem {
   /// credential. See [StreamSession.posterPath] for why this is not a URL.
   final String? posterPath;
 
+  /// Relative path of the item's wide artwork (a backdrop, or an episode's
+  /// series backdrop), resolved like [posterPath]; null when the server has
+  /// none or the read did not carry it.
+  final String? backdropPath;
+
   final int? year;
 
   /// Total runtime in milliseconds.
@@ -220,6 +225,7 @@ class StreamItem {
     this.overview,
     this.seasonNumber,
     this.episodeNumber,
+    this.backdropPath,
   });
 
   /// Fraction watched, 0..1, or null when there is no resume point.
