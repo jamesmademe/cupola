@@ -38,10 +38,7 @@ void main() {
       surfaceSize: _tall,
     );
 
-    expect(
-      find.text('5 downloading · 40.4\u00A0MB/s across 2 clients'),
-      findsOne,
-    );
+    expect(find.text('5 moving · 1 stuck · 40.4\u00A0MB/s'), findsOne);
     // Both Radarr: the HD's four imports and the 4K's two, and Sonarr's one.
     expect(find.text('7 imported'), findsOne);
     expect(find.textContaining('Not in the total'), findsNothing);
@@ -64,8 +61,9 @@ void main() {
     // the device is away; qBittorrent refused the sign-in. The count is
     // theirs, the 4K's two movies included, and the line under it names the
     // rest. Which of them did not answer is Needs you's sentence, so the note
-    // does not say it a second time.
-    expect(find.text('5 downloading'), findsOne);
+    // does not say it a second time. The speed is a dash: two clients that are
+    // set up did not answer, and the rate of the others would understate it.
+    expect(find.text('5 moving · 1 stuck · —'), findsOne);
     const inFlightNote = 'Not in the total: Lidarr, SABnzbd, qBittorrent';
     expect(find.text(inFlightNote), findsOne);
 
@@ -86,10 +84,11 @@ void main() {
       findsOne,
     );
 
-    // The header speaks the figure and what qualifies it as one sentence.
+    // The header speaks the figures and what qualifies them as one sentence,
+    // the dash as an unknown speed.
     expect(
       find.bySemanticsLabel(
-        'Downloads, 5 downloading, '
+        'Downloads, 5 moving, 1 stuck, speed unknown, '
         'Not in the total: Lidarr, SABnzbd, qBittorrent',
       ),
       findsOne,
@@ -148,7 +147,7 @@ void main() {
       findsOne,
     );
     // Not the empty copy, which would send the user looking for media.
-    expect(find.text('The queue is empty'), findsNothing);
+    expect(find.text('Nothing is downloading'), findsNothing);
     expect(find.text('Nothing imported yet'), findsNothing);
 
     // The heading speaks the name and nothing else: no count to be read as
