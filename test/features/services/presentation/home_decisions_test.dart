@@ -319,7 +319,10 @@ void main() {
     // Needs you, the note under Downloads, and SABnzbd's own rows.
     expect(find.textContaining('did not answer'), findsNothing);
     expect(find.textContaining('Not in the total'), findsNothing);
-    expect(find.text('5 downloading · 40.4 MB/s across 2 clients'), findsOne);
+    expect(
+      find.text('5 downloading · 40.4\u00A0MB/s across 2 clients'),
+      findsOne,
+    );
 
     await harness.unmount(tester);
   });
