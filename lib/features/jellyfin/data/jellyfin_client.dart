@@ -546,6 +546,33 @@ class JellyfinClient implements StreamServerClient {
     }
   }
 
+  /// What the household member [viewerId] (else the configured one) started
+  /// and did not finish, across every library of the server, the most
+  /// recently played first: `/UserItems/Resume` with no `parentId`.
+  ///
+  /// Throws [JellyfinViewerRequired] when nobody is chosen: the endpoint is
+  /// user-scoped and the API key has no user, so an empty list would claim
+  /// nothing is in progress. Throws on a remote failure too, for the reason
+  /// Plex's `getContinueWatching` does. What somebody is playing right now
+  /// stays out (`excludeActiveSessions`): Now playing has it.
+  Future<List<StreamItem>> getContinueWatching({
+    String? viewerId,
+    int count = 12,
+    CancelToken? cancelToken,
+  }) async {
+    final userId = _resolveViewerId(viewerId);
+    if (userId == null) throw const JellyfinViewerRequired();
+    final page = await _fetchItemsPage('/UserItems/Resume', {
+      'userId': userId,
+      'limit': count,
+      'fields': _browseFields,
+      'enableUserData': true,
+      'excludeActiveSessions': true,
+      'mediaTypes': 'Video',
+    }, cancelToken: cancelToken);
+    return page.items;
+  }
+
   /// `GET /Search/Hints` — the library search, typed and grouped.
   ///
   /// **Why the type set is not sent as `includeItemTypes`.** This endpoint gates
@@ -1383,4 +1410,13 @@ class _JellyfinApiKeyQuery extends Interceptor {
     options.queryParameters = {...options.queryParameters, 'ApiKey': _token};
     handler.next(options);
   }
+}
+
+/// A user-scoped read asked of a Jellyfin connection whose household member
+/// nobody has chosen: the API key sees every user and is none of them.
+class JellyfinViewerRequired implements Exception {
+  const JellyfinViewerRequired();
+
+  @override
+  String toString() => 'Jellyfin needs to know which user you are';
 }
