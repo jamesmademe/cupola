@@ -145,6 +145,57 @@ class ContinueWatchingRow extends ConsumerWidget {
         ? null
         : server.imageFor(item.posterPath!, width: 360);
 
+    // At a large reading size the words take the slab's width under the
+    // picture, rather than a third of it beside.
+    final stacked = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final picture = ClipRRect(
+      borderRadius: AppRadius.borderRadiusSm,
+      child: SizedBox.fromSize(
+        size: thumb,
+        child: image == null
+            ? ColoredBox(
+                color: room.fillQuiet,
+                child: Icon(
+                  row.service.icon,
+                  size: 20,
+                  color: room.inkSecondary,
+                ),
+              )
+            : ContentCard(imageUrl: image.url, httpHeaders: image.headers),
+      ),
+    );
+    final words = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppType.row.weight(FontWeight.w600).copyWith(color: room.ink),
+        ),
+        if (detail.isNotEmpty)
+          Text(
+            detail,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppType.meta.copyWith(color: room.inkSecondary),
+          ),
+        if (left != null)
+          Text(
+            left,
+            maxLines: 1,
+            style: AppType.meta.tabular
+                .weight(FontWeight.w600)
+                .copyWith(color: room.ink),
+          ),
+        if (item.resumeProgress case final progress?) ...[
+          const SizedBox(height: 7),
+          // Ink: how far somebody got is not a status.
+          HomeRowBar(value: progress, color: room.ink),
+        ],
+      ],
+    );
+
     Future<void> open() => openResume(context, ref, row);
 
     return Semantics(
@@ -170,67 +221,22 @@ class ContinueWatchingRow extends ConsumerWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: AppRadius.borderRadiusSm,
-                    child: SizedBox.fromSize(
-                      size: thumb,
-                      child: image == null
-                          ? ColoredBox(
-                              color: room.fillQuiet,
-                              child: Icon(
-                                row.service.icon,
-                                size: 20,
-                                color: room.inkSecondary,
-                              ),
-                            )
-                          : ContentCard(
-                              imageUrl: image.url,
-                              httpHeaders: image.headers,
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
+              child: stacked
+                  ? Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppType.row
-                              .weight(FontWeight.w600)
-                              .copyWith(color: room.ink),
-                        ),
-                        if (detail.isNotEmpty)
-                          Text(
-                            detail,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppType.meta.copyWith(
-                              color: room.inkSecondary,
-                            ),
-                          ),
-                        if (left != null)
-                          Text(
-                            left,
-                            maxLines: 1,
-                            style: AppType.meta.tabular
-                                .weight(FontWeight.w600)
-                                .copyWith(color: room.ink),
-                          ),
-                        if (item.resumeProgress case final progress?) ...[
-                          const SizedBox(height: 7),
-                          // Ink: how far somebody got is not a status.
-                          HomeRowBar(value: progress, color: room.ink),
-                        ],
+                        Align(alignment: Alignment.centerLeft, child: picture),
+                        const SizedBox(height: AppSpacing.sm),
+                        words,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        picture,
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: words),
                       ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),
