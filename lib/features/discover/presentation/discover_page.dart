@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -152,6 +155,12 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
     }
 
     return AmbientScaffold(
+      // The tab's well on a desktop window is measured on the catalogue's
+      // columns: at 1140 the atrium's grids and the catalogue page they open
+      // hold seven posters at 148, the library's grid at the same window. The
+      // answers to a search are rows, and take the reading well inside it
+      // (`_rowsPadding`).
+      contentWellWidth: AppBreakpoints.contentWell,
       // Engaged, the field takes the title's place, as drawn.
       appBar: engaged
           ? null
@@ -189,82 +198,99 @@ class _Recents extends ConsumerWidget {
     if (recents.isEmpty) return const SizedBox.shrink();
     final room = CupolaRoom.of(context);
     final notifier = ref.read(recentSearchesProvider.notifier);
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        bottomPadding,
-      ),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      children: [
-        Row(
-          children: [
-            Expanded(child: _Heading('Recent searches', top: 0)),
-            TextButton(
-              onPressed: notifier.clear,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(44, 44),
-                visualDensity: VisualDensity.standard,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                foregroundColor: room.inkSecondary,
-                textStyle: AppType.label,
+    return LayoutBuilder(
+      builder: (context, box) => ListView(
+        padding: _rowsPadding(box.maxWidth, bottom: bottomPadding),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _Heading('Recent searches', top: 0)),
+              TextButton(
+                onPressed: notifier.clear,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  visualDensity: VisualDensity.standard,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                  ),
+                  foregroundColor: room.inkSecondary,
+                  textStyle: AppType.label,
+                ),
+                child: const Text('Clear'),
               ),
-              child: const Text('Clear'),
-            ),
-          ],
-        ),
-        for (var i = 0; i < recents.length; i++)
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: i == 0 ? null : Border(top: BorderSide(color: room.hair)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: PressableScale(
-                    onTap: () => onPick(recents[i]),
-                    semanticLabel: recents[i],
-                    excludeChildSemantics: true,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 50),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.history_rounded,
-                            size: 20,
-                            color: room.inkSecondary,
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Text(
-                              recents[i],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppType.body.copyWith(color: room.ink),
+            ],
+          ),
+          for (var i = 0; i < recents.length; i++)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: i == 0
+                    ? null
+                    : Border(top: BorderSide(color: room.hair)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: PressableScale(
+                      onTap: () => onPick(recents[i]),
+                      semanticLabel: recents[i],
+                      excludeChildSemantics: true,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 50),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.history_rounded,
+                              size: 20,
+                              color: room.inkSecondary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Text(
+                                recents[i],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppType.body.copyWith(color: room.ink),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                IconButton(
-                  onPressed: () => notifier.remove(recents[i]),
-                  tooltip: 'Remove ${recents[i]} from recent searches',
-                  icon: Icon(
-                    Icons.close_rounded,
-                    size: 18,
-                    color: room.inkSecondary,
+                  IconButton(
+                    onPressed: () => notifier.remove(recents[i]),
+                    tooltip: 'Remove ${recents[i]} from recent searches',
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: room.inkSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
+
+/// A list of rows at the head of the tab, never wider than a page of one
+/// column ([AppBreakpoints.readingWell]): a title's row and its add, a
+/// recent search and its remove, are read across, and stretched over a
+/// tablet on its side the control stops belonging to its row. The list still
+/// scrolls the whole width, and on a phone this is the gutter alone.
+EdgeInsets _rowsPadding(double width, {required double bottom}) =>
+    EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      0,
+      math.max(
+        AppSpacing.lg,
+        width - AppSpacing.lg - AppBreakpoints.readingWell,
+      ),
+      bottom,
+    );
 
 /// A section's name, in the secondary ink.
 class _Heading extends StatelessWidget {
@@ -364,15 +390,15 @@ class _Results extends ConsumerWidget {
       if (lidarr && sections.settled) _LidarrLink(query: query),
     ];
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.xl + bottomPadding,
+    return LayoutBuilder(
+      builder: (context, box) => ListView(
+        padding: _rowsPadding(
+          box.maxWidth,
+          bottom: AppSpacing.xl + bottomPadding,
+        ),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        children: children,
       ),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      children: children,
     );
   }
 }
@@ -781,34 +807,43 @@ class _WithoutSeerr extends ConsumerWidget {
       children: [
         // The calendar comes from the arrs, and needs no Seerr.
         const DiscoverCalendarBand(),
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          decoration: BoxDecoration(
-            color: room.slab,
-            borderRadius: BorderRadius.circular(AppRadius.group),
-            border: Border.all(color: room.hair),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'The catalogue comes from Seerr',
-                style: AppType.section.copyWith(color: room.ink),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Set up Seerr to browse movies and series by genre, network '
-                'and studio, and see what is coming. The field above '
-                'searches ${_serviceList(searchable)}.',
-                style: AppType.meta.copyWith(color: room.inkSecondary),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton(
-                onPressed: () =>
-                    context.go(ServiceRoutes.setUp(ServiceKey.seerr)),
-                child: Text(Lexicon.setUp(ServiceKey.seerr.title)),
-              ),
-            ],
+        // A paragraph: never a line longer than a page of one column.
+        Align(
+          alignment: AlignmentDirectional.topStart,
+          child: Container(
+            // The whole width up to the measure, whatever the words take.
+            width: double.infinity,
+            constraints: const BoxConstraints(
+              maxWidth: AppBreakpoints.readingWell,
+            ),
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            decoration: BoxDecoration(
+              color: room.slab,
+              borderRadius: BorderRadius.circular(AppRadius.group),
+              border: Border.all(color: room.hair),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'The catalogue comes from Seerr',
+                  style: AppType.section.copyWith(color: room.ink),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Set up Seerr to browse movies and series by genre, network '
+                  'and studio, and see what is coming. The field above '
+                  'searches ${_serviceList(searchable)}.',
+                  style: AppType.meta.copyWith(color: room.inkSecondary),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                FilledButton(
+                  onPressed: () =>
+                      context.go(ServiceRoutes.setUp(ServiceKey.seerr)),
+                  child: Text(Lexicon.setUp(ServiceKey.seerr.title)),
+                ),
+              ],
+            ),
           ),
         ),
       ],
