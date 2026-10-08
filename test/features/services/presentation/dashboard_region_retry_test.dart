@@ -1,11 +1,11 @@
-/// A region's Retry asks its failed sources again, driven through the app's
+/// A module's Retry asks its failed sources again, driven through the app's
 /// real clients on the profiles' fake network.
 ///
-/// In flight's and Recently added's Retry used to drop the summary and the
-/// merge. The summary only delegates to the probe it awaits, and the merge
-/// awaits client queues that hold a failure until somebody drops them, so a
-/// recovered qBittorrent stayed missing from the queue and a recovered Radarr
-/// stayed named in the band above.
+/// Downloads' and Arrived's Retry used to drop the summary and the merge. The
+/// summary only delegates to the probe it awaits, and the merge awaits client
+/// queues that hold a failure until somebody drops them, so a recovered
+/// qBittorrent stayed missing from the queue and a recovered Radarr stayed
+/// named at the top of the Home.
 library;
 
 import 'dart:io';
@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -60,7 +61,7 @@ Finder _within(Type region, Finder matching) =>
     find.descendant(of: find.byType(region), matching: matching);
 
 void main() {
-  testWidgets('P1, every queue back: In flight Retry brings back every '
+  testWidgets('P1, every queue back: Downloads Retry brings back every '
       'client, not only the arrs', (tester) async {
     var down = true;
     final harness = await _pumpHome(
@@ -76,20 +77,20 @@ void main() {
       ], () => down),
     );
 
-    expect(find.text('— downloading'), findsOne);
-    expect(_within(ServicesInFlightSection, find.byType(FaultBand)), findsOne);
+    // No source answered: the module states no figure, and its fault line
+    // stands under its heading.
+    expect(find.text('Downloads'), findsOne);
+    expect(find.textContaining('downloading'), findsNothing);
+    expect(_within(HomeDownloadsModule, find.byType(FaultBand)), findsOne);
 
     down = false;
-    await tester.tap(_within(ServicesInFlightSection, find.text('Retry')));
+    await tester.tap(_within(HomeDownloadsModule, find.text('Retry')));
     await harness.settle(tester);
 
     // The arrs' queues are read straight off their clients and came back with
     // the merge; qBittorrent's and SABnzbd's are providers of their own that
     // kept the failure, and only dropping them brings their rows back.
-    expect(
-      _within(ServicesInFlightSection, find.byType(FaultBand)),
-      findsNothing,
-    );
+    expect(_within(HomeDownloadsModule, find.byType(FaultBand)), findsNothing);
     // Both clients' rates are back in the sum: SABnzbd's rows are joined to
     // the 4K Radarr's, so its rate is the one thing only it can say.
     expect(
@@ -101,8 +102,8 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('P1, the arrs back: Recently added Retry re-asks whether they '
-      'answer, so the band lets go of them', (tester) async {
+  testWidgets('P1, the arrs back: Arrived Retry re-asks whether they answer, '
+      'so Needs you lets go of them', (tester) async {
     var down = true;
     final harness = await _pumpHome(
       tester,
@@ -115,21 +116,42 @@ void main() {
       ], () => down),
     );
 
-    expect(find.text('— imported'), findsOne);
+    expect(find.text('Arrived'), findsOne);
+    expect(find.textContaining('imported'), findsNothing);
     expect(
-      find.byKey(const ValueKey('services-alert-band')),
+      find.descendant(
+        of: find.byType(NeedsYouLine),
+        matching: find.textContaining(
+          'Radarr, Sonarr and Lidarr did not answer',
+        ),
+      ),
       findsOne,
       reason: 'the probes found the three arrs dark',
     );
 
     down = false;
-    await tester.tap(_within(ServicesRecentlyAddedSection, find.text('Retry')));
+    await tester.tap(_within(HomeArrivedModule, find.text('Retry')));
     await harness.settle(tester);
 
     expect(find.text('7 imported'), findsOne);
     // The probe itself was asked, not the summary that awaits its old answer.
-    expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
     expect(find.textContaining('did not answer'), findsNothing);
+    // What leads Needs you now is a fault of the stack, not a silence: its
+    // way in is Review, never Retry.
+    expect(
+      find.descendant(
+        of: find.byType(NeedsYouLine),
+        matching: find.text('Review'),
+      ),
+      findsOne,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(NeedsYouLine),
+        matching: find.text('Retry'),
+      ),
+      findsNothing,
+    );
 
     await harness.unmount(tester);
   });
