@@ -499,12 +499,11 @@ class _QuietLinks extends ConsumerWidget {
         AppSpacing.lg,
         0,
       ),
-      child: Row(
-        children: [
-          link(DiscoverIndex.moods),
-          const SizedBox(width: AppSpacing.xl),
-          link(DiscoverIndex.languages),
-        ],
+      // A wrap rather than a row: at a large reading size the two links do
+      // not fit one phone's line, and the second goes under the first.
+      child: Wrap(
+        spacing: AppSpacing.xl,
+        children: [link(DiscoverIndex.moods), link(DiscoverIndex.languages)],
       ),
     );
   }

@@ -55,6 +55,21 @@ void main() {
       expect(find.text('Coming soon'), findsOneWidget);
     });
 
+    testWidgets('at twice the reading size on a phone the two quiet links '
+        'go one under the other', (tester) async {
+      await _pumpAtrium(tester, size: const Size(390, 3000), textScale: 2);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final moods = tester.getTopLeft(find.text('Moods'));
+      final languages = tester.getTopLeft(find.text('Languages'));
+      expect(languages.dy, greaterThan(moods.dy));
+      expect(
+        tester.getTopRight(find.text('Languages')).dx,
+        lessThanOrEqualTo(390),
+      );
+    });
+
     testWidgets('a shelf with no titles is not drawn', (tester) async {
       await _pumpAtrium(tester, best: const []);
       await tester.pumpAndSettle();
@@ -261,9 +276,11 @@ Future<ProviderContainer> _pumpAtrium(
   Future<List<MediaPreview>> Function(Ref ref)? trending,
   List<MediaPreview> best = _best,
   List<SeerrRequest> requests = const [],
+  Size size = const Size(1200, 3000),
+  double textScale = 1,
 }) async {
   // Tall viewport so every shelf builds (the vertical ListView is lazy).
-  tester.view.physicalSize = const Size(1200, 3000);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(() {
     tester.view.resetPhysicalSize();
@@ -295,7 +312,15 @@ Future<ProviderContainer> _pumpAtrium(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: const MaterialApp(home: Scaffold(body: DiscoverAtrium())),
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: const Scaffold(body: DiscoverAtrium()),
+      ),
     ),
   );
   return container;
