@@ -16,7 +16,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -61,7 +61,7 @@ Future<(ProfileHarness, List<String>)> _pumpHome(
 
   final router = GoRouter(
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const DashboardScreen()),
+      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
       GoRoute(path: ServiceRoutes.nginxProxyManager, builder: landed),
       GoRoute(path: ServiceRoutes.npmCertificates, builder: landed),
     ],

@@ -15,8 +15,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -87,7 +87,7 @@ Future<(ProfileHarness, ValueGetter<String?>)> _pumpHome(
 
   final router = GoRouter(
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const DashboardScreen()),
+      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
       GoRoute(
         path: '${ServiceRoutes.prowlarrIndexerBase}/:id',
         builder: landed,

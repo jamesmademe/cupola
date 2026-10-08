@@ -138,10 +138,10 @@ class _PaneState extends State<_Pane> {
   );
 
   late final _router = GoRouter(
-    initialLocation: '/dashboard',
+    initialLocation: '/stack',
     routes: [
       GoRoute(
-        path: '/dashboard',
+        path: '/stack',
         builder: (_, _) => const Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

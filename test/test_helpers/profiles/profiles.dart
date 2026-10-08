@@ -2,7 +2,7 @@
 /// variants), and P8 behind Cloudflare Access, as values a test can pump.
 ///
 /// ```dart
-/// await pumpWithProfile(tester, Profiles.p6, child: const DashboardScreen());
+/// await pumpWithProfile(tester, Profiles.p6, child: const StackScreen());
 /// ```
 ///
 /// See `README.md` beside this file for what each profile is for.

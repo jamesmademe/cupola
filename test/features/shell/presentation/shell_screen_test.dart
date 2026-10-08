@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
@@ -43,39 +44,69 @@ void main() {
   });
 
   group('ShellScreen', () {
-    testWidgets('renders the floating nav bar with four destinations', (
+    testWidgets('renders the floating nav bar with the operator\'s four', (
       tester,
     ) async {
       await _pumpShell(tester);
 
       expect(find.byType(FloatingBottomNavBar), findsOneWidget);
-      expect(_navItem('Dashboard'), findsOneWidget);
-      expect(_navItem('Activity'), findsOneWidget);
+      expect(_navItem('Home'), findsOneWidget);
       expect(_navItem('Discover'), findsOneWidget);
-      expect(_navItem('Settings'), findsOneWidget);
+      expect(_navItem('Activity'), findsOneWidget);
+      expect(_navItem('Stack'), findsOneWidget);
+      // Settings is a branch with no place in the bar: it opens from Stack's
+      // gear. Requests is the requester's third tab, not the operator's.
+      expect(_navItem('Settings'), findsNothing);
+      expect(_navItem('Requests'), findsNothing);
+      final bar = tester.widget<FloatingBottomNavBar>(
+        find.byType(FloatingBottomNavBar),
+      );
+      expect(bar.destinations.map((destination) => destination.label), [
+        'Home',
+        'Discover',
+        'Activity',
+        'Stack',
+      ]);
     });
 
-    testWidgets('selects Services for the /services route', (tester) async {
-      await _pumpShell(tester, initialLocation: '/dashboard');
+    testWidgets('selects Home for the /home route', (tester) async {
+      await _pumpShell(tester, initialLocation: '/home');
 
-      expect(find.text('ServicesPage'), findsOneWidget);
-      expect(find.byIcon(Icons.view_list_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.view_list_outlined), findsNothing);
+      expect(find.text('HomePage'), findsOneWidget);
+      expect(find.byIcon(Icons.home_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.home_outlined), findsNothing);
     });
 
-    testWidgets('selects Services for legacy detail routes', (tester) async {
-      await _pumpShell(tester, initialLocation: '/dashboard/radarr/movie/42');
+    testWidgets('selects Stack for the /stack route', (tester) async {
+      await _pumpShell(tester, initialLocation: '/stack');
+
+      expect(find.text('StackPage'), findsOneWidget);
+      expect(find.byIcon(Icons.layers_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.layers_outlined), findsNothing);
+    });
+
+    testWidgets('selects Stack for service room routes', (tester) async {
+      await _pumpShell(tester, initialLocation: '/stack/radarr/movie/42');
 
       expect(find.text('MovieDetailPage'), findsOneWidget);
-      expect(find.byIcon(Icons.view_list_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.layers_rounded), findsOneWidget);
     });
 
-    testWidgets('selects Settings for the /settings route', (tester) async {
+    testWidgets('Settings is on screen with no tab of the bar selected', (
+      tester,
+    ) async {
       await _pumpShell(tester, initialLocation: '/settings');
 
       expect(find.text('SettingsPage'), findsOneWidget);
-      expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.settings_outlined), findsNothing);
+      final bar = tester.widget<FloatingBottomNavBar>(
+        find.byType(FloatingBottomNavBar),
+      );
+      expect(bar.selectedIndex, -1);
+      // Every glyph is the resting one: nothing in the bar is lit.
+      expect(find.byIcon(Icons.home_rounded), findsNothing);
+      expect(find.byIcon(Icons.explore_rounded), findsNothing);
+      expect(find.byIcon(Icons.layers_rounded), findsNothing);
+      expect(find.byIcon(Icons.settings_rounded), findsNothing);
     });
 
     // Replaces "does not select a tab for unmatched shell routes". There is no
@@ -104,71 +135,76 @@ void main() {
       expect(find.byIcon(Icons.explore_rounded), findsOneWidget);
     });
 
-    testWidgets('tapping the current Services tab triggers a refresh', (
-      tester,
-    ) async {
-      final harness = await _pumpShell(tester, initialLocation: '/dashboard');
+    for (final (label, path, section) in [
+      ('Home', '/home', NavigationSection.home),
+      ('Stack', '/stack', NavigationSection.stack),
+    ]) {
+      testWidgets('tapping the current $label tab triggers a refresh', (
+        tester,
+      ) async {
+        final harness = await _pumpShell(tester, initialLocation: path);
 
-      expect(
-        harness.container.read(
-          navigationRefreshProvider(NavigationSection.dashboard),
-        ),
-        0,
-      );
+        expect(harness.container.read(navigationRefreshProvider(section)), 0);
 
-      await tester.tap(_navItem('Dashboard'));
-      await tester.pumpAndSettle();
+        await tester.tap(_navItem(label));
+        await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/dashboard');
-      expect(
-        harness.container.read(
-          navigationRefreshProvider(NavigationSection.dashboard),
-        ),
-        1,
-      );
-    });
+        expect(harness.router.state.uri.path, path);
+        expect(harness.container.read(navigationRefreshProvider(section)), 1);
+        // And only its own: the other tabs' counters did not move.
+        for (final other in NavigationSection.values.where(
+          (value) => value != section,
+        )) {
+          expect(
+            harness.container.read(navigationRefreshProvider(other)),
+            0,
+            reason: '$label must refresh $label, not ${other.name}',
+          );
+        }
+      });
+    }
 
     testWidgets(
-      'tapping selected Services from a nested services route returns to root without refreshing',
+      'tapping selected Stack from a nested room returns to root without refreshing',
       (tester) async {
         final harness = await _pumpShell(
           tester,
-          initialLocation: '/dashboard/radarr/movie/42',
+          initialLocation: '/stack/radarr/movie/42',
         );
 
-        await tester.tap(_navItem('Dashboard'));
+        await tester.tap(_navItem('Stack'));
         await tester.pumpAndSettle();
 
-        expect(harness.router.state.uri.path, '/dashboard');
-        expect(find.text('ServicesPage'), findsOneWidget);
+        expect(harness.router.state.uri.path, '/stack');
+        expect(find.text('StackPage'), findsOneWidget);
         expect(
           harness.container.read(
-            navigationRefreshProvider(NavigationSection.dashboard),
+            navigationRefreshProvider(NavigationSection.stack),
           ),
           0,
         );
       },
     );
 
-    // ── What four navigators buy, and what they must not cost ──────────────
+    // ── What the navigators buy, and what they must not cost ───────────────
 
     testWidgets('each branch keeps its own stack across a switch', (
       tester,
     ) async {
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr/movie/42',
+        initialLocation: '/stack/radarr/movie/42',
       );
 
       await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
       expect(find.text('DiscoverPage'), findsOneWidget);
 
-      await tester.tap(_navItem('Dashboard'));
+      await tester.tap(_navItem('Stack'));
       await tester.pumpAndSettle();
 
       // Not the tab's root: the page that was open when it was left.
-      expect(harness.router.state.uri.path, '/dashboard/radarr/movie/42');
+      expect(harness.router.state.uri.path, '/stack/radarr/movie/42');
       expect(find.text('MovieDetailPage'), findsOneWidget);
     });
 
@@ -176,18 +212,18 @@ void main() {
       tester,
     ) async {
       await _pumpShell(tester);
-      expect(_ProbePage.mounts['ServicesPage'], 1);
+      expect(_ProbePage.mounts['HomePage'], 1);
 
       await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
-      await tester.tap(_navItem('Dashboard'));
+      await tester.tap(_navItem('Home'));
       await tester.pumpAndSettle();
 
       // Still one: this is the whole performance claim. A return costs no
       // construction, and everything the page had subscribed to stayed
-      // subscribed — the 26 provider fetches a rebuilt /services used to re-run
-      // never happen.
-      expect(_ProbePage.mounts['ServicesPage'], 1);
+      // subscribed — the 26 provider fetches a rebuilt first page used to
+      // re-run never happen.
+      expect(_ProbePage.mounts['HomePage'], 1);
       expect(_ProbePage.mounts['DiscoverPage'], 1);
     });
 
@@ -198,13 +234,13 @@ void main() {
       // `initialLocation: true` must be a navigation, never a refresh.
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr/movie/42',
+        initialLocation: '/stack/radarr/movie/42',
       );
 
-      await tester.tap(_navItem('Dashboard'));
+      await tester.tap(_navItem('Stack'));
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/dashboard');
+      expect(harness.router.state.uri.path, '/stack');
       for (final section in NavigationSection.values) {
         expect(
           harness.container.read(navigationRefreshProvider(section)),
@@ -219,24 +255,24 @@ void main() {
     ) async {
       // With four stacks the location can belong to a branch other than the
       // visible one, which is why the shell asks the navigator rather than the
-      // path. Services is deep here while Discover shows: tapping Services must
+      // path. The Stack is deep here while Discover shows: tapping the Stack must
       // land on its own root.
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr/movie/42',
+        initialLocation: '/stack/radarr/movie/42',
       );
       await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
 
-      await tester.tap(_navItem('Dashboard'));
+      await tester.tap(_navItem('Stack'));
       await tester.pumpAndSettle();
       expect(find.text('MovieDetailPage'), findsOneWidget);
 
-      await tester.tap(_navItem('Dashboard'));
+      await tester.tap(_navItem('Stack'));
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/dashboard');
-      expect(find.text('ServicesPage'), findsOneWidget);
+      expect(harness.router.state.uri.path, '/stack');
+      expect(find.text('StackPage'), findsOneWidget);
     });
 
     testWidgets('crossing the rail breakpoint keeps every branch stack', (
@@ -244,7 +280,7 @@ void main() {
     ) async {
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr/movie/42',
+        initialLocation: '/stack/radarr/movie/42',
       );
 
       // Widen past 840 so the bar becomes the rail, then narrow back. The shell
@@ -257,26 +293,26 @@ void main() {
       tester.view.physicalSize = const Size(400, 900);
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/dashboard/radarr/movie/42');
+      expect(harness.router.state.uri.path, '/stack/radarr/movie/42');
       expect(find.text('MovieDetailPage'), findsOneWidget);
     });
 
-    testWidgets('re-tapping the active Dashboard tab announces the refresh', (
+    testWidgets('re-tapping the active Stack tab announces the refresh', (
       tester,
     ) async {
       // A re-tap refresh changes nothing on screen — no spinner, no route
       // change — so without this the tap is indistinguishable from a no-op for a
       // screen-reader user.
       final announcements = SemanticsAnnouncementRecorder.install(tester);
-      final harness = await _pumpShell(tester, initialLocation: '/dashboard');
+      final harness = await _pumpShell(tester, initialLocation: '/stack');
 
-      await tester.tap(_navItem('Dashboard'));
+      await tester.tap(_navItem('Stack'));
       await tester.pumpAndSettle();
 
-      expect(announcements.messages, ['Refreshing Dashboard']);
+      expect(announcements.messages, ['Refreshing Stack']);
       expect(
         harness.container.read(
-          navigationRefreshProvider(NavigationSection.dashboard),
+          navigationRefreshProvider(NavigationSection.stack),
         ),
         1,
       );
@@ -290,13 +326,13 @@ void main() {
           tester,
           supportsAnnounce: false,
         );
-        await _pumpShell(tester, initialLocation: '/dashboard');
+        await _pumpShell(tester, initialLocation: '/stack');
 
-        await tester.tap(_navItem('Dashboard'));
+        await tester.tap(_navItem('Stack'));
         await tester.pumpAndSettle();
 
         expect(
-          find.semantics.byLabel('Refreshing Dashboard'),
+          find.semantics.byLabel('Refreshing Stack'),
           containsSemantics(isLiveRegion: true),
         );
         expect(native.messages, isEmpty);
@@ -309,7 +345,7 @@ void main() {
       // interrupts the reader's speech queue. This guards an over-eager
       // announce() in the navigate branch.
       final announcements = SemanticsAnnouncementRecorder.install(tester);
-      await _pumpShell(tester, initialLocation: '/dashboard');
+      await _pumpShell(tester, initialLocation: '/stack');
 
       await tester.tap(_navItem('Discover'));
       await tester.pumpAndSettle();
@@ -331,7 +367,7 @@ void main() {
             return null;
           });
 
-      await _pumpShell(tester, initialLocation: '/dashboard');
+      await _pumpShell(tester, initialLocation: '/stack');
       haptics.clear();
 
       await tester.tap(_navItem('Discover'));
@@ -340,33 +376,25 @@ void main() {
       expect(haptics, ['HapticFeedbackType.selectionClick']);
     });
 
-    testWidgets('tapping the current Settings tab does not trigger refresh', (
+    testWidgets('leaving Settings by the bar refreshes nothing', (
       tester,
     ) async {
+      // Settings has no tab to re-tap and no refresh section of its own: its
+      // refresh is a command ("Test all"). The way out of it is a tab of the
+      // bar, and that is a navigation, never a fetch.
       final harness = await _pumpShell(tester, initialLocation: '/settings');
 
-      await tester.tap(_navItem('Settings'));
+      await tester.tap(_navItem('Stack'));
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/settings');
-      expect(
-        harness.container.read(
-          navigationRefreshProvider(NavigationSection.dashboard),
-        ),
-        0,
-      );
-      expect(
-        harness.container.read(
-          navigationRefreshProvider(NavigationSection.activity),
-        ),
-        0,
-      );
-      expect(
-        harness.container.read(
-          navigationRefreshProvider(NavigationSection.discover),
-        ),
-        0,
-      );
+      expect(harness.router.state.uri.path, '/stack');
+      for (final section in NavigationSection.values) {
+        expect(
+          harness.container.read(navigationRefreshProvider(section)),
+          0,
+          reason: '${section.name} must not refresh on arrival',
+        );
+      }
     });
   });
 
@@ -418,7 +446,10 @@ void main() {
       await _pumpShell(
         tester,
         viewport: _railViewport,
-        overrides: [unseenReleaseSearchCountProvider.overrideWithValue(3)],
+        overrides: [
+          ...await _lensOverrides(instances: const []),
+          unseenReleaseSearchCountProvider.overrideWithValue(3),
+        ],
       );
 
       expect(
@@ -531,7 +562,7 @@ void main() {
     ) async {
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr',
+        initialLocation: '/stack/radarr',
         overrides: await _lensOverrides(),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
@@ -568,7 +599,7 @@ void main() {
       );
       // And it really was a no-op underneath: neither input the hook watches
       // changed, which is why the hook could never have caught this.
-      expect(harness.router.state.uri.path, '/dashboard/radarr');
+      expect(harness.router.state.uri.path, '/stack/radarr');
       expect(
         harness.container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
         'radarr',
@@ -584,7 +615,7 @@ void main() {
       // with no velocity is a visible hitch.
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr',
+        initialLocation: '/stack/radarr',
         overrides: await _lensOverrides(),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
@@ -614,7 +645,7 @@ void main() {
     ) async {
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr/movie/42',
+        initialLocation: '/stack/radarr/movie/42',
         overrides: await _lensOverrides(),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
@@ -628,14 +659,14 @@ void main() {
       expect(find.byType(ServiceMatrix), findsNothing);
       expect(
         harness.router.state.uri.path,
-        '/dashboard/radarr/movie/42',
+        '/stack/radarr/movie/42',
         reason: 'the room the Portal lifted is the one it puts back',
       );
       expect(find.text('MovieDetailPage'), findsOneWidget);
 
       // And with the Portal gone, back is back again.
       await _systemBack(tester);
-      expect(harness.router.state.uri.path, '/dashboard');
+      expect(harness.router.state.uri.path, '/stack');
     });
 
     testWidgets('on a tab root, back closes the Portal instead of the app', (
@@ -688,7 +719,7 @@ void main() {
       await _openPortal(tester);
       expect(lastClaim(), isTrue);
 
-      await tester.tap(_navItem('Dashboard'));
+      await tester.tap(_navItem('Stack'));
       await tester.pumpAndSettle();
       expect(find.byType(ServiceMatrix), findsNothing);
       expect(
@@ -706,7 +737,7 @@ void main() {
       final platformCalls = _recordPlatformCalls();
       await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr/movie/42',
+        initialLocation: '/stack/radarr/movie/42',
         overrides: await _lensOverrides(),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
@@ -734,7 +765,7 @@ void main() {
       try {
         final harness = await _pumpShell(
           tester,
-          initialLocation: '/dashboard/radarr/movie/42',
+          initialLocation: '/stack/radarr/movie/42',
           overrides: await _lensOverrides(),
           viewport: const Size(390 * 3, 844 * 3),
           devicePixelRatio: 3,
@@ -747,7 +778,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(ServiceMatrix), findsNothing);
-        expect(harness.router.state.uri.path, '/dashboard/radarr/movie/42');
+        expect(harness.router.state.uri.path, '/stack/radarr/movie/42');
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
@@ -758,7 +789,7 @@ void main() {
   // carries the Portal as an action instead. Opening it — either way — says
   // once what the floor holds.
   group('the Portal without the gesture', () {
-    testWidgets('the Dashboard tab carries an action that opens it', (
+    testWidgets('the Stack tab carries an action that opens it', (
       tester,
     ) async {
       final semantics = tester.ensureSemantics();
@@ -771,20 +802,20 @@ void main() {
           );
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr/movie/42',
+        initialLocation: '/stack/radarr/movie/42',
         overrides: await _lensOverrides(),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
       );
-      // The Dashboard, where the app opens, has already asked every
+      // The Stack, where the services are, has already asked every
       // connection. Without that the sentence says what is true at that
       // moment — "2 checking" — which the sentence's own test covers.
       harness.container.listen(portalFloorCensusProvider, (_, _) {});
       await tester.pumpAndSettle();
 
-      final dashboardTab = find.semantics.byLabel(RegExp(r'^Dashboard\n'));
+      final stackTab = find.semantics.byLabel(RegExp(r'^Stack\n'));
       expect(
-        tester.getSemantics(_navItem('Dashboard')),
+        tester.getSemantics(_navItem('Stack')),
         containsSemantics(customActions: const [ShellScreen.openPortalAction]),
       );
       expect(
@@ -793,7 +824,7 @@ void main() {
         reason: 'one tab carries it, not four',
       );
 
-      tester.semantics.customAction(dashboardTab, ShellScreen.openPortalAction);
+      tester.semantics.customAction(stackTab, ShellScreen.openPortalAction);
       await tester.pumpAndSettle();
 
       expect(find.byType(ServiceMatrix), findsOneWidget);
@@ -808,7 +839,7 @@ void main() {
       expect(close, findsOne);
 
       // A second activation while open neither restarts it nor speaks again.
-      tester.semantics.customAction(dashboardTab, ShellScreen.openPortalAction);
+      tester.semantics.customAction(stackTab, ShellScreen.openPortalAction);
       await tester.pumpAndSettle();
       expect(announcements.messages, hasLength(1));
 
@@ -840,7 +871,7 @@ void main() {
         await tester.pumpAndSettle();
 
         tester.semantics.customAction(
-          find.semantics.byLabel(RegExp(r'^Dashboard\n')),
+          find.semantics.byLabel(RegExp(r'^Stack\n')),
           ShellScreen.openPortalAction,
         );
         await tester.pumpAndSettle();
@@ -969,24 +1000,25 @@ void main() {
     });
   });
 
-  // The coach mark's evidence of need: a switch from the Dashboard to a service
+  // The coach mark's evidence of need: a switch from the Stack to a service
   // that went round the Portal. Counted only where a Portal is drawn.
   group('the Portal coach mark\'s journeys', () {
-    testWidgets('a Dashboard to service switch on the phone is one', (
+    testWidgets('a Stack to service switch on the phone is one', (
       tester,
     ) async {
       final harness = await _pumpShell(
         tester,
+        initialLocation: '/stack',
         overrides: await _lensOverrides(),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
       );
       expect(harness.container.read(portalHintsProvider).manualJourneys, 0);
 
-      harness.router.go('/dashboard/radarr');
+      harness.router.go('/stack/radarr');
       await tester.pumpAndSettle();
 
-      expect(find.text('ServiceDashboard'), findsOneWidget);
+      expect(find.text('ServiceRoom'), findsOneWidget);
       expect(harness.container.read(portalHintsProvider).manualJourneys, 1);
     });
 
@@ -998,15 +1030,16 @@ void main() {
       // never lacked the Portal.
       final harness = await _pumpShell(
         tester,
+        initialLocation: '/stack',
         overrides: await _lensOverrides(),
         viewport: _railViewport,
       );
       expect(find.byType(NavigationRail), findsOneWidget);
 
-      harness.router.go('/dashboard/radarr');
+      harness.router.go('/stack/radarr');
       await tester.pumpAndSettle();
 
-      expect(find.text('ServiceDashboard'), findsOneWidget);
+      expect(find.text('ServiceRoom'), findsOneWidget);
       expect(harness.container.read(portalHintsProvider).manualJourneys, 0);
     });
   });
@@ -1075,6 +1108,7 @@ const _lensInstances = [
 Future<List<Override>> _lensOverrides({
   Set<String> silent = const {},
   bool demoDue = false,
+  List<ServiceInstance> instances = _lensInstances,
 }) async {
   SharedPreferences.setMockInitialValues({
     if (!demoDue) 'portal_hint_demo_shown': true,
@@ -1084,9 +1118,10 @@ Future<List<Override>> _lensOverrides({
     sharedPreferencesProvider.overrideWithValue(prefs),
     secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
     initialSettingsProvider.overrideWithValue(
-      const SettingsModel(instances: _lensInstances),
+      SettingsModel(instances: instances),
     ),
-    for (final instance in _lensInstances)
+    initialOnboardingCompletedProvider.overrideWithValue(true),
+    for (final instance in instances)
       instanceSummaryProvider((
         service: instance.service,
         instanceId: instance.id,
@@ -1201,7 +1236,7 @@ class _ProbePageState extends State<_ProbePage> {
 
 Future<_ShellHarness> _pumpShell(
   WidgetTester tester, {
-  String initialLocation = '/dashboard',
+  String initialLocation = '/home',
   // Phone width by default, so the shell renders the FloatingBottomNavBar rather
   // than the wide-window NavigationRail (the rail breakpoint is 840).
   Size viewport = const Size(400, 900),
@@ -1209,12 +1244,17 @@ Future<_ShellHarness> _pumpShell(
   // test that opens the Portal needs a viewport in real device pixels rather
   // than the logical-pixel shorthand the rest of this file uses.
   double devicePixelRatio = 1.0,
-  List<Override> overrides = const [],
+  // The shell reads who it is drawn for, which waits on the saved settings and
+  // on onboarding: a test that brings no world of its own gets one with no
+  // connection in it (and the demo spent, as in every world here).
+  List<Override>? overrides,
 }) async {
   _ProbePage.mounts.clear();
-  final container = ProviderContainer(overrides: overrides);
+  final container = ProviderContainer(
+    overrides: overrides ?? await _lensOverrides(instances: const []),
+  );
   // Mirrors production's shape, because that shape is what the shell now reads:
-  // four branches in `NavTab` order, each with its own navigator key, behind the
+  // six branches in `NavTab` order, each with its own navigator key, behind the
   // real cross-fade container. `/outside` sits at ROOT, where the manual-import
   // flow and the activity drill-down live — a route with no tab of its own is
   // now a route outside the shell, not an unmatched route inside it.
@@ -1227,23 +1267,11 @@ Future<_ShellHarness> _pumpShell(
             ShellScreen(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            navigatorKey: branchNavigatorKeyFor(NavTab.dashboard),
+            navigatorKey: branchNavigatorKeyFor(NavTab.home),
             routes: [
               GoRoute(
-                path: '/dashboard',
-                builder: (_, _) => const _ProbePage('ServicesPage'),
-                routes: [
-                  GoRoute(
-                    path: 'radarr/movie/:id',
-                    builder: (_, _) => const _ProbePage('MovieDetailPage'),
-                  ),
-                  // Where a matrix cell lands. One segment, so it cannot
-                  // swallow the two-segment detail route above it.
-                  GoRoute(
-                    path: ':service',
-                    builder: (_, _) => const _ProbePage('ServiceDashboard'),
-                  ),
-                ],
+                path: '/home',
+                builder: (_, _) => const _ProbePage('HomePage'),
               ),
             ],
           ),
@@ -1262,6 +1290,36 @@ Future<_ShellHarness> _pumpShell(
               GoRoute(
                 path: '/activity',
                 builder: (_, _) => const _ProbePage('ActivityPage'),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.stack),
+            routes: [
+              GoRoute(
+                path: '/stack',
+                builder: (_, _) => const _ProbePage('StackPage'),
+                routes: [
+                  GoRoute(
+                    path: 'radarr/movie/:id',
+                    builder: (_, _) => const _ProbePage('MovieDetailPage'),
+                  ),
+                  // Where a matrix cell lands. One segment, so it cannot
+                  // swallow the two-segment detail route above it.
+                  GoRoute(
+                    path: ':service',
+                    builder: (_, _) => const _ProbePage('ServiceRoom'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.requests),
+            routes: [
+              GoRoute(
+                path: '/requests',
+                builder: (_, _) => const _ProbePage('RequestsPage'),
               ),
             ],
           ),

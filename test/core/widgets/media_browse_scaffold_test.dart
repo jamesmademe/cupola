@@ -598,9 +598,7 @@ void main() {
         expect(libraryLoadCount, 1);
 
         container
-            .read(
-              navigationRefreshProvider(NavigationSection.dashboard).notifier,
-            )
+            .read(navigationRefreshProvider(NavigationSection.stack).notifier)
             .state++;
         await tester.pump();
         await tester.pumpAndSettle();
@@ -1029,7 +1027,7 @@ Future<void> _pumpLargeWall(
               title: 'Test Title',
               searchHint: 'Search test...',
               activityRoute: '/activity/test',
-              navigationSection: NavigationSection.dashboard,
+              navigationSection: NavigationSection.stack,
               serviceName: 'Test Service',
               heroTagPrefix: 'test',
               searchHeroTagPrefix: 'test_search',
@@ -1072,7 +1070,7 @@ Widget _buildTestScaffold() {
     title: 'Test Title',
     searchHint: 'Search test...',
     activityRoute: '/activity/test',
-    navigationSection: NavigationSection.dashboard,
+    navigationSection: NavigationSection.stack,
     serviceName: 'Test Service',
     heroTagPrefix: 'test',
     searchHeroTagPrefix: 'test_search',
@@ -1110,7 +1108,7 @@ Widget _buildCustomTestApp({
         title: 'Test Title',
         searchHint: 'Search test...',
         activityRoute: '/activity/test',
-        navigationSection: NavigationSection.dashboard,
+        navigationSection: NavigationSection.stack,
         serviceName: 'Test Service',
         heroTagPrefix: 'test',
         searchHeroTagPrefix: 'test_search',

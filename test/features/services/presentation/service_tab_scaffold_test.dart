@@ -22,11 +22,11 @@ void main() {
   group('serviceTabOf / isServiceTabRoot', () {
     test('reads the tab off the path', () {
       expect(
-        serviceTabOf(ServiceKey.radarr, '/dashboard/radarr/library'),
+        serviceTabOf(ServiceKey.radarr, '/stack/radarr/library'),
         ServiceTab.library,
       );
       expect(
-        serviceTabOf(ServiceKey.radarr, '/dashboard/radarr/library/movie/42'),
+        serviceTabOf(ServiceKey.radarr, '/stack/radarr/library/movie/42'),
         ServiceTab.library,
       );
     });
@@ -35,45 +35,39 @@ void main() {
       // `rss` is a qBittorrent view. A link naming it under Radarr is not a
       // place on Radarr, and answering with the tab would light a bar entry
       // that does not exist.
-      expect(serviceTabOf(ServiceKey.radarr, '/dashboard/radarr/rss'), isNull);
+      expect(serviceTabOf(ServiceKey.radarr, '/stack/radarr/rss'), isNull);
       expect(
-        serviceTabOf(ServiceKey.qbittorrent, '/dashboard/qbittorrent/rss'),
+        serviceTabOf(ServiceKey.qbittorrent, '/stack/qbittorrent/rss'),
         ServiceTab.rss,
       );
     });
 
     test('another service\'s path is not read as this one\'s', () {
-      expect(
-        serviceTabOf(ServiceKey.radarr, '/dashboard/sonarr/library'),
-        isNull,
-      );
-      expect(serviceTabOf(ServiceKey.radarr, '/dashboard/radarr'), isNull);
-      expect(serviceTabOf(ServiceKey.radarr, '/dashboard'), isNull);
+      expect(serviceTabOf(ServiceKey.radarr, '/stack/sonarr/library'), isNull);
+      expect(serviceTabOf(ServiceKey.radarr, '/stack/radarr'), isNull);
+      expect(serviceTabOf(ServiceKey.radarr, '/stack'), isNull);
     });
 
     test('a tab root is three segments; a pushed page is more', () {
       // The band the shell draws asks exactly this question, because it cannot
       // be covered by the page that wants it gone.
       expect(
-        isServiceTabRoot(ServiceKey.radarr, '/dashboard/radarr/library'),
+        isServiceTabRoot(ServiceKey.radarr, '/stack/radarr/library'),
         isTrue,
       );
       expect(
-        isServiceTabRoot(
-          ServiceKey.radarr,
-          '/dashboard/radarr/library/movie/42',
-        ),
+        isServiceTabRoot(ServiceKey.radarr, '/stack/radarr/library/movie/42'),
         isFalse,
       );
     });
 
     test('TrueNAS has no tabs, so nothing is one of its roots', () {
       expect(
-        serviceTabOf(ServiceKey.truenas, '/dashboard/truenas/storage'),
+        serviceTabOf(ServiceKey.truenas, '/stack/truenas/storage'),
         isNull,
       );
       expect(
-        isServiceTabRoot(ServiceKey.truenas, '/dashboard/truenas/storage'),
+        isServiceTabRoot(ServiceKey.truenas, '/stack/truenas/storage'),
         isFalse,
       );
     });

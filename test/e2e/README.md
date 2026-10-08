@@ -253,7 +253,7 @@ Docker endpoint cannot be mistaken for a UI placeholder:
 3. Cupola configuration: launch with flutter run -d macos or the built app,
    complete onboarding, add every service using the endpoint map, and verify
    each connection row. Credentials remain in the macOS keychain.
-4. Route/tab pass: from /dashboard visit every route produced by serviceTabs
+4. Route/tab pass: from /stack visit every route produced by serviceTabs
    for each configured service, plus /activity, /search and /settings. Exercise
    cold load, refresh, deep link and back navigation. TrueNAS is the deliberate
    exception to the horizontal service-tab model.

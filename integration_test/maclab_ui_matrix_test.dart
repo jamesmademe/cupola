@@ -237,7 +237,8 @@ Duration get _settleDuration {
 
 List<String> _routes() {
   final routes = <String>[
-    ServiceRoutes.dashboard,
+    ServiceRoutes.home,
+    ServiceRoutes.stack,
     '/activity',
     '/search',
     '/settings',

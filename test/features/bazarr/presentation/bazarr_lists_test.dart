@@ -202,7 +202,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BazarrSeriesDetailScreen), findsOneWidget);
-      expect(router.state.uri.path, '/dashboard/bazarr/series/7');
+      expect(router.state.uri.path, '/stack/bazarr/series/7');
     },
   );
 
@@ -257,7 +257,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BazarrMovieDetailScreen), findsOneWidget);
-      expect(router.state.uri.path, '/dashboard/bazarr/movies/12');
+      expect(router.state.uri.path, '/stack/bazarr/movies/12');
     },
   );
 }

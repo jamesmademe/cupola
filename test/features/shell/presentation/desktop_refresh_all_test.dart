@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -62,24 +63,35 @@ void main() {
     });
   });
 
-  testWidgets('⌘R elsewhere still refreshes the section, not the connections', (
-    tester,
-  ) async {
-    await _onDesktop(() async {
-      final container = await _container();
-      addTearDown(container.dispose);
+  for (final (tab, section) in [
+    (NavTab.home, NavigationSection.home),
+    (NavTab.activity, NavigationSection.activity),
+    (NavTab.stack, NavigationSection.stack),
+  ]) {
+    testWidgets(
+      '⌘R on ${tab.label} still refreshes the section, not the connections',
+      (tester) async {
+        await _onDesktop(() async {
+          final container = await _container();
+          addTearDown(container.dispose);
 
-      await _pump(tester, container, tab: NavTab.activity);
-      await _pressRefreshAll(tester);
+          await _pump(tester, container, tab: tab);
+          await _pressRefreshAll(tester);
 
-      expect(
-        container.read(navigationRefreshProvider(NavigationSection.activity)),
-        1,
-      );
-      // No snack: a section refresh is visible in the section it refreshed.
-      expect(find.textContaining('Testing'), findsNothing);
-    });
-  });
+          expect(container.read(navigationRefreshProvider(section)), 1);
+          // And no other: each tab asks for its own.
+          for (final other in NavigationSection.values.where(
+            (value) => value != section,
+          )) {
+            expect(container.read(navigationRefreshProvider(other)), 0);
+          }
+          // No snack: a section refresh is visible in the section it
+          // refreshed.
+          expect(find.textContaining('Testing'), findsNothing);
+        });
+      },
+    );
+  }
 }
 
 /// Runs [body] as if the app were on macOS, and always puts the override back.
@@ -137,6 +149,7 @@ Future<void> _pump(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
+  final bar = NavTab.barFor(Audience.operator);
   final router = GoRouter(
     initialLocation: tab.routePath,
     routes: [
@@ -152,16 +165,20 @@ Future<void> _pump(
               autofocus: true,
               child: SizedBox.expand(),
             ),
+            currentTab: navTab,
+            // The operator's bar, and where this tab sits in it: none, for
+            // Settings, which is no tab of the bar.
             destinations: [
-              for (final t in NavTab.values)
+              for (final t in bar)
                 FloatingNavDestination(
                   icon: t.icon,
                   selectedIcon: t.selectedIcon,
                   label: t.label,
                 ),
             ],
-            selectedIndex: NavTab.values.indexOf(navTab),
+            selectedIndex: bar.indexOf(navTab),
             onDestinationSelected: (_) {},
+            onSettings: () {},
           ),
         ),
     ],

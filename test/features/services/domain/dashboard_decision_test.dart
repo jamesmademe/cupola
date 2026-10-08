@@ -190,7 +190,7 @@ void main() {
       expect(row.actionId, 7);
       expect(row.importPath, '/downloads/pack');
       expect(row.instanceId, 'sonarr-1');
-      expect(row.route, '/dashboard/sonarr');
+      expect(row.route, '/stack/sonarr');
       // Every count surface reads the members, not the rows.
       expect(decisionItemCount(grouped), 18);
       expect(decisionsEyebrow(grouped), '18 items · blocked imports');

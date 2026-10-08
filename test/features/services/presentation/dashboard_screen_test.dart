@@ -1,11 +1,16 @@
-/// The Dashboard, region by region.
+/// The Home and the Stack, region by region.
 ///
-/// Every test here guards a **rule**, not a rendering: the order of the six
-/// regions, the ranking inside the decisions list, the cap per size class, that
-/// a probe still out is not a fault, that a figure nobody could take reads `—`
-/// and not `0`, and that a control whose target is not configured is dimmed but
-/// still reachable. Nothing asserts a hex or a pixel — those are the canvas's to
-/// change and this file's to survive.
+/// Every test here guards a **rule**, not a rendering: the order of the regions
+/// on each page, the ranking inside the decisions list, the cap per size class,
+/// that a probe still out is not a fault, that a figure nobody could take reads
+/// `—` and not `0`, and that a control whose target is not configured is dimmed
+/// but still reachable. Nothing asserts a hex or a pixel — those are the
+/// canvas's to change and this file's to survive.
+///
+/// The page that was the Dashboard is two now. The Home keeps what needs a
+/// decision, what is in flight and what was recently added, under the band; the
+/// Stack keeps the headline, the band and the matrix of services. The band and
+/// the empty state are on both, so their tests run on both.
 ///
 /// The fold tests that used to fill most of this file are gone, and the two that
 /// replace them are the reason they are gone rather than deleted: the stack now
@@ -26,6 +31,8 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
@@ -33,9 +40,10 @@ import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/services/presentation/service_matrix.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -44,28 +52,35 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
-  testWidgets('the six regions are in the settled order', (tester) async {
-    await _pumpDashboard(
+  testWidgets("the Home's regions are in the settled order", (tester) async {
+    await _pumpPage(
       tester,
+      _Page.home,
       decisions: [_stall('Furiosa', at: DateTime.utc(2024))],
     );
 
-    // Read off the list rather than off the screen: the regions below the stack
+    // Read off the list rather than off the screen: the regions below the band
     // are built lazily, so a y-coordinate comparison would be testing the
     // viewport height. Three questions, in this order — is everything all right
-    // → what needs me → what is happening — and the stack fourth, because it is
-    // a launcher and not the headline.
-    final list = tester.widget<ListView>(find.byType(ListView));
-    final children =
-        (list.childrenDelegate as SliverChildListDelegate).children;
-
-    expect(children.map((child) => child.runtimeType.toString()), [
-      '_StackHeadline',
+    // → what needs me → what is moving — and what arrived last.
+    expect(_regionsOnPage(tester), [
       'ServicesAlertBand',
       'DashboardDecisionsSection',
-      'ServiceMatrix',
       'ServicesInFlightSection',
       'ServicesRecentlyAddedSection',
+    ]);
+  });
+
+  testWidgets("the Stack's regions are in the settled order", (tester) async {
+    await _pumpPage(tester, _Page.stack);
+
+    // The headline says whether everything is all right, the band names what is
+    // not, and the matrix, the launcher, comes last: the fleet is all this page
+    // holds.
+    expect(_regionsOnPage(tester), [
+      '_StackHeadline',
+      'ServicesAlertBand',
+      'ServiceMatrix',
     ]);
   });
 
@@ -75,8 +90,9 @@ void main() {
     // The Dockge bug: the probe answered, the figures read failed, and the
     // card shimmered for good because failure and "still coming" were both
     // null.
-    await _pumpDashboard(
+    await _pumpPage(
       tester,
+      _Page.stack,
       signalPairFuture: (service) => service == ServiceKey.sonarr
           ? Future.error(Exception('Sonarr did not answer'))
           : Future.value(null),
@@ -97,46 +113,49 @@ void main() {
     expect(find.textContaining('Sonarr figures unavailable'), findsOneWidget);
   });
 
-  group('with nothing set up', () {
-    // The front door after "Skip for now". Its button used to borrow the pick
-    // step's title while opening Connections, which sets up one service at a
-    // time, and its headline used the word for a service that stayed silent.
-    testWidgets('says nothing is set up and opens Connections', (tester) async {
-      String? opened;
-      final router = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: ServiceRoutes.settingsConnections,
-            builder: (context, state) {
-              opened = state.uri.path;
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-
-      await _pumpDashboard(
+  for (final page in _Page.values) {
+    group('with nothing set up, the ${page.name}', () {
+      // The front door after "Skip for now", on the first tab and on the
+      // Stack alike. Its button used to borrow the pick step's title while
+      // opening Connections, which sets up one service at a time, and its
+      // headline used the word for a service that stayed silent.
+      testWidgets('says nothing is set up and opens Connections', (
         tester,
-        router: router,
-        settings: const SettingsModel(),
-      );
+      ) async {
+        String? opened;
+        final router = GoRouter(
+          routes: [
+            GoRoute(path: '/', builder: (context, state) => _screen(page)),
+            GoRoute(
+              path: ServiceRoutes.settingsConnections,
+              builder: (context, state) {
+                opened = state.uri.path;
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
 
-      expect(find.text('Nothing is set up yet.'), findsOneWidget);
-      expect(find.text('Nothing answers yet.'), findsNothing);
-      expect(find.text('Pick your services'), findsNothing);
+        await _pumpPage(
+          tester,
+          page,
+          router: router,
+          settings: const SettingsModel(),
+        );
 
-      await tester.tap(find.text('Set up a service'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Nothing is set up yet.'), findsOneWidget);
+        expect(find.text('Nothing answers yet.'), findsNothing);
+        expect(find.text('Pick your services'), findsNothing);
 
-      expect(opened, ServiceRoutes.settingsConnections);
+        await tester.tap(find.text('Set up a service'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(opened, ServiceRoutes.settingsConnections);
+      });
     });
-  });
+  }
 
   group('the header', () {
     testWidgets('counts connections folded per service, and says degraded', (
@@ -145,8 +164,9 @@ void main() {
       // Two Radarr, one of them dark: the service still answers, so it is not
       // unreachable — it is degraded, and the sum still closes over the
       // configured services.
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.stack,
         settings: _twoRadarrSettings,
         instanceSummary: (key) =>
             _summary(key.service, online: key.instanceId != 'radarr-hd'),
@@ -161,8 +181,9 @@ void main() {
     testWidgets('a probe still out reads as checking, and is not a fault', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.stack,
         // Never completes: the header has to be honest about a reading in
         // progress rather than reporting the absence of an answer as a failure.
         instanceSummaryFuture: (_) => Completer<ServiceSummary>().future,
@@ -176,112 +197,123 @@ void main() {
     });
 
     testWidgets('the age is bucketed, never in seconds', (tester) async {
-      await _pumpDashboard(tester);
+      await _pumpPage(tester, _Page.stack);
       final line = _textContaining(tester, 'answering');
       expect(line, contains('refreshed just now'));
       expect(line, isNot(contains('second')));
     });
   });
 
-  group('the alert band', () {
-    testWidgets('names the offenders in the settled words', (tester) async {
-      await _pumpDashboard(tester);
+  // The band is on both pages: what stopped answering is the first thing
+  // either one says.
+  for (final page in _Page.values) {
+    group('the alert band, the ${page.name}', () {
+      testWidgets('names the offenders in the settled words', (tester) async {
+        await _pumpPage(tester, page);
 
-      // Lidarr is the configured service that does not answer in the fixture.
-      // Scoped to the band: the same sentence is what a region whose sources are
-      // dark prints in place of its empty copy, and the two sharing one string
-      // is the point.
-      // 800pt wide in a widget test, so the band carries its second sentence:
-      // the consequence is what a wide surface has room for.
-      expect(
-        find.descendant(
-          of: find.byKey(const ValueKey('services-alert-band')),
-          matching: find.textContaining('Lidarr did not answer.'),
-        ),
-        findsOneWidget,
-      );
-      // One offender, so the bare verb — `Retry both` is for exactly two.
-      expect(
-        find.descendant(
-          of: find.byKey(const ValueKey('services-alert-band')),
-          matching: find.text('Retry'),
-        ),
-        findsOneWidget,
-      );
-      // The action is the fix: the second control leads where the address is.
-      expect(find.text('Settings'), findsOneWidget);
-    });
+        // Lidarr is the configured service that does not answer in the fixture.
+        // Scoped to the band: the same sentence is what a region whose sources are
+        // dark prints in place of its empty copy, and the two sharing one string
+        // is the point.
+        // 800pt wide in a widget test, so the band carries its second sentence:
+        // the consequence is what a wide surface has room for.
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('services-alert-band')),
+            matching: find.textContaining('Lidarr did not answer.'),
+          ),
+          findsOneWidget,
+        );
+        // One offender, so the bare verb — `Retry both` is for exactly two.
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('services-alert-band')),
+            matching: find.text('Retry'),
+          ),
+          findsOneWidget,
+        );
+        // The action is the fix: the second control leads where the address is.
+        expect(find.text('Settings'), findsOneWidget);
+      });
 
-    testWidgets('retry stays brand indigo, never the error tone', (
-      tester,
-    ) async {
-      await _pumpDashboard(tester);
-
-      final context = tester.element(find.byType(ServicesAlertBand));
-      final scheme = Theme.of(context).colorScheme;
-      final retry = tester.widget<Text>(
-        find
-            .descendant(
-              of: find.byKey(const ValueKey('services-alert-band')),
-              matching: find.text('Retry'),
-            )
-            .first,
-      );
-      expect(retry.style?.color, scheme.primary);
-      expect(retry.style?.color, isNot(scheme.error));
-    });
-
-    testWidgets('the phone prints the first sentence only', (tester) async {
-      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
-      tester.view.devicePixelRatio = 3;
-      addTearDown(tester.view.reset);
-
-      await _pumpDashboard(tester);
-
-      // One line of room, and the name of the service is the half that cannot
-      // be dropped.
-      expect(find.text('Lidarr did not answer.'), findsWidgets);
-      expect(find.textContaining('missing from this page'), findsNothing);
-    });
-
-    testWidgets('stays silent for a degraded service the header names', (
-      tester,
-    ) async {
-      // Two Radarr, the dark one being the lens. The band used to read the
-      // lensed summary, so it printed "Radarr did not answer." directly under a
-      // header that had just called Radarr answering. One fold now: the header
-      // counts it degraded, the band names nobody.
-      await _pumpDashboard(
+      testWidgets('retry stays brand indigo, never the error tone', (
         tester,
-        settings: _twoRadarrSettings,
-        instanceSummary: (key) =>
-            _summary(key.service, online: key.instanceId != 'radarr-hd'),
-        summary: (service) => _summary(service, online: false),
-      );
+      ) async {
+        await _pumpPage(tester, page);
 
-      expect(find.textContaining('1 degraded'), findsOneWidget);
-      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
-    });
+        final context = tester.element(find.byType(ServicesAlertBand));
+        final scheme = Theme.of(context).colorScheme;
+        final retry = tester.widget<Text>(
+          find
+              .descendant(
+                of: find.byKey(const ValueKey('services-alert-band')),
+                matching: find.text('Retry'),
+              )
+              .first,
+        );
+        expect(retry.style?.color, scheme.primary);
+        expect(retry.style?.color, isNot(scheme.error));
+      });
 
-    testWidgets('is absent entirely when the whole stack answers', (
-      tester,
-    ) async {
-      await _pumpDashboard(
+      testWidgets('the phone prints the first sentence only', (tester) async {
+        tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+        tester.view.devicePixelRatio = 3;
+        addTearDown(tester.view.reset);
+
+        await _pumpPage(tester, page);
+
+        // One line of room, and the name of the service is the half that cannot
+        // be dropped.
+        expect(find.text('Lidarr did not answer.'), findsWidgets);
+        expect(find.textContaining('missing from this page'), findsNothing);
+      });
+
+      testWidgets('stays silent for a degraded service the header names', (
         tester,
-        instanceSummary: (key) => _summary(key.service, online: true),
-        summary: (service) => _summary(service, online: true),
-      );
+      ) async {
+        // Two Radarr, the dark one being the lens. The band used to read the
+        // lensed summary, so it printed "Radarr did not answer." directly under a
+        // header that had just called Radarr answering. One fold now: the header
+        // counts it degraded, the band names nobody.
+        await _pumpPage(
+          tester,
+          page,
+          settings: _twoRadarrSettings,
+          instanceSummary: (key) =>
+              _summary(key.service, online: key.instanceId != 'radarr-hd'),
+          summary: (service) => _summary(service, online: false),
+        );
 
-      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+        // The header is the Stack's; the Home has the band and no header, and
+        // the band must stay silent there all the same.
+        if (page == _Page.stack) {
+          expect(find.textContaining('1 degraded'), findsOneWidget);
+        }
+        expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+      });
+
+      testWidgets('is absent entirely when the whole stack answers', (
+        tester,
+      ) async {
+        await _pumpPage(
+          tester,
+          page,
+          instanceSummary: (key) => _summary(key.service, online: true),
+          summary: (service) => _summary(service, online: true),
+        );
+
+        expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+      });
     });
-  });
+  }
 
   group('needs a decision', () {
     testWidgets('faults come before backlog, oldest first inside a kind', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         decisions: [
           _request('Severance', at: DateTime.utc(2024, 1, 1)),
           _stall('The Zone of Interest', at: DateTime.utc(2024, 5, 2)),
@@ -304,8 +336,9 @@ void main() {
     testWidgets('the phone shows three, and says how many there are', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         decisions: [
           for (var i = 0; i < 5; i++)
             _stall('Stalled $i', at: DateTime.utc(2024, 1, i + 1)),
@@ -321,15 +354,16 @@ void main() {
     });
 
     testWidgets('is absent when nothing is waiting', (tester) async {
-      await _pumpDashboard(tester, decisions: const []);
+      await _pumpPage(tester, _Page.home, decisions: const []);
       expect(find.text('Needs a decision'), findsNothing);
     });
 
     testWidgets(
       'a control whose target is not configured is dimmed but reachable',
       (tester) async {
-        await _pumpDashboard(
+        await _pumpPage(
           tester,
+          _Page.home,
           decisions: [
             _stall(
               'Furiosa',
@@ -364,8 +398,9 @@ void main() {
     testWidgets('blocked imports are one row that offers a manual import', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         decisions: groupDecisions([
           for (var i = 0; i < 18; i++)
             _blocked('Episode $i', at: DateTime.utc(2024, 1, i + 1)),
@@ -386,10 +421,7 @@ void main() {
       Uri? opened;
       final router = GoRouter(
         routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const DashboardScreen(),
-          ),
+          GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
           GoRoute(
             path: '/import/browse',
             builder: (context, state) {
@@ -401,8 +433,9 @@ void main() {
       );
       addTearDown(router.dispose);
 
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         router: router,
         decisions: [
           _blocked(
@@ -432,8 +465,9 @@ void main() {
     testWidgets('a pending request keeps both of its decisions', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         decisions: [_request('A Quiet Place', at: DateTime.utc(2024, 1, 1))],
       );
 
@@ -446,7 +480,7 @@ void main() {
     testWidgets('a card carries both figures on arrival — there is no fold', (
       tester,
     ) async {
-      await _pumpDashboard(tester);
+      await _pumpPage(tester, _Page.stack);
 
       // Primary and secondary, each present without anything being expanded
       // first. This is the test the fold suite became.
@@ -457,7 +491,7 @@ void main() {
     testWidgets('nothing on the page persists a density', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
-      await _pumpDashboard(tester, prefs: prefs);
+      await _pumpPage(tester, _Page.stack, prefs: prefs);
 
       // The two keys the fold used to write. A page that still wrote either
       // would be a page that still has a fold.
@@ -468,7 +502,7 @@ void main() {
     testWidgets('an answering service has no pip; a dark one does', (
       tester,
     ) async {
-      await _pumpDashboard(tester);
+      await _pumpPage(tester, _Page.stack);
 
       // Radarr answers and is proved by its figure.
       expect(_pipsIn(tester, 'service-matrix-cell-radarr'), 0);
@@ -478,8 +512,9 @@ void main() {
     });
 
     testWidgets('a checking pip is not amber', (tester) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.stack,
         instanceSummaryFuture: (_) => Completer<ServiceSummary>().future,
         summaryFuture: (_) => Completer<ServiceSummary>().future,
       );
@@ -494,7 +529,7 @@ void main() {
     testWidgets('an unconfigured service is a cell, not a footnote', (
       tester,
     ) async {
-      await _pumpDashboard(tester);
+      await _pumpPage(tester, _Page.stack);
 
       expect(
         find.byKey(const ValueKey('service-matrix-cell-readarr')),
@@ -511,10 +546,7 @@ void main() {
       Uri? opened;
       final router = GoRouter(
         routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const DashboardScreen(),
-          ),
+          GoRoute(path: '/', builder: (context, state) => const StackScreen()),
           GoRoute(
             path: '/settings/service/:service',
             builder: (context, state) {
@@ -526,7 +558,7 @@ void main() {
       );
       addTearDown(router.dispose);
 
-      await _pumpDashboard(tester, router: router);
+      await _pumpPage(tester, _Page.stack, router: router);
       final cell = find.byKey(const ValueKey('service-matrix-cell-readarr'));
       await tester.ensureVisible(cell);
       await tester.tap(cell);
@@ -536,9 +568,16 @@ void main() {
     });
 
     testWidgets('the region header counts the whole registry', (tester) async {
-      await _pumpDashboard(tester);
+      await _pumpPage(tester, _Page.stack);
 
-      expect(find.text('Stack'), findsOneWidget);
+      // The matrix's own header: the app bar above it says Stack too.
+      expect(
+        find.descendant(
+          of: find.byType(ServiceMatrix),
+          matching: find.text('Stack'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('· ${ServiceKey.values.length}'), findsOneWidget);
     });
 
@@ -546,7 +585,7 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pumpDashboard(tester);
+      await _pumpPage(tester, _Page.stack);
 
       final node = tester.getSemantics(
         find.byKey(const ValueKey('service-matrix-cell-radarr')),
@@ -564,8 +603,9 @@ void main() {
     testWidgets('a stalled transfer is not in flight, and says where it went', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         queue: [
           _queueItem('Dune: Part Two', progress: 0.92),
           _queueItem('The Zone of Interest', progress: 0.4, stalled: true),
@@ -584,8 +624,9 @@ void main() {
     testWidgets('the eyebrow counts every transfer, not the five it shows', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         queue: [
           for (var i = 0; i < 8; i++)
             _queueItem('Release $i', progress: (8 - i) / 10),
@@ -606,8 +647,9 @@ void main() {
     testWidgets('blocked imports are not an empty queue, and are not stalls', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         // Every source answering: a dark one replaces the empty label with its
         // own message, which is not what is under test.
         instanceSummary: (key) => _summary(key.service, online: true),
@@ -636,8 +678,9 @@ void main() {
     testWidgets('a figure the source did not report reads —, never 0', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         queue: [
           const ServiceQueueItem(
             service: ServiceKey.sabnzbd,
@@ -659,8 +702,9 @@ void main() {
     });
 
     testWidgets('the eyebrow sums the rate once per client', (tester) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         queue: [
           _queueItem('One', progress: 0.5, rate: 1024 * 1024),
           _queueItem('Two', progress: 0.3, rate: 1024 * 1024),
@@ -682,8 +726,9 @@ void main() {
     testWidgets('names how many landed and, in amber, how many did not', (
       tester,
     ) async {
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         recentlyAdded: [
           _imported('Poor Things', at: DateTime.utc(2024, 5, 5, 8, 12)),
           _imported(
@@ -712,8 +757,9 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pumpDashboard(
+      await _pumpPage(
         tester,
+        _Page.home,
         recentlyAdded: [
           _imported('Poor Things', at: DateTime.utc(2024, 5, 5, 8, 12)),
         ],
@@ -732,9 +778,11 @@ void main() {
     tester,
   ) async {
     final gate = Completer<List<RecentlyAddedItem>>();
-    await _pumpDashboard(tester, recentlyAddedFuture: () => gate.future);
+    await _pumpPage(tester, _Page.home, recentlyAddedFuture: () => gate.future);
 
-    await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
+    // The page's own list, the first in the tree: the Home is short enough now
+    // for Recently added's shelf, a list of its own, to be built beside it.
+    await tester.fling(find.byType(ListView).first, const Offset(0, 400), 1000);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
@@ -751,15 +799,32 @@ void main() {
 
 typedef _InstanceKey = ({ServiceKey service, String instanceId});
 
-/// Pumps the Dashboard with every source overridden.
+/// The two pages the old Dashboard became.
+enum _Page { home, stack }
+
+Widget _screen(_Page page) => switch (page) {
+  _Page.home => const HomeScreen(),
+  _Page.stack => const StackScreen(),
+};
+
+/// The runtime types of the regions [page] lays out, top to bottom, read off its
+/// list view.
+List<String> _regionsOnPage(WidgetTester tester) {
+  final list = tester.widget<ListView>(find.byType(ListView));
+  final children = (list.childrenDelegate as SliverChildListDelegate).children;
+  return [for (final child in children) child.runtimeType.toString()];
+}
+
+/// Pumps [page] with every source overridden.
 ///
 /// Nothing here reaches a network: the four providers the page reads are handed
 /// values, and `instanceSummaryProvider` is overridden as well as
 /// `serviceSummaryProvider` because the header counts **connections**, so a
 /// fixture that only answers the per-service probe would leave it saying
 /// "checking" forever.
-Future<void> _pumpDashboard(
-  WidgetTester tester, {
+Future<void> _pumpPage(
+  WidgetTester tester,
+  _Page page, {
   SettingsModel? settings,
   List<DashboardDecision>? decisions,
   SourceCoverage decisionsCoverage = SourceCoverage.none,
@@ -778,6 +843,8 @@ Future<void> _pumpDashboard(
 }) async {
   final overrides = <Override>[
     if (prefs != null) sharedPreferencesProvider.overrideWithValue(prefs),
+    // The Home reads who the shell is drawn for, which waits on onboarding.
+    initialOnboardingCompletedProvider.overrideWithValue(true),
     currentSettingsProvider.overrideWith((ref) => settings ?? _settings),
     instanceSummaryProvider.overrideWith(
       (ref, key) =>
@@ -846,7 +913,7 @@ Future<void> _pumpDashboard(
     ProviderScope(
       overrides: overrides,
       child: router == null
-          ? const MaterialApp(home: DashboardScreen())
+          ? MaterialApp(home: _screen(page))
           : MaterialApp.router(routerConfig: router),
     ),
   );

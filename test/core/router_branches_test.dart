@@ -229,14 +229,14 @@ void main() {
 
   /// A service's own node, walked to from the app shell rather than looked up.
   ///
-  /// Walking is the point: reaching it means passing through the Dashboard
+  /// Walking is the point: reaching it means passing through the Stack
   /// branch, so a service shell mounted anywhere else would not be found at
   /// all.
   GoRoute serviceRouteOf(GoRouter router, ServiceKey service) {
-    final dashboard =
-        shellRouteOf(router).branches[NavTab.dashboard.index].routes.single
+    final stack =
+        shellRouteOf(router).branches[NavTab.stack.index].routes.single
             as GoRoute;
-    return dashboard.routes.whereType<GoRoute>().firstWhere(
+    return stack.routes.whereType<GoRoute>().firstWhere(
       (route) => route.path == service.routeParam,
     );
   }
@@ -299,7 +299,7 @@ void main() {
       }
     });
 
-    testWidgets('every service shell is nested inside the Dashboard branch', (
+    testWidgets('every service shell is nested inside the Stack branch', (
       tester,
     ) async {
       final router = await pumpRouter(tester);
@@ -312,7 +312,7 @@ void main() {
             'bar, the Portal and the whole desktop chrome hang off — opening a '
             'service would take the app\'s own navigation away with it.',
       );
-      // Found only by walking down through the Dashboard branch, which is the
+      // Found only by walking down through the Stack branch, which is the
       // assertion: nothing else in this file could reach them.
       for (final service in _tabbedServices) {
         expect(
@@ -585,7 +585,7 @@ void main() {
       // Landing on Activity starts its Now poll, which is the correct
       // behaviour and a pending timer at teardown. Switching away closes that
       // gate — proof of the same mechanism, and it leaves the test tidy.
-      router.go(NavTab.dashboard.routePath);
+      router.go(NavTab.home.routePath);
       await tester.pumpAndSettle();
     });
 

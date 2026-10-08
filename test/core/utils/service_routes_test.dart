@@ -29,11 +29,20 @@ void main() {
       // checks and no analyzer rule sees.
       for (final service in ServiceKey.values) {
         final route = ServiceRoutes.forService(service);
-        expect(route, startsWith('${ServiceRoutes.dashboard}/'));
+        expect(route, startsWith('${ServiceRoutes.stack}/'));
         expect(route, isNot(contains(r'$')));
         expect(route, isNot(contains('{')));
         expect(route, endsWith('/${service.routeParam}'));
       }
+    });
+
+    test('the tabs have a root each, and the old ones are named as old', () {
+      expect(ServiceRoutes.home, '/home');
+      expect(ServiceRoutes.stack, '/stack');
+      expect(ServiceRoutes.requests, '/requests');
+      // Where the stack lived: the redirect rewrites these, nothing builds them.
+      expect(ServiceRoutes.legacyDashboard, '/dashboard');
+      expect(ServiceRoutes.legacyServices, '/services');
     });
 
     test('the two that used to be built by hand are constants now', () {
@@ -42,7 +51,7 @@ void main() {
         ServiceRoutes.forService(ServiceKey.transmission),
       );
       // The one segment that is not the enum name.
-      expect(ServiceRoutes.nginxProxyManager, '/dashboard/npm');
+      expect(ServiceRoutes.nginxProxyManager, '/stack/npm');
       expect(
         ServiceRoutes.nginxProxyManager,
         ServiceRoutes.forService(ServiceKey.nginxProxyManager),
@@ -53,13 +62,10 @@ void main() {
       // The film moved under `library/`: it is a page inside the Library tab's
       // branch now, not a sibling of the tabs. Every link in the app is built
       // here, so this constant is what put it there.
-      expect(
-        ServiceRoutes.radarrMovie(42),
-        '/dashboard/radarr/library/movie/42',
-      );
+      expect(ServiceRoutes.radarrMovie(42), '/stack/radarr/library/movie/42');
       expect(
         ServiceRoutes.radarrMovie(42, heroTag: 'movie hero'),
-        '/dashboard/radarr/library/movie/42?heroTag=movie+hero',
+        '/stack/radarr/library/movie/42?heroTag=movie+hero',
       );
     });
 
@@ -89,11 +95,11 @@ void main() {
       // sibling of the tabs.
       expect(
         ServiceRoutes.sonarrSeries(7, heroTag: 'series_7'),
-        '/dashboard/sonarr/library/series/7?heroTag=series_7',
+        '/stack/sonarr/library/series/7?heroTag=series_7',
       );
       expect(
         ServiceRoutes.lidarrArtist(9, heroTag: 'artist_9'),
-        '/dashboard/lidarr/library/artist/9?heroTag=artist_9',
+        '/stack/lidarr/library/artist/9?heroTag=artist_9',
       );
     });
 
@@ -139,7 +145,7 @@ void main() {
       // Unchanged by the migration, and that is the assertion: the author list
       // was already at this address as a pushed page, so every link that ever
       // pointed at it still resolves — now to the Library tab.
-      expect(ServiceRoutes.readarrLibrary, '/dashboard/readarr/library');
+      expect(ServiceRoutes.readarrLibrary, '/stack/readarr/library');
       expect(
         ServiceRoutes.readarrLibrary,
         '${ServiceRoutes.readarr}/${ServiceTab.library.segment}',
@@ -176,7 +182,7 @@ void main() {
       );
       expect(
         ServiceRoutes.qbittorrentTorrent('abc123'),
-        '/dashboard/qbittorrent/queue/torrent/abc123',
+        '/stack/qbittorrent/queue/torrent/abc123',
       );
     });
 
@@ -271,7 +277,7 @@ void main() {
       // Requests did not move, and that is the assertion: the all-requests list
       // was already at this address as a pushed page, so every link that ever
       // pointed at it still resolves — now to a tab.
-      expect(ServiceRoutes.seerrRequests, '/dashboard/seerr/requests');
+      expect(ServiceRoutes.seerrRequests, '/stack/seerr/requests');
     });
 
     test('every catalogue page hangs off the Discover tab', () {
@@ -332,12 +338,12 @@ void main() {
           from: '${ServiceRoutes.seerrRequests}/media/tv/1399',
           heroTag: 'cast_287',
         ),
-        '/dashboard/seerr/requests/media/person/287?heroTag=cast_287',
+        '/stack/seerr/requests/media/person/287?heroTag=cast_287',
       );
     });
 
     test('exposes the Bazarr service root', () {
-      expect(ServiceRoutes.bazarr, '/dashboard/bazarr');
+      expect(ServiceRoutes.bazarr, '/stack/bazarr');
     });
 
     test('the Bazarr tab roots are spelled by the tabs they mount', () {
@@ -376,19 +382,19 @@ void main() {
       // detail is `<tab>/:id` rather than `<tab>/<record>/:id`. The series link
       // is byte-for-byte what it always was; the film's moved from the singular
       // `movie/`, and every link to one in the app is built here.
-      expect(ServiceRoutes.bazarrSeries(7), '/dashboard/bazarr/series/7');
+      expect(ServiceRoutes.bazarrSeries(7), '/stack/bazarr/series/7');
       expect(
         ServiceRoutes.bazarrSeries(7, heroTag: 'ignored'),
-        '/dashboard/bazarr/series/7?heroTag=ignored',
+        '/stack/bazarr/series/7?heroTag=ignored',
       );
-      expect(ServiceRoutes.bazarrMovie(12), '/dashboard/bazarr/movies/12');
+      expect(ServiceRoutes.bazarrMovie(12), '/stack/bazarr/movies/12');
     });
 
     test('the Prowlarr tab roots are spelled by the tabs they mount', () {
       // `library` became `indexers` — the word the bar uses and the word the
       // page always meant. The literal is tied to the tab here because nothing
       // the analyzer sees ties them.
-      expect(ServiceRoutes.prowlarr, '/dashboard/prowlarr');
+      expect(ServiceRoutes.prowlarr, '/stack/prowlarr');
       expect(
         ServiceRoutes.prowlarrOverview,
         '${ServiceRoutes.prowlarr}/${ServiceTab.overview.segment}',
@@ -416,7 +422,7 @@ void main() {
       );
       expect(
         ServiceRoutes.prowlarrIndexer(3),
-        '/dashboard/prowlarr/indexers/indexer/3',
+        '/stack/prowlarr/indexers/indexer/3',
       );
     });
 
@@ -462,7 +468,7 @@ void main() {
       );
       // The one tab segment that is not simply its enum name: Plex writes it
       // "On Deck", so the URL is hyphenated rather than camel-cased away.
-      expect(ServiceRoutes.plexOnDeck, '/dashboard/plex/on-deck');
+      expect(ServiceRoutes.plexOnDeck, '/stack/plex/on-deck');
       expect(
         ServiceRoutes.plexOnDeck,
         '${ServiceRoutes.plex}/${ServiceTab.onDeck.segment}',
@@ -489,11 +495,11 @@ void main() {
       // *is* the tab root, the way Bazarr's Series tab is also its series base.
       expect(
         ServiceRoutes.jellyfinLibrary('f137a2dd'),
-        '/dashboard/jellyfin/libraries/f137a2dd',
+        '/stack/jellyfin/libraries/f137a2dd',
       );
       expect(
         ServiceRoutes.jellyfinLibrary('f137a2dd', title: 'Films'),
-        '/dashboard/jellyfin/libraries/f137a2dd?title=Films',
+        '/stack/jellyfin/libraries/f137a2dd?title=Films',
       );
       expect(
         ServiceRoutes.jellyfinItemBase,
@@ -501,21 +507,18 @@ void main() {
       );
       expect(
         ServiceRoutes.jellyfinItem('abc-123'),
-        '/dashboard/jellyfin/libraries/item/abc-123',
+        '/stack/jellyfin/libraries/item/abc-123',
       );
 
       expect(
         ServiceRoutes.plexLibrary('3', title: 'TV Shows'),
-        '/dashboard/plex/libraries/3?title=TV+Shows',
+        '/stack/plex/libraries/3?title=TV+Shows',
       );
       expect(
         ServiceRoutes.plexItemBase,
         startsWith('${ServiceRoutes.plexLibraries}/'),
       );
-      expect(
-        ServiceRoutes.plexItem('9421'),
-        '/dashboard/plex/libraries/item/9421',
-      );
+      expect(ServiceRoutes.plexItem('9421'), '/stack/plex/libraries/item/9421');
     });
 
     test('the Dockge tab roots are spelled by the tabs they mount', () {
@@ -548,11 +551,11 @@ void main() {
       );
       expect(
         ServiceRoutes.dockgeStack('immich'),
-        '/dashboard/dockge/stacks/stack/immich',
+        '/stack/dockge/stacks/stack/immich',
       );
       expect(
         ServiceRoutes.dockgeStackEdit('immich'),
-        '/dashboard/dockge/stacks/stack/immich/edit',
+        '/stack/dockge/stacks/stack/immich/edit',
       );
       expect(ServiceRoutes.dockgeNewStack, '${ServiceRoutes.dockgeStacks}/new');
     });
@@ -587,7 +590,7 @@ void main() {
       // `vms` and not `vMs`: the segment is the tab's, and the breadcrumb that
       // title-cased whatever it found is exactly what `ServiceTab` exists to
       // stop.
-      expect(ServiceRoutes.unraidVms, '/dashboard/unraid/vms');
+      expect(ServiceRoutes.unraidVms, '/stack/unraid/vms');
     });
 
     test('the NPM tab roots are spelled by the tabs they mount', () {
@@ -619,9 +622,9 @@ void main() {
       // Written out once, because two irregularities meet here: the service
       // segment is `npm` rather than the enum name, and three tab segments are
       // hyphenated.
-      expect(ServiceRoutes.npmProxyHosts, '/dashboard/npm/proxy-hosts');
-      expect(ServiceRoutes.npmAccessLists, '/dashboard/npm/access-lists');
-      expect(ServiceRoutes.npmAuditLog, '/dashboard/npm/audit-log');
+      expect(ServiceRoutes.npmProxyHosts, '/stack/npm/proxy-hosts');
+      expect(ServiceRoutes.npmAccessLists, '/stack/npm/access-lists');
+      expect(ServiceRoutes.npmAuditLog, '/stack/npm/audit-log');
     });
 
     test('every tab of the three infrastructure services has a constant', () {
@@ -668,7 +671,7 @@ void main() {
       // Decision 26: the four field-driven sections are one page, not a fifth
       // bar entry. It stays a page pushed from the service, at the address it
       // always had, so every link into it still resolves.
-      expect(ServiceRoutes.prowlarrSettings, '/dashboard/prowlarr/settings');
+      expect(ServiceRoutes.prowlarrSettings, '/stack/prowlarr/settings');
       expect(
         ServiceTab.fromSegment('settings'),
         isNull,
@@ -682,7 +685,7 @@ void main() {
       test('under the service tab, for a service that mounts titles', () {
         expect(
           ServiceRoutes.media(film, from: ServiceRoutes.radarrLibrary),
-          '/dashboard/radarr/library/media/movie/653',
+          '/stack/radarr/library/media/movie/653',
         );
         // Deeper in the tab, the tab: one Navigator, so the poster flies.
         expect(
@@ -690,31 +693,46 @@ void main() {
             film,
             from: '${ServiceRoutes.seerrRequests}/media/person/42',
           ),
-          '/dashboard/seerr/requests/media/movie/653',
+          '/stack/seerr/requests/media/movie/653',
         );
         // From a title's page, its own mount: More like this stays put.
         expect(
           ServiceRoutes.media(
             const MediaKey.tv(1399),
-            from: '/dashboard/jellyfin/libraries/media/movie/653',
+            from: '/stack/jellyfin/libraries/media/movie/653',
           ),
-          '/dashboard/jellyfin/libraries/media/tv/1399',
+          '/stack/jellyfin/libraries/media/tv/1399',
         );
       });
 
       test('under the top-level tab otherwise', () {
         expect(
-          ServiceRoutes.media(film, from: ServiceRoutes.dashboard),
-          '/dashboard/media/movie/653',
+          ServiceRoutes.media(film, from: ServiceRoutes.stack),
+          '/stack/media/movie/653',
         );
         expect(
           ServiceRoutes.media(film, from: ServiceRoutes.bazarrWanted),
-          '/dashboard/media/movie/653',
+          '/stack/media/movie/653',
           reason: 'Bazarr keeps its own pages and mounts no titles',
         );
         expect(
-          ServiceRoutes.media(film, from: '/dashboard/media/movie/1'),
-          '/dashboard/media/movie/653',
+          ServiceRoutes.media(film, from: '/stack/media/movie/1'),
+          '/stack/media/movie/653',
+        );
+        // The Home and the requester's Requests open titles in place too:
+        // each is a tab with a navigator of its own, so a title opened there
+        // hangs under it and Back returns to the page it came from.
+        expect(
+          ServiceRoutes.media(film, from: ServiceRoutes.home),
+          '/home/media/movie/653',
+        );
+        expect(
+          ServiceRoutes.media(film, from: '/home/media/movie/1'),
+          '/home/media/movie/653',
+        );
+        expect(
+          ServiceRoutes.media(film, from: ServiceRoutes.requests),
+          '/requests/media/movie/653',
         );
         expect(
           ServiceRoutes.media(film, from: ServiceRoutes.activity),
@@ -757,7 +775,7 @@ void main() {
             heroTag: 'series_7',
             posterUrl: 'https://image.tmdb.org/t/p/w300/a b.jpg',
           ),
-          '/dashboard/sonarr/library/media/tv/tvdb/300001'
+          '/stack/sonarr/library/media/tv/tvdb/300001'
           '?i=sonarr-4k&heroTag=series_7'
           '&posterUrl=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Fw300%2Fa+b.jpg',
         );

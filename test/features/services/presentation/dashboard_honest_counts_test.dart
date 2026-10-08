@@ -12,7 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -33,7 +33,7 @@ void main() {
     final harness = await pumpWithProfile(
       tester,
       Profiles.p1,
-      child: const DashboardScreen(),
+      child: const HomeScreen(),
       surfaceSize: _tall,
     );
 
@@ -55,7 +55,7 @@ void main() {
     final harness = await pumpWithProfile(
       tester,
       Profiles.p7,
-      child: const DashboardScreen(),
+      child: const HomeScreen(),
       surfaceSize: _tall,
     );
 
@@ -106,7 +106,7 @@ void main() {
     final harness = await pumpWithProfile(
       tester,
       _nothingAnswers,
-      child: const DashboardScreen(),
+      child: const HomeScreen(),
       surfaceSize: _tall,
     );
 

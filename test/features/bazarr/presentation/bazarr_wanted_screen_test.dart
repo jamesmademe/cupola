@@ -12,8 +12,8 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 void main() {
   group('BazarrWantedScreen when Bazarr is not configured', () {
     // Wanted is deep-linkable, so it is reachable with Bazarr unconfigured
-    // without ever passing the dashboard. It used to answer with a bare
-    // sentence — no icon, no button, no route — while the dashboard one screen
+    // without ever passing the stack. It used to answer with a bare
+    // sentence — no icon, no button, no route — while the stack one screen
     // over offered the shared placeholder and its deep link.
     testWidgets('renders the shared placeholder rather than a private notice', (
       tester,
@@ -40,10 +40,10 @@ void main() {
       // deep link is the only thing that separates them, and the dead end this
       // replaced is precisely the absence of one.
       final router = GoRouter(
-        initialLocation: '/dashboard/bazarr/wanted',
+        initialLocation: '/stack/bazarr/wanted',
         routes: [
           GoRoute(
-            path: '/dashboard/bazarr/wanted',
+            path: '/stack/bazarr/wanted',
             builder: (context, state) => const BazarrWantedScreen(),
           ),
           GoRoute(

@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
@@ -207,8 +208,11 @@ final _queue = ActivityFeed(
   results: const [],
 );
 
+/// The operator's bar, which the rail draws above Settings.
+final _bar = NavTab.barFor(Audience.operator);
+
 List<FloatingNavDestination> _destinations() => [
-  for (final tab in NavTab.values)
+  for (final tab in _bar)
     FloatingNavDestination(
       icon: tab.icon,
       selectedIcon: tab.selectedIcon,
@@ -268,7 +272,7 @@ class _WindowState extends State<_Window> {
     initialLocation: ServiceRoutes.radarrOverview,
     routes: [
       GoRoute(
-        path: '/dashboard',
+        path: '/stack',
         builder: (_, _) => const SizedBox.shrink(),
         routes: [
           GoRoute(
@@ -285,9 +289,11 @@ class _WindowState extends State<_Window> {
                       topPadding: kToolbarHeight + ServiceTabBar.height,
                     ),
                   ),
+                  currentTab: NavTab.stack,
                   destinations: _destinations(),
-                  selectedIndex: NavTab.dashboard.index,
+                  selectedIndex: _bar.indexOf(NavTab.stack),
                   onDestinationSelected: (_) {},
+                  onSettings: () {},
                 ),
               ),
             ],

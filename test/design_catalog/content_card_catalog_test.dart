@@ -179,7 +179,7 @@ void main() {
         (_) => SidePaneScope(
           selected: 'shown',
           selectedTag: 'poster-1',
-          location: '/dashboard/radarr/library/media/movie/1',
+          location: '/stack/radarr/library/media/movie/1',
           child: Wrap(
             spacing: 16,
             children: [

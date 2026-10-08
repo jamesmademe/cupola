@@ -191,7 +191,7 @@ void main() {
       CatalogScene(
         'ServiceDeck · full, on a canonical tab · All services, the stack as '
         'one figure with its down count, the freshness line, the jump pill',
-        (_) => _DeckScene(location: '/dashboard', onCommandDeck: () {}),
+        (_) => _DeckScene(location: '/home', onCommandDeck: () {}),
         width: deckWidth,
         height: ServiceDeck.fullHeight,
         platform: CatalogPlatform.desktop,
@@ -236,7 +236,7 @@ void main() {
         'ServiceDeck · under 500pt, never refreshed · the down count and the '
         'freshness line drop; the pill keeps only its key',
         (_) => _DeckScene(
-          location: '/dashboard',
+          location: '/home',
           compact: true,
           refreshed: false,
           onCommandDeck: () {},

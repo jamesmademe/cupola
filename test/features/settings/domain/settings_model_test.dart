@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/service_glyphs.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -271,23 +272,56 @@ void main() {
   });
 
   group('NavTab', () {
-    test('matches the approved four-tab navigation model', () {
-      // Discover took Search's place, second as in the direction's bar.
+    test('has the six branches, in the order the router builds them', () {
+      // One branch each, always: the operator's four and the requester's three
+      // are subsets of this list, and Settings is a branch the bar never draws.
       expect(NavTab.values, [
-        NavTab.dashboard,
+        NavTab.home,
         NavTab.discover,
         NavTab.activity,
+        NavTab.stack,
+        NavTab.requests,
         NavTab.settings,
       ]);
       expect(NavTab.values.map((tab) => tab.label), [
-        'Dashboard',
+        'Home',
         'Discover',
         'Activity',
+        'Stack',
+        'Requests',
         'Settings',
       ]);
       // No colour per tab any more: the chrome is monochrome, and the
       // selected tab is the strong fill under the primary ink in every
       // section (floating_bottom_nav_bar_test). The order is what is left.
+    });
+
+    test('the operator\'s bar is the control room, Settings not in it', () {
+      expect(NavTab.barFor(Audience.operator), [
+        NavTab.home,
+        NavTab.discover,
+        NavTab.activity,
+        NavTab.stack,
+      ]);
+    });
+
+    test('the requester\'s bar has Requests and no control room', () {
+      expect(NavTab.barFor(Audience.requester), [
+        NavTab.home,
+        NavTab.discover,
+        NavTab.requests,
+      ]);
+    });
+
+    test('each tab opens on its own root', () {
+      expect(NavTab.values.map((tab) => tab.routePath), [
+        '/home',
+        '/discover',
+        '/activity',
+        '/stack',
+        '/requests',
+        '/settings',
+      ]);
     });
   });
 

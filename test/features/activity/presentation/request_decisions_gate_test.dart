@@ -13,7 +13,7 @@ import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -60,7 +60,14 @@ void main() {
     testWidgets('P2: her own waiting request is no decision of hers', (
       tester,
     ) async {
-      final harness = await _pump(tester, Profiles.p2, const DashboardScreen());
+      // The section itself, not the Home around it: the requester's Home
+      // draws two shelves in its place, so only the section can say that
+      // the gate, and not the page, keeps her own request out of it.
+      final harness = await _pump(
+        tester,
+        Profiles.p2,
+        const SingleChildScrollView(child: DashboardDecisionsSection()),
+      );
 
       expect(_inDecisions(find.text('Charge')), findsNothing);
       expect(find.byTooltip('Approve Charge'), findsNothing);
@@ -82,7 +89,7 @@ void main() {
                 SeerrPermission.request.value |
                     SeerrPermission.requestView.value,
               ),
-          const DashboardScreen(),
+          const HomeScreen(),
         );
 
         Finder row(String seerr) =>

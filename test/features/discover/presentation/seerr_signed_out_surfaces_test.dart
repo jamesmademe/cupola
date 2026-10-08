@@ -24,8 +24,8 @@ import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/services/presentation/widgets/instance_lens_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
@@ -193,14 +193,14 @@ void main() {
     });
   }
 
-  group('Home', () {
+  group('Stack', () {
     testWidgets('the stack has Seerr, signed out, not an empty first run', (
       tester,
     ) async {
       final harness = await pumpWithProfile(
         tester,
         _p2SignedOut,
-        child: const DashboardScreen(),
+        child: const StackScreen(),
         surfaceSize: const Size(430, 2400),
       );
 
@@ -222,7 +222,7 @@ void main() {
       final harness = await pumpWithProfile(
         tester,
         Profiles.p2WithJellyfin.withSeerrSignedOut(WorldIds.seerr),
-        child: const DashboardScreen(),
+        child: const StackScreen(),
         surfaceSize: const Size(430, 2400),
       );
 
@@ -245,7 +245,7 @@ void main() {
       final harness = await pumpWithProfile(
         tester,
         Profiles.p9.withSeerrSignedOut(WorldIds.seerrFriend),
-        child: const DashboardScreen(),
+        child: const StackScreen(),
         surfaceSize: const Size(430, 3000),
       );
 

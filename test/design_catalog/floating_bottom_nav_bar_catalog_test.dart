@@ -4,14 +4,18 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 
 import 'catalog.dart';
 
-/// The shell's four destinations; only Activity carries a count.
-List<FloatingNavDestination> _destinations({int searchesWaiting = 0}) => [
-  for (final tab in NavTab.values)
+/// The shell's destinations for [audience]; only Activity carries a count.
+List<FloatingNavDestination> _destinations({
+  int searchesWaiting = 0,
+  Audience audience = Audience.operator,
+}) => [
+  for (final tab in NavTab.barFor(audience))
     FloatingNavDestination(
       icon: tab.icon,
       selectedIcon: tab.selectedIcon,
@@ -24,10 +28,20 @@ List<FloatingNavDestination> _destinations({int searchesWaiting = 0}) => [
     ),
 ];
 
-Widget _bar(int selected, {int searchesWaiting = 0}) => FloatingBottomNavBar(
+/// The operator's bar, which is the shell's for everyone but a requester.
+final _operatorBar = NavTab.barFor(Audience.operator);
+
+Widget _bar(
+  int selected, {
+  int searchesWaiting = 0,
+  Audience audience = Audience.operator,
+}) => FloatingBottomNavBar(
   selectedIndex: selected,
   onDestinationSelected: (_) {},
-  destinations: _destinations(searchesWaiting: searchesWaiting),
+  destinations: _destinations(
+    searchesWaiting: searchesWaiting,
+    audience: audience,
+  ),
 );
 
 CatalogScene _scene(
@@ -47,22 +61,35 @@ void main() {
     width: 480,
     scenes: [
       _scene(
-        'Dashboard selected · the strong-fill pill with icon and label in the '
+        'Home selected · the strong-fill pill with icon and label in the '
         'primary ink, the other three icon only in the secondary ink',
-        0,
+        _operatorBar.indexOf(NavTab.home),
       ),
       _scene(
         'Activity selected, 3 finished searches · the count on the ink disc, '
         'never a status tone and never a section colour',
-        NavTab.activity.index,
+        _operatorBar.indexOf(NavTab.activity),
         searchesWaiting: 3,
       ),
       _scene(
         'Discover selected, badge on Activity · a count past nine reads 9+',
-        NavTab.discover.index,
+        _operatorBar.indexOf(NavTab.discover),
         searchesWaiting: 12,
       ),
-      _scene('Settings selected', NavTab.settings.index),
+      _scene('Stack selected', _operatorBar.indexOf(NavTab.stack)),
+      _scene(
+        'Settings on screen · it has no place in the bar, so no tab is '
+        'selected and every item rests',
+        -1,
+      ),
+      CatalogScene(
+        "The requester's bar · Home, Discover, Requests: no control room in it",
+        (_) => _bar(
+          NavTab.barFor(Audience.requester).indexOf(NavTab.requests),
+          audience: Audience.requester,
+        ),
+        width: 390,
+      ),
       _scene(
         '320pt window · the bar fills the width and the items tighten',
         0,
@@ -91,7 +118,7 @@ void main() {
         textScale: catalogTextScale,
       ),
       CatalogScene(
-        'At 2× reading size, Search selected · 9+ on a compact item',
+        'At 2× reading size, Activity selected · 9+ on a compact item',
         (_) => _bar(2, searchesWaiting: 12),
         width: 390,
         textScale: catalogTextScale,

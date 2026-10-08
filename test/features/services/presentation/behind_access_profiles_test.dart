@@ -18,8 +18,8 @@ import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -72,11 +72,11 @@ void main() {
       },
     );
 
-    testWidgets('the Dashboard says each one\'s state', (tester) async {
+    testWidgets('the Stack says each one\'s state', (tester) async {
       final harness = await pumpWithProfile(
         tester,
         Profiles.p8,
-        child: const DashboardScreen(),
+        child: const StackScreen(),
         surfaceSize: const Size(430, 2400),
       );
 

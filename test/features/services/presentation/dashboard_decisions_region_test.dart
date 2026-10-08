@@ -16,7 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -28,12 +28,17 @@ Finder _inDecisions(Finder matching) => find.descendant(
   matching: matching,
 );
 
-/// Starts [profile], lets [before] script the network, then pumps Home.
+/// Starts [profile], lets [before] script the network, then pumps [home].
+///
+/// The operator's Home, unless a test says otherwise: a requester's Home draws
+/// two shelves in the region's place, so a test about what the region says to
+/// a requester mounts the region by itself.
 Future<ProfileHarness> _pumpHome(
   WidgetTester tester,
   ConfigProfile profile, {
   void Function(ProfileNetwork network)? before,
   bool settle = true,
+  Widget home = const HomeScreen(),
 }) async {
   final harness = await ProfileHarness.start(profile);
   before?.call(harness.network);
@@ -42,10 +47,7 @@ Future<ProfileHarness> _pumpHome(
   await tester.pumpWidget(
     ProviderScope(
       overrides: harness.overrides,
-      child: MaterialApp(
-        theme: AppTheme.darkTheme(),
-        home: const DashboardScreen(),
-      ),
+      child: MaterialApp(theme: AppTheme.darkTheme(), home: home),
     ),
   );
   if (settle) await harness.settle(tester);
@@ -118,6 +120,11 @@ void main() {
     expect(find.byType(DecisionRowSkeleton), findsOne);
     expect(find.bySemanticsLabel('Loading decisions'), findsOne);
 
+    // Nothing else on the Home animates while the three are out, so settling
+    // alone would stop at the first quiet frame: their seconds are turned on
+    // purpose, as in the Dockge test above. Seerr is read in two calls, one
+    // after the other, each of them slow.
+    await _advance(tester, const Duration(seconds: 12));
     await harness.settle(tester);
     expect(find.byType(DecisionRowSkeleton), findsNothing);
     expect(_inDecisions(find.text('Metropolis')), findsOne);
@@ -162,6 +169,10 @@ void main() {
     final harness = await _pumpHome(
       tester,
       Profiles.p2,
+      // The region alone: Anna's Home has her two shelves where it would be.
+      home: const Scaffold(
+        body: SingleChildScrollView(child: DashboardDecisionsSection()),
+      ),
       before: (network) => network.on(
         WorldIds.seerr,
         'GET',

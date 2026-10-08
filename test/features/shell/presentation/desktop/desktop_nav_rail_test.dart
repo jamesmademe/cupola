@@ -1,13 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 
 void main() {
-  Future<void> pumpRail(WidgetTester tester, {required int count}) async {
+  FloatingNavDestination destinationFor(NavTab tab, {int badge = 0}) =>
+      FloatingNavDestination(
+        icon: tab.icon,
+        selectedIcon: tab.selectedIcon,
+        railIcon: tab.railIcon,
+        label: tab.label,
+        badgeCount: badge,
+      );
+
+  // The operator's bar, which is what the rail draws above Settings.
+  final bar = NavTab.barFor(Audience.operator);
+
+  Future<void> pumpRail(
+    WidgetTester tester, {
+    int count = 0,
+    bool settingsSelected = false,
+    ValueChanged<int>? onDestinationSelected,
+    VoidCallback? onSettings,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.lightTheme(),
@@ -17,19 +37,21 @@ void main() {
             child: SizedBox(
               height: 480,
               child: DesktopNavRail(
-                selectedIndex: NavTab.activity.index,
-                onDestinationSelected: (_) {},
+                selectedIndex: settingsSelected
+                    ? -1
+                    : bar.indexOf(NavTab.activity),
+                onDestinationSelected: onDestinationSelected ?? (_) {},
                 onCommandDeck: () {},
                 destinations: [
-                  for (final tab in NavTab.values)
-                    FloatingNavDestination(
-                      icon: tab.icon,
-                      selectedIcon: tab.selectedIcon,
-                      railIcon: tab.railIcon,
-                      label: tab.label,
-                      badgeCount: tab == NavTab.activity ? count : 0,
+                  for (final tab in bar)
+                    destinationFor(
+                      tab,
+                      badge: tab == NavTab.activity ? count : 0,
                     ),
                 ],
+                settings: destinationFor(NavTab.settings),
+                settingsSelected: settingsSelected,
+                onSettings: onSettings ?? () {},
               ),
             ),
           ),
@@ -40,6 +62,82 @@ void main() {
   }
 
   Finder badge() => find.byKey(const ValueKey('desktop-rail-badge'));
+
+  Finder railItem(String label) => find.byWidgetPredicate(
+    (w) => w is IconButton && (w.tooltip ?? '').startsWith('$label  '),
+  );
+
+  group('DesktopNavRail sections', () {
+    testWidgets('draws the bar, then Settings at the foot', (tester) async {
+      await pumpRail(tester);
+
+      final tops = [
+        for (final tab in bar) tester.getTopLeft(railItem(tab.label)).dy,
+      ];
+      expect(tops, orderedEquals([...tops]..sort()), reason: 'bar order');
+      // Four sections, and the settings key below the last of them.
+      expect(tops, hasLength(4));
+      final settings = tester.getTopLeft(railItem('Settings')).dy;
+      expect(settings, greaterThan(tops.last));
+      // Settings is no section: the rail has five buttons beside the deck's.
+      expect(railItem('Requests'), findsNothing);
+    });
+
+    testWidgets(
+      'the sections carry the bar\'s shortcuts, Settings carries ⌘,',
+      (tester) async {
+        await pumpRail(tester);
+
+        for (final (index, tab) in bar.indexed) {
+          expect(
+            tester.widget<IconButton>(railItem(tab.label)).tooltip,
+            '${tab.label}  ${ShellShortcuts.section(index)}',
+          );
+        }
+        expect(
+          tester.widget<IconButton>(railItem('Settings')).tooltip,
+          'Settings  ${ShellShortcuts.settings}',
+        );
+      },
+    );
+
+    testWidgets('Settings is selected by its own flag, and no section is', (
+      tester,
+    ) async {
+      await pumpRail(tester, settingsSelected: true);
+
+      expect(
+        tester.widget<IconButton>(railItem('Settings')).isSelected,
+        isTrue,
+      );
+      for (final tab in bar) {
+        expect(
+          tester.widget<IconButton>(railItem(tab.label)).isSelected,
+          isNot(isTrue),
+          reason: tab.label,
+        );
+      }
+    });
+
+    testWidgets('a section reports its place in the bar, Settings its own', (
+      tester,
+    ) async {
+      final selected = <int>[];
+      var settings = 0;
+      await pumpRail(
+        tester,
+        onDestinationSelected: selected.add,
+        onSettings: () => settings++,
+      );
+
+      await tester.tap(railItem('Stack'));
+      await tester.tap(railItem('Home'));
+      await tester.tap(railItem('Settings'));
+
+      expect(selected, [bar.indexOf(NavTab.stack), bar.indexOf(NavTab.home)]);
+      expect(settings, 1);
+    });
+  });
 
   group('DesktopNavRail badge', () {
     // Anchored by its right edge 2pt past a 20pt glyph, the 18pt badge covered

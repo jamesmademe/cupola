@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -109,8 +110,11 @@ ServiceSummary _summary(ServiceKey service, {bool online = true}) =>
       version: '5.14.0',
     );
 
+/// The operator's bar: the Portal is the Stack tab's gesture.
+final _bar = NavTab.barFor(Audience.operator);
+
 List<FloatingNavDestination> _destinations() => [
-  for (final tab in NavTab.values)
+  for (final tab in _bar)
     FloatingNavDestination(
       icon: tab.icon,
       selectedIcon: tab.selectedIcon,
@@ -189,7 +193,7 @@ class _PortalPoseState extends State<_PortalPose>
             ],
           ),
           bottomNavigationBar: FloatingBottomNavBar(
-            selectedIndex: NavTab.dashboard.index,
+            selectedIndex: _bar.indexOf(NavTab.stack),
             onDestinationSelected: (_) {},
             destinations: _destinations(),
             verticalDragDelegate: _portal,

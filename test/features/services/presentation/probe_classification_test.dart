@@ -1,4 +1,4 @@
-/// The Dashboard's probe, driven through the app's real clients on the
+/// The Stack's probe, driven through the app's real clients on the
 /// profiles' fake network: a failure is classified before it is painted.
 ///
 /// The probe used to catch every error and report `offline`, so a refused key
@@ -14,8 +14,8 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 
@@ -180,7 +180,7 @@ void main() {
     );
   });
 
-  group('the Dashboard paints it', () {
+  group('the Stack paints it', () {
     testWidgets('a refused key reads amber in its own words, and the band '
         'that names what did not answer leaves it out', (tester) async {
       final harness = await pumpWithProfile(
@@ -189,7 +189,7 @@ void main() {
           WorldIds.sonarr,
           ConnectionBehaviour.refusesKey,
         ),
-        child: const DashboardScreen(),
+        child: const StackScreen(),
         surfaceSize: const Size(430, 2400),
       );
 

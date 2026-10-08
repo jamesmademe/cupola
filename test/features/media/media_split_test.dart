@@ -143,7 +143,7 @@ void main() {
     test('reads a title under a mount, with its query', () {
       final target = MediaSplit.targetOf(
         Uri.parse(
-          '/dashboard/radarr/library/media/movie/10378'
+          '/stack/radarr/library/media/movie/10378'
           '?i=radarr&heroTag=movie_2_0&posterUrl=https%3A%2F%2Fa%2Fp.jpg',
         ),
       )!;
@@ -171,7 +171,7 @@ void main() {
       expect((person! as MediaPanePerson).id, 90001);
       expect((person as MediaPanePerson).posterUrl, 'https://a/p.jpg');
       final collection = MediaSplit.pageOf(
-        Uri.parse('/dashboard/seerr/requests/media/collection/90101'),
+        Uri.parse('/stack/seerr/requests/media/collection/90101'),
       );
       expect((collection! as MediaPaneCollection).id, 90101);
       // A title is still a title, in the shell's own terms.
@@ -212,10 +212,10 @@ void main() {
     test('the root mount, other pages and malformed ids have no pane', () {
       for (final location in [
         '/media/movie/10378',
-        '/dashboard/radarr/library',
-        '/dashboard/radarr/library/movie/2',
-        '/dashboard/radarr/library/media/movie/abc',
-        '/dashboard/radarr/library/media/movie/10378/extra',
+        '/stack/radarr/library',
+        '/stack/radarr/library/movie/2',
+        '/stack/radarr/library/media/movie/abc',
+        '/stack/radarr/library/media/movie/10378/extra',
       ]) {
         expect(
           MediaSplit.targetOf(Uri.parse(location)),

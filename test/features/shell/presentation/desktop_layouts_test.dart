@@ -210,7 +210,7 @@ void main() {
           tester,
           const Size(1440, 900),
           const TrueNasConsoleShell(child: Text('an area')),
-          location: '/dashboard/truenas/storage',
+          location: '/stack/truenas/storage',
         );
         // Full window: the list carries each area's second line.
         expect(find.text('Pools & topology'), findsOneWidget);
@@ -219,7 +219,7 @@ void main() {
           tester,
           const Size(720, 450),
           const TrueNasConsoleShell(child: Text('an area')),
-          location: '/dashboard/truenas/storage',
+          location: '/stack/truenas/storage',
         );
         // Compact: the same nine doors, one line, no subtitles.
         expect(find.text('Storage'), findsOneWidget);
@@ -260,7 +260,7 @@ Future<void> _pump(
   WidgetTester tester,
   Size size,
   Widget child, {
-  String location = '/dashboard',
+  String location = '/stack',
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;

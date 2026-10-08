@@ -1,5 +1,5 @@
 /// Something other than the service answers at its address, and the app says
-/// so: on the Dashboard, on the service's library and in its connection test.
+/// so: on the Stack, on the service's library and in its connection test.
 ///
 /// The case behind "Radarr and Sonarr answering, with empty libraries": a web
 /// page (a proxy's default page, an address missing its base path) answered
@@ -23,8 +23,8 @@ import 'package:cupola/features/music/presentation/music_screen.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -435,7 +435,7 @@ void main() {
       }
     });
 
-    testWidgets('Home paints a Sonarr on Radarr\'s port amber, in the '
+    testWidgets('the Stack paints a Sonarr on Radarr\'s port amber, in the '
         'address\'s words', (tester) async {
       final harness = await pumpWithProfile(
         tester,
@@ -443,7 +443,7 @@ void main() {
           WorldIds.radarr,
           const ConnectionBehaviour.answersAsOtherService(ServiceKey.sonarr),
         ),
-        child: const DashboardScreen(),
+        child: const StackScreen(),
         surfaceSize: const Size(430, 2400),
       );
 
@@ -621,7 +621,9 @@ void main() {
       expect(summary.failure?.gateway, isNull);
     });
 
-    testWidgets('Home paints Cloudflare Access amber, by name', (tester) async {
+    testWidgets('the Stack paints Cloudflare Access amber, by name', (
+      tester,
+    ) async {
       final harness = await pumpWithProfile(
         tester,
         Profiles.p3.withBehaviour(
@@ -630,7 +632,7 @@ void main() {
             mode: CloudflareAccessMode.unauthorized,
           ),
         ),
-        child: const DashboardScreen(),
+        child: const StackScreen(),
         surfaceSize: const Size(430, 2400),
       );
 

@@ -216,7 +216,7 @@ Widget _scaffold(
     title: title,
     searchHint: 'Search movies',
     activityRoute: '/activity',
-    navigationSection: NavigationSection.dashboard,
+    navigationSection: NavigationSection.stack,
     serviceName: 'Radarr',
     service: service,
     accentColor: ServiceKey.radarr.accent,

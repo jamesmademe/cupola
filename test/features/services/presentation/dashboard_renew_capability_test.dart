@@ -13,9 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -53,10 +53,7 @@ Future<ProfileHarness> _pumpHome(
   await tester.pumpWidget(
     ProviderScope(
       overrides: harness.overrides,
-      child: MaterialApp(
-        theme: AppTheme.darkTheme(),
-        home: const DashboardScreen(),
-      ),
+      child: MaterialApp(theme: AppTheme.darkTheme(), home: const HomeScreen()),
     ),
   );
   await harness.settle(tester);

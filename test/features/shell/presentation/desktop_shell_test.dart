@@ -8,7 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -18,6 +20,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
+import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
@@ -87,7 +90,7 @@ void main() {
         expect(activitySemantics.flagsCollection.isButton, isTrue);
         expect(activitySemantics.hasAction(SemanticsAction.tap), isTrue);
         expect(find.bySemanticsLabel('Jump to anything, ⌘K'), findsNWidgets(2));
-        // The deck speaks the stack as one sentence, the one the Dashboard
+        // The deck speaks the stack as one sentence, the one the Stack
         // header prints, rather than seventeen glyphs one by one.
         expect(
           find.bySemanticsLabel(RegExp(r'^1 of 1 answering')),
@@ -144,14 +147,14 @@ void main() {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(
         tester,
-        initialLocation: '/dashboard/radarr',
+        initialLocation: '/stack/radarr',
         overrides: await _world(),
       );
 
       final chrome = find.byType(WindowChrome);
       expect(
         // The breadcrumb IS the URL, and the root crumb is the tab's label.
-        find.descendant(of: chrome, matching: find.text('Dashboard')),
+        find.descendant(of: chrome, matching: find.text('Stack')),
         findsOneWidget,
       );
       expect(
@@ -326,7 +329,7 @@ void main() {
         await onPlatform(TargetPlatform.macOS, () async {
           await _pumpShell(
             tester,
-            initialLocation: '/dashboard/radarr/library/item/42',
+            initialLocation: '/stack/radarr/library/item/42',
             overrides: await _world(),
           );
           expect(find.text('4K'), findsNothing);
@@ -342,7 +345,7 @@ void main() {
           try {
             await _pumpShell(
               tester,
-              initialLocation: '/dashboard/radarr/library/item/42',
+              initialLocation: '/stack/radarr/library/item/42',
               overrides: await _world(instances: _twoRadarr),
             );
             // The derived name is the room's title, with no second label
@@ -365,7 +368,7 @@ void main() {
         // The lens rests on the first Radarr; the film is the 4K's.
         await _pumpShell(
           tester,
-          initialLocation: '/dashboard/radarr/library/item/42?i=radarr-4k00001',
+          initialLocation: '/stack/radarr/library/item/42?i=radarr-4k00001',
           overrides: await _world(instances: _twoRadarr),
         );
         expect(find.bySemanticsLabel('Viewing Radarr, 4K'), findsOneWidget);
@@ -386,7 +389,7 @@ void main() {
         try {
           await _pumpShell(
             tester,
-            initialLocation: '/dashboard/radarr/library',
+            initialLocation: '/stack/radarr/library',
             overrides: await _world(),
           );
           expect(
@@ -407,7 +410,7 @@ void main() {
         try {
           await _pumpShell(
             tester,
-            initialLocation: '/dashboard/radarr/library/item/42',
+            initialLocation: '/stack/radarr/library/item/42',
             overrides: await _world(),
           );
           // One Radarr, so the room alone: its `4K` label outlived the
@@ -427,7 +430,7 @@ void main() {
         try {
           await _pumpShell(
             tester,
-            initialLocation: '/dashboard/truenas',
+            initialLocation: '/stack/truenas',
             overrides: await _world(),
           );
           expect(find.bySemanticsLabel('Viewing TrueNAS'), findsOneWidget);
@@ -476,6 +479,92 @@ void main() {
         harness.routerDelegate.currentConfiguration.uri.path,
         NavTab.discover.routePath,
       );
+    });
+  });
+
+  testWidgets('⌘1 to ⌘4 follow the operator\'s bar, in its order', (
+    tester,
+  ) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      final harness = await _pumpShell(tester, overrides: await _world());
+      final bar = NavTab.barFor(Audience.operator);
+
+      // Backwards, so every key crosses to a section the window is not on.
+      for (final (index, key) in [
+        LogicalKeyboardKey.digit4,
+        LogicalKeyboardKey.digit3,
+        LogicalKeyboardKey.digit2,
+        LogicalKeyboardKey.digit1,
+      ].indexed) {
+        await _press(tester, key, meta: true);
+
+        expect(
+          harness.routerDelegate.currentConfiguration.uri.path,
+          bar[bar.length - 1 - index].routePath,
+          reason: '⌘${4 - index}',
+        );
+      }
+      // Home, Discover, Activity, Stack: not the order of the branches under
+      // them, which also hold Requests and Settings.
+      expect(bar.map((tab) => tab.label), [
+        'Home',
+        'Discover',
+        'Activity',
+        'Stack',
+      ]);
+    });
+  });
+
+  testWidgets('⌘, opens Settings, which the bar has no number for', (
+    tester,
+  ) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      final harness = await _pumpShell(tester, overrides: await _world());
+
+      await _press(tester, LogicalKeyboardKey.comma, meta: true);
+
+      expect(
+        harness.routerDelegate.currentConfiguration.uri.path,
+        NavTab.settings.routePath,
+      );
+    });
+  });
+
+  testWidgets('the rail ends in Settings, lit while it is on screen', (
+    tester,
+  ) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      final harness = await _pumpShell(tester, overrides: await _world());
+
+      // The rail's button for [label], found by the tooltip it prints.
+      Finder railButton(String label) => find.descendant(
+        of: find.byType(DesktopNavRail),
+        matching: find.byWidgetPredicate(
+          (w) => w is IconButton && (w.tooltip ?? '').startsWith('$label  '),
+        ),
+      );
+      bool lit(String label) =>
+          tester.widget<IconButton>(railButton(label)).isSelected ?? false;
+
+      expect(
+        tester.widget<IconButton>(railButton('Settings')).tooltip,
+        'Settings  ${ShellShortcuts.settings}',
+      );
+      expect(lit('Settings'), isFalse);
+      expect(lit('Home'), isTrue, reason: 'the window opens on the Home');
+
+      await tester.tap(railButton('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(
+        harness.routerDelegate.currentConfiguration.uri.path,
+        NavTab.settings.routePath,
+      );
+      expect(lit('Settings'), isTrue);
+      // And no section of the bar is lit beside it.
+      for (final tab in NavTab.barFor(Audience.operator)) {
+        expect(lit(tab.label), isFalse, reason: tab.label);
+      }
     });
   });
 }
@@ -574,11 +663,17 @@ class _Harness {
 
 Future<_Harness> _pumpShell(
   WidgetTester tester, {
-  String initialLocation = '/dashboard',
+  String initialLocation = '/home',
   Size viewport = const Size(1440, 900),
   List<Override> overrides = const [],
 }) async {
-  final container = ProviderContainer(overrides: overrides);
+  final container = ProviderContainer(
+    overrides: [
+      // The shell reads who it is drawn for, which waits on onboarding.
+      initialOnboardingCompletedProvider.overrideWithValue(true),
+      ...overrides,
+    ],
+  );
   final router = GoRouter(
     initialLocation: initialLocation,
     routes: [
@@ -588,10 +683,34 @@ Future<_Harness> _pumpShell(
             ShellScreen(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            navigatorKey: branchNavigatorKeyFor(NavTab.dashboard),
+            navigatorKey: branchNavigatorKeyFor(NavTab.home),
+            routes: [
+              GoRoute(path: '/home', builder: (_, _) => const Placeholder()),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.discover),
             routes: [
               GoRoute(
-                path: '/dashboard',
+                path: '/discover',
+                builder: (_, _) => const Placeholder(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.activity),
+            routes: [
+              GoRoute(
+                path: '/activity',
+                builder: (_, _) => const Placeholder(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.stack),
+            routes: [
+              GoRoute(
+                path: '/stack',
                 builder: (_, _) => const Placeholder(),
                 routes: [
                   GoRoute(
@@ -615,19 +734,10 @@ Future<_Harness> _pumpShell(
             ],
           ),
           StatefulShellBranch(
-            navigatorKey: branchNavigatorKeyFor(NavTab.discover),
+            navigatorKey: branchNavigatorKeyFor(NavTab.requests),
             routes: [
               GoRoute(
-                path: '/discover',
-                builder: (_, _) => const Placeholder(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            navigatorKey: branchNavigatorKeyFor(NavTab.activity),
-            routes: [
-              GoRoute(
-                path: '/activity',
+                path: '/requests',
                 builder: (_, _) => const Placeholder(),
               ),
             ],

@@ -8,13 +8,21 @@ void main() {
         ShellBreadcrumb.of(location).map((c) => c.label).toList();
 
     test('the crumb is the URL, three deep', () {
-      expect(labels('/dashboard'), ['Dashboard']);
-      expect(labels('/dashboard/radarr'), ['Dashboard', 'Radarr']);
-      expect(labels('/dashboard/radarr/library'), [
-        'Dashboard',
-        'Radarr',
-        'Library',
-      ]);
+      expect(labels('/stack'), ['Stack']);
+      expect(labels('/stack/radarr'), ['Stack', 'Radarr']);
+      expect(labels('/stack/radarr/library'), ['Stack', 'Radarr', 'Library']);
+    });
+
+    test('the first crumb is the tab the location hangs off', () {
+      expect(labels('/home'), ['Home']);
+      expect(labels('/discover'), ['Discover']);
+      expect(labels('/activity'), ['Activity']);
+      expect(labels('/requests'), ['Requests']);
+      expect(labels('/home/media/movie/603'), ['Home', 'Movie']);
+      expect(labels('/requests/media/tv/1396'), ['Requests', 'Series']);
+      // A tab's crumb points back at the tab's own root.
+      expect(ShellBreadcrumb.of('/home').single.location, '/home');
+      expect(ShellBreadcrumb.of('/stack').single.location, '/stack');
     });
 
     test('a tab takes its own label, not a title-cased segment', () {
@@ -22,23 +30,23 @@ void main() {
       // crumb title-cased the segment and printed `Vms` and `Rss` next to bars
       // that say VMs and RSS — two surfaces naming one place two ways, in the
       // same window, one above the other.
-      expect(labels('/dashboard/unraid/vms').last, 'VMs');
-      expect(labels('/dashboard/qbittorrent/rss').last, 'RSS');
-      expect(labels('/dashboard/plex/on-deck').last, 'On deck');
-      expect(labels('/dashboard/npm/proxy-hosts').last, 'Proxy hosts');
-      expect(labels('/dashboard/npm/audit-log').last, 'Audit log');
+      expect(labels('/stack/unraid/vms').last, 'VMs');
+      expect(labels('/stack/qbittorrent/rss').last, 'RSS');
+      expect(labels('/stack/plex/on-deck').last, 'On deck');
+      expect(labels('/stack/npm/proxy-hosts').last, 'Proxy hosts');
+      expect(labels('/stack/npm/audit-log').last, 'Audit log');
     });
 
     test('a tab another service owns is not claimed by this one', () {
       // `rss` is a qBittorrent tab. Radarr has no such view, so a deep link
       // naming it is not a place on Radarr and the crumb must not say it is.
-      expect(labels('/dashboard/radarr/rss').last, isNot('RSS'));
+      expect(labels('/stack/radarr/rss').last, isNot('RSS'));
     });
 
     test("TrueNAS keeps the word Dashboard for its own console section", () {
       // The one place the app does not rename another product's furniture.
-      expect(labels('/dashboard/truenas/dashboard'), [
-        'Dashboard',
+      expect(labels('/stack/truenas/dashboard'), [
+        'Stack',
         'TrueNAS',
         'Dashboard',
       ]);
@@ -48,8 +56,8 @@ void main() {
       // The crumb stops at the last *place*. A record's own identity belongs to
       // the page, which knows what it is called; the trail would only have the
       // number.
-      expect(labels('/dashboard/radarr/library/movie/1234'), [
-        'Dashboard',
+      expect(labels('/stack/radarr/library/movie/1234'), [
+        'Stack',
         'Radarr',
         'Library',
       ]);
@@ -65,7 +73,7 @@ void main() {
         'Discover',
         'Collection',
       ]);
-      expect(labels('/dashboard/media/movie/603'), ['Dashboard', 'Movie']);
+      expect(labels('/stack/media/movie/603'), ['Stack', 'Movie']);
     });
 
     test('an unknown location yields nothing rather than guessing', () {
@@ -74,7 +82,7 @@ void main() {
     });
 
     test('every crumb but the last points somewhere', () {
-      final crumbs = ShellBreadcrumb.of('/dashboard/radarr/library');
+      final crumbs = ShellBreadcrumb.of('/stack/radarr/library');
       for (final crumb in crumbs.take(crumbs.length - 1)) {
         expect(crumb.location, isNotNull, reason: crumb.label);
       }

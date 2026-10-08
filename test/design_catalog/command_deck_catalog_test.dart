@@ -56,10 +56,10 @@ final _settings = SettingsModel(
 /// Where the window has been, newest first. The first is where it stands,
 /// which the deck leaves out.
 const _recents = [
-  '/dashboard',
+  '/stack',
   ServiceRoutes.radarrLibrary,
   '/activity',
-  '/dashboard/sonarr/calendar',
+  '/stack/sonarr/calendar',
   '/settings/certificates',
 ];
 

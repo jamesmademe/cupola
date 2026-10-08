@@ -17,7 +17,7 @@ startup settings.
 
 **No service provider is overridden.** Every client is the app's own and is
 built by the app's own providers. This includes the throwaway clients the
-Dashboard probe builds, and the TrueNAS and Dockge WebSockets. So the app's
+Stack probe builds, and the TrueNAS and Dockge WebSockets. So the app's
 classification and counting code is what runs.
 
 ## Usage
@@ -27,7 +27,7 @@ import '../../test_helpers/profiles/profiles.dart';
 
 testWidgets('…', (tester) async {
   final harness = await pumpWithProfile(tester, Profiles.p6,
-      child: const DashboardScreen());
+      child: const StackScreen());
   // …assert on the screen, or on what the app asked:
   expect(harness.network.requestsTo(WorldIds.radarr4k), isNotEmpty);
   await harness.unmount(tester); // always, see below

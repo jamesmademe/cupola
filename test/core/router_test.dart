@@ -66,7 +66,8 @@ import 'package:cupola/features/transmission/presentation/transmission_screen.da
 import 'package:cupola/features/transmission/presentation/transmission_tab_screens.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -88,12 +89,12 @@ import '../test_helpers/model_builders.dart';
 
 void main() {
   group('routerProvider', () {
-    testWidgets('starts on services', (tester) async {
+    testWidgets('starts on the Home', (tester) async {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      expect(router.state.uri.toString(), '/dashboard');
-      expect(find.byType(DashboardScreen), findsOneWidget);
+      expect(router.state.uri.toString(), ServiceRoutes.home);
+      expect(find.byType(HomeScreen), findsOneWidget);
     });
 
     testWidgets('starts on onboarding when onboarding is incomplete', (
@@ -121,7 +122,7 @@ void main() {
       },
     );
 
-    testWidgets('redirects to services when onboarding completes', (
+    testWidgets('redirects to the Home when onboarding completes', (
       tester,
     ) async {
       final container = await _pumpRouter(tester, onboardingCompleted: false);
@@ -130,8 +131,8 @@ void main() {
       container.read(onboardingCompletedProvider.notifier).state = true;
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), '/dashboard');
-      expect(find.byType(DashboardScreen), findsOneWidget);
+      expect(router.state.uri.toString(), ServiceRoutes.home);
+      expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.byType(OnboardingScreen), findsNothing);
     });
 
@@ -145,7 +146,7 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      router.go('/dashboard/seerr/movie/not-a-number');
+      router.go('/stack/seerr/movie/not-a-number');
       await tester.pumpAndSettle();
 
       expect(router.state.uri.toString(), ServiceRoutes.discover);
@@ -162,9 +163,7 @@ void main() {
 
         // A series is its own page in the Discover tab, the poster decoded
         // once.
-        router.go(
-          '/dashboard/seerr/discover/tv/123?posterUrl=$encodedPosterUrl',
-        );
+        router.go('/stack/seerr/discover/tv/123?posterUrl=$encodedPosterUrl');
         await tester.pumpAndSettle();
 
         expect(
@@ -180,7 +179,7 @@ void main() {
         // A movie is its own page in the Discover tab, the poster decoded
         // once.
         router.go(
-          '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
+          '/stack/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
         );
         await tester.pumpAndSettle();
 
@@ -202,7 +201,7 @@ void main() {
         final container = await _pumpRouter(tester);
         final router = container.read(routerProvider);
 
-        router.go('/dashboard/radarr/movie/42');
+        router.go('/stack/radarr/movie/42');
         await tester.pumpAndSettle();
 
         // A title named by an arr's own id opens the way to its own page.
@@ -251,10 +250,7 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      router.go(
-        '/dashboard/radarr/movie/not-a-number',
-        extra: buildMovie(id: 42),
-      );
+      router.go('/stack/radarr/movie/not-a-number', extra: buildMovie(id: 42));
       await tester.pumpAndSettle();
 
       expect(router.state.uri.toString(), ServiceRoutes.radarrLibrary);
@@ -430,7 +426,7 @@ void main() {
         ServiceKey.readarr,
       ]) {
         for (final tab in tabsFor(service)!) {
-          final location = '/dashboard/${service.routeParam}/${tab.segment}';
+          final location = '/stack/${service.routeParam}/${tab.segment}';
           router.go(location);
           await tester.pumpAndSettle();
 
@@ -455,7 +451,7 @@ void main() {
       final router = container.read(routerProvider);
 
       for (final tab in tabsFor(ServiceKey.seerr)!) {
-        final location = '/dashboard/seerr/${tab.segment}';
+        final location = '/stack/seerr/${tab.segment}';
         router.go(location);
         await tester.pumpAndSettle();
 
@@ -474,7 +470,11 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      for (final prefix in ['/dashboard/seerr', '/services/seerr']) {
+      for (final prefix in [
+        '/stack/seerr',
+        '/dashboard/seerr',
+        '/services/seerr',
+      ]) {
         for (final entry in {
           '': ServiceRoutes.seerrOverview,
           '/requests': ServiceRoutes.seerrRequests,
@@ -562,7 +562,7 @@ void main() {
           ServiceKey.nzbget,
         ]) {
           for (final tab in tabsFor(service)!) {
-            final location = '/dashboard/${service.routeParam}/${tab.segment}';
+            final location = '/stack/${service.routeParam}/${tab.segment}';
             router.go(location);
             await tester.pumpAndSettle();
 
@@ -654,7 +654,7 @@ void main() {
       final router = container.read(routerProvider);
 
       for (final tab in tabsFor(ServiceKey.bazarr)!) {
-        final location = '/dashboard/bazarr/${tab.segment}';
+        final location = '/stack/bazarr/${tab.segment}';
         router.go(location);
         await tester.pumpAndSettle();
 
@@ -670,7 +670,11 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      for (final prefix in ['/dashboard/bazarr', '/services/bazarr']) {
+      for (final prefix in [
+        '/stack/bazarr',
+        '/dashboard/bazarr',
+        '/services/bazarr',
+      ]) {
         for (final entry in {
           '': ServiceRoutes.bazarrOverview,
           '/library': ServiceRoutes.bazarrSeriesBase,
@@ -697,7 +701,7 @@ void main() {
       final router = container.read(routerProvider);
 
       for (final tab in tabsFor(ServiceKey.prowlarr)!) {
-        final location = '/dashboard/prowlarr/${tab.segment}';
+        final location = '/stack/prowlarr/${tab.segment}';
         router.go(location);
         await tester.pumpAndSettle();
 
@@ -713,7 +717,11 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      for (final prefix in ['/dashboard/prowlarr', '/services/prowlarr']) {
+      for (final prefix in [
+        '/stack/prowlarr',
+        '/dashboard/prowlarr',
+        '/services/prowlarr',
+      ]) {
         for (final entry in {
           '': ServiceRoutes.prowlarrOverview,
           '/library': ServiceRoutes.prowlarrIndexers,
@@ -746,6 +754,9 @@ void main() {
       for (final entry in {
         ServiceRoutes.qbittorrent: ServiceRoutes.qbittorrentOverview,
         '/services/qbittorrent': ServiceRoutes.qbittorrentOverview,
+        '/stack/qbittorrent/torrent/abc123': ServiceRoutes.qbittorrentTorrent(
+          'abc123',
+        ),
         '/dashboard/qbittorrent/torrent/abc123':
             ServiceRoutes.qbittorrentTorrent('abc123'),
         '/services/qbittorrent/torrent/abc123':
@@ -772,10 +783,10 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      router.go('/dashboard/seerr/requests');
+      router.go('/stack/seerr/requests');
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), '/dashboard/seerr/requests');
+      expect(router.state.uri.toString(), '/stack/seerr/requests');
       expect(find.byType(ServiceAllRequestsScreen), findsOneWidget);
 
       // Readarr never had a `media` tail and does not grow one here: its
@@ -785,9 +796,9 @@ void main() {
       // whole library IS a tab now; a service still off the model has nowhere
       // but its root to go.
       for (final entry in {
-        '/dashboard/radarr/media': ServiceRoutes.radarrLibrary,
-        '/dashboard/sonarr/media': ServiceRoutes.sonarrLibrary,
-        '/dashboard/lidarr/media': ServiceRoutes.lidarrLibrary,
+        '/stack/radarr/media': ServiceRoutes.radarrLibrary,
+        '/stack/sonarr/media': ServiceRoutes.sonarrLibrary,
+        '/stack/lidarr/media': ServiceRoutes.lidarrLibrary,
       }.entries) {
         router.go(entry.key);
         await tester.pumpAndSettle();
@@ -812,16 +823,16 @@ void main() {
       // retry timer pending and the failure would be about the fixture rather
       // than about the rewrite.
       // `/services/radarr` takes two hops now: the prefix rewrite lands it on
-      // `/dashboard/radarr`, which is redirect-only and hands off to Overview.
+      // `/stack/radarr`, which is redirect-only and hands off to Overview.
       // That chaining is the property — a rewrite that stopped at the first
       // hop would leave the user on a path that draws nothing.
       const cases = {
-        '/services': '/dashboard',
+        '/services': '/stack',
         '/services/radarr': ServiceRoutes.radarrOverview,
         '/services/sonarr': ServiceRoutes.sonarrOverview,
         '/services/lidarr': ServiceRoutes.lidarrOverview,
         '/services/readarr': ServiceRoutes.readarrOverview,
-        '/services/seerr/requests': '/dashboard/seerr/requests',
+        '/services/seerr/requests': '/stack/seerr/requests',
       };
 
       for (final entry in cases.entries) {
@@ -873,7 +884,7 @@ void main() {
       // Asserted on what rendered rather than on `router.state`: an unmatched
       // location leaves the match list empty and reading `state` throws, which
       // would pass this test for entirely the wrong reason.
-      expect(find.byType(DashboardScreen), findsNothing);
+      expect(find.byType(StackScreen), findsNothing);
     });
 
     testWidgets('legacy top-level routes redirect to services', (tester) async {
@@ -891,7 +902,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(router.state.uri.toString(), entry.value);
-        expect(find.byType(DashboardScreen), findsNothing);
+        expect(find.byType(StackScreen), findsNothing);
       }
     });
 
@@ -1617,7 +1628,8 @@ void main() {
           for (final service in ServiceRoutes.mediaMountServices)
             for (final tab in tabsFor(service)!)
               '${ServiceRoutes.forService(service)}/${tab.segment}',
-          ServiceRoutes.dashboard,
+          ServiceRoutes.home,
+          ServiceRoutes.stack,
           ServiceRoutes.activity,
           ServiceRoutes.discover,
           '/activity/movies',
@@ -1665,7 +1677,7 @@ void main() {
             ServiceRoutes.sonarrLibrary,
           ),
           ('${ServiceRoutes.discover}/media/movie/x', ServiceRoutes.discover),
-          ('/media/movie/-1', ServiceRoutes.dashboard),
+          ('/media/movie/-1', ServiceRoutes.home),
         ]) {
           router.go(location);
           await tester.pumpAndSettle();

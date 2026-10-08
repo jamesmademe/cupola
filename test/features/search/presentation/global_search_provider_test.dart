@@ -107,7 +107,7 @@ void main() {
     expect(routes.map((uri) => uri.path), [
       '/media/movie/101',
       '/media/movie/123',
-      '/dashboard/sonarr/library/series/20',
+      '/stack/sonarr/library/series/20',
     ]);
     // Keyed on the CONNECTION and on the row's position, not on the service:
     // the same id names different things on two servers, and a lookup result

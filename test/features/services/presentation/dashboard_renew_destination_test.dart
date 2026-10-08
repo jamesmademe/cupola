@@ -13,7 +13,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -49,10 +49,7 @@ void main() {
 
     final router = GoRouter(
       routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const DashboardScreen(),
-        ),
+        GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
         GoRoute(path: ServiceRoutes.nginxProxyManager, builder: landed),
         GoRoute(path: ServiceRoutes.npmOverview, builder: landed),
         GoRoute(path: ServiceRoutes.npmCertificates, builder: landed),
