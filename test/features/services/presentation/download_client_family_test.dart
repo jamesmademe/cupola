@@ -1,8 +1,8 @@
 /// The download clients are one family on Home.
 ///
 /// qBittorrent, Transmission, SABnzbd and NZBGet each feed Downloads, each
-/// add their rate to the eyebrow, each raise their faults in Needs you and
-/// each are named under the module when they do not answer.
+/// add their rate to the line under its name, each raise their faults in
+/// Needs you and each are named under the module when they do not answer.
 library;
 
 import 'package:flutter/material.dart';
@@ -244,11 +244,13 @@ void main() {
       expect(detailOf('Coffee.Run.2020.720p.WEB'), contains('1 seed ·'));
     });
 
-    testWidgets('P4 on Home: the eyebrow sums both clients', (tester) async {
+    testWidgets('P4 on Home: the line sums both clients', (tester) async {
       final harness = await _pump(tester, Profiles.p4);
 
+      // qBittorrent's 22.4 MB/s and Transmission's 3: one speed, and the
+      // Sonarr grab Transmission moves is counted once among the four.
       expect(
-        _inDownloads(find.textContaining('across 2 clients')),
+        _inDownloads(find.text('4 moving · 1 stuck · 25.4\u00A0MB/s')),
         findsOneWidget,
       );
 
@@ -286,14 +288,25 @@ void main() {
       );
     });
 
-    testWidgets('P1 on Home: the two broken torrents are counted under '
-        'Downloads', (tester) async {
+    testWidgets('P1 on Home: the two broken torrents are rows of Downloads, '
+        'stuck and not moving', (tester) async {
       final harness = await _pump(
         tester,
         Profiles.p1.withDownloads([_qbError, _qbMissing]),
       );
 
-      expect(_inDownloads(find.textContaining('2 failed')), findsOneWidget);
+      // Big Buck Bunny's stall and the two broken torrents are stuck; the
+      // five that move are the same five as without them.
+      expect(
+        _inDownloads(find.text('5 moving · 3 stuck · 40.4\u00A0MB/s')),
+        findsOneWidget,
+      );
+      // Each says it failed, and carries its remedy: another download of
+      // what Radarr grabbed (Coffee Run, and Big Buck Bunny's stall), and
+      // the torrent nobody's arr asked for opens in its client.
+      expect(_inDownloads(find.text('Failed')), findsNWidgets(2));
+      expect(_inDownloads(find.text('Try another download')), findsNWidgets(2));
+      expect(_inDownloads(find.text('Open in qBittorrent')), findsOneWidget);
 
       await harness.unmount(tester);
     });
