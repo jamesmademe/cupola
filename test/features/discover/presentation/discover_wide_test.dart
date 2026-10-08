@@ -236,6 +236,17 @@ void main() {
           expect(rect.width, lessThanOrEqualTo(AppBreakpoints.readingWell));
           expect(rect.left, atrium.left + AppSpacing.lg);
         }
+        // The field and its Cancel end where the answers do.
+        final right = tester.getRect(rows.first).right;
+        expect(
+          tester.getRect(find.byType(SearchBar)).left,
+          atrium.left + AppSpacing.lg,
+        );
+        expect(
+          tester.getRect(find.text('Cancel')).right,
+          lessThanOrEqualTo(right + 0.5),
+        );
+        expect(tester.getRect(find.byType(SearchBar)).right, lessThan(right));
 
         await harness.unmount(tester);
       });

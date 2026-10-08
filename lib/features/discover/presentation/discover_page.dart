@@ -177,7 +177,17 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
       body: Column(
         children: [
           if (engaged) SizedBox(height: MediaQuery.paddingOf(context).top),
-          field,
+          // Engaged, the field and its Cancel take the column its answers
+          // read in; at rest it spans the tab, over the doors. The same
+          // widgets either way, so focusing it never rebuilds it.
+          LayoutBuilder(
+            builder: (context, box) => Padding(
+              padding: EdgeInsets.only(
+                right: engaged ? _rowsInset(box.maxWidth) : 0,
+              ),
+              child: field,
+            ),
+          ),
           Expanded(child: body),
         ],
       ),
@@ -285,12 +295,13 @@ EdgeInsets _rowsPadding(double width, {required double bottom}) =>
     EdgeInsets.fromLTRB(
       AppSpacing.lg,
       0,
-      math.max(
-        AppSpacing.lg,
-        width - AppSpacing.lg - AppBreakpoints.readingWell,
-      ),
+      AppSpacing.lg + _rowsInset(width),
       bottom,
     );
+
+/// How much of [width] lies right of the rows' column, past its gutter.
+double _rowsInset(double width) =>
+    math.max(0, width - 2 * AppSpacing.lg - AppBreakpoints.readingWell);
 
 /// A section's name, in the secondary ink.
 class _Heading extends StatelessWidget {
