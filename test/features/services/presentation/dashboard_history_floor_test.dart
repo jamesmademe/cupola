@@ -1,11 +1,11 @@
-/// Home reads one page of history per connection, and a page that came back
-/// full is a window onto more of it.
+/// Needs you reads one page of history per connection, and a page that came
+/// back full is a window onto more of it.
 ///
-/// Arrived counted the imports on that page and stated them as the total, and
-/// the failed imports Needs you counts after its lead were stated as every one
-/// there is.
-/// Past a full page are older imports and older failures nobody read, so the
-/// figures over it are floors.
+/// The failed imports Needs you counts after its lead were stated as every one
+/// there is. Past a full page are older failures nobody read, so the figure
+/// over it is a floor. Arrived reads no page: a week of imports comes in one
+/// answer per connection, so what it counts is every title there is, however
+/// busy the evening, and it never says a floor.
 library;
 
 import 'package:flutter/material.dart';
@@ -17,7 +17,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -54,8 +53,10 @@ void main() {
     });
   });
 
-  testWidgets('P1, a busy HD Radarr: the counts over its full page are '
-      'floors', (tester) async {
+  testWidgets('P1, a busy HD Radarr: Needs you\'s count over its full page '
+      'is a floor, and Arrived\'s count over the whole week is not', (
+    tester,
+  ) async {
     final handle = tester.ensureSemantics();
     final harness = await ProfileHarness.start(Profiles.p1);
     harness.network.on(
@@ -65,6 +66,14 @@ void main() {
       (r) => NetworkReply.json(
         pagedEnvelope(r, _busyEvening(harness.network.now)),
       ),
+    );
+    // The same evening as the week's read answers it: every record, with no
+    // page to run out.
+    harness.network.on(
+      WorldIds.radarr,
+      'GET',
+      '/api/v3/history/since',
+      (r) => NetworkReply.json(_busyEvening(harness.network.now)),
     );
     await tester.binding.setSurfaceSize(const Size(430, 6000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -79,18 +88,27 @@ void main() {
     );
     await harness.settle(tester);
 
-    // Twenty on the HD's page, two on the 4K's, one on Sonarr's: at least
-    // twenty-three, and maybe more past the HD's page.
+    // Twenty-five titles on the HD's answer and two on the 4K's: the week's
+    // total, which no page cut short. Sonarr's episode is of a series that
+    // was already there, and is not a title that arrived.
     expect(
       find.descendant(
         of: find.byType(HomeArrivedModule),
-        matching: find.text('23+ imported'),
+        matching: find.text('Last 7 days · 27 new'),
       ),
       findsOne,
     );
     expect(
-      find.bySemanticsLabel(RegExp(r'^Arrived, at least 23 imported')),
+      find.bySemanticsLabel(RegExp(r'^Arrived, Last 7 days, 27 new')),
       findsOne,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(HomeArrivedModule),
+        matching: find.textContaining(RegExp(r'\d\+')),
+      ),
+      findsNothing,
+      reason: 'Arrived reads no page, so it has no floor to say',
     );
     // Needs you read the same page for failed imports. The blocked imports
     // it leads with come from the queue, read whole, so their eighteen is
@@ -130,5 +148,39 @@ void main() {
 
     final history = await container.read(servicesArrHistoryProvider.future);
     expect(history.coverage.isFloor, isFalse);
+  });
+
+  test('P1, a busy HD Radarr: the week is whole however many it holds, and '
+      'is never a floor', () async {
+    final harness = await ProfileHarness.start(Profiles.p1);
+    harness.network.on(
+      WorldIds.radarr,
+      'GET',
+      '/api/v3/history',
+      (r) => NetworkReply.json(
+        pagedEnvelope(r, _busyEvening(harness.network.now)),
+      ),
+    );
+    harness.network.on(
+      WorldIds.radarr,
+      'GET',
+      '/api/v3/history/since',
+      (r) => NetworkReply.json(_busyEvening(harness.network.now)),
+    );
+    final container = harness.container(retry: (_, _) => null);
+    container.listen(servicesArrivalsProvider, (_, _) {});
+
+    // The page of twenty is a window onto the evening, and says so.
+    final page = await container.read(servicesArrHistoryProvider.future);
+    expect(page.coverage.isFloor, isTrue);
+
+    // The week is the whole of it: past twenty, and not cut short.
+    final week = await container.read(servicesArrivalsProvider.future);
+    expect(
+      week.entries.where((entry) => entry.instanceId == WorldIds.radarr),
+      hasLength(25),
+    );
+    expect(week.coverage.isFloor, isFalse);
+    expect(week.coverage.isWhole, isTrue);
   });
 }
