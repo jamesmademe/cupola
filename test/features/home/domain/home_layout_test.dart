@@ -19,6 +19,7 @@ void main() {
     test('each person has their own modules, in the default order', () {
       expect(HomeModule.of(operator), [
         HomeModule.needsYou,
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.arrived,
@@ -40,6 +41,7 @@ void main() {
       expect(HomeModule.setUpNext.hideable, isTrue);
       expect(HomeModule.setUpNext.movable, isFalse);
       expect(HomeModule.orderedOf(operator), [
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.arrived,
@@ -51,7 +53,7 @@ void main() {
 
     test('a stored name finds its module, an unknown one finds none', () {
       expect(HomeModule.byName('downloads'), HomeModule.downloads);
-      expect(HomeModule.byName('featured'), isNull);
+      expect(HomeModule.byName('stackHealth'), isNull);
     });
   });
 
@@ -88,12 +90,13 @@ void main() {
     test('a name no module has drops, and so does another person\'s', () {
       final layout = HomeLayout.read(
         stored(
-          ['requests', 'featured', 'trending', 'downloads', 'arrived'],
+          ['requests', 'stackHealth', 'trending', 'downloads', 'arrived'],
           hidden: ['storage', 'comingSoon'],
         ),
         operator,
       );
       expect(layout.order, [
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.requests,
@@ -105,11 +108,12 @@ void main() {
     });
 
     test('a module the layout does not know enters at its default place', () {
-      // Written before Continue watching, Coming up, Downloads and Now
-      // playing existed: each lands after the module that precedes it by
+      // Written before Featured, Continue watching, Coming up, Downloads and
+      // Now playing existed: each lands after the module that precedes it by
       // default, wherever the person moved that one to.
       final layout = HomeLayout.read(stored(['requests', 'arrived']), operator);
       expect(layout.order, [
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.requests,
@@ -125,7 +129,7 @@ void main() {
         stored(['requests', 'downloads']),
         operator,
       );
-      expect(layout.order.first, HomeModule.continueWatching);
+      expect(layout.order.first, HomeModule.featured);
     });
 
     test('Needs you stands first and Set up next last, whatever the file '
@@ -138,6 +142,7 @@ void main() {
         operator,
       );
       expect(layout.order, [
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.requests,
@@ -156,6 +161,7 @@ void main() {
         operator,
       );
       expect(layout.order, [
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.downloads,
@@ -175,6 +181,7 @@ void main() {
       expect(read.hidden, written.hidden);
       expect(read.shown, [
         HomeModule.needsYou,
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.requests,
@@ -193,9 +200,10 @@ void main() {
     final layout = HomeLayout.defaultFor(operator);
 
     test('a move is clamped to the ends of the order', () {
-      expect(layout.moved(HomeModule.continueWatching, -1), same(layout));
+      expect(layout.moved(HomeModule.featured, -1), same(layout));
       expect(layout.moved(HomeModule.nowPlaying, 5), same(layout));
       expect(layout.moved(HomeModule.arrived, 1).order, [
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.downloads,
@@ -216,8 +224,9 @@ void main() {
 
     test('a drag counts the dragged module\'s own slot, as a reorderable '
         'list reports it', () {
-      // Arrived dropped below Requests: the list reports index 5.
-      expect(layout.reordered(2, 5).order, [
+      // Arrived dropped below Requests: the list reports index 6.
+      expect(layout.reordered(3, 6).order, [
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.downloads,
@@ -226,15 +235,16 @@ void main() {
         HomeModule.nowPlaying,
       ]);
       // Requests dropped on top.
-      expect(layout.reordered(4, 0).order, [
+      expect(layout.reordered(5, 0).order, [
         HomeModule.requests,
+        HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
         HomeModule.arrived,
         HomeModule.downloads,
         HomeModule.nowPlaying,
       ]);
-      expect(layout.reordered(1, 2), same(layout));
+      expect(layout.reordered(2, 3), same(layout));
       expect(layout.reordered(9, 0), same(layout));
     });
 
@@ -257,17 +267,17 @@ void main() {
     final layout = HomeLayout.defaultFor(operator);
 
     test('how many modules, and which are off', () {
-      expect(layout.summary, '8 modules');
+      expect(layout.summary, '9 modules');
       expect(
         layout.switched(HomeModule.requests, on: false).summary,
-        '8 modules · Requests hidden',
+        '9 modules · Requests hidden',
       );
       expect(
         layout
             .switched(HomeModule.requests, on: false)
             .switched(HomeModule.setUpNext, on: false)
             .summary,
-        '8 modules · 2 hidden',
+        '9 modules · 2 hidden',
       );
       expect(HomeLayout.defaultFor(requester).summary, '2 modules');
     });

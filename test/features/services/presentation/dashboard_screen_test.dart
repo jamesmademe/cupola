@@ -75,15 +75,16 @@ void main() {
 
     // Read off the list rather than off the screen: the modules below the fold
     // are built lazily, so a y-coordinate comparison would be testing the
-    // viewport height. The day, then what needs me, what is in progress, what
-    // is coming up, what arrived, what is moving, what waits for an answer and
-    // who is watching, and the Home's own two rows at its foot: Set up next and
-    // the way to Edit Home. Now playing and Continue watching hold their place
-    // on a Home with no media server: they step aside by drawing nothing, not
-    // by leaving the list.
+    // viewport height. The day, then what needs me, what is featured, what is
+    // in progress, what is coming up, what arrived, what is moving, what waits
+    // for an answer and who is watching, and the Home's own two rows at its
+    // foot: Set up next and the way to Edit Home. Featured, Now playing and
+    // Continue watching hold their place with nothing to show: they step aside
+    // by drawing nothing, not by leaving the list.
     expect(_regionsOnPage(tester), [
       'HomeHeader',
       'NeedsYouBanner',
+      'HomeFeaturedModule',
       'HomeContinueWatchingModule',
       'HomeComingUpModule',
       'HomeArrivedModule',
@@ -1246,6 +1247,10 @@ Future<void> _pumpPage(
     ),
   );
   await tester.pump();
+  await tester.pump(const Duration(milliseconds: 50));
+  // Featured holds its place until its sources answer, then steps aside: the
+  // modules it held below the fold are built on this frame, and their reads
+  // settle as the earlier ones did.
   await tester.pump(const Duration(milliseconds: 50));
 }
 

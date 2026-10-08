@@ -26,7 +26,7 @@ void main() {
     SharedPreferences.setMockInitialValues(stored);
     prefs = await SharedPreferences.getInstance();
     // Tall enough for the whole page: a list builds only what it shows.
-    tester.view.physicalSize = const Size(1206, 3600);
+    tester.view.physicalSize = const Size(1206, 4200);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final container = ProviderContainer(
@@ -57,8 +57,8 @@ void main() {
       expect(find.text(module.label), findsOneWidget, reason: module.label);
     }
     expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
-    // Needs you has no switch; the six ordered modules and Set up next do.
-    expect(find.byType(Switch), findsNWidgets(7));
+    // Needs you has no switch; the seven ordered modules and Set up next do.
+    expect(find.byType(Switch), findsNWidgets(8));
     final reset = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
     expect(reset.onPressed, isNull);
     // The other person's default, from the registry.
@@ -81,6 +81,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(homeLayoutProvider).order, [
+      HomeModule.featured,
       HomeModule.continueWatching,
       HomeModule.comingUp,
       HomeModule.downloads,
@@ -107,8 +108,9 @@ void main() {
       'default back', (tester) async {
     final container = await pump(tester);
 
-    // Continue watching, Coming up, Arrived, Downloads, then Requests.
-    await tester.tap(find.byType(Switch).at(4));
+    // Featured, Continue watching, Coming up, Arrived, Downloads, then
+    // Requests.
+    await tester.tap(find.byType(Switch).at(5));
     await tester.pumpAndSettle();
     expect(
       container.read(homeLayoutProvider).isOn(HomeModule.requests),
@@ -147,7 +149,8 @@ void main() {
       ids['Move up'],
     );
     await tester.pumpAndSettle();
-    expect(container.read(homeLayoutProvider).order.take(4), [
+    expect(container.read(homeLayoutProvider).order.take(5), [
+      HomeModule.featured,
       HomeModule.continueWatching,
       HomeModule.comingUp,
       HomeModule.downloads,

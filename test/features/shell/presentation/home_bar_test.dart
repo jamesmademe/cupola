@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
@@ -339,6 +340,7 @@ Future<ProviderContainer> _pump(
       // The Home's thirty-second poll: a test about the bar ends before the
       // container that holds its timer is disposed.
       homeLivePollProvider.overrideWith((ref) {}),
+      featuredAdvancesProvider.overrideWithValue(false),
     ],
   );
   addTearDown(container.dispose);

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_access_registry.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
@@ -42,6 +43,9 @@ class ProfileHarness {
       // poll's timer would outlive a container disposed at teardown. The
       // poll has its own test.
       homeLivePollProvider.overrideWith((ref) {}),
+      // Featured standing still, for the same reason: its slides move on a
+      // timer of their own, which the pager's own test drives.
+      featuredAdvancesProvider.overrideWithValue(false),
       ...overrides,
     ]);
   }

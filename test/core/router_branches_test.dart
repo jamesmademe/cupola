@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -188,6 +189,7 @@ void main() {
         // The Home's thirty-second poll: a test about routes ends before the
         // container that holds its timer is disposed.
         homeLivePollProvider.overrideWith((ref) {}),
+        featuredAdvancesProvider.overrideWithValue(false),
       ],
     );
     addTearDown(container.dispose);
