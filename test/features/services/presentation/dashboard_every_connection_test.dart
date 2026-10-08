@@ -1,11 +1,11 @@
 /// Home reads every connection of a service, the way its header does.
 ///
-/// Needs a decision, In flight and Recently added used to read the lens
-/// alone. With two Radarr, the 4K's downloads, its failed imports and its
-/// imports never reached Home, and nothing on Home said so. Each connection is
-/// now its own source: one that fails is named under the figure and takes
-/// only its own rows with it, and every row carries the connection it came
-/// off, so what it opens is that server's.
+/// Needs you, Downloads and Arrived used to read the lens alone. With two
+/// Radarr, the 4K's downloads, its failed imports and its imports never
+/// reached Home, and nothing on Home said so. Each connection is now its own
+/// source: one that fails is named under the figure and takes only its own
+/// rows with it, and every row carries the connection it came off, so what it
+/// opens is that server's.
 library;
 
 import 'package:flutter/material.dart';
@@ -20,6 +20,7 @@ import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/decision_rows.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 import '../../../test_helpers/profiles/service_fakes.dart';
 
@@ -66,7 +67,7 @@ Finder _within(Type region, Finder matching) =>
     find.descendant(of: find.byType(region), matching: matching);
 
 void main() {
-  testWidgets('P1, lens on the HD: the 4K Radarr reaches every region, '
+  testWidgets('P1, lens on the HD: the 4K Radarr reaches every module, '
       'named', (tester) async {
     final handle = tester.ensureSemantics();
     final harness = await _pumpHome(
@@ -75,18 +76,10 @@ void main() {
       before: _scriptFailedImportOn4k,
     );
 
-    // Needs a decision: the 4K's failed import, saying which Radarr.
+    // Downloads: the 4K's two movies, joined to the SABnzbd moving them.
     expect(
       _within(
-        DashboardDecisionsSection,
-        find.text('Import failed · Radarr 4K · Not a valid video file'),
-      ),
-      findsOne,
-    );
-    // In flight: the 4K's two films, joined to the SABnzbd moving them.
-    expect(
-      _within(
-        ServicesInFlightSection,
+        HomeDownloadsModule,
         find.text(
           'Radarr 4K · Bluray-2160p · 2.9 of 9.4\u00A0GB · 6\u00A0min left · SABnzbd',
         ),
@@ -108,13 +101,13 @@ void main() {
     // The HD's own rows say which Radarr too, now that there are two.
     expect(
       _within(
-        ServicesInFlightSection,
+        HomeDownloadsModule,
         find.textContaining('Radarr 1 · WEBDL-1080p'),
       ),
       findsOne,
     );
-    // Recently added: the 4K's failed import is on the rail, and the tile
-    // says which Radarr it failed on.
+    // Arrived: the 4K's failed import is on the rail, and the tile says
+    // which Radarr it failed on.
     expect(
       find.bySemanticsLabel(
         RegExp(r'^Elephants Dream, Radarr 4K, failed import, '),
@@ -123,6 +116,42 @@ void main() {
     );
 
     handle.dispose();
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P1, lens on the HD: the 4K Radarr\'s failed import reaches '
+      'Needs you, and its row says which Radarr', (tester) async {
+    final harness = await ProfileHarness.start(Profiles.p1);
+    _scriptFailedImportOn4k(harness.network);
+    await tester.binding.setSurfaceSize(_tall);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    // The row itself: the Home leads with one line and opens the place a
+    // fault is fixed, so the decision's row is mounted on its own.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: harness.overrides,
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: Scaffold(
+            body: ProvidedDecisionRows(
+              where: (decision) => decision.kind == DecisionKind.failedImport,
+            ),
+          ),
+        ),
+      ),
+    );
+    await harness.settle(tester);
+
+    expect(
+      find.descendant(
+        of: find.byType(DecisionRow),
+        matching: find.text(
+          'Import failed · Radarr 4K · Not a valid video file',
+        ),
+      ),
+      findsOne,
+    );
+
     await harness.unmount(tester);
   });
 
@@ -179,18 +208,15 @@ void main() {
     );
 
     expect(
-      _within(ServicesInFlightSection, find.text('Not in the total: Radarr 1')),
+      _within(HomeDownloadsModule, find.text('Not in the total: Radarr 1')),
       findsOne,
     );
     expect(
-      _within(ServicesInFlightSection, find.textContaining('Radarr 4K · ')),
+      _within(HomeDownloadsModule, find.textContaining('Radarr 4K · ')),
       findsNWidgets(2),
     );
     expect(
-      _within(
-        ServicesRecentlyAddedSection,
-        find.text('Not in the total: Radarr 1'),
-      ),
+      _within(HomeArrivedModule, find.text('Not in the total: Radarr 1')),
       findsOne,
     );
     // A figure over the connections that answered, never a dash over a
