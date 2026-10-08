@@ -71,6 +71,45 @@ class NeedsYouLine extends StatelessWidget {
       needs.leadsWithSilence ? StatusTone.error : StatusTone.warning,
       surface: room.slab,
     );
+    final glyphIcon = Icon(
+      needs.leadsWithSilence
+          ? Icons.cloud_off_rounded
+          : Icons.warning_amber_rounded,
+      size: 18,
+      color: glyph,
+    );
+    const gap = SizedBox(width: AppSpacing.md);
+    final sentence = Expanded(
+      child: Text(needs.line, style: AppType.body.copyWith(color: room.ink)),
+    );
+    final chip = needs.more <= 0
+        ? null
+        : [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: room.fillStrong,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: Text(
+                '+${needs.more}',
+                style: AppType.caption
+                    .weight(FontWeight.w600)
+                    .copyWith(color: room.inkSecondary),
+              ),
+            ),
+          ];
+    final action = Text(
+      needs.action,
+      style: AppType.body.weight(FontWeight.w600).copyWith(color: room.ink),
+    );
+    // At a large reading size the sentence takes the line and the count and
+    // the way in go under it: beside them it broke inside its words.
+    final stacked = MediaQuery.textScalerOf(context).scale(10) >= 13;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.gutter,
@@ -96,50 +135,34 @@ class NeedsYouLine extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.button),
               border: Border.all(color: room.hair),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  needs.leadsWithSilence
-                      ? Icons.cloud_off_rounded
-                      : Icons.warning_amber_rounded,
-                  size: 18,
-                  color: glyph,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    needs.line,
-                    style: AppType.body.copyWith(color: room.ink),
+            child: stacked
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [glyphIcon, gap, sentence],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [...?chip, gap, action],
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      glyphIcon,
+                      gap,
+                      sentence,
+                      if (chip != null) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        ...chip,
+                      ],
+                      gap,
+                      action,
+                    ],
                   ),
-                ),
-                if (needs.more > 0) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: room.fillStrong,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      '+${needs.more}',
-                      style: AppType.caption
-                          .weight(FontWeight.w600)
-                          .copyWith(color: room.inkSecondary),
-                    ),
-                  ),
-                ],
-                const SizedBox(width: AppSpacing.md),
-                Text(
-                  needs.action,
-                  style: AppType.body
-                      .weight(FontWeight.w600)
-                      .copyWith(color: room.ink),
-                ),
-              ],
-            ),
           ),
         ),
       ),

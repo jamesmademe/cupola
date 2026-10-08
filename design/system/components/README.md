@@ -42,6 +42,8 @@ cards live in [`../motion/`](../motion/).
 | Overlays | [AppDialog](AppDialog/README.md) | `lib/core/widgets/app_dialog.dart` |
 | Forms | [TextField](TextField/README.md) | `lib/core/theme.dart` |
 | Iconography | [ServiceGlyphs](ServiceGlyphs/README.md) | `lib/core/service_glyphs.dart`, `lib/features/settings/domain/service_key.dart` |
+| Home | [HomeModule](HomeModule/README.md) | `lib/features/home/presentation/widgets/home_module_frame.dart`, `lib/features/home/presentation/widgets/needs_you_banner.dart`, `lib/features/home/presentation/widgets/set_up_next_module.dart` |
+| Home | [EditHome](EditHome/README.md) | `lib/features/home/presentation/edit_home_page.dart`, `lib/features/home/domain/home_layout.dart` |
 | Media | [CalendarAgenda](CalendarAgenda/README.md) | `lib/features/discover/presentation/widgets/calendar_agenda.dart` |
 | Media | [CalendarBand](CalendarBand/README.md) | `lib/features/discover/presentation/widgets/calendar_band.dart` |
 | Media | [CalendarMonthGrid](CalendarMonthGrid/README.md) | `lib/features/discover/presentation/widgets/calendar_month_grid.dart` |

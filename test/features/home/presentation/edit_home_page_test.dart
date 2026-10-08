@@ -136,7 +136,7 @@ void main() {
     };
     expect(ids.keys, containsAll(['Move up', 'Move down']));
 
-    tester.binding.pipelineOwner.semanticsOwner!.performAction(
+    node.owner!.performAction(
       node.id,
       SemanticsAction.customAction,
       ids['Move up'],
