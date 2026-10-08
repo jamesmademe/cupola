@@ -20,7 +20,6 @@ import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -118,6 +117,10 @@ void main() {
     expect(find.text('Arrived'), findsOne);
     expect(find.textContaining('imported'), findsNothing);
     expect(
+      _within(HomeArrivedModule, find.textContaining('Last 7 days')),
+      findsNothing,
+    );
+    expect(
       find.descendant(
         of: find.byType(NeedsYouLine),
         matching: find.textContaining(
@@ -132,7 +135,18 @@ void main() {
     await tester.tap(_within(HomeArrivedModule, find.text('Retry')));
     await harness.settle(tester);
 
-    expect(find.text('7 imported'), findsOne);
+    // PORT: fails until this is fixed in lib. Arrived reads `servicesArrivalsProvider`, and
+    // `retryDashboardServices` (dashboard_retry.dart) drops the probes, the
+    // queue and `servicesArrHistoryProvider` but not the week: after Retry
+    // the arrs are asked `/system/status`, `/queue` and `/history` again and
+    // never `/history/since`, so the module keeps its silent frame (`Radarr 1,
+    // Radarr 4K and 2 others did not answer.` and Retry) instead of
+    // `Last 7 days · 4 new`. The old rail read the history page, which that
+    // function does drop.
+    expect(
+      _within(HomeArrivedModule, find.text('Last 7 days · 4 new')),
+      findsOne,
+    );
     // The probe itself was asked, not the summary that awaits its old answer.
     expect(find.textContaining('did not answer'), findsNothing);
     // What leads Needs you now is a fault of the stack, not a silence: its
