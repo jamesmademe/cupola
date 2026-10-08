@@ -94,10 +94,7 @@ void main() {
     expect(_within(HomeDownloadsModule, find.byType(FaultBand)), findsNothing);
     // Both clients' rates are back in the sum: SABnzbd's rows are joined to
     // the 4K Radarr's, so its rate is the one thing only it can say.
-    expect(
-      find.text('5 downloading · 40.4\u00A0MB/s across 2 clients'),
-      findsOne,
-    );
+    expect(find.text('5 moving · 1 stuck · 40.4\u00A0MB/s'), findsOne);
     expect(find.textContaining('Not in the total'), findsNothing);
 
     await harness.unmount(tester);
