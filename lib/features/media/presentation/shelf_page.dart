@@ -20,6 +20,7 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
+import 'package:cupola/features/media/presentation/media_split.dart';
 
 /// A picture on a shelf page, and what its request carries: an arr's own
 /// artwork needs its key.
@@ -205,30 +206,42 @@ class ShelfPage extends StatelessWidget {
               );
       },
     );
+    final ambient = BoxDecoration(
+      gradient: AppGradients.ambientBackground(scheme, accent: light?.light),
+    );
+    // The clock stays legible over whatever scrolls under it.
+    final framed = Stack(
+      children: [
+        page,
+        const Positioned(top: 0, left: 0, right: 0, child: StatusBarScrim()),
+      ],
+    );
     return Scaffold(
       backgroundColor: room.ground,
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: AppGradients.ambientBackground(
-            scheme,
-            accent: light?.light,
-          ),
-        ),
-        // The clock stays legible over whatever scrolls under it.
-        child: Stack(
-          children: [
-            page,
-            const Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: StatusBarScrim(),
+      body: MediaPane.maybeOf(context) == null
+          ? DecoratedBox(decoration: ambient, child: framed)
+          // In a tablet's pane the room's light comes up from the list's
+          // side rather than starting at an edge, as a title's does.
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                ShaderMask(
+                  blendMode: BlendMode.dstIn,
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: const [Color(0x00000000), Color(0xFF000000)],
+                    stops: [0, (_paneLightRise / bounds.width).clamp(0, 1)],
+                  ).createShader(bounds),
+                  child: DecoratedBox(decoration: ambient),
+                ),
+                framed,
+              ],
             ),
-          ],
-        ),
-      ),
     );
   }
+
+  /// How far into a pane the room's light takes to come up: a title's
+  /// distance (`MediaPage`), so the two read as one pane.
+  static const double _paneLightRise = 110;
 }
 
 /// The person: a 92 disc with their photo, or their initials on the room's

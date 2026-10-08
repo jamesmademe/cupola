@@ -22,7 +22,7 @@ extension OpenMedia on BuildContext {
     String? focus,
     String? heroTag,
     String? posterUrl,
-  }) => _openTitle(
+  }) => _openBeside(
     ServiceRoutes.media(
       key,
       from: _here,
@@ -32,15 +32,16 @@ extension OpenMedia on BuildContext {
     ),
   );
 
-  /// Pushes a title's [location]. On a tablet with a title open beside the
-  /// list (`MediaSplit`), one chosen from the list takes that title's place,
-  /// with the pane's own history; one opened from inside the pane is pushed
-  /// on it, so Back in the pane returns to the title before.
-  Future<void> _openTitle(String location, {Object? extra}) {
+  /// Pushes [location], a page the pane can draw: a title's, a person's or
+  /// a collection's (`MediaSplit.pageOf`). On a tablet with one open beside
+  /// the list, one chosen from the list takes its place, with the pane's own
+  /// history; one opened from inside the pane is pushed on it, so Back in the
+  /// pane returns to the page before.
+  Future<void> _openBeside(String location, {Object? extra}) {
     final router = GoRouter.of(this);
     if (MediaPane.maybeOf(this) == null &&
         SidePaneScope.selectedOf(this) != null) {
-      while (MediaSplit.targetOf(router.state.uri) != null && router.canPop()) {
+      while (MediaSplit.pageOf(router.state.uri) != null && router.canPop()) {
         router.pop();
       }
     }
@@ -76,26 +77,29 @@ extension OpenMedia on BuildContext {
       };
 
   /// Pushes a person's page under the tab the user is on, as a title opened
-  /// here would be (`ServiceRoutes.person`).
-  Future<void> openPerson(int id, {String? heroTag, String? posterUrl}) => push(
-    ServiceRoutes.person(
-      id,
-      from: _here,
-      heroTag: heroTag,
-      posterUrl: posterUrl,
-    ),
-  );
+  /// here would be (`ServiceRoutes.person`), and on a tablet beside the list
+  /// as a title is.
+  Future<void> openPerson(int id, {String? heroTag, String? posterUrl}) =>
+      _openBeside(
+        ServiceRoutes.person(
+          id,
+          from: _here,
+          heroTag: heroTag,
+          posterUrl: posterUrl,
+        ),
+      );
 
-  /// Pushes a collection's page under the tab the user is on.
+  /// Pushes a collection's page under the tab the user is on, and on a
+  /// tablet beside the list as a title is.
   Future<void> openCollection(int id, {String? heroTag}) =>
-      push(ServiceRoutes.collection(id, from: _here, heroTag: heroTag));
+      _openBeside(ServiceRoutes.collection(id, from: _here, heroTag: heroTag));
 
   /// Pushes [location], a title's page in root form moved under the tab the
   /// user is on (`ServiceRoutes.mounted`); any other location as it is.
   Future<void> pushMounted(String location, {Object? extra}) {
     final mounted = ServiceRoutes.mounted(location, from: _here);
-    return MediaSplit.targetOf(Uri.parse(mounted)) == null
+    return MediaSplit.pageOf(Uri.parse(mounted)) == null
         ? push(mounted, extra: extra)
-        : _openTitle(mounted, extra: extra);
+        : _openBeside(mounted, extra: extra);
   }
 }

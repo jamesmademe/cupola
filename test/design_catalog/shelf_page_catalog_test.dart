@@ -20,6 +20,7 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_title_row.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
+import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/media/presentation/shelf_page.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/lidarr_queue_snapshots.dart';
@@ -270,13 +271,21 @@ Map<String, Object?> _directed(
 
 CatalogScene _personScene(
   String caption, {
+  double width = 390,
   double height = 1100,
   double textScale = 1,
   bool seerrSends = true,
+  bool paned = false,
 }) => CatalogScene(
   caption,
-  (_) => const PersonPage(personId: 1),
-  width: 390,
+  (_) => paned
+      ? MediaPane(
+          canGoBack: false,
+          onBack: () {},
+          child: const PersonPage(personId: 1),
+        )
+      : const PersonPage(personId: 1),
+  width: width,
   height: height,
   textScale: textScale,
   overrides: [
@@ -428,6 +437,13 @@ void main() {
       _collectionScene(
         'CollectionPage (ShelfPage.banner) · the still lights the room; how '
         'much is on the server, the strip, the movies in release order',
+      ),
+      _personScene(
+        'PersonPage in a tablet\'s pane, opened from a list · Close, and the '
+        'light coming up from the list\'s side',
+        width: 660,
+        height: 820,
+        paned: true,
       ),
       _personScene(
         'PersonPage at twice the reading size',

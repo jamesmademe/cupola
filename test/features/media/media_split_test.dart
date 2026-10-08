@@ -1,17 +1,24 @@
 /// A title opened on a tablet: beside the page it was opened from, at the
 /// phone's location. The list stays on screen, live, and rings the
 /// poster it opened; Back closes the pane, or returns to a title opened
-/// inside it.
+/// inside it. A person and a collection opened from a list go beside it the
+/// same way; a phone and a desktop window keep the whole page.
 library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
+import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/discover/presentation/collection_page.dart';
+import 'package:cupola/features/discover/presentation/discover_atrium.dart';
+import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -22,6 +29,7 @@ import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 
+import '../../test_helpers/profiles/fakes/media_fakes.dart';
 import '../../test_helpers/profiles/profiles.dart';
 
 const _tablet = Size(1180, 820);
@@ -34,7 +42,17 @@ Future<(ProfileHarness, GoRouter, ProviderContainer)> _app(
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final harness = await ProfileHarness.start(Profiles.p1);
+  final harness = await ProfileHarness.start(
+    Profiles.p1,
+    // The atrium's Genres door without its backdrop: a lit door sends the
+    // image cache to a plugin a widget test on an Apple platform does not
+    // have.
+    overrides: [
+      catalogGenresProvider.overrideWith(
+        (ref, kind) async => const [SeerrGenre(id: 16, name: 'Animation')],
+      ),
+    ],
+  );
   harness.network.followFakeTime(tester.binding);
   final container = harness.container();
   final router = container.read(routerProvider);
@@ -94,6 +112,39 @@ Future<void> _tapPaneControl(WidgetTester tester, String label) async {
   await _answer(tester);
 }
 
+/// The person or the collection on screen, by type.
+Finder _page<T extends Widget>() => find.byType(T).hitTestable();
+
+/// Taps the back control of the person's or the collection's page.
+Future<void> _tapShelfControl(WidgetTester tester, String label) async {
+  expect(_paneControl(label), findsOneWidget);
+  await tester.tap(
+    find
+        .byIcon(
+          label == 'Close' ? Icons.close_rounded : Icons.chevron_left_rounded,
+        )
+        .hitTestable()
+        .last,
+  );
+  await _answer(tester);
+}
+
+/// Opens the atrium's People index and taps the person in it.
+Future<void> _openPersonFromPeople(
+  WidgetTester tester,
+  GoRouter router,
+  ProviderContainer container,
+) async {
+  router.go(ServiceRoutes.discover);
+  await _answer(tester);
+  container.read(discoverIndexProvider.notifier).open(DiscoverIndex.people);
+  await _answer(tester);
+  await tester.tap(find.text(SeerrFake.personName));
+  await _answer(tester);
+}
+
+final _person = '${ServiceRoutes.discover}/media/person/${SeerrFake.personId}';
+
 final _bunny = MediaKey.movie(WorldTitles.bigBuckBunny.tmdbId);
 final _charge = MediaKey.movie(WorldTitles.charge.tmdbId);
 final _metropolis = MediaKey.movie(WorldTitles.metropolis.tmdbId);
@@ -119,6 +170,54 @@ void main() {
         MediaSplit.targetOf(Uri.parse('/activity/media/tv/tvdb/121361'))?.key,
         MediaKey.tvdb(121361),
       );
+    });
+
+    test('reads a person and a collection under a mount, with their query', () {
+      final person = MediaSplit.pageOf(
+        Uri.parse(
+          '/discover/media/person/90001?posterUrl=https%3A%2F%2Fa%2Fp.jpg',
+        ),
+      );
+      expect(person, isA<MediaPanePerson>());
+      expect((person! as MediaPanePerson).id, 90001);
+      expect((person as MediaPanePerson).posterUrl, 'https://a/p.jpg');
+      final collection = MediaSplit.pageOf(
+        Uri.parse('/dashboard/seerr/requests/media/collection/90101'),
+      );
+      expect((collection! as MediaPaneCollection).id, 90101);
+      // A title is still a title, in the shell's own terms.
+      final title = MediaSplit.pageOf(Uri.parse('/search/media/tv/1399'));
+      expect(title?.selected, MediaKey.tv(1399));
+      // The same page is the same page; another one is not.
+      expect(
+        MediaSplit.pageOf(Uri.parse('/discover/media/person/5'))?.identity,
+        MediaSplit.pageOf(Uri.parse('/activity/media/person/5'))?.identity,
+      );
+      expect(
+        MediaSplit.pageOf(Uri.parse('/discover/media/person/5'))?.identity,
+        isNot(
+          MediaSplit.pageOf(
+            Uri.parse('/discover/media/collection/5'),
+          )?.identity,
+        ),
+      );
+    });
+
+    test('a person or a collection at the root, malformed or with more '
+        'after it has no pane', () {
+      for (final location in [
+        '/media/person/90001',
+        '/media/collection/90101',
+        '/discover/media/person/abc',
+        '/discover/media/person/90001/extra',
+        '/discover/media/people/90001',
+      ]) {
+        expect(
+          MediaSplit.pageOf(Uri.parse(location)),
+          isNull,
+          reason: location,
+        );
+      }
     });
 
     test('the root mount, other pages and malformed ids have no pane', () {
@@ -303,5 +402,170 @@ void main() {
     expect(_shown(tester), isEmpty);
 
     await _close(tester, harness, container);
+  });
+  testWidgets('a person chosen in a list opens beside it, at the phone\'s '
+      'location; the list stays, and Close gives it its width back', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final (harness, router, container) = await _app(tester);
+
+    await _openPersonFromPeople(tester, router, container);
+
+    expect(router.state.uri.path, _person);
+    expect(_page<PersonPage>(), findsOneWidget);
+    // The index is still on screen and in reach, beside the pane.
+    expect(
+      find.text('Who is behind this week’s trending titles').hitTestable(),
+      findsOneWidget,
+    );
+    expect(
+      tester.getRect(find.byType(PersonPage)).left,
+      greaterThan(tester.getRect(find.byType(DiscoverAtrium)).right - 1),
+    );
+
+    await _tapShelfControl(tester, 'Close');
+    expect(router.state.uri.path, ServiceRoutes.discover);
+    expect(find.byType(PersonPage), findsNothing);
+    expect(SidePaneSlots.instance.debugCount, 0);
+
+    semantics.dispose();
+    await _close(tester, harness, container);
+  });
+
+  testWidgets('a person opened from a title in the pane stays in it, and '
+      'Back returns to the title', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final (harness, router, container) = await _app(tester);
+    router.go(
+      ServiceRoutes.discoverCatalog(const CatalogQuery.all(CatalogKind.movie)),
+    );
+    await _answer(tester);
+    final charge = find.text('Charge');
+    await tester.ensureVisible(charge);
+    await _answer(tester);
+    await tester.tap(charge);
+    await _answer(tester);
+    expect(_shown(tester), [_charge]);
+
+    tester.element(find.byType(MediaPage)).openPerson(SeerrFake.personId);
+    await _answer(tester);
+    expect(router.state.uri.path, _person);
+    expect(_page<PersonPage>(), findsOneWidget);
+    expect(_shown(tester), isEmpty);
+    // The catalogue is still the list beside it.
+    expect(find.byType(CatalogPage).hitTestable(), findsOneWidget);
+
+    await _tapShelfControl(tester, 'Back');
+    expect(_shown(tester), [_charge]);
+    expect(find.byType(PersonPage), findsNothing);
+
+    await _tapPaneControl(tester, 'Close');
+    expect(router.state.uri.path, '/discover/all/movie');
+    expect(_shown(tester), isEmpty);
+
+    semantics.dispose();
+    await _close(tester, harness, container);
+  });
+
+  testWidgets('a person chosen in the list takes the place of the title the '
+      'pane shows', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final (harness, router, container) = await _app(tester);
+    router.go(ServiceRoutes.discover);
+    await _answer(tester);
+    tester.element(find.byType(DiscoverAtrium)).openMedia(_bunny);
+    await _answer(tester);
+    expect(_shown(tester), [_bunny]);
+
+    tester.element(find.byType(DiscoverAtrium)).openPerson(SeerrFake.personId);
+    await _answer(tester);
+    expect(_page<PersonPage>(), findsOneWidget);
+    expect(_shown(tester), isEmpty);
+
+    // Close leaves the list, not the title it replaced.
+    await _tapShelfControl(tester, 'Close');
+    expect(router.state.uri.path, ServiceRoutes.discover);
+    expect(_shown(tester), isEmpty);
+
+    semantics.dispose();
+    await _close(tester, harness, container);
+  });
+
+  testWidgets('the collection the atrium invites to complete opens beside '
+      'it', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final (harness, router, container) = await _app(tester);
+    router.go(ServiceRoutes.discover);
+    await _answer(tester);
+
+    final invitation = find.text('Complete the collection');
+    await tester.ensureVisible(invitation);
+    await _answer(tester);
+    await tester.tap(invitation);
+    await _answer(tester);
+
+    expect(
+      router.state.uri.path,
+      '${ServiceRoutes.discover}/media/collection/${SeerrFake.collectionId}',
+    );
+    expect(_page<CollectionPage>(), findsOneWidget);
+    expect(find.byType(DiscoverAtrium).hitTestable(), findsOneWidget);
+
+    await _tapShelfControl(tester, 'Close');
+    expect(router.state.uri.path, ServiceRoutes.discover);
+    expect(find.byType(CollectionPage), findsNothing);
+
+    semantics.dispose();
+    await _close(tester, harness, container);
+  });
+
+  testWidgets('on a phone the person takes the whole page', (tester) async {
+    final (harness, router, container) = await _app(
+      tester,
+      size: const Size(390, 844),
+    );
+
+    await _openPersonFromPeople(tester, router, container);
+
+    expect(router.state.uri.path, _person);
+    expect(_page<PersonPage>(), findsOneWidget);
+    expect(find.byType(DiscoverAtrium).hitTestable(), findsNothing);
+    expect(SidePaneSlots.instance.debugCount, 0);
+
+    router.pop();
+    await _answer(tester);
+    expect(router.state.uri.path, ServiceRoutes.discover);
+    expect(find.byType(PersonPage), findsNothing);
+
+    await _close(tester, harness, container);
+  });
+
+  testWidgets('in a desktop window the person takes the whole page, as a '
+      'title does', (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (_) async => null);
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final (harness, router, container) = await _app(
+        tester,
+        size: const Size(1440, 900),
+      );
+
+      await _openPersonFromPeople(tester, router, container);
+
+      expect(router.state.uri.path, _person);
+      expect(_page<PersonPage>(), findsOneWidget);
+      expect(find.byType(DiscoverAtrium).hitTestable(), findsNothing);
+      expect(SidePaneSlots.instance.debugCount, 0);
+
+      await _close(tester, harness, container);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }

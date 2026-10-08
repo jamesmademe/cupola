@@ -240,28 +240,47 @@ List<GoRoute> _mediaRoutes({String prefix = ''}) => [
   // The two pages a title links to, hung beside it: a cast member or a
   // collection opened from a title stays in the tab the title is in, and Back
   // returns to the title (`ServiceRoutes.person`, `ServiceRoutes.collection`).
-  _page(
+  // On a tablet they are drawn in the pane as a title is.
+  _besideTitle(
     '${prefix}media/person/:id',
     (state) => PersonPage(
       personId: RouteUtils.safeIntParam(state, 'id')!,
       heroTag: state.uri.queryParameters['heroTag'],
       initialProfileUrl: state.uri.queryParameters['posterUrl'],
     ),
-    redirect: (context, state) => RouteUtils.safeIntParam(state, 'id') == null
-        ? _mediaMountOrHome(state.uri.path)
-        : null,
+    paned: prefix.isEmpty,
   ),
-  _page(
+  _besideTitle(
     '${prefix}media/collection/:id',
     (state) => CollectionPage(
       collectionId: RouteUtils.safeIntParam(state, 'id')!,
       heroTag: state.uri.queryParameters['heroTag'],
     ),
-    redirect: (context, state) => RouteUtils.safeIntParam(state, 'id') == null
-        ? _mediaMountOrHome(state.uri.path)
-        : null,
+    paned: prefix.isEmpty,
   ),
 ];
+
+/// A page a title links to, at [path] under a mount: [_page], and on a tablet
+/// ([paned], every mount but the root) an empty slot whose page the pane
+/// beside the list draws (`MediaSplit.pageOf`), as a title's. A malformed id
+/// falls back to the mount.
+GoRoute _besideTitle(
+  String path,
+  Widget Function(GoRouterState state) child, {
+  required bool paned,
+}) => GoRoute(
+  path: path,
+  redirect: (context, state) => RouteUtils.safeIntParam(state, 'id') == null
+      ? _mediaMountOrHome(state.uri.path)
+      : null,
+  pageBuilder: (context, state) => paned && MediaSplit.splits(context)
+      ? SidePaneSlotPage(key: state.pageKey, name: state.uri.toString())
+      : RouteUtils.cupertinoPage(
+          key: state.pageKey,
+          name: state.matchedLocation,
+          child: child(state),
+        ),
+);
 
 /// The mount a title's location hangs off, or the Dashboard for the root one.
 String _mediaMountOrHome(String path) =>

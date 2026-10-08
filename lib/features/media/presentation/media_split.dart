@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/utils/side_pane_route.dart';
+import 'package:cupola/features/discover/presentation/collection_page.dart';
+import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
 
@@ -16,13 +18,102 @@ typedef MediaPaneTarget = ({
   String? heroTag,
 });
 
+/// What the pane draws, read from the location: a title, or one of the two
+/// pages a title links to, a person's and a collection's.
+sealed class MediaPanePage {
+  const MediaPanePage();
+
+  /// The tag of the tile it was opened from, which the list rings.
+  String? get heroTag;
+
+  /// What the pane shows, in the shell's own terms (`SidePaneScope.selected`).
+  Object get selected;
+
+  /// Which page this is: another one is drawn fresh, and arrives as a page
+  /// does.
+  Object get identity;
+
+  /// The page as the pane draws it. With no hero tag: the tile it was opened
+  /// from is in another navigator, and a flight never crosses one. The
+  /// picture it drew still stands in.
+  Widget build();
+}
+
+/// A title in the pane.
+final class MediaPaneTitle extends MediaPanePage {
+  const MediaPaneTitle(this.target);
+
+  final MediaPaneTarget target;
+
+  @override
+  String? get heroTag => target.heroTag;
+
+  @override
+  Object get selected => target.key;
+
+  @override
+  Object get identity => (target.key, target.focus);
+
+  @override
+  Widget build() => MediaPage(
+    mediaKey: target.key,
+    focus: target.focus,
+    posterUrl: target.posterUrl,
+  );
+}
+
+/// A person in the pane, opened from a list or from a title in it.
+final class MediaPanePerson extends MediaPanePage {
+  const MediaPanePerson({required this.id, this.posterUrl, this.heroTag});
+
+  /// TMDB's id for them.
+  final int id;
+
+  /// The face the list drew, standing in while the page reads its own.
+  final String? posterUrl;
+
+  @override
+  final String? heroTag;
+
+  @override
+  Object get selected => identity;
+
+  @override
+  Object get identity => (person: id);
+
+  @override
+  Widget build() => PersonPage(personId: id, initialProfileUrl: posterUrl);
+}
+
+/// A collection in the pane, opened from a list or from a title in it.
+final class MediaPaneCollection extends MediaPanePage {
+  const MediaPaneCollection({required this.id, this.heroTag});
+
+  /// TMDB's id for it.
+  final int id;
+
+  @override
+  final String? heroTag;
+
+  @override
+  Object get selected => identity;
+
+  @override
+  Object get identity => (collection: id);
+
+  @override
+  Widget build() => CollectionPage(collectionId: id);
+}
+
 /// A title opened on a tablet: beside the page it was opened from, not over
-/// it.
+/// it. A person or a collection opened from a list goes beside it the same
+/// way, and one opened from a title in the pane stays in the pane.
 ///
 /// The location is the phone's, `…/media/movie/133701` under the tab it was
-/// opened from, so a link, Back and a rotation mean what they mean on a
-/// phone. Only the drawing differs: the navigator keeps the page in the
-/// phone's column ([AppBreakpoints.splitList]) with an empty slot over it
+/// opened from (`…/media/person/90001`, `…/media/collection/90101`), so a
+/// link, Back and a rotation mean what they mean on a phone. Only the
+/// drawing differs: the navigator keeps the page in the phone's column
+/// ([AppBreakpoints.splitList]) with an empty slot over it
 /// (`SidePaneSlotRoute`), and the shell draws the title beside it
 /// ([MediaSplitLayout]).
 abstract final class MediaSplit {
@@ -53,9 +144,32 @@ abstract final class MediaSplit {
       heroTag: uri.queryParameters['heroTag'],
     );
   }
+
+  /// The page [uri] puts in the pane: a title's ([targetOf]), a person's or
+  /// a collection's location under a mount, else null.
+  static MediaPanePage? pageOf(Uri uri) {
+    if (targetOf(uri) case final target?) return MediaPaneTitle(target);
+    final segments = uri.pathSegments;
+    final at = segments.lastIndexOf('media');
+    if (at < 1 || segments.length != at + 3) return null;
+    // Read as the route reads it (`RouteUtils.safeIntParam`): a slot the
+    // pane could not fill would be an empty pane.
+    final id = int.tryParse(segments[at + 2]);
+    if (id == null) return null;
+    final query = uri.queryParameters;
+    return switch (segments[at + 1]) {
+      'person' => MediaPanePerson(
+        id: id,
+        posterUrl: query['posterUrl'],
+        heroTag: query['heroTag'],
+      ),
+      'collection' => MediaPaneCollection(id: id, heroTag: query['heroTag']),
+      _ => null,
+    };
+  }
 }
 
-/// The pane a title is drawn in, as the page inside it sees it: its back
+/// The pane a page is drawn in, as the page inside it sees it: its back
 /// control goes back in the pane, or closes it.
 class MediaPane extends InheritedWidget {
   const MediaPane({
@@ -65,7 +179,7 @@ class MediaPane extends InheritedWidget {
     required super.child,
   });
 
-  /// Whether Back returns to a title opened before this one in the pane;
+  /// Whether Back returns to a page opened before this one in the pane;
   /// otherwise it closes the pane.
   final bool canGoBack;
 
@@ -79,7 +193,8 @@ class MediaPane extends InheritedWidget {
       canGoBack != oldWidget.canGoBack;
 }
 
-/// The navigator, and beside it the title its location opens.
+/// The navigator, and beside it the page its location opens: a title, a
+/// person or a collection ([MediaSplit.pageOf]).
 ///
 /// Built by the touch shell around the branches. Without a title, or below
 /// [AppBreakpoints.touchSplit], the navigator takes the whole width; with one
@@ -102,11 +217,11 @@ class MediaSplitLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final target = MediaSplit.splits(context)
-        ? MediaSplit.targetOf(location)
+        ? MediaSplit.pageOf(location)
         : null;
     final instant = MediaQuery.disableAnimationsOf(context);
     return SidePaneScope(
-      selected: target?.key,
+      selected: target?.selected,
       selectedTag: target?.heroTag,
       location: location.toString(),
       child: LayoutBuilder(
@@ -137,8 +252,8 @@ class MediaSplitLayout extends StatelessWidget {
                         ),
                       ),
                       child: _Pane(
-                        key: ValueKey((target.key, target.focus)),
-                        target: target,
+                        key: ValueKey(target.identity),
+                        page: target,
                         location: location.toString(),
                       ),
                     ),
@@ -150,11 +265,11 @@ class MediaSplitLayout extends StatelessWidget {
   }
 }
 
-/// One title in the pane.
+/// One page in the pane.
 class _Pane extends StatelessWidget {
-  const _Pane({super.key, required this.target, required this.location});
+  const _Pane({super.key, required this.page, required this.location});
 
-  final MediaPaneTarget target;
+  final MediaPanePage page;
 
   /// The slot's name: the location it was pushed at.
   final String location;
@@ -162,18 +277,11 @@ class _Pane extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: SidePaneSlots.instance,
-    builder: (context, page) => MediaPane(
+    builder: (context, child) => MediaPane(
       canGoBack: SidePaneSlots.instance.hasHistory(location),
       onBack: () => SidePaneSlots.instance.popShown(location),
-      child: page!,
+      child: child!,
     ),
-    // No hero tag: the tile the title was opened from is in another
-    // navigator, and a flight never crosses one. The poster it drew still
-    // stands in.
-    child: MediaPage(
-      mediaKey: target.key,
-      focus: target.focus,
-      posterUrl: target.posterUrl,
-    ),
+    child: page.build(),
   );
 }
