@@ -53,7 +53,6 @@ import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/download_join.dart';
 import 'package:cupola/features/services/domain/download_names.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
-import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
@@ -903,13 +902,6 @@ Future<LidarrQueueSnapshots> _readLidarrQueueSnapshots(
   );
 }
 
-/// How many items the merged Recently Added rail shows.
-///
-/// Six, down from twelve, and the number is the region's anatomy speaking: the
-/// phone draws six 60×90 tiles clipped by a right-edge fade, and a rail that
-/// scrolls twice as far as it shows is a rail whose fade is a lie.
-const int servicesRecentlyAddedLimit = 6;
-
 /// How many history records each arr is asked for.
 ///
 /// One page, unfiltered — see `domain/arr_import.dart` for why the brief's
@@ -953,9 +945,20 @@ class ArrHistoryEntry {
     this.instanceId = '',
     this.connectionName,
     this.tmdbId,
+    this.backdropUrl = '',
+    this.mediaAddedAt,
   });
 
   final ServiceKey service;
+
+  /// The wide artwork of what the record is about (Radarr's and Sonarr's
+  /// fanart, a Lidarr artist's), or empty: what Arrived's card shows.
+  final String backdropUrl;
+
+  /// When the movie, the series or the artist the record is about was added
+  /// to its library, from the media it embeds. What tells a series new to the
+  /// library from a new episode of one that was there.
+  final DateTime? mediaAddedAt;
 
   /// TMDB's id for the film a Radarr record is about, from the film the
   /// record embeds: what opens the film's own page. Null elsewhere.
@@ -1148,6 +1151,14 @@ ArrHistoryEntry _historyEntryFrom(
       _ => null,
     },
     posterUrl: _historyPosterUrl(record, baseUrl: baseUrl, apiKey: apiKey),
+    backdropUrl: _historyBackdropUrl(record, baseUrl: baseUrl, apiKey: apiKey),
+    mediaAddedAt: parseAddedTimestamp(
+      stringOrNull(
+        (mapOrNull(record['movie']) ??
+            mapOrNull(record['series']) ??
+            mapOrNull(record['artist']))?['added'],
+      ),
+    ),
     outcome: classifyHistoryEvent(stringOrNull(record['eventType'])),
     at: parseAddedTimestamp(stringOrNull(record['date'])),
     // `statusMessages` is where an \*arr puts the reason an import failed, and
@@ -1194,59 +1205,135 @@ String _historyPosterUrl(
   return '';
 }
 
-/// What the arrs actually imported, newest first.
+/// The wide artwork a history record carries in its embedded media: the
+/// movie's or the series' fanart, a Lidarr album's artist's. Empty when the
+/// arr has none, and the card falls back to the poster.
+String _historyBackdropUrl(
+  Map<String, dynamic> record, {
+  required String baseUrl,
+  required String apiKey,
+}) {
+  for (final media in [record['movie'], record['series'], record['artist']]) {
+    final images = mapOrNull(media)?['images'];
+    if (images is! List) continue;
+    final url = ImageUtils.extractPosterUrl(
+      images,
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      coverTypes: const ['fanart'],
+    ).url;
+    if (url.isNotEmpty) return url;
+  }
+  return '';
+}
+
+/// How far back Arrived looks.
+const arrivalsWindow = Duration(days: 7);
+
+/// What the libraries imported in the last [arrivalsWindow]: one
+/// `/history/since` per connection of Radarr, Sonarr and Lidarr, narrowed to
+/// the import event and with the media embedded.
 ///
-/// One region and one channel — the old "Finished today" band folded into it, so
-/// a failed import is named here (in amber, in the eyebrow) and *acted on* in
-/// the decisions region above, rather than sitting in a band of its own where a
-/// failure went to die.
-///
-/// The fetch is the history read, not the library browse it used to be: three
-/// full `fetchAllItems` walks for six tiles, on every pull-to-refresh.
-///
-/// Carries the history's coverage through, so the eyebrow counts only the
-/// libraries that answered.
-///
-/// Every row, newest first, and **not** cut to the rail: the eyebrow is a
-/// count, and it used to count the six tiles the rail draws, so with a second
-/// Radarr's imports folded in, a busy evening read "6 imported" whatever had
-/// landed. The rail takes its [servicesRecentlyAddedLimit] off the front.
-final servicesRecentlyAddedProvider = FutureProvider<ServicesRecentlyAdded>((
+/// Not [servicesArrHistoryProvider]'s page of twenty, which on a busy evening
+/// does not reach back a day: `/history/since` has no pages, so a count over
+/// it is the week's total, and the module can say `4 new` rather than `4+`.
+/// The import event is asked for by name and checked again on each record, so
+/// a server that ignores the filter still gives only imports.
+final servicesArrivalsProvider = FutureProvider.autoDispose<ArrHistory>((
   ref,
 ) async {
-  final history = await ref.watch(servicesArrHistoryProvider.future);
-
-  final items = [
-    for (final entry in history.entries)
-      if (entry.outcome != ArrImportOutcome.other)
-        RecentlyAddedItem(
-          service: entry.service,
-          instanceId: entry.instanceId,
-          connectionName: entry.connectionName,
-          id: entry.mediaId,
-          tmdbId: entry.tmdbId,
-          title: entry.title,
-          posterUrl: entry.posterUrl,
-          addedAt: entry.at,
-          failed: entry.outcome == ArrImportOutcome.failed,
-          unitId: entry.unitId,
-          detail: entry.detail,
+  final since = ref.watch(arrivalsSinceProvider);
+  Future<ArrHistory> from(_MergeConnection source) async {
+    try {
+      final records = await switch (source.service) {
+        ServiceKey.radarr =>
+          ref
+              .watch(radarrServiceForProvider(source.instanceId))
+              .getHistorySince(
+                since,
+                queryParameters: const {
+                  'eventType': 'downloadFolderImported',
+                  'includeMovie': true,
+                },
+              ),
+        ServiceKey.sonarr =>
+          ref
+              .watch(sonarrServiceForProvider(source.instanceId))
+              .getHistorySince(
+                since,
+                queryParameters: const {
+                  'eventType': 'downloadFolderImported',
+                  'includeSeries': true,
+                  'includeEpisode': true,
+                },
+              ),
+        _ =>
+          ref
+              .watch(lidarrServiceForProvider(source.instanceId))
+              .getHistorySince(
+                since,
+                queryParameters: const {
+                  'eventType': 'trackFileImported',
+                  'includeArtist': true,
+                  'includeAlbum': true,
+                },
+              ),
+      };
+      return (
+        entries: [
+          for (final record in records.whereType<Map>().map(stringKeyMap))
+            _historyEntryFrom(
+              source.service,
+              record,
+              instanceId: source.instanceId,
+              connectionName: source.name,
+              baseUrl: source.connection.url,
+              apiKey: source.connection.apiKey,
+            ),
+        ].where((entry) => entry.outcome == ArrImportOutcome.imported).toList(),
+        coverage: SourceCoverage.answeredBy(
+          source.service,
+          instanceId: source.instanceId,
+          name: source.name,
         ),
-  ];
+      );
+    } catch (error) {
+      return (
+        entries: const <ArrHistoryEntry>[],
+        coverage: SourceCoverage.failure(
+          source.service,
+          error,
+          instanceId: source.instanceId,
+          name: source.name,
+        ),
+      );
+    }
+  }
 
-  final rows = groupRecentlyAdded(items);
+  final results = await Future.wait([
+    for (final service in const [
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+      ServiceKey.lidarr,
+    ])
+      for (final source in _watchMergeConnections(ref, service)) from(source),
+  ]);
   return (
-    items: sortRecentlyAdded(rows, limit: rows.length),
-    coverage: history.coverage,
+    entries: results.expand((result) => result.entries).toList(growable: false),
+    coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
   );
 });
 
-/// What the Recently added region counts, newest first, and which libraries
-/// answered for it. The rail draws the first [servicesRecentlyAddedLimit].
-typedef ServicesRecentlyAdded = ({
-  List<RecentlyAddedItem> items,
-  SourceCoverage coverage,
-});
+/// The moment Arrived's week starts: [arrivalsWindow] before now, read once
+/// per reading so every connection is asked the same window.
+final arrivalsSinceProvider = Provider.autoDispose<DateTime>(
+  (ref) => ref.watch(arrivalsClockProvider)().subtract(arrivalsWindow),
+);
+
+/// The clock Arrived reads its week and its `2 h ago` by. A test pins it.
+final arrivalsClockProvider = Provider<DateTime Function()>(
+  (ref) => DateTime.now,
+);
 
 /// How many in-flight items the hub shows before deferring to `/activity`.
 ///

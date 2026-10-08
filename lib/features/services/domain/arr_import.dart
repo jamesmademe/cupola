@@ -73,3 +73,15 @@ ArrImportOutcome classifyHistoryEvent(String? eventType) {
   // claim is "this is what landed".
   return ArrImportOutcome.other;
 }
+
+/// Parses an arr `added` or `date` field, which is an ISO 8601 string or
+/// absent.
+///
+/// Returns null rather than throwing or defaulting to the epoch: a bad
+/// timestamp must not sort an item to the top of a "newest first" list, and it
+/// must not take the list down either.
+DateTime? parseAddedTimestamp(String? added) {
+  final raw = added?.trim();
+  if (raw == null || raw.isEmpty) return null;
+  return DateTime.tryParse(raw);
+}

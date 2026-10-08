@@ -20,14 +20,16 @@ const double _stackedScale = 1.4;
 ///
 /// The operator's row names the connections that hold the thing; the
 /// requester's ([CalendarRow.requester]) has no lead column and no service
-/// names, a larger poster and its own note in their place.
+/// names, a larger poster and its own note in their place. The Home's
+/// ([CalendarRow.home]) leads with the day, carries an episode's time in its
+/// status and stops at two lines.
 class CalendarRow extends StatelessWidget {
   const CalendarRow({
     super.key,
     required this.event,
     required this.now,
     this.onTap,
-  }) : _requester = false;
+  }) : _for = _RowFor.operator;
 
   /// The requester's row: a date and no time, no service names, the poster
   /// larger and the event's own note (`You asked for season 3 on Sat 26
@@ -37,7 +39,18 @@ class CalendarRow extends StatelessWidget {
     required this.event,
     required this.now,
     this.onTap,
-  }) : _requester = true;
+  }) : _for = _RowFor.requester;
+
+  /// Coming up's row on the Home: the day in the lead column (`Today` over
+  /// `29 Sep`), an episode's time at the head of its status (`21:00 · S3 E1
+  /// · premiere · not aired`), and nothing under it: no sources, no bar, the
+  /// figure of a download already in the status.
+  const CalendarRow.home({
+    super.key,
+    required this.event,
+    required this.now,
+    this.onTap,
+  }) : _for = _RowFor.home;
 
   final CalendarEvent event;
 
@@ -46,7 +59,10 @@ class CalendarRow extends StatelessWidget {
 
   final VoidCallback? onTap;
 
-  final bool _requester;
+  final _RowFor _for;
+
+  bool get _requester => _for == _RowFor.requester;
+  bool get _home => _for == _RowFor.home;
 
   static const Size _poster = Size(36, 54);
 
@@ -61,11 +77,16 @@ class CalendarRow extends StatelessWidget {
     final state = event.state;
     final toned = state.stand == CalendarStand.inFlight;
     final tone = statusToneColor(scheme, state.tone, surface: room.slab);
-    final progress = state.queue?.showsProgress == true
+    final progress = !_home && state.queue?.showsProgress == true
         ? state.queue?.progress
         : null;
     final stacked = MediaQuery.textScalerOf(context).scale(1) > _stackedScale;
-    final lead = event.lead();
+    final lead = _home
+        ? (
+            lead: calendarDayName(event.day, now),
+            under: calendarDayMonth(event.day, now),
+          )
+        : event.lead();
     final leadWords = lead.under == null
         ? lead.lead
         : '${lead.lead} · ${lead.under}';
@@ -89,7 +110,9 @@ class CalendarRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.s),
         Flexible(
           child: Text(
-            event.statusLine(now),
+            _home && event.airsAt != null
+                ? '${formatClockTime(event.airsAt!)} · ${event.statusLine(now)}'
+                : event.statusLine(now),
             maxLines: stacked ? 3 : 2,
             overflow: TextOverflow.ellipsis,
             style: (toned ? AppType.meta.weight(FontWeight.w600) : AppType.meta)
@@ -98,7 +121,9 @@ class CalendarRow extends StatelessWidget {
         ),
       ],
     );
-    final third = _requester || event.sources.isEmpty
+    final third = _home
+        ? null
+        : _requester || event.sources.isEmpty
         ? (event.note == null
               ? null
               : Text(
@@ -260,8 +285,9 @@ class CalendarRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md + 2,
+          // The Home's slab has its own margin; the row does not add one.
+          padding: EdgeInsets.symmetric(
+            horizontal: _home ? 0 : AppSpacing.md + 2,
             vertical: AppSpacing.md,
           ),
           child: body,
@@ -477,3 +503,6 @@ class _Initials extends StatelessWidget {
     );
   }
 }
+
+/// Which of [CalendarRow]'s three rows this is.
+enum _RowFor { operator, requester, home }

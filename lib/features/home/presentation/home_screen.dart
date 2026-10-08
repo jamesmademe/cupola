@@ -14,10 +14,15 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
+import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
+import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
+import 'package:cupola/features/home/presentation/widgets/coming_up_module.dart';
+import 'package:cupola/features/home/presentation/widgets/continue_watching_module.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
@@ -26,7 +31,6 @@ import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
 import 'package:cupola/features/home/presentation/widgets/set_up_next_module.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/nothing_set_up.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -118,6 +122,8 @@ class HomeScreen extends ConsumerWidget {
 /// registry without one.
 Widget homeModuleView(HomeModule module) => switch (module) {
   HomeModule.needsYou => const NeedsYouBanner(),
+  HomeModule.continueWatching => const HomeContinueWatchingModule(),
+  HomeModule.comingUp => const HomeComingUpModule(),
   HomeModule.arrived => const HomeArrivedModule(),
   HomeModule.downloads => const HomeDownloadsModule(),
   HomeModule.requests => const HomeRequestsModule(),
@@ -213,8 +219,10 @@ Future<void> _refreshHome(WidgetRef ref) async {
     settle(ref.read(servicesQueueProvider.future)),
     for (final source in DecisionSource.values)
       settle(ref.read(dashboardDecisionSourceProvider(source).future)),
-    settle(ref.read(servicesRecentlyAddedProvider.future)),
+    settle(ref.read(servicesArrivalsProvider.future)),
     settle(ref.read(streamActivityProvider.future)),
+    settle(ref.read(libraryCalendarProvider.future)),
+    settle(ref.read(homeResumeProvider.future)),
   ]);
 }
 
@@ -237,11 +245,14 @@ void _invalidateHome(WidgetRef ref) {
   }
   ref.invalidate(servicesRequestsProvider);
   ref.invalidate(servicesQueueProvider);
-  // One history read per arr, feeding both Arrived and the failed-import
-  // decisions. Invalidated at the source rather than through either of its two
-  // readers, so the two cannot end up disagreeing about the same page.
+  // The history page the failed-import decisions and Downloads' last finish
+  // read, and Arrived's week.
   ref.invalidate(servicesArrHistoryProvider);
-  ref.invalidate(servicesRecentlyAddedProvider);
+  ref.invalidate(servicesArrivalsProvider);
+  // Coming up's calendar, every connection's, and what is in progress.
+  ref.invalidate(calendarSourceProvider);
+  ref.invalidate(libraryCalendarProvider);
+  ref.invalidate(homeResumeProvider);
   // Each decision source, and what they read that keeps an answer of its own
   // — Prowlarr's indexer status among them, which nothing else here drops, so
   // a pull left a fixed indexer on the list as failing.

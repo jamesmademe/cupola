@@ -37,4 +37,22 @@ void main() {
     expect(classifyHistoryEvent(null), ArrImportOutcome.other);
     expect(classifyHistoryEvent('  '), ArrImportOutcome.other);
   });
+
+  group('parseAddedTimestamp', () {
+    test('parses the ISO 8601 string the arr APIs return', () {
+      expect(
+        parseAddedTimestamp('2024-03-14T09:26:53Z'),
+        DateTime.utc(2024, 3, 14, 9, 26, 53),
+      );
+    });
+
+    test('returns null for absent, blank or unparseable values', () {
+      // Null rather than the epoch: a bad timestamp must not sort an item to
+      // the top of a "newest first" list, and must not take it down either.
+      expect(parseAddedTimestamp(null), isNull);
+      expect(parseAddedTimestamp(''), isNull);
+      expect(parseAddedTimestamp('   '), isNull);
+      expect(parseAddedTimestamp('not a date'), isNull);
+    });
+  });
 }

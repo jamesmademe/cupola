@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';

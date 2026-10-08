@@ -40,11 +40,32 @@ enum HomeModule {
     placement: HomePlacement.first,
   ),
 
-  /// What the libraries imported, newest first.
+  /// What somebody started and did not finish.
+  continueWatching(
+    audience: Audience.operator,
+    label: 'Continue watching',
+    line: 'What you started and did not finish',
+    services: [ServiceKey.jellyfin, ServiceKey.plex],
+  ),
+
+  /// What comes out or airs from today to three days on.
+  comingUp(
+    audience: Audience.operator,
+    label: 'Coming up',
+    line: 'What comes out or airs in the next few days',
+    services: [
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+      ServiceKey.lidarr,
+      ServiceKey.readarr,
+    ],
+  ),
+
+  /// What the libraries gained in the last seven days.
   arrived(
     audience: Audience.operator,
     label: 'Arrived',
-    line: 'What your libraries imported, newest first',
+    line: 'New in your libraries in the last 7 days',
     services: [ServiceKey.radarr, ServiceKey.sonarr, ServiceKey.lidarr],
   ),
 
