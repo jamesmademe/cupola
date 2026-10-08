@@ -4,8 +4,8 @@
 /// on each page, what leads Needs you, the cap per size class, that a probe
 /// still out is not a fault, that a figure nobody could take reads `—` and not
 /// `0`, and that a control whose target is not configured is dimmed but still
-/// reachable. Nothing asserts a hex or a pixel — those are the canvas's to
-/// change and this file's to survive.
+/// reachable. Nothing asserts a hex or a pixel — those are the design system's
+/// to change and this file's to survive.
 ///
 /// The page that was the Dashboard is two now. The Home keeps Needs you, what
 /// arrived, what is moving and what waits for an answer, in the order the person
