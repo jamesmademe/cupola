@@ -45,10 +45,10 @@ void main() {
   });
 
   test('where, and how long is left; Stopped while the player holds it', () {
-    expect(nowPlayingLine(_session()), 'Living room TV · 9 min left');
+    expect(nowPlayingLine(_session()), 'Living room TV · 9\u00A0min left');
     expect(
       nowPlayingLine(_session(paused: true)),
-      'Living room TV · Stopped · 9 min left',
+      'Living room TV · Stopped · 9\u00A0min left',
     );
     expect(nowPlayingLine(_session(remaining: null)), 'Living room TV');
   });

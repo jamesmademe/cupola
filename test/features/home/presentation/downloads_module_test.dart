@@ -110,7 +110,7 @@ void main() {
 
     expect(find.textContaining(RegExp(r'^1 moving · 1 stuck · ')), findsOne);
     expect(find.text('Stuck at 47%'), findsOne);
-    expect(find.text('50% · 10 min'), findsOne);
+    expect(find.text('50% · 10\u00A0min'), findsOne);
     // The blocked import is no download: named once, and left to Needs you.
     expect(find.text('Cosmos'), findsNothing);
     expect(find.text('1 needs a manual import · in Needs you'), findsOne);

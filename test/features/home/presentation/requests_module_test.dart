@@ -19,7 +19,7 @@ DashboardDecision _request(String title, int id, {int hoursAgo = 2}) =>
       id: 'seerr--$id',
       service: ServiceKey.seerr,
       title: title,
-      detail: 'Request · Anna · Movie',
+      detail: 'Seerr · Anna',
       occurredAt: DateTime(2026, 10, 8, 20).subtract(Duration(hours: hoursAgo)),
       actionId: id,
     );

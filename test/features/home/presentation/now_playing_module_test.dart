@@ -63,7 +63,7 @@ void main() {
     expect(find.text('Now playing'), findsOne);
     expect(find.text('Jellyfin'), findsOne);
     expect(find.text('Anna · Sintel'), findsOne);
-    expect(find.text('Living room TV · 9 min left'), findsOne);
+    expect(find.text('Living room TV · 9\u00A0min left'), findsOne);
     expect(find.text('A'), findsOne);
     expect(find.bySemanticsLabel('Anna · Sintel'), findsOne);
     handle.dispose();

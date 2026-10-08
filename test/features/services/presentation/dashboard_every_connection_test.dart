@@ -282,7 +282,7 @@ void main() {
     final cabin = byConnection[WorldIds.seerrCabin]!.first;
     // Named, and opening the cabin's own requests list: Discover reads the
     // lens, so a media page would have asked the other Seerr.
-    expect(cabin.detail, startsWith('Request · Seerr Cabin · '));
+    expect(cabin.detail, startsWith('Seerr Cabin · '));
     expect(cabin.route, '/activity/discover?i=${WorldIds.seerrCabin}');
     // Ids carry the connection: both Seerrs number their requests from one.
     expect(

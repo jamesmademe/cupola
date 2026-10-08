@@ -1333,7 +1333,7 @@ DashboardDecision _request(String title, {required DateTime at}) =>
       id: 'request-$title',
       service: ServiceKey.seerr,
       title: title,
-      detail: 'Request · nadia',
+      detail: 'Seerr · nadia',
       occurredAt: at,
       actionId: 1,
     );
