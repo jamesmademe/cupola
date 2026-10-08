@@ -564,6 +564,51 @@ void main() {
     );
   });
 
+  group('getContinueWatching', () {
+    _ConversationAdapter resumeAdapter() => _ConversationAdapter(
+      byPath: {
+        'UserItems/Resume': jsonFixtureMap('jellyfin/resume_items.json'),
+      },
+    );
+
+    test('asks every library of the server for the viewer, leaving out '
+        'what is playing now', () async {
+      final adapter = resumeAdapter();
+      final items = await _client(adapter).getContinueWatching(count: 3);
+
+      final query = adapter
+          .matching('/UserItems/Resume')
+          .single
+          .queryParameters;
+      expect(query['userId'], _viewerId);
+      // The whole server: no library narrows it.
+      expect(query.containsKey('parentId'), isFalse);
+      expect(query['limit'], '3');
+      expect(query['excludeActiveSessions'], 'true');
+      expect(query['enableUserData'], 'true');
+      expect(items.first.subtitle, 'Severance · S2 E4');
+      expect(items.first.resumeProgress, closeTo(0.4, 0.0001));
+    });
+
+    test('with nobody chosen it says so, and asks nothing', () async {
+      final adapter = resumeAdapter();
+      await expectLater(
+        _client(adapter, userId: '').getContinueWatching(),
+        throwsA(isA<JellyfinViewerRequired>()),
+      );
+      expect(adapter.uris, isEmpty);
+    });
+
+    test('a server that does not answer is a failure, never an empty '
+        'list', () async {
+      final adapter = _ConversationAdapter(response: 'down', statusCode: 503);
+      await expectLater(
+        _client(adapter).getContinueWatching(),
+        throwsA(anything),
+      );
+    });
+  });
+
   group('refreshLibrary', () {
     test('passes both refresh modes, which default to None', () async {
       final adapter = CapturingHttpAdapter(response: '', statusCode: 204);

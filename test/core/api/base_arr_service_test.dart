@@ -326,6 +326,36 @@ void main() {
       ]);
     });
 
+    test('getHistorySince asks for the window in UTC, unpaged, and returns '
+        'the bare list', () async {
+      client.getResponseData = [
+        {'id': 3, 'eventType': 'downloadFolderImported'},
+      ];
+
+      final items = await service.getHistorySince(
+        DateTime.utc(2026, 10, 1, 20),
+        queryParameters: const {
+          'eventType': 'downloadFolderImported',
+          'includeMovie': true,
+        },
+      );
+
+      expect(client.lastGetPath, '/api/v3/history/since');
+      expect(client.lastGetQueryParameters, {
+        'date': '2026-10-01T20:00:00.000Z',
+        'eventType': 'downloadFolderImported',
+        'includeMovie': true,
+      });
+      expect(items, [
+        {'id': 3, 'eventType': 'downloadFolderImported'},
+      ]);
+    });
+
+    test('getHistorySince reads anything but a list as nothing', () async {
+      client.getResponseData = {'records': const []};
+      expect(await service.getHistorySince(DateTime.utc(2026)), isEmpty);
+    });
+
     // The defect the page variants exist for: every paged endpoint answers with
     // `{page, pageSize, totalRecords, records}` and the app kept only the last
     // field, so every count derived from history / missing / cutoff was the size
