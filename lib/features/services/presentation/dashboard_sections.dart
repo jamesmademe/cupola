@@ -99,7 +99,8 @@ class HomeRequestsModule extends ConsumerWidget {
         if (decision.kind == DecisionKind.pendingRequest) decision,
     ];
     if (requests.isEmpty) {
-      if (coverage.everySourceFailed) {
+      // With one Seerr silent, its requests are unknown, not absent.
+      if (coverage.failed.isNotEmpty) {
         return HomeModuleFrame.silent(
           title: _title,
           coverage: coverage,
@@ -234,12 +235,13 @@ class HomeDownloadsModule extends ConsumerWidget {
               ),
             )
           else
-            for (final item in data.preview)
+            for (final (index, item) in data.preview.indexed)
               _InFlightRow(
                 // With the connection: two Radarr both number their queues
                 // from one.
                 key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
                 item: item,
+                divided: index > 0,
               ),
           if (footnote != null)
             Padding(
@@ -263,8 +265,8 @@ class HomeDownloadsModule extends ConsumerWidget {
 /// Arrived: what the arrs imported, newest first.
 ///
 /// A failure is named here, in amber in its count, and acted on from Needs
-/// you. Absent when nothing was imported: a module with nothing to say steps
-/// aside.
+/// you. Absent when every library answered and nothing was imported: a
+/// module with nothing to say steps aside.
 class HomeArrivedModule extends ConsumerWidget {
   const HomeArrivedModule({super.key});
 
@@ -304,7 +306,18 @@ class HomeArrivedModule extends ConsumerWidget {
             retryDashboardServices(ref, read.coverage.failedServices),
       );
     }
-    if (read.items.isEmpty) return const SizedBox.shrink();
+    if (read.items.isEmpty) {
+      // Nothing to say only when every library said so. With one of them
+      // silent, its arrivals are unknown, not absent: the module keeps its
+      // place and names it.
+      if (read.coverage.failed.isEmpty) return const SizedBox.shrink();
+      return HomeModuleFrame.silent(
+        title: _title,
+        coverage: read.coverage,
+        onRetry: () =>
+            retryDashboardServices(ref, read.coverage.failedServices),
+      );
+    }
 
     final counts = recentlyAddedEyebrow(read.items, coverage: read.coverage);
     final note = coverageNote(read.coverage);
@@ -592,8 +605,9 @@ class _RecentlyAddedRows extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (final item in items)
+        for (final (index, item) in items.indexed)
           _CompactListRow(
+            divided: index > 0,
             icon: item.service.icon,
             title: item.title,
             subtitle: joinDisplayParts([
@@ -1220,9 +1234,10 @@ class _RequestDecisionButton extends StatelessWidget {
 /// so a column of them lines up — see `domain/in_flight.dart` for why the four
 /// fields are the four fields.
 class _InFlightRow extends StatelessWidget {
-  const _InFlightRow({super.key, required this.item});
+  const _InFlightRow({super.key, required this.item, this.divided = false});
 
   final ServiceQueueItem item;
+  final bool divided;
 
   @override
   Widget build(BuildContext context) {
@@ -1279,6 +1294,7 @@ class _InFlightRow extends StatelessWidget {
       progressValue: item.progress,
       progressColor: item.progress == null ? null : accent,
       onTap: () => context.go('/activity'),
+      divided: divided,
     );
   }
 }
@@ -1326,6 +1342,9 @@ class _CompactListRow extends StatelessWidget {
   final Color? progressColor;
   final VoidCallback onTap;
 
+  /// Whether a hairline separates it from the row above.
+  final bool divided;
+
   /// Everything announced after [title].
   ///
   /// Composed by the caller because [trailing] is an opaque widget and only the
@@ -1346,6 +1365,7 @@ class _CompactListRow extends StatelessWidget {
     this.heroTag,
     this.progressValue,
     this.progressColor,
+    this.divided = false,
   });
 
   @override
@@ -1356,74 +1376,84 @@ class _CompactListRow extends StatelessWidget {
       color: colorScheme.onSurfaceVariant,
     );
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard.surfaceOutlined(
-        onTap: onTap,
-        semanticLabel: title,
-        semanticValue: semanticValue,
-        // Nothing in this row is interactive on its own. Note the deliberate
-        // absence of LinearProgressIndicator.semanticsLabel: it would add a
-        // second focus stop *inside* a button, which is worse than the bar being
-        // silent.
-        excludeChildSemantics: true,
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 38,
-              height: 54,
-              child: imageUrl == null || imageUrl!.isEmpty
-                  ? Container(
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHigh,
-                        borderRadius: AppRadius.borderRadiusSm,
-                      ),
-                      child: Icon(
-                        icon,
-                        size: 18,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    )
-                  : _HeroContentCard(heroTag: heroTag, imageUrl: imageUrl!),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.weight(FontWeight.w600),
-                  ),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: tabularSubtitle
-                        ? subtitleStyle?.tabular
-                        : subtitleStyle,
-                  ),
-                  if (progressColor != null) ...[
-                    const SizedBox(height: 5),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: LinearProgressIndicator(
-                        value: progressValue,
-                        minHeight: 3,
-                        color: progressColor,
-                        backgroundColor: colorScheme.outlineVariant,
+    // A row of its module's slab, with no card of its own inside the slab: a
+    // hairline above every row but the first.
+    return PressableScale(
+      onTap: onTap,
+      semanticLabel: title,
+      semanticValue: semanticValue,
+      // Nothing in this row is interactive on its own. Note the deliberate
+      // absence of LinearProgressIndicator.semanticsLabel: it would add a
+      // second focus stop *inside* a button, which is worse than the bar being
+      // silent.
+      excludeChildSemantics: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: divided
+              ? Border(top: BorderSide(color: CupolaRoom.of(context).hair))
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 38,
+                height: 54,
+                child: imageUrl == null || imageUrl!.isEmpty
+                    ? Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHigh,
+                          borderRadius: AppRadius.borderRadiusSm,
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    : _HeroContentCard(heroTag: heroTag, imageUrl: imageUrl!),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.weight(
+                        FontWeight.w600,
                       ),
                     ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tabularSubtitle
+                          ? subtitleStyle?.tabular
+                          : subtitleStyle,
+                    ),
+                    if (progressColor != null) ...[
+                      const SizedBox(height: 5),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: progressValue,
+                          minHeight: 3,
+                          color: progressColor,
+                          backgroundColor: colorScheme.outlineVariant,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            trailing,
-          ],
+              const SizedBox(width: AppSpacing.sm),
+              trailing,
+            ],
+          ),
         ),
       ),
     );
