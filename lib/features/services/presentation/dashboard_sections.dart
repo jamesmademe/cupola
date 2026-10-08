@@ -25,7 +25,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';

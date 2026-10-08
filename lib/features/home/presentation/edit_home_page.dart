@@ -12,7 +12,6 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
-import 'package:cupola/features/home/domain/home_layout.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
 
