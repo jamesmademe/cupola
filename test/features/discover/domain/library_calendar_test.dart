@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -451,4 +452,99 @@ void main() {
       );
     },
   );
+
+  group('the month\'s grid and the day beside it', () {
+    CalendarEvent episode(
+      int dayOffset,
+      int number, {
+      CalendarMark? mark,
+      String title = 'Cosmos Laundromat',
+    }) => CalendarEvent(
+      identity: '$title-3-$number',
+      kind: CalendarKind.episode,
+      day: DateTime(2026, 9, 29 + dayOffset),
+      airsAt: DateTime(2026, 9, 29 + dayOffset, 21),
+      title: title,
+      season: 3,
+      episode: number,
+      mark: mark,
+      sources: const ['Sonarr'],
+      state: const CalendarState.notYet(),
+    );
+    final disc = CalendarEvent(
+      identity: 'sf-disc',
+      kind: CalendarKind.movie,
+      day: DateTime(2026, 10, 12),
+      title: 'Sprite Fright',
+      release: Lexicon.onDisc,
+      sources: const ['Radarr', 'Radarr 4K'],
+      state: const CalendarState.notYet(),
+    );
+    final album = CalendarEvent(
+      identity: 'album',
+      kind: CalendarKind.album,
+      day: DateTime(2026, 10, 2),
+      title: 'Sintel (Anniversary Edition)',
+      byline: 'Jan Morgenstern',
+      sources: const ['Lidarr'],
+      state: const CalendarState.notYet(),
+    );
+
+    test('a day\'s first line: the time and code, the kind of release', () {
+      expect(calendarGridLead(episode(3, 1)), '21:00 S3 E1');
+      expect(calendarGridLead(disc), 'Disc');
+      expect(calendarGridLead(album), 'Album');
+    });
+
+    test('the tip under the pointer names the release, the standing and '
+        'the connections', () {
+      expect(
+        calendarEventTip(disc, now),
+        'Sprite Fright · on disc · not out yet · Radarr, Radarr 4K',
+      );
+      expect(
+        calendarEventTip(album, now),
+        'Sintel (Anniversary Edition) · Jan Morgenstern · not out yet · '
+        'Lidarr',
+      );
+    });
+
+    test('the day in a sentence: three named, the rest counted', () {
+      expect(calendarDaySummary(const []), 'Nothing on this day.');
+      expect(
+        calendarDaySummary([album, episode(3, 1, mark: CalendarMark.premiere)]),
+        '2 things: an album by Jan Morgenstern and the premiere of Cosmos '
+        'Laundromat season 3.',
+      );
+      expect(
+        calendarDaySummary([
+          disc,
+          album,
+          episode(3, 4, title: 'Night Shift'),
+          episode(3, 5, title: 'Night Shift'),
+        ]),
+        '4 things: Sprite Fright on disc, an album by Jan Morgenstern, '
+        'Night Shift S3 E4 and 1 more.',
+      );
+    });
+
+    test('the rest of a season, after the episode and only its season', () {
+      final premiere = episode(3, 1, mark: CalendarMark.premiere);
+      final events = [
+        premiere,
+        episode(10, 2),
+        episode(17, 3),
+        episode(10, 9, title: 'Night Shift'),
+        disc,
+      ];
+      expect(
+        [
+          for (final event in calendarLaterInSeason(premiere, events))
+            event.episode,
+        ],
+        [2, 3],
+      );
+      expect(calendarLaterInSeason(disc, events), isEmpty);
+    });
+  });
 }

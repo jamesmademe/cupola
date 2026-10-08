@@ -999,6 +999,87 @@ String calendarEventShort(CalendarEvent event) => switch (event.kind) {
   CalendarKind.book => '${event.title}, book',
 };
 
+/// A thing's first line in a day of the month's grid: `22:00 S2 E5`,
+/// `62% · Digital`, `Album`. A download's figure leads, so a narrow day
+/// cuts the word and keeps it. An episode without a time (the requester's)
+/// says its code alone.
+String calendarGridLead(CalendarEvent event) => [
+  if (event.state.percent case final percent?) formatPercent(percent),
+  [
+    if (event.kind != CalendarKind.episode || event.airsAt != null)
+      event.lead().lead,
+    ?event.code,
+  ].join(' '),
+].join(' · ');
+
+/// What a day of the grid says of [event] under the pointer: `Sprite
+/// Fright · on disc · not out yet · Radarr, Radarr 4K`; the requester's
+/// names no service and says her note instead.
+String calendarEventTip(CalendarEvent event, DateTime now) {
+  final status = event.statusLine(now);
+  return [
+    event.title,
+    if (event.kind == CalendarKind.movie && event.region == null)
+      ?event.release,
+    if (event.note case final note?) _lowerFirst(note),
+    // A movie's line is capitalised to stand alone; the others begin with a
+    // code or a name, which keep their capitals.
+    event.kind == CalendarKind.movie ? _lowerFirst(status) : status,
+    if (event.sources.isNotEmpty) event.sources.join(', '),
+  ].join(' · ');
+}
+
+String _lowerFirst(String words) =>
+    words.isEmpty ? words : words[0].toLowerCase() + words.substring(1);
+
+/// What a day holds, as the panel beside the month's grid says it: `2
+/// things: an album by Jan Morgenstern and the premiere of Cosmos
+/// Laundromat season 3.` Three are named, the rest counted.
+String calendarDaySummary(List<CalendarEvent> events) {
+  if (events.isEmpty) return 'Nothing on this day.';
+  String phrase(CalendarEvent event) => switch (event.kind) {
+    CalendarKind.movie => [event.title, ?event.release].join(' '),
+    CalendarKind.episode => switch ((event.mark, event.season)) {
+      (CalendarMark.premiere, final season?) =>
+        'the premiere of ${event.title} season $season',
+      (CalendarMark.wholeSeason, final season?) =>
+        'all of ${event.title} season $season',
+      (CalendarMark.seasonFinale, _) => 'the season finale of ${event.title}',
+      (CalendarMark.midseasonFinale, _) =>
+        'the midseason finale of ${event.title}',
+      (CalendarMark.seriesFinale, _) => 'the series finale of ${event.title}',
+      _ => [event.title, ?event.code].join(' '),
+    },
+    CalendarKind.album =>
+      event.byline == null ? 'an album' : 'an album by ${event.byline}',
+    CalendarKind.book =>
+      event.byline == null ? 'a book' : 'a book by ${event.byline}',
+  };
+  final named = [for (final event in events.take(3)) phrase(event)];
+  final rest = events.length - named.length;
+  final count = events.length == 1 ? '1 thing' : '${events.length} things';
+  return '$count: ${joinWithAnd([...named, if (rest > 0) '$rest more'])}.';
+}
+
+/// The episodes of [event]'s season that air after it among [events]: what
+/// the panel beside the grid lists under an episode.
+List<CalendarEvent> calendarLaterInSeason(
+  CalendarEvent event,
+  List<CalendarEvent> events,
+) {
+  if (event.kind != CalendarKind.episode || event.season == null) {
+    return const [];
+  }
+  return [
+    for (final other in events)
+      if (other.kind == CalendarKind.episode &&
+          other.title == event.title &&
+          other.season == event.season &&
+          other.day.isAfter(event.day))
+        other,
+  ];
+}
+
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _spokenWeekdays = [
   'Monday',

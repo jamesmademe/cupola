@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/discover/presentation/calendar_page.dart';
 import 'package:cupola/features/discover/presentation/discover_atrium.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/calendar_agenda.dart';
+import 'package:cupola/features/discover/presentation/widgets/calendar_month_grid.dart';
+import 'package:cupola/features/discover/presentation/widgets/calendar_week_strip.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -17,15 +22,39 @@ void main() {
   Future<ProfileHarness> pump(
     WidgetTester tester,
     ConfigProfile profile,
-    Widget child,
-  ) => pumpWithProfile(
+    Widget child, {
+    Size size = const Size(430, 4000),
+  }) => pumpWithProfile(
     tester,
     profile,
     child: child,
     now: now,
     overrides: [calendarClockProvider.overrideWithValue(() => now)],
-    surfaceSize: const Size(430, 4000),
+    surfaceSize: size,
   );
+
+  /// [body] on a desktop window of [size]: the platform is set before the
+  /// theme is built, and put back before the test ends.
+  Future<void> onDesktop(
+    WidgetTester tester,
+    ConfigProfile profile,
+    Size size,
+    Future<void> Function() body,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final harness = await pump(
+        tester,
+        profile,
+        const CalendarPage(),
+        size: size,
+      );
+      await body();
+      await harness.unmount(tester);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  }
 
   String band(WidgetTester tester) => tester
       .getSemantics(find.bySemanticsLabel(RegExp(r'^Calendar')).first)
@@ -181,5 +210,68 @@ void main() {
     );
 
     await harness.unmount(tester);
+  });
+
+  testWidgets('Desktop, P1: the thirty days as a grid, the selected day '
+      'read beside it, moved by the arrows and by a click', (tester) async {
+    await onDesktop(tester, Profiles.p1, const Size(1208, 856), () async {
+      expect(find.byType(CalendarMonthGrid), findsOneWidget);
+      expect(find.byType(CalendarWeekStrip), findsNothing);
+      expect(find.text('Selected day'), findsOneWidget);
+      expect(find.text('1 thing: Sprite Fright on digital.'), findsOneWidget);
+      expect(find.text('Open Sprite Fright'), findsOneWidget);
+      expect(
+        find.text('Arrow keys move the day. Enter opens its first title.'),
+        findsOneWidget,
+      );
+      // A day is one button.
+      expect(
+        find.bySemanticsLabel('Friday 2 October, 1 thing'),
+        findsOneWidget,
+      );
+
+      for (var i = 0; i < 3; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+      }
+      expect(
+        find.text('1 thing: the premiere of Cosmos Laundromat season 3.'),
+        findsOneWidget,
+      );
+
+      // A week on: nothing, and the way to the next day that has something.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(find.text('Nothing on this day.'), findsOneWidget);
+      expect(find.text('Next day · Mon 12 Oct'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Monday 12 October, 1 thing'));
+      await tester.pump();
+      expect(find.text('1 thing: Sprite Fright on disc.'), findsOneWidget);
+    });
+  });
+
+  testWidgets('Desktop, a window too narrow for the grid: the phone\'s strip '
+      'and agenda, in the reading well', (tester) async {
+    await onDesktop(tester, Profiles.p1, const Size(1000, 856), () async {
+      expect(find.byType(CalendarMonthGrid), findsNothing);
+      expect(find.byType(CalendarWeekStrip), findsOneWidget);
+      expect(
+        tester.getSize(find.byType(CalendarDayGroup).first).width,
+        lessThanOrEqualTo(720),
+      );
+    });
+  });
+
+  testWidgets('Desktop, P2: her grid and her day name no service', (
+    tester,
+  ) async {
+    await onDesktop(tester, Profiles.p2, const Size(1208, 856), () async {
+      expect(find.byType(CalendarMonthGrid), findsOneWidget);
+      expect(find.text('Open Sprite Fright'), findsOneWidget);
+      for (final service in ['Radarr', 'Sonarr', 'Lidarr', 'Seerr']) {
+        expect(find.textContaining(service), findsNothing);
+      }
+    });
   });
 }
