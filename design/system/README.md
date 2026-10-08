@@ -211,13 +211,13 @@ One ease carries almost everything: `motion.curve.standard` (0.2, 0.8, 0.2, 1), 
 | `roll` | 900 ms | easeOutCubic | A figure rolls once from `—` to its value. | the final figure |
 | `light` | 1500 ms | ease | The room light moves to a new title; the new light enters over the old, since a symmetric fade darkens the room halfway. | a jump |
 | `shimmer` | 1600 ms loop | linear | A skeleton sweep. | the flat base |
-| `dwell` | 6000 ms | linear | A carousel slide; the pager fills; a pause control stays visible. | no auto-advance |
+| `dwell` | 6000 ms | linear | A carousel slide; the pager fills; a pause control stays visible; after a touch the slide holds `dwell.hold` (1200 ms). | no auto-advance |
 | `breathe` | 8000 ms | ease-in-out | One slab's light per screen, 0.42 ↔ 0.55. | still |
 | `kenburns` | 14000 ms | ease-in-out | Carousel art drifts 1.02 → 1.12. | still |
 
 - **One authored moment per screen** — the flight onto a Media page, the list rising on Home. Everything else changes state without an entrance.
 - **Events, not loops.** A glint or a pulse fires once per new sample, so a stuck feed stops moving. Figures roll once from `—` and never count up from 0.
-- **Continuous motion stops** off screen, in the background, under the Portal, with a screen reader running and under Reduce Motion. **Direction:** breathe, Ken Burns and the pager fill run on one gated 12 Hz ambient clock. **Today** that clock does not exist and no widget uses `breathe`, `kenburns`, `dwell` or `light`; most call sites still read the older ladder (`AppAnimation.durationXs` … `durationXl`), which now resolves onto the roles, and the poster flight rides the pushed route's own transition rather than `shared`.
+- **Continuous motion stops** off screen, in the background, under the Portal, with a screen reader running and under Reduce Motion. **Direction:** breathe, Ken Burns and the pager fill run on one gated 12 Hz ambient clock. **Today** that clock does not exist: the Home's Featured ([FeaturedPager](components/FeaturedPager/README.md)) runs `dwell`, `kenburns`, the two crossfades and `light` on its own ticker, stopped under those same conditions and under a finger, and nothing uses `breathe` yet; most call sites still read the older ladder (`AppAnimation.durationXs` … `durationXl`), which now resolves onto the roles, and the poster flight rides the pushed route's own transition rather than `shared`.
 - `duration.confirmation-hold` 1600 ms: a success check replaces a button's icon for that long, then reverts.
 - **The Portal's physics are hand-tuned** (`PortalPhysics`, `lib/features/shell/presentation/service_portal.dart`) and are never normalised to the motion tokens: the values are the design.
 

@@ -1,7 +1,8 @@
 # HomeModule
 
 One module of the Home in the slab every module shares, the operator's modules of content (Continue watching, Coming
-up, Arrived, Downloads, Requests, Now playing), and the two pieces of the operator's Home that are not modules of content: Needs you at the top and Set up
+up, Arrived, Downloads, Requests, Now playing; Featured, which has no slab, is
+[FeaturedPager](../FeaturedPager/README.md)), and the two pieces of the operator's Home that are not modules of content: Needs you at the top and Set up
 next at the foot. A module decides its state; the frame draws it,
 so no module invents its own way of loading, failing or asking for a service.
 
@@ -63,7 +64,8 @@ answering` already answers) or before anything answered (no space is held for it
   (a movie's year), `5 min left` in ink, and an ink bar: how far somebody got is not a status. At a large reading size
   the words go under the picture. The line under the name is the server. A Jellyfin set up with a server key and
   nobody chosen asks once, in an outlined row: `Which Jellyfin user are you?` · `A server key sees every user; pick yours
-  once`, to that connection's form where the picker is. Absent when nothing is in progress and every server answered.
+  once`, to that connection's form where the picker is. Absent when nothing is in progress and every server answered,
+  and when its only title is already Featured's first slide (while Featured is on the Home).
 - **Coming up**: what comes out or airs from today to three days on, three rows (`CalendarRow.home`: the day leading,
   an episode's time opening its status), then `Calendar` in the heading to the calendar's page. Tones as the calendar
   has them: downloading blue, not out yet and not aired neutral, never amber. Nothing in the window is a calm line,
