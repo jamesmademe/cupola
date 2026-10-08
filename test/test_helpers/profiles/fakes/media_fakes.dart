@@ -665,16 +665,13 @@ class SeerrFake extends ServiceFake {
             ]),
           );
         // The rail's own route, as Seerr 3.4.1 answers it: each genre with
-        // the backdrops of a few of its titles. `/genres/{movie,tv}` exists
-        // too, but nothing in the app reads it.
+        // the backdrops of a few of its titles, which a profile leaves empty
+        // because it carries no artwork (see the README). `/genres/{movie,tv}`
+        // exists too, but nothing in the app reads it.
         case '/api/v1/discover/genreslider/movie':
         case '/api/v1/discover/genreslider/tv':
           return NetworkReply.json(const [
-            {
-              'id': 16,
-              'name': 'Animation',
-              'backdrops': ['/animation-1.jpg', '/animation-2.jpg'],
-            },
+            {'id': 16, 'name': 'Animation', 'backdrops': <String>[]},
           ]);
       }
       final service = RegExp(

@@ -14,9 +14,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
-import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
-import 'package:cupola/features/discover/presentation/catalog_providers.dart';
 import 'package:cupola/features/discover/presentation/collection_page.dart';
 import 'package:cupola/features/discover/presentation/discover_atrium.dart';
 import 'package:cupola/features/discover/presentation/person_page.dart';
@@ -43,17 +41,7 @@ Future<(ProfileHarness, GoRouter, ProviderContainer)> _app(
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final harness = await ProfileHarness.start(
-    Profiles.p1,
-    // The atrium's Genres door without its backdrop: a lit door sends the
-    // image cache to a plugin a widget test on an Apple platform does not
-    // have.
-    overrides: [
-      catalogGenresProvider.overrideWith(
-        (ref, kind) async => const [SeerrGenre(id: 16, name: 'Animation')],
-      ),
-    ],
-  );
+  final harness = await ProfileHarness.start(Profiles.p1);
   harness.network.followFakeTime(tester.binding);
   final container = harness.container();
   final router = container.read(routerProvider);

@@ -216,7 +216,6 @@ void main() {
           Profiles.p1,
           child: const DiscoverPage(),
           surfaceSize: _desktop,
-          overrides: _noArtwork,
         );
 
         final atrium = tester.getRect(find.byType(DiscoverAtrium));
@@ -251,7 +250,6 @@ void main() {
           Profiles.p1,
           child: const CatalogPage(query: CatalogQuery.trending()),
           surfaceSize: _desktop,
-          overrides: _noArtwork,
         );
 
         final posters = _postersOf(tester);
@@ -309,14 +307,6 @@ int _firstRow(WidgetTester tester) {
 List<Rect> _postersOf(WidgetTester tester) => [
   for (final element in find.byType(CatalogPoster).evaluate())
     tester.getRect(find.byWidget(element.widget)),
-];
-
-/// The genres without their backdrops: a lit door sends the image cache to a
-/// plugin a widget test on an Apple platform does not have.
-final _noArtwork = [
-  catalogGenresProvider.overrideWith(
-    (ref, kind) async => const [SeerrGenre(id: 16, name: 'Animation')],
-  ),
 ];
 
 Future<void> _onMac(Future<void> Function() body) async {
