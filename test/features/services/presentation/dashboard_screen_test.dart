@@ -8,9 +8,9 @@
 /// to change and this file's to survive.
 ///
 /// The page that was the Dashboard is two now. The Home keeps Needs you, what
-/// arrived, what is moving and what waits for an answer, in the order the person
-/// keeps them; the Stack keeps the headline, the band and the matrix of
-/// services. The empty state is on both, so its test runs on both. The band is
+/// is in progress, what is coming up, what arrived, what is moving and what
+/// waits for an answer, in the order the person keeps them; the Stack keeps the
+/// headline, the band and the matrix of services. The empty state is on both, so its test runs on both. The band is
 /// the Stack's: on the Home a service that did not answer leads Needs you, in
 /// the same words.
 ///
@@ -33,7 +33,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
+import 'package:cupola/features/discover/domain/library_calendar.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
@@ -45,7 +47,7 @@ import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart'
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
-import 'package:cupola/features/services/domain/recently_added.dart';
+import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -73,14 +75,17 @@ void main() {
 
     // Read off the list rather than off the screen: the modules below the fold
     // are built lazily, so a y-coordinate comparison would be testing the
-    // viewport height. The day, then what needs me, what arrived, what is
-    // moving, what waits for an answer and who is watching, and the Home's own
-    // two rows at its foot: Set up next and the way to Edit Home. Now playing
-    // holds its place on a Home with no media server: it steps aside by
-    // drawing nothing, not by leaving the list.
+    // viewport height. The day, then what needs me, what is in progress, what
+    // is coming up, what arrived, what is moving, what waits for an answer and
+    // who is watching, and the Home's own two rows at its foot: Set up next and
+    // the way to Edit Home. Now playing and Continue watching hold their place
+    // on a Home with no media server: they step aside by drawing nothing, not
+    // by leaving the list.
     expect(_regionsOnPage(tester), [
       'HomeHeader',
       'NeedsYouBanner',
+      'HomeContinueWatchingModule',
+      'HomeComingUpModule',
       'HomeArrivedModule',
       'HomeDownloadsModule',
       'HomeRequestsModule',
@@ -100,13 +105,10 @@ void main() {
       instanceSummary: (key) => _summary(key.service, online: true),
       summary: (service) => _summary(service, online: true),
       decisions: [_stall('Furiosa', at: DateTime.utc(2024))],
-      recentlyAdded: [
-        _imported('Poor Things', at: DateTime.utc(2024, 5, 5, 8, 12)),
-      ],
+      arrivals: [_imported('Poor Things', ago: const Duration(hours: 2))],
     );
 
-    // The lead is the first thing under the day, and Arrived is the first
-    // module after it.
+    // The lead is the first thing under the day, and Arrived is under it.
     expect(
       _yOf(tester, find.byType(HomeHeader)),
       lessThan(_yOf(tester, find.text('Furiosa is stuck'))),
@@ -1010,51 +1012,52 @@ void main() {
   });
 
   group('arrived', () {
-    testWidgets('names how many landed and, in amber, how many did not', (
-      tester,
-    ) async {
+    testWidgets('names how many titles landed in the week, and counts a '
+        'movie imported twice once', (tester) async {
       await _pumpPage(
         tester,
         _Page.home,
-        recentlyAdded: [
-          _imported('Poor Things', at: DateTime.utc(2024, 5, 5, 8, 12)),
-          _imported(
-            'Nickel Boys',
-            at: DateTime.utc(2024, 5, 5, 6, 58),
-            failed: true,
-          ),
+        arrivals: [
+          _imported('Poor Things', ago: const Duration(hours: 2)),
+          // The same movie again, a day earlier: one title.
+          _imported('Poor Things', ago: const Duration(hours: 26)),
+          _imported('Nickel Boys', ago: const Duration(hours: 5), id: 2),
+          // Last week's: not in the week.
+          _imported('Old Movie', ago: const Duration(days: 9), id: 3),
         ],
       );
 
       await _scrollTo(tester, find.text('Arrived'));
-      expect(find.text('1 imported'), findsOneWidget);
-
-      final failed = tester.widget<Text>(find.text('1 failed'));
-      final context = tester.element(find.text('1 failed'));
-      final scheme = Theme.of(context).colorScheme;
-      // Amber, because a failed import is a fault. Red is reserved for a
-      // connection that did not answer.
-      expect(
-        failed.style?.color,
-        statusToneColor(scheme, StatusTone.warning, surface: scheme.surface),
-      );
+      expect(find.text('Last 7 days · 2 new'), findsOneWidget);
+      // A failed import is Needs you's, and Arrived says nothing of it.
+      expect(find.textContaining('failed'), findsNothing);
     });
 
-    testWidgets('each tile is a target whose name is title, service, time', (
-      tester,
-    ) async {
+    testWidgets('each card is one button whose name is the title, then when '
+        'and where', (tester) async {
       final handle = tester.ensureSemantics();
       await _pumpPage(
         tester,
         _Page.home,
-        recentlyAdded: [
-          _imported('Poor Things', at: DateTime.utc(2024, 5, 5, 8, 12)),
+        arrivals: [
+          _imported('Poor Things', ago: const Duration(hours: 2)),
+          _imported(
+            'Nickel Boys',
+            ago: const Duration(hours: 5),
+            id: 2,
+            connectionName: '4K',
+          ),
         ],
       );
       await _scrollTo(tester, find.text('Arrived'));
 
+      // A service with one connection names none; one with two does.
       expect(
-        find.bySemanticsLabel(RegExp(r'Poor Things, Radarr, \d\d:\d\d')),
+        find.bySemanticsLabel('Poor Things, 2\u00A0h ago'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Nickel Boys, 5\u00A0h ago, Radarr 4K'),
         findsOneWidget,
       );
       handle.dispose();
@@ -1064,8 +1067,8 @@ void main() {
   testWidgets('pull-to-refresh holds the indicator until the data is back', (
     tester,
   ) async {
-    final gate = Completer<List<RecentlyAddedItem>>();
-    await _pumpPage(tester, _Page.home, recentlyAddedFuture: () => gate.future);
+    final gate = Completer<List<ArrHistoryEntry>>();
+    await _pumpPage(tester, _Page.home, arrivalsFuture: () => gate.future);
 
     // The page's own list, the first in the tree: the Home is short enough now
     // for Arrived's rail, a list of its own, to be built beside it.
@@ -1117,9 +1120,9 @@ Future<void> _pumpPage(
   SourceCoverage decisionsCoverage = SourceCoverage.none,
   List<ServiceQueueItem>? queue,
   SourceCoverage queueCoverage = SourceCoverage.none,
-  List<RecentlyAddedItem>? recentlyAdded,
-  SourceCoverage recentlyAddedCoverage = SourceCoverage.none,
-  Future<List<RecentlyAddedItem>> Function()? recentlyAddedFuture,
+  List<ArrHistoryEntry>? arrivals,
+  SourceCoverage arrivalsCoverage = SourceCoverage.none,
+  Future<List<ArrHistoryEntry>> Function()? arrivalsFuture,
   ServiceSummary Function(_InstanceKey key)? instanceSummary,
   Future<ServiceSummary> Function(_InstanceKey key)? instanceSummaryFuture,
   ServiceSummary Function(ServiceKey service)? summary,
@@ -1198,12 +1201,35 @@ Future<void> _pumpPage(
       (ref) async =>
           (entries: const <ArrHistoryEntry>[], coverage: SourceCoverage.none),
     ),
-    servicesRecentlyAddedProvider.overrideWith(
+    // Arrived's week is read against a clock of the test's own, so a card's
+    // age is not the day the suite runs on.
+    arrivalsClockProvider.overrideWithValue(() => _arrivalsNow),
+    servicesArrivalsProvider.overrideWith(
       (ref) async => (
-        items:
-            await (recentlyAddedFuture?.call() ??
-                Future.value(recentlyAdded ?? const <RecentlyAddedItem>[])),
-        coverage: recentlyAddedCoverage,
+        entries:
+            await (arrivalsFuture?.call() ??
+                Future.value(arrivals ?? const <ArrHistoryEntry>[])),
+        coverage: arrivalsCoverage,
+      ),
+    ),
+    // Nothing is coming up and nothing is in progress: the two reads the
+    // Home makes beside the others are handed an answer and never reach a
+    // network.
+    libraryCalendarProvider.overrideWith(
+      (ref) async => LibraryCalendar(
+        window: CalendarWindow.from(_arrivalsNow),
+        events: const [],
+        answered: const ['Radarr'],
+        silent: const [],
+        kinds: const {},
+        readAt: _arrivalsNow,
+      ),
+    ),
+    homeResumeProvider.overrideWith(
+      (ref) async => (
+        rows: const <ResumeRow>[],
+        coverage: SourceCoverage.none,
+        viewerMissing: const <String>[],
       ),
     ),
     servicesRequestsProvider.overrideWith(
@@ -1361,17 +1387,27 @@ ServiceQueueItem _queueItem(
   stalledSince: stalled || fault != null ? DateTime.utc(2024, 1, 1) : null,
 );
 
-RecentlyAddedItem _imported(
+/// The moment Arrived's week is read from in these tests.
+final DateTime _arrivalsNow = DateTime.utc(2024, 5, 5, 10, 12);
+
+/// One import of a movie, [ago] before [_arrivalsNow].
+ArrHistoryEntry _imported(
   String title, {
-  required DateTime at,
-  bool failed = false,
-}) => RecentlyAddedItem(
+  required Duration ago,
+  int id = 1,
+  String? connectionName,
+}) => ArrHistoryEntry(
   service: ServiceKey.radarr,
-  id: 1,
+  id: id,
+  mediaId: id,
   title: title,
+  unitId: null,
+  detail: null,
   posterUrl: '',
-  addedAt: at,
-  failed: failed,
+  outcome: ArrImportOutcome.imported,
+  at: _arrivalsNow.subtract(ago),
+  reason: null,
+  connectionName: connectionName,
 );
 
 double _yOf(WidgetTester tester, Finder finder) =>
