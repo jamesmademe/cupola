@@ -4,7 +4,8 @@
 /// Downloads and Arrived each read several services and degrade a failed one
 /// to no rows. The figure above the rows used to count the failure as nothing:
 /// `0 downloading` over clients that did not answer, and `3 downloading` with
-/// SABnzbd dark reading as the whole queue.
+/// SABnzbd dark reading as the whole queue. Arrived counts titles over the
+/// libraries that answered and names them, and says which did not.
 library;
 
 import 'package:flutter/material.dart';
@@ -15,11 +16,13 @@ import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
 const _tall = Size(430, 6000);
+
+Finder _inArrived(Finder matching) =>
+    find.descendant(of: find.byType(HomeArrivedModule), matching: matching);
 
 /// P7 with every queue and every library dark as well: Radarr (both),
 /// Sonarr, and the rest as P7 already has them.
@@ -40,8 +43,10 @@ void main() {
     );
 
     expect(find.text('5 moving · 1 stuck · 40.4\u00A0MB/s'), findsOne);
-    // Both Radarr: the HD's four imports and the 4K's two, and Sonarr's one.
-    expect(find.text('7 imported'), findsOne);
+    // Four titles: the HD's Coffee Run and Sintel, the 4K's Spring and Tears
+    // of Steel. The HD's older copy of Tears of Steel is outside the week, and
+    // Sonarr's episode is of a series that was already there.
+    expect(_inArrived(find.text('Last 7 days · 4 new')), findsOne);
     expect(find.textContaining('Not in the total'), findsNothing);
     expect(find.byType(FaultNote), findsNothing);
 
@@ -68,8 +73,11 @@ void main() {
     const inFlightNote = 'Not in the total: Lidarr, SABnzbd, qBittorrent';
     expect(find.text(inFlightNote), findsOne);
 
-    expect(find.text('7 imported'), findsOne);
-    expect(find.text('Not in the total: Lidarr'), findsOne);
+    // Arrived counts titles over the libraries that answered, names them, and
+    // says under the heading which one did not.
+    const arrivedLine = 'Last 7 days · 4 from Radarr 1, Radarr 4K and Sonarr';
+    expect(_inArrived(find.text(arrivedLine)), findsOne);
+    expect(_inArrived(find.text('Lidarr did not answer.')), findsOne);
 
     // Red is spent on the glyph and only because a source did not answer;
     // the sentence stays in secondary ink.
@@ -85,6 +93,18 @@ void main() {
       findsOne,
     );
 
+    // Arrived's note is red the same way: Lidarr did not answer.
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: _inArrived(find.text('Lidarr did not answer.')),
+          matching: find.byType(FaultNote),
+        ),
+        matching: find.byIcon(Icons.error_outline_rounded),
+      ),
+      findsOne,
+    );
+
     // The header speaks the figures and what qualifies them as one sentence,
     // the dash as an unknown speed.
     expect(
@@ -94,8 +114,16 @@ void main() {
       ),
       findsOne,
     );
-    // And the note itself is not a second stop.
+    expect(
+      find.bySemanticsLabel(
+        'Arrived, Last 7 days, 4 from Radarr 1, Radarr 4K and Sonarr, '
+        'Lidarr did not answer.',
+      ),
+      findsOne,
+    );
+    // And the notes themselves are not a second stop.
     expect(find.bySemanticsLabel(inFlightNote), findsNothing);
+    expect(find.bySemanticsLabel('Lidarr did not answer.'), findsNothing);
 
     handle.dispose();
     await harness.unmount(tester);
@@ -113,6 +141,7 @@ void main() {
 
     expect(find.text('0 downloading'), findsNothing);
     expect(find.text('0 imported'), findsNothing);
+    expect(find.text('Last 7 days · 0 new'), findsNothing);
     // No source answered, so the module states no figure at all, not even
     // the dash: its heading stands over the fault, which says why.
     expect(find.textContaining('downloading'), findsNothing);
@@ -141,15 +170,18 @@ void main() {
       findsOne,
     );
     expect(
-      find.widgetWithText(
-        FaultBand,
-        'Radarr 1, Radarr 4K and 2 others did not answer.',
+      _inArrived(
+        find.widgetWithText(
+          FaultBand,
+          'Radarr 1, Radarr 4K and 2 others did not answer.',
+        ),
       ),
       findsOne,
     );
     // Not the empty copy, which would send the user looking for media.
     expect(find.text('Nothing is downloading'), findsNothing);
     expect(find.text('Nothing imported yet'), findsNothing);
+    expect(find.textContaining('Last 7 days'), findsNothing);
 
     // The heading speaks the name and nothing else: no count to be read as
     // unavailable, and none to be read as zero.
