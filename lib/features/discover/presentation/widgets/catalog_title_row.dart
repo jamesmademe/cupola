@@ -18,6 +18,7 @@ import 'package:cupola/features/discover/presentation/discover_details_provider.
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/features/discover/presentation/widgets/search_row.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
@@ -172,6 +173,11 @@ class CatalogTitleRow extends ConsumerWidget {
         posterUrl: poster.isEmpty ? null : poster,
       ),
       action: action,
+      selected: context.paneShows(
+        media.mediaType == 'tv'
+            ? MediaKey.tv(media.id)
+            : MediaKey.movie(media.id),
+      ),
     );
   }
 

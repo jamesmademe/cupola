@@ -78,6 +78,7 @@ class SearchRow extends StatelessWidget {
     this.heroTag,
     required this.onTap,
     this.action,
+    this.selected = false,
     this.padding = EdgeInsets.zero,
   }) : imageUrl = poster,
        _person = false;
@@ -90,6 +91,7 @@ class SearchRow extends StatelessWidget {
     required String line,
     String face = '',
     required this.onTap,
+    this.selected = false,
     this.padding = EdgeInsets.zero,
   }) : title = name,
        meta = line,
@@ -117,6 +119,11 @@ class SearchRow extends StatelessWidget {
   /// What the row offers at its end. Null where there is nothing to add or
   /// ask for, and then there is no control at all.
   final SearchRowAction? action;
+
+  /// Whether the pane beside the list shows this row's page, on a tablet: the
+  /// row sits on the room's strong fill, the mark of what is selected in the
+  /// settings' list and the tab bar, and says so to a screen reader.
+  final bool selected;
 
   /// Around the row, beside the list's own gutter: none in a search, the
   /// slab's inset among the atrium's people.
@@ -150,6 +157,7 @@ class SearchRow extends StatelessWidget {
       onTap: onTap,
       semanticLabel: title,
       semanticValue: spoken,
+      semanticSelected: selected ? true : null,
       excludeChildSemantics: true,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: minHeight),
@@ -268,24 +276,29 @@ class SearchRow extends StatelessWidget {
         MediaQuery.textScalerOf(context).scale(14) > 14 * 1.4;
     return Padding(
       padding: padding,
-      child: switch (trailing) {
-        null => row,
-        final trailing when under => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            row,
-            Align(alignment: AlignmentDirectional.centerEnd, child: trailing),
-            const SizedBox(height: AppSpacing.sm),
-          ],
-        ),
-        final trailing => Row(
-          children: [
-            Expanded(child: row),
-            const SizedBox(width: AppSpacing.sm),
-            trailing,
-          ],
-        ),
-      },
+      // One shape selected or not, so the row under it keeps its state; the
+      // fill reaches into the gutter, so nothing in the row moves.
+      child: CustomPaint(
+        painter: selected ? _Selected(room.fillStrong) : null,
+        child: switch (trailing) {
+          null => row,
+          final trailing when under => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              row,
+              Align(alignment: AlignmentDirectional.centerEnd, child: trailing),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ),
+          final trailing => Row(
+            children: [
+              Expanded(child: row),
+              const SizedBox(width: AppSpacing.sm),
+              trailing,
+            ],
+          ),
+        },
+      ),
     );
   }
 
@@ -382,4 +395,26 @@ class _Plus extends StatelessWidget {
       child: Icon(Icons.add_rounded, size: 20, color: room.ink),
     );
   }
+}
+
+/// The room's strong fill behind a selected row, reaching [_reach] into the
+/// gutter on either side.
+class _Selected extends CustomPainter {
+  const _Selected(this.color);
+
+  final Color color;
+
+  static const double _reach = AppSpacing.sm;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTRB(-_reach, 0, size.width + _reach, size.height);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(AppRadius.md)),
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Selected oldDelegate) => color != oldDelegate.color;
 }

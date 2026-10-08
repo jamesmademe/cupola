@@ -45,6 +45,10 @@ class PressableScale extends StatefulWidget {
   /// Whether to hide the child's own semantics behind [semanticLabel].
   final bool excludeChildSemantics;
 
+  /// Whether the control stands for what is selected beside it (the row whose
+  /// page the pane shows), for a screen reader; null says nothing.
+  final bool? semanticSelected;
+
   const PressableScale({
     super.key,
     required this.child,
@@ -56,6 +60,7 @@ class PressableScale extends StatefulWidget {
     this.semanticValue,
     this.semanticHint,
     this.excludeChildSemantics = false,
+    this.semanticSelected,
   });
 
   @override
@@ -115,6 +120,7 @@ class _PressableScaleState extends State<PressableScale> {
       enabled: enabled,
       label: widget.semanticLabel,
       value: widget.semanticValue,
+      selected: widget.semanticSelected,
       // The hint survives a control that cannot act, and that is the point of
       // it. It used to be gated on `enabled`, which meant the one state where a
       // hint is load-bearing — a control the user can see and cannot use — was

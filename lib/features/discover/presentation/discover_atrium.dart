@@ -1022,6 +1022,7 @@ class _PersonRow extends StatelessWidget {
       line: '${person.role} · ${person.title}',
       face: photo ?? '',
       onTap: () => context.openPerson(person.id, posterUrl: photo),
+      selected: context.paneShowsPerson(person.id),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
     );
   }

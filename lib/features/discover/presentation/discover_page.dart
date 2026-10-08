@@ -358,6 +358,7 @@ class _Results extends ConsumerWidget {
                 : 'Known for ${person.knownFor.take(2).join(', ')}',
             face: person.imageUrl,
             onTap: () => context.pushMounted(person.route),
+            selected: context.paneShowsPerson(person.id),
           ),
       ],
     ];
@@ -440,6 +441,7 @@ class _TitleRow extends ConsumerWidget {
       posterHeaders: title.imageHeaders,
       heroTag: title.canFlyPoster ? title.heroTag : null,
       onTap: () => context.pushMounted(title.route, extra: title.routeExtra),
+      selected: title.key != null && context.paneShows(title.key!),
       action: connections.isEmpty
           ? null
           : SearchRowAdd(

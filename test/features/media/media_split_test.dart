@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
@@ -423,11 +424,23 @@ void main() {
       tester.getRect(find.byType(PersonPage)).left,
       greaterThan(tester.getRect(find.byType(DiscoverAtrium)).right - 1),
     );
+    // The row the pane shows says so, to the eye and to a screen reader.
+    final row = find
+        .ancestor(
+          of: find.descendant(
+            of: find.byType(DiscoverAtrium),
+            matching: find.text(SeerrFake.personName),
+          ),
+          matching: find.byType(PressableScale),
+        )
+        .first;
+    expect(tester.getSemantics(row), containsSemantics(isSelected: true));
 
     await _tapShelfControl(tester, 'Close');
     expect(router.state.uri.path, ServiceRoutes.discover);
     expect(find.byType(PersonPage), findsNothing);
     expect(SidePaneSlots.instance.debugCount, 0);
+    expect(tester.getSemantics(row), containsSemantics(isSelected: false));
 
     semantics.dispose();
     await _close(tester, harness, container);

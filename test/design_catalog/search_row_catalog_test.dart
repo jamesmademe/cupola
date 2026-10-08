@@ -140,6 +140,39 @@ void main() {
         width: 320,
       ),
       CatalogScene(
+        'Selected · on a tablet, the row whose page the pane beside the list '
+        'shows sits on the room\'s strong fill, reaching into the gutter; '
+        'the rows around it, one with its plus, are as ever',
+        (_) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              SearchRow.person(
+                name: 'Ton Roosendaal',
+                line: 'Producer · Sintel',
+                onTap: () {},
+              ),
+              SearchRow.person(
+                name: 'Colin Levy',
+                line: 'Director · Sintel',
+                onTap: () {},
+                selected: true,
+              ),
+              SearchRow.title(
+                title: 'Tears of Steel',
+                meta: 'Movie · 2012 · TMDB\u00A06.4',
+                onTap: () {},
+                action: SearchRowAdd(
+                  label: 'Add Tears of Steel to Sonarr',
+                  onTap: () {},
+                ),
+              ),
+            ],
+          ),
+        ),
+        width: 440,
+      ),
+      CatalogScene(
         'The control at the end · the plus to Sonarr, a title on the server '
         'with none, Request where Seerr sends a movie to its Radarr, and the '
         'plus dimmed where nothing set up can add it',

@@ -15,6 +15,7 @@ Rendered from `lib/features/discover/presentation/widgets/search_row.dart` (`Sea
 - **Person** (`SearchRow.person`): the face, a 44 circle in the quiet fill with a hairline edge (initials without a picture), the name in `row` ink, one line under it in `meta` secondary ink (up to two lines: `Known for Forrest Gump, Toy Story`, or `Director · Dune` in the atrium), and a trailing chevron in the secondary ink.
 - `padding` around the row: none in a search, whose list carries the gutter; the slab's inset (`space-lg`) among the atrium's people.
 - With a `heroTag` and artwork, the poster flies into the title's page (`MediaPosterCard.flightOnUserGestures`); with no artwork there is no flight, so an empty plate never flies.
+- **Selected** (`selected`): on a tablet, the row whose page the pane beside the list shows sits on the room's strong fill (`fillStrong`, `radius-md`), the mark of what is selected in the settings' list and the tab bar. The fill reaches `space-sm` into the gutter on either side and is painted behind the row, so nothing in the row moves. The caller asks the pane (`paneShows` for a title's key, `paneShowsPerson` for a person, in `open_media.dart`); a poster wears its ring instead (`ContentCard.paneTag`).
 
 ## Where a title stands
 
@@ -24,11 +25,11 @@ On a person's or a collection's page (`CatalogTitleRow`) the operator gets the p
 
 ## The consumer provides
 
-`title`, `meta`, an optional `status` (label and tone), `poster` and `posterHeaders`, `heroTag`, `onTap`, and an `action` with its label (`Add Cosmic Voyage to Radarr`, `Request Project London`) where there is one to honour. A person: `name`, `line`, `face`, `onTap`.
+`title`, `meta`, an optional `status` (label and tone), `poster` and `posterHeaders`, `heroTag`, `onTap`, and an `action` with its label (`Add Cosmic Voyage to Radarr`, `Request Project London`) where there is one to honour. A person: `name`, `line`, `face`, `onTap`. Either: `selected` while the pane beside the list shows its page.
 
 ## Semantics
 
-The row is one button: its label is the title (or the name), its value the meta and the state (`Movie · 1996, Waiting for approval`); its parts are silent. The control at the end is its own button, named by its label; the dimmed plus keeps its button role and hint, never `enabled: false`.
+The row is one button: its label is the title (or the name), its value the meta and the state (`Movie · 1996, Waiting for approval`); its parts are silent, and it is announced as selected while the pane shows its page. The control at the end is its own button, named by its label; the dimmed plus keeps its button role and hint, never `enabled: false`.
 
 ## States in the catalog
 
@@ -36,6 +37,7 @@ Each sheet is drawn in the dark and the light room.
 
 - A search by kind: a title on the server with artwork and its state, one with no artwork and the plus, one waiting for approval, a person with no picture.
 - A long title and a long state at 320pt: one line each, the plus whole.
+- Selected: a person between two rows, one of them a title with its plus, at the tablet list's 440.
 - The control at the end: the plus to Sonarr, a title on the server with none, Request, the plus dimmed.
 - Text at 200%.
 

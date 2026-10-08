@@ -16,6 +16,14 @@ extension OpenMedia on BuildContext {
   /// Where the user is: the location the router is showing.
   String get _here => GoRouter.of(this).state.uri.path;
 
+  /// Whether the pane beside this page shows [key]'s page: the row that
+  /// opens it marks itself while it does, as a poster wears its ring.
+  bool paneShows(MediaKey key) => SidePaneScope.selectedOf(this) == key;
+
+  /// Whether the pane beside this page shows the person [id]'s page.
+  bool paneShowsPerson(int id) =>
+      SidePaneScope.selectedOf(this) == MediaPanePerson(id: id).selected;
+
   /// Pushes [key]'s page under the tab the user is on.
   Future<void> openMedia(
     MediaKey key, {
