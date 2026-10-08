@@ -454,6 +454,27 @@ class SeerrService {
     );
   }
 
+  /// The requests waiting for a decision, one page of them: what the Home's
+  /// Requests module lists.
+  ///
+  /// One page, never the walk: the module shows a few rows, and states how
+  /// many wait from Seerr's own count of them ([SeerrRequestList.total], the
+  /// page's `pageInfo.results`), never from the rows. Throws when the page
+  /// does not come back.
+  Future<List<SeerrRequest>> getPendingRequests() async {
+    final page = await _requestPage(
+      0,
+      numbering: numbering(),
+      filter: 'pending',
+    );
+    return SeerrRequestList(
+      await _hydrateRequests(page.items),
+      total: page.total,
+      // With no count, a full page may have more behind it.
+      isPartial: page.total == null && page.items.length >= _requestPageSize,
+    );
+  }
+
   /// Seerr's own filters for a request still in motion: waiting for a
   /// decision, approved and being fetched, or failed and needing one.
   static const activeRequestFilters = ['pending', 'processing', 'failed'];

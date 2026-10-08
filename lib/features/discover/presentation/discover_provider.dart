@@ -64,6 +64,16 @@ final activeRequestsForProvider =
       return ref.watch(seerrServiceForProvider(instanceId)).getActiveRequests();
     }, retry: noProviderRetry);
 
+/// The requests of one named connection waiting for a decision, one page
+/// with Seerr's count of them ([SeerrService.getPendingRequests]). What the
+/// Home's Requests module reads. Empty id means the lens.
+final pendingRequestsForProvider =
+    FutureProvider.family<List<SeerrRequest>, String>((ref, instanceId) {
+      return ref
+          .watch(seerrServiceForProvider(instanceId))
+          .getPendingRequests();
+    }, retry: noProviderRetry);
+
 /// Whether the lens's Seerr has a server that takes 4K requests of [arr]
 /// (Radarr or Sonarr), from the list the request sheet reads
 /// (`/api/v1/service/radarr|sonarr`, which a requester may read too).

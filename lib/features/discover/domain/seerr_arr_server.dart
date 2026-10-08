@@ -306,6 +306,24 @@ class SeerrApproveTarget {
   /// `4K Radarr`, `Sonarr`: the kind of server, when there is no name for it.
   String get _kind => is4k ? '4K ${arr.title}' : arr.title;
 
+  /// What a row says once the request is approved: where Seerr sent it,
+  /// `Approved · sent to Radarr 4K`, named as [confirmation] names it.
+  String approvedLine({
+    required String Function(ServiceInstance connection) connectionTitle,
+  }) {
+    final server = this.server;
+    final connection = this.connection;
+    final to = connection != null
+        ? connectionTitle(connection)
+        : server != null
+        ? (server.name.isEmpty ? "Seerr's $_kind" : server.name)
+        : serversRead
+        ? null
+        : "Seerr's $_kind";
+    if (to == null) return 'Approved · Seerr has no $_kind for it';
+    return 'Approved · sent to $to';
+  }
+
   /// What the approve confirmation says about where [title] goes.
   ///
   /// [connectionTitle] names a connection the way the rest of the app does

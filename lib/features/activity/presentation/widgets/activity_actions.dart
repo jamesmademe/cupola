@@ -14,6 +14,7 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/seerr_approve_target_read.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The write actions the Activity surfaces can perform on a queue or blocklist
@@ -196,7 +197,10 @@ class ActivityActions {
   /// server and one known only to Seerr included. [request] is the record
   /// when the caller holds it; otherwise it is read from Seerr by
   /// [requestId] first.
-  static Future<void> approveRequest(
+  ///
+  /// Answers what a row may say once it went through (`Approved · sent to
+  /// Radarr`), or null when it did not: refused, overtaken or cancelled.
+  static Future<String?> approveRequest(
     BuildContext context,
     WidgetRef ref, {
     required String instanceId,
@@ -204,16 +208,16 @@ class ActivityActions {
     required String title,
     SeerrRequest? request,
   }) async {
-    if (!_decides(context, ref, instanceId)) return;
+    if (!_decides(context, ref, instanceId)) return null;
     // Captured before any wait: the approval outlives the control that
     // started it, and the notifier is the container's, not the widget's.
     final approvals = ref.read(seerrApprovalsInFlightProvider.notifier);
     final key = (instanceId: instanceId, requestId: requestId);
     // A second tap while the first is still being read or sent does nothing.
     var owned = approvals.begin(key, SeerrApprovalPhase.checking);
-    if (!owned) return;
+    if (!owned) return null;
     try {
-      final message = await _approveConfirmation(
+      final (:message, :approved) = await _approveConfirmation(
         ref,
         instanceId: instanceId,
         requestId: requestId,
@@ -224,7 +228,7 @@ class ActivityActions {
       // while a person decides.
       approvals.end(key);
       owned = false;
-      if (!context.mounted) return;
+      if (!context.mounted) return null;
 
       final result = await showAppConfirmDialog(
         context: context,
@@ -234,12 +238,12 @@ class ActivityActions {
         confirmLabel: 'Approve request',
       );
 
-      if (!result.confirmed) return;
-      if (!context.mounted) return;
+      if (!result.confirmed) return null;
+      if (!context.mounted) return null;
       owned = approvals.begin(key, SeerrApprovalPhase.approving);
-      if (!owned) return;
+      if (!owned) return null;
 
-      await _run(
+      final done = await _run(
         context,
         ref,
         service: ServiceKey.seerr,
@@ -250,6 +254,7 @@ class ActivityActions {
         failureMessage: 'Could not approve this request',
         invalidateRequests: true,
       );
+      return done ? approved : null;
     } finally {
       // Only an approval this call still holds: never another tap's.
       if (owned) approvals.end(key);
@@ -272,8 +277,9 @@ class ActivityActions {
   }
 
   /// What the approve confirmation says, read within one
-  /// [seerrTargetReadLimit] ([readSeerrApproveTarget]).
-  static Future<String> _approveConfirmation(
+  /// [seerrTargetReadLimit] ([readSeerrApproveTarget]), and what the row
+  /// says once it is approved.
+  static Future<({String message, String approved})> _approveConfirmation(
     WidgetRef ref, {
     required String instanceId,
     required int requestId,
@@ -291,28 +297,31 @@ class ActivityActions {
     if (target == null) {
       // Not even its kind is known: the approval still goes where Seerr
       // sends it, and that is all that can be said.
-      return '$title goes to the server Seerr sends it to and starts '
-          'downloading.';
+      return (
+        message:
+            '$title goes to the server Seerr sends it to and starts '
+            'downloading.',
+        approved: 'Approved',
+      );
     }
-    return target.confirmation(
-      title,
-      connectionTitle: (connection) => settings.connectionTitle(
-        connection.id,
-        connection.service,
-        joiner: ' ',
-      ),
+    String connectionTitle(ServiceInstance connection) => settings
+        .connectionTitle(connection.id, connection.service, joiner: ' ');
+    return (
+      message: target.confirmation(title, connectionTitle: connectionTitle),
+      approved: target.approvedLine(connectionTitle: connectionTitle),
     );
   }
 
-  /// Declines a request, leaving the media alone.
-  static Future<void> declineRequest(
+  /// Declines a request, leaving the media alone. True when it went
+  /// through.
+  static Future<bool> declineRequest(
     BuildContext context,
     WidgetRef ref, {
     required String instanceId,
     required int requestId,
     required String title,
   }) async {
-    if (!_decides(context, ref, instanceId)) return;
+    if (!_decides(context, ref, instanceId)) return false;
     final result = await showAppConfirmDialog(
       context: context,
       title: 'Decline this request?',
@@ -323,10 +332,10 @@ class ActivityActions {
       confirmLabel: 'Decline request',
     );
 
-    if (!result.confirmed) return;
-    if (!context.mounted) return;
+    if (!result.confirmed) return false;
+    if (!context.mounted) return false;
 
-    await _run(
+    return _run(
       context,
       ref,
       service: ServiceKey.seerr,
@@ -345,7 +354,7 @@ class ActivityActions {
   /// exception: `'Search failed: $error'` was the previous house style and it
   /// surfaced transport internals to someone who wanted to know whether their
   /// download was gone.
-  static Future<void> _run(
+  static Future<bool> _run(
     BuildContext context,
     WidgetRef ref, {
     required ServiceKey service,
@@ -368,6 +377,8 @@ class ActivityActions {
       // The stale thing is the list on screen, so this falls through to the
       // refresh below instead of leaving a row the server no longer agrees with.
       if (context.mounted) SnackBarHelper.error(context, '$conflict');
+      _refresh(ref, invalidateRequests: invalidateRequests);
+      return false;
     } catch (error) {
       // Why, in the classified words: a refusal is not an outage, and the
       // toast used to guess "may be unreachable" for both.
@@ -378,13 +389,19 @@ class ActivityActions {
           cause: error,
         );
       }
-      return;
+      return false;
     }
+    _refresh(ref, invalidateRequests: invalidateRequests);
+    return true;
+  }
 
+  /// Every list the write may have changed, read again.
+  static void _refresh(WidgetRef ref, {required bool invalidateRequests}) {
     if (invalidateRequests) {
       ref.invalidate(requestsProvider);
       ref.invalidate(requestsForProvider);
       ref.invalidate(activeRequestsForProvider);
+      ref.invalidate(pendingRequestsForProvider);
     }
     ref.read(activityRefreshVersionProvider.notifier).state++;
   }
