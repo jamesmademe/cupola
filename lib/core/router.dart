@@ -143,6 +143,15 @@ const double _serviceHomeTopPadding = kToolbarHeight;
 /// It does not count the status bar's inset, which the band consumes: a
 /// hosted screen with no `SafeArea` adds `MediaQuery.paddingOf(context).top`
 /// to it, or its first row starts under the tab bar on a phone.
+/// `ServiceListPage` adds it itself, so a screen built on it passes this
+/// constant on unchanged.
+///
+/// Nothing stops a new hosted screen forgetting the inset except
+/// `test/features/services/presentation/service_tab_inset_guard_test.dart`,
+/// which reads every widget handed this constant here and asks for a case in
+/// `service_tab_inset_test.dart` (the screen on a phone with a status bar,
+/// its first content below the tab bar), or an excuse with a reason the guard
+/// can check.
 const double _serviceTabTopPadding =
     _serviceHomeTopPadding + ServiceTabBar.height;
 
