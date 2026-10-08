@@ -1,7 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/title_light.dart';
 
 import 'package:cupola/features/discover/presentation/calendar_page.dart';
 import 'package:cupola/features/discover/presentation/discover_atrium.dart';
@@ -249,6 +253,84 @@ void main() {
       await tester.pump();
       expect(find.text('1 thing: Sprite Fright on disc.'), findsOneWidget);
     });
+  });
+
+  testWidgets('Desktop, a wide window: the next release lights the whole '
+      'window, and the light fades out before its foot', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final harness = await ProfileHarness.start(
+        Profiles.p1,
+        now: now,
+        overrides: [
+          calendarClockProvider.overrideWithValue(() => now),
+          titleLightProvider.overrideWith(
+            (ref, url) async => const TitleLight(
+              light: Color(0xFFD9A35B),
+              actionFill: Color(0xFFF2D3A6),
+              actionInk: Color(0xFF2B1A05),
+              dayPrimary: Color(0xFF6B4410),
+            ),
+          ),
+        ],
+      );
+      // The world's records carry no artwork: the next release here does,
+      // so the page has a light to draw.
+      harness.network.on(
+        WorldIds.radarr,
+        'GET',
+        '/api/v3/calendar',
+        (_) => NetworkReply.json([
+          {
+            'id': 1,
+            'title': 'Sprite Fright',
+            'tmdbId': 10378,
+            'monitored': true,
+            'hasFile': false,
+            'digitalRelease': '2026-09-30T00:00:00Z',
+            'images': [
+              {
+                'coverType': 'poster',
+                'remoteUrl': 'https://image.tmdb.org/t/p/original/sprite.jpg',
+              },
+            ],
+          },
+        ]),
+      );
+      await tester.binding.setSurfaceSize(const Size(1600, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: harness.overrides,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: const CalendarPage(),
+          ),
+        ),
+      );
+      await harness.settle(tester);
+
+      final glow = find.byWidgetPredicate((widget) {
+        if (widget is! DecoratedBox) return false;
+        final decoration = widget.decoration;
+        return decoration is BoxDecoration &&
+            decoration.gradient is RadialGradient &&
+            (decoration.gradient! as RadialGradient).center ==
+                const Alignment(0.6, -1);
+      });
+      expect(glow, findsOneWidget);
+      // The window's, not the well's.
+      expect(tester.getSize(glow).width, 1600);
+      // Its radius never passes the box's height, the shorter side.
+      final gradient =
+          (tester.widget<DecoratedBox>(glow).decoration as BoxDecoration)
+                  .gradient!
+              as RadialGradient;
+      expect(gradient.radius, lessThanOrEqualTo(1));
+      await harness.unmount(tester);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('Desktop, a window too narrow for the grid: the phone\'s strip '

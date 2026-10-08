@@ -22,6 +22,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
+import 'package:cupola/core/widgets/desktop_content_well.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -456,6 +457,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     return AmbientScaffold(
       accent: light?.light,
+      // The light is the window's, not the well's: it is drawn full-bleed
+      // and the page keeps the well inside it.
+      contentWell: false,
       body: Stack(
         children: [
           // The next release lights the head of the page, as it lit the
@@ -467,54 +471,60 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               right: 0,
               height: top + 420,
               child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: AppGradients.serviceGlow(
-                      light.light,
-                      center: const Alignment(0.6, -1),
-                      radius: 1.3,
-                      alpha: 0.28,
+                child: LayoutBuilder(
+                  // The radius is a share of the box's shorter side. In a
+                  // box wider than it is tall (a desktop window) that side
+                  // is the height, and past it the glow would still be lit
+                  // at the foot and end there in an edge.
+                  builder: (context, box) => DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppGradients.serviceGlow(
+                        light.light,
+                        center: const Alignment(0.6, -1),
+                        radius: box.maxWidth > box.maxHeight ? 1 : 1.3,
+                        alpha: 0.28,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          LayoutBuilder(
-            builder: (context, box) {
-              if (box.maxWidth < _gridWidth) {
-                // Wider than a phone, the agenda keeps a phone's measure.
-                return scroll(
-                  agenda(),
-                  side: ((box.maxWidth - AppBreakpoints.readingWell) / 2).clamp(
-                    0,
-                    double.infinity,
+          DesktopContentWell(
+            child: LayoutBuilder(
+              builder: (context, box) {
+                if (box.maxWidth < _gridWidth) {
+                  // Wider than a phone, the agenda keeps a phone's measure.
+                  return scroll(
+                    agenda(),
+                    side: ((box.maxWidth - AppBreakpoints.readingWell) / 2)
+                        .clamp(0, double.infinity),
+                  );
+                }
+                return Focus(
+                  autofocus: true,
+                  onKeyEvent: (node, key) => _onKey(key, window, byDay),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: scroll(grid())),
+                      SizedBox(
+                        width: _panelWidth,
+                        child: _DayPanel(
+                          day: selected,
+                          now: now,
+                          events: value == null ? null : events,
+                          requester: requester,
+                          top: top,
+                          bottom: bottom,
+                          onOpen: _open,
+                          onSelect: (day) => setState(() => _selected = day),
+                        ),
+                      ),
+                    ],
                   ),
                 );
-              }
-              return Focus(
-                autofocus: true,
-                onKeyEvent: (node, key) => _onKey(key, window, byDay),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: scroll(grid())),
-                    SizedBox(
-                      width: _panelWidth,
-                      child: _DayPanel(
-                        day: selected,
-                        now: now,
-                        events: value == null ? null : events,
-                        requester: requester,
-                        top: top,
-                        bottom: bottom,
-                        onOpen: _open,
-                        onSelect: (day) => setState(() => _selected = day),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+              },
+            ),
           ),
           const Positioned(top: 0, left: 0, right: 0, child: StatusBarScrim()),
         ],
