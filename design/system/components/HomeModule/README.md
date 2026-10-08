@@ -1,13 +1,19 @@
 # HomeModule
 
-One module of the Home in the slab every module shares, and the two pieces of the operator's Home that are not
-modules of content: Needs you at the top and Set up next at the foot. A module decides its state; the frame draws it,
+One module of the Home in the slab every module shares, the operator's live modules (Downloads, Requests, Now
+playing), and the two pieces of the operator's Home that are not modules of content: Needs you at the top and Set up
+next at the foot. A module decides its state; the frame draws it,
 so no module invents its own way of loading, failing or asking for a service.
 
 Rendered from `lib/features/home/presentation/widgets/home_module_frame.dart` (`HomeModuleFrame`),
 `lib/features/home/presentation/widgets/needs_you_banner.dart` (`NeedsYouLine`, its words from
 `lib/features/home/domain/needs_you.dart`) and `lib/features/home/presentation/widgets/set_up_next_module.dart`
-(`SetUpNextModule`, `EditHomeRow`, its suggestions from `lib/features/home/domain/set_up_next.dart`), by
+(`SetUpNextModule`, `EditHomeRow`, its suggestions from `lib/features/home/domain/set_up_next.dart`),
+`downloads_module.dart` (`HomeDownloadsModule`, `DownloadRow`, words in `lib/features/home/domain/downloads.dart`),
+`requests_module.dart` (`HomeRequestsModule`, its rows `DecisionRow` in
+`lib/features/services/presentation/dashboard_sections.dart`), `now_playing_module.dart` (`HomeNowPlayingModule`,
+words in `lib/features/home/domain/now_playing.dart`) and `home_module_parts.dart` (`HomeModuleLink`,
+`HomeCoverageNote`, `HomeRowArt`, `HomeRowBar`), by
 `test/design_catalog/home_module_catalog_test.dart`. Which modules a person's Home has, in what order, is the registry
 `HomeModule` (`lib/features/home/domain/home_module.dart`) read through the person's saved layout; see
 [EditHome](../EditHome/README.md).
@@ -18,7 +24,7 @@ Rendered from `lib/features/home/presentation/widgets/home_module_frame.dart` (`
   list rows unless the module passes its own skeleton, a poster row for Arrived). Never a spinner in the middle of the
   Home. Spoken `Loading downloads`.
 - **Ready** (the default constructor): the name, the line under it in `meta` and `inkSecondary` (`2 wait for you`,
-  `1 downloading · 15.5 MB/s across 2 clients`), an optional quiet link at the end of the heading, the rows. Rows are
+  `3 moving · 1 stuck · 40.4 MB/s`), an optional quiet link at the end of the heading, the rows. Rows are
   rows of the slab, a hairline between them, never cards inside it.
 - **Nothing to say**: no frame. The module draws nothing and the next one moves up: the Home has no empty boxes. Only
   when every source answered: a source that did not answer is not an empty one.
@@ -45,10 +51,34 @@ answering` already answers) or before anything answered (no space is held for it
 - `fillQuiet` under a `hair` edge, `AppRadius.button`, at least 52pt tall. At a large reading size the count and the
   way in go under the sentence.
 
+## Downloads, Requests, Now playing
+
+Each row is the 36×54 art (`HomeRowArt`: the poster, or the service's plate), the title in `row` 600 and a quiet line
+under it, a hairline between rows. A 4pt bar (`HomeRowBar`) says how far something got.
+
+- **Downloads**: four rows at most, no sizes. A moving download says `88% · 1 min` beside its title in blue
+  (downloading is information), its release under it in mono (a machine string, exactly as named), a blue bar. A
+  stalled or failed one is chosen first and drawn last, its value amber (`Stuck at 47%`, `Failed`), its bar amber, and
+  under it `Try another download` in the amber fill with a 44pt More (`Open in qBittorrent`, `Remove`); a torrent no
+  arr asked for offers `Open in qBittorrent` alone. The line under the name counts `3 moving · 1 stuck` and the clients'
+  speed, `—` while a client that is set up did not answer; with no client, `Speeds come from your download client`
+  under the rows. A blocked import is not a download: the footnote names it once (`18 need a manual import · in Needs
+  you`). Nothing moving is `Nothing is downloading` with `The last download finished at 18:52.`, and the link reads
+  `Activity`. At a large reading size the value goes under the title. The module is read again every 30 s while the
+  Home is on screen.
+- **Requests**: `2 wait for you`, from Seerr's own count. A row says who and when (`Anna · 2 h ago`); under it
+  `Approve` in the ink fill and `Decline` outlined, the same width. Neither takes a tone: a request is not a fault.
+  Approved or declined here, the row says what happened (`Approved · sent to Radarr`, `Declined`) without its buttons,
+  in its place, until the Home is read again. `See all requests` when more wait than the rows show.
+- **Now playing**: one row per playback, a disc with the viewer's initial, `Anna · Sintel` (an episode by its code),
+  `Living room TV · 9 min left` (`Stopped` while the player holds it), an ink bar: watching is not a status. The line
+  under the name is the server (`Jellyfin`). Absent when nobody watches; a server that did not answer keeps it in place.
+  Read again every 30 s while the Home is seen.
+
 ## Set up next and Edit Home
 
 - **Set up next** (`SetUpNextModule`): at most three services the stack lacks, each with what it adds (`Set up
-  Jellyfin · Play on every title, and who is watching`), ordered by how much, then `All services`. A Plex stands for
+  Jellyfin · Play on every title, and Now playing`), ordered by how much, then `All services`. A Plex stands for
   Jellyfin, any download client for the four. Absent when nothing it knows of is missing. Each row opens that service's
   setup form in Settings, whose way back leads to the Home.
 - **EditHomeRow**: the last thing on the operator's Home, a dashed `edge` around `Edit Home · Reorder and hide
@@ -63,11 +93,13 @@ need you. Review`), announced when it appears. Each Set up next row is one butto
 ## States in the catalog
 
 Each sheet is drawn in the dark and the light room: the frame ready, loading, silent and needing a service; Needs
-you led by a group, by one fault and by a silent service; Set up next over Radarr, Sonarr and Seerr; the Edit Home
-row; text at 200%.
+you led by a group, by one fault and by a silent service; Set up next over Radarr, Sonarr and Seerr; Downloads moving
+with one stuck, with qBittorrent silent, and with nothing moving; Requests with one row answered; Now playing with two
+playbacks; the Edit Home row; text at 200% with Downloads.
 
 ## Do / don't
 
 - Do let a module draw nothing when it has nothing to say, and only then.
 - Don't put a card inside the slab, or a second Retry under a silent module.
+- Don't paint Approve green or Decline red: neither is a state. Red is a service that did not answer.
 - Don't say `Set up X` twice on one Home: a missing service is named by Set up next, once.
