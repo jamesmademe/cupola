@@ -10,6 +10,9 @@ class ServiceRoutes {
   /// The first tab: the Home of modules.
   static const home = '/home';
 
+  /// Edit Home, from the foot of the Home: its modules reordered and hidden.
+  static const homeEdit = '$home/edit';
+
   /// The Stack tab, and the prefix every service's room hangs off: one
   /// service is a *service home* at `/stack/{key}`. TrueNAS keeps the word
   /// "dashboard" for its own console section because the app does not rename
@@ -661,6 +664,10 @@ class ServiceRoutes {
   /// by silently 404ing in the one state nobody screenshots.
   static const settings = '/settings';
   static const settingsConnections = '$settings/connections';
+
+  /// Edit Home again, from Settings: the same page, whose way back is
+  /// Settings.
+  static const settingsHome = '$settings/home';
 
   /// Where the fix lives for a service that is not set up, or whose credential
   /// is too narrow: its own settings page, where its setup note is printed.

@@ -3211,6 +3211,7 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
     // connection to. The control stays drawn and tappable either way; see the
     // row.
     requiresService: _clientServiceFor(item),
+    transferFailed: item.fault == InFlightFault.failed,
   );
 }
 

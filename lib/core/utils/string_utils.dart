@@ -95,6 +95,38 @@ String formatShortDate(String isoDate, {DateTime? now}) {
       : '$day ${parsed.year}';
 }
 
+/// The weekday of [day] in full: `Thursday`. For the Home's date and for
+/// what a screen reader says of a day, where `Thu` would be read as letters.
+String weekdayName(DateTime day) => _fullWeekdayNames[day.weekday - 1];
+
+/// The month of [day] in full: `October`.
+String monthName(DateTime day) => _fullMonthNames[day.month - 1];
+
+const List<String> _fullWeekdayNames = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+const List<String> _fullMonthNames = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 /// A time of day as the brand book writes one: 24 h, `20:41`, on this
 /// device's clock.
 String formatClockTime(DateTime time) {

@@ -1,27 +1,18 @@
-/// The Dashboard's regions below the header: what needs you, what is moving,
-/// and what landed.
+/// The Home's modules that grew out of the Dashboard's regions: what waits
+/// for an answer, what is moving, what arrived.
 ///
-/// Three regions, in that order, and the order is the argument. The page asks
-/// three questions — *is everything all right* (the header and the alert band),
-/// *what needs me* (decisions), *what is happening* (in flight, then recently
-/// added) — and the stack itself sits fourth, because it is a launcher and not
-/// the headline.
-///
-/// The Requests region that used to live here is gone, absorbed rather than
-/// deleted: a pending request is one *kind* of thing waiting on a human, and it
-/// had a region of its own only because it was the one kind anybody had wired
-/// up. A stalled download, a failing indexer, a stopped stack, an expiring
-/// certificate and a failed import are the same question asked by five other
-/// services, and six regions that are empty most of the time is six headings to
-/// scroll past to learn that nothing is wrong. See
-/// `domain/dashboard_decision.dart`.
+/// Each draws in the module frame (`HomeModuleFrame`) and its five states:
+/// a skeleton while its sources are out, its rows when they answered, nothing
+/// when they had nothing to say, the classified fault when every one of them
+/// failed. The rows are the Dashboard's, kept until each module is redrawn on
+/// its own; what needs a decision went to Needs you, which leads with one line
+/// and opens the place a fault is fixed.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -36,15 +27,11 @@ import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
-import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
-import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
-import 'package:cupola/core/widgets/section_header.dart';
-import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
@@ -56,6 +43,8 @@ import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/home/domain/home_module.dart';
+import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
@@ -69,371 +58,285 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 
-/// Region 3 — everything waiting on a human, from every source, in one list.
+/// Requests: the requests waiting for the operator's answer, with Approve and
+/// Decline in the row.
 ///
-/// Absent when nothing is waiting, for the same reason the alert band is absent
-/// when everything answers: **presence is the signal**. A permanent "nothing
-/// needs you" heading is a region that is empty on almost every open, which is a
-/// heading nobody reads on the day it fills.
-///
-/// Absent only then, though. While no source has said anything it is a
-/// skeleton, and when every source failed it is one fault line: both used to
-/// draw nothing, which told the user nothing needed them about a stack that
-/// had not been — or could not be — asked. See [DecisionsRegion].
-class DashboardDecisionsSection extends ConsumerWidget {
-  const DashboardDecisionsSection({super.key});
+/// Absent when nothing waits and when no Seerr is set up: a module with
+/// nothing to say steps aside. Never in Needs you: a request is somebody
+/// waiting politely, not something that stopped working.
+class HomeRequestsModule extends ConsumerWidget {
+  const HomeRequestsModule({super.key});
 
-  static const _title = 'Needs a decision';
+  static const _title = 'Requests';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final read = ref.watch(dashboardDecisionsProvider);
-    final decisions = read.decisions;
-    final coverage = read.coverage;
-    final primary = Theme.of(context).colorScheme.primary;
-
-    // The ~30pt header InkWell the code already has. Raising it is a new rule
-    // for code and canvas both, and not this region's to make.
-    Widget header({String? eyebrow, String? note, String? seeAll}) =>
-        SectionHeader.action(
+    if (!ref.watch(
+      currentSettingsProvider.select(
+        (settings) => settings.isServiceConfigured(ServiceKey.seerr),
+      ),
+    )) {
+      return const SizedBox.shrink();
+    }
+    final read = ref.watch(
+      dashboardDecisionSourceProvider(DecisionSource.requests),
+    );
+    final value = read.value;
+    if (value == null) {
+      if (read.hasError) {
+        final coverage = SourceCoverage.failure(ServiceKey.seerr, read.error);
+        return HomeModuleFrame.silent(
           title: _title,
-          subtitle: eyebrow,
-          trailing: _SectionAction(
-            label: seeAll ?? 'Activity',
-            color: primary,
-            onTap: () => context.go('/activity'),
-          ),
-          semanticLabel: joinSpokenParts([
-            _title,
-            if (eyebrow != null) spokenCountPhrase(eyebrow),
-            if (note != null) spokenFromDotted(note),
-          ]),
+          coverage: coverage,
+          onRetry: () => retryDashboardServices(ref, const [ServiceKey.seerr]),
         );
-
-    switch (decisionsRegion(decisions, coverage)) {
-      case DecisionsRegion.absent:
-        return const SizedBox.shrink();
-      case DecisionsRegion.loading:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            header(),
-            const SizedBox(height: AppSpacing.sm),
-            Semantics(
-              container: true,
-              // The shimmer carries no text; this is what is said instead.
-              excludeSemantics: true,
-              label: 'Loading decisions',
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: DecisionRowSkeleton(),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-          ],
+      }
+      return const HomeModuleFrame.loading(title: _title);
+    }
+    final coverage = value.coverage;
+    final requests = [
+      for (final decision in value.decisions)
+        if (decision.kind == DecisionKind.pendingRequest) decision,
+    ];
+    if (requests.isEmpty) {
+      if (coverage.everySourceFailed) {
+        return HomeModuleFrame.silent(
+          title: _title,
+          coverage: coverage,
+          onRetry: () => retryDashboardServices(ref, coverage.failedServices),
         );
-      case DecisionsRegion.failed:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            header(),
-            _SourcesFaultLine(
-              coverage: coverage,
-              onRetry: () =>
-                  retryDashboardServices(ref, coverage.failedServices),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-          ],
-        );
-      case DecisionsRegion.shown:
-        break;
+      }
+      return const SizedBox.shrink();
     }
 
-    // Three on the phone, four on the desktop, two when the window is narrow.
-    // The rule is `AppBreakpoints`', resolved here and passed pure — see
-    // `decisionCapFor`.
     final cap = decisionCapFor(
       desktopShell: AppBreakpoints.isDesktopShell(context),
       compact: AppBreakpoints.isCompactDesktop(context),
     );
-    final shown = rankDecisions(decisions, cap: cap);
-    final eyebrow = decisionsEyebrow(decisions, floor: coverage.isFloor);
+    final shown = rankDecisions(requests, cap: cap);
+    final count = coverage.isFloor
+        ? Lexicon.floor(requests.length)
+        : '${requests.length}';
+    final waits = requests.length == 1 && !coverage.isFloor
+        ? '$count waits for you'
+        : '$count wait for you';
     final note = coverageNote(coverage);
-    final items = decisionItemCount(decisions);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        header(
-          eyebrow: eyebrow,
-          note: note,
-          // Items, not rows: a folded row of eighteen blocked imports is
-          // eighteen things to see, and the row count is a layout fact.
-          seeAll:
-              'See all ${coverage.isFloor ? Lexicon.floor(items) : '$items'}',
-        ),
-        if (note != null) _CoverageNote(note: note, coverage: coverage),
-        const SizedBox(height: AppSpacing.sm),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Column(
-            children: [
-              for (final decision in shown)
-                _DecisionRow(key: ValueKey(decision.id), decision: decision),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
+    return HomeModuleFrame(
+      title: _title,
+      subtitle: waits,
+      semanticLabel: joinSpokenParts([
+        _title,
+        spokenCountPhrase(waits),
+        if (note != null) spokenFromDotted(note),
+      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (note != null) _CoverageNote(note: note, coverage: coverage),
+          for (final (index, decision) in shown.indexed)
+            DecisionRow(
+              key: ValueKey(decision.id),
+              decision: decision,
+              divided: index > 0,
+            ),
+        ],
+      ),
     );
   }
 }
 
-/// Region 5 — what is moving right now.
+/// Downloads: what is moving right now, from every queue.
 ///
-/// Active transfers only. A stalled one is not in flight, it is a decision, and
-/// it says so in the footnote rather than silently making this count disagree
-/// with the client's own queue depth.
-class ServicesInFlightSection extends ConsumerWidget {
-  const ServicesInFlightSection({super.key});
+/// Active transfers only. A stalled one is not moving, it is a fault: Needs
+/// you counts it, and the footnote here says where it went rather than letting
+/// this count disagree with the client's own queue depth. Nothing moving is a
+/// calm line, not an absence: the queue was read and is quiet.
+class HomeDownloadsModule extends ConsumerWidget {
+  const HomeDownloadsModule({super.key});
 
-  /// Any service that can report a transfer, not just the two arrs the old gate
-  /// checked.
-  static const _sources = [
-    ServiceKey.radarr,
-    ServiceKey.sonarr,
-    ServiceKey.lidarr,
-    ServiceKey.readarr,
-    ServiceKey.qbittorrent,
-    ServiceKey.transmission,
-    ServiceKey.sabnzbd,
-    ServiceKey.nzbget,
-  ];
+  static const _title = 'Downloads';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
-    final sources = _sources
-        .where(settings.isServiceConfigured)
-        .toList(growable: false);
-    if (sources.isEmpty) return const SizedBox.shrink();
+    if (!HomeModule.downloads.services.any(settings.isServiceConfigured)) {
+      return const SizedBox.shrink();
+    }
 
     final inFlight = ref.watch(servicesInFlightProvider);
     final data = inFlight.asData?.value;
-    // The count, never the preview's length: the rows are capped and the
-    // eyebrow states a total — over the sources that answered, and only them.
-    final eyebrow = data == null
-        ? null
-        : inFlightEyebrow(
-            active: data.activeCount,
-            rateBytesPerSecond: data.rateBytesPerSecond,
-            clients: data.clients,
-            coverage: data.coverage,
-          );
-    final note = data == null ? null : coverageNote(data.coverage);
-    int faultsOf(InFlightFault fault) =>
-        data?.faults.where((item) => item.fault == fault).length ?? 0;
-    final footnote = data == null
-        ? null
-        : inFlightFaultFootnote(
-            stalled: faultsOf(InFlightFault.stalled),
-            needsImport: faultsOf(InFlightFault.needsImport),
-            failed: faultsOf(InFlightFault.failed),
-            // The faults are rows of the same walks the eyebrow counts: a
-            // walk cut short makes them floors too.
-            coverage: data.coverage,
-          );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader.action(
-          // "In flight", not "Downloading": the region also carries a usenet
-          // job being repaired and a torrent waiting on a slot, and neither is
-          // downloading. One name for one thing, settled on the canvas.
-          title: 'In flight',
-          subtitle: eyebrow,
-          trailing: _SectionAction(
-            label: 'Activity',
-            // Brand primary, not a service accent: the region spans up to eight
-            // sources and no one of them owns it.
-            color: Theme.of(context).colorScheme.primary,
-            onTap: () => context.go('/activity'),
-          ),
-          semanticLabel: joinSpokenParts([
-            'In flight',
-            if (eyebrow != null) spokenCountPhrase(spokenFromDotted(eyebrow)),
-            if (note != null) spokenFromDotted(note),
+    if (data == null) {
+      if (inFlight.hasError) {
+        return HomeModuleFrame.silent(
+          title: _title,
+          coverage: SourceCoverage.merge([
+            for (final service in HomeModule.downloads.services)
+              if (settings.isServiceConfigured(service))
+                SourceCoverage.failure(service, inFlight.error),
           ]),
-        ),
-        if (note != null) _CoverageNote(note: note, coverage: data!.coverage),
-        const SizedBox(height: AppSpacing.sm),
-        AsyncValueWidget<ServicesInFlight>(
-          value: inFlight,
-          serviceName: 'download queue',
           onRetry: () => ref.invalidate(servicesQueueProvider),
-          data: (value) {
-            if (value.coverage.everySourceFailed) {
-              return _SourcesFaultLine(
-                coverage: value.coverage,
-                onRetry: () =>
-                    retryDashboardServices(ref, value.coverage.failedServices),
-              );
-            }
-            if (value.preview.isEmpty) {
-              return _SectionEmptyLabel(
-                // Not "Nothing downloading", which the header now says. An
-                // empty transfer list is a fact about the queue, so name the
-                // queue — and only call it empty when it is, rather than over
-                // a footnote counting what it holds or a note naming a source
-                // that did not answer.
-                label: inFlightEmptyLabel(
-                  faults: value.faults.length,
-                  held: value.held,
-                  whole: value.coverage.isWhole,
-                ),
-              );
-            }
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Column(
-                children: [
-                  for (final item in value.preview)
-                    _InFlightRow(
-                      // With the connection: two Radarr both number their
-                      // queues from one.
-                      key: ValueKey(
-                        '${item.service}-${item.instanceId}-${item.id}',
-                      ),
-                      item: item,
-                    ),
-                ],
+        );
+      }
+      return const HomeModuleFrame.loading(title: _title);
+    }
+    if (data.coverage.everySourceFailed) {
+      return HomeModuleFrame.silent(
+        title: _title,
+        coverage: data.coverage,
+        onRetry: () =>
+            retryDashboardServices(ref, data.coverage.failedServices),
+      );
+    }
+
+    // The count, never the preview's length: the rows are capped and the
+    // line states a total, over the sources that answered and only them.
+    final eyebrow = inFlightEyebrow(
+      active: data.activeCount,
+      rateBytesPerSecond: data.rateBytesPerSecond,
+      clients: data.clients,
+      coverage: data.coverage,
+    );
+    final note = coverageNote(data.coverage);
+    int faultsOf(InFlightFault fault) =>
+        data.faults.where((item) => item.fault == fault).length;
+    final footnote = inFlightFaultFootnote(
+      stalled: faultsOf(InFlightFault.stalled),
+      needsImport: faultsOf(InFlightFault.needsImport),
+      failed: faultsOf(InFlightFault.failed),
+      // The faults are rows of the same walks the line counts: a walk cut
+      // short makes them floors too.
+      coverage: data.coverage,
+    );
+    final room = CupolaRoom.of(context);
+
+    return HomeModuleFrame(
+      title: _title,
+      subtitle: eyebrow,
+      semanticLabel: joinSpokenParts([
+        _title,
+        spokenCountPhrase(spokenFromDotted(eyebrow)),
+        if (note != null) spokenFromDotted(note),
+      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (note != null) _CoverageNote(note: note, coverage: data.coverage),
+          if (data.preview.isEmpty)
+            _SectionEmptyLabel(
+              // An empty transfer list is a fact about the queue, so name the
+              // queue, and only call it empty when it is: not over a footnote
+              // counting what it holds, nor over a source that did not answer.
+              label: inFlightEmptyLabel(
+                faults: data.faults.length,
+                held: data.held,
+                whole: data.coverage.isWhole,
               ),
-            );
-          },
-        ),
-        if (footnote != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.xs,
-              AppSpacing.lg,
-              0,
-            ),
-            child: Text(
-              footnote,
-              semanticsLabel: spokenFaultFootnote(footnote),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            )
+          else
+            for (final item in data.preview)
+              _InFlightRow(
+                // With the connection: two Radarr both number their queues
+                // from one.
+                key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
+                item: item,
+              ),
+          if (footnote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(
+                footnote,
+                semanticsLabel: spokenFaultFootnote(footnote),
+                style: AppType.meta.copyWith(color: room.inkSecondary),
               ),
             ),
+          _ModuleLink(
+            label: 'See all in Activity',
+            onTap: () => context.go(ServiceRoutes.activity),
           ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
+        ],
+      ),
     );
   }
 }
 
-/// Region 6 — what the arrs actually imported, newest first.
+/// Arrived: what the arrs imported, newest first.
 ///
-/// One region and one channel: the old "Finished today" band folded into this
-/// one, so a failure is *named* here (in amber, in the eyebrow) and *acted on*
-/// in the decisions region, rather than sitting in a band of its own where a
-/// failure went to die.
-class ServicesRecentlyAddedSection extends ConsumerWidget {
-  const ServicesRecentlyAddedSection({super.key});
+/// A failure is named here, in amber in its count, and acted on from Needs
+/// you. Absent when nothing was imported: a module with nothing to say steps
+/// aside.
+class HomeArrivedModule extends ConsumerWidget {
+  const HomeArrivedModule({super.key});
 
-  static const _libraries = [
-    ServiceKey.radarr,
-    ServiceKey.sonarr,
-    ServiceKey.lidarr,
-  ];
+  static const _title = 'Arrived';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
-    final libraries = _libraries
+    final libraries = HomeModule.arrived.services
         .where(settings.isServiceConfigured)
         .toList(growable: false);
     if (libraries.isEmpty) return const SizedBox.shrink();
 
     final items = ref.watch(servicesRecentlyAddedProvider);
     final read = items.asData?.value;
-    final counts = read == null
-        ? null
-        : recentlyAddedEyebrow(read.items, coverage: read.coverage);
-    final note = read == null ? null : coverageNote(read.coverage);
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader.action(
-          title: 'Recently added',
-          trailing: _SectionAction(
-            // History, not Search: this rail is a record of what the arrs did,
-            // and the place that record continues is Activity's history — a
-            // search screen is where you go to look for something you do not
-            // have yet.
-            label: 'History',
-            color: colorScheme.primary,
-            onTap: () => context.go('/activity'),
-          ),
-          semanticLabel: joinSpokenParts([
-            'Recently added',
-            if (counts != null) spokenCountPhrase(counts.imported),
-            if (counts?.failed case final failed?) spokenCountPhrase(failed),
-            if (note != null) spokenFromDotted(note),
+    if (read == null) {
+      if (items.hasError) {
+        return HomeModuleFrame.silent(
+          title: _title,
+          coverage: SourceCoverage.merge([
+            for (final service in libraries)
+              SourceCoverage.failure(service, items.error),
           ]),
-        ),
-        if (counts != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: _ImportCounts(
-              imported: counts.imported,
-              failed: counts.failed,
-            ),
-          ),
-        if (note != null) _CoverageNote(note: note, coverage: read!.coverage),
-        const SizedBox(height: AppSpacing.sm),
-        AsyncValueWidget<ServicesRecentlyAdded>(
-          value: items,
-          serviceName: 'your libraries',
           onRetry: () => ref.invalidate(servicesArrHistoryProvider),
-          skeleton: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: AppSkeleton.posterRow(height: 90),
-          ),
-          data: (data) {
-            if (data.coverage.everySourceFailed) {
-              return _SourcesFaultLine(
-                coverage: data.coverage,
-                onRetry: () =>
-                    retryDashboardServices(ref, data.coverage.failedServices),
-              );
-            }
-            if (data.items.isEmpty) {
-              return const _SectionEmptyLabel(
-                // Not "No items found", which is search vocabulary and implies
-                // a query this rail never ran.
-                label: 'Nothing imported yet',
-              );
-            }
-            // The phone gets the rail; anything with room gets rows, which can
-            // carry the title, the time and the service without truncating any
-            // of the three. The reduction rule is Reflow's — fewer items, never
-            // smaller ones — and a row is not a smaller tile.
-            // The eyebrow counted every row; the rail draws the newest few.
-            final shown = data.items
-                .take(servicesRecentlyAddedLimit)
-                .toList(growable: false);
-            return AppBreakpoints.isDesktopShell(context)
-                ? _RecentlyAddedRows(items: shown)
-                : _RecentlyAddedRail(items: shown);
-          },
-        ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
+        );
+      }
+      return HomeModuleFrame.loading(
+        title: _title,
+        skeleton: AppSkeleton.posterRow(height: 90),
+      );
+    }
+    if (read.coverage.everySourceFailed) {
+      return HomeModuleFrame.silent(
+        title: _title,
+        coverage: read.coverage,
+        onRetry: () =>
+            retryDashboardServices(ref, read.coverage.failedServices),
+      );
+    }
+    if (read.items.isEmpty) return const SizedBox.shrink();
+
+    final counts = recentlyAddedEyebrow(read.items, coverage: read.coverage);
+    final note = coverageNote(read.coverage);
+    // The line counted every row; the rail draws the newest few.
+    final shown = read.items
+        .take(servicesRecentlyAddedLimit)
+        .toList(growable: false);
+
+    return HomeModuleFrame(
+      title: _title,
+      semanticLabel: joinSpokenParts([
+        _title,
+        spokenCountPhrase(counts.imported),
+        if (counts.failed case final failed?) spokenCountPhrase(failed),
+        if (note != null) spokenFromDotted(note),
+      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ImportCounts(imported: counts.imported, failed: counts.failed),
+          if (note != null) _CoverageNote(note: note, coverage: read.coverage),
+          const SizedBox(height: AppSpacing.sm),
+          // The phone gets the rail; anything with room gets rows, which can
+          // carry the title, the time and the service without truncating any
+          // of the three. Fewer items, never smaller ones.
+          if (AppBreakpoints.isDesktopShell(context))
+            _RecentlyAddedRows(items: shown)
+          else
+            _RecentlyAddedRail(items: shown),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      ),
     );
   }
 }
@@ -517,7 +420,6 @@ class _RecentlyAddedRail extends StatelessWidget {
           ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             itemCount: items.length,
             separatorBuilder: (_, _) =>
                 const SizedBox(width: AppSpacing.carouselGap),
@@ -688,36 +590,33 @@ class _RecentlyAddedRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        children: [
-          for (final item in items)
-            _CompactListRow(
-              icon: item.service.icon,
-              title: item.title,
-              subtitle: joinDisplayParts([
-                item.failed
-                    ? 'failed import'
-                    : serviceWithConnection(
-                        item.service,
-                        item.connectionName,
-                        joiner: ' ',
-                      ),
-                item.subtitle,
-                formatImportedAt(item.addedAt),
-              ]),
-              imageUrl: item.posterUrl.isEmpty ? null : item.posterUrl,
-              heroTag: item.heroTag,
-              trailing: const SizedBox.shrink(),
-              semanticValue: recentlyAddedTileLabel(
-                item,
-                timeLabel: formatImportedAt(item.addedAt),
-              ),
-              onTap: () => _openRecentlyAdded(context, item),
+    return Column(
+      children: [
+        for (final item in items)
+          _CompactListRow(
+            icon: item.service.icon,
+            title: item.title,
+            subtitle: joinDisplayParts([
+              item.failed
+                  ? 'failed import'
+                  : serviceWithConnection(
+                      item.service,
+                      item.connectionName,
+                      joiner: ' ',
+                    ),
+              item.subtitle,
+              formatImportedAt(item.addedAt),
+            ]),
+            imageUrl: item.posterUrl.isEmpty ? null : item.posterUrl,
+            heroTag: item.heroTag,
+            trailing: const SizedBox.shrink(),
+            semanticValue: recentlyAddedTileLabel(
+              item,
+              timeLabel: formatImportedAt(item.addedAt),
             ),
-        ],
-      ),
+            onTap: () => _openRecentlyAdded(context, item),
+          ),
+      ],
     );
   }
 }
@@ -776,10 +675,19 @@ void _openRecentlyAdded(BuildContext context, RecentlyAddedItem item) {
 /// The row body links to the item; the trailing control is the decision. They
 /// are never the same destination — a row where "open it" and "do it" are one
 /// gesture is a row you cannot inspect before acting.
-class _DecisionRow extends ConsumerWidget {
-  const _DecisionRow({super.key, required this.decision});
+///
+/// Requests draws it for the requests that wait; every other kind (a stall,
+/// a blocked import, an indexer, a stack, a certificate) keeps its control
+/// here for the list of everything that needs the operator, which Needs you
+/// leads to and Activity will draw.
+class DecisionRow extends ConsumerWidget {
+  const DecisionRow({super.key, required this.decision, this.divided = false});
 
   final DashboardDecision decision;
+
+  /// Whether a hairline separates it from the row above: every row of a
+  /// module but its first.
+  final bool divided;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -795,24 +703,22 @@ class _DecisionRow extends ConsumerWidget {
       surface: colorScheme.surfaceContainer,
     );
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard.surfaceOutlined(
-        key: ValueKey('decision-${decision.id}'),
-        onTap: () async {
-          final route = decision.route;
-          if (route == null) return;
-          // A page that reads the lens opens on the connection the row came
-          // off: see [DecisionKindRank.opensUnderLens].
-          if (decision.kind.opensUnderLens) {
-            await _bringUnderLens(ref, decision.service, decision.instanceId);
-            if (!context.mounted) return;
-          }
-          // A title's own page opens under this tab.
-          context.pushMounted(route);
-        },
-        semanticLabel: decision.title,
-        semanticValue: decisionRowSpokenValue(
+    Future<void> open() => openDecision(context, ref, decision);
+
+    // A row of its module's slab: no card of its own inside the slab, a
+    // hairline above every row but the first.
+    return DecoratedBox(
+      key: ValueKey('decision-${decision.id}'),
+      decoration: BoxDecoration(
+        border: divided
+            ? Border(top: BorderSide(color: CupolaRoom.of(context).hair))
+            : null,
+      ),
+      child: Semantics(
+        container: true,
+        button: true,
+        label: decision.title,
+        value: decisionRowSpokenValue(
           serviceTitle: decision.service.title,
           detail: decision.detail,
           actionLabel: decisionActionLabel(
@@ -821,64 +727,91 @@ class _DecisionRow extends ConsumerWidget {
             renewable: decision.renewable,
           ),
         ),
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          children: [
-            // Everything the row's own label already speaks.
-            Expanded(
-              child: ExcludeSemantics(
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 38,
-                      height: 54,
-                      child: decision.posterUrl.isEmpty
-                          ? _GlyphPlate(
-                              icon: decision.service.icon,
-                              tone: toneColor,
-                            )
-                          : _HeroContentCard(
-                              heroTag: null,
-                              imageUrl: decision.posterUrl,
-                            ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            decision.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.weight(
-                              FontWeight.w600,
-                            ),
+        onTap: open,
+        child: InkWell(
+          onTap: open,
+          // The name and the tap are the node above's.
+          excludeFromSemantics: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
+            child: Row(
+              children: [
+                // Everything the row's own label already speaks.
+                Expanded(
+                  child: ExcludeSemantics(
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 38,
+                          height: 54,
+                          child: decision.posterUrl.isEmpty
+                              ? _GlyphPlate(
+                                  icon: decision.service.icon,
+                                  tone: toneColor,
+                                )
+                              : _HeroContentCard(
+                                  heroTag: null,
+                                  imageUrl: decision.posterUrl,
+                                ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                decision.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium?.weight(
+                                  FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                decision.detail,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: decision.isFault
+                                      ? toneColor
+                                      : colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            decision.detail,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: decision.isFault
-                                  ? toneColor
-                                  : colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                // Not excluded: these are the point of the row.
+                _DecisionControls(decision: decision),
+              ],
             ),
-            // Not excluded: these are the point of the row.
-            _DecisionControls(decision: decision),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Opens the place [decision] is fixed today: where its row leads. Needs
+/// you's Review goes here too.
+Future<void> openDecision(
+  BuildContext context,
+  WidgetRef ref,
+  DashboardDecision decision,
+) async {
+  final route = decision.route;
+  if (route == null) return;
+  // A page that reads the lens opens on the connection the row came off: see
+  // [DecisionKindRank.opensUnderLens].
+  if (decision.kind.opensUnderLens) {
+    await _bringUnderLens(ref, decision.service, decision.instanceId);
+    if (!context.mounted) return;
+  }
+  // A title's own page opens under this tab.
+  await context.pushMounted(route);
 }
 
 /// The trailing control, or the two of them a request needs.
@@ -1497,42 +1430,44 @@ class _CompactListRow extends StatelessWidget {
   }
 }
 
-class _SectionAction extends StatelessWidget {
-  const _SectionAction({
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+/// The way from a module to the page it continues on: `See all in Activity`,
+/// a quiet row at the module's foot with its chevron, 44pt tall.
+class _ModuleLink extends StatelessWidget {
+  const _ModuleLink({required this.label, required this.onTap});
 
   final String label;
-  final Color color;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppRadius.borderRadiusSm,
-      child: ConstrainedBox(
-        // The ~30pt header control the code already had, kept at that height on
-        // purpose: raising it to 44 is a new rule for code and canvas both, and
-        // this region is not the place to make it.
-        constraints: const BoxConstraints(minHeight: 30),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-          child: Center(
-            child: Text(
-              '$label →',
-              // One line, always. The arrow belongs to the words before it, so a
-              // wrap that stranded it on its own line would read as a second
-              // control.
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              semanticsLabel: label,
-              style: Theme.of(context).textTheme.labelMedium
-                  ?.weight(FontWeight.w600)
-                  .copyWith(color: color),
-            ),
+    final room = CupolaRoom.of(context);
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.borderRadiusSm,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppType.meta
+                      .weight(FontWeight.w600)
+                      .copyWith(color: room.inkSecondary),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: room.inkSecondary,
+              ),
+            ],
           ),
         ),
       ),
@@ -1544,8 +1479,8 @@ class _SectionAction extends StatelessWidget {
 ///
 /// Only then. A source that did not answer, or answered with a refusal, is not
 /// an empty library, and the section says so from the read itself — the line
-/// under its figure ([_CoverageNote]) when some sources answered, the fault
-/// line ([_SourcesFaultLine]) when none did. Before the read carried that, a
+/// under its figure ([_CoverageNote]) when some sources answered, the
+/// module's fault (`HomeModuleFrame.silent`) when none did. Before the read carried that, a
 /// browse that degraded to `[]` arrived here exactly like an empty one, and the
 /// merged regions printed the empty copy over a missing connection.
 class _SectionEmptyLabel extends StatelessWidget {
@@ -1587,84 +1522,11 @@ class _CoverageNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.xs,
-        AppSpacing.lg,
-        0,
-      ),
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: ExcludeSemantics(
         child: coverage.anyDidNotAnswer
             ? FaultNote.unreachable(message: note)
             : FaultNote.fault(message: note),
-      ),
-    );
-  }
-}
-
-/// A section whose every source failed: one quiet line in its tone, in place
-/// of the rows and of any figure.
-///
-/// Red only when a source did not answer — the band names who and why, and a
-/// refused key among them is said in its own words. Amber when every one of
-/// them answered with a fault. Never a coloured box: the presence rule keeps
-/// the tone on the glyph and the recovery verb in ink.
-///
-/// Its Retry is `retryDashboardServices` over the failed sources, never the
-/// summary or the merge alone: both re-read an answer already in the cache —
-/// the probe behind the summary, the client queues behind the merge — so the
-/// line used to outlive the recovery it was asking about.
-class _SourcesFaultLine extends StatelessWidget {
-  const _SourcesFaultLine({required this.coverage, required this.onRetry});
-
-  final SourceCoverage coverage;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final message = coverageFailureSentence(coverage);
-    return coverage.anyDidNotAnswer
-        ? FaultBand.section(message: message, onRetry: onRetry)
-        : FaultBand.partial(message: message, onRetry: onRetry);
-  }
-}
-
-/// Skeleton placeholder for one decision row while the merge resolves.
-class DecisionRowSkeleton extends StatelessWidget {
-  const DecisionRowSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard.surfaceOutlined(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          children: [
-            ShimmerPlaceholder(
-              width: 38,
-              height: 54,
-              borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ShimmerPlaceholder.text(width: 140),
-                  const SizedBox(height: AppSpacing.xs),
-                  ShimmerPlaceholder.text(width: 90),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            ShimmerPlaceholder(
-              width: 110,
-              height: 26,
-              borderRadius: AppRadius.borderRadiusSm,
-            ),
-          ],
-        ),
       ),
     );
   }

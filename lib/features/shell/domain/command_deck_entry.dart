@@ -98,6 +98,11 @@ const List<({String label, String location, String detail})> _namedScreens = [
     detail: 'Settings · pinned per host',
   ),
   (label: 'Appearance', location: '/settings/appearance', detail: 'Settings'),
+  (
+    label: 'Edit Home',
+    location: '/home/edit',
+    detail: 'Home · reorder and hide modules',
+  ),
   (label: 'Region', location: '/settings/region', detail: 'Settings'),
   (label: 'Hints', location: '/settings/hints', detail: 'Settings'),
   (

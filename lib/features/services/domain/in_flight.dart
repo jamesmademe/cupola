@@ -178,18 +178,18 @@ String inFlightEyebrow({
       'across $clients $noun';
 }
 
-/// The footnote under the region when faults were moved out of it:
-/// `18 need a manual import · 2 stalled · under Needs a decision`.
+/// The footnote under Downloads when faults were moved out of it:
+/// `18 need a manual import · 2 stalled · in Needs you`.
 ///
-/// The region shows active transfers only; a faulted one is a decision, not a
-/// transfer, and it lives in the region above. Saying so is what stops the
-/// count here disagreeing with the client's own queue depth without explanation
-/// — and naming each fault by what it is, rather than calling all of them
+/// The module shows active transfers only; a faulted one is a decision, not a
+/// transfer, and Needs you at the top of the Home counts it. Saying so is what
+/// stops the count here disagreeing with the client's own queue depth without
+/// explanation — and naming each fault by what it is, rather than calling all of them
 /// stalls, is what stops the footnote sending the user to the wrong remedy.
 ///
-/// Names the region by its heading rather than "under a decision": identical
-/// faults are folded into one row (`groupDecisions`), so how many *rows* the
-/// faults occupy is not something this count can say.
+/// Names the module by its heading: identical faults are folded into one
+/// (`groupDecisions`), so how many lines the faults take is not something this
+/// count can say.
 ///
 /// The counts are rows of the queues [coverage] read. When one of those walks
 /// stopped short of the end, the part it did not read may hold more of any
@@ -208,7 +208,7 @@ String? inFlightFaultFootnote({
     if (failed > 0) '${figure(failed)} failed',
   ];
   if (clauses.isEmpty) return null;
-  return '${clauses.join(' · ')} · under Needs a decision';
+  return '${clauses.join(' · ')} · in Needs you';
 }
 
 /// [inFlightFaultFootnote] as a screen reader should say it: each clause on

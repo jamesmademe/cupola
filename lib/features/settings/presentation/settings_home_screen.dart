@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/features/home/presentation/widgets/settings_home_row.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/regions.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -131,6 +132,7 @@ class SettingsHomeScreen extends ConsumerWidget {
             semanticHint: 'opens the appearance picker',
             onTap: () => context.push('/settings/appearance'),
           ),
+          const SettingsHomeRow(),
           SettingsCard.grouped(
             leading: const Icon(Icons.travel_explore_rounded),
             title: 'Background search',

@@ -78,6 +78,7 @@ class SettingsMasterDetail extends StatelessWidget {
       location: '/settings/appearance',
       icon: Icons.palette_rounded,
     ),
+    (label: 'Home', location: '/settings/home', icon: Icons.home_outlined),
     (
       label: 'Region',
       location: '/settings/region',

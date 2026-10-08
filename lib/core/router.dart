@@ -60,6 +60,7 @@ import 'package:cupola/features/import/presentation/manual_import_progress_scree
 import 'package:cupola/features/import/presentation/manual_import_review_screen.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/home/presentation/edit_home_page.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/requests/presentation/requests_screen.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
@@ -2816,7 +2817,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
   NavTab.home => GoRoute(
     path: ServiceRoutes.home,
     pageBuilder: (context, state) => _tabPage(state, const HomeScreen()),
-    routes: _mediaRoutes(),
+    routes: [_page('edit', (state) => const EditHomePage()), ..._mediaRoutes()],
   ),
   NavTab.stack => GoRoute(
     path: ServiceRoutes.stack,
@@ -2919,6 +2920,9 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
         (state) => const ReleaseSearchSettingsScreen(),
       ),
       _page('appearance', (state) => const SettingsAppearanceScreen()),
+      // Edit Home, from Settings: the page the Home's own row opens, whose
+      // way back here is Settings.
+      _page('home', (state) => const EditHomePage()),
       _page('hints', (state) => const SettingsHintsScreen()),
       _page('connections', (state) => const SettingsConnectionsScreen()),
       // Former name of the connections screen, kept so an existing

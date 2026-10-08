@@ -26,12 +26,17 @@ class SettingsReturn extends Notifier<NavTab?> {
 }
 
 /// Opens Settings from wherever [context] is, remembering the tab it was
-/// opened from.
-void openSettings(BuildContext context, WidgetRef ref) {
+/// opened from: at its root, or at [to] inside it (a service's setup form),
+/// whose way back leads to the root and from there to the tab.
+void openSettings(
+  BuildContext context,
+  WidgetRef ref, {
+  String to = ServiceRoutes.settings,
+}) {
   final index = StatefulNavigationShell.maybeOf(context)?.currentIndex;
   final from = index == null ? null : NavTab.values[index];
   ref
       .read(settingsReturnProvider.notifier)
       .set(from == NavTab.settings ? null : from);
-  context.go(ServiceRoutes.settings);
+  context.go(to);
 }

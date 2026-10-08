@@ -7,6 +7,7 @@ library;
 
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/percent_format.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 
 /// Joins the non-empty parts with the comma both screen readers read as a short
 /// pause.
@@ -173,6 +174,18 @@ String servicesAlertBandMessage(
   List<String> offlineServiceTitles, {
   int maxNamed = 3,
 }) {
+  final clause = servicesDidNotAnswer(offlineServiceTitles, maxNamed: maxNamed);
+  return clause.isEmpty ? '' : '$clause.';
+}
+
+/// The band's sentence as a clause, without its full stop: `Radarr and
+/// Sonarr did not answer`, and ` at 20:53` when the probe that found them
+/// silent is [at]. The Home's Needs you leads with it.
+String servicesDidNotAnswer(
+  List<String> offlineServiceTitles, {
+  int maxNamed = 3,
+  DateTime? at,
+}) {
   final titles = offlineServiceTitles
       .where((t) => t.trim().isNotEmpty)
       .toList();
@@ -196,7 +209,9 @@ String servicesAlertBandMessage(
     subject = '${titles.take(maxNamed).join(', ')} and $others';
   }
 
-  return '$subject $verb.';
+  return at == null
+      ? '$subject $verb'
+      : '$subject $verb at ${formatClockTime(at)}';
 }
 
 /// The alert band's second sentence, on a surface wide enough to carry it.

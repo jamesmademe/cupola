@@ -924,9 +924,7 @@ String spokenDay(DateTime day, DateTime now) {
   return switch (_daysBetween(today, day)) {
     0 => 'Today',
     1 => 'Tomorrow',
-    _ =>
-      '${_spokenWeekdays[day.weekday - 1]} ${day.day} '
-          '${_spokenMonths[day.month - 1]}',
+    _ => '${weekdayName(day)} ${day.day} ${monthName(day)}',
   };
 }
 
@@ -1081,15 +1079,6 @@ List<CalendarEvent> calendarLaterInSeason(
 }
 
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const _spokenWeekdays = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
 const _months = [
   'Jan',
   'Feb',
@@ -1103,20 +1092,6 @@ const _months = [
   'Oct',
   'Nov',
   'Dec',
-];
-const _spokenMonths = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
 ];
 
 /// What the band and the page's answer say of the calendar: the next

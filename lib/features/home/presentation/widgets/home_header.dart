@@ -1,0 +1,154 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/shell/domain/stack_health.dart';
+
+/// The top of the Home: the day, large, and under it the month and how many
+/// services answered, which opens Stack.
+///
+/// The day is the page's title. The Home is not a place with a name to say,
+/// it is today: "Thursday 8", and the month after it on the line below, where
+/// the health of the stack is one more fact about today. Nothing is reserved
+/// for Needs you here: before any service answered, the line says it is
+/// checking and the page does not hold a gap for a banner that may not come.
+///
+/// The requester's has no health line (she reads no service) and carries her
+/// account at its end, her way to Settings.
+class HomeHeader extends ConsumerWidget {
+  const HomeHeader({super.key, this.trailing, this.showsHealth = true});
+
+  /// At the end of the day's line: the requester's account.
+  final Widget? trailing;
+
+  /// Whether the month's line says how many services answered.
+  final bool showsHealth;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final room = CupolaRoom.of(context);
+    final now = ref.watch(calendarClockProvider)();
+    final day = '${weekdayName(now)} ${now.day}';
+    final month = monthName(now);
+    final health = showsHealth ? ref.watch(stackHealthProvider) : null;
+    final line = health == null ? '' : homeHealthLine(health);
+
+    final title = Semantics(
+      header: true,
+      child: Text(day, style: AppType.screen.copyWith(color: room.ink)),
+    );
+    final monthStyle = AppType.body.copyWith(color: room.inkSecondary);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        MediaQuery.paddingOf(context).top + AppSpacing.sm,
+        AppSpacing.gutter,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (trailing case final end?)
+            Row(
+              children: [
+                Expanded(child: title),
+                end,
+              ],
+            )
+          else
+            title,
+          if (line.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(month, style: monthStyle),
+            )
+          else
+            Semantics(
+              link: true,
+              label: '$month. Stack: ${spokenHealthLine(health!)}',
+              excludeSemantics: true,
+              child: InkWell(
+                onTap: () => context.go(ServiceRoutes.stack),
+                borderRadius: BorderRadius.circular(AppRadius.thumb),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(month, style: monthStyle),
+                      Text(' · ', style: monthStyle),
+                      _HealthDot(health: health),
+                      const SizedBox(width: 7),
+                      Flexible(child: Text(line, style: monthStyle)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// `12 of 12 answering`, `Checking 12 services` before anything answered,
+/// `9 of 12 answering · 3 checking` while the slowest are still out. Empty
+/// when nothing set up is asked anything.
+String homeHealthLine(StackHealth health) {
+  final configured = health.configured;
+  if (configured == 0) return '';
+  if (health.checking >= configured) {
+    return 'Checking $configured ${configured == 1 ? 'service' : 'services'}';
+  }
+  final head = health.headline!;
+  return health.checking > 0 ? '$head · ${health.checking} checking' : head;
+}
+
+/// [homeHealthLine] as a screen reader says it: `12 of 12 services
+/// answering`.
+String spokenHealthLine(StackHealth health) {
+  final line = homeHealthLine(health);
+  if (health.checking >= health.configured) return line;
+  return line
+      .replaceFirst(' answering', ' services answering')
+      .replaceAll(' · ', ', ');
+}
+
+/// The stack's light: green while everything answers, amber over a fault,
+/// red when a service did not answer, a ring while the first answers are out.
+class _HealthDot extends StatelessWidget {
+  const _HealthDot({required this.health});
+
+  final StackHealth health;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final room = CupolaRoom.of(context);
+    final checking = health.checking >= health.configured;
+    final tone = health.unreachable > 0
+        ? StatusTone.error
+        : health.degraded > 0 || health.faulted > 0
+        ? StatusTone.warning
+        : StatusTone.success;
+    return Container(
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: checking
+            ? null
+            : statusToneColor(scheme, tone, surface: room.ground),
+        border: checking ? Border.all(color: room.inkTertiary) : null,
+      ),
+    );
+  }
+}

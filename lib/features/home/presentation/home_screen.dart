@@ -12,27 +12,30 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/home/data/home_layout_provider.dart';
+import 'package:cupola/features/home/domain/home_module.dart';
+import 'package:cupola/features/home/presentation/widgets/home_header.dart';
+import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
+import 'package:cupola/features/home/presentation/widgets/set_up_next_module.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/nothing_set_up.dart';
-import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 
-/// The first tab.
+/// The first tab: today, and the modules the person keeps on it.
 ///
-/// For now the regions the stack's page gave up when it became Stack — what
-/// needs a decision, what is moving, what arrived — under the band that says
-/// which service stopped answering. The Home of modules replaces them one
-/// module at a time.
+/// The day is the title, the health of the stack the line under it; then the
+/// person's modules in the order they keep them (`homeLayoutProvider`), each
+/// drawing itself or stepping aside when it has nothing to say. The operator's
+/// Home ends with Set up next and the way to Edit Home.
 ///
-/// The requester's Home is hers: two of Seerr's shelves, and her account in
-/// the corner, which is her way to Settings now that the bar has no tab for
-/// it.
+/// No app bar: the page scrolls under the status bar, where a scrim fades it
+/// into the room.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -59,50 +62,81 @@ class HomeScreen extends ConsumerWidget {
     final allUnconfigured = ServiceKey.values.every(
       (s) => !settings.hasServiceConnection(s),
     );
+    final layout = ref.watch(homeLayoutProvider);
 
     return RefreshOnReturn(
       id: 'home',
       maxAge: _staleAfter,
       onStale: () => ref.triggerNavigationRefresh(NavigationSection.home),
       child: AmbientScaffold(
-        appBar: GlassAppBar(
-          title: const Text('Home'),
-          actions: [if (requester) const _AccountButton()],
-        ),
         body: allUnconfigured
             ? NothingSetUpView(bottomPadding: bottomPadding)
-            : RefreshIndicator(
-                onRefresh: () => _refreshHome(ref),
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.only(bottom: bottomPadding),
-                  children: requester
-                      ? [
-                          DiscoverCarousel(
-                            title: 'Trending this week',
-                            sectionId: 'home_trending',
-                            items: ref.watch(atriumTrendingProvider),
-                            onRetry: () =>
-                                ref.invalidate(atriumTrendingProvider),
-                          ),
-                          DiscoverCarousel(
-                            title: 'Coming soon',
-                            sectionId: 'home_coming_soon',
-                            items: ref.watch(comingSoonProvider),
-                            onRetry: () => ref.invalidate(comingSoonProvider),
-                          ),
-                        ]
-                      : const [
-                          ServicesAlertBand(),
-                          DashboardDecisionsSection(),
-                          ServicesInFlightSection(),
-                          ServicesRecentlyAddedSection(),
-                        ],
-                ),
+            : Stack(
+                children: [
+                  RefreshIndicator(
+                    onRefresh: () => _refreshHome(ref),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.only(bottom: bottomPadding),
+                      children: [
+                        HomeHeader(
+                          showsHealth: !requester,
+                          trailing: requester ? const _AccountButton() : null,
+                        ),
+                        for (final module in layout.shown)
+                          homeModuleView(module),
+                        if (!requester) const EditHomeRow(),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                    ),
+                  ),
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: StatusBarScrim(),
+                  ),
+                ],
               ),
       ),
     );
   }
+}
+
+/// The widget that draws [module]: exhaustive, so a module cannot join the
+/// registry without one.
+Widget homeModuleView(HomeModule module) => switch (module) {
+  HomeModule.needsYou => const NeedsYouBanner(),
+  HomeModule.arrived => const HomeArrivedModule(),
+  HomeModule.downloads => const HomeDownloadsModule(),
+  HomeModule.requests => const HomeRequestsModule(),
+  HomeModule.setUpNext => const SetUpNextModule(),
+  HomeModule.trending => const _TrendingShelf(),
+  HomeModule.comingSoon => const _ComingSoonShelf(),
+};
+
+class _TrendingShelf extends ConsumerWidget {
+  const _TrendingShelf();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => DiscoverCarousel(
+    title: HomeModule.trending.label,
+    sectionId: 'home_trending',
+    items: ref.watch(atriumTrendingProvider),
+    onRetry: () => ref.invalidate(atriumTrendingProvider),
+  );
+}
+
+class _ComingSoonShelf extends ConsumerWidget {
+  const _ComingSoonShelf();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => DiscoverCarousel(
+    title: HomeModule.comingSoon.label,
+    sectionId: 'home_coming_soon',
+    items: ref.watch(comingSoonProvider),
+    onRetry: () => ref.invalidate(comingSoonProvider),
+  );
 }
 
 /// The requester's way to her account and Settings: her initial in a disc,
@@ -122,25 +156,22 @@ class _AccountButton extends ConsumerWidget {
       ),
     );
     final initial = name.isEmpty ? null : name.characters.first.toUpperCase();
-    return Padding(
-      padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: PressableScale(
-        onTap: () => openSettings(context, ref),
-        semanticLabel: name.isEmpty ? 'Your account' : '$name, your account',
-        excludeChildSemantics: true,
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: room.fillStrong,
-            border: Border.all(color: room.edge),
-          ),
-          child: initial == null
-              ? Icon(Icons.person_outline_rounded, color: room.ink, size: 22)
-              : Text(initial, style: AppType.row.copyWith(color: room.ink)),
+    return PressableScale(
+      onTap: () => openSettings(context, ref),
+      semanticLabel: name.isEmpty ? 'Your account' : '$name, your account',
+      excludeChildSemantics: true,
+      child: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: room.fillStrong,
+          border: Border.all(color: room.edge),
         ),
+        child: initial == null
+            ? Icon(Icons.person_outline_rounded, color: room.ink, size: 22)
+            : Text(initial, style: AppType.row.copyWith(color: room.ink)),
       ),
     );
   }
@@ -180,14 +211,14 @@ void _invalidateHome(WidgetRef ref) {
     ref.invalidate(comingSoonProvider);
     return;
   }
-  // The band's question, asked again of every server: whether it answers.
+  // The header's question, asked again of every server: whether it answers.
   ref.invalidate(instanceSummaryProvider);
   for (final service in ServiceKey.values) {
     ref.invalidate(serviceSummaryProvider(service));
   }
   ref.invalidate(servicesRequestsProvider);
   ref.invalidate(servicesQueueProvider);
-  // One history read per arr, feeding both Recently added and the failed-import
+  // One history read per arr, feeding both Arrived and the failed-import
   // decisions. Invalidated at the source rather than through either of its two
   // readers, so the two cannot end up disagreeing about the same page.
   ref.invalidate(servicesArrHistoryProvider);

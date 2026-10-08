@@ -199,6 +199,7 @@ class DashboardDecision {
     this.importPath,
     this.reason,
     this.renewable = true,
+    this.transferFailed = false,
   });
 
   final DecisionKind kind;
@@ -279,6 +280,11 @@ class DashboardDecision {
   /// only be replaced, by whoever issued it, so its row offers no Renew.
   /// True for every other kind, where it means nothing.
   final bool renewable;
+
+  /// For a stalled download: whether the client gave up on it rather than
+  /// stopped moving it. The row's detail already says `Failed`; this is what
+  /// a sentence about the transfer reads, so it never calls a failure stuck.
+  final bool transferFailed;
 
   bool get isFault => kind.isFault;
 
@@ -399,6 +405,7 @@ DashboardDecision _groupOf(List<DashboardDecision> members) {
     connectionName: first.connectionName,
     actionInstanceId: first.actionInstanceId,
     importPath: shared((member) => member.importPath),
+    transferFailed: members.every((member) => member.transferFailed),
   );
 }
 

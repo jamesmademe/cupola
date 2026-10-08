@@ -1,0 +1,148 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/home/domain/needs_you.dart';
+import 'package:cupola/features/services/presentation/dashboard_retry.dart';
+import 'package:cupola/features/services/presentation/dashboard_sections.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/shell/domain/stack_health.dart';
+
+/// Needs you, the operator's first module: one line that says what is wrong,
+/// how many more things are, and the way in.
+///
+/// Absent while nothing is: the date line above already answers "12 of 12
+/// answering", and a band that is there on every open is one nobody reads on
+/// the day it matters. Absent, too, before anything answered: the page does
+/// not hold a gap for it.
+///
+/// One target, as drawn. A service that did not answer leads, in red, and
+/// the line is its Retry; otherwise the largest group of equal faults leads,
+/// in amber, and the line is Review, which opens the place that fault is
+/// fixed today. The line never runs a remedy itself.
+class NeedsYouBanner extends ConsumerWidget {
+  const NeedsYouBanner({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final silent = ref.watch(unreachableServicesProvider);
+    final checkedAt = ref.watch(stackHealthProvider.select((h) => h.checkedAt));
+    final read = ref.watch(dashboardDecisionsProvider);
+    final now = ref.watch(calendarClockProvider)();
+    final needs = needsYouOf(
+      silent: silent,
+      decisions: read.decisions,
+      now: now,
+      silentAt: checkedAt,
+      floor: read.coverage.isFloor,
+    );
+    if (needs == null) return const SizedBox.shrink();
+
+    final lead = needs.lead;
+    return NeedsYouLine(
+      needs: needs,
+      onTap: needs.leadsWithSilence
+          ? () => retryDashboardServices(ref, needs.silent)
+          : () => openDecision(context, ref, lead!),
+    );
+  }
+}
+
+/// The line itself, given what it says: the glyph in the tone of the lead,
+/// the sentence, `+2` when more things need the person, and the control's
+/// word at its end.
+class NeedsYouLine extends StatelessWidget {
+  const NeedsYouLine({super.key, required this.needs, required this.onTap});
+
+  final NeedsYou needs;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final glyph = statusToneColor(
+      scheme,
+      needs.leadsWithSilence ? StatusTone.error : StatusTone.warning,
+      surface: room.slab,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        AppSpacing.sm,
+        AppSpacing.gutter,
+        0,
+      ),
+      child: Semantics(
+        // Announced when it appears, the moment it matters.
+        liveRegion: true,
+        child: PressableScale(
+          onTap: onTap,
+          semanticLabel: needs.spoken,
+          excludeChildSemantics: true,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: room.fillQuiet,
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              border: Border.all(color: room.hair),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  needs.leadsWithSilence
+                      ? Icons.cloud_off_rounded
+                      : Icons.warning_amber_rounded,
+                  size: 18,
+                  color: glyph,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    needs.line,
+                    style: AppType.body.copyWith(color: room.ink),
+                  ),
+                ),
+                if (needs.more > 0) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: room.fillStrong,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      '+${needs.more}',
+                      style: AppType.caption
+                          .weight(FontWeight.w600)
+                          .copyWith(color: room.inkSecondary),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: AppSpacing.md),
+                Text(
+                  needs.action,
+                  style: AppType.body
+                      .weight(FontWeight.w600)
+                      .copyWith(color: room.ink),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
