@@ -5,10 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/features/discover/presentation/discover_atrium.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
+import 'package:cupola/features/discover/presentation/widgets/calendar_band.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -92,6 +95,27 @@ void main() {
     );
 
     expect(landedOn?.path, ServiceRoutes.settingsConnections);
+  });
+
+  testWidgets('P3 without its Seerr: the calendar band and the catalogue\'s '
+      'slab share one margin', (tester) async {
+    await pumpSearch(tester, Profiles.p3.without(ServiceKey.seerr));
+
+    final band = find.descendant(
+      of: find.byType(CalendarBand),
+      matching: find.byType(PressableScale),
+    );
+    final slab = find
+        .ancestor(
+          of: find.text('The catalogue comes from Seerr'),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is Container && widget.decoration != null,
+          ),
+        )
+        .first;
+    expect(band, findsOneWidget);
+    expect(tester.getTopLeft(band).dx, AppSpacing.lg);
+    expect(tester.getTopLeft(slab).dx, AppSpacing.lg);
   });
 
   testWidgets('P3, with Radarr, Sonarr and Seerr: at rest the tab browses '

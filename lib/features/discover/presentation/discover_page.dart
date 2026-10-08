@@ -798,17 +798,14 @@ class _WithoutSeerr extends ConsumerWidget {
     }
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        bottomPadding,
-      ),
+      // No side padding: the band carries its own margins, as in the atrium.
+      padding: EdgeInsets.only(top: AppSpacing.sm, bottom: bottomPadding),
       children: [
         // The calendar comes from the arrs, and needs no Seerr.
         const DiscoverCalendarBand(),
         // A paragraph: never a line longer than a page of one column.
-        Align(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           alignment: AlignmentDirectional.topStart,
           child: Container(
             // The whole width up to the measure, whatever the words take.
