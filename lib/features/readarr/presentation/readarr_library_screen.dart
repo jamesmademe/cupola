@@ -109,7 +109,12 @@ class ReadarrLibraryScreen extends ConsumerWidget {
                 },
               );
             },
-            loading: () => const ListRowsShimmer(count: 8),
+            // Under the same room the rows reserve: the `SafeArea` took the
+            // inset, but not the two bands hovering below it.
+            loading: () => Padding(
+              padding: EdgeInsets.only(top: topPadding),
+              child: const ListRowsShimmer(count: 8),
+            ),
             // The whole tab is this one list, so a failure is the page's
             // leaf: the cause in plain words, the address, Settings.
             error: (error, _) => ServiceOfflineState.failure(

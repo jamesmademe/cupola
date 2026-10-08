@@ -47,6 +47,7 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.
 import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/presentation/readarr_activity_screen.dart';
 import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_library_screen.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
@@ -536,6 +537,25 @@ void main() {
 
       expect(find.text('No history yet'), findsOneWidget);
       expectClearsTheBar(tester, find.byType(AppEmptyState));
+    });
+
+    testWidgets('a Library still loading starts below the tab bar', (
+      tester,
+    ) async {
+      // Its rows were already padded by the room the bands take, inside a
+      // `SafeArea` that took the inset; the skeleton alone was not.
+      await pumpHosted(
+        tester,
+        service: ServiceKey.readarr,
+        tab: ServiceTab.library,
+        overrides: [readarrAuthorsProvider.overrideWith((ref) => _pending())],
+        child: const ReadarrLibraryScreen(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
     });
   });
 
