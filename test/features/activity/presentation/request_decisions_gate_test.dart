@@ -50,26 +50,24 @@ Future<ProfileHarness> _pump(
   return harness;
 }
 
-Finder _inDecisions(Finder matching) => find.descendant(
-  of: find.byType(DashboardDecisionsSection),
-  matching: matching,
-);
+Finder _inRequests(Finder matching) =>
+    find.descendant(of: find.byType(HomeRequestsModule), matching: matching);
 
 void main() {
   group('Home', () {
     testWidgets('P2: her own waiting request is no decision of hers', (
       tester,
     ) async {
-      // The section itself, not the Home around it: the requester's Home
-      // draws two shelves in its place, so only the section can say that
+      // The module itself, not the Home around it: the requester's Home
+      // draws two shelves in its place, so only the module can say that
       // the gate, and not the page, keeps her own request out of it.
       final harness = await _pump(
         tester,
         Profiles.p2,
-        const SingleChildScrollView(child: DashboardDecisionsSection()),
+        const SingleChildScrollView(child: HomeRequestsModule()),
       );
 
-      expect(_inDecisions(find.text('Charge')), findsNothing);
+      expect(_inRequests(find.text('Charge')), findsNothing);
       expect(find.byTooltip('Approve Charge'), findsNothing);
 
       await harness.unmount(tester);
