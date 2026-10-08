@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/desktop_content_well.dart';
 
 /// A near-transparent app-bar surface that lets the page's ambient gradient
 /// read continuously behind it — no opaque strip and no hairline border that
@@ -111,18 +112,35 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      title: title,
-      leading: leading,
-      actions: actions,
-      centerTitle: centerTitle,
-      bottom: bottom,
-      toolbarHeight: toolbarHeight,
-      automaticallyImplyLeading: automaticallyImplyLeading,
-      flexibleSpace: const GlassSurface(),
+    if (!ContentWellScope.welled(context)) return _bar(glass: true);
+    // On a desktop window over a welled body the glass stays the room's,
+    // full-bleed, and what sits on it moves in to line up with the well.
+    return LayoutBuilder(
+      builder: (context, box) => Stack(
+        children: [
+          const Positioned.fill(child: GlassSurface()),
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: ContentWellScope.insetOf(context, box.maxWidth),
+            ),
+            child: _bar(glass: false),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _bar({required bool glass}) => AppBar(
+    backgroundColor: Colors.transparent,
+    elevation: 0,
+    scrolledUnderElevation: 0,
+    title: title,
+    leading: leading,
+    actions: actions,
+    centerTitle: centerTitle,
+    bottom: bottom,
+    toolbarHeight: toolbarHeight,
+    automaticallyImplyLeading: automaticallyImplyLeading,
+    flexibleSpace: glass ? const GlassSurface() : null,
+  );
 }

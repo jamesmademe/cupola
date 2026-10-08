@@ -186,6 +186,15 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
+        'AmbientScaffold(appBar: GlassAppBar) on a wide desktop window · the '
+        'glass runs the full width, the title lines up with the content well '
+        'under it',
+        (_) => _truenasHub(),
+        width: 1328,
+        height: 300,
+        platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
         'Text at 200% · Radarr service home on touch: the 56pt service band '
         'and the 44pt tab bar over the lit room, the content at twice the '
         'reading size',

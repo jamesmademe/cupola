@@ -51,3 +51,42 @@ class DesktopContentWell extends StatelessWidget {
     );
   }
 }
+
+/// The width the page's well holds its body to, for a bar above the body.
+///
+/// The bar stays full-bleed, the room's, but what sits on it lines up with
+/// the well under it: on a wide window a title at the window's edge over a
+/// body centred 200pt in reads as two pages. `AmbientScaffold` puts one
+/// around every page, with no width where the page owns the whole window.
+class ContentWellScope extends InheritedWidget {
+  const ContentWellScope({
+    super.key,
+    required this.width,
+    required super.child,
+  });
+
+  /// The well's width, or null where the body is not welled.
+  final double? width;
+
+  /// How far a bar [barWidth] wide insets its contents to line them up with
+  /// the well: nothing on a touch build, nothing without a well, nothing on a
+  /// window no wider than the well.
+  static double insetOf(BuildContext context, double barWidth) {
+    final width = context
+        .dependOnInheritedWidgetOfExactType<ContentWellScope>()
+        ?.width;
+    if (width == null || !AppBreakpoints.isDesktopShell(context)) return 0;
+    return ((barWidth - width) / 2).clamp(0, double.infinity);
+  }
+
+  /// Whether a bar here may line up with a well at all, before its width is
+  /// known.
+  static bool welled(BuildContext context) =>
+      AppBreakpoints.isDesktopShell(context) &&
+      context.dependOnInheritedWidgetOfExactType<ContentWellScope>()?.width !=
+          null;
+
+  @override
+  bool updateShouldNotify(ContentWellScope oldWidget) =>
+      width != oldWidget.width;
+}

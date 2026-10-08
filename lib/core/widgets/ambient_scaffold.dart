@@ -59,17 +59,22 @@ class AmbientScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AmbientBackground(
       accent: accent,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        extendBody: extendBody,
-        extendBodyBehindAppBar: extendBodyBehindAppBar,
-        appBar: appBar,
-        body: contentWell
-            ? DesktopContentWell(maxWidth: contentWellWidth, child: body)
-            : body,
-        floatingActionButton: floatingActionButton,
-        bottomNavigationBar: bottomNavigationBar,
-        resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+      // The bars stay full-bleed; a `GlassAppBar` reads the well from here to
+      // line its title and actions up with the body.
+      child: ContentWellScope(
+        width: contentWell ? contentWellWidth : null,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          extendBody: extendBody,
+          extendBodyBehindAppBar: extendBodyBehindAppBar,
+          appBar: appBar,
+          body: contentWell
+              ? DesktopContentWell(maxWidth: contentWellWidth, child: body)
+              : body,
+          floatingActionButton: floatingActionButton,
+          bottomNavigationBar: bottomNavigationBar,
+          resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+        ),
       ),
     );
   }

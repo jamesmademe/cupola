@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/desktop_content_well.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_detail_slot.dart';
 import 'package:cupola/core/widgets/media_detail_view.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
@@ -58,6 +60,66 @@ void main() {
         );
 
         expect(tester.getRect(find.byType(SizedBox)).width, 720);
+      });
+    });
+  });
+
+  group('a glass app bar over a well', () {
+    Widget page({bool welled = true}) => AmbientScaffold(
+      contentWell: welled,
+      appBar: GlassAppBar(
+        title: const Text('Discover'),
+        actions: [const SizedBox(key: Key('action'), width: 44, height: 44)],
+      ),
+      body: const SizedBox.expand(),
+    );
+
+    testWidgets('lines its title and actions up with the well on a window, '
+        'and keeps its glass full-bleed', (tester) async {
+      await _onPlatform(TargetPlatform.macOS, () async {
+        await _pump(tester, const Size(1600, 900), page());
+
+        const inset = (1600 - AppBreakpoints.contentWell) / 2;
+        expect(
+          tester.getTopLeft(find.text('Discover')).dx,
+          inset + NavigationToolbar.kMiddleSpacing,
+        );
+        expect(
+          tester.getTopRight(find.byKey(const Key('action'))).dx,
+          1600 - inset,
+        );
+        expect(tester.getRect(find.byType(GlassSurface)).width, 1600);
+      });
+    });
+
+    testWidgets('leaves its title at the gutter on a phone', (tester) async {
+      await _onPlatform(TargetPlatform.android, () async {
+        await _pump(tester, const Size(400, 900), page());
+
+        expect(
+          tester.getTopLeft(find.text('Discover')).dx,
+          NavigationToolbar.kMiddleSpacing,
+        );
+        // The bar it always was: the glass is the app bar's own.
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.byType(GlassSurface),
+          ),
+          findsOneWidget,
+        );
+      });
+    });
+
+    testWidgets('leaves its title at the gutter over a page that owns the '
+        'window', (tester) async {
+      await _onPlatform(TargetPlatform.macOS, () async {
+        await _pump(tester, const Size(1600, 900), page(welled: false));
+
+        expect(
+          tester.getTopLeft(find.text('Discover')).dx,
+          NavigationToolbar.kMiddleSpacing,
+        );
       });
     });
   });
