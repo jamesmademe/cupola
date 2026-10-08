@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
@@ -267,6 +268,34 @@ void main() {
       expect(find.text('caligari'), findsNothing);
 
       await tester.tap(find.text('metropolis'));
+      await _frames(tester);
+      expect(
+        _containerOf(tester).read(globalSearchQueryProvider),
+        'metropolis',
+      );
+    });
+
+    testWidgets('with a mouse, a recent search runs: the click does not '
+        'take the field away first', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'recent_searches': ['metropolis', 'caligari'],
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await _pump(tester, query: '', prefs: prefs);
+
+      await tester.tap(find.byType(SearchBar), kind: PointerDeviceKind.mouse);
+      await _frames(tester);
+      expect(find.text('Recent searches'), findsOneWidget);
+
+      await tester.tap(
+        find.byTooltip('Remove caligari from recent searches'),
+        kind: PointerDeviceKind.mouse,
+      );
+      await _frames(tester);
+      expect(find.text('caligari'), findsNothing);
+      expect(find.text('Recent searches'), findsOneWidget);
+
+      await tester.tap(find.text('metropolis'), kind: PointerDeviceKind.mouse);
       await _frames(tester);
       expect(
         _containerOf(tester).read(globalSearchQueryProvider),

@@ -208,79 +208,83 @@ class _Recents extends ConsumerWidget {
     if (recents.isEmpty) return const SizedBox.shrink();
     final room = CupolaRoom.of(context);
     final notifier = ref.read(recentSearchesProvider.notifier);
-    return LayoutBuilder(
-      builder: (context, box) => ListView(
-        padding: _rowsPadding(box.maxWidth, bottom: bottomPadding),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        children: [
-          Row(
-            children: [
-              Expanded(child: _Heading('Recent searches', top: 0)),
-              TextButton(
-                onPressed: notifier.clear,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(44, 44),
-                  visualDensity: VisualDensity.standard,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xs,
+    // Part of the field, for a click: a mouse press anywhere else takes the
+    // field's focus, and with it these rows, before the press lands on one.
+    return TextFieldTapRegion(
+      child: LayoutBuilder(
+        builder: (context, box) => ListView(
+          padding: _rowsPadding(box.maxWidth, bottom: bottomPadding),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          children: [
+            Row(
+              children: [
+                Expanded(child: _Heading('Recent searches', top: 0)),
+                TextButton(
+                  onPressed: notifier.clear,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    visualDensity: VisualDensity.standard,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                    ),
+                    foregroundColor: room.inkSecondary,
+                    textStyle: AppType.label,
                   ),
-                  foregroundColor: room.inkSecondary,
-                  textStyle: AppType.label,
+                  child: const Text('Clear'),
                 ),
-                child: const Text('Clear'),
-              ),
-            ],
-          ),
-          for (var i = 0; i < recents.length; i++)
-            DecoratedBox(
-              decoration: BoxDecoration(
-                border: i == 0
-                    ? null
-                    : Border(top: BorderSide(color: room.hair)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: PressableScale(
-                      onTap: () => onPick(recents[i]),
-                      semanticLabel: recents[i],
-                      excludeChildSemantics: true,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 50),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.history_rounded,
-                              size: 20,
-                              color: room.inkSecondary,
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Text(
-                                recents[i],
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppType.body.copyWith(color: room.ink),
+              ],
+            ),
+            for (var i = 0; i < recents.length; i++)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: i == 0
+                      ? null
+                      : Border(top: BorderSide(color: room.hair)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: PressableScale(
+                        onTap: () => onPick(recents[i]),
+                        semanticLabel: recents[i],
+                        excludeChildSemantics: true,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 50),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.history_rounded,
+                                size: 20,
+                                color: room.inkSecondary,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  recents[i],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppType.body.copyWith(color: room.ink),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => notifier.remove(recents[i]),
-                    tooltip: 'Remove ${recents[i]} from recent searches',
-                    icon: Icon(
-                      Icons.close_rounded,
-                      size: 18,
-                      color: room.inkSecondary,
+                    IconButton(
+                      onPressed: () => notifier.remove(recents[i]),
+                      tooltip: 'Remove ${recents[i]} from recent searches',
+                      icon: Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: room.inkSecondary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
