@@ -102,6 +102,21 @@ void main() {
     expect(find.textContaining('TMDB'), findsNothing);
   });
 
+  testWidgets('an average of a handful of votes is not drawn', (tester) async {
+    await _pump(
+      tester,
+      const MediaPreview(
+        id: 3,
+        title: 'Die Brad Pitt Story',
+        mediaType: 'movie',
+        voteAverage: 10,
+        voteCount: 1,
+      ),
+    );
+
+    expect(find.textContaining('TMDB'), findsNothing);
+  });
+
   testWidgets('the requester reads her own word', (tester) async {
     final semantics = tester.ensureSemantics();
     await _pump(tester, _sintel, audience: Audience.requester);

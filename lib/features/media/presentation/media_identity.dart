@@ -51,7 +51,7 @@ class MediaIdentity {
       cast: model.cast,
       collection: model.collection,
       videos: model.playableVideos,
-      tmdbScore: model.voteAverage,
+      tmdbScore: ratingWorthShowing(model.voteAverage, votes: model.voteCount),
       series: record.isSeries
           ? (
               span: _span(
@@ -258,8 +258,8 @@ MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
     for (final rating in arr ?? const <RatingSource>[]) {
       // The arr's names are display names (`Rotten Tomatoes`).
       final source = rating.name.toLowerCase().replaceAll(' ', '');
-      if (source == name.toLowerCase() && rating.value > 0) {
-        return rating.value;
+      if (source == name.toLowerCase()) {
+        return ratingWorthShowing(rating.value, votes: rating.votes);
       }
     }
     return null;

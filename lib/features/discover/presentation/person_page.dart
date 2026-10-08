@@ -220,15 +220,14 @@ class _PersonPageState extends ConsumerState<PersonPage> {
           }
           final work = works[index];
           final media = work.media;
-          final score = media.voteAverage;
+          final score = media.tmdbScore;
           return CatalogTitleRow(
             key: ValueKey((trade.title, media.mediaType, media.id)),
             media: media,
             meta: [
               if (work.year != null) '${work.year}',
               media.mediaType == 'tv' ? 'Series' : 'Movie',
-              if (score != null && score > 0)
-                'TMDB$unitSpace${score.toStringAsFixed(1)}',
+              if (score != null) 'TMDB$unitSpace${score.toStringAsFixed(1)}',
             ].join(' · '),
             heroTag:
                 'person_${widget.personId}_${trade.title}_'

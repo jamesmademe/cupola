@@ -165,13 +165,13 @@ class _CollectionPageState extends ConsumerState<CollectionPage> {
             itemBuilder: (context, index) {
               final part = shelf.parts[index];
               final media = part.media;
-              final score = media.voteAverage;
+              final score = media.tmdbScore;
               return CatalogTitleRow(
                 key: ValueKey(media.id),
                 media: media,
                 meta: [
                   if (part.year != null) '${part.year}',
-                  if (score != null && score > 0)
+                  if (score != null)
                     'TMDB$unitSpace${score.toStringAsFixed(1)}',
                 ].join(' · '),
                 heroTag: 'collection_${id}_${media.id}',

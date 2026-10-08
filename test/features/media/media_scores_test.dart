@@ -45,4 +45,36 @@ void main() {
     expect(scores.rottenTomatoes, 97);
     expect(scores.metacritic, 91);
   });
+
+  test('an average over a handful of votes reads as no score', () {
+    final movie = RadarrMovie.fromJson({
+      'id': 8,
+      'title': 'Die Brad Pitt Story',
+      'tmdbId': 1,
+      'year': 2020,
+      'ratings': {
+        'imdb': {'value': 9.1, 'votes': 7},
+        'tmdb': {'value': 10, 'votes': 1},
+        'rottenTomatoes': {'value': 60, 'votes': 0},
+      },
+    });
+    final rows = [
+      MediaConnectionRow<MediaRadarrCopy>(
+        const ServiceInstance(id: 'radarr', service: ServiceKey.radarr),
+        MediaReadingAnswered(
+          MediaAnswer(
+            MediaRadarrCopy(movie: movie, queue: ArrQueueSnapshot.empty),
+            DateTime(2026, 10, 8),
+          ),
+        ),
+      ),
+    ];
+
+    final scores = mediaScoresOf(rows, MediaIdentity.of(rows));
+
+    expect(scores.tmdb, isNull);
+    expect(scores.imdb, isNull);
+    // A critics' score carries no votes, and stands.
+    expect(scores.rottenTomatoes, 60);
+  });
 }

@@ -544,8 +544,7 @@ GlobalSearchResult _seerrResult(
     kind: item.mediaType == 'tv' ? SearchHitKind.series : SearchHitKind.movie,
     key: key,
     year: int.tryParse(year),
-    // TMDB's zero is a title nobody has rated, not a score of nothing.
-    score: (item.voteAverage ?? 0) > 0 ? item.voteAverage : null,
+    score: item.tmdbScore,
     seerrInfo: item.mediaInfo,
     // Seerr has no `routeExtra` to preload from, so the poster travels in the
     // URL: the detail page paints real art during its lookup instead of

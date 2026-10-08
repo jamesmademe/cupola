@@ -76,13 +76,10 @@ class CatalogPoster extends ConsumerWidget {
       numbering: ref.watch(seerrNumberingProvider).value,
       audience: ref.watch(audienceProvider),
     );
-    final vote = item.voteAverage;
-    // TMDB's zero is a title nobody has rated, not a score of nothing.
+    final vote = item.tmdbScore;
     final score =
         meta ??
-        (vote == null || vote <= 0
-            ? null
-            : 'TMDB$unitSpace${vote.toStringAsFixed(1)}');
+        (vote == null ? null : 'TMDB$unitSpace${vote.toStringAsFixed(1)}');
 
     return SizedBox(
       width: width,

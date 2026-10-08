@@ -1,3 +1,5 @@
+import 'package:cupola/core/models/rating_source.dart';
+
 class MediaPreview {
   final int id;
   final String title;
@@ -6,6 +8,10 @@ class MediaPreview {
   final String? releaseDate;
   final String mediaType; // 'movie' or 'tv'
   final double? voteAverage;
+
+  /// How many people TMDB's [voteAverage] is the average of; null when the
+  /// answer did not say.
+  final int? voteCount;
 
   /// What Seerr holds of this title (`mediaInfo`: its status, its 4K status,
   /// the downloads it forwards), as Seerr sent it; null when Seerr holds
@@ -20,8 +26,13 @@ class MediaPreview {
     this.releaseDate,
     required this.mediaType,
     this.voteAverage,
+    this.voteCount,
     this.mediaInfo,
   });
+
+  /// TMDB's average as a list draws it: null when nobody rated the title or
+  /// too few did (`ratingWorthShowing`).
+  double? get tmdbScore => ratingWorthShowing(voteAverage, votes: voteCount);
 
   factory MediaPreview.fromJson(
     Map<String, dynamic> json, {
@@ -42,6 +53,7 @@ class MediaPreview {
     final overview = json['overview'];
     final voteAverage = (json['voteAverage'] ?? json['vote_average'])
         ?.toDouble();
+    final voteCount = (json['voteCount'] ?? json['vote_count'])?.toInt();
     final mediaInfo = json['mediaInfo'];
 
     // Determine media type
@@ -65,6 +77,7 @@ class MediaPreview {
       releaseDate: releaseDate,
       mediaType: mediaType,
       voteAverage: voteAverage,
+      voteCount: voteCount,
       mediaInfo: mediaInfo is Map ? Map<String, dynamic>.from(mediaInfo) : null,
     );
   }

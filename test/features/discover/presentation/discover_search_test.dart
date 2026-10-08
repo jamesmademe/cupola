@@ -96,6 +96,29 @@ void main() {
       expect(top('On your server'), lessThan(top('People')));
     });
 
+    testWidgets('an average of a handful of votes is not drawn', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        seerr: _Seerr(
+          titles: const [
+            MediaPreview(
+              id: 1,
+              title: 'Dune Story',
+              mediaType: 'movie',
+              releaseDate: '2020-01-01',
+              voteAverage: 10,
+              voteCount: 1,
+            ),
+          ],
+        ),
+      );
+
+      expect(find.text('Movie · 2020'), findsOneWidget);
+      expect(find.textContaining('TMDB'), findsNothing);
+    });
+
     testWidgets('a source with no one by that name says so', (tester) async {
       await _pump(tester, seerr: _Seerr(titles: [_duneSeerr]));
 

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/models/rating_source.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/episode_code.dart';
@@ -572,7 +573,7 @@ class MediaEpisodesGraph {
   });
 
   /// Fewer votes than this, and a cell is drawn uncertain.
-  static const fewVotes = 20;
+  static const fewVotes = ratingVoteFloor;
 
   /// The steps of the one-colour scale: under 7.3, then every 0.3, to 8.5
   /// and above.
