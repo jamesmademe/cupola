@@ -22,6 +22,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 @immutable
@@ -29,6 +30,7 @@ class NeedsYou {
   const NeedsYou._({
     required this.line,
     required this.more,
+    this.moreIsFloor = false,
     this.silent = const [],
     this.lead,
   });
@@ -46,6 +48,14 @@ class NeedsYou {
   /// How many more things need the person, after the lead: the chip's `+2`.
   final int more;
 
+  /// Whether [more] is the least there is: a read the faults come from
+  /// stopped short, so past it there may be more.
+  final bool moreIsFloor;
+
+  /// The chip: `+2`, or `2+ more` when that is the least there is.
+  String get moreLabel =>
+      moreIsFloor ? '${Lexicon.floor(more)} more' : '+$more';
+
   /// Whether a silent service leads: red, and Retry.
   bool get leadsWithSilence => silent.isNotEmpty;
 
@@ -56,12 +66,14 @@ class NeedsYou {
   /// The one sentence a screen reader hears: `18 downloads need a manual
   /// import, and 2 more things need you. Review`.
   String get spoken {
+    final count = moreIsFloor ? 'at least $more' : '$more';
     final rest = switch (more) {
       0 => '',
-      1 => ', and 1 more thing needs you',
-      _ => ', and $more more things need you',
+      1 when !moreIsFloor => ', and 1 more thing needs you',
+      _ => ', and $count more things need you',
     };
-    return '$line$rest. $action';
+    // A floor is heard as one: `at least 18 downloads`, never `18 plus`.
+    return '${spokenCountPhrase(line)}$rest. $action';
   }
 }
 
@@ -69,8 +81,10 @@ class NeedsYou {
 ///
 /// [silent] are the services whose every connection did not answer, found
 /// silent by the probe that settled at [silentAt]. [decisions] are the stack's,
-/// already folded and ranked; [floor] when a walk stopped before the queue's
-/// end, so a group's count is at least what it says. [now] dates a
+/// already folded and ranked; [floor] when the walk of the queues, where every
+/// group comes from, stopped before their end, so a group's count is at least
+/// what it says; [moreFloor] when any read the faults come from stopped short,
+/// so the count after the lead is at least what it says. [now] dates a
 /// certificate's expiry.
 NeedsYou? needsYouOf({
   required List<ServiceKey> silent,
@@ -78,6 +92,7 @@ NeedsYou? needsYouOf({
   required DateTime now,
   DateTime? silentAt,
   bool floor = false,
+  bool moreFloor = false,
 }) {
   final faults = [
     for (final decision in decisions)
@@ -90,6 +105,7 @@ NeedsYou? needsYouOf({
         for (final service in silent) service.title,
       ], at: silentAt),
       more: faults.length,
+      moreIsFloor: moreFloor,
     );
   }
   if (faults.isEmpty) return null;
@@ -111,6 +127,7 @@ NeedsYou? needsYouOf({
     lead: lead,
     line: needsYouLine(lead, now: now, floor: floor),
     more: faults.length - 1,
+    moreIsFloor: moreFloor,
   );
 }
 

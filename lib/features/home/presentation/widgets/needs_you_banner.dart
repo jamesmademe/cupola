@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/home/domain/needs_you.dart';
+import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -39,7 +40,17 @@ class NeedsYouBanner extends ConsumerWidget {
       decisions: read.decisions,
       now: now,
       silentAt: checkedAt,
-      floor: read.coverage.isFloor,
+      // Only the queues' walk: every group is folded from it, and a history
+      // page read whole or not says nothing about how many imports are
+      // blocked.
+      floor:
+          ref
+              .watch(dashboardDecisionSourceProvider(DecisionSource.queue))
+              .value
+              ?.coverage
+              .isFloor ??
+          false,
+      moreFloor: read.coverage.isFloor,
     );
     if (needs == null) return const SizedBox.shrink();
 
@@ -95,7 +106,7 @@ class NeedsYouLine extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
               child: Text(
-                '+${needs.more}',
+                needs.moreLabel,
                 style: AppType.caption
                     .weight(FontWeight.w600)
                     .copyWith(color: room.inkSecondary),

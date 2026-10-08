@@ -2,7 +2,8 @@
 /// full is a window onto more of it.
 ///
 /// Arrived counted the imports on that page and stated them as the total, and
-/// the failed imports Needs you found there were stated as every one there is.
+/// the failed imports Needs you counts after its lead were stated as every one
+/// there is.
 /// Past a full page are older imports and older failures nobody read, so the
 /// figures over it are floors.
 library;
@@ -90,12 +91,30 @@ void main() {
       find.bySemanticsLabel(RegExp(r'^Arrived, at least 23 imported')),
       findsOne,
     );
-    // Needs you read the same page for failed imports, so the figure it
-    // leads with is the least there is too.
+    // Needs you read the same page for failed imports. The blocked imports
+    // it leads with come from the queue, read whole, so their eighteen is
+    // every one there is; what follows them counts the failed imports of
+    // that full page, and is the least there is.
     expect(
       find.descendant(
         of: find.byType(NeedsYouLine),
-        matching: find.text('18+ downloads need a manual import'),
+        matching: find.text('18 downloads need a manual import'),
+      ),
+      findsOne,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(NeedsYouLine),
+        matching: find.textContaining(RegExp(r'^\d+\+ more$')),
+      ),
+      findsOne,
+    );
+    expect(
+      find.bySemanticsLabel(
+        RegExp(
+          r'^18 downloads need a manual import, and at least \d+ more '
+          r'things? needs? you\. Review$',
+        ),
       ),
       findsOne,
     );

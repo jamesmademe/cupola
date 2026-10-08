@@ -232,5 +232,43 @@ void main() {
       now: now,
     )!;
     expect(one.spoken, 'The media stack stopped. Review');
+
+    final floor = needsYouOf(
+      silent: const [],
+      decisions: [decision(DecisionKind.importBlocked, 'x', count: 50)],
+      now: now,
+      floor: true,
+    )!;
+    expect(floor.spoken, 'at least 50 downloads need a manual import. Review');
+  });
+
+  test('a read that stopped short makes the count after the lead a floor, '
+      'not the lead from a queue read whole', () {
+    final needs = needsYouOf(
+      silent: const [],
+      decisions: [
+        decision(DecisionKind.importBlocked, 'x', count: 18),
+        decision(DecisionKind.failedImport, 'Sintel'),
+        decision(DecisionKind.failedImport, 'Spring'),
+      ],
+      now: now,
+      moreFloor: true,
+    )!;
+    expect(needs.line, '18 downloads need a manual import');
+    expect(needs.moreLabel, '2+ more');
+    expect(
+      needs.spoken,
+      '18 downloads need a manual import, and at least 2 more things need '
+      'you. Review',
+    );
+    final exact = needsYouOf(
+      silent: const [],
+      decisions: [
+        decision(DecisionKind.importBlocked, 'x', count: 18),
+        decision(DecisionKind.failedImport, 'Sintel'),
+      ],
+      now: now,
+    )!;
+    expect(exact.moreLabel, '+1');
   });
 }
