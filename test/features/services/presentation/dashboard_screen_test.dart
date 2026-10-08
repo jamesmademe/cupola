@@ -1,16 +1,18 @@
-/// The Home and the Stack, region by region.
+/// The Home and the Stack, module by module.
 ///
-/// Every test here guards a **rule**, not a rendering: the order of the regions
-/// on each page, the ranking inside the decisions list, the cap per size class,
-/// that a probe still out is not a fault, that a figure nobody could take reads
-/// `—` and not `0`, and that a control whose target is not configured is dimmed
-/// but still reachable. Nothing asserts a hex or a pixel — those are the
-/// canvas's to change and this file's to survive.
+/// Every test here guards a **rule**, not a rendering: the order of the modules
+/// on each page, what leads Needs you, the cap per size class, that a probe
+/// still out is not a fault, that a figure nobody could take reads `—` and not
+/// `0`, and that a control whose target is not configured is dimmed but still
+/// reachable. Nothing asserts a hex or a pixel — those are the canvas's to
+/// change and this file's to survive.
 ///
-/// The page that was the Dashboard is two now. The Home keeps what needs a
-/// decision, what is in flight and what was recently added, under the band; the
-/// Stack keeps the headline, the band and the matrix of services. The band and
-/// the empty state are on both, so their tests run on both.
+/// The page that was the Dashboard is two now. The Home keeps Needs you, what
+/// arrived, what is moving and what waits for an answer, in the order the person
+/// keeps them; the Stack keeps the headline, the band and the matrix of
+/// services. The empty state is on both, so its test runs on both. The band is
+/// the Stack's: on the Home a service that did not answer leads Needs you, in
+/// the same words.
 ///
 /// The fold tests that used to fill most of this file are gone, and the two that
 /// replace them are the reason they are gone rather than deleted: the stack now
@@ -31,7 +33,10 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/home/presentation/widgets/home_header.dart';
+import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
@@ -40,6 +45,7 @@ import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/service_matrix.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -49,26 +55,58 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import '../../../test_helpers/decision_rows.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
-  testWidgets("the Home's regions are in the settled order", (tester) async {
+  testWidgets("the Home's modules are in the settled order", (tester) async {
     await _pumpPage(
       tester,
       _Page.home,
       decisions: [_stall('Furiosa', at: DateTime.utc(2024))],
     );
 
-    // Read off the list rather than off the screen: the regions below the band
+    // Read off the list rather than off the screen: the modules below the fold
     // are built lazily, so a y-coordinate comparison would be testing the
-    // viewport height. Three questions, in this order — is everything all right
-    // → what needs me → what is moving — and what arrived last.
+    // viewport height. The day, then what needs me, what arrived, what is
+    // moving and what waits for an answer, and the Home's own two rows at its
+    // foot: Set up next and the way to Edit Home.
     expect(_regionsOnPage(tester), [
-      'ServicesAlertBand',
-      'DashboardDecisionsSection',
-      'ServicesInFlightSection',
-      'ServicesRecentlyAddedSection',
+      'HomeHeader',
+      'NeedsYouBanner',
+      'HomeArrivedModule',
+      'HomeDownloadsModule',
+      'HomeRequestsModule',
+      'SetUpNextModule',
+      'EditHomeRow',
+      'SizedBox',
     ]);
+  });
+
+  testWidgets('what leads Needs you stands above the day\'s modules', (
+    tester,
+  ) async {
+    await _pumpPage(
+      tester,
+      _Page.home,
+      instanceSummary: (key) => _summary(key.service, online: true),
+      summary: (service) => _summary(service, online: true),
+      decisions: [_stall('Furiosa', at: DateTime.utc(2024))],
+      recentlyAdded: [
+        _imported('Poor Things', at: DateTime.utc(2024, 5, 5, 8, 12)),
+      ],
+    );
+
+    // The lead is the first thing under the day, and Arrived is the first
+    // module after it.
+    expect(
+      _yOf(tester, find.byType(HomeHeader)),
+      lessThan(_yOf(tester, find.text('Furiosa is stuck'))),
+    );
+    expect(
+      _yOf(tester, find.text('Furiosa is stuck')),
+      lessThan(_yOf(tester, find.text('Arrived'))),
+    );
   });
 
   testWidgets("the Stack's regions are in the settled order", (tester) async {
@@ -204,116 +242,203 @@ void main() {
     });
   });
 
-  // The band is on both pages: what stopped answering is the first thing
-  // either one says.
-  for (final page in _Page.values) {
-    group('the alert band, the ${page.name}', () {
-      testWidgets('names the offenders in the settled words', (tester) async {
-        await _pumpPage(tester, page);
+  // The band is the Stack's: what stopped answering is the first thing it says.
+  group('the alert band, the stack', () {
+    const page = _Page.stack;
 
-        // Lidarr is the configured service that does not answer in the fixture.
-        // Scoped to the band: the same sentence is what a region whose sources are
-        // dark prints in place of its empty copy, and the two sharing one string
-        // is the point.
-        // 800pt wide in a widget test, so the band carries its second sentence:
-        // the consequence is what a wide surface has room for.
-        expect(
-          find.descendant(
-            of: find.byKey(const ValueKey('services-alert-band')),
-            matching: find.textContaining('Lidarr did not answer.'),
-          ),
-          findsOneWidget,
-        );
-        // One offender, so the bare verb — `Retry both` is for exactly two.
-        expect(
-          find.descendant(
-            of: find.byKey(const ValueKey('services-alert-band')),
-            matching: find.text('Retry'),
-          ),
-          findsOneWidget,
-        );
-        // The action is the fix: the second control leads where the address is.
-        expect(find.text('Settings'), findsOneWidget);
-      });
+    testWidgets('names the offenders in the settled words', (tester) async {
+      await _pumpPage(tester, page);
 
-      testWidgets('retry stays brand indigo, never the error tone', (
-        tester,
-      ) async {
-        await _pumpPage(tester, page);
-
-        final context = tester.element(find.byType(ServicesAlertBand));
-        final scheme = Theme.of(context).colorScheme;
-        final retry = tester.widget<Text>(
-          find
-              .descendant(
-                of: find.byKey(const ValueKey('services-alert-band')),
-                matching: find.text('Retry'),
-              )
-              .first,
-        );
-        expect(retry.style?.color, scheme.primary);
-        expect(retry.style?.color, isNot(scheme.error));
-      });
-
-      testWidgets('the phone prints the first sentence only', (tester) async {
-        tester.view.physicalSize = const Size(390 * 3, 844 * 3);
-        tester.view.devicePixelRatio = 3;
-        addTearDown(tester.view.reset);
-
-        await _pumpPage(tester, page);
-
-        // One line of room, and the name of the service is the half that cannot
-        // be dropped.
-        expect(find.text('Lidarr did not answer.'), findsWidgets);
-        expect(find.textContaining('missing from this page'), findsNothing);
-      });
-
-      testWidgets('stays silent for a degraded service the header names', (
-        tester,
-      ) async {
-        // Two Radarr, the dark one being the lens. The band used to read the
-        // lensed summary, so it printed "Radarr did not answer." directly under a
-        // header that had just called Radarr answering. One fold now: the header
-        // counts it degraded, the band names nobody.
-        await _pumpPage(
-          tester,
-          page,
-          settings: _twoRadarrSettings,
-          instanceSummary: (key) =>
-              _summary(key.service, online: key.instanceId != 'radarr-hd'),
-          summary: (service) => _summary(service, online: false),
-        );
-
-        // The header is the Stack's; the Home has the band and no header, and
-        // the band must stay silent there all the same.
-        if (page == _Page.stack) {
-          expect(find.textContaining('1 degraded'), findsOneWidget);
-        }
-        expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
-      });
-
-      testWidgets('is absent entirely when the whole stack answers', (
-        tester,
-      ) async {
-        await _pumpPage(
-          tester,
-          page,
-          instanceSummary: (key) => _summary(key.service, online: true),
-          summary: (service) => _summary(service, online: true),
-        );
-
-        expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
-      });
+      // Lidarr is the configured service that does not answer in the fixture.
+      // Scoped to the band: the same sentence is what a module whose sources are
+      // dark prints in place of its empty copy, and the two sharing one string
+      // is the point.
+      // 800pt wide in a widget test, so the band carries its second sentence:
+      // the consequence is what a wide surface has room for.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('services-alert-band')),
+          matching: find.textContaining('Lidarr did not answer.'),
+        ),
+        findsOneWidget,
+      );
+      // One offender, so the bare verb — `Retry both` is for exactly two.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('services-alert-band')),
+          matching: find.text('Retry'),
+        ),
+        findsOneWidget,
+      );
+      // The action is the fix: the second control leads where the address is.
+      expect(find.text('Settings'), findsOneWidget);
     });
-  }
 
-  group('needs a decision', () {
-    testWidgets('faults come before backlog, oldest first inside a kind', (
+    testWidgets('retry stays brand indigo, never the error tone', (
+      tester,
+    ) async {
+      await _pumpPage(tester, page);
+
+      final context = tester.element(find.byType(ServicesAlertBand));
+      final scheme = Theme.of(context).colorScheme;
+      final retry = tester.widget<Text>(
+        find
+            .descendant(
+              of: find.byKey(const ValueKey('services-alert-band')),
+              matching: find.text('Retry'),
+            )
+            .first,
+      );
+      expect(retry.style?.color, scheme.primary);
+      expect(retry.style?.color, isNot(scheme.error));
+    });
+
+    testWidgets('the phone prints the first sentence only', (tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await _pumpPage(tester, page);
+
+      // One line of room, and the name of the service is the half that cannot
+      // be dropped.
+      expect(find.text('Lidarr did not answer.'), findsWidgets);
+      expect(find.textContaining('missing from this page'), findsNothing);
+    });
+
+    testWidgets('stays silent for a degraded service the header names', (
+      tester,
+    ) async {
+      // Two Radarr, the dark one being the lens. The band used to read the
+      // lensed summary, so it printed "Radarr did not answer." directly under a
+      // header that had just called Radarr answering. One fold now: the header
+      // counts it degraded, the band names nobody.
+      await _pumpPage(
+        tester,
+        page,
+        settings: _twoRadarrSettings,
+        instanceSummary: (key) =>
+            _summary(key.service, online: key.instanceId != 'radarr-hd'),
+        summary: (service) => _summary(service, online: false),
+      );
+
+      expect(find.textContaining('1 degraded'), findsOneWidget);
+      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+    });
+
+    testWidgets('is absent entirely when the whole stack answers', (
+      tester,
+    ) async {
+      await _pumpPage(
+        tester,
+        page,
+        instanceSummary: (key) => _summary(key.service, online: true),
+        summary: (service) => _summary(service, online: true),
+      );
+
+      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+    });
+  });
+
+  // On the Home the band is gone: a service that did not answer leads Needs
+  // you, in the band's own words, and its line is its Retry.
+  group('Needs you, the home, for a service that did not answer', () {
+    const page = _Page.home;
+
+    Finder inNeedsYou(Finder matching) =>
+        find.descendant(of: find.byType(NeedsYouLine), matching: matching);
+
+    testWidgets('names the offenders in the settled words', (tester) async {
+      await _pumpPage(tester, page);
+
+      // Lidarr is the configured service that does not answer in the fixture.
+      // The band's sentence as a clause, and the time the probe found it
+      // silent; the Home has no band, and no Stack-only `Settings` control.
+      expect(
+        inNeedsYou(
+          find.textContaining(
+            RegExp(r'^Lidarr did not answer at \d{2}:\d{2}$'),
+          ),
+        ),
+        findsOneWidget,
+      );
+      // One offender, so the bare verb — `Retry both` is for exactly two.
+      expect(inNeedsYou(find.text('Retry')), findsOneWidget);
+      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+    });
+
+    testWidgets('retry stays in the ink, never the error tone', (tester) async {
+      await _pumpPage(tester, page);
+
+      final context = tester.element(find.byType(NeedsYouLine));
+      final scheme = Theme.of(context).colorScheme;
+      final retry = tester.widget<Text>(inNeedsYou(find.text('Retry')));
+      expect(retry.style?.color, CupolaRoom.of(context).ink);
+      expect(retry.style?.color, isNot(scheme.error));
+    });
+
+    testWidgets('the phone prints one sentence, and no second', (tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await _pumpPage(tester, page);
+
+      // One line of room, and the name of the service is the half that cannot
+      // be dropped.
+      expect(
+        find.textContaining(RegExp(r'^Lidarr did not answer at ')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('missing from this page'), findsNothing);
+    });
+
+    testWidgets('stays silent for a degraded service the header names', (
+      tester,
+    ) async {
+      // Two Radarr, the dark one being the lens: the service answers, so Needs
+      // you names nobody.
+      await _pumpPage(
+        tester,
+        page,
+        settings: _twoRadarrSettings,
+        instanceSummary: (key) =>
+            _summary(key.service, online: key.instanceId != 'radarr-hd'),
+        summary: (service) => _summary(service, online: false),
+      );
+
+      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+      expect(find.textContaining('did not answer'), findsNothing);
+      expect(find.byType(NeedsYouLine), findsNothing);
+    });
+
+    testWidgets('is absent entirely when the whole stack answers', (
+      tester,
+    ) async {
+      await _pumpPage(
+        tester,
+        page,
+        instanceSummary: (key) => _summary(key.service, online: true),
+        summary: (service) => _summary(service, online: true),
+      );
+
+      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+      expect(find.byType(NeedsYouLine), findsNothing);
+    });
+  });
+
+  group('Needs you', () {
+    Finder inNeedsYou(Finder matching) =>
+        find.descendant(of: find.byType(NeedsYouLine), matching: matching);
+
+    testWidgets('the oldest of equal faults leads, and backlog is no fault', (
       tester,
     ) async {
       await _pumpPage(
         tester,
         _Page.home,
+        instanceSummary: (key) => _summary(key.service, online: true),
+        summary: (service) => _summary(service, online: true),
         decisions: [
           _request('Severance', at: DateTime.utc(2024, 1, 1)),
           _stall('The Zone of Interest', at: DateTime.utc(2024, 5, 2)),
@@ -321,19 +446,84 @@ void main() {
         ],
       );
 
-      // The request is the oldest item on the list by four months and still
-      // sorts last: it is backlog, and backlog never outranks a fault.
+      // Two stalls of one size: the oldest leads, as the ranking has it. The
+      // request is the oldest item by four months and is no part of the line
+      // or of its count: it is backlog, and waits in Requests.
+      expect(inNeedsYou(find.text('Fantasia is stuck')), findsOneWidget);
+      expect(inNeedsYou(find.text('+1')), findsOneWidget);
+      expect(find.text('The Zone of Interest'), findsNothing);
+      expect(inNeedsYou(find.text('Severance')), findsNothing);
       expect(
-        _yOf(tester, find.text('Fantasia')),
-        lessThan(_yOf(tester, find.text('The Zone of Interest'))),
-      );
-      expect(
-        _yOf(tester, find.text('The Zone of Interest')),
+        _yOf(tester, find.text('Fantasia is stuck')),
         lessThan(_yOf(tester, find.text('Severance'))),
       );
     });
 
-    testWidgets('the phone shows three, and says how many there are', (
+    testWidgets('one line, and the faults beyond its lead are counted', (
+      tester,
+    ) async {
+      await _pumpPage(
+        tester,
+        _Page.home,
+        instanceSummary: (key) => _summary(key.service, online: true),
+        summary: (service) => _summary(service, online: true),
+        decisions: [
+          for (var i = 0; i < 5; i++)
+            _stall('Stalled $i', at: DateTime.utc(2024, 1, i + 1)),
+        ],
+      );
+
+      // The cap hides rows, and Needs you has none: one line, and the count of
+      // what it leaves out.
+      expect(inNeedsYou(find.text('Stalled 0 is stuck')), findsOneWidget);
+      expect(inNeedsYou(find.text('+4')), findsOneWidget);
+      expect(find.text('Stalled 1'), findsNothing);
+      expect(find.text('Review'), findsOneWidget);
+    });
+
+    testWidgets('a group of equal faults is one line that says how many', (
+      tester,
+    ) async {
+      await _pumpPage(
+        tester,
+        _Page.home,
+        instanceSummary: (key) => _summary(key.service, online: true),
+        summary: (service) => _summary(service, online: true),
+        decisions: groupDecisions([
+          for (var i = 0; i < 18; i++)
+            _blocked('Episode $i', at: DateTime.utc(2024, 1, i + 1)),
+        ]),
+      );
+
+      // APP-04: a blocked import was filed as a stall, and eighteen of them
+      // were eighteen rows. One line, and its figure is what they stand for.
+      expect(
+        inNeedsYou(find.text('18 downloads need a manual import')),
+        findsOneWidget,
+      );
+      expect(inNeedsYou(find.textContaining('stuck')), findsNothing);
+      expect(inNeedsYou(find.textContaining(RegExp(r'^\+\d'))), findsNothing);
+    });
+
+    testWidgets('is absent, and Requests with it, when nothing is waiting', (
+      tester,
+    ) async {
+      await _pumpPage(
+        tester,
+        _Page.home,
+        instanceSummary: (key) => _summary(key.service, online: true),
+        summary: (service) => _summary(service, online: true),
+        decisions: const [],
+      );
+
+      expect(find.byType(NeedsYouLine), findsNothing);
+      expect(find.text('Needs you'), findsNothing);
+      expect(find.text('Requests'), findsNothing);
+    });
+  });
+
+  group('Requests', () {
+    testWidgets('the phone shows three, and says how many wait', (
       tester,
     ) async {
       await _pumpPage(
@@ -341,29 +531,55 @@ void main() {
         _Page.home,
         decisions: [
           for (var i = 0; i < 5; i++)
-            _stall('Stalled $i', at: DateTime.utc(2024, 1, i + 1)),
+            _request('Requested $i', at: DateTime.utc(2024, 1, i + 1)),
         ],
       );
 
       // Three rows, and the two the cap dropped are simply not built.
-      expect(find.text('Stalled 0'), findsOneWidget);
-      expect(find.text('Stalled 2'), findsOneWidget);
-      expect(find.text('Stalled 3'), findsNothing);
-      // The cap hides rows; the header must not hide the count.
-      expect(find.text('See all 5 →'), findsOneWidget);
+      expect(find.text('Requested 0'), findsOneWidget);
+      expect(find.text('Requested 2'), findsOneWidget);
+      expect(find.text('Requested 3'), findsNothing);
+      // The cap hides rows; the heading must not hide the count.
+      expect(find.text('5 wait for you'), findsOneWidget);
     });
 
-    testWidgets('is absent when nothing is waiting', (tester) async {
-      await _pumpPage(tester, _Page.home, decisions: const []);
-      expect(find.text('Needs a decision'), findsNothing);
-    });
+    testWidgets('a pending request keeps both of its decisions', (
+      tester,
+    ) async {
+      await _pumpPage(
+        tester,
+        _Page.home,
+        decisions: [_request('A Quiet Place', at: DateTime.utc(2024, 1, 1))],
+      );
 
+      expect(
+        find.descendant(
+          of: find.byType(HomeRequestsModule),
+          matching: find.byTooltip('Approve A Quiet Place'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(HomeRequestsModule),
+          matching: find.byTooltip('Decline A Quiet Place'),
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
+  // The Home leads with one line and no longer lists the decisions, so the
+  // row, which still carries each kind's control, is mounted on its own, with
+  // the decisions the app's own provider builds.
+  group('a decision row', () {
     testWidgets(
       'a control whose target is not configured is dimmed but reachable',
       (tester) async {
         await _pumpPage(
           tester,
           _Page.home,
+          screen: const Scaffold(body: ProvidedDecisionRows()),
           decisions: [
             _stall(
               'Furiosa',
@@ -401,6 +617,7 @@ void main() {
       await _pumpPage(
         tester,
         _Page.home,
+        screen: const Scaffold(body: ProvidedDecisionRows()),
         decisions: groupDecisions([
           for (var i = 0; i < 18; i++)
             _blocked('Episode $i', at: DateTime.utc(2024, 1, i + 1)),
@@ -410,9 +627,7 @@ void main() {
       expect(find.text('18 need a manual import'), findsOneWidget);
       expect(find.text('Manual import'), findsOneWidget);
       expect(find.textContaining('Open in'), findsNothing);
-      // The cap counts rows; the header counts what they stand for.
-      expect(find.text('See all 18 →'), findsOneWidget);
-      expect(find.text('18 items · blocked imports'), findsOneWidget);
+      expect(find.byType(DecisionRow), findsOneWidget);
     });
 
     testWidgets('manual import opens the wizard on the record\'s connection', (
@@ -421,7 +636,11 @@ void main() {
       Uri? opened;
       final router = GoRouter(
         routes: [
-          GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+          GoRoute(
+            path: '/',
+            builder: (context, state) =>
+                const Scaffold(body: ProvidedDecisionRows()),
+          ),
           GoRoute(
             path: '/import/browse',
             builder: (context, state) {
@@ -460,19 +679,6 @@ void main() {
         // the record came off, not into whichever one the lens is on.
         'i': 'radarr-hd',
       });
-    });
-
-    testWidgets('a pending request keeps both of its decisions', (
-      tester,
-    ) async {
-      await _pumpPage(
-        tester,
-        _Page.home,
-        decisions: [_request('A Quiet Place', at: DateTime.utc(2024, 1, 1))],
-      );
-
-      expect(find.byTooltip('Approve A Quiet Place'), findsOneWidget);
-      expect(find.byTooltip('Decline A Quiet Place'), findsOneWidget);
     });
   });
 
@@ -599,8 +805,8 @@ void main() {
     });
   });
 
-  group('in flight', () {
-    testWidgets('a stalled transfer is not in flight, and says where it went', (
+  group('downloads', () {
+    testWidgets('a stalled transfer is not moving, and says where it went', (
       tester,
     ) async {
       await _pumpPage(
@@ -612,7 +818,7 @@ void main() {
         ],
       );
 
-      await _scrollTo(tester, find.text('In flight'));
+      await _scrollTo(tester, find.text('Downloads'));
 
       expect(find.text('Dune: Part Two'), findsOneWidget);
       expect(find.text('The Zone of Interest'), findsNothing);
@@ -633,7 +839,7 @@ void main() {
         ],
       );
 
-      await _scrollTo(tester, find.text('In flight'));
+      await _scrollTo(tester, find.text('Downloads'));
 
       expect(find.textContaining('8 downloading'), findsOneWidget);
       expect(find.textContaining('5 downloading'), findsNothing);
@@ -664,12 +870,12 @@ void main() {
         ],
       );
 
-      await _scrollTo(tester, find.text('In flight'));
+      await _scrollTo(tester, find.text('Downloads'));
 
       expect(find.text('The queue is empty'), findsNothing);
       expect(find.text('Nothing moving'), findsOneWidget);
       expect(
-        find.text('18 need a manual import · under Needs a decision'),
+        find.text('18 need a manual import · in Needs you'),
         findsOneWidget,
       );
       expect(find.textContaining('stall'), findsNothing);
@@ -691,7 +897,7 @@ void main() {
         ],
       );
 
-      await _scrollTo(tester, find.text('In flight'));
+      await _scrollTo(tester, find.text('Downloads'));
 
       // The row's own line, not the stack card that happens to share the name.
       final line = _textContaining(tester, '· SABnzbd');
@@ -711,7 +917,7 @@ void main() {
         ],
       );
 
-      await _scrollTo(tester, find.text('In flight'));
+      await _scrollTo(tester, find.text('Downloads'));
 
       // Both rows belong to the same client, which reported 1 MB/s for its whole
       // queue — not 2.
@@ -722,7 +928,7 @@ void main() {
     });
   });
 
-  group('recently added', () {
+  group('arrived', () {
     testWidgets('names how many landed and, in amber, how many did not', (
       tester,
     ) async {
@@ -739,7 +945,7 @@ void main() {
         ],
       );
 
-      await _scrollTo(tester, find.text('Recently added'));
+      await _scrollTo(tester, find.text('Arrived'));
       expect(find.text('1 imported'), findsOneWidget);
 
       final failed = tester.widget<Text>(find.text('1 failed'));
@@ -764,7 +970,7 @@ void main() {
           _imported('Poor Things', at: DateTime.utc(2024, 5, 5, 8, 12)),
         ],
       );
-      await _scrollTo(tester, find.text('Recently added'));
+      await _scrollTo(tester, find.text('Arrived'));
 
       expect(
         find.bySemanticsLabel(RegExp(r'Poor Things, Radarr, \d\d:\d\d')),
@@ -781,7 +987,7 @@ void main() {
     await _pumpPage(tester, _Page.home, recentlyAddedFuture: () => gate.future);
 
     // The page's own list, the first in the tree: the Home is short enough now
-    // for Recently added's shelf, a list of its own, to be built beside it.
+    // for Arrived's rail, a list of its own, to be built beside it.
     await tester.fling(find.byType(ListView).first, const Offset(0, 400), 1000);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -840,6 +1046,9 @@ Future<void> _pumpPage(
   Future<ServiceSignalPair?> Function(ServiceKey service)? signalPairFuture,
   SharedPreferences? prefs,
   GoRouter? router,
+
+  /// What to draw in the page's place: a widget of a test's own.
+  Widget? screen,
 }) async {
   final overrides = <Override>[
     if (prefs != null) sharedPreferencesProvider.overrideWithValue(prefs),
@@ -889,6 +1098,18 @@ Future<void> _pumpPage(
       decisions: rankDecisions(decisions ?? const []),
       coverage: decisionsCoverage,
     )),
+    // Requests reads its own source and not the folded list: the requests
+    // among [decisions] are what that source holds.
+    dashboardDecisionSourceProvider.overrideWith(
+      (ref, source) async => (
+        decisions: [
+          if (source == DecisionSource.requests)
+            for (final decision in rankDecisions(decisions ?? const []))
+              if (decision.kind == DecisionKind.pendingRequest) decision,
+        ],
+        coverage: decisionsCoverage,
+      ),
+    ),
     servicesQueueProvider.overrideWith(
       (ref) async => (items: queue ?? const [], coverage: queueCoverage),
     ),
@@ -913,7 +1134,7 @@ Future<void> _pumpPage(
     ProviderScope(
       overrides: overrides,
       child: router == null
-          ? MaterialApp(home: _screen(page))
+          ? MaterialApp(home: screen ?? _screen(page))
           : MaterialApp.router(routerConfig: router),
     ),
   );
