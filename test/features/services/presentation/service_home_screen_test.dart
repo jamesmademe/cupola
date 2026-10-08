@@ -41,7 +41,7 @@ void main() {
     // used to open was retired when the Portal became the one switcher.
     expect(find.byKey(const ValueKey('service-home-switcher')), findsNothing);
 
-    await tester.tap(find.byTooltip('Back to Dashboard'));
+    await tester.tap(find.byTooltip('Back to Stack'));
     await tester.pumpAndSettle();
 
     expect(router.state.uri.toString(), '/stack');
@@ -78,7 +78,7 @@ void main() {
     router.go('/stack/lidarr');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Back to Dashboard'));
+    await tester.tap(find.byTooltip('Back to Stack'));
     await tester.pumpAndSettle();
 
     expect(router.state.uri.toString(), '/stack');

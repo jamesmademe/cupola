@@ -137,7 +137,7 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
                 context,
                 ServiceRoutes.forService(service),
               ),
-              tooltip: 'Back to Dashboard',
+              tooltip: 'Back to Stack',
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             ),
