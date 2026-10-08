@@ -225,25 +225,54 @@ class DiscoverDoor extends StatelessWidget {
   List<Widget> _corner(BuildContext context) {
     final room = CupolaRoom.of(context);
     if (names.isNotEmpty) {
+      final scaler = TextScaleMetrics.clampedScalerOf(context);
+      // The names stack up from the foot and stop under the words: as many
+      // as fit, never on the line under the name ("Prime Video" on "Series"
+      // in a door a third of a phone wide).
+      final wordsFoot =
+          AppSpacing.md +
+          _lineHeight(AppType.row, scaler) +
+          (subtitle == null ? 0 : _lineHeight(AppType.caption, scaler));
+      final nameLine = _lineHeight(AppType.label, scaler);
       return [
-        Positioned(
-          right: AppSpacing.md,
-          bottom: AppSpacing.sm,
-          child: ExcludeSemantics(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (var i = 0; i < names.length && i < 3; i++)
-                  Opacity(
-                    opacity: 1 - i * 0.28,
-                    child: Text(
-                      names[i],
-                      maxLines: 1,
-                      style: AppType.label.copyWith(color: room.inkSecondary),
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final space = box.maxHeight - wordsFoot - AppSpacing.sm;
+              final fit = math.min(
+                math.min(names.length, 3),
+                math.max(0, space ~/ nameLine),
+              );
+              return Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    right: AppSpacing.md,
+                    bottom: AppSpacing.sm,
+                  ),
+                  child: ExcludeSemantics(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        for (var i = 0; i < fit; i++)
+                          Opacity(
+                            opacity: 1 - i * 0.28,
+                            child: Text(
+                              names[i],
+                              maxLines: 1,
+                              textScaler: scaler,
+                              style: AppType.label.copyWith(
+                                color: room.inkSecondary,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-              ],
-            ),
+                ),
+              );
+            },
           ),
         ),
       ];
@@ -272,6 +301,19 @@ class DiscoverDoor extends StatelessWidget {
       ),
     ];
   }
+}
+
+/// The height of one line of [style] at [scaler], as a [Text] lays it out.
+double _lineHeight(TextStyle style, TextScaler scaler) {
+  final painter = TextPainter(
+    text: TextSpan(text: 'Ag', style: style),
+    textScaler: scaler,
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+  )..layout();
+  final height = painter.height;
+  painter.dispose();
+  return height;
 }
 
 /// A small poster leaning out of a door's corner, [turns] degrees off true.
