@@ -6,16 +6,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/list_rows_shimmer.dart';
+import 'package:cupola/core/widgets/search_bar_header.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/core/widgets/service_list_page.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
+import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
@@ -24,6 +29,11 @@ import 'package:cupola/features/bazarr/presentation/bazarr_library_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_providers_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
@@ -31,6 +41,8 @@ import 'package:cupola/features/dockge/presentation/dockge_terminal_screen.dart'
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_tab_screens.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/presentation/movies_provider.dart';
+import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
@@ -42,8 +54,10 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_history_screen.da
 import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_stats_screen.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/presentation/readarr_activity_screen.dart';
 import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart';
@@ -52,6 +66,7 @@ import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
@@ -848,6 +863,139 @@ void main() {
 
       expectClearsTheBar(tester, find.text('A header'));
     });
+  });
+
+  // These pages put the room the bands take, and the inset, into their own
+  // header or list padding rather than into a `SafeArea`.
+  group('The library, calendar and request tabs clear the glass bars', () {
+    testWidgets('Radarr Library starts below the tab bar', (tester) async {
+      // The shared browse scaffold, which Sonarr's and Lidarr's libraries
+      // hand their room to unchanged.
+      await pumpHosted(
+        tester,
+        service: ServiceKey.radarr,
+        tab: ServiceTab.library,
+        overrides: [moviesProvider.overrideWith((ref) => _pending())],
+        child: const MoviesScreen(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(SearchBarHeader));
+    });
+
+    testWidgets('a Calendar still loading starts below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.radarr,
+        tab: ServiceTab.calendar,
+        overrides: [
+          calendarSourceProvider.overrideWith((ref, key) => _pending()),
+        ],
+        child: const ArrCalendarScreen(
+          service: ServiceKey.radarr,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(ShimmerList));
+    });
+
+    testWidgets('qBittorrent Queue draws its figures below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.qbittorrent,
+        tab: ServiceTab.queue,
+        overrides: [
+          torrentsProvider.overrideWith((ref) => _pending()),
+          torrentPollingProvider.overrideWith((ref) {}),
+          serviceKpiProvider(
+            ServiceKey.qbittorrent,
+          ).overrideWith((ref) => _pending()),
+        ],
+        child: const QbittorrentScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ServiceKpiPeek));
+    });
+
+    testWidgets('Seerr Requests draws its filter chips below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.seerr,
+        tab: ServiceTab.requests,
+        overrides: [requestsProvider.overrideWith((ref) => _pending())],
+        child: const ServiceAllRequestsScreen(
+          showAppBar: false,
+          topPadding: _hostedTopPadding,
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(FilterChip));
+    });
+
+    testWidgets('Seerr Issues draws its filter pills below the tab bar', (
+      tester,
+    ) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.seerr,
+        tab: ServiceTab.issues,
+        overrides: [
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          seerrIssuesProvider.overrideWith((ref, filter) => _pending()),
+        ],
+        child: const SeerrIssuesScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, _selectionPills);
+    });
+
+    testWidgets('Seerr Users starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.seerr,
+        tab: ServiceTab.users,
+        overrides: [
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          seerrUsersProvider.overrideWith((ref) => _pending()),
+        ],
+        child: const SeerrUsersScreen(topPadding: _hostedTopPadding),
+      );
+
+      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+    });
+
+    testWidgets(
+      'an account that may not manage users reads why below the bar',
+      (tester) async {
+        await pumpHosted(
+          tester,
+          service: ServiceKey.seerr,
+          tab: ServiceTab.users,
+          overrides: [
+            seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+            roleGateProvider('').overrideWithValue(
+              const RoleGate(
+                audience: Audience.operator,
+                grant: SeerrGrant.account(permissions: 0),
+              ),
+            ),
+          ],
+          child: const SeerrUsersScreen(topPadding: _hostedTopPadding),
+        );
+
+        expect(find.byType(ListRowsShimmer), findsNothing);
+        expectClearsTheBar(tester, find.byType(AppEmptyState));
+      },
+    );
   });
 
   group('The media servers\' tabs clear the glass bars', () {
