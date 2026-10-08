@@ -1,11 +1,13 @@
-/// Home offers Renew only for a certificate Nginx Proxy Manager can renew.
+/// A certificate's decision row offers Renew only for a certificate Nginx
+/// Proxy Manager can renew.
 ///
 /// NPM renews a Let's Encrypt certificate and nothing else: an uploaded one is
-/// replaced by whoever issued it. Home offered Renew for both, and for an
+/// replaced by whoever issued it. The row offered Renew for both, and for an
 /// uploaded certificate it landed on a tab with no Renew for it, a promise
 /// the app cannot keep. Its row now says the truth, that it expires and must
 /// be replaced in NPM, and its control opens the certificates without the
-/// word Renew.
+/// word Renew. The row is mounted on its own: the Home leads with one line
+/// (Needs you) and no longer lists the decisions.
 library;
 
 import 'package:flutter/material.dart';
@@ -16,9 +18,9 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
-import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
+import '../../../test_helpers/decision_rows.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 
 const _open = 'Open certificates';
@@ -43,7 +45,7 @@ void _script(ProfileNetwork network, String provider) => network.on(
   ]),
 );
 
-Future<(ProfileHarness, List<String>)> _pumpHome(
+Future<(ProfileHarness, List<String>)> _pumpRows(
   WidgetTester tester, {
   required String provider,
   ConnectionBehaviour behaviour = ConnectionBehaviour.answers,
@@ -61,7 +63,11 @@ Future<(ProfileHarness, List<String>)> _pumpHome(
 
   final router = GoRouter(
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/',
+        builder: (context, state) =>
+            const Scaffold(body: ProvidedDecisionRows()),
+      ),
       GoRoute(path: ServiceRoutes.nginxProxyManager, builder: landed),
       GoRoute(path: ServiceRoutes.npmCertificates, builder: landed),
     ],
@@ -83,25 +89,23 @@ Future<(ProfileHarness, List<String>)> _pumpHome(
   return (harness, opened);
 }
 
-Finder _inDecisions(Finder matching) => find.descendant(
-  of: find.byType(DashboardDecisionsSection),
-  matching: matching,
-);
+Finder _inRows(Finder matching) =>
+    find.descendant(of: find.byType(DecisionRow), matching: matching);
 
 void main() {
   testWidgets('an uploaded certificate: the row names it as uploaded, and the '
       'control opens the certificates without the word Renew', (tester) async {
-    final (harness, opened) = await _pumpHome(tester, provider: 'other');
+    final (harness, opened) = await _pumpRows(tester, provider: 'other');
 
-    expect(_inDecisions(find.text('nas.example.net')), findsOneWidget);
+    expect(_inRows(find.text('nas.example.net')), findsOneWidget);
     expect(
-      _inDecisions(find.text('Uploaded certificate expires in 5 days')),
+      _inRows(find.text('Uploaded certificate expires in 5 days')),
       findsOneWidget,
     );
-    expect(_inDecisions(find.textContaining('Renew')), findsNothing);
-    expect(_inDecisions(find.text(_open)), findsOneWidget);
+    expect(_inRows(find.textContaining('Renew')), findsNothing);
+    expect(_inRows(find.text(_open)), findsOneWidget);
 
-    await tester.tap(_inDecisions(find.text(_open)));
+    await tester.tap(_inRows(find.text(_open)));
     await harness.settle(tester);
     expect(opened, [ServiceRoutes.npmCertificates]);
     await harness.unmount(tester);
@@ -109,13 +113,13 @@ void main() {
 
   testWidgets('an uploaded certificate on a view-only account: opening is a '
       'read, so the control is not dimmed', (tester) async {
-    final (harness, _) = await _pumpHome(
+    final (harness, _) = await _pumpRows(
       tester,
       provider: 'other',
       behaviour: ConnectionBehaviour.readOnly,
     );
 
-    final open = _inDecisions(find.text(_open));
+    final open = _inRows(find.text(_open));
     expect(open, findsOneWidget);
     expect(
       tester
@@ -131,16 +135,14 @@ void main() {
   testWidgets('a Let\'s Encrypt certificate: Renew, opening the certificates', (
     tester,
   ) async {
-    final (harness, opened) = await _pumpHome(tester, provider: 'letsencrypt');
+    final (harness, opened) = await _pumpRows(tester, provider: 'letsencrypt');
 
     expect(
-      _inDecisions(
-        find.text('Certificate expires in 5 days · Nginx Proxy Manager'),
-      ),
+      _inRows(find.text('Certificate expires in 5 days · Nginx Proxy Manager')),
       findsOneWidget,
     );
-    expect(_inDecisions(find.text(_open)), findsNothing);
-    await tester.tap(_inDecisions(find.text('Renew')));
+    expect(_inRows(find.text(_open)), findsNothing);
+    await tester.tap(_inRows(find.text('Renew')));
     await harness.settle(tester);
     expect(opened, [ServiceRoutes.npmCertificates]);
     await harness.unmount(tester);

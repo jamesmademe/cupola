@@ -1,9 +1,10 @@
-/// Home's Renew lands where a certificate is renewed.
+/// A decision row's Renew lands where a certificate is renewed.
 ///
 /// It opened Nginx Proxy Manager's root, which is its Overview, and the
 /// Overview offers no writes at all: Renew lands on a page with nothing to
 /// renew on it. It now opens the Certificates tab, where Renew and its
-/// confirmation are.
+/// confirmation are. The row is mounted on its own: the Home leads with one
+/// line (Needs you) and no longer lists the decisions.
 library;
 
 import 'package:flutter/material.dart';
@@ -13,9 +14,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 
+import '../../../test_helpers/decision_rows.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 
 void main() {
@@ -49,7 +50,11 @@ void main() {
 
     final router = GoRouter(
       routes: [
-        GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+        GoRoute(
+          path: '/',
+          builder: (context, state) =>
+              const Scaffold(body: ProvidedDecisionRows()),
+        ),
         GoRoute(path: ServiceRoutes.nginxProxyManager, builder: landed),
         GoRoute(path: ServiceRoutes.npmOverview, builder: landed),
         GoRoute(path: ServiceRoutes.npmCertificates, builder: landed),
@@ -72,7 +77,7 @@ void main() {
 
     await tester.tap(
       find.descendant(
-        of: find.byType(DashboardDecisionsSection),
+        of: find.byType(DecisionRow),
         matching: find.text('Renew'),
       ),
     );
