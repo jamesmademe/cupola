@@ -195,6 +195,20 @@ class DownloadRow extends ConsumerWidget {
 
     Future<void> open() async => context.go(ServiceRoutes.activity);
 
+    // At a large reading size the value goes under the title: beside it the
+    // title kept three letters.
+    final stacked = MediaQuery.textScalerOf(context).scale(10) >= 13;
+    Widget titleText({required int maxLines}) => Text(
+      title,
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+      style: AppType.row.weight(FontWeight.w600).copyWith(color: room.ink),
+    );
+    final valueText = Text(
+      value,
+      style: AppType.meta.weight(FontWeight.w600).tabular.copyWith(color: tone),
+    );
+
     return DecoratedBox(
       decoration: BoxDecoration(
         border: divided ? Border(top: BorderSide(color: room.hair)) : null,
@@ -225,32 +239,21 @@ class DownloadRow extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppType.row
-                                        .weight(FontWeight.w600)
-                                        .copyWith(color: room.ink),
-                                  ),
-                                ),
-                                if (value.isNotEmpty) ...[
-                                  const SizedBox(width: AppSpacing.sm),
-                                  Text(
-                                    value,
-                                    style: AppType.meta
-                                        .weight(FontWeight.w600)
-                                        .tabular
-                                        .copyWith(color: tone),
-                                  ),
+                            if (stacked) ...[
+                              titleText(maxLines: 2),
+                              if (value.isNotEmpty) valueText,
+                            ] else
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Expanded(child: titleText(maxLines: 1)),
+                                  if (value.isNotEmpty) ...[
+                                    const SizedBox(width: AppSpacing.sm),
+                                    valueText,
+                                  ],
                                 ],
-                              ],
-                            ),
+                              ),
                             if (showsRelease)
                               Text(
                                 release,
