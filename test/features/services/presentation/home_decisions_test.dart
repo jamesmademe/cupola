@@ -276,13 +276,7 @@ void main() {
     await tester.tap(_inRequests(find.text('Retry')));
     await harness.settle(tester);
 
-    // PORT: fails on lib, which is left as it is. Requests now reads the
-    // waiting page (`pendingRequestsForProvider`), but Retry only drops what
-    // `dashboardSourcesOf(ServiceKey.seerr)` lists
-    // (lib/features/services/presentation/dashboard_retry.dart), which is
-    // `requestsForProvider` and `servicesRequestsProvider`. The module
-    // re-reads the failure it cached: expected no FaultBand after Retry, found
-    // one. Listing `pendingRequestsForProvider` there makes this pass.
+    // Retry drops the waiting page Requests reads, not only the lists.
     expect(_inRequests(find.byType(FaultBand)), findsNothing);
     // Anna decides nothing: her own waiting Charge is no decision of hers,
     // and Luca's Metropolis is not hers to see.
