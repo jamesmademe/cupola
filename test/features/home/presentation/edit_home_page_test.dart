@@ -57,8 +57,8 @@ void main() {
       expect(find.text(module.label), findsOneWidget, reason: module.label);
     }
     expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
-    // Needs you has no switch; the four ordered modules and Set up next do.
-    expect(find.byType(Switch), findsNWidgets(5));
+    // Needs you has no switch; the six ordered modules and Set up next do.
+    expect(find.byType(Switch), findsNWidgets(7));
     final reset = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
     expect(reset.onPressed, isNull);
     // The other person's default, from the registry.
@@ -81,6 +81,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(homeLayoutProvider).order, [
+      HomeModule.continueWatching,
+      HomeModule.comingUp,
       HomeModule.downloads,
       HomeModule.arrived,
       HomeModule.requests,
@@ -105,7 +107,8 @@ void main() {
       'default back', (tester) async {
     final container = await pump(tester);
 
-    await tester.tap(find.byType(Switch).at(2));
+    // Continue watching, Coming up, Arrived, Downloads, then Requests.
+    await tester.tap(find.byType(Switch).at(4));
     await tester.pumpAndSettle();
     expect(
       container.read(homeLayoutProvider).isOn(HomeModule.requests),
@@ -144,10 +147,12 @@ void main() {
       ids['Move up'],
     );
     await tester.pumpAndSettle();
-    expect(
-      container.read(homeLayoutProvider).order.first,
+    expect(container.read(homeLayoutProvider).order.take(4), [
+      HomeModule.continueWatching,
+      HomeModule.comingUp,
       HomeModule.downloads,
-    );
+      HomeModule.arrived,
+    ]);
     handle.dispose();
   });
 

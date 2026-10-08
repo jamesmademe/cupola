@@ -19,7 +19,7 @@ void main() {
       ['Set up Jellyfin', 'Set up a download client', 'Set up Bazarr'],
     );
     expect(suggestions.first.service, ServiceKey.jellyfin);
-    expect(suggestions.first.line, 'Play on every title, and Now playing');
+    expect(suggestions.first.line, 'Play, Continue watching and Now playing');
     // A kind of service, not one: it leads to the whole list.
     expect(suggestions[1].service, isNull);
   });
