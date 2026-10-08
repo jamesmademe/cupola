@@ -327,6 +327,41 @@ void main() {
       );
     });
 
+    test('an approved row says where the request went, as the confirmation '
+        'named it', () {
+      expect(
+        SeerrApproveTarget.of(
+          _request(is4k: true),
+          servers: [hd, uhd],
+          connections: connections,
+        ).approvedLine(connectionTitle: title),
+        'Approved · sent to Radarr · 4K',
+      );
+      expect(
+        SeerrApproveTarget.of(
+          _request(serverId: 2),
+          servers: [hd, uhd, spare],
+          connections: connections,
+        ).approvedLine(connectionTitle: title),
+        'Approved · sent to Radarr spare',
+      );
+      expect(
+        SeerrApproveTarget.of(
+          _request(is4k: true),
+          servers: [hd],
+          connections: connections,
+        ).approvedLine(connectionTitle: title),
+        'Approved · Seerr has no 4K Radarr for it',
+      );
+      expect(
+        SeerrApproveTarget.of(
+          _request(type: 'tv'),
+          servers: null,
+        ).approvedLine(connectionTitle: title),
+        "Approved · sent to Seerr's Sonarr",
+      );
+    });
+
     test('no confirmation leans on an em dash', () {
       final targets = [
         SeerrApproveTarget.of(
