@@ -1,10 +1,10 @@
 /// Home reads one page of history per connection, and a page that came back
 /// full is a window onto more of it.
 ///
-/// Recently added counted the imports on that page and stated them as the
-/// total, and the failed imports Needs a decision found there were stated as
-/// every one there is. Past a full page are older imports and older failures
-/// nobody read, so the figures over it are floors.
+/// Arrived counted the imports on that page and stated them as the total, and
+/// the failed imports Needs you found there were stated as every one there is.
+/// Past a full page are older imports and older failures nobody read, so the
+/// figures over it are floors.
 library;
 
 import 'package:flutter/material.dart';
@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 
@@ -80,21 +81,21 @@ void main() {
     // twenty-three, and maybe more past the HD's page.
     expect(
       find.descendant(
-        of: find.byType(ServicesRecentlyAddedSection),
+        of: find.byType(HomeArrivedModule),
         matching: find.text('23+ imported'),
       ),
       findsOne,
     );
     expect(
-      find.bySemanticsLabel(RegExp(r'^Recently added, at least 23 imported')),
+      find.bySemanticsLabel(RegExp(r'^Arrived, at least 23 imported')),
       findsOne,
     );
-    // Needs a decision read the same page for failed imports, so its count
-    // is the least there is too.
+    // Needs you read the same page for failed imports, so the figure it
+    // leads with is the least there is too.
     expect(
       find.descendant(
-        of: find.byType(DashboardDecisionsSection),
-        matching: find.textContaining(RegExp(r'^\d+\+ items')),
+        of: find.byType(NeedsYouLine),
+        matching: find.text('18+ downloads need a manual import'),
       ),
       findsOne,
     );
