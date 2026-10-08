@@ -24,9 +24,10 @@ import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/home/domain/arrived.dart';
+import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
-import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -813,70 +814,11 @@ void main() {
     );
   });
 
-  group('servicesRecentlyAddedProvider', () {
-    // The rail's own rebuild is what is under test, not its sources: the fakes
-    // below are static overrides, so a rebuild reuses their cached results and
-    // only the identity of the freshly sorted list can tell the two apart.
-    test('an unrelated settings change does not rebuild the rail', () async {
-      final container = _mutableSettingsContainer(
-        initial: _secureRadarr,
-        radarrService: _HistoryRadarrService([_importedRecord]),
-      );
-
-      final first = (await container.read(
-        servicesRecentlyAddedProvider.future,
-      )).items;
-      expect(first, hasLength(1));
-
-      container
-          .read(_settingsHolderProvider.notifier)
-          .set(_secureRadarr.copyWith(themeMode: AppThemeMode.light));
-      final second = (await container.read(
-        servicesRecentlyAddedProvider.future,
-      )).items;
-
-      expect(
-        identical(first, second),
-        isTrue,
-        reason: 'the rail does not depend on the theme',
-      );
-    });
-
-    test('repointing a source rebuilds the rail', () async {
-      // The other half: the poster URLs are built from the source's own base
-      // URL and key, so a rail that ignored a move would keep pointing its
-      // images at the old server.
-      final container = _mutableSettingsContainer(
-        initial: _secureRadarr,
-        radarrService: _HistoryRadarrService([_importedRecord]),
-      );
-
-      final first = (await container.read(
-        servicesRecentlyAddedProvider.future,
-      )).items;
-      container
-          .read(_settingsHolderProvider.notifier)
-          .set(
-            _secureRadarr.copyWithService(
-              ServiceKey.radarr,
-              url: 'https://moved.local:7878',
-            ),
-          );
-      final second = (await container.read(
-        servicesRecentlyAddedProvider.future,
-      )).items;
-
-      expect(identical(first, second), isFalse);
-    });
-
-    // The comment above this fetch used to say the opposite — that Lidarr's
-    // records arrive without their artist because `LidarrService` has no
-    // override. It does have one, on `getHistoryPage`, and `getHistory`
-    // delegates through it. This is what makes that true rather than a claim:
-    // a real `LidarrService` over a fake client, so the query the dashboard
-    // actually sends is what is asserted, and the title that comes out is the
-    // album's rather than the release name.
-    test('the dashboard asks Lidarr for the artist and the album', () async {
+  // The page of twenty is still what the failed-import decisions and
+  // Downloads' "last download finished" read. Its Lidarr records have to
+  // arrive with their artist and album, or a decision names a release.
+  group('servicesArrHistoryProvider', () {
+    test('the page asks Lidarr for the artist and the album', () async {
       final client = FakeApiClient();
       client.getResponseData = const {
         'records': [
@@ -901,22 +843,136 @@ void main() {
         lidarrService: LidarrService(client),
       );
 
-      final items = (await container.read(
-        servicesRecentlyAddedProvider.future,
-      )).items;
+      final entries = (await container.read(
+        servicesArrHistoryProvider.future,
+      )).entries;
 
       expect(client.lastGetPath, '/api/v1/history');
       expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
       expect(client.lastGetQueryParameters?['includeAlbum'], isTrue);
-      expect(items.single.service, ServiceKey.lidarr);
+      expect(entries.single.service, ServiceKey.lidarr);
       expect(
-        items.single.title,
+        entries.single.title,
         'Diamond Jubilee',
-        reason: 'the embed is what keeps the raw release name off the tile',
+        reason: 'the embed is what keeps the raw release name off the row',
+      );
+    });
+  });
+
+  group('servicesArrivalsProvider', () {
+    // The week's own re-read is what is under test, not its sources: the fakes
+    // below are static overrides, so a rebuild reuses their cached results and
+    // only the identity of the freshly built answer can tell the two apart.
+    test('an unrelated settings change does not re-read the week', () async {
+      final container = _mutableSettingsContainer(
+        initial: _secureRadarr,
+        radarrService: _HistoryRadarrService([_importedRecord]),
+      );
+
+      final first = (await _arrivals(container)).entries;
+      expect(first, hasLength(1));
+
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(_secureRadarr.copyWith(themeMode: AppThemeMode.light));
+      final second = (await _arrivals(container)).entries;
+
+      expect(
+        identical(first, second),
+        isTrue,
+        reason: 'the week does not depend on the theme',
       );
     });
 
-    test('a Lidarr row wears the album cover, then the artist', () async {
+    test('repointing a source re-reads the week', () async {
+      // The other half: the artwork URLs are built from the source's own base
+      // URL and key, so a rail that ignored a move would keep pointing its
+      // images at the old server.
+      final container = _mutableSettingsContainer(
+        initial: _secureRadarr,
+        radarrService: _HistoryRadarrService([_importedRecord]),
+      );
+
+      final first = (await _arrivals(container)).entries;
+      container
+          .read(_settingsHolderProvider.notifier)
+          .set(
+            _secureRadarr.copyWithService(
+              ServiceKey.radarr,
+              url: 'https://moved.local:7878',
+            ),
+          );
+      final second = (await _arrivals(container)).entries;
+
+      expect(identical(first, second), isFalse);
+    });
+
+    test('it asks Radarr for the last seven days of imports, with the movie '
+        'embedded', () async {
+      final radarr = _HistoryRadarrService([_importedRecord]);
+      final container = _container(
+        settings: _secureRadarr,
+        radarrService: radarr,
+        overrides: _pinnedNow,
+      );
+
+      await _arrivals(container);
+
+      expect(radarr.asked, hasLength(1));
+      expect(radarr.asked.single.since, _now.subtract(arrivalsWindow));
+      expect(radarr.asked.single.query['eventType'], 'downloadFolderImported');
+      expect(radarr.asked.single.query['includeMovie'], isTrue);
+    });
+
+    // The comment above this fetch used to say the opposite — that Lidarr's
+    // records arrive without their artist because `LidarrService` has no
+    // override. The dashboard now sends the embeds itself: a real
+    // `LidarrService` over a fake client, so the query Arrived actually sends
+    // is what is asserted, and the title that comes out is the album's rather
+    // than the release name.
+    test('Arrived asks Lidarr for the artist and the album', () async {
+      final client = FakeApiClient();
+      client.getResponseData = const [
+        {
+          'id': 1,
+          'eventType': 'trackFileImported',
+          'date': '2024-05-05T08:12:00Z',
+          'artistId': 5,
+          'artist': {'artistName': 'Cindy Lee'},
+          'album': {'id': 9, 'title': 'Diamond Jubilee'},
+          'sourceTitle': 'Cindy.Lee-Diamond.Jubilee-WEB-2024-XYZ',
+        },
+      ];
+
+      final container = _container(
+        settings: settingsWith(
+          lidarrUrl: 'https://lidarr.local:8686',
+          lidarrApiKey: 'key',
+        ),
+        lidarrService: LidarrService(client),
+        overrides: _pinnedNow,
+      );
+
+      final entries = (await _arrivals(container)).entries;
+
+      expect(client.lastGetPath, '/api/v1/history/since');
+      expect(
+        client.lastGetQueryParameters?['date'],
+        _now.subtract(arrivalsWindow).toUtc().toIso8601String(),
+      );
+      expect(client.lastGetQueryParameters?['eventType'], 'trackFileImported');
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+      expect(client.lastGetQueryParameters?['includeAlbum'], isTrue);
+      expect(entries.single.service, ServiceKey.lidarr);
+      expect(
+        entries.single.title,
+        'Diamond Jubilee',
+        reason: 'the embed is what keeps the raw release name off the card',
+      );
+    });
+
+    test('a Lidarr card wears its artist\'s wide art, and its poster is the '
+        'album cover, then the artist', () async {
       Map<String, dynamic> record(int id, {required bool albumCover}) => {
         'id': id,
         'eventType': 'trackFileImported',
@@ -927,6 +983,7 @@ void main() {
           'artistName': 'Cindy Lee',
           'images': [
             {'coverType': 'poster', 'remoteUrl': 'https://img.test/artist.jpg'},
+            {'coverType': 'fanart', 'remoteUrl': 'https://img.test/wide.jpg'},
           ],
         },
         'album': {
@@ -940,10 +997,10 @@ void main() {
       };
 
       final client = FakeApiClient();
-      client.getResponseData = {
-        'records': [record(1, albumCover: true), record(2, albumCover: false)],
-        'totalRecords': 2,
-      };
+      client.getResponseData = [
+        record(1, albumCover: true),
+        record(2, albumCover: false),
+      ];
 
       final container = _container(
         settings: settingsWith(
@@ -953,34 +1010,41 @@ void main() {
         lidarrService: LidarrService(client),
       );
 
-      final items = (await container.read(
-        servicesRecentlyAddedProvider.future,
-      )).items;
-      final byTitle = {for (final item in items) item.title: item.posterUrl};
+      final entries = (await _arrivals(container)).entries;
+      final posters = {for (final item in entries) item.title: item.posterUrl};
 
-      expect(byTitle['Album 1'], 'https://img.test/album.jpg');
+      expect(posters['Album 1'], 'https://img.test/album.jpg');
       expect(
-        byTitle['Album 2'],
+        posters['Album 2'],
         'https://img.test/artist.jpg',
         reason: 'an album with no cover yet still has a face',
       );
+      expect(
+        entries.map((item) => item.backdropUrl),
+        everyElement('https://img.test/wide.jpg'),
+        reason: 'the card draws wide art, and the artist is who has it',
+      );
     });
 
-    test('a season imported episode by episode is one row', () async {
+    test('a season imported episode by episode is one card, and the count is '
+        'cards', () async {
       Map<String, dynamic> episode(int id, int number) => {
         'id': id,
         'eventType': 'downloadFolderImported',
-        'date': '2024-05-05T22:${39 + number % 2}:00Z',
+        'date': _now
+            .subtract(Duration(hours: 3, minutes: number))
+            .toIso8601String(),
         'seriesId': 4,
-        'series': {'title': "Marvel's Daredevil"},
+        'series': {
+          'title': "Marvel's Daredevil",
+          'tmdbId': 61889,
+          'added': _now.subtract(const Duration(days: 1)).toIso8601String(),
+        },
         'episode': {'seasonNumber': 1, 'episodeNumber': number},
       };
 
       final client = FakeApiClient();
-      client.getResponseData = {
-        'records': [for (var n = 1; n <= 6; n++) episode(n, n)],
-        'totalRecords': 6,
-      };
+      client.getResponseData = [for (var n = 1; n <= 6; n++) episode(n, n)];
 
       final container = _container(
         settings: settingsWith(
@@ -988,23 +1052,123 @@ void main() {
           sonarrApiKey: 'key',
         ),
         sonarrService: SonarrService(client),
+        overrides: _pinnedNow,
       );
 
-      final items = (await container.read(
-        servicesRecentlyAddedProvider.future,
-      )).items;
+      final history = await _arrivals(container);
+      expect(history.entries, hasLength(6));
+      final cards = arrivedOf(
+        history.entries,
+        since: _now.subtract(arrivalsWindow),
+      );
 
-      expect(items, hasLength(1));
-      expect(items.single.title, "Marvel's Daredevil");
-      expect(items.single.subtitle, 'Season 1 · 6 episodes');
-      expect(recentlyAddedEyebrow(items).imported, '6 imported');
+      expect(cards, hasLength(1));
+      expect(cards.single.title, "Marvel's Daredevil");
+      // The newest of the six is the one the card stands for.
+      expect(
+        cards.single.at,
+        _now.subtract(const Duration(hours: 3, minutes: 1)),
+      );
+      expect(
+        arrivedSubtitle(cards.length, history.coverage),
+        'Last 7 days · 1 new',
+      );
+      expect(client.lastGetPath, '/api/v3/history/since');
+      expect(
+        client.lastGetQueryParameters?['eventType'],
+        'downloadFolderImported',
+      );
+      expect(client.lastGetQueryParameters?['includeSeries'], isTrue);
+      expect(client.lastGetQueryParameters?['includeEpisode'], isTrue);
     });
 
-    test('it reads history, and keeps only what landed or failed', () async {
-      // One page per arr, unfiltered, classified here — see
-      // `domain/arr_import.dart` for why the brief's `eventType` query cannot
-      // be sent. A page of history is mostly `grabbed`, and none of it is this
-      // region's business.
+    test('an episode of a series that was already there is not an arrival, '
+        'and a series that does not say when it was added is kept', () async {
+      Map<String, dynamic> episode(int id, String title, {String? added}) => {
+        'id': id,
+        'eventType': 'downloadFolderImported',
+        'date': _now.subtract(const Duration(hours: 5)).toIso8601String(),
+        'seriesId': id,
+        'series': {'title': title, 'tmdbId': 100 + id, 'added': ?added},
+        'episode': {'seasonNumber': 3, 'episodeNumber': 1},
+      };
+
+      final client = FakeApiClient();
+      client.getResponseData = [
+        episode(
+          1,
+          'Long Running',
+          added: _now.subtract(const Duration(days: 300)).toIso8601String(),
+        ),
+        episode(
+          2,
+          'Just Added',
+          added: _now.subtract(const Duration(days: 2)).toIso8601String(),
+        ),
+        episode(3, 'Added Unknown'),
+      ];
+
+      final container = _container(
+        settings: settingsWith(
+          sonarrUrl: 'https://sonarr.local:8989',
+          sonarrApiKey: 'key',
+        ),
+        sonarrService: SonarrService(client),
+        overrides: _pinnedNow,
+      );
+
+      final history = await _arrivals(container);
+      final cards = arrivedOf(
+        history.entries,
+        since: _now.subtract(arrivalsWindow),
+      );
+
+      expect(cards.map((card) => card.title), ['Just Added', 'Added Unknown']);
+    });
+
+    test('a movie imported twice is one card, the newer import\'s, and the '
+        'cards run newest first', () async {
+      Map<String, dynamic> imported(
+        int id,
+        String title,
+        int tmdbId,
+        Duration ago,
+      ) => {
+        'id': id,
+        'eventType': 'downloadFolderImported',
+        'date': _now.subtract(ago).toIso8601String(),
+        'movieId': id,
+        'movie': {'title': title, 'tmdbId': tmdbId, 'images': <dynamic>[]},
+      };
+
+      final container = _container(
+        settings: _secureRadarr,
+        radarrService: _HistoryRadarrService([
+          imported(1, 'Sintel', 45745, const Duration(days: 2)),
+          imported(2, 'Spring', 593910, const Duration(hours: 2)),
+          // Upgraded: the same movie again, a day after the first.
+          imported(3, 'Sintel', 45745, const Duration(days: 1)),
+          // Last month's, outside the week.
+          imported(4, 'Elephants Dream', 9761, const Duration(days: 30)),
+        ]),
+        overrides: _pinnedNow,
+      );
+
+      final history = await _arrivals(container);
+      final cards = arrivedOf(
+        history.entries,
+        since: _now.subtract(arrivalsWindow),
+      );
+
+      expect(cards.map((card) => card.title), ['Spring', 'Sintel']);
+      expect(cards.last.id, 3, reason: 'the newer copy stands for the title');
+    });
+
+    test('it keeps only what was imported: a failed import is not what '
+        'arrived', () async {
+      // The import event is asked for by name, and checked again on each
+      // record: a server that ignores the filter still gives only imports.
+      // A failed import is a decision, and Needs you's.
       final container = _container(
         settings: _secureRadarr,
         radarrService: _HistoryRadarrService([
@@ -1025,16 +1189,15 @@ void main() {
         ]),
       );
 
-      final items = (await container.read(
-        servicesRecentlyAddedProvider.future,
-      )).items;
+      final history = await _arrivals(container);
 
-      expect(items.map((item) => item.title), [
-        'Poor Things',
-        'Nickel.Boys.2024',
-      ]);
-      expect(items.first.failed, isFalse);
-      expect(items.last.failed, isTrue);
+      expect(history.entries.map((entry) => entry.title), ['Poor Things']);
+      expect(
+        history.entries.every(
+          (entry) => entry.outcome == ArrImportOutcome.imported,
+        ),
+        isTrue,
+      );
     });
   });
 
@@ -1287,19 +1450,43 @@ class _MoviesRadarrService extends FakeRadarrService {
   Future<List<RadarrMovie>> getMovies() async => movies;
 }
 
-/// One page of \*arr history, which is what Recently added and the failed-import
-/// decisions both read.
+/// What Arrived asks a Radarr: the week's imports since a date, in one answer.
+/// Records what it was asked, so a test can see the window and the narrowing.
 class _HistoryRadarrService extends FakeRadarrService {
   _HistoryRadarrService(this.records);
 
   final List<Map<String, dynamic>> records;
 
+  /// Each `/history/since` this service answered.
+  final List<({DateTime since, Map<String, dynamic> query})> asked = [];
+
   @override
-  Future<List<dynamic>> getHistory({
-    int page = 1,
-    int pageSize = 20,
+  Future<List<dynamic>> getHistorySince(
+    DateTime date, {
     Map<String, dynamic>? queryParameters,
-  }) async => records;
+  }) async {
+    asked.add((since: date, query: queryParameters ?? const {}));
+    return records;
+  }
+}
+
+/// The moment the week is read from, pinned so a record's age is not the
+/// clock's.
+final _now = DateTime.utc(2026, 10, 7, 12);
+
+final _pinnedNow = [
+  arrivalsClockProvider.overrideWith(
+    (ref) =>
+        () => _now,
+  ),
+];
+
+/// The week's answer, held open: the provider lets go of its answer when
+/// nothing listens, and a test that reads it twice is asking whether it was
+/// read again.
+Future<ArrHistory> _arrivals(ProviderContainer container) {
+  container.listen(servicesArrivalsProvider, (_, _) {});
+  return container.read(servicesArrivalsProvider.future);
 }
 
 const Map<String, dynamic> _importedRecord = {
