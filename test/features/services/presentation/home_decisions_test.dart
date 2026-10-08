@@ -276,6 +276,13 @@ void main() {
     await tester.tap(_inRequests(find.text('Retry')));
     await harness.settle(tester);
 
+    // PORT: fails on lib, which is left as it is. Requests now reads the
+    // waiting page (`pendingRequestsForProvider`), but Retry only drops what
+    // `dashboardSourcesOf(ServiceKey.seerr)` lists
+    // (lib/features/services/presentation/dashboard_retry.dart), which is
+    // `requestsForProvider` and `servicesRequestsProvider`. The module
+    // re-reads the failure it cached: expected no FaultBand after Retry, found
+    // one. Listing `pendingRequestsForProvider` there makes this pass.
     expect(_inRequests(find.byType(FaultBand)), findsNothing);
     // Anna decides nothing: her own waiting Charge is no decision of hers,
     // and Luca's Metropolis is not hers to see.
@@ -310,8 +317,10 @@ void main() {
     );
     expect(_inDownloads(find.text('Not in the total: SABnzbd')), findsOne);
     // SABnzbd's rate is missing from the sum: its rows are joined to the 4K
-    // Radarr's, and the rate is the part only SABnzbd can say.
-    expect(find.textContaining('across 2 clients'), findsNothing);
+    // Radarr's, and the rate is the part only SABnzbd can say. The speed is a
+    // dash, not the half of it that qBittorrent reported.
+    expect(_inDownloads(find.text('5 moving · 1 stuck · —')), findsOne);
+    expect(_inDownloads(find.textContaining('MB/s')), findsNothing);
 
     down = false;
     await tester.tap(_inNeedsYou(find.text('Retry')));
@@ -322,7 +331,7 @@ void main() {
     expect(find.textContaining('did not answer'), findsNothing);
     expect(find.textContaining('Not in the total'), findsNothing);
     expect(
-      find.text('5 downloading · 40.4\u00A0MB/s across 2 clients'),
+      _inDownloads(find.text('5 moving · 1 stuck · 40.4\u00A0MB/s')),
       findsOne,
     );
 
