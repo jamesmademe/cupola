@@ -482,6 +482,17 @@ class FakeSeerrService extends SeerrService {
   Future<List<SeerrRequest>> getActiveRequests() async =>
       seerrRequestsInMotion(await getRequests());
 
+  /// The `pending` filter's page, with its count, the way the server
+  /// answers it.
+  @override
+  Future<List<SeerrRequest>> getPendingRequests() async {
+    final pending = [
+      for (final request in await getRequests())
+        if (request.status == RequestStatus.pendingApproval) request,
+    ];
+    return SeerrRequestList(pending, total: pending.length);
+  }
+
   // Filters on the issue's own `status`, the way the server does: the filter
   // is what is *asked for*, and a record carries what it is.
   @override
