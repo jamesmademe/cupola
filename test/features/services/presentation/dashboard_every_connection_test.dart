@@ -77,34 +77,42 @@ void main() {
       before: _scriptFailedImportOn4k,
     );
 
-    // Downloads: the 4K's two movies, joined to the SABnzbd moving them.
+    // Downloads: the 4K's movie, named for its Radarr, with how far it is
+    // and how long is left.
     expect(
-      _within(
-        HomeDownloadsModule,
-        find.text(
-          'Radarr 4K · Bluray-2160p · 2.9 of 9.4\u00A0GB · 6\u00A0min left · SABnzbd',
-        ),
-      ),
+      _within(HomeDownloadsModule, find.text('Elephants Dream · Radarr 4K')),
       findsOne,
     );
-    // The line is figures, so it is tabular in the text face: figures are
-    // never mono, which is for machine strings only.
-    final line = tester.widget<Text>(
-      find.text(
-        'Radarr 4K · Bluray-2160p · 2.9 of 9.4\u00A0GB · 6\u00A0min left · SABnzbd',
-      ),
-    );
-    expect(line.style?.fontFamily, isNot(DesignTokens.typeFamilyMono));
     expect(
-      line.style?.fontFeatures,
+      _within(HomeDownloadsModule, find.text('31% · 6\u00A0min')),
+      findsOne,
+    );
+    // The value is figures, so it is tabular in the text face: figures are
+    // never mono, which is for machine strings only.
+    final value = tester.widget<Text>(find.text('31% · 6\u00A0min'));
+    expect(value.style?.fontFamily, isNot(DesignTokens.typeFamilyMono));
+    expect(
+      value.style?.fontFeatures,
       contains(const FontFeature.tabularFigures()),
+    );
+    // Both of the 4K's movies were joined to the SABnzbd moving them: the
+    // module draws four rows, so the second one is read off the data.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeScreen)),
+    );
+    final fourK = container
+        .read(servicesInFlightProvider)
+        .requireValue
+        .preview
+        .where((item) => item.instanceId == WorldIds.radarr4k);
+    expect(fourK, hasLength(2));
+    expect(
+      fourK.map((item) => item.clientService),
+      everyElement(ServiceKey.sabnzbd),
     );
     // The HD's own rows say which Radarr too, now that there are two.
     expect(
-      _within(
-        HomeDownloadsModule,
-        find.textContaining('Radarr 1 · WEBDL-1080p'),
-      ),
+      _within(HomeDownloadsModule, find.text('Sprite Fright · Radarr 1')),
       findsOne,
     );
     // Arrived: the 4K's failed import is on the rail, and the tile says
@@ -212,9 +220,22 @@ void main() {
       _within(HomeDownloadsModule, find.text('Not in the total: Radarr 1')),
       findsOne,
     );
+    // The 4K keeps its movies: the one the module has room for is drawn, and
+    // both are still in what it counts.
     expect(
-      _within(HomeDownloadsModule, find.textContaining('Radarr 4K · ')),
-      findsNWidgets(2),
+      _within(HomeDownloadsModule, find.text('Elephants Dream · Radarr 4K')),
+      findsOne,
+    );
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeScreen)),
+    );
+    expect(
+      container
+          .read(servicesInFlightProvider)
+          .requireValue
+          .preview
+          .where((item) => item.instanceId == WorldIds.radarr4k),
+      hasLength(2),
     );
     expect(
       _within(HomeArrivedModule, find.text('Not in the total: Radarr 1')),
@@ -222,7 +243,14 @@ void main() {
     );
     // A figure over the connections that answered, never a dash over a
     // Radarr that did.
-    expect(find.text('— downloading'), findsNothing);
+    expect(
+      _within(
+        HomeDownloadsModule,
+        find.text('5 moving · 1 stuck · 40.4\u00A0MB/s'),
+      ),
+      findsOne,
+    );
+    expect(find.text('— moving'), findsNothing);
     expect(find.text('— imported'), findsNothing);
 
     await harness.unmount(tester);
