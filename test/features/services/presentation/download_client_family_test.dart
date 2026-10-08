@@ -1,8 +1,8 @@
 /// The download clients are one family on Home.
 ///
-/// qBittorrent, Transmission, SABnzbd and NZBGet each feed In flight, each
-/// add their rate to the eyebrow, each raise their faults under Needs a
-/// decision and each are named under the region when they do not answer.
+/// qBittorrent, Transmission, SABnzbd and NZBGet each feed Downloads, each
+/// add their rate to the eyebrow, each raise their faults in Needs you and
+/// each are named under the module when they do not answer.
 library;
 
 import 'package:flutter/material.dart';
@@ -18,6 +18,7 @@ import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/decision_rows.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 
 const _mb = 1024 * 1024;
@@ -98,27 +99,31 @@ Future<ProviderContainer> _start(ConfigProfile profile) async {
   return harness.container(retry: (_, _) => null);
 }
 
-Future<ProfileHarness> _pumpHome(
+Future<ProfileHarness> _pump(
   WidgetTester tester,
-  ConfigProfile profile,
-) async {
+  ConfigProfile profile, {
+  Widget home = const HomeScreen(),
+}) async {
   final harness = await ProfileHarness.start(profile);
   await tester.binding.setSurfaceSize(const Size(430, 6000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     ProviderScope(
       overrides: harness.overrides,
-      child: MaterialApp(theme: AppTheme.darkTheme(), home: const HomeScreen()),
+      child: MaterialApp(theme: AppTheme.darkTheme(), home: home),
     ),
   );
   await harness.settle(tester);
   return harness;
 }
 
-Finder _inFlight(Finder matching) => find.descendant(
-  of: find.byType(ServicesInFlightSection),
-  matching: matching,
-);
+/// The decision rows of [profile]: the Home leads with one line (Needs you)
+/// and no longer lists them, so the row is mounted on its own.
+Future<ProfileHarness> _pumpRows(WidgetTester tester, ConfigProfile profile) =>
+    _pump(tester, profile, home: const Scaffold(body: ProvidedDecisionRows()));
+
+Finder _inDownloads(Finder matching) =>
+    find.descendant(of: find.byType(HomeDownloadsModule), matching: matching);
 
 void main() {
   group('Transmission', () {
@@ -240,10 +245,10 @@ void main() {
     });
 
     testWidgets('P4 on Home: the eyebrow sums both clients', (tester) async {
-      final harness = await _pumpHome(tester, Profiles.p4);
+      final harness = await _pump(tester, Profiles.p4);
 
       expect(
-        _inFlight(find.textContaining('across 2 clients')),
+        _inDownloads(find.textContaining('across 2 clients')),
         findsOneWidget,
       );
 
@@ -281,14 +286,26 @@ void main() {
       );
     });
 
-    testWidgets('P1 on Home: the two broken torrents are counted under the '
-        'region and listed as decisions', (tester) async {
-      final harness = await _pumpHome(
+    testWidgets('P1 on Home: the two broken torrents are counted under '
+        'Downloads', (tester) async {
+      final harness = await _pump(
         tester,
         Profiles.p1.withDownloads([_qbError, _qbMissing]),
       );
 
-      expect(_inFlight(find.textContaining('2 failed')), findsOneWidget);
+      expect(_inDownloads(find.textContaining('2 failed')), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P1: the two broken torrents are listed as decisions', (
+      tester,
+    ) async {
+      final harness = await _pumpRows(
+        tester,
+        Profiles.p1.withDownloads([_qbError, _qbMissing]),
+      );
+
       expect(find.textContaining('Files missing'), findsOneWidget);
 
       await harness.unmount(tester);
@@ -461,14 +478,25 @@ void main() {
     });
 
     testWidgets('P1 on Home, SABnzbd\'s disk full: the stops are counted '
-        'under the region', (tester) async {
-      final harness = await _pumpHome(
+        'under Downloads', (tester) async {
+      final harness = await _pump(
         tester,
         Profiles.p1.withFullDisk(WorldIds.sabnzbd),
       );
 
       // Big Buck Bunny, and the two jobs the disk stopped.
-      expect(_inFlight(find.textContaining('3 stuck')), findsOneWidget);
+      expect(_inDownloads(find.textContaining('3 stuck')), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P1, SABnzbd\'s disk full: the stops are listed as one '
+        'decision', (tester) async {
+      final harness = await _pumpRows(
+        tester,
+        Profiles.p1.withFullDisk(WorldIds.sabnzbd),
+      );
+
       // The 4K's two stops fold into one row, which keeps their shared cause.
       expect(find.textContaining('Disk full'), findsOneWidget);
 
