@@ -506,7 +506,7 @@ class _RequestListRow extends ConsumerWidget {
       SnackBarHelper.success(
         context,
         cancels
-            ? 'Cancelled the request for $title'
+            ? 'Canceled the request for $title'
             : 'Deleted the request for $title',
       );
     } catch (error) {

@@ -160,7 +160,7 @@ MediaStatusInfo manualImportCommandStatus(ManualImportCommandStatus command) {
     'aborted' => ('Aborted', StatusTone.warning),
     'orphaned' => ('Orphaned', StatusTone.warning),
     // Somebody cancelled it. Stopped on purpose is neutral.
-    'cancelled' => ('Cancelled', StatusTone.neutral),
+    'cancelled' => ('Canceled', StatusTone.neutral),
     _ => (command.status, StatusTone.info),
   };
   return MediaStatusInfo(

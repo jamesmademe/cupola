@@ -23,7 +23,7 @@ The slab is `slab` under a wash of the next release's light (`titleLightProvider
 
 ## Whose calendar
 
-The operator's comes from every Radarr, Sonarr, Lidarr and Readarr connection, and stands whatever Seerr says: it is in the atrium even when Seerr is silent, and above the `The catalogue comes from Seerr` slab when there is no Seerr. The requester's comes from her own requests, through her Seerr, and names no service.
+The operator's comes from every Radarr, Sonarr, Lidarr and Readarr connection, and stands whatever Seerr says: it is in the atrium even when Seerr is silent, and above the `The catalog comes from Seerr` slab when there is no Seerr. The requester's comes from her own requests, through her Seerr, and names no service.
 
 ## The consumer provides
 

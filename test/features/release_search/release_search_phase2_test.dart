@@ -1105,7 +1105,7 @@ void main() {
           status: ReleaseSearchJobStatus.failed,
           failure: const ReleaseSearchFailure(
             kind: ReleaseSearchFailureKind.cancelled,
-            headline: 'Search cancelled.',
+            headline: 'Search canceled.',
             diagnosis: 'Nothing was sent.',
           ),
         ),

@@ -213,7 +213,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
         finishedAt: _now(),
         failure: const ReleaseSearchFailure(
           kind: ReleaseSearchFailureKind.cancelled,
-          headline: 'Search cancelled.',
+          headline: 'Search canceled.',
           diagnosis: 'Nothing was sent to your indexers after you stopped it.',
         ),
       ),
@@ -253,7 +253,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
           finishedAt: _now(),
           failure: ReleaseSearchFailure(
             kind: ReleaseSearchFailureKind.cancelled,
-            headline: 'Cancelled, ${service.title}\'s connection changed.',
+            headline: 'Canceled, ${service.title}\'s connection changed.',
             diagnosis: 'Searching again will use the settings you just saved.',
           ),
         ),

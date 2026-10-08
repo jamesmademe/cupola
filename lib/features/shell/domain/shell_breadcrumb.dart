@@ -50,7 +50,7 @@ abstract final class ShellBreadcrumb {
     'datasets': 'Datasets',
     'shares': 'Shares',
     'apps': 'Apps',
-    'virt': 'Virtualisation',
+    'virt': 'Virtualization',
     'reporting': 'Reporting',
     'system': 'System',
     'services': 'Services',

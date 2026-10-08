@@ -107,7 +107,7 @@ void main() {
     );
     final slab = find
         .ancestor(
-          of: find.text('The catalogue comes from Seerr'),
+          of: find.text('The catalog comes from Seerr'),
           matching: find.byWidgetPredicate(
             (widget) => widget is Container && widget.decoration != null,
           ),
@@ -125,7 +125,7 @@ void main() {
     // The empty state is what a search here would reach when there is no
     // catalogue to browse; with Seerr there is one.
     expect(find.byType(DiscoverAtrium), findsOneWidget);
-    expect(find.text('The catalogue comes from Seerr'), findsNothing);
+    expect(find.text('The catalog comes from Seerr'), findsNothing);
     expect(find.textContaining('Set up'), findsNothing);
   });
 }

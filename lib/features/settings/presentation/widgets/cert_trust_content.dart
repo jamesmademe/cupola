@@ -175,7 +175,7 @@ class CertTrustContent extends StatelessWidget {
     return 'This address presented a certificate that is not trusted by your '
         'device. That is normal for a self-signed certificate on a home '
         'install, but it also means the connection cannot be authenticated, '
-        'only trust it if you recognise this server.$hostClause$sharedClause';
+        'only trust it if you recognize this server.$hostClause$sharedClause';
   }
 
   /// Uppercased, colon-grouped hex, matching [ServerCertificate.displayFingerprint]

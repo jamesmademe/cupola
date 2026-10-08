@@ -27,7 +27,7 @@ void main() {
     );
 
     expect(find.text('Animation'), findsOneWidget);
-    expect(find.text('From the Seerr catalogue'), findsOneWidget);
+    expect(find.text('From the Seerr catalog'), findsOneWidget);
     for (final control in [
       'Movies',
       'Series',

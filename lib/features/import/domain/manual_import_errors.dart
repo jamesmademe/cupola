@@ -40,7 +40,7 @@ String mapImportError(Object error, ServiceKey service) {
         ServiceKey.lidarr =>
           "the file's name doesn't match a known artist/album/track pattern, "
               'or the folder name gives no hint. '
-              'Try organising into `Artist/Album/Track.ext`, then rescan.',
+              'Try organizing into `Artist/Album/Track.ext`, then rescan.',
         _ => 'check the service logs for the full error.',
       };
       return '$title answered with an error while processing the manual '

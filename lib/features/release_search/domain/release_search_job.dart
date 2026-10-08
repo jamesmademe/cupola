@@ -297,7 +297,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
   if (error is DioException && CancelToken.isCancel(error)) {
     return const ReleaseSearchFailure(
       kind: ReleaseSearchFailureKind.cancelled,
-      headline: 'Search cancelled.',
+      headline: 'Search canceled.',
       diagnosis: 'Nothing was sent to your indexers after you stopped it.',
     );
   }

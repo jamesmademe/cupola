@@ -705,7 +705,7 @@ class _LidarrLink extends ConsumerWidget {
           context.go(ServiceRoutes.lidarrLibrary);
         },
         semanticLabel: 'Search Lidarr for $query',
-        semanticHint: 'Music is not in the movie and series catalogue',
+        semanticHint: 'Music is not in the movie and series catalog',
         excludeChildSemantics: true,
         child: Container(
           constraints: const BoxConstraints(minHeight: 60),
@@ -742,7 +742,7 @@ class _LidarrLink extends ConsumerWidget {
                       style: AppType.row.copyWith(color: room.ink),
                     ),
                     Text(
-                      'Artists and albums aren’t in the movie catalogue',
+                      'Artists and albums aren’t in the movie catalog',
                       style: AppType.meta.copyWith(color: room.inkSecondary),
                     ),
                   ],
@@ -840,7 +840,7 @@ class _WithoutSeerr extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'The catalogue comes from Seerr',
+                  'The catalog comes from Seerr',
                   style: AppType.section.copyWith(color: room.ink),
                 ),
                 const SizedBox(height: AppSpacing.sm),

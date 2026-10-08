@@ -178,7 +178,7 @@ void main() {
             .where((r) => r.method == 'DELETE'),
         hasLength(1),
       );
-      expect(find.text('Request cancelled'), findsOneWidget);
+      expect(find.text('Request canceled'), findsOneWidget);
 
       await harness.unmount(tester);
     });

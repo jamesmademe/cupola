@@ -375,7 +375,7 @@ void main() {
         'field still searches Radarr', (tester) async {
       await _pump(tester, query: '', withSeerr: false);
 
-      expect(find.text('The catalogue comes from Seerr'), findsOneWidget);
+      expect(find.text('The catalog comes from Seerr'), findsOneWidget);
       expect(find.text('Set up Seerr'), findsOneWidget);
       expect(find.textContaining('searches Radarr'), findsOneWidget);
       // People come from Seerr: the field does not promise them.

@@ -715,7 +715,7 @@ class _TransmissionSessionBodyState
           ),
           const SizedBox(height: AppSpacing.lg),
           _SettingsSection(
-            title: 'Behaviour',
+            title: 'Behavior',
             children: [
               _toggleRow(
                 icon: Icons.play_arrow_rounded,

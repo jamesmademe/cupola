@@ -137,7 +137,7 @@ class _TrueNasDiagnosticsScreenState
               children: [
                 Text(
                   'Debug-only: raw JSON-RPC responses from the connected server. '
-                  'Copy these to help finalise parsing.',
+                  'Copy these to help finalize parsing.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),

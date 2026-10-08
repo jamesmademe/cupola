@@ -349,7 +349,7 @@ class TransmissionClient {
         // set. So the fix worth offering first is the one that also fixes the
         // bigger problem.
         return const TransmissionException(
-          'Transmission did not recognise the hostname in the request. Add it '
+          'Transmission did not recognize the hostname in the request. Add it '
           'to `rpc-host-whitelist`, or make the reverse proxy rewrite the Host '
           'header. (This check is skipped entirely once Transmission has a '
           'username and password set, which is worth doing anyway.)',

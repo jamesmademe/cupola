@@ -398,7 +398,7 @@ class _AppearanceSummaryCard extends ConsumerWidget {
           // Says it here because the absence of a Material You switch reads as
           // an omission until you know it is a decision: the per-service
           // accents have to stay recognisable on every OS.
-          subtitle: 'Cupola does not take the system accent colour.',
+          subtitle: 'Cupola does not take the system accent color.',
         ),
       ],
     );

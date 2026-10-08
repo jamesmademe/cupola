@@ -7,9 +7,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import '../../test_helpers/copy_scan.dart';
 
 /// The brand book's lexicon, held on the copy: **one word per state, the same
-/// on every screen**, none of the words its *Never* list bans, and no em dash
-/// as punctuation: the dash is the placeholder of a figure nobody could read,
-/// and only that.
+/// on every screen**, none of the words its *Never* list bans, American
+/// spelling throughout (color, catalog, canceled, -ize), and no em dash as
+/// punctuation: the dash is the placeholder of a figure nobody could read, and
+/// only that.
 ///
 /// A source scan because the regression is one plausible string in a diff —
 /// "Offline" reads as a fine label until the next screen says "Did not
@@ -73,7 +74,8 @@ void main() {
           '(StateWord, Lexicon, failureLabel/failureHeadline): Answering · '
           'Did not answer · Not set up · Set up X · Retry · Stuck · Stopped · '
           'Waiting for approval · Could not (never the contraction, never '
-          '"Failed to"). A word '
+          '"Failed to"). The app writes American English: color, catalog, '
+          'canceled, organize. A word '
           'that is not the banned state goes in '
           '_allowed with its reason.',
     );
@@ -213,6 +215,132 @@ final f = 'failed to start';
     ]);
   });
 
+  group('the British spelling matcher', () {
+    test('catches the British forms', () {
+      for (final prose in [
+        'Each service keeps its own colour',
+        'Coloured, colouring, colourful, watercolour',
+        'From the Seerr catalogue',
+        'Cataloguing 3 catalogues',
+        'Search cancelled.',
+        'Cancelling the request',
+        'Cancelled, background search was turned off.',
+        'Behaviour',
+        'Misbehaviour',
+        'Add to favourites',
+        'In honour of the host',
+        'Neighbouring services',
+        'Nothing is labelled',
+        'Labelling the album',
+        'Travelled, travelling, traveller',
+        'A modelled response',
+        'The signalled change, signalling',
+        'An open-source licence',
+        'Licences',
+        'In the centre of the screen',
+        '5 metres, 2 kilometres',
+        'Home theatre',
+        'Fibre connection',
+        'A grey band, greyed out',
+        'The artefact',
+        'Dialogue',
+        'A matter of judgement',
+        'Ageing disks',
+        'Whilst it runs',
+        'Amongst the rest',
+        'What we learnt',
+        'Programme the box',
+        'Defence, offence, pretence',
+        // The -ise family, stem by stem.
+        'Organise the files',
+        'Organisation settings',
+        'Did not recognise this server',
+        'Unrecognised certificate',
+        'Authorise the request',
+        'Realised too late',
+        'Apologise for the delay',
+        'Prioritise the queue',
+        'Summarise the week',
+        'Customise the tabs',
+        'Optimise the library',
+        'Utilise the space',
+        'Minimise the window',
+        'Maximise the window',
+        'Help finalise parsing',
+        'Normalised titles',
+        'Initialising the client',
+        'Serialise the stack',
+        'Visualise the queue',
+        'Personalised for you',
+        'Standardise the names',
+        'Synchronise the clocks',
+        'Categorise the releases',
+        'Specialised search',
+        'Localise the copy',
+        'Sanitise the input',
+        'Analyse the log',
+        'Analysed twice',
+        'Analysing the queue',
+        'Emphasise the title',
+        'Emphasises it, emphasising it',
+        'Paralyse the queue',
+        'Paralysed by a retry',
+        'MINIMISE',
+      ]) {
+        expect(_britishSpelling.hasMatch(prose), isTrue, reason: prose);
+      }
+    });
+
+    test('lets the American forms and the look-alike words through', () {
+      for (final prose in [
+        'Each service keeps its own color',
+        'Colored, coloring, colorful',
+        'From the Seerr catalog',
+        'Search canceled.',
+        'Canceling the request',
+        'Cancellation is final',
+        'Behavior',
+        'Add to favorites',
+        'In honor of the host',
+        'Neighboring services',
+        'Nothing is labeled',
+        'Traveled, traveling, traveler',
+        'An open-source license',
+        'In the center of the screen',
+        '5 meters, 2 kilometers',
+        'Home theater',
+        'A gray band, grayed out',
+        'The artifact',
+        'Dialog',
+        'A matter of judgment',
+        'Aging disks',
+        'While it runs',
+        'Among the rest',
+        'What we learned',
+        'Program the box',
+        'Defense, offense, pretense',
+        'Organize the files',
+        'Minimize the window',
+        'Help finalize parsing',
+        'Analyze the log',
+        'The analyses of the logs',
+        'Emphasize the title',
+        // The words a generic -ise pattern would trip on.
+        'A promise, otherwise precise',
+        'Exercise caution',
+        'A surprise',
+        'Advise Radarr first',
+        'Compromise, revise, supervise, enterprise, franchise',
+        'The analysis, the emphasis, the paralysis',
+        'Organism, optimism, specialist, realism, surrealist',
+        'A metered connection, a meter',
+        'Centered, centering',
+      ]) {
+        expect(_britishSpelling.hasMatch(prose), isFalse, reason: prose);
+      }
+    });
+  });
+
   test('every allow-list entry still matches something', () {
     // An entry whose site was fixed or moved is an exception nobody needs,
     // and it would quietly excuse the next occurrence in that file.
@@ -296,7 +424,68 @@ final _never = <String, RegExp>{
     r'\b(could not|failed to) load\b',
     caseSensitive: false,
   ),
+  'British spelling → American': _britishSpelling,
 };
+
+/// The British spellings the app does not write: its copy is American English
+/// (color, catalog, canceled, organize). Built from explicit stems, never from
+/// a generic `\w+ise\b`, which would trip on promise, otherwise, precise,
+/// exercise, surprise and advise.
+///
+/// `analyses` and `paralyses` are left out on purpose: they are also the plural
+/// of analysis and paralysis, and plain American English.
+final _britishSpelling = RegExp(
+  [
+    // -our: colour, favourite, honour, neighbour, behaviour, humour…
+    r'(?:colo|favo|hono|neighbo|behavio|labo|humo|rumo|flavo|harbo|odo|armo'
+        r'|savo|vapo|rigo|vigo|valo|tumo|endeavo|splendo)ur',
+    // -ogue: catalogue (dialogue stays below, `dialog` is the American one).
+    r'\bcatalogu(?:e|es|ed|ing)\b',
+    r'\bdialogues?\b',
+    // A doubled l before a suffix: cancelled, labelled, travelled, modelled…
+    r'\b(?:cancell|labell|travell|modell|signall|fuell|levell|channell'
+        r'|tunnell)(?:ed|ing|er|ers)\b',
+    // -re: centre, metre, theatre, fibre, calibre…
+    r'\b(?:centr|theatr|fibr|calibr|lustr|spectr|sombr)(?:e|es|ed|ing)\b',
+    r'\b(?:kilo|milli|centi|deci)?metres?\b',
+    // -ce: licence, defence, offence, pretence.
+    r'\blicenc(?:e|es|ed|ing)\b',
+    r'\b(?:defence|offence|pretence)(?:s|less)?\b',
+    // Single words.
+    r'\bgrey',
+    r'\bartefacts?\b',
+    r'\bjudgements?\b',
+    r'\bageing\b',
+    r'\b(?:whilst|amongst|learnt)\b',
+    r'\bprogrammes?\b',
+    r'\bcheques?\b',
+    r'\btyres?\b',
+    r'\bmould',
+    r'\bplough',
+    r'\bsceptic',
+    r'\bjewellery\b',
+    r'\baluminium\b',
+    r'\bmanoeuvr',
+    r'\bpractis(?:e|es|ed|ing)\b',
+    r'\b(?:fulfil|enrol)\b',
+    r'\b(?:skilful|wilful|instalments?)\b',
+    // -ise by explicit stem: organise, recognise, authorise, realise…
+    r'(?:organis|recognis|authoris|realis|apologis|prioritis|summaris'
+        r'|customis|optimis|utilis|minimis|maximis|finalis|normalis'
+        r'|initialis|serialis|visualis|personalis|standardis|synchronis'
+        r'|categoris|specialis|localis|sanitis|capitalis|criticis|memoris'
+        r'|mobilis|digitis|centralis|generalis|familiaris|harmonis|legalis'
+        r'|materialis|modernis|rationalis|randomis|stabilis|symbolis'
+        r'|sympathis|tokenis|virtualis|formalis|globalis|equalis|fertilis'
+        r'|scrutinis|subsidis|characteris|computeris|hypnotis|idealis'
+        r'|magnetis|jeopardis|pasteuris|publicis|popularis)'
+        r'(?:e|es|ed|ing|ation|ations|er|ers)\b',
+    // -yse: analyse, paralyse, catalyse (never the plural of -ysis).
+    r'(?:analys|paralys|catalys)(?:e|ed|ing|er|ers)\b',
+    r'emphasis(?:e|ed|es|ing)\b',
+  ].join('|'),
+  caseSensitive: false,
+);
 
 /// The words that stay, each with the reason it is not the banned state.
 const _allowed = <({String file, String literal, String reason})>[
@@ -341,7 +530,7 @@ const _allowed = <({String file, String literal, String reason})>[
         'lib/features/truenas/presentation/system/truenas_diagnostics_screen.dart',
     literal:
         'Debug-only: raw JSON-RPC responses from the connected server. Copy '
-        'these to help finalise parsing.',
+        'these to help finalize parsing.',
     reason: 'a debug-only diagnostic screen, not product copy',
   ),
   (
@@ -376,6 +565,27 @@ const _allowed = <({String file, String literal, String reason})>[
         'the footer of a grid that did load, under the rows already fetched, '
         'naming the next page: not a screen failing whole, which is what '
         "the classification's headline is for",
+  ),
+  (
+    file: 'lib/features/prowlarr/domain/models/prowlarr_models.dart',
+    literal: 'cancelled',
+    reason:
+        "Prowlarr's own command status, the wire value `isFinished` compares; "
+        'never shown',
+  ),
+  (
+    file: 'lib/features/jellyfin/domain/models/jellyfin_models.dart',
+    literal: 'cancelled',
+    reason:
+        "Jellyfin's own scheduled-task state, the wire value the model "
+        'compares; never shown',
+  ),
+  (
+    file: 'lib/features/release_search/data/release_search_transport.dart',
+    literal: 'cancelled',
+    reason:
+        "the `reason` of Dio's `requestCancelled`, a marker on the exception "
+        'the search maps to its own wording; never shown',
   ),
 ];
 

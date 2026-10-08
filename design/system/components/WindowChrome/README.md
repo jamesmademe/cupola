@@ -28,7 +28,7 @@ Windows and Linux (what the OS switch is allowed to change: button placement, gu
 
 - Windows: three 44-wide caption buttons (`remove`, `crop_square`, `close`, 15px, `on-surface-variant`), no gap, square; hover `on-surface` at 8%, Close hover a full `error` fill with an `on-error` glyph. They request 44 tall, so the 38 compact strip clamps them.
 - Linux (GNOME): 26pt round buttons `space-sm` apart, `surface-container-highest` at 60%, 13px glyphs; Close hover `error` at 24%.
-- Both sit `space-md` after the last chip and inside the strip's `space-md` right padding. Each is a button named *Minimise*, *Maximise*, *Close*.
+- Both sit `space-md` after the last chip and inside the strip's `space-md` right padding. Each is a button named *Minimize*, *Maximize*, *Close*.
 
 `WindowDragStrip`, in the same file, stands in for the chrome above a flow the shell does not host (onboarding): the same height and gutter, the caption buttons where the OS needs them, and a trail (*Cupola › Setup*) in `chrome` 11 / 500 `dim-text` throughout, because none of its crumbs is a link. It draws nothing on a phone.
 

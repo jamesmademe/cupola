@@ -487,14 +487,14 @@ class _CaptionButtons extends StatelessWidget {
       children: [
         _CaptionButton(
           icon: Icons.remove_rounded,
-          label: 'Minimise',
+          label: 'Minimize',
           gnome: gnome,
           onPressed: windowManager.minimize,
         ),
         SizedBox(width: gnome ? AppSpacing.sm : 0),
         _CaptionButton(
           icon: Icons.crop_square_rounded,
-          label: 'Maximise',
+          label: 'Maximize',
           gnome: gnome,
           onPressed: () async {
             if (await windowManager.isMaximized()) {

@@ -249,7 +249,7 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
       return const _SheetMessage(
         title: 'That search is gone',
         message:
-            'It was cancelled or cleared while this sheet was open. Searching '
+            'It was canceled or cleared while this sheet was open. Searching '
             'again is safe.',
       );
     }

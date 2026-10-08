@@ -155,7 +155,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Seerr did not answer, so the catalogue is missing.'),
+        find.text('Seerr did not answer, so the catalog is missing.'),
         findsOneWidget,
       );
       expect(find.bySemanticsLabel('Genres, 1'), findsNothing);

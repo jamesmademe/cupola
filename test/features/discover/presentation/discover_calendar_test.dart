@@ -147,12 +147,10 @@ void main() {
     final harness = await pump(tester, Profiles.p4, const DiscoverPage());
 
     expect(find.text('Calendar'), findsOneWidget);
-    expect(find.text('The catalogue comes from Seerr'), findsOneWidget);
+    expect(find.text('The catalog comes from Seerr'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('Calendar')).dy,
-      lessThan(
-        tester.getTopLeft(find.text('The catalogue comes from Seerr')).dy,
-      ),
+      lessThan(tester.getTopLeft(find.text('The catalog comes from Seerr')).dy),
     );
 
     await harness.unmount(tester);

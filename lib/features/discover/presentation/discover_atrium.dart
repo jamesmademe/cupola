@@ -274,7 +274,7 @@ class _SeerrSilent extends ConsumerWidget {
       child: InlineErrorRetry(
         message:
             '${describeFailureOf(ServiceKey.seerr, error).headline}, '
-            'so the catalogue is missing.',
+            'so the catalog is missing.',
         error: error,
         service: ServiceKey.seerr,
         onRetry: () => DiscoverAtrium.invalidate(ref),

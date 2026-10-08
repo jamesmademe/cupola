@@ -83,7 +83,7 @@ abstract final class RoleGateCopy {
 
   /// Why a request that no longer waits cannot be cancelled.
   static const notWaitingForApproval =
-      'Only a request still waiting for approval can be cancelled.';
+      'Only a request still waiting for approval can be canceled.';
 
   /// What [ability] is, as the tail of "can't …".
   static String _doing(SeerrAbility ability, SeerrMediaKind? kind) =>

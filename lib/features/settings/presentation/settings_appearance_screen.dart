@@ -36,7 +36,7 @@ class SettingsAppearanceScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: AppSpacing.lg),
               child: Text(
                 'Both themes are first-class, light is not an inverted '
-                'afterthought. Each service keeps its own colour either way.',
+                'afterthought. Each service keeps its own color either way.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

@@ -215,7 +215,7 @@ abstract final class Lexicon {
 
   /// Seerr's 401 on cancelling a request that is no longer waiting.
   static const noLongerCancellable =
-      "It was already approved, so it can't be cancelled here.";
+      "It was already approved, so it can't be canceled here.";
 
   /// After a write the requester asked for failed: nothing half happened.
   static const nothingChanged = 'Nothing changed.';

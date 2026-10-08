@@ -394,7 +394,7 @@ class _RequestCard extends ConsumerWidget {
       action: () => ref
           .read(seerrServiceForProvider(instanceId))
           .deleteRequest(request.id),
-      successMessage: cancels ? 'Request cancelled' : 'Request deleted',
+      successMessage: cancels ? 'Request canceled' : 'Request deleted',
       failureMessage: cancels
           ? "Could not cancel the request"
           : "Could not delete the request",

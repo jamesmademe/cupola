@@ -111,7 +111,7 @@ void main() {
       await _onPlatform(TargetPlatform.windows, () async {
         await _pump(tester);
         expect(find.bySemanticsLabel('Close'), findsOneWidget);
-        expect(find.bySemanticsLabel('Minimise'), findsOneWidget);
+        expect(find.bySemanticsLabel('Minimize'), findsOneWidget);
       });
 
       // macOS draws its own, so ours must not appear beside them.

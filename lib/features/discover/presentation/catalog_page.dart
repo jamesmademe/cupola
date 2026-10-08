@@ -328,7 +328,7 @@ class _Head extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          requester ? 'From the catalogue' : 'From the Seerr catalogue',
+          requester ? 'From the catalog' : 'From the Seerr catalog',
           style: AppType.label
               .weight(FontWeight.w400)
               .copyWith(color: room.inkSecondary),

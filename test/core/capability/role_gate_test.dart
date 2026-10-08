@@ -354,7 +354,7 @@ void main() {
         true,
         false,
         const Dimmed(
-          'Only a request still waiting for approval can be cancelled.',
+          'Only a request still waiting for approval can be canceled.',
         ),
       ),
       (

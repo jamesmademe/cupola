@@ -37,7 +37,7 @@ class BackgroundSearchSwitch {
 
   /// What the cancelled jobs say. Named constants because a test asserting on
   /// the verdict should not be asserting on a string literal typed twice.
-  static const cancelHeadline = 'Cancelled, background search was turned off.';
+  static const cancelHeadline = 'Canceled, background search was turned off.';
   static const cancelDiagnosis =
       'Searches in flight were stopped so nothing of theirs stays on the '
       'device. Searching again keeps this one in the app.';

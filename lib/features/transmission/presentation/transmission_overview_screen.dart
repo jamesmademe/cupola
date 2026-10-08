@@ -211,7 +211,7 @@ class _LabelsSection extends ConsumerWidget {
         // the absence costs a line rather than an alarm.
         emptyBuilder: const ServiceOverviewEmpty(
           icon: Icons.label_off_outlined,
-          label: 'Nothing is labelled',
+          label: 'Nothing is labeled',
         ),
         data: (items) => Column(
           children: [

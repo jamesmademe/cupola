@@ -38,7 +38,7 @@ const Map<String, String> kJellyfinTranscodeReasonPhrases = {
   'VideoProfileNotSupported': 'Video profile is beyond the client',
   'VideoLevelNotSupported': 'Video level is beyond the client',
   'VideoResolutionNotSupported': 'Resolution is above the client limit',
-  'VideoBitDepthNotSupported': 'Colour bit depth is above the client limit',
+  'VideoBitDepthNotSupported': 'Color bit depth is above the client limit',
   'VideoFramerateNotSupported': 'Frame rate is above the client limit',
   'VideoBitrateNotSupported': 'Video bitrate is above the client limit',
   'VideoRangeTypeNotSupported': 'Client cannot display this HDR format',
