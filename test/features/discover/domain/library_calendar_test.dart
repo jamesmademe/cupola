@@ -101,6 +101,44 @@ void main() {
     expect(disc.state.hollow, isTrue);
   });
 
+  test("a movie's fanart is its wide artwork, kept when two Radarrs merge, "
+      'and an episode takes its series\'', () {
+    Map<String, dynamic> withFanart(Map<String, dynamic> record) => {
+      ...record,
+      'images': [
+        {'coverType': 'poster', 'remoteUrl': 'https://art.test/poster.jpg'},
+        {'coverType': 'fanart', 'remoteUrl': 'https://art.test/fanart.jpg'},
+      ],
+    };
+    final events = libraryCalendarEvents(
+      [
+        reading(ServiceKey.radarr, 'Radarr', [spriteFright()]),
+        reading(ServiceKey.radarr, 'Radarr 4K', [withFanart(spriteFright())]),
+      ],
+      window,
+      now,
+    );
+    expect(events.first.backdrop?.url, 'https://art.test/fanart.jpg');
+    expect(events.first.poster?.url, 'https://art.test/poster.jpg');
+
+    final episode = libraryCalendarEvents(
+      [
+        reading(ServiceKey.sonarr, 'Sonarr', [
+          {
+            'seriesId': 1,
+            'seasonNumber': 3,
+            'episodeNumber': 1,
+            'airDateUtc': DateTime(2026, 9, 29, 21).toUtc().toIso8601String(),
+            'series': withFanart({'title': 'Cosmos Laundromat', 'tvdbId': 9}),
+          },
+        ]),
+      ],
+      window,
+      now,
+    ).single;
+    expect(episode.backdrop?.url, 'https://art.test/fanart.jpg');
+  });
+
   test('on the server, a movie says only that; out with nothing on disk it '
       'is missing only over a queue read whole', () {
     List<CalendarEvent> read(ArrQueueSnapshot queue, {bool hasFile = false}) =>

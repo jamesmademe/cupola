@@ -224,6 +224,7 @@ class CalendarEvent {
     this.mark,
     this.byline,
     this.poster,
+    this.backdrop,
     this.sources = const [],
     this.note,
     this.target,
@@ -268,6 +269,10 @@ class CalendarEvent {
   final String? byline;
 
   final ImageSource? poster;
+
+  /// The wide artwork of a movie or a series (its fanart), when its record
+  /// carries one: what the Home's Featured draws.
+  final ImageSource? backdrop;
 
   /// The connections that hold it, by name: `Radarr · Radarr 4K`.
   final List<String> sources;
@@ -443,6 +448,7 @@ class CalendarEvent {
     mark: mark ?? other.mark,
     byline: byline ?? other.byline,
     poster: (poster?.url.isNotEmpty ?? false) ? poster : other.poster,
+    backdrop: (backdrop?.url.isNotEmpty ?? false) ? backdrop : other.backdrop,
     sources: [
       ...sources,
       for (final source in other.sources)
@@ -605,6 +611,7 @@ List<CalendarEvent> collapseCalendarRuns(List<CalendarEvent> events) {
             ? event.mark
             : held.mark,
         poster: held.poster,
+        backdrop: held.backdrop,
         sources: held.sources,
         note: held.note,
         state: held.state,
@@ -719,6 +726,7 @@ Iterable<CalendarEvent> _eventsOf(
       final title = stringOrNull(record['title']) ?? 'Movie';
       final tmdb = intOrNull(record['tmdbId']);
       final poster = art(_list(record['images']), const ['poster']);
+      final backdrop = art(_list(record['images']), const ['fanart']);
       for (final (field, release) in _radarrReleases) {
         final day = arrCalendarDate(record[field]);
         if (day == null || !window.contains(day)) continue;
@@ -730,6 +738,7 @@ Iterable<CalendarEvent> _eventsOf(
           release: release,
           tmdbId: tmdb != null && tmdb > 0 ? tmdb : null,
           poster: poster,
+          backdrop: backdrop,
           sources: sources,
           state: stateOf(day: day, onDisk: record['hasFile'] == true),
           target: tmdb == null || tmdb <= 0
@@ -767,6 +776,7 @@ Iterable<CalendarEvent> _eventsOf(
         episode: episode,
         mark: CalendarMark.of(record),
         poster: art(_list(series?['images']), const ['poster']),
+        backdrop: art(_list(series?['images']), const ['fanart']),
         sources: sources,
         state: stateOf(
           day: day,
