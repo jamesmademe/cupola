@@ -15,7 +15,7 @@ The consumer provides the same `FloatingNavDestination` list the phone's bar tak
 
 Each sheet is drawn in the dark and the light room, on the desktop sheet.
 
-- Dashboard selected, Activity selected with two finished searches, Settings selected with twelve waiting (`9+`).
+- Home selected, Activity selected with two finished searches, Settings selected at the foot with twelve waiting (`9+`) and no section lit.
 - Text at 200%: Activity with the `9+` badge, whole, short of the rail's hairline.
 
 ## Do / don't

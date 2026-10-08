@@ -41,7 +41,9 @@ One node per item: button, selected state, and the label *Home*, a new line, *Ta
 
 Each sheet is drawn in the dark and the light room.
 
-- Each of the four destinations selected; a badge on Activity (3, and 9+ past nine).
+- The operator's bar with Home, Activity, Discover and Stack selected; a badge on Activity (3, and 9+ past nine).
+- Settings on screen: no tab selected, every item at rest.
+- The requester's bar: Home, Discover, Requests.
 - A 320pt window, where the bar fills the width and the items tighten.
 - Over artwork, where the glass is a tint.
 - Text at 200%: Activity with a badge, and Discover selected with 9+.
