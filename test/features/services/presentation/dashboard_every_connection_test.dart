@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/home/domain/arrived.dart';
 import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
@@ -23,6 +24,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/decision_rows.dart';
+import '../../../test_helpers/profiles/fakes/arr_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 import '../../../test_helpers/profiles/service_fakes.dart';
 
@@ -39,12 +41,31 @@ Map<String, Object?> _failedImport(DateTime now) => {
   'data': {'message': 'Not a valid video file'},
 };
 
-void _scriptFailedImportOn4k(ProfileNetwork network) => network.on(
-  WorldIds.radarr4k,
-  'GET',
-  '/api/v3/history',
-  (r) => NetworkReply.json(pagedEnvelope(r, [_failedImport(network.now)])),
-);
+void _scriptFailedImportOn4k(ProfileNetwork network) {
+  network.on(
+    WorldIds.radarr4k,
+    'GET',
+    '/api/v3/history',
+    (r) => NetworkReply.json(pagedEnvelope(r, [_failedImport(network.now)])),
+  );
+  // The week's read asks for imports by name; a server that ignores that
+  // still answers with the failure among its imports, and Arrived leaves it
+  // out.
+  network.on(
+    WorldIds.radarr4k,
+    'GET',
+    '/api/v3/history/since',
+    (r) => NetworkReply.json([
+      _failedImport(network.now),
+      ...const RadarrFake().history(
+        ServerContext(
+          network: network,
+          server: network.server(WorldIds.radarr4k),
+        ),
+      ),
+    ]),
+  );
+}
 
 Future<ProfileHarness> _pumpHome(
   WidgetTester tester,
@@ -64,6 +85,23 @@ Future<ProfileHarness> _pumpHome(
   await harness.settle(tester);
   return harness;
 }
+
+/// The week's answer, held open: the provider lets go of it when nothing
+/// listens.
+Future<ArrHistory> _arrivals(ProviderContainer container) {
+  container.listen(servicesArrivalsProvider, (_, _) {});
+  return container.read(servicesArrivalsProvider.future);
+}
+
+/// What Arrived draws as cards, newest first, over the week the profile's
+/// network is in.
+Future<List<ArrHistoryEntry>> _arrivedCards(
+  ProviderContainer container,
+  ProfileHarness harness,
+) async => arrivedOf(
+  (await _arrivals(container)).entries,
+  since: harness.network.now.subtract(arrivalsWindow),
+);
 
 Finder _within(Type region, Finder matching) =>
     find.descendant(of: find.byType(region), matching: matching);
@@ -116,13 +154,16 @@ void main() {
       _within(HomeDownloadsModule, find.text('Sprite Fright · Radarr 1')),
       findsOne,
     );
-    // Arrived: the 4K's failed import is on the rail, and the tile says
-    // which Radarr it failed on.
+    // Arrived: the 4K's import is on the rail, and the card says which
+    // Radarr it came to. Its failed import is Needs you's, not a card.
     expect(
-      find.bySemanticsLabel(
-        RegExp(r'^Elephants Dream, Radarr 4K, failed import, '),
-      ),
+      _within(HomeArrivedModule, find.text('2\u00A0h ago · Radarr 4K')),
       findsOne,
+    );
+    expect(find.bySemanticsLabel('Spring, 2\u00A0h ago, Radarr 4K'), findsOne);
+    expect(
+      _within(HomeArrivedModule, find.text('Elephants Dream')),
+      findsNothing,
     );
 
     handle.dispose();
@@ -189,22 +230,143 @@ void main() {
     expect(Uri.parse(fix.route!).queryParameters['i'], WorldIds.radarr4k);
   });
 
-  test('P1: two films numbered 3, one on each Radarr, are two tiles that '
-      'open two different films', () async {
+  test('P1: two movies numbered 3, one on each Radarr, are two cards that '
+      'open two different movies', () async {
     final harness = await ProfileHarness.start(Profiles.p1);
     final container = harness.container(retry: (_, _) => null);
 
-    final recent = await container.read(servicesRecentlyAddedProvider.future);
-    final threes = recent.items
-        .where((item) => item.service == ServiceKey.radarr && item.id == 3)
+    final cards = await _arrivedCards(container, harness);
+    final threes = cards
+        .where((card) => card.service == ServiceKey.radarr && card.mediaId == 3)
         .toList();
-    expect(threes.map((item) => item.title), ['Spring', 'Coffee Run']);
-    expect(threes.map((item) => item.instanceId), [
+    expect(threes.map((card) => card.title), ['Spring', 'Coffee Run']);
+    expect(threes.map((card) => card.instanceId), [
       WorldIds.radarr4k,
       WorldIds.radarr,
     ]);
-    // One hero per tile: two tiles sharing a tag assert on the flight.
-    expect(threes.map((item) => item.heroTag).toSet(), hasLength(2));
+    // A card is a title, and a title is TMDB's: the number a Radarr gave it
+    // is its own, so it is neither what keeps two cards apart nor what a card
+    // opens.
+    expect(threes.map((card) => card.tmdbId), [
+      WorldTitles.spring.tmdbId,
+      WorldTitles.coffeeRun.tmdbId,
+    ]);
+    expect(threes.map(arrivedIdentity).toSet(), hasLength(2));
+  });
+
+  test('P1: a movie on the HD and the 4K Radarr is one card, the newer '
+      'import\'s, and says which Radarr', () async {
+    final harness = await ProfileHarness.start(Profiles.p1);
+    // The HD Radarr imported Tears of Steel three days ago, and the 4K a day
+    // and two hours ago.
+    harness.network.on(
+      WorldIds.radarr,
+      'GET',
+      '/api/v3/history/since',
+      (r) => NetworkReply.json([
+        ...const RadarrFake().history(
+          ServerContext(
+            network: harness.network,
+            server: harness.network.server(WorldIds.radarr),
+          ),
+        ),
+        {
+          'id': 77,
+          'movieId': 5,
+          'eventType': 'downloadFolderImported',
+          'date': harness.network.now
+              .subtract(const Duration(days: 3))
+              .toUtc()
+              .toIso8601String(),
+          'movie': {
+            'id': 5,
+            'title': 'Tears of Steel',
+            'tmdbId': WorldTitles.tearsOfSteel.tmdbId,
+            'added': harness.network.now
+                .subtract(const Duration(days: 17))
+                .toUtc()
+                .toIso8601String(),
+          },
+        },
+      ]),
+    );
+    final container = harness.container(retry: (_, _) => null);
+
+    final history = await _arrivals(container);
+    expect(
+      history.entries.where((entry) => entry.title == 'Tears of Steel'),
+      hasLength(3),
+      reason: 'the HD answered with its old import and its new one',
+    );
+    final tears = (await _arrivedCards(
+      container,
+      harness,
+    )).where((card) => card.title == 'Tears of Steel').toList();
+    expect(tears, hasLength(1));
+    expect(tears.single.instanceId, WorldIds.radarr4k);
+    expect(tears.single.connectionName, '4K');
+  });
+
+  test('P1: every connection of Radarr, Sonarr and Lidarr is asked for the '
+      'week, and each entry carries its own', () async {
+    final harness = await ProfileHarness.start(Profiles.p1);
+    final container = harness.container(retry: (_, _) => null);
+
+    final history = await _arrivals(container);
+
+    for (final id in [
+      WorldIds.radarr,
+      WorldIds.radarr4k,
+      WorldIds.sonarr,
+      WorldIds.lidarr,
+    ]) {
+      expect(
+        harness.network
+            .requestsTo(id)
+            .where((r) => r.path.endsWith('/history/since')),
+        hasLength(1),
+        reason: '$id is asked once',
+      );
+    }
+    expect(
+      history.entries
+          .where((entry) => entry.service == ServiceKey.radarr)
+          .map((entry) => (entry.title, entry.instanceId, entry.connectionName))
+          .toSet(),
+      {
+        ('Coffee Run', WorldIds.radarr, 'Radarr 1'),
+        ('Sintel', WorldIds.radarr, 'Radarr 1'),
+        ('Tears of Steel', WorldIds.radarr, 'Radarr 1'),
+        ('Elephants Dream', WorldIds.radarr, 'Radarr 1'),
+        ('Spring', WorldIds.radarr4k, '4K'),
+        ('Tears of Steel', WorldIds.radarr4k, '4K'),
+      },
+    );
+    expect(history.coverage.isWhole, isTrue);
+  });
+
+  test('P1, the HD Radarr dark: the week is the 4K\'s, and the coverage '
+      'names the one missing', () async {
+    final harness = await ProfileHarness.start(
+      Profiles.p1.withBehaviour(
+        WorldIds.radarr,
+        ConnectionBehaviour.didNotAnswer,
+      ),
+    );
+    final container = harness.container(retry: (_, _) => null);
+
+    final history = await _arrivals(container);
+    final cards = await _arrivedCards(container, harness);
+
+    expect(history.coverage.failed.keys.map((source) => source.title), [
+      'Radarr 1',
+    ]);
+    expect(cards.map((card) => card.title), ['Spring', 'Tears of Steel']);
+    expect(cards.map((card) => card.instanceId).toSet(), {WorldIds.radarr4k});
+    expect(
+      arrivedSubtitle(cards.length, history.coverage),
+      'Last 7 days · 2 from Lidarr, Radarr 4K and Sonarr',
+    );
   });
 
   testWidgets('P1, the HD Radarr dark: the 4K keeps its rows, and the note '
@@ -238,8 +400,21 @@ void main() {
           .where((item) => item.instanceId == WorldIds.radarr4k),
       hasLength(2),
     );
+    // Arrived draws the 4K's cards, says whose they are, and names the Radarr
+    // that did not answer over the rail.
     expect(
-      _within(HomeArrivedModule, find.text('Not in the total: Radarr 1')),
+      _within(
+        HomeArrivedModule,
+        find.text('Last 7 days · 2 from Lidarr, Radarr 4K and Sonarr'),
+      ),
+      findsOne,
+    );
+    expect(
+      _within(HomeArrivedModule, find.text('Radarr 1 did not answer.')),
+      findsOne,
+    );
+    expect(
+      _within(HomeArrivedModule, find.text('2\u00A0h ago · Radarr 4K')),
       findsOne,
     );
     // A figure over the connections that answered, never a dash over a
@@ -252,7 +427,6 @@ void main() {
       findsOne,
     );
     expect(find.text('— moving'), findsNothing);
-    expect(find.text('— imported'), findsNothing);
 
     await harness.unmount(tester);
   });
