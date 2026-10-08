@@ -1,11 +1,13 @@
-/// Home's failing indexers, exited stacks and expiring certificates come off
-/// every connection, and each control acts on the one its row came off.
+/// The failing indexers, exited stacks and expiring certificates the Home
+/// leads with come off every connection, and each decision row's control acts
+/// on the one its row came off.
 ///
 /// The three were read through the lens alone, because Test, Start and Renew
 /// called the lens: with two Prowlarr, two Dockge or two Nginx Proxy Manager,
 /// the second one's faults never reached Home. Each connection is now its own
 /// source, every row says which one it is on once there are two, and its
-/// control reaches that server.
+/// control reaches that server. The rows are mounted on their own: the Home
+/// leads with one line (Needs you) and no longer lists the decisions.
 library;
 
 import 'package:flutter/material.dart';
@@ -15,17 +17,17 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/decision_rows.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 
 /// Seerr alone, and then the two connections under test: no queue, so the
-/// region's three phone rows are theirs.
+/// rows are theirs and the requests'.
 ConfigProfile _two(ProfileConnection first, ProfileConnection second) =>
     Profiles.p3
         .without(ServiceKey.radarr)
@@ -69,9 +71,9 @@ void _expiringCertificate(ProfileNetwork network, String id) => network.on(
   ]),
 );
 
-/// Home under [profile] in a router whose other pages record where a tap
-/// landed.
-Future<(ProfileHarness, ValueGetter<String?>)> _pumpHome(
+/// The decision rows of [profile] in a router whose other pages record where
+/// a tap landed.
+Future<(ProfileHarness, ValueGetter<String?>)> _pumpRows(
   WidgetTester tester,
   ConfigProfile profile, {
   void Function(ProfileNetwork network)? before,
@@ -87,7 +89,11 @@ Future<(ProfileHarness, ValueGetter<String?>)> _pumpHome(
 
   final router = GoRouter(
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/',
+        builder: (context, state) =>
+            const Scaffold(body: ProvidedDecisionRows()),
+      ),
       GoRoute(
         path: '${ServiceRoutes.prowlarrIndexerBase}/:id',
         builder: landed,
@@ -112,7 +118,7 @@ Future<(ProfileHarness, ValueGetter<String?>)> _pumpHome(
   return (harness, () => opened);
 }
 
-/// The app's container, which outlives Home once a tap has left it.
+/// The app's container, which outlives the rows once a tap has left them.
 ProviderContainer _container(WidgetTester tester) =>
     ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
 
@@ -122,10 +128,8 @@ Finder _control(String id, String label) => find.descendant(
   matching: find.text(label),
 );
 
-Finder _detail(String text) => find.descendant(
-  of: find.byType(DashboardDecisionsSection),
-  matching: find.text(text),
-);
+Finder _detail(String text) =>
+    find.descendant(of: find.byType(DecisionRow), matching: find.text(text));
 
 void main() {
   group('two Prowlarr', () {
@@ -159,7 +163,7 @@ void main() {
     testWidgets('Test on the tower\'s row tests the tower\'s indexer', (
       tester,
     ) async {
-      final (harness, _) = await _pumpHome(
+      final (harness, _) = await _pumpRows(
         tester,
         _two(WorldConnections.prowlarr, WorldConnections.prowlarrTower),
         before: (network) {
@@ -185,7 +189,7 @@ void main() {
 
     testWidgets('the tower\'s row opens its indexer with the tower under the '
         'lens', (tester) async {
-      final (harness, opened) = await _pumpHome(
+      final (harness, opened) = await _pumpRows(
         tester,
         _two(WorldConnections.prowlarr, WorldConnections.prowlarrTower),
         before: (network) => _failingIndexer(network, WorldIds.prowlarrTower),
@@ -208,7 +212,7 @@ void main() {
 
   testWidgets('two Dockge: Start on the tower\'s stack starts it on the '
       'tower', (tester) async {
-    final (harness, _) = await _pumpHome(
+    final (harness, _) = await _pumpRows(
       tester,
       _two(WorldConnections.dockge, WorldConnections.dockgeTower),
     );
@@ -237,7 +241,7 @@ void main() {
       'certificate opens the certificates with it under the lens', (
     tester,
   ) async {
-    final (harness, opened) = await _pumpHome(
+    final (harness, opened) = await _pumpRows(
       tester,
       _two(WorldConnections.npm, WorldConnections.npmNas),
       before: (network) {
