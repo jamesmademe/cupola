@@ -2946,8 +2946,9 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
                 id: 'seerr-${source.instanceId}-${request.id}',
                 service: ServiceKey.seerr,
                 title: request.media?.title ?? 'Unknown media',
+                // Who asked, and on which Seerr once there are two; the row
+                // adds when (`askedAgo`), which a read cannot keep current.
                 detail: joinDisplayParts([
-                  'Request',
                   if (source.name != null)
                     serviceWithConnection(
                       ServiceKey.seerr,
@@ -2955,7 +2956,6 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
                       joiner: ' ',
                     ),
                   if (namesWho) request.requestedBy?.displayName,
-                  request.type == 'tv' ? 'Series' : 'Movie',
                 ]),
                 occurredAt: parseAddedTimestamp(request.createdAt),
                 actionId: request.id,

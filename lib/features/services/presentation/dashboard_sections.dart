@@ -21,7 +21,9 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
@@ -507,6 +509,13 @@ class DecisionRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (decision.kind == DecisionKind.pendingRequest) {
+      return _RequestRow(
+        decision: decision,
+        divided: divided,
+        outcome: outcome,
+      );
+    }
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     // Faults are amber; a pending request is backlog and stays neutral. The tone
@@ -640,67 +649,6 @@ class _DecisionControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (decision.kind == DecisionKind.pendingRequest) {
-      final id = decision.actionId;
-      // The gate of the Seerr the request came off: an account of the
-      // operator's that may not approve there keeps the pair, dimmed.
-      final decide = ref
-          .watch(roleGateProvider(decision.instanceId))
-          .operatorAction(SeerrAbility.approve);
-      if (!decide.isDrawn) return const SizedBox.shrink();
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          RoleGatedAction.builder(
-            verdict: decide,
-            onTap: () async {
-              if (id == null) return;
-              // Held before the wait: the row goes once Seerr's list is
-              // read again, and its answer stays in its place.
-              final answered = ref.read(answeredRequestsProvider.notifier);
-              final outcome = await ActivityActions.approveRequest(
-                context,
-                ref,
-                // The Seerr the request came off: the region reads every
-                // one, and a request id is per server.
-                instanceId: decision.instanceId,
-                requestId: id,
-                title: decision.title,
-              );
-              if (outcome != null) answered.answer(decision, outcome);
-            },
-            builder: (context, onPressed, annotate) =>
-                _RequestDecisionButton.approve(
-                  title: decision.title,
-                  onPressed: id == null ? null : onPressed,
-                  annotate: annotate,
-                ),
-          ),
-          RoleGatedAction.builder(
-            verdict: decide,
-            onTap: () async {
-              if (id == null) return;
-              final answered = ref.read(answeredRequestsProvider.notifier);
-              final declined = await ActivityActions.declineRequest(
-                context,
-                ref,
-                instanceId: decision.instanceId,
-                requestId: id,
-                title: decision.title,
-              );
-              if (declined) answered.answer(decision, 'Declined');
-            },
-            builder: (context, onPressed, annotate) =>
-                _RequestDecisionButton.decline(
-                  title: decision.title,
-                  onPressed: id == null ? null : onPressed,
-                  annotate: annotate,
-                ),
-          ),
-        ],
-      );
-    }
-
     final required = decision.requiresService;
     final label = decisionActionLabel(
       decision.kind,
@@ -963,79 +911,196 @@ class _DecisionActionButton extends StatelessWidget {
   }
 }
 
-/// One of the two inline decisions on a pending request.
+/// A request that waits: who asked and when, then Approve in ink and Decline
+/// beside it, the two the same width under the words. Once answered here, the
+/// row says what happened in their place.
 ///
-/// Both are icon-only, so both carry the media title in their name: five pending
-/// rows would otherwise offer five identical "Approve" buttons with no way to
-/// tell which request each belongs to.
-class _RequestDecisionButton extends StatelessWidget {
-  const _RequestDecisionButton._({
-    required this.icon,
-    required this.verb,
-    required this.tone,
-    required this.title,
-    required this.onPressed,
-    this.annotate,
+/// Neither button takes a tone: a request is somebody waiting politely, and
+/// declining one is not a fault.
+class _RequestRow extends ConsumerWidget {
+  const _RequestRow({
+    required this.decision,
+    required this.divided,
+    required this.outcome,
   });
 
-  const _RequestDecisionButton.approve({
-    required String title,
-    required VoidCallback? onPressed,
-    Widget Function(Widget content)? annotate,
-  }) : this._(
-         icon: Icons.check_rounded,
-         verb: 'Approve',
-         tone: StatusTone.success,
-         title: title,
-         onPressed: onPressed,
-         annotate: annotate,
-       );
-
-  const _RequestDecisionButton.decline({
-    required String title,
-    required VoidCallback? onPressed,
-    Widget Function(Widget content)? annotate,
-  }) : this._(
-         icon: Icons.close_rounded,
-         verb: 'Decline',
-         tone: StatusTone.error,
-         title: title,
-         onPressed: onPressed,
-         annotate: annotate,
-       );
-
-  final IconData icon;
-  final String verb;
-  final StatusTone tone;
-  final String title;
-  final VoidCallback? onPressed;
-
-  /// The gate's dim and hint, around the glyph: the button's own content.
-  final Widget Function(Widget content)? annotate;
+  final DashboardDecision decision;
+  final bool divided;
+  final String? outcome;
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final room = CupolaRoom.of(context);
+    final asked = decision.occurredAt;
+    final line =
+        outcome ??
+        joinDisplayParts([
+          decision.detail,
+          if (asked != null) askedAgo(asked, now: DateTime.now()),
+        ]);
 
-    final glyph = Icon(icon, size: 20);
-    return IconButton(
-      onPressed: onPressed,
-      icon: annotate?.call(glyph) ?? glyph,
-      // The tooltip is already this button's accessible name and three test
-      // files assert on `find.byTooltip`, so it stays; the explicit label is
-      // added rather than traded for it.
-      tooltip: '$verb $title',
-      color: ServiceTheme.onTint(
-        statusToneColor(colorScheme, tone),
-        surface: colorScheme.surfaceContainer,
-        tintAlpha: 0,
+    Future<void> open() => openDecision(context, ref, decision);
+
+    return DecoratedBox(
+      key: ValueKey('decision-${decision.id}'),
+      decoration: BoxDecoration(
+        border: divided ? Border(top: BorderSide(color: room.hair)) : null,
       ),
-      // Material's default 48x48 clears both the 44pt iOS and 48dp Android
-      // floors; stated so a later density tweak cannot quietly drop under them.
-      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-      padding: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              container: true,
+              button: true,
+              label: decision.title,
+              value: spokenFromDotted(line),
+              onTap: open,
+              child: InkWell(
+                onTap: open,
+                excludeFromSemantics: true,
+                child: ExcludeSemantics(
+                  child: Row(
+                    children: [
+                      HomeRowArt(
+                        posterUrl: decision.posterUrl,
+                        icon: decision.service.icon,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              decision.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppType.row
+                                  .weight(FontWeight.w600)
+                                  .copyWith(color: room.ink),
+                            ),
+                            Text(
+                              line,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppType.meta.copyWith(
+                                color: room.inkSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (outcome == null)
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: AppSpacing.sm,
+                  left: HomeRowArt.width + AppSpacing.sm,
+                ),
+                child: _RequestControls(decision: decision),
+              ),
+          ],
+        ),
+      ),
     );
   }
+}
+
+/// Approve and Decline, gated by the Seerr the request came off: an account
+/// of the operator's that may not approve there keeps the pair, dimmed.
+class _RequestControls extends ConsumerWidget {
+  const _RequestControls({required this.decision});
+
+  final DashboardDecision decision;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final id = decision.actionId;
+    final decide = ref
+        .watch(roleGateProvider(decision.instanceId))
+        .operatorAction(SeerrAbility.approve);
+    if (!decide.isDrawn) return const SizedBox.shrink();
+
+    Future<void> approve() async {
+      if (id == null) return;
+      // Held before the wait: the row goes once Seerr's list is read again,
+      // and its answer stays in its place.
+      final answered = ref.read(answeredRequestsProvider.notifier);
+      final outcome = await ActivityActions.approveRequest(
+        context,
+        ref,
+        // The Seerr the request came off: the module reads every one, and a
+        // request id is per server.
+        instanceId: decision.instanceId,
+        requestId: id,
+        title: decision.title,
+      );
+      if (outcome != null) answered.answer(decision, outcome);
+    }
+
+    Future<void> decline() async {
+      if (id == null) return;
+      final answered = ref.read(answeredRequestsProvider.notifier);
+      final declined = await ActivityActions.declineRequest(
+        context,
+        ref,
+        instanceId: decision.instanceId,
+        requestId: id,
+        title: decision.title,
+      );
+      if (declined) answered.answer(decision, 'Declined');
+    }
+
+    Widget button(String verb, VoidCallback onTap, {required bool ink}) =>
+        Expanded(
+          child: RoleGatedAction.builder(
+            verdict: decide,
+            onTap: onTap,
+            builder: (context, onPressed, annotate) {
+              // The button says its verb; a screen reader and a long press
+              // hear the title with it.
+              final named = '$verb ${decision.title}';
+              final content = annotate(Text(verb, semanticsLabel: named));
+              final pressed = id == null ? null : onPressed;
+              return Tooltip(
+                message: named,
+                excludeFromSemantics: true,
+                child: ink
+                    ? FilledButton(onPressed: pressed, child: content)
+                    : OutlinedButton(onPressed: pressed, child: content),
+              );
+            },
+          ),
+        );
+
+    return Row(
+      children: [
+        button('Approve', approve, ink: true),
+        const SizedBox(width: AppSpacing.sm),
+        button('Decline', decline, ink: false),
+      ],
+    );
+  }
+}
+
+/// When a request was made, as its row says it: `2 h ago`, `yesterday`, the
+/// weekday within the week, then the date.
+String askedAgo(DateTime at, {required DateTime now}) {
+  final local = at.toLocal();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(local.year, local.month, local.day);
+  final daysAgo = today.difference(day).inDays;
+  if (daysAgo <= 0 || now.difference(local) < const Duration(hours: 12)) {
+    return formatSampleAge(local, now: now);
+  }
+  if (daysAgo == 1) return 'yesterday';
+  if (daysAgo < 7) return weekdayName(local);
+  return formatShortDate(local.toIso8601String(), now: now);
 }
 
 class _HeroContentCard extends StatelessWidget {

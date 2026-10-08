@@ -7,6 +7,7 @@ import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -40,6 +41,15 @@ void main() {
     expect(requestsSubtitle(1), '1 waits for you');
     expect(requestsSubtitle(50, floor: true), '50+ wait for you');
     expect(requestsSubtitle(0), 'All answered');
+  });
+
+  test('when it was asked, as the row says it', () {
+    final now = DateTime(2026, 10, 8, 20);
+    expect(askedAgo(DateTime(2026, 10, 8, 18), now: now), '2\u00A0h ago');
+    expect(askedAgo(DateTime(2026, 10, 8, 19, 58), now: now), '2\u00A0min ago');
+    expect(askedAgo(DateTime(2026, 10, 7, 9), now: now), 'yesterday');
+    expect(askedAgo(DateTime(2026, 10, 4, 9), now: now), 'Sunday');
+    expect(askedAgo(DateTime(2026, 9, 20, 9), now: now), 'Sun 20 Sep');
   });
 
   testWidgets('an approved request says where it went, without its '
