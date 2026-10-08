@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -22,6 +20,7 @@ import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/shell/domain/settings_return.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 
 /// The first tab.
@@ -126,7 +125,7 @@ class _AccountButton extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
       child: PressableScale(
-        onTap: () => context.go(ServiceRoutes.settings),
+        onTap: () => openSettings(context, ref),
         semanticLabel: name.isEmpty ? 'Your account' : '$name, your account',
         excludeChildSemantics: true,
         child: Container(

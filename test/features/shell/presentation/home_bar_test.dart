@@ -88,6 +88,27 @@ void main() {
       expect(find.byType(SettingsHomeScreen), findsOneWidget);
     });
 
+    testWidgets('Settings goes back to Stack, by its arrow and by the '
+        'system\'s back', (tester) async {
+      final container = await _pump(tester, _operator);
+      await tester.tap(_tab(NavTab.stack));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Back to Stack'));
+      await tester.pumpAndSettle();
+      expect(_location(container), ServiceRoutes.stack);
+
+      // Android's back on the Settings root: back to Stack, not out of the
+      // app.
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pumpAndSettle();
+      expect(_location(container), ServiceRoutes.stack);
+    });
+
     testWidgets('a location from the Dashboard lands on Stack in one hop, '
         'query and all', (tester) async {
       final container = await _pump(tester, _operator);
@@ -136,13 +157,17 @@ void main() {
       }
     });
 
-    testWidgets('her account opens Settings', (tester) async {
+    testWidgets('her account opens Settings, and its arrow brings her '
+        'Home', (tester) async {
       final container = await _pump(tester, _requester);
 
       await tester.tap(find.bySemanticsLabel('Anna, your account'));
       await tester.pumpAndSettle();
-
       expect(_location(container), ServiceRoutes.settings);
+
+      await tester.tap(find.byTooltip('Back to Home'));
+      await tester.pumpAndSettle();
+      expect(_location(container), ServiceRoutes.home);
     });
 
     testWidgets('Requests is her tab', (tester) async {

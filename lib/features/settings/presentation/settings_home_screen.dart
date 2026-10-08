@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -14,6 +15,7 @@ import 'package:cupola/features/settings/presentation/widgets/settings_app_rows.
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_summary_cards.dart';
+import 'package:cupola/features/shell/domain/settings_return.dart';
 
 export 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart'
     show SettingsSectionLabel;
@@ -42,10 +44,30 @@ class SettingsHomeScreen extends ConsumerWidget {
       FloatingNavBarMetrics.getScrollViewBottomPadding(context),
     );
 
-    return AmbientScaffold(
+    // The tab Settings was opened from, and the way back to it: the page is a
+    // branch root with nothing to pop. Not in the desktop window, where
+    // Settings is an item of the rail and the rail is the way back.
+    final from = AppBreakpoints.isDesktopShell(context)
+        ? null
+        : ref.watch(settingsReturnProvider);
+    void goBack() {
+      ref.read(settingsReturnProvider.notifier).set(null);
+      StatefulNavigationShell.maybeOf(context)?.goBranch(from!.index);
+    }
+
+    final page = AmbientScaffold(
       // No accent: a settings pane has no artwork, so its room is lit by the
       // neutral lamp, the fallback of `AmbientBackground`.
-      appBar: const GlassAppBar(title: Text('Settings')),
+      appBar: GlassAppBar(
+        title: const Text('Settings'),
+        leading: from == null
+            ? null
+            : IconButton(
+                tooltip: 'Back to ${from.label}',
+                icon: const Icon(Icons.chevron_left_rounded),
+                onPressed: goBack,
+              ),
+      ),
       body: SettingsMasterDetail(
         // Asked of the layout itself rather than re-derived here, so the pane
         // and the rail can never disagree about which of the two is on screen.
@@ -66,6 +88,18 @@ class SettingsHomeScreen extends ConsumerWidget {
                 ],
               ),
       ),
+    );
+    if (from == null) return page;
+    // Android's back, which on a branch root would otherwise leave the app.
+    // Only while this page is the one on top: a pushed settings page pops
+    // first, through its own navigator.
+    return BackButtonListener(
+      onBackButtonPressed: () async {
+        if (!(ModalRoute.of(context)?.isCurrent ?? false)) return false;
+        goBack();
+        return true;
+      },
+      child: page,
     );
   }
 

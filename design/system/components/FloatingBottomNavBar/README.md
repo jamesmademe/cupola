@@ -1,6 +1,6 @@
 # FloatingBottomNavBar
 
-The detached glass bar that carries the four canonical tabs on phones: Dashboard, Discover, Activity, Settings.
+The detached glass bar that carries a person's tabs on phones: the operator's Home, Discover, Activity, Stack, and the requester's Home, Discover, Requests (`NavTab.barFor`). Settings has no tab: it opens from Stack's gear and from the requester's account button.
 
 Rendered from `lib/core/widgets/floating_bottom_nav_bar.dart` by `test/design_catalog/floating_bottom_nav_bar_catalog_test.dart`, with the destinations of `lib/features/settings/domain/nav_tab.dart` as `lib/features/shell/presentation/shell_screen.dart` builds them.
 
@@ -35,7 +35,7 @@ At `AppBreakpoints.touchRail` (840) and wider on a touch device, a `NavigationRa
 
 ## Semantics
 
-One node per item: button, selected state, and the label *Dashboard*, a new line, *Tab 1 of 4*. A badge joins the label as a sentence (*Activity, 3 finished searches to look at*); the painted count is excluded. A destination's custom semantics actions ride on its node: the phone shell gives the Dashboard tab *Open the Portal*, the reader's way to the switcher the drag opens. The rails carry none.
+One node per item: button, selected state, and the label *Home*, a new line, *Tab 1 of 4*. In Settings no tab is selected. A badge joins the label as a sentence (*Activity, 3 finished searches to look at*); the painted count is excluded. A destination's custom semantics actions ride on its node: the phone shell gives the Stack tab *Open the Portal*, the reader's way to the switcher the drag opens. The rails carry none.
 
 ## States in the catalog
 
