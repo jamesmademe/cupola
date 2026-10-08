@@ -765,6 +765,11 @@
       "curve": {
         "$type": "cubicBezier",
         "$value": "{motion.curve.standard}"
+      },
+      "rise": {
+        "$type": "dimension",
+        "$value": "10px",
+        "$description": "How far the copy rises as it comes in. Reduce Motion: none."
       }
     },
     "image-xfade": {
@@ -820,6 +825,11 @@
       "curve": {
         "$type": "cubicBezier",
         "$value": "{motion.curve.linear}"
+      },
+      "hold": {
+        "$type": "duration",
+        "$value": "1200ms",
+        "$description": "After a touch anywhere in the carousel, the slide stays at least this long."
       }
     },
     "breathe": {
@@ -852,6 +862,16 @@
       "curve": {
         "$type": "cubicBezier",
         "$value": "{motion.curve.ease-in-out}"
+      },
+      "from": {
+        "$type": "number",
+        "$value": 1.02,
+        "$description": "The art's scale at the start of its drift."
+      },
+      "to": {
+        "$type": "number",
+        "$value": 1.12,
+        "$description": "The art's scale at the far end of its drift."
       }
     }
   },

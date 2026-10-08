@@ -92,6 +92,29 @@ class AppAnimation {
   /// 1500ms - The room light moving to a new title.
   static const Duration light = DesignTokens.motionLightDuration;
 
+  /// 900ms - A carousel's artwork crossfading to the next slide.
+  static const Duration imageCrossfade = DesignTokens.motionImageXfadeDuration;
+
+  /// 700ms - A carousel's copy changing, rising [textCrossfadeRise].
+  static const Duration textCrossfade = DesignTokens.motionTextXfadeDuration;
+
+  /// 10 - How far a carousel's copy rises as it comes in.
+  static const double textCrossfadeRise = DesignTokens.motionTextXfadeRise;
+
+  /// 6000ms - One carousel slide, the pager filling.
+  static const Duration dwell = DesignTokens.motionDwellDuration;
+
+  /// 1200ms - After a touch anywhere in a carousel, the slide stays at least
+  /// this long.
+  static const Duration dwellHold = DesignTokens.motionDwellHold;
+
+  /// 14000ms - A carousel's artwork drifting from [kenBurnsFrom] to
+  /// [kenBurnsTo] and back.
+  static const Duration kenBurns = DesignTokens.motionKenburnsDuration;
+
+  static const double kenBurnsFrom = DesignTokens.motionKenburnsFrom;
+  static const double kenBurnsTo = DesignTokens.motionKenburnsTo;
+
   // === COMMON ANIMATION CONFIGS ===
 
   /// 1600ms - Shimmer animation cycle

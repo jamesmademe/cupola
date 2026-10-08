@@ -466,6 +466,9 @@ abstract final class DesignTokens {
 
   static const Cubic motionTextXfadeCurve = motionCurveStandard;
 
+  /// How far the copy rises as it comes in. Reduce Motion: none.
+  static const double motionTextXfadeRise = 10;
+
   // motion.image-xfade
   /// Carousel art changing.
   static const Duration motionImageXfadeDuration = Duration(milliseconds: 900);
@@ -497,6 +500,10 @@ abstract final class DesignTokens {
 
   static const Cubic motionDwellCurve = motionCurveLinear;
 
+  /// After a touch anywhere in the carousel, the slide stays at least this
+  /// long.
+  static const Duration motionDwellHold = Duration(milliseconds: 1200);
+
   // motion.breathe
   /// One slab's light per screen, alternating on the 12 Hz ambient clock.
   /// Reduce Motion: still.
@@ -515,6 +522,12 @@ abstract final class DesignTokens {
   static const Duration motionKenburnsDuration = Duration(milliseconds: 14000);
 
   static const Cubic motionKenburnsCurve = motionCurveEaseInOut;
+
+  /// The art's scale at the start of its drift.
+  static const double motionKenburnsFrom = 1.02;
+
+  /// The art's scale at the far end of its drift.
+  static const double motionKenburnsTo = 1.12;
 
   // duration
   /// Micro-interactions: the press dip, a highlight.
