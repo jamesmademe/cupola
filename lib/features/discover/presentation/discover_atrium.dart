@@ -380,7 +380,6 @@ class _Doors extends ConsumerWidget {
     final trending = ref.watch(atriumTrendingProvider).value ?? const [];
     final best = ref.watch(bestMissingProvider).value ?? const [];
     final genres = ref.watch(catalogGenresProvider(CatalogKind.movie)).value;
-    final backdrop = genres?.expand((genre) => genre.backdrops).firstOrNull;
     final networks = _libraryNetworks(ref);
     final studios = _libraryStudios(ref);
     MediaPreview? at(List<MediaPreview> list, int i) =>
@@ -408,9 +407,13 @@ class _Doors extends ConsumerWidget {
             // How many there are, once Seerr said: a complete list, so a
             // count of it is a fact.
             subtitle: genres == null ? 'Movies, series' : '${genres.length}',
-            lightUrl: backdrop == null
-                ? null
-                : ImageUtils.buildTmdbPosterUrl(backdrop, size: 'w300'),
+            // Words, like the networks and the studios: a genre's backdrop
+            // blurred to a door is a grey nobody can tell from a door still
+            // loading.
+            names: [
+              for (final genre in doorGenresFirst(genres ?? const []).take(3))
+                genre.name,
+            ],
             onTap: () => open(DiscoverIndex.genres),
           ),
           DiscoverDoor.lobby(

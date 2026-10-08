@@ -56,8 +56,8 @@ class DiscoverDoor extends StatelessWidget {
   /// Up to two posters leaning out of the corner.
   final List<String> posterUrls;
 
-  /// A few names stacked in the corner, fading: the networks a door leads
-  /// to.
+  /// A few names stacked in the corner, fading: the genres, networks or
+  /// studios a door leads to.
   final List<String> names;
 
   final bool _index;

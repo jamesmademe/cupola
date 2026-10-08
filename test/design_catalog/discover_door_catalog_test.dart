@@ -48,7 +48,7 @@ Widget _lobby({int columns = 3}) => _rows(columns: columns, [
   DiscoverDoor.lobby(
     title: 'Genres',
     subtitle: '19',
-    lightUrl: _backdrop,
+    names: const ['Comedy', 'Horror', 'Documentary'],
     onTap: () {},
   ),
   DiscoverDoor.lobby(

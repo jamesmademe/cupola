@@ -9,6 +9,8 @@
 /// same kind of list for its sliders.
 library;
 
+import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
+
 /// A network, a studio or a mood: a TMDB id with the name the app writes.
 typedef CatalogEntity = ({int id, String name});
 
@@ -152,6 +154,19 @@ CatalogLanguage? curatedLanguage(String code) {
   }
   return null;
 }
+
+/// The genres the Genres door names, by TMDB id: a comedy, a horror and a
+/// documentary say how wide the index runs, where the first three of Seerr's
+/// list (A to Z: Action, Adventure, Animation) say only where it starts. Ids,
+/// so the names on the door are Seerr's own, as the index writes them.
+const List<int> doorGenreIds = [35, 27, 99];
+
+/// [genres] with those of [doorGenreIds] first, in that order, then the rest
+/// in Seerr's: a Seerr that lacks one still fills the door.
+List<SeerrGenre> doorGenresFirst(List<SeerrGenre> genres) => [
+  for (final id in doorGenreIds) ...genres.where((genre) => genre.id == id),
+  ...genres.where((genre) => !doorGenreIds.contains(genre.id)),
+];
 
 /// [list] with the entries whose name is in [owned] first, in [list]'s own
 /// order otherwise: the networks your series come from lead the index.

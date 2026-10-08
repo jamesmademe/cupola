@@ -6,7 +6,7 @@ Rendered from `lib/features/discover/presentation/widgets/discover_door.dart` by
 
 ## Variants
 
-- **Lobby** (`DiscoverDoor.lobby`) — at least 104 tall, three to a row on a phone and all six on one row once each would still be 104 wide (664 between the gutters: a tablet on its side, a desktop window; never a phone or a tablet's list beside a title). The name in the row role (Onest 15/20, 600) in ink and a line under it in the caption role in `dimText`, at the head. In the corner, what the door leads to: up to two posters leaning out of the bottom edge (38 wide, 2 : 3, `radius-thumb`, 6° and −8°, a soft `shadow` drop), or up to three names stacked from the foot and fading (the label role in `ink-secondary`, each a step dimmer: the networks), as many as fit under the words: two in a door at its floor on a phone, where a third would sit on the line under the name.
+- **Lobby** (`DiscoverDoor.lobby`) — at least 104 tall, three to a row on a phone and all six on one row once each would still be 104 wide (664 between the gutters: a tablet on its side, a desktop window; never a phone or a tablet's list beside a title). The name in the row role (Onest 15/20, 600) in ink and a line under it in the caption role in `dimText`, at the head. In the corner, what the door leads to: up to two posters leaning out of the bottom edge (38 wide, 2 : 3, `radius-thumb`, 6° and −8°, a soft `shadow` drop), or up to three names stacked from the foot and fading (the label role in `ink-secondary`, each a step dimmer: the genres, the networks, the studios), as many as fit under the words: two in a door at its floor on a phone, where a third would sit on the line under the name.
 - **Index** (`DiscoverDoor.index`) — two to a row on a phone, and a column more wherever another fits at 160, the tile of the narrowest phone: six across a tablet on its side. The name in the section role (Bricolage 21/24) in ink. Lit, at least 104 tall, the name sits at the foot under one poster leaning in from the top edge; plain, at least 92 tall, at the head.
 
 Both are the room's door fill (`door`) with a 1px `hair` edge and `radius-door` (20). A door with artwork is lit by it: the picture decoded 24 pixels wide and laid over the whole door at 55% (60% on an index tile), which reads as the board's blur and costs no filter. Without artwork the fill and the name carry it.
@@ -35,5 +35,6 @@ Each sheet is drawn in the dark and the light room.
 ## Do / don't
 
 - Do give a door the artwork of what it leads to: trending posters on Trending, a genre's backdrop on its tile.
+- Don't light a lobby door with a picture of no one thing: a genre's backdrop blurred to a door is a grey nobody can tell from a door still loading. The Genres door names three genres instead, a comedy, a horror and a documentary (`doorGenreIds`), in Seerr's own words.
 - Don't count what a door leads to unless the list is whole: Genres can say 19, Networks cannot say how many series Netflix has.
 - Don't fix a door's height: it is a floor, so the words never clip.

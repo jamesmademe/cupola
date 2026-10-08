@@ -55,6 +55,38 @@ void main() {
       expect(find.text('Coming soon'), findsOneWidget);
     });
 
+    testWidgets('the Genres door names its genres in words, as Networks and '
+        'Studios do, and is lit by no backdrop', (tester) async {
+      await _pumpAtrium(
+        tester,
+        movieGenres: const [
+          SeerrGenre(id: 28, name: 'Action', backdrops: ['/action.jpg']),
+          SeerrGenre(id: 35, name: 'Comedy', backdrops: ['/comedy.jpg']),
+          SeerrGenre(id: 99, name: 'Documentary'),
+          SeerrGenre(id: 27, name: 'Horror'),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      // A door at its floor has room for two names under its words.
+      final door = find.bySemanticsLabel('Genres, 4');
+      for (final name in ['Comedy', 'Horror']) {
+        expect(
+          find.descendant(of: door, matching: find.text(name)),
+          findsOneWidget,
+          reason: name,
+        );
+      }
+      expect(
+        find.descendant(of: door, matching: find.text('Action')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: door, matching: find.byType(ImageFiltered)),
+        findsNothing,
+      );
+    });
+
     testWidgets('at twice the reading size on a phone the two quiet links '
         'go one under the other', (tester) async {
       await _pumpAtrium(tester, size: const Size(390, 3000), textScale: 2);
@@ -276,6 +308,7 @@ Future<ProviderContainer> _pumpAtrium(
   Future<List<MediaPreview>> Function(Ref ref)? trending,
   List<MediaPreview> best = _best,
   List<SeerrRequest> requests = const [],
+  List<SeerrGenre> movieGenres = const [SeerrGenre(id: 16, name: 'Animation')],
   Size size = const Size(1200, 3000),
   double textScale = 1,
 }) async {
@@ -301,7 +334,7 @@ Future<ProviderContainer> _pumpAtrium(
       comingSoonProvider.overrideWith((ref) async => _soon),
       catalogGenresProvider.overrideWith(
         (ref, kind) async => kind == CatalogKind.movie
-            ? const [SeerrGenre(id: 16, name: 'Animation')]
+            ? movieGenres
             : const [SeerrGenre(id: 10765, name: 'Sci-Fi & Fantasy')],
       ),
       requestsProvider.overrideWith((ref) async => requests),

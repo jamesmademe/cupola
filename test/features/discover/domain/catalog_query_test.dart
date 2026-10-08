@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/discover/domain/catalog_curation.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 
 /// What each catalogue page asks Seerr, in the parameters Seerr 3.4.1
 /// answers to (checked on the lab, 06/10).
@@ -222,6 +223,38 @@ void main() {
 
     test('with no library the list is as curated', () {
       expect(libraryFirst(curatedStudios, const []), curatedStudios);
+    });
+
+    test('the Genres door names a comedy, a horror and a documentary '
+        'before the alphabet', () {
+      // Seerr lists its genres A to Z, as the lab's does.
+      const seerr = [
+        SeerrGenre(id: 28, name: 'Action'),
+        SeerrGenre(id: 12, name: 'Adventure'),
+        SeerrGenre(id: 35, name: 'Comedy'),
+        SeerrGenre(id: 99, name: 'Documentary'),
+        SeerrGenre(id: 27, name: 'Horror'),
+      ];
+      expect(doorGenresFirst(seerr).take(3).map((genre) => genre.name), [
+        'Comedy',
+        'Horror',
+        'Documentary',
+      ]);
+      expect(doorGenresFirst(seerr), hasLength(seerr.length));
+    });
+
+    test('a Seerr without one of them still fills the door, in its own '
+        'order', () {
+      const seerr = [
+        SeerrGenre(id: 28, name: 'Action'),
+        SeerrGenre(id: 12, name: 'Adventure'),
+        SeerrGenre(id: 35, name: 'Comedy'),
+      ];
+      expect(doorGenresFirst(seerr).map((genre) => genre.name), [
+        'Comedy',
+        'Action',
+        'Adventure',
+      ]);
     });
 
     test('the decades run from now back to the 1920s', () {
