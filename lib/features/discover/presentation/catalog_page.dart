@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -191,7 +192,17 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
   }
 
   Widget _scroll(BuildContext context, BoxConstraints box, double top) {
-    final inner = box.maxWidth - 2 * AppSpacing.lg;
+    // On a desktop window the page stands in a well measured on its
+    // columns: at 1140, seven posters at 148, the library's grid at the same
+    // window (`MediaBrowseScaffold`), so a title is one size in both. The
+    // scroll view keeps the window's width, so the wheel turns it anywhere
+    // over the page; the gradient and the clock's scrim stay full-bleed.
+    final well = AppBreakpoints.isDesktopShell(context)
+        ? math.min(box.maxWidth, AppBreakpoints.contentWell)
+        : box.maxWidth;
+    final side = (box.maxWidth - well) / 2;
+    final gutter = side + AppSpacing.lg;
+    final inner = well - 2 * AppSpacing.lg;
     final columns = MediaGrid.columnsFor(inner, 3);
     final tileWidth = (inner - (columns - 1) * AppSpacing.gridGap) / columns;
     final bottom = math.max(
@@ -208,23 +219,23 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
         slivers: [
           SliverPadding(
             padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
+              gutter,
               top + AppSpacing.md,
-              AppSpacing.lg,
+              gutter,
               0,
             ),
             sliver: SliverToBoxAdapter(child: _Head(title: _title(ref))),
           ),
-          SliverToBoxAdapter(
-            child: _Controls(query: _query, onChanged: _ask),
+          // The controls carry the gutter themselves: the pills scroll to
+          // the well's edges.
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: side),
+            sliver: SliverToBoxAdapter(
+              child: _Controls(query: _query, onChanged: _ask),
+            ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              0,
-            ),
+            padding: EdgeInsets.fromLTRB(gutter, AppSpacing.md, gutter, 0),
             sliver: PagingListener<int, MediaPreview>(
               controller: _paging,
               builder: (context, state, fetchNextPage) =>
@@ -266,12 +277,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
             ),
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              bottom,
-            ),
+            padding: EdgeInsets.fromLTRB(gutter, AppSpacing.lg, gutter, bottom),
             sliver: SliverToBoxAdapter(
               child: Text(
                 // The trending list's figure is TMDB's cap, not a count.
@@ -452,6 +458,10 @@ class _Controls extends ConsumerWidget {
 }
 
 /// "Hide what I have": one switch for the whole catalogue.
+///
+/// The row is a phone's at most ([AppBreakpoints.splitList]), at the head of
+/// a wider page: across a tablet or a desktop window the switch would sit a
+/// thousand points from the words that say what it does.
 class _HideOwned extends StatelessWidget {
   const _HideOwned({required this.value, required this.onChanged});
 
@@ -461,6 +471,16 @@ class _HideOwned extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppBreakpoints.splitList),
+        child: _row(room),
+      ),
+    );
+  }
+
+  Widget _row(CupolaRoom room) {
     return MergeSemantics(
       child: InkWell(
         onTap: () => onChanged(!value),
