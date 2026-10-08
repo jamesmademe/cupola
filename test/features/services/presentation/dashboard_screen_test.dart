@@ -21,6 +21,7 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
+import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/core/theme.dart';
@@ -70,14 +73,17 @@ void main() {
     // Read off the list rather than off the screen: the modules below the fold
     // are built lazily, so a y-coordinate comparison would be testing the
     // viewport height. The day, then what needs me, what arrived, what is
-    // moving and what waits for an answer, and the Home's own two rows at its
-    // foot: Set up next and the way to Edit Home.
+    // moving, what waits for an answer and who is watching, and the Home's own
+    // two rows at its foot: Set up next and the way to Edit Home. Now playing
+    // holds its place on a Home with no media server: it steps aside by
+    // drawing nothing, not by leaving the list.
     expect(_regionsOnPage(tester), [
       'HomeHeader',
       'NeedsYouBanner',
       'HomeArrivedModule',
       'HomeDownloadsModule',
       'HomeRequestsModule',
+      'HomeNowPlayingModule',
       'SetUpNextModule',
       'EditHomeRow',
       'SizedBox',
@@ -817,18 +823,43 @@ void main() {
           _queueItem('Dune: Part Two', progress: 0.92),
           _queueItem('The Zone of Interest', progress: 0.4, stalled: true),
         ],
+        // The same stall, read by Needs you as the decision it is. Every
+        // service answering, so that no silence leads it instead.
+        instanceSummary: (key) => _summary(key.service, online: true),
+        summary: (service) => _summary(service, online: true),
+        decisions: [_stall('The Zone of Interest', at: DateTime.utc(2024))],
       );
 
       await _scrollTo(tester, find.text('Downloads'));
 
+      // What moves says how far it got and how long it has left.
       expect(find.text('Dune: Part Two'), findsOneWidget);
-      expect(find.text('The Zone of Interest'), findsNothing);
-      expect(find.textContaining('1 stuck'), findsOneWidget);
+      expect(find.text('92% · 3\u00A0min'), findsOneWidget);
+      // What stopped is a row too, saying where, and in amber: a fault. A
+      // transfer no arr asked for has nothing to search again, so its
+      // remedy is its client.
+      expect(find.text('The Zone of Interest'), findsOneWidget);
+      expect(find.text('Stuck at 40%'), findsOneWidget);
+      expect(find.text('Open in qBittorrent'), findsOneWidget);
+      final context = tester.element(find.text('Stuck at 40%'));
+      expect(
+        tester.widget<Text>(find.text('Stuck at 40%')).style?.color,
+        statusToneColor(
+          Theme.of(context).colorScheme,
+          StatusTone.warning,
+          surface: CupolaRoom.of(context).slab,
+        ),
+      );
+      // It is not moving: the line counts it apart from what is.
+      expect(find.text('1 moving · 1 stuck'), findsOneWidget);
+      expect(find.textContaining('2 moving'), findsNothing);
+      // And it is still a decision: Needs you leads with it.
+      expect(find.text('The Zone of Interest is stuck'), findsOneWidget);
     });
 
-    // APP-01: the eyebrow counted the five-row preview and printed it as the
+    // APP-01: the line counted the capped preview and printed it as the
     // total.
-    testWidgets('the eyebrow counts every transfer, not the five it shows', (
+    testWidgets('the line counts every transfer, not the four it shows', (
       tester,
     ) async {
       await _pumpPage(
@@ -842,11 +873,11 @@ void main() {
 
       await _scrollTo(tester, find.text('Downloads'));
 
-      expect(find.textContaining('8 downloading'), findsOneWidget);
-      expect(find.textContaining('5 downloading'), findsNothing);
+      expect(find.text('8 moving'), findsOneWidget);
+      expect(find.textContaining('4 moving'), findsNothing);
       // The rows stay capped.
-      expect(find.text('Release 4'), findsOneWidget);
-      expect(find.text('Release 5'), findsNothing);
+      expect(find.text('Release 3'), findsOneWidget);
+      expect(find.text('Release 4'), findsNothing);
     });
 
     // APP-04: eighteen blocked imports and nothing downloading read "The queue
@@ -873,7 +904,10 @@ void main() {
 
       await _scrollTo(tester, find.text('Downloads'));
 
-      expect(find.text('The queue is empty'), findsNothing);
+      // Nothing is downloading, which is true of a finished download an arr
+      // will not import, and the queue is never called empty over them.
+      expect(find.textContaining('empty'), findsNothing);
+      expect(find.text('Nothing is downloading'), findsOneWidget);
       expect(find.text('Nothing moving'), findsOneWidget);
       expect(
         find.text('18 need a manual import · in Needs you'),
@@ -882,7 +916,7 @@ void main() {
       expect(find.textContaining('stall'), findsNothing);
     });
 
-    testWidgets('a figure the source did not report reads —, never 0', (
+    testWidgets('a figure the source did not report reads nothing, never 0', (
       tester,
     ) async {
       await _pumpPage(
@@ -891,7 +925,15 @@ void main() {
         queue: [
           const ServiceQueueItem(
             service: ServiceKey.sabnzbd,
+            id: 'nothing-known',
             title: 'Nothing.Known.2024',
+            progress: null,
+            clientLabel: 'SABnzbd',
+          ),
+          const ServiceQueueItem(
+            service: ServiceKey.sabnzbd,
+            id: 'half-known',
+            title: 'Half.Known.2024',
             progress: 0.1,
             clientLabel: 'SABnzbd',
           ),
@@ -900,18 +942,58 @@ void main() {
 
       await _scrollTo(tester, find.text('Downloads'));
 
-      // The row's own line, not the stack card that happens to share the name.
-      final line = _textContaining(tester, '· SABnzbd');
-      expect(line, contains('—'));
-      // A count nobody was able to take is not zero, and `0 B` would say the
-      // transfer has not started.
-      expect(line, isNot(contains('0\u00A0B')));
+      Finder inRow(String title, Finder matching) => find.descendant(
+        of: find.ancestor(
+          of: find.text(title),
+          matching: find.byType(DownloadRow),
+        ),
+        matching: matching,
+      );
+      // A transfer nothing was reported of has no percent and no bar: `0%`
+      // would say it has not started.
+      expect(
+        inRow('Nothing.Known.2024', find.textContaining('%')),
+        findsNothing,
+      );
+      expect(
+        inRow('Nothing.Known.2024', find.byType(HomeRowBar)),
+        findsNothing,
+      );
+      // One half known is one half said: no time left is made up for it.
+      expect(inRow('Half.Known.2024', find.text('10%')), findsOneWidget);
+      expect(inRow('Half.Known.2024', find.byType(HomeRowBar)), findsOneWidget);
     });
 
-    testWidgets('the eyebrow sums the rate once per client', (tester) async {
+    testWidgets('a speed the client did not report reads —, never 0', (
+      tester,
+    ) async {
       await _pumpPage(
         tester,
         _Page.home,
+        settings: _settingsWithClient,
+        queue: [_queueItem('One', progress: 0.5)],
+        // qBittorrent is set up and did not answer: the rate is not known,
+        // and what the arr reported is not a rate.
+        queueCoverage: SourceCoverage.merge([
+          SourceCoverage.answeredBy(ServiceKey.radarr),
+          SourceCoverage.failure(
+            ServiceKey.qbittorrent,
+            const SocketException('Connection refused'),
+          ),
+        ]),
+      );
+
+      await _scrollTo(tester, find.text('Downloads'));
+
+      expect(find.text('1 moving · —'), findsOneWidget);
+      expect(find.textContaining('B/s'), findsNothing);
+    });
+
+    testWidgets('the line sums the rate once per client', (tester) async {
+      await _pumpPage(
+        tester,
+        _Page.home,
+        settings: _settingsWithClient,
         queue: [
           _queueItem('One', progress: 0.5, rate: 1024 * 1024),
           _queueItem('Two', progress: 0.3, rate: 1024 * 1024),
@@ -922,10 +1004,7 @@ void main() {
 
       // Both rows belong to the same client, which reported 1 MB/s for its whole
       // queue — not 2.
-      expect(
-        find.textContaining('1.0\u00A0MB/s across 1 client'),
-        findsOneWidget,
-      );
+      expect(find.text('2 moving · 1.0\u00A0MB/s'), findsOneWidget);
     });
   });
 
@@ -1154,6 +1233,22 @@ final SettingsModel _settings = settingsWith(
   sonarrApiKey: 'key',
   lidarrUrl: 'http://lidarr.local:8686',
   lidarrApiKey: 'key',
+);
+
+/// [_settings] with a download client set up: the speed on Downloads is the
+/// client's to say.
+final SettingsModel _settingsWithClient = settingsWith(
+  seerrUrl: 'http://seerr.local:5055',
+  seerrApiKey: 'key',
+  radarrUrl: 'http://radarr.local:7878',
+  radarrApiKey: 'key',
+  sonarrUrl: 'http://sonarr.local:8989',
+  sonarrApiKey: 'key',
+  lidarrUrl: 'http://lidarr.local:8686',
+  lidarrApiKey: 'key',
+  qbittorrentUrl: 'http://qbittorrent.local:8080',
+  qbittorrentUsername: 'user',
+  qbittorrentPassword: 'pass',
 );
 
 /// One service, two connections — the shape the header's `degraded` exists for.
