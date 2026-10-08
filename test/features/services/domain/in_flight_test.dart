@@ -204,20 +204,17 @@ void main() {
     });
   });
 
-  group('a fault leaves this region and says what it is', () {
+  group('a fault leaves Downloads and says what it is', () {
     test('the footnote names each fault, blocked imports first', () {
       expect(inFlightFaultFootnote(), isNull);
-      expect(
-        inFlightFaultFootnote(stalled: 1),
-        '1 stuck · under Needs a decision',
-      );
+      expect(inFlightFaultFootnote(stalled: 1), '1 stuck · in Needs you');
       expect(
         inFlightFaultFootnote(stalled: 2, needsImport: 18),
-        '18 need a manual import · 2 stuck · under Needs a decision',
+        '18 need a manual import · 2 stuck · in Needs you',
       );
       expect(
         inFlightFaultFootnote(needsImport: 1, failed: 1),
-        '1 needs a manual import · 1 failed · under Needs a decision',
+        '1 needs a manual import · 1 failed · in Needs you',
       );
       // APP-04: eighteen blocked imports were footnoted "18 stalls", which
       // named the wrong fault and so the wrong remedy.
@@ -240,13 +237,12 @@ void main() {
       )!;
       expect(
         footnote,
-        '18+ need a manual import · 2+ stuck · 1+ failed · under Needs a '
-        'decision',
+        '18+ need a manual import · 2+ stuck · 1+ failed · in Needs you',
       );
       expect(
         spokenFaultFootnote(footnote),
         'at least 18 need a manual import, at least 2 stuck, at least 1 '
-        'failed, under Needs a decision',
+        'failed, in Needs you',
       );
 
       // Read whole, the counts are the counts.
@@ -255,13 +251,10 @@ void main() {
         needsImport: 18,
         coverage: SourceCoverage.answeredBy(ServiceKey.sonarr),
       )!;
-      expect(
-        whole,
-        '18 need a manual import · 2 stuck · under Needs a decision',
-      );
+      expect(whole, '18 need a manual import · 2 stuck · in Needs you');
       expect(
         spokenFaultFootnote(whole),
-        '18 need a manual import, 2 stuck, under Needs a decision',
+        '18 need a manual import, 2 stuck, in Needs you',
       );
     });
 
