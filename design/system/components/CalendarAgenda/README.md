@@ -12,7 +12,7 @@ Rendered from `lib/features/discover/presentation/widgets/calendar_agenda.dart` 
   - The title in the row role; under it where the thing stands after a 7pt dot; under that the connections that hold it after the service's glyph, `Radarr · Radarr 4K`, in `inkTertiary`.
 - **The requester's** (`CalendarRow.requester`): no lead column and no service name; the poster 44 × 66; her note in the connections' place, `On digital in Italy today`, `You asked for season 3 on Sat 26 Sep`.
 
-While a download moves, a 3pt bar in its tone and `around 21:10` (the requester's `ready around 21:10`) close the row.
+While a download moves, a 3pt bar in its tone and `around 21:10` (the requester's `ready around 21:10`) close the row; the time keeps at most 70% of the line and is cut before it overflows (a narrow panel, a large reading size), the bar taking the rest.
 
 ### Where a row stands
 

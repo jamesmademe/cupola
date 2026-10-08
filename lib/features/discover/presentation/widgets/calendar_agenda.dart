@@ -135,30 +135,39 @@ class CalendarRow extends StatelessWidget {
         if (third != null) ...[const SizedBox(height: 3), third],
         if (progress != null) ...[
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(1.5),
-                  child: LinearProgressIndicator(
-                    value: progress.clamp(0, 1).toDouble(),
-                    minHeight: 3,
-                    backgroundColor: room.fillTrack,
-                    valueColor: AlwaysStoppedAnimation(tone),
+          // The time keeps at most 70% of the line, so a narrow row or a
+          // large reading size cuts it rather than overflowing.
+          LayoutBuilder(
+            builder: (context, box) => Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(1.5),
+                    child: LinearProgressIndicator(
+                      value: progress.clamp(0, 1).toDouble(),
+                      minHeight: 3,
+                      backgroundColor: room.fillTrack,
+                      valueColor: AlwaysStoppedAnimation(tone),
+                    ),
                   ),
                 ),
-              ),
-              if (state.finishesAt case final at?) ...[
-                const SizedBox(width: AppSpacing.md),
-                Text(
-                  '${_requester ? 'ready around' : 'around'} '
-                  '${formatClockTime(at)}',
-                  style: AppType.caption
-                      .weight(FontWeight.w600)
-                      .copyWith(color: room.inkSecondary),
-                ),
+                if (state.finishesAt case final at?) ...[
+                  const SizedBox(width: AppSpacing.md),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: box.maxWidth * 0.7),
+                    child: Text(
+                      '${_requester ? 'ready around' : 'around'} '
+                      '${formatClockTime(at)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppType.caption
+                          .weight(FontWeight.w600)
+                          .copyWith(color: room.inkSecondary),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ],
