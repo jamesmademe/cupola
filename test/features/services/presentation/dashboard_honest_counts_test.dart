@@ -1,10 +1,10 @@
 /// Home's figures, driven through the app's real clients on the profiles'
 /// fake network: a count is a count of the sources that answered.
 ///
-/// In flight and Recently added each read several services and degrade a
-/// failed one to no rows. The figure above the rows used to count the
-/// failure as nothing — `0 downloading` over clients that did not answer, and
-/// `3 downloading` with SABnzbd dark reading as the whole queue.
+/// Downloads and Arrived each read several services and degrade a failed one
+/// to no rows. The figure above the rows used to count the failure as nothing:
+/// `0 downloading` over clients that did not answer, and `3 downloading` with
+/// SABnzbd dark reading as the whole queue.
 library;
 
 import 'package:flutter/material.dart';
@@ -61,9 +61,9 @@ void main() {
 
     // Both Radarr and Sonarr answered; Lidarr and SABnzbd are home-only and
     // the device is away; qBittorrent refused the sign-in. The count is
-    // theirs, the 4K's two films included, and the line under it names the
-    // rest. Why each is missing is the alert band's sentence, so the note does
-    // not say it a second time.
+    // theirs, the 4K's two movies included, and the line under it names the
+    // rest. Which of them did not answer is Needs you's sentence, so the note
+    // does not say it a second time.
     expect(find.text('5 downloading'), findsOne);
     const inFlightNote = 'Not in the total: Lidarr, SABnzbd, qBittorrent';
     expect(find.text(inFlightNote), findsOne);
@@ -88,7 +88,7 @@ void main() {
     // The header speaks the figure and what qualifies it as one sentence.
     expect(
       find.bySemanticsLabel(
-        'In flight, 5 downloading, '
+        'Downloads, 5 downloading, '
         'Not in the total: Lidarr, SABnzbd, qBittorrent',
       ),
       findsOne,
@@ -100,7 +100,7 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('P7, nothing answering: no figure reads 0, and the region '
+  testWidgets('P7, nothing answering: no figure reads 0, and the module '
       'says why in one quiet line', (tester) async {
     final handle = tester.ensureSemantics();
     final harness = await pumpWithProfile(
@@ -112,13 +112,14 @@ void main() {
 
     expect(find.text('0 downloading'), findsNothing);
     expect(find.text('0 imported'), findsNothing);
-    expect(find.text('— downloading'), findsOne);
-    expect(find.text('— imported'), findsOne);
+    // No source answered, so the module states no figure at all, not even
+    // the dash: its heading stands over the fault, which says why.
+    expect(find.textContaining('downloading'), findsNothing);
+    expect(find.textContaining('imported'), findsNothing);
+    expect(find.text('Downloads'), findsOne);
+    expect(find.text('Arrived'), findsOne);
     // No total, so nothing to qualify.
-    for (final region in const [
-      ServicesInFlightSection,
-      ServicesRecentlyAddedSection,
-    ]) {
+    for (final region in const [HomeDownloadsModule, HomeArrivedModule]) {
       expect(
         find.descendant(
           of: find.byType(region),
@@ -149,10 +150,10 @@ void main() {
     expect(find.text('The queue is empty'), findsNothing);
     expect(find.text('Nothing imported yet'), findsNothing);
 
-    expect(
-      find.bySemanticsLabel('In flight, downloading, count unavailable'),
-      findsOne,
-    );
+    // The heading speaks the name and nothing else: no count to be read as
+    // unavailable, and none to be read as zero.
+    expect(find.bySemanticsLabel('Downloads'), findsOne);
+    expect(find.bySemanticsLabel('Arrived'), findsOne);
 
     handle.dispose();
     await harness.unmount(tester);
