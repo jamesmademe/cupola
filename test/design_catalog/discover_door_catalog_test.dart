@@ -75,12 +75,20 @@ Widget _lobby({int columns = 3}) => _rows(columns: columns, [
 void main() {
   catalogCard(
     'DiscoverDoor',
+    // Wide enough for the scene of a tablet on its side.
+    width: 1160,
     scenes: [
       CatalogScene(
         'DiscoverDoor.lobby · the atrium\'s six: lit with leaning posters, '
         'lit alone, names stacked and fading, plain',
         (_) => _lobby(),
         width: 390,
+      ),
+      CatalogScene(
+        'The lobby on a tablet on its side · all six on one row, each wider '
+        'than the narrowest phone\'s',
+        (_) => _lobby(columns: 6),
+        width: 1068,
       ),
       CatalogScene(
         'DiscoverDoor.index · a genre lit by its backdrop with a poster '

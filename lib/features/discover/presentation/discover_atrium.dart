@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -282,43 +283,86 @@ class _SeerrSilent extends ConsumerWidget {
   }
 }
 
-/// [children] two to a row, each row as tall as its taller tile: index
-/// tiles grow with their words, so a fixed grid extent would clip them.
+/// [children] in rows, each row as tall as its taller tile: index tiles grow
+/// with their words, so a fixed grid extent would clip them.
+///
+/// [columns] answers how many to a row for the width the tiles share; by
+/// default an index's tiles, which add a column wherever another fits at
+/// [_indexTileFloor].
 class _TileRows extends StatelessWidget {
-  const _TileRows({required this.children, this.columns = 2});
+  const _TileRows({required this.children, this.columns = _indexColumns});
 
   final List<Widget> children;
-  final int columns;
+  final int Function(BuildContext context, double width) columns;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        children: [
-          for (var start = 0; start < children.length; start += columns)
-            Padding(
-              padding: EdgeInsets.only(top: start == 0 ? 0 : AppSpacing.sm),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = start; i < start + columns; i++) ...[
-                      if (i > start) const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: i < children.length
-                            ? children[i]
-                            : const SizedBox.shrink(),
-                      ),
-                    ],
-                  ],
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final count = columns(context, box.maxWidth);
+          return Column(
+            children: [
+              for (var start = 0; start < children.length; start += count)
+                Padding(
+                  padding: EdgeInsets.only(top: start == 0 ? 0 : AppSpacing.sm),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = start; i < start + count; i++) ...[
+                          if (i > start) const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: i < children.length
+                                ? children[i]
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+/// The narrowest an index's tile is drawn: two to a row on the narrowest
+/// phone (360pt), whose tiles come to 160. A wider window adds a column
+/// wherever another fits at that width, never a wider tile than it needs:
+/// two on every phone and in a tablet's list beside a title, six across a
+/// tablet on its side and in a desktop window's well.
+const double _indexTileFloor = 160;
+
+int _indexColumns(BuildContext context, double width) {
+  final fits = ((width + AppSpacing.sm) / (_indexTileFloor + AppSpacing.sm))
+      .floor();
+  return fits > 2 ? fits : 2;
+}
+
+/// The narrowest a door of the lobby is drawn: three to a row on the
+/// narrowest phone (360pt) come to 104. Six fit on one row once each of them
+/// is that wide (664pt between the gutters), which no phone and no tablet's
+/// list beside a title reaches, and every tablet and desktop window does.
+const double _doorFloor = 104;
+
+int _doorColumns(BuildContext context, double width) {
+  final row = width >= 6 * _doorFloor + 5 * AppSpacing.sm;
+  // Two once the words are large, where three narrow doors would cut every
+  // name short; three across a wide window, where two would stretch a door
+  // past anything it holds.
+  final large =
+      TextScaleMetrics.clampedScalerOf(context).scale(1) >
+      DiscoverDoor.largeTextScale;
+  return switch ((row, large)) {
+    (true, false) => 6,
+    (true, true) || (false, false) => 3,
+    (false, true) => 2,
+  };
 }
 
 String? _poster(MediaPreview? item, {String size = 'w154'}) {
@@ -344,16 +388,13 @@ class _Doors extends ConsumerWidget {
     void open(DiscoverIndex index) =>
         ref.read(discoverIndexProvider.notifier).open(index);
 
-    // Three to a row; two once the words are large, where three narrow
-    // doors would cut every name short.
-    final large =
-        TextScaleMetrics.clampedScalerOf(context).scale(1) >
-        DiscoverDoor.largeTextScale;
+    // Three to a row on a phone, all six on one row once the window is wide
+    // enough (`_doorColumns`).
     return Semantics(
       container: true,
       label: 'Browse by',
       child: _TileRows(
-        columns: large ? 2 : 3,
+        columns: _doorColumns,
         children: [
           DiscoverDoor.lobby(
             title: 'Trending',
@@ -925,25 +966,39 @@ class _PeopleIndex extends ConsumerWidget {
           ),
           data: (list) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: CupolaRoom.of(context).slab,
-                borderRadius: BorderRadius.circular(AppRadius.group),
-                border: Border.all(color: CupolaRoom.of(context).hair),
-              ),
-              child: Column(
-                children: [
-                  for (var i = 0; i < list.length; i++) ...[
-                    if (i > 0)
-                      Divider(
-                        height: 1,
-                        indent: AppSpacing.lg,
-                        endIndent: AppSpacing.lg,
-                        color: CupolaRoom.of(context).hair,
-                      ),
-                    _PersonRow(person: list[i]),
-                  ],
-                ],
+            // Rows read across, a face to its name: never wider than a page
+            // of one column, and at the head of a wider window, under the
+            // line that says what they are.
+            child: Align(
+              alignment: AlignmentDirectional.topStart,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppBreakpoints.readingWell,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: CupolaRoom.of(context).slab,
+                      borderRadius: BorderRadius.circular(AppRadius.group),
+                      border: Border.all(color: CupolaRoom.of(context).hair),
+                    ),
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < list.length; i++) ...[
+                          if (i > 0)
+                            Divider(
+                              height: 1,
+                              indent: AppSpacing.lg,
+                              endIndent: AppSpacing.lg,
+                              color: CupolaRoom.of(context).hair,
+                            ),
+                          _PersonRow(person: list[i]),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
