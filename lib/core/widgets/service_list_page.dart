@@ -96,8 +96,14 @@ class ServiceListPage<T> extends StatelessWidget {
   /// qualifies them; [header] does not, because it acts on them.
   final Widget? banner;
 
-  /// Room the floating service band and tab bar take above this page, since
-  /// they hover over it rather than pushing it down.
+  /// Room the host's floating bands take above this page, since they hover
+  /// over it rather than pushing it down: the service band and the tab bar.
+  ///
+  /// **Without** the status bar. The band consumes that inset but does not
+  /// remove it from `MediaQuery`, so the page adds whatever
+  /// `MediaQuery.paddingOf(context).top` still reports, and a caller never
+  /// does. Where something above already took the inset (an app bar, a
+  /// `SafeArea`) the query reports zero and nothing is added twice.
   final double topPadding;
 
   final double skeletonRowHeight;
@@ -167,7 +173,9 @@ class ServiceListPage<T> extends StatelessWidget {
     return AmbientScaffold(
       accent: service.accent,
       body: Padding(
-        padding: EdgeInsets.only(top: topPadding),
+        padding: EdgeInsets.only(
+          top: topPadding + MediaQuery.paddingOf(context).top,
+        ),
         child: _withHeader(coldPage),
       ),
     );

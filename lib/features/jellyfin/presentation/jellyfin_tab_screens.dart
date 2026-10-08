@@ -37,8 +37,7 @@ class JellyfinUsersScreen extends ConsumerWidget {
     }
     return ServiceListPage<JellyfinUserDto>(
       service: ServiceKey.jellyfin,
-      // The host's two bands and the status bar the upper one consumes.
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       value: ref.watch(jellyfinUsersProvider),
       serviceName: 'Jellyfin users',
       emptyIcon: Icons.people_outline_rounded,
@@ -65,8 +64,7 @@ class JellyfinDevicesScreen extends ConsumerWidget {
     }
     return ServiceListPage<JellyfinDevice>(
       service: ServiceKey.jellyfin,
-      // The host's two bands and the status bar the upper one consumes.
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       value: ref.watch(jellyfinDevicesProvider),
       serviceName: 'Jellyfin devices',
       emptyIcon: Icons.devices_other_rounded,
@@ -96,8 +94,7 @@ class JellyfinTasksScreen extends ConsumerWidget {
     }
     return ServiceListPage<JellyfinScheduledTask>(
       service: ServiceKey.jellyfin,
-      // The host's two bands and the status bar the upper one consumes.
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       value: ref.watch(jellyfinTasksProvider),
       serviceName: 'Jellyfin tasks',
       emptyIcon: Icons.task_alt_rounded,

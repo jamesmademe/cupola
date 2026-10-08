@@ -21,8 +21,7 @@ class NzbgetHistoryScreen extends ConsumerWidget {
     if (!_isConfigured(ref)) return _notConfigured();
     return ServiceListPage<NzbgetHistoryItem>.unsummarised(
       service: ServiceKey.nzbget,
-      // The host's two bands and the status bar the upper one consumes.
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       value: ref.watch(nzbgetHistoryProvider),
       serviceName: 'NZBGet history',
       emptyIcon: Icons.history_rounded,
@@ -44,8 +43,7 @@ class NzbgetFeedsScreen extends ConsumerWidget {
     if (!_isConfigured(ref)) return _notConfigured();
     return ServiceListPage<NzbgetFeed>.unsummarised(
       service: ServiceKey.nzbget,
-      // The host's two bands and the status bar the upper one consumes.
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       value: ref.watch(nzbgetFeedsProvider),
       serviceName: 'NZBGet feeds',
       emptyIcon: Icons.rss_feed_rounded,
@@ -67,8 +65,7 @@ class NzbgetMessagesScreen extends ConsumerWidget {
     if (!_isConfigured(ref)) return _notConfigured();
     return ServiceListPage<NzbgetMessage>.unsummarised(
       service: ServiceKey.nzbget,
-      // The host's two bands and the status bar the upper one consumes.
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       value: ref.watch(nzbgetMessagesProvider),
       serviceName: 'NZBGet messages',
       emptyIcon: Icons.notes_rounded,

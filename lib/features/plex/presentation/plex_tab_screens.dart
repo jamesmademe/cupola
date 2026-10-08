@@ -61,8 +61,7 @@ class PlexDevicesScreen extends ConsumerWidget {
     if (!_isConfigured(ref)) return _notConfigured();
     return ServiceListPage<PlexDevice>(
       service: ServiceKey.plex,
-      // The host's two bands and the status bar the upper one consumes.
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       value: ref.watch(plexDevicesProvider),
       serviceName: 'Plex devices',
       emptyIcon: Icons.devices_other_rounded,
@@ -85,8 +84,7 @@ class PlexPlaylistsScreen extends ConsumerWidget {
     if (!_isConfigured(ref)) return _notConfigured();
     return ServiceListPage<PlexPlaylist>(
       service: ServiceKey.plex,
-      // The host's two bands and the status bar the upper one consumes.
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       value: ref.watch(plexPlaylistsProvider),
       serviceName: 'Plex playlists',
       emptyIcon: Icons.playlist_play_rounded,

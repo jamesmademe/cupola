@@ -59,7 +59,7 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
       emptyIcon: Icons.report_problem_outlined,
       emptyTitle: 'No issues',
       emptyMessage: 'Seerr has no issues in this view.',
-      topPadding: widget.topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: widget.topPadding,
       // Top only: the pills carry the gutter themselves, so a side inset here
       // put them a second gutter in from the rows below.
       header: Padding(
@@ -163,7 +163,7 @@ class SeerrUsersScreen extends ConsumerWidget {
       emptyIcon: Icons.people_outline_rounded,
       emptyTitle: 'No users',
       emptyMessage: 'Seerr returned no users.',
-      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      topPadding: topPadding,
       banner: partial != null && partial.isPartial
           ? FaultBand.partial(
               message:

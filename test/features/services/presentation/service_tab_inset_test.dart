@@ -12,6 +12,7 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/list_rows_shimmer.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
+import 'package:cupola/core/widgets/service_list_page.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -773,6 +774,59 @@ void main() {
       );
 
       expectClearsTheBar(tester, find.byType(SectionHeader));
+    });
+  });
+
+  group('ServiceListPage takes the inset itself', () {
+    // The page is handed only what the host's bands take, as the router hands
+    // every tab, and nothing here adds the status bar: whatever clears the tab
+    // bar does so because the page did.
+    testWidgets('its first row starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.plex,
+        tab: ServiceTab.devices,
+        child: ServiceListPage<String>.unsummarised(
+          service: ServiceKey.plex,
+          topPadding: _hostedTopPadding,
+          value: const AsyncData(['A first row']),
+          serviceName: 'Plex devices',
+          emptyIcon: Icons.devices_other_rounded,
+          emptyTitle: 'No devices',
+          emptyMessage: 'Nothing here.',
+          onRetry: () {},
+          rowBuilder: (row) => Text(row),
+        ),
+      );
+
+      expect(find.text('A first row'), findsOneWidget);
+      expectClearsTheBar(tester, find.text('A first row'));
+    });
+
+    testWidgets('its own header starts below the tab bar', (tester) async {
+      // The header sits outside the state ladder, so it rides the padding
+      // alone: this is the case where a page that forgot the inset would put
+      // a filter under the glass.
+      await pumpHosted(
+        tester,
+        service: ServiceKey.plex,
+        tab: ServiceTab.devices,
+        child: ServiceListPage<String>(
+          service: ServiceKey.plex,
+          topPadding: _hostedTopPadding,
+          value: const AsyncData(['A first row']),
+          serviceName: 'Plex devices',
+          emptyIcon: Icons.devices_other_rounded,
+          emptyTitle: 'No devices',
+          emptyMessage: 'Nothing here.',
+          onRetry: () {},
+          summary: (rows) => '${rows.length} rows',
+          header: const Text('A header'),
+          rowBuilder: (row) => Text(row),
+        ),
+      );
+
+      expectClearsTheBar(tester, find.text('A header'));
     });
   });
 
