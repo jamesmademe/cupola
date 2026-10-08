@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/desktop_content_well.dart';
@@ -18,6 +19,9 @@ class AmbientScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
   final Widget body;
   final Color? accent;
+
+  /// See [AmbientBackground.accentDuration].
+  final Duration accentDuration;
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
   final bool resizeToAvoidBottomInset;
@@ -46,6 +50,7 @@ class AmbientScaffold extends StatelessWidget {
     required this.body,
     this.appBar,
     this.accent,
+    this.accentDuration = AppAnimation.durationMd,
     this.floatingActionButton,
     this.bottomNavigationBar,
     this.resizeToAvoidBottomInset = true,
@@ -59,6 +64,7 @@ class AmbientScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AmbientBackground(
       accent: accent,
+      accentDuration: accentDuration,
       // The bars stay full-bleed; a `GlassAppBar` reads the well from here to
       // line its title and actions up with the body.
       child: ContentWellScope(

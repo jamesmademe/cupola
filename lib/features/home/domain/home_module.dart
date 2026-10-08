@@ -40,6 +40,21 @@ enum HomeModule {
     placement: HomePlacement.first,
   ),
 
+  /// Up to three slides, moving on by themselves: what somebody was
+  /// watching, the newest arrival, what comes out today. The room takes its
+  /// light from the slide in front.
+  featured(
+    audience: Audience.operator,
+    label: 'Featured',
+    line: 'What you were watching, what is new and what is out today',
+    services: [
+      ServiceKey.jellyfin,
+      ServiceKey.plex,
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+    ],
+  ),
+
   /// What somebody started and did not finish.
   continueWatching(
     audience: Audience.operator,

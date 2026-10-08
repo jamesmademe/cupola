@@ -34,7 +34,17 @@ class AmbientBackground extends StatelessWidget {
   final Widget child;
   final Color? accent;
 
-  const AmbientBackground({super.key, required this.child, this.accent});
+  /// How long the light takes to drift to a new [accent]. A room lit by a
+  /// title's artwork takes [AppAnimation.light], as the title's own page
+  /// does.
+  final Duration accentDuration;
+
+  const AmbientBackground({
+    super.key,
+    required this.child,
+    this.accent,
+    this.accentDuration = AppAnimation.durationMd,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +70,7 @@ class AmbientBackground extends StatelessWidget {
       // `ColorTween`, not `Tween<Color?>`: only the former knows how to
       // interpolate a colour, and the plain one would snap at the halfway frame.
       tween: ColorTween(end: target),
-      duration: AppAnimation.durationMd,
+      duration: accentDuration,
       curve: AppAnimation.standardCurve,
       // The subtree is built once and carried through every frame of the drift:
       // the room repaints, the screen inside it does not rebuild.

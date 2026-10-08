@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
@@ -15,7 +16,10 @@ import 'package:cupola/features/discover/presentation/catalog_providers.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/media/presentation/media_sources_provider.dart'
+    show mediaStreamCopyProvider;
 import 'package:cupola/features/home/data/answered_requests.dart';
+import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/home_live.dart';
@@ -24,6 +28,7 @@ import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
 import 'package:cupola/features/home/presentation/widgets/coming_up_module.dart';
 import 'package:cupola/features/home/presentation/widgets/continue_watching_module.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
+import 'package:cupola/features/home/presentation/widgets/featured_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
 import 'package:cupola/features/home/presentation/widgets/now_playing_module.dart';
@@ -84,6 +89,10 @@ class HomeScreen extends ConsumerWidget {
       maxAge: _staleAfter,
       onStale: () => ref.triggerNavigationRefresh(NavigationSection.home),
       child: AmbientScaffold(
+        // The room takes its light from the slide in front, drifting as the
+        // title's own page does.
+        accent: allUnconfigured ? null : ref.watch(featuredRoomLightProvider),
+        accentDuration: AppAnimation.light,
         body: allUnconfigured
             ? NothingSetUpView(bottomPadding: bottomPadding)
             : Stack(
@@ -122,6 +131,7 @@ class HomeScreen extends ConsumerWidget {
 /// registry without one.
 Widget homeModuleView(HomeModule module) => switch (module) {
   HomeModule.needsYou => const NeedsYouBanner(),
+  HomeModule.featured => const HomeFeaturedModule(),
   HomeModule.continueWatching => const HomeContinueWatchingModule(),
   HomeModule.comingUp => const HomeComingUpModule(),
   HomeModule.arrived => const HomeArrivedModule(),
@@ -223,6 +233,7 @@ Future<void> _refreshHome(WidgetRef ref) async {
     settle(ref.read(streamActivityProvider.future)),
     settle(ref.read(libraryCalendarProvider.future)),
     settle(ref.read(homeResumeProvider.future)),
+    settle(ref.read(featuredProvider.future)),
   ]);
 }
 
@@ -253,6 +264,8 @@ void _invalidateHome(WidgetRef ref) {
   ref.invalidate(calendarSourceProvider);
   ref.invalidate(libraryCalendarProvider);
   ref.invalidate(homeResumeProvider);
+  // Whether a media server holds what arrived, for Featured's Play.
+  ref.invalidate(mediaStreamCopyProvider);
   // Each decision source, and what they read that keeps an answer of its own
   // — Prowlarr's indexer status among them, which nothing else here drops, so
   // a pull left a fixed indexer on the list as failing.

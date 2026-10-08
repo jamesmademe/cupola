@@ -9,8 +9,11 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/features/home/data/featured.dart';
+import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/continue_watching.dart';
+import 'package:cupola/features/home/domain/featured.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
@@ -29,9 +32,10 @@ import 'package:cupola/features/shell/domain/settings_return.dart';
 /// Continue watching: up to three titles started and not finished, on every
 /// Jellyfin and Plex, each opening its page.
 ///
-/// Absent when nothing is in progress and every server answered, and
-/// without a media server (Set up next names Jellyfin). A Jellyfin whose
-/// household member nobody chose asks who you are, once.
+/// Absent when nothing is in progress and every server answered, when its
+/// only title is already Featured's first slide, and without a media server
+/// (Set up next names Jellyfin). A Jellyfin whose household member nobody
+/// chose asks who you are, once.
 class HomeContinueWatchingModule extends ConsumerWidget {
   const HomeContinueWatchingModule({super.key});
 
@@ -70,6 +74,13 @@ class HomeContinueWatchingModule extends ConsumerWidget {
                 ? null
                 : settings.connectionName(resume.viewerMissing.first),
           );
+    // Featured already leads with its only title: said once is enough.
+    if (asking == null &&
+        coverage.failed.isEmpty &&
+        resume.rows.length == 1 &&
+        _featuredLeadsWith(ref, resume.rows.single)) {
+      return const SizedBox.shrink();
+    }
     if (resume.rows.isEmpty && asking == null) {
       if (coverage.failed.isEmpty) return const SizedBox.shrink();
       return HomeModuleFrame.silent(
@@ -113,6 +124,17 @@ class HomeContinueWatchingModule extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Whether Featured is on the Home and its first slide is [row].
+bool _featuredLeadsWith(WidgetRef ref, ResumeRow row) {
+  if (!ref.watch(homeLayoutProvider).shown.contains(HomeModule.featured)) {
+    return false;
+  }
+  final first = ref.watch(featuredProvider).value?.firstOrNull;
+  return first is FeaturedResume &&
+      first.row.instanceId == row.instanceId &&
+      first.row.item.id == row.item.id;
 }
 
 /// One title in progress: its picture, its name, the episode, how long is
