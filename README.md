@@ -152,7 +152,7 @@ Two columns are worth reading before you judge an integration:
 
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
-| **TrueNAS** | Full console: dashboard, pools and disks, datasets and snapshots, SMB/NFS shares, apps, virtualisation, replication and periodic tasks, reporting, users and groups | API key | Read + write | ◐ |
+| **TrueNAS** | Full console: dashboard, pools and disks, datasets and snapshots, SMB/NFS shares, apps, virtualization, replication and periodic tasks, reporting, users and groups | API key | Read + write | ◐ |
 | **Dockge** | Compose stacks with live terminal output: start, stop, restart, update, down, and edit or deploy the compose file itself | User + password | Read + write | ✅ |
 | **Unraid** | Array status, disks, Docker containers | API key | Read-only | ○ |
 | **Nginx Proxy Manager** | What the box is fronting, what is broken, which certificates are about to lapse; enable/disable hosts, retarget a forward, renew a certificate | Email + password | Read + write | ◐ |
@@ -228,7 +228,7 @@ Cupola is a native app rather than a web UI in a shell, and it is meant to feel 
 
 - Posters that expand into a cinematic header and carry across screens as you navigate
 - Light and dark, both designed rather than inverted, each service keeping its own
-  accent colour, with your system accent picked up where the platform offers one
+  accent color, with your system accent picked up where the platform offers one
 - A navigation bar you choose: the services you actually use get the tabs
 - Empty, broken and not-yet-configured screens that say something useful, in one voice
 - Reading at a large system font size? Everything grows with it. Nothing clips
@@ -441,7 +441,7 @@ lib/
 
 Two conventions worth calling out, because they shape most of the code:
 
-- **Unreachable is normal.** Missing config throws a recognisable exception that the
+- **Unreachable is normal.** Missing config throws a recognizable exception that the
   shared `AsyncValueWidget` turns into a not-configured placeholder. Browse and load
   methods degrade to empty rather than exploding; only user-initiated mutations
   surface errors.
@@ -470,9 +470,9 @@ of the Cupola line, and everything before it was published as Seekarr.
   default, with an opt-in Docker-backed end-to-end tier
 - **Known gap: screen readers.** Dynamic Type and contrast are handled; VoiceOver and
   TalkBack coverage is real work in progress and we are closing it screen by screen.
-  New UI ships labelled.
+  New UI ships labeled.
 - **Explicit non-goals**, so nobody files them as bugs: no server or cloud component,
-  no web client, no account layer, and no localisation. English-only is a decision we
+  no web client, no account layer, and no localization. English-only is a decision we
   made, not a gap. Tablets keep working but are not a design target. CI does build for
   web, but only as a compile check — the result is not a product and is not published.
 
@@ -521,7 +521,7 @@ sees it and pins its fingerprint, scoped to the host. See
 <br/>
 Because we have not mapped and tested its write layer yet. Each integration ships
 read-first and gains actions once we understand how its API really behaves. Open an
-issue if you want us to prioritise a particular one.
+issue if you want us to prioritize a particular one.
 </details>
 
 <details>
@@ -541,10 +541,10 @@ You can build it, and it may well work, but we do not test or support either tar
 </details>
 
 <details>
-<summary><b>Why not localised?</b></summary>
+<summary><b>Why not localized?</b></summary>
 <br/>
 A deliberate decision, not missing work: user-facing strings are English by design
-and there is no localisation scaffolding.
+and there is no localization scaffolding.
 </details>
 
 ---
@@ -572,14 +572,14 @@ If Cupola is useful to you, a donation helps us keep it moving.
 
 Licensed under the **[Apache License 2.0](LICENSE)**.
 
-Cupola was previously distributed under the MIT License. That licence still covers
+Cupola was previously distributed under the MIT License. That license still covers
 copies obtained before the change, and its original notice is preserved in
 [LICENSE-MIT](LICENSE-MIT); see [NOTICE](NOTICE) for details.
 
 The bundled typefaces — [Bricolage Grotesque](https://github.com/ateliertriay/bricolage),
 [Onest](https://github.com/googlefonts/onest) and
 [Geist Mono](https://github.com/vercel/geist-font) — are licensed separately
-under the SIL Open Font License 1.1; each licence text ships alongside its font
+under the SIL Open Font License 1.1; each license text ships alongside its font
 in [assets/fonts/](assets/fonts/).
 
 ### Trademarks
