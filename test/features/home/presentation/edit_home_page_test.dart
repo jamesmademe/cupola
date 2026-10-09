@@ -11,7 +11,10 @@ import 'package:cupola/features/home/domain/home_layout.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/edit_home_page.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 /// Edit Home: reorder by handle or arrows, switch off, reset, and the moves a
 /// screen reader is offered.
@@ -22,16 +25,28 @@ void main() {
     WidgetTester tester, {
     Audience audience = Audience.operator,
     Map<String, Object> stored = const {},
+    // A stack that feeds every module, so each row says what it shows.
+    List<ServiceKey> configured = const [
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+      ServiceKey.seerr,
+      ServiceKey.jellyfin,
+      ServiceKey.qbittorrent,
+      ServiceKey.truenas,
+    ],
   }) async {
     SharedPreferences.setMockInitialValues(stored);
     prefs = await SharedPreferences.getInstance();
     // Tall enough for the whole page: a list builds only what it shows.
-    tester.view.physicalSize = const Size(1206, 4200);
+    tester.view.physicalSize = const Size(1206, 5400);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
+        initialSettingsProvider.overrideWith(
+          (ref) => settingsWithServices(configured),
+        ),
         shellAudienceProvider.overrideWith(() => _Fixed(audience)),
       ],
     );
@@ -57,8 +72,8 @@ void main() {
       expect(find.text(module.label), findsOneWidget, reason: module.label);
     }
     expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
-    // Needs you has no switch; the seven ordered modules and Set up next do.
-    expect(find.byType(Switch), findsNWidgets(8));
+    // Needs you has no switch; the ten ordered modules and Set up next do.
+    expect(find.byType(Switch), findsNWidgets(11));
     final reset = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
     expect(reset.onPressed, isNull);
     // The other person's default, from the registry.
@@ -88,6 +103,9 @@ void main() {
       HomeModule.arrived,
       HomeModule.requests,
       HomeModule.nowPlaying,
+      HomeModule.stackHealth,
+      HomeModule.storage,
+      HomeModule.discoverShelf,
     ]);
     final saved = HomeLayout.read(
       prefs.getString('home_layout_operator'),
@@ -157,6 +175,18 @@ void main() {
       HomeModule.arrived,
     ]);
     handle.dispose();
+  });
+
+  testWidgets('a module none of whose services is set up says what it '
+      'needs', (tester) async {
+    await pump(tester, configured: const [ServiceKey.radarr]);
+    expect(find.text('Needs TrueNAS or Unraid'), findsOneWidget);
+    expect(find.text('Needs Seerr'), findsNWidgets(2));
+    expect(find.text('Needs Jellyfin or Plex'), findsNWidgets(2));
+    // Radarr feeds Arrived: it says what it shows.
+    expect(find.text(HomeModule.arrived.line), findsOneWidget);
+    // Stack health reads the whole stack, and needs nothing.
+    expect(find.text(HomeModule.stackHealth.line), findsOneWidget);
   });
 
   testWidgets('the requester arranges her own Home, kept apart', (

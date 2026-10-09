@@ -26,6 +26,9 @@ void main() {
         HomeModule.downloads,
         HomeModule.requests,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
         HomeModule.setUpNext,
       ]);
       expect(HomeModule.of(requester), [
@@ -48,21 +51,33 @@ void main() {
         HomeModule.downloads,
         HomeModule.requests,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
       ]);
     });
 
     test('a stored name finds its module, an unknown one finds none', () {
       expect(HomeModule.byName('downloads'), HomeModule.downloads);
-      expect(HomeModule.byName('stackHealth'), isNull);
+      expect(HomeModule.byName('mediaLibrary'), isNull);
     });
   });
 
   group('reading', () {
-    test('nothing stored is the default, with every module on', () {
+    test('nothing stored is the default, every module on but the three a '
+        'person adds', () {
       final layout = HomeLayout.read(null, operator);
       expect(layout.isDefault, isTrue);
-      expect(layout.shown, HomeModule.of(operator));
       expect(layout.rows, HomeModule.of(operator));
+      expect(layout.hidden, {
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
+      });
+      expect(layout.shown, [
+        for (final module in HomeModule.of(operator))
+          if (module.defaultOn) module,
+      ]);
     });
 
     test('a damaged value or another version is the default', () {
@@ -90,8 +105,8 @@ void main() {
     test('a name no module has drops, and so does another person\'s', () {
       final layout = HomeLayout.read(
         stored(
-          ['requests', 'stackHealth', 'trending', 'downloads', 'arrived'],
-          hidden: ['storage', 'comingSoon'],
+          ['requests', 'mediaLibrary', 'trending', 'downloads', 'arrived'],
+          hidden: ['diskSpace', 'comingSoon'],
         ),
         operator,
       );
@@ -101,10 +116,18 @@ void main() {
         HomeModule.comingUp,
         HomeModule.requests,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
         HomeModule.downloads,
         HomeModule.arrived,
       ]);
-      expect(layout.hidden, isEmpty);
+      // The modules it did not know enter as the registry starts them.
+      expect(layout.hidden, {
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
+      });
     });
 
     test('a module the layout does not know enters at its default place', () {
@@ -118,10 +141,24 @@ void main() {
         HomeModule.comingUp,
         HomeModule.requests,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
         HomeModule.arrived,
         HomeModule.downloads,
       ]);
       expect(layout.isOn(HomeModule.downloads), isTrue);
+      // On or off as the registry starts it.
+      expect(layout.isOn(HomeModule.storage), isFalse);
+    });
+
+    test('a module the person switched on stays on when read back', () {
+      final on = HomeLayout.defaultFor(
+        operator,
+      ).switched(HomeModule.storage, on: true);
+      final read = HomeLayout.read(on.toJson(), operator);
+      expect(read.isOn(HomeModule.storage), isTrue);
+      expect(read.isOn(HomeModule.stackHealth), isFalse);
     });
 
     test('a new first module enters first', () {
@@ -147,6 +184,9 @@ void main() {
         HomeModule.comingUp,
         HomeModule.requests,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
         HomeModule.downloads,
         HomeModule.arrived,
       ]);
@@ -168,6 +208,9 @@ void main() {
         HomeModule.arrived,
         HomeModule.requests,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
       ]);
     });
 
@@ -201,7 +244,7 @@ void main() {
 
     test('a move is clamped to the ends of the order', () {
       expect(layout.moved(HomeModule.featured, -1), same(layout));
-      expect(layout.moved(HomeModule.nowPlaying, 5), same(layout));
+      expect(layout.moved(HomeModule.discoverShelf, 5), same(layout));
       expect(layout.moved(HomeModule.arrived, 1).order, [
         HomeModule.featured,
         HomeModule.continueWatching,
@@ -210,6 +253,9 @@ void main() {
         HomeModule.arrived,
         HomeModule.requests,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
       ]);
       expect(
         layout.moved(HomeModule.requests, -9).order.first,
@@ -233,6 +279,9 @@ void main() {
         HomeModule.requests,
         HomeModule.arrived,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
       ]);
       // Requests dropped on top.
       expect(layout.reordered(5, 0).order, [
@@ -243,9 +292,12 @@ void main() {
         HomeModule.arrived,
         HomeModule.downloads,
         HomeModule.nowPlaying,
+        HomeModule.stackHealth,
+        HomeModule.storage,
+        HomeModule.discoverShelf,
       ]);
       expect(layout.reordered(2, 3), same(layout));
-      expect(layout.reordered(9, 0), same(layout));
+      expect(layout.reordered(12, 0), same(layout));
     });
 
     test('Needs you cannot be switched off, nor another person\'s module '
@@ -270,14 +322,19 @@ void main() {
       expect(layout.summary, '9 modules');
       expect(
         layout.switched(HomeModule.requests, on: false).summary,
-        '9 modules · Requests hidden',
+        '8 modules · Requests hidden',
       );
       expect(
         layout
             .switched(HomeModule.requests, on: false)
             .switched(HomeModule.setUpNext, on: false)
             .summary,
-        '9 modules · 2 hidden',
+        '7 modules · 2 hidden',
+      );
+      // A module that starts off is added, not unhidden.
+      expect(
+        layout.switched(HomeModule.storage, on: true).summary,
+        '10 modules',
       );
       expect(HomeLayout.defaultFor(requester).summary, '2 modules');
     });
