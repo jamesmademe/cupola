@@ -13,9 +13,9 @@ Every section of the Activity page: Needs you, Everyone's requests, Watching now
 - Heading, on the page: `AppSpacing.gutter` on each side, `AppSpacing.section` above, `AppSpacing.md` below. The name in `AppType.section` in the ink; the count after it in `AppType.meta` in `inkSecondary`.
 - Count, led somewhere (`onOpen`): the same words in weight 600 and tabular figures, then a 16px chevron, in a target at least 44 tall. Not led: plain `meta`, no target.
 - Slab (`ActivitySlab`): the room's slab fill (`slab`), a 1px hairline (`hair`), `AppRadius.borderRadiusSlab`, its rows clipped to the corners, `AppSpacing.lg` inside on each side by default (`slabPadding` for rows that run edge to edge). The slab sits `AppSpacing.gutter` in from the page.
-- Slab link (`ActivitySlabLink`): a line of at least 44, the label in `AppType.label` in `inkSecondary`, the count after it in `AppType.meta` in `inkTertiary` (one line, ellipsised before the label is), a 18px chevron at the end, over a hairline when it follows rows (`divided: false` when it is the slab's only line).
+- Slab link (`ActivitySlabLink`): a line of at least 44, the label in `AppType.label` in `inkSecondary`, the count after it in `AppType.meta` in `inkTertiary` (one line beside the label, ellipsised before the label is; under it at a large reading size), a 18px chevron at the end, over a hairline when it follows rows (`divided: false` when it is the slab's only line).
 
-At a large reading size (a text scale of 1.3 and over) the count goes under the name instead of beside it, left-aligned: beside it, the name broke inside its words. A slab link at that size lets its label take a second line and gives the count what is left, which it ellipsises (`2 processi…`); the line's sentence to a screen reader is whole.
+At a large reading size (a text scale of 1.3 and over) the count goes under the name instead of beside it, left-aligned: beside it, the name broke inside its words. A slab link at that size puts its count under its label, whole and free to wrap, rather than ellipsising it in what the label leaves of the line.
 
 ## The consumer provides
 

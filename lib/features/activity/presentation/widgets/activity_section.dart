@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
 
 /// One section of Activity: its name over a slab of rows.
 ///
@@ -182,13 +183,25 @@ class ActivitySlabLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
+    final labelText = Text(
+      label,
+      style: AppType.label.copyWith(color: room.inkSecondary),
+    );
+    final metaStyle = AppType.meta.copyWith(color: room.inkTertiary);
+    // At a large reading size the count goes under the label, whole: beside
+    // it, what was left of the line cut the count inside its words.
+    final stacked = MediaQuery.textScalerOf(context).scale(10) >= 13;
     return DecoratedBox(
       decoration: BoxDecoration(
         border: divided ? Border(top: BorderSide(color: room.hair)) : null,
       ),
       child: Semantics(
         button: true,
-        label: [label, ?meta].join(', '),
+        // The dot between the counts is for the eye: said aloud it is a pause.
+        label: [
+          label,
+          if (meta case final meta?) spokenFromDotted(meta),
+        ].join(', '),
         excludeSemantics: true,
         child: InkWell(
           onTap: onTap,
@@ -196,22 +209,35 @@ class ActivitySlabLink extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 44),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                    label,
-                    style: AppType.label.copyWith(color: room.inkSecondary),
-                  ),
-                ),
-                if (meta case final meta?) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  Flexible(
-                    child: Text(
-                      meta,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppType.meta.copyWith(color: room.inkTertiary),
+                if (stacked)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          labelText,
+                          if (meta case final meta?)
+                            Text(meta, style: metaStyle),
+                        ],
+                      ),
                     ),
-                  ),
+                  )
+                else ...[
+                  Expanded(child: labelText),
+                  if (meta case final meta?) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: Text(
+                        meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: metaStyle,
+                      ),
+                    ),
+                  ],
                 ],
                 const SizedBox(width: AppSpacing.xxs),
                 Icon(
