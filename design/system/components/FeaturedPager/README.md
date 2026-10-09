@@ -22,6 +22,10 @@ At most three, in this order, each only with wide artwork and never a title twic
 A source that did not answer gives no slide and no failure: the module that shows it whole names it. Nothing to
 feature: the module is absent and the next one moves up.
 
+The requester's Ready to watch is the same pager with one slide (`HomeReadyToWatchModule`, see
+[HomeModule](../HomeModule/README.md)): a line above the title with its dot (`FeaturedPage.eyebrow`, `● Ready to watch
+· since 18:40`, in `meta` 600, the dot on its first line), the group named for the module (`FeaturedPager.label`).
+
 ## Parts
 
 - **The art box**: the slide's artwork, `AppRadius.slab`, 214 tall on the phone and growing with the well

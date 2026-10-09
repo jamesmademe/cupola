@@ -3,8 +3,9 @@
 One module of the Home in the slab every module shares, the operator's modules of content (Continue watching, Coming
 up, Arrived, Downloads, Requests, Now playing; Featured, which has no slab, is
 [FeaturedPager](../FeaturedPager/README.md)), the three a person adds in Edit Home (Stack health, Storage, Discover
-shelf), and the two pieces of the operator's Home that are not modules of content: Needs you at the top and Set up
-next at the foot. A module decides its state; the frame draws it,
+shelf), the requester's (Ready to watch, Your requests, Trending this week, Coming soon), and the two pieces of the
+operator's Home that are not modules of content: Needs you at the top and Set up next at the foot. A module decides
+its state; the frame draws it,
 so no module invents its own way of loading, failing or asking for a service.
 
 Rendered from `lib/features/home/presentation/widgets/home_module_frame.dart` (`HomeModuleFrame`),
@@ -23,7 +24,9 @@ words in `lib/features/home/domain/now_playing.dart`), `continue_watching_module
 `lib/features/home/domain/stack_lights.dart`, read by `lib/features/home/data/stack_lights.dart`), `storage_module.dart`
 (`HomeStorageModule`, `StoragePoolRow`, words in `lib/features/home/domain/storage.dart`, read by
 `lib/features/home/data/storage.dart`), `discover_shelf_module.dart` (`HomeDiscoverShelfModule`, its shelf
-`DiscoverCarousel`) and `home_module_parts.dart` (`HomeModuleLink`,
+`DiscoverCarousel`), `ready_to_watch_module.dart` (`HomeReadyToWatchModule`) and `your_requests_module.dart`
+(`HomeYourRequestsModule`), their words in `lib/features/requests/domain/my_requests.dart`, and
+`home_module_parts.dart` (`HomeModuleLink`,
 `HomeCoverageNote`, `HomeRowArt`, `HomeRowBar`), by
 `test/design_catalog/home_module_catalog_test.dart`. Which modules a person's Home has, in what order, is the registry
 `HomeModule` (`lib/features/home/domain/home_module.dart`) read through the person's saved layout; see
@@ -132,6 +135,26 @@ lives a tab away. Each sits after Now playing.
   [CatalogPoster](../CatalogPoster/README.md)), the library's state on every poster, its heading the way into
   Discover. Never a count. Without Seerr it asks for Seerr: `Set up Seerr to discover movies and series`.
 
+## The requester's Home
+
+Everything comes from her own Seerr session; no fault, no service named but her player.
+
+- **Ready to watch** (`HomeReadyToWatchModule`): her Featured, drawn by [FeaturedPager](../FeaturedPager/README.md)
+  with one slide. The newest thing she asked for that arrived in the last seven days: `● Ready to watch · since
+  18:40` above the title, `You asked for it on Sunday · TMDB 7.1` under it, `Watch on Jellyfin` (Seerr's link to it in
+  the player its server is set up with, `Watch on Plex`, `Watch` when Seerr does not say) and `Details`. The room takes
+  the title's light. A second arrival is one line under it, `Also ready · Sintel` · `On the server since Wednesday`.
+  Nothing arrived: the module is absent and Your requests leads.
+- **Your requests** (`HomeYourRequestsModule`): `Your requests`, `3 on the way`, up to three
+  [RequesterRequestRow](../RequesterRequestRow/README.md)s, what moves first, then what waits, then a no of the last
+  seven days; `All your requests` to her tab. Nothing on its way: `Nothing on its way` · `Find something to ask for in
+  Discover.` and `Discover`.
+- **Trending this week** and **Coming soon**: Seerr's shelves as Discover draws them, the heading the way into
+  Discover and into her calendar; Coming soon says each poster's day (`Fri 2 Oct`), no region and no count.
+- **The server**: one line above everything when any of her reads did not come back, `Can't reach the server since
+  20:41` and `Retry`, or `You were signed out` and `Sign in again`; the modules under it keep what they last knew and
+  draw no failure of their own.
+
 ## Set up next and Edit Home
 
 - **Set up next** (`SetUpNextModule`): at most three services the stack lacks, each with what it adds (`Set up
@@ -156,7 +179,8 @@ playbacks; Continue watching with two titles and asking who you are; Coming up o
 and nothing by Friday; Arrived over a week, and with Radarr 4K silent; Stack health with three faults, with Radarr
 silent, and checking; Storage with a disk in trouble, and with TrueNAS silent; Storage and Discover shelf asking for
 their services; the Edit Home row; text at 200% with Downloads, with Stack health, Storage and Discover shelf asking for
-Seerr, and with Continue watching, Coming up and Arrived.
+Seerr, and with Continue watching, Coming up and Arrived. The requester's Ready to watch and Your requests are drawn on
+the [RequesterRequestRow](../RequesterRequestRow/README.md) sheet.
 
 ## Do / don't
 
