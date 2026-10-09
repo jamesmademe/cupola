@@ -5,12 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_activity_section.dart';
-
-import '../../test_helpers/settings_scope.dart';
 
 /// Every `Set up X` goes to the same place: the service's own setup form.
 ///
@@ -73,29 +70,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(opened()?.path, ServiceRoutes.setUp(ServiceKey.plex));
-  });
-
-  testWidgets('Activity with only Jellyfin set up names its own sources, and '
-      'never says nothing is connected', (tester) async {
-    final opened = await pumpRouted(
-      tester,
-      const GlobalActivityScreen(),
-      overrides: await settingsScopeOverrides(
-        configured: const [ServiceKey.jellyfin],
-      ),
-    );
-
-    expect(
-      find.text('Radarr, Sonarr, Lidarr and Seerr are not set up'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('connected'), findsNothing);
-    for (final service in activityServiceKeys) {
-      expect(find.text('Set up ${service.title}'), findsOneWidget);
-    }
-    await tester.tap(find.text('Set up Sonarr'));
-    await tester.pumpAndSettle();
-
-    expect(opened()?.path, ServiceRoutes.setUp(ServiceKey.sonarr));
   });
 }

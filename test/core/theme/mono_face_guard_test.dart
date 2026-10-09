@@ -178,6 +178,20 @@ int _lineOf(String text, int offset) =>
 /// [uses] is how many times the file reaches for it.
 const _monoUses = <({String file, int uses, String prints})>[
   (
+    file:
+        'lib/features/activity/presentation/widgets/activity_download_row.dart',
+    uses: 1,
+    prints:
+        'the release a download is, exactly as the indexer and the client '
+        'name it',
+  ),
+  (
+    file:
+        'lib/features/activity/presentation/widgets/activity_history_row.dart',
+    uses: 1,
+    prints: 'the file an import became, exactly as the library names it',
+  ),
+  (
     file: 'lib/features/home/presentation/widgets/downloads_module.dart',
     uses: 1,
     prints:

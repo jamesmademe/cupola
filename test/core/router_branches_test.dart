@@ -8,8 +8,9 @@ import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/data/activity_live.dart';
+import 'package:cupola/features/activity/domain/activity_tab.dart';
+import 'package:cupola/features/activity/presentation/activity_page.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
@@ -189,6 +190,8 @@ void main() {
         // The Home's thirty-second poll: a test about routes ends before the
         // container that holds its timer is disposed.
         homeLivePollProvider.overrideWith((ref) {}),
+        // And Activity's, for the same reason.
+        activityLivePollProvider.overrideWith((ref, tab) {}),
         featuredAdvancesProvider.overrideWithValue(false),
       ],
     );
@@ -271,7 +274,7 @@ void main() {
       expect(branches, hasLength(NavTab.values.length));
       for (var i = 0; i < NavTab.values.length; i++) {
         final tab = NavTab.values[i];
-        final root = branches[i].routes.single as GoRoute;
+        final root = branches[i].routes.first as GoRoute;
         expect(
           root.path,
           tab.routePath,
@@ -280,7 +283,25 @@ void main() {
               '$i must be ${tab.name}. Out of order it would select the wrong '
               'tab rather than fail.',
         );
+        // A tab has one root, except Activity, whose other views sit beside
+        // All in its branch: a view replaces the page, it is not pushed on it.
+        expect(
+          branches[i].routes,
+          hasLength(tab == NavTab.activity ? ActivityTab.values.length : 1),
+          reason: tab.name,
+        );
       }
+    });
+
+    testWidgets("Activity's views are the branch's routes, in ActivityTab "
+        'order, each at its own address', (tester) async {
+      final router = await pumpRouter(tester);
+      final branch = shellRouteOf(router).branches[NavTab.activity.index];
+
+      expect(
+        [for (final route in branch.routes) (route as GoRoute).path],
+        [for (final tab in ActivityTab.values) tab.location],
+      );
     });
 
     testWidgets('each service on the model has one branch per tab, in '
@@ -547,7 +568,9 @@ void main() {
       expect(
         atRoot,
         contains('/activity/:type'),
-        reason: 'the drill-down was full-screen before and stays that way',
+        reason:
+            'the old per-service pages are a redirect at the root, one hop to '
+            'where the thing lives now',
       );
     });
 
@@ -590,54 +613,61 @@ void main() {
       expect(router.state.uri.path, NavTab.activity.routePath);
       expect(find.byType(FloatingBottomNavBar), findsOneWidget);
 
-      // Landing on Activity starts its Now poll, which is the correct
-      // behaviour and a pending timer at teardown. Switching away closes that
-      // gate — proof of the same mechanism, and it leaves the test tidy.
       router.go(NavTab.home.routePath);
       await tester.pumpAndSettle();
     });
 
-    testWidgets('the activity drill-down renders without a nav bar', (
-      tester,
-    ) async {
-      // Radarr configured, because this destination builds a real client:
-      // the assertion is about chrome, not about what the screen finds.
-      await pumpRouter(
+    testWidgets('an old per-service activity link lands in a tab, with its nav '
+        'bar', (tester) async {
+      // Radarr configured, because the queue tab builds a real client: the
+      // assertion is about where the link lands and its chrome.
+      final router = await pumpRouter(
         tester,
         at: '/activity/movies',
         configured: const [ServiceKey.radarr],
       );
 
-      expect(find.byType(FloatingBottomNavBar), findsNothing);
-      expect(find.byType(ShellScreen), findsNothing);
+      expect(router.state.uri.toString(), '/stack/radarr/queue');
+      expect(find.byType(FloatingBottomNavBar), findsOneWidget);
+      expect(find.byType(ShellScreen), findsOneWidget);
     });
 
-    // The requests drill-down is the one destination here that belongs to a
+    // The requests view is the one destination here that belongs to a
     // *connection*: /activity aggregates every Seerr, so a row that came off
     // the second one has to open the second one's list. The link carries the
-    // connection in `?i=` and this asserts the route reads it — a parameter
-    // nothing reads was removed from this route once already.
-    testWidgets('the requests drill-down carries its connection', (
-      tester,
-    ) async {
-      await pumpRouter(
+    // connection in `?i=` and this asserts the route reads it, both at its own
+    // address and through the old one: a parameter nothing reads was removed
+    // from this route once already.
+    for (final at in [
+      '/activity/requests?i=${_secondSeerr.id}',
+      '/activity/discover?i=${_secondSeerr.id}',
+    ]) {
+      testWidgets('the requests view carries its connection ($at)', (
         tester,
-        at: '/activity/discover?i=${_secondSeerr.id}',
-        configured: const [ServiceKey.seerr],
-        // A real second connection, so the id in the link names something —
-        // otherwise the assertion would hold even if the screen took the lens.
-        customize: (settings) => settings.copyWithInstance(_secondSeerr),
-      );
+      ) async {
+        final router = await pumpRouter(
+          tester,
+          at: at,
+          configured: const [ServiceKey.seerr],
+          // A real second connection, so the id in the link names something:
+          // otherwise the assertion would hold even if the page took the lens.
+          customize: (settings) => settings.copyWithInstance(_secondSeerr),
+        );
 
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is ActivityScreen &&
-              widget.instanceId == _secondSeerr.id &&
-              widget.serviceType == ServiceType.discover,
-        ),
-        findsOneWidget,
-      );
-    });
+        expect(
+          router.state.uri.toString(),
+          '/activity/requests?i=${_secondSeerr.id}',
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is ActivityPage &&
+                widget.tab == ActivityTab.requests &&
+                widget.requestsOf == _secondSeerr.id,
+          ),
+          findsOneWidget,
+        );
+      });
+    }
   });
 }

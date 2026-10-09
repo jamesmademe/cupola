@@ -742,6 +742,22 @@ void main() {
           ServiceRoutes.media(film, from: '/activity/media/movie/1'),
           '/activity/media/movie/653',
         );
+        // Each of Activity's views, a request list's connection and the
+        // blocklist included, is the Activity tab: the title opens under it,
+        // and Back returns to the view.
+        for (final view in [
+          ServiceRoutes.activityDownloads,
+          ServiceRoutes.activityRequests,
+          '${ServiceRoutes.activityRequests}?i=seerr-cabin',
+          ServiceRoutes.activityHistory,
+          ServiceRoutes.activityBlocklist,
+        ]) {
+          expect(
+            ServiceRoutes.media(film, from: view),
+            '/activity/media/movie/653',
+            reason: view,
+          );
+        }
         expect(
           ServiceRoutes.media(film, from: ServiceRoutes.discover),
           '/discover/media/movie/653',
@@ -754,14 +770,16 @@ void main() {
       });
 
       test('at the root from a page above the tabs', () {
-        // `/activity/movies` sits over the tabs: pushed into one, the title
-        // would open underneath it.
+        // A title's own page at the root sits over the tabs: pushed into
+        // one, the title would open underneath it. (`/activity/movies` was
+        // such a page once; it redirects now, and any `/activity/...` is the
+        // Activity tab.)
         expect(
-          ServiceRoutes.media(film, from: '/activity/movies'),
+          ServiceRoutes.media(film, from: '/media/movie/1'),
           '/media/movie/653',
         );
         expect(
-          ServiceRoutes.media(film, from: '/media/movie/1'),
+          ServiceRoutes.media(film, from: '/import/browse'),
           '/media/movie/653',
         );
       });

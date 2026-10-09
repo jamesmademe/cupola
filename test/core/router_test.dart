@@ -37,6 +37,7 @@ import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
+import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
@@ -1632,7 +1633,10 @@ void main() {
           ServiceRoutes.stack,
           ServiceRoutes.activity,
           ServiceRoutes.discover,
-          '/activity/movies',
+          // Activity's other views: each is the Activity tab, so a title
+          // opened from one hangs under it.
+          for (final tab in ActivityTab.values)
+            if (tab != ActivityTab.all) tab.location,
         ];
         for (final (index, from) in froms.indexed) {
           final key = MediaKey.movie(600 + index);
@@ -1690,8 +1694,10 @@ void main() {
       ) async {
         final container = await _pumpRouter(tester);
         final router = container.read(routerProvider);
-        router.go('/activity/movies');
+        // A title's own page at the root: it sits over the tabs.
+        router.go(ServiceRoutes.media(const MediaKey.movie(1), from: '/'));
         await tester.pumpAndSettle();
+        expect(router.state.uri.path, '/media/movie/1');
 
         unawaited(
           router.push(

@@ -15,8 +15,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart';
+import 'package:cupola/features/activity/domain/activity_tab.dart';
+import 'package:cupola/features/activity/presentation/activity_page.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_provider.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
@@ -78,9 +78,8 @@ Iterable<NetworkRequest> _freshQueueReads(ProfileHarness harness) => harness
     .where((r) => r.path == '/api/v3/queue' && r.headers['x-gate'] == 'one');
 
 void main() {
-  testWidgets('a page holding its own read reads again, never an outage', (
-    tester,
-  ) async {
+  testWidgets('a page holding its own read keeps its answer, and a pull reads '
+      'again, never an outage', (tester) async {
     final harness = await pumpWithProfile(
       tester,
       Profiles.p1.withLatency(WorldIds.radarr, _latency),
@@ -89,14 +88,14 @@ void main() {
       child: Consumer(
         builder: (context, ref, _) {
           ref.watch(radarrServiceProvider);
-          return const ActivityTab(serviceType: ServiceType.movies);
+          return const ActivityPage(tab: ActivityTab.downloads);
         },
       ),
       surfaceSize: const Size(430, 2400),
       settle: false,
     );
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(ActivityTab)),
+      tester.element(find.byType(ActivityPage)),
     );
     _changeSettingsMidWalk(harness, container);
 
@@ -109,6 +108,18 @@ void main() {
       reason: 'the closed client is not the server failing',
     );
 
+    await harness.settle(tester);
+    expect(_didNotAnswer(), findsNothing);
+    // A settings write does not re-read Activity on purpose: the answer it
+    // holds stands until a pull, a return or its poll.
+    expect(_freshQueueReads(harness), isEmpty);
+
+    // The pull reads again, on the client the change rebuilt.
+    await tester.fling(
+      find.byType(Scrollable).first,
+      const Offset(0, 400),
+      1000,
+    );
     await harness.settle(tester);
     expect(_didNotAnswer(), findsNothing);
     expect(_freshQueueReads(harness), isNotEmpty);

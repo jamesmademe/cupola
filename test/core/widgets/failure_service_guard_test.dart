@@ -44,9 +44,6 @@ void main() {
           'so it passes `serviceName` on and the fallback reads it.',
       'lib/core/widgets/media_detail_placeholder_view.dart':
           'Handed a display name by the detail pages it stands in for.',
-      'lib/features/activity/presentation/global_activity_screen.dart':
-          "The feed's own load failing, which no connection's form holds "
-          '(the one state of the two that knows a sole connection passes it).',
       'lib/features/stream/presentation/widgets/stream_activity_section.dart':
           'Several media servers, all dark. With one, the section draws '
           "that server's own leaf instead.",
