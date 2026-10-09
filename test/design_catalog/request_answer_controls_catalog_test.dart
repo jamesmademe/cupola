@@ -222,7 +222,8 @@ void main() {
       ),
       CatalogScene(
         'RequestAnswerControls.row · text at 200%, a long title: the pair '
-        'stays whole, and busy keeps its place',
+        'goes one under the other when a verb would not fit, and busy keeps '
+        'its place',
         (_) => Column(
           children: [
             _row(

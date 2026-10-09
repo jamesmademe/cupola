@@ -96,6 +96,31 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('side by side while both verbs fit their half, one under '
+        'the other once they would be cut', (tester) async {
+      final wide = await _pump(tester, Profiles.p6, _row());
+      expect(
+        tester.getTopLeft(find.byType(FilledButton)).dy,
+        tester.getTopLeft(find.byType(OutlinedButton)).dy,
+      );
+      await wide.unmount(tester);
+
+      // A narrow row at a large reading size: the verb no longer fits half.
+      final narrow = await _pump(
+        tester,
+        Profiles.p6,
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: SizedBox(width: 240, child: _row()),
+        ),
+      );
+      final approve = tester.getRect(find.byType(FilledButton));
+      final decline = tester.getRect(find.byType(OutlinedButton));
+      expect(decline.top, greaterThan(approve.bottom));
+      expect(approve.width, decline.width);
+      await narrow.unmount(tester);
+    });
+
     testWidgets('each button speaks its verb with the title, as one button', (
       tester,
     ) async {

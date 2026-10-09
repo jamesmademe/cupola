@@ -157,12 +157,30 @@ class RequestAnswerControls extends ConsumerWidget {
     );
 
     return switch (_look) {
-      _Look.row => Row(
-        children: [
-          Expanded(child: approve),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(child: decline),
-        ],
+      // Side by side while both verbs fit their half; one under the other
+      // once they do not (a narrow row at a large reading size), so a verb
+      // is never cut.
+      _Look.row => LayoutBuilder(
+        builder: (context, box) {
+          final half = (box.maxWidth - AppSpacing.sm) / 2;
+          if (_verbsFit(context, half)) {
+            return Row(
+              children: [
+                Expanded(child: approve),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: decline),
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              approve,
+              const SizedBox(height: AppSpacing.sm),
+              decline,
+            ],
+          );
+        },
       ),
       _Look.card => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -181,6 +199,26 @@ class RequestAnswerControls extends ConsumerWidget {
         ],
       ),
     };
+  }
+
+  /// Whether both verbs, and the busy ring beside one, fit a button [width]
+  /// wide at the reading size.
+  static bool _verbsFit(BuildContext context, double width) {
+    final style = Theme.of(context).textTheme.labelLarge ?? AppType.button;
+    var widest = 0.0;
+    for (final verb in const ['Approve', 'Decline']) {
+      final painter = TextPainter(
+        text: TextSpan(text: verb, style: style),
+        textScaler: MediaQuery.textScalerOf(context),
+        textDirection: Directionality.of(context),
+        maxLines: 1,
+      )..layout();
+      if (painter.width > widest) widest = painter.width;
+      painter.dispose();
+    }
+    // The button's own padding on each side, and the ring with its gap.
+    const chrome = 2 * AppSpacing.lg + 18 + AppSpacing.sm;
+    return widest + chrome <= width;
   }
 
   Widget _button(

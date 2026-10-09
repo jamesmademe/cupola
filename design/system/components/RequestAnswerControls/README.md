@@ -27,7 +27,9 @@ makes `displayStatus` read Available, and the request would lose the only answer
 ## Variants
 
 - **`.row`**: the pair side by side, one width each, filling the width it is given. Approve is the ink fill and Decline
-  the outline, both 44pt high and with no glyph. The Home's pair, and the one of every list.
+  the outline, both 44pt high and with no glyph. The Home's pair, and the one of every list. When a verb, with the busy
+  ring beside it, no longer fits its half (a narrow row at a large reading size), the pair goes one under the other at
+  the row's width, Approve first: a verb is never cut.
 - **`.card`**: the pair one under the other, the width of the card they close. Approve takes the check glyph and the
   fill the page chooses (`approveStyle`: the page's lit fill when nothing else leads, the quiet one under a lead that
   plays or fixes a copy); `onDone` reads the page again once the answer is over, however it ended.
