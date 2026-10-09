@@ -21,12 +21,15 @@ cards live in [`../motion/`](../motion/).
 | Actions | [RequestAnswerControls](RequestAnswerControls/README.md) | `lib/features/requests/presentation/widgets/request_answer_controls.dart`, `lib/features/activity/presentation/widgets/activity_actions.dart`, `lib/features/home/data/answered_requests.dart` |
 | Navigation | [FloatingBottomNavBar](FloatingBottomNavBar/README.md) | `lib/core/widgets/floating_bottom_nav_bar.dart`, `lib/features/settings/domain/nav_tab.dart`, `lib/features/shell/presentation/shell_screen.dart` |
 | Navigation | [FloatingNavRail](FloatingNavRail/README.md) | `lib/core/widgets/floating_nav_rail.dart`, `lib/features/shell/presentation/shell_screen.dart` |
+| Navigation | [PageTabs](PageTabs/README.md) | `lib/core/widgets/page_tabs.dart`, `lib/features/activity/domain/activity_tab.dart` |
 | Navigation | [SearchBarHeader](SearchBarHeader/README.md) | `lib/core/widgets/search_bar_header.dart` |
 | Navigation | [SelectionPills](SelectionPills/README.md) | `lib/core/widgets/selection_pills.dart` |
 | Navigation | [ServiceTabBar](ServiceTabBar/README.md) | `lib/core/widgets/service_tab_bar.dart`, `lib/features/services/domain/service_tab.dart` |
 | Structure | [SectionHeader](SectionHeader/README.md) | `lib/core/widgets/section_header.dart` |
+| Structure | [ActivitySection](ActivitySection/README.md) | `lib/features/activity/presentation/widgets/activity_section.dart` |
 | Containers | [AppCard](AppCard/README.md) | `lib/core/widgets/app_card.dart` |
 | Lists | [ServiceRecordRow](ServiceRecordRow/README.md) | `lib/core/widgets/service_record_row.dart` |
+| Lists | [ActivityRows](ActivityRows/README.md) | `lib/features/activity/presentation/widgets/activity_download_row.dart`, `lib/features/activity/presentation/widgets/activity_history_row.dart` |
 | Metadata | [TagChip](TagChip/README.md) | `lib/core/widgets/tag_chip.dart` |
 | Metadata | [MachineName](MachineName/README.md) | `lib/core/widgets/machine_name.dart` |
 | Status | [AppErrorState](AppErrorState/README.md) | `lib/core/widgets/app_error_state.dart`, `lib/core/widgets/inline_error_retry.dart`, `lib/core/widgets/brief_failure_line.dart` |
