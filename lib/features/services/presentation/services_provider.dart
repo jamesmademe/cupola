@@ -952,9 +952,16 @@ class ArrHistoryEntry {
     this.tmdbId,
     this.backdropUrl = '',
     this.mediaAddedAt,
+    this.fileName,
   });
 
   final ServiceKey service;
+
+  /// The file an import record landed, as the library names it: the last
+  /// segment of the record's `data.importedPath`, else the release's
+  /// `sourceTitle`. Null on any other event, and on an import whose record
+  /// carries neither.
+  final String? fileName;
 
   /// The wide artwork of what the record is about (Radarr's and Sonarr's
   /// fanart, a Lidarr artist's), or empty: what Arrived's card shows.
@@ -1124,6 +1131,7 @@ ArrHistoryEntry _historyEntryFrom(
   final data = mapOrNull(record['data']);
   final title =
       arrPrimaryMediaTitle(record) ?? arrReleaseTitle(record) ?? 'Unknown item';
+  final outcome = classifyHistoryEvent(stringOrNull(record['eventType']));
 
   return ArrHistoryEntry(
     service: service,
@@ -1164,7 +1172,10 @@ ArrHistoryEntry _historyEntryFrom(
             mapOrNull(record['artist']))?['added'],
       ),
     ),
-    outcome: classifyHistoryEvent(stringOrNull(record['eventType'])),
+    outcome: outcome,
+    fileName: outcome == ArrImportOutcome.imported
+        ? _importedFileName(record, data)
+        : null,
     at: parseAddedTimestamp(stringOrNull(record['date'])),
     // `statusMessages` is where an \*arr puts the reason an import failed, and
     // `message` is where a failed *grab* puts it. Neither is always present, and
@@ -1172,6 +1183,26 @@ ArrHistoryEntry _historyEntryFrom(
     reason:
         stringOrNull(data?['statusMessages']) ?? stringOrNull(data?['message']),
   );
+}
+
+/// The name of the file an import record landed: the last segment of
+/// `data.importedPath` (Radarr and Sonarr `downloadFolderImported`, Lidarr
+/// `trackFileImported`, each recording the library path it moved the file to
+/// under that key), else the record's `sourceTitle`, the release it came
+/// from. Null when the record has neither.
+///
+/// A path from a Windows host reads on `\\` as well as `/`.
+String? _importedFileName(
+  Map<String, dynamic> record,
+  Map<String, dynamic>? data,
+) {
+  final path = stringOrNull(data?['importedPath'])?.trim();
+  if (path != null && path.isNotEmpty) {
+    final segments = path.split(RegExp(r'[\\/]')).where((s) => s.isNotEmpty);
+    if (segments.isNotEmpty) return segments.last;
+  }
+  final source = stringOrNull(record['sourceTitle'])?.trim();
+  return source == null || source.isEmpty ? null : source;
 }
 
 /// The artwork a history record carries in its embedded media.
