@@ -9,6 +9,13 @@ import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/home/data/stack_lights.dart';
+import 'package:cupola/features/home/data/storage.dart';
+import 'package:cupola/features/home/domain/stack_lights.dart';
+import 'package:cupola/features/home/domain/storage.dart';
+import 'package:cupola/features/home/presentation/widgets/discover_shelf_module.dart';
+import 'package:cupola/features/home/presentation/widgets/stack_health_module.dart';
+import 'package:cupola/features/home/presentation/widgets/storage_module.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/needs_you.dart';
@@ -312,6 +319,60 @@ class _Rows extends StatelessWidget {
   }
 }
 
+/// A household's twelve services, in the Stack's order, each answering unless
+/// [lights] says otherwise.
+StackLights _lights(
+  Map<ServiceKey, StackLight> lights, {
+  int faults = 0,
+  StackLight every = StackLight.answering,
+}) => StackLights(
+  rows: [
+    for (final service in const [
+      ServiceKey.seerr,
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+      ServiceKey.lidarr,
+      ServiceKey.prowlarr,
+      ServiceKey.bazarr,
+      ServiceKey.qbittorrent,
+      ServiceKey.sabnzbd,
+      ServiceKey.jellyfin,
+      ServiceKey.truenas,
+      ServiceKey.dockge,
+      ServiceKey.nginxProxyManager,
+    ])
+      (service: service, light: lights[service] ?? every),
+  ],
+  faults: faults,
+);
+
+const _tib = 1024 * 1024 * 1024 * 1024;
+
+final _pools = [
+  StoragePool(
+    service: ServiceKey.truenas,
+    instanceId: 'truenas',
+    name: 'tank',
+    healthy: false,
+    state: 'Degraded',
+    usedFraction: 0.72,
+    usedBytes: (31.2 * _tib).round(),
+    totalBytes: (43.6 * _tib).round(),
+    disks: const ['Disk sdd reports 8 errors'],
+  ),
+  StoragePool(
+    service: ServiceKey.truenas,
+    instanceId: 'truenas',
+    name: 'fast',
+    healthy: true,
+    state: 'Healthy',
+    scan: 'scrubbed Sunday',
+    usedFraction: 0.33,
+    usedBytes: (0.6 * _tib).round(),
+    totalBytes: (1.8 * _tib).round(),
+  ),
+];
+
 void main() {
   catalogCard(
     'HomeModule',
@@ -362,6 +423,7 @@ void main() {
         (_) => HomeModuleFrame.needsService(
           title: 'Storage',
           service: ServiceKey.truenas,
+          headline: 'Set up TrueNAS to see your storage',
           setUpLine: 'Pools, space and disk health',
           onSetUp: () {},
         ),
@@ -705,6 +767,121 @@ void main() {
           currentSettingsProvider.overrideWith((ref) => _clientSettings),
           servicesInFlightProvider.overrideWith((ref) async => _evening),
           servicesArrHistoryProvider.overrideWith((ref) async => _noHistory),
+        ],
+      ),
+      CatalogScene(
+        'Stack health · every service its mark and its light; the faults, '
+        'counted in groups, named in amber; one target to Stack',
+        (_) => const HomeStackHealthModule(),
+        width: 390,
+        overrides: [
+          stackLightsProvider.overrideWithValue(
+            _lights({
+              ServiceKey.sonarr: StackLight.fault,
+              ServiceKey.qbittorrent: StackLight.fault,
+              ServiceKey.truenas: StackLight.fault,
+            }, faults: 3),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Stack health · one did not answer: its light red, the line red '
+        'with Retry',
+        (_) => const HomeStackHealthModule(),
+        width: 390,
+        overrides: [
+          stackLightsProvider.overrideWithValue(
+            _lights({
+              ServiceKey.radarr: StackLight.silent,
+              ServiceKey.sonarr: StackLight.fault,
+            }, faults: 1),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Stack health · before anything answers: hollow lights',
+        (_) => const HomeStackHealthModule(),
+        width: 390,
+        overrides: [
+          stackLightsProvider.overrideWithValue(
+            _lights(const {}, every: StackLight.checking),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Storage · each pool its share in ink, its state, and the disk in '
+        'trouble in amber, one tap from its pool',
+        (_) => const HomeStorageModule(),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith(
+            (ref) => settingsWithServices(const [ServiceKey.truenas]),
+          ),
+          homeStorageProvider.overrideWith(
+            (ref) async => (
+              pools: _pools,
+              coverage: SourceCoverage.answeredBy(ServiceKey.truenas),
+            ),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Storage · TrueNAS did not answer: the place kept, Retry',
+        (_) => const HomeStorageModule(),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith(
+            (ref) => settingsWithServices(const [ServiceKey.truenas]),
+          ),
+          homeStorageProvider.overrideWith(
+            (ref) async => (
+              pools: const <StoragePool>[],
+              coverage: SourceCoverage.failure(
+                ServiceKey.truenas,
+                const ClassifiedFailure(ServiceFailureReason.unreachable),
+              ),
+            ),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Storage and Discover shelf switched on without their services: '
+        'each asks for it, in a dashed outline',
+        (_) => const Column(
+          children: [HomeStorageModule(), HomeDiscoverShelfModule()],
+        ),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith(
+            (ref) => settingsWithServices(const [ServiceKey.radarr]),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Text at 200% · Stack health, Storage, and Discover shelf asking '
+        'for Seerr: the button under the words',
+        (_) => const Column(
+          children: [
+            HomeStackHealthModule(),
+            HomeStorageModule(),
+            HomeDiscoverShelfModule(),
+          ],
+        ),
+        width: 390,
+        textScale: catalogTextScale,
+        overrides: [
+          currentSettingsProvider.overrideWith(
+            (ref) => settingsWithServices(const [ServiceKey.truenas]),
+          ),
+          stackLightsProvider.overrideWithValue(
+            _lights({ServiceKey.truenas: StackLight.fault}, faults: 1),
+          ),
+          homeStorageProvider.overrideWith(
+            (ref) async => (
+              pools: _pools.take(1).toList(),
+              coverage: SourceCoverage.answeredBy(ServiceKey.truenas),
+            ),
+          ),
         ],
       ),
       CatalogScene(

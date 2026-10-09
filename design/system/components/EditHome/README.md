@@ -10,7 +10,8 @@ the rules of reading it are in `lib/features/home/domain/home_layout.dart`.
 ## Where it opens
 
 At `/home/edit`, from the Edit Home row at the foot of the operator's Home, and at `/settings/home`, from the `Home`
-row of Settings (`5 modules · Requests hidden`), the desktop's Settings rail and the command deck. The way back is
+row of Settings (`8 modules · Requests hidden`: the modules the Home draws, and the ones the person switched off; a
+module that starts off is added, not unhidden), the desktop's Settings rail and the command deck. The way back is
 the page it was opened from (`MediaBackPlate`).
 
 ## Parts
@@ -19,7 +20,9 @@ the page it was opened from (`MediaBackPlate`).
   reorder and hide, nothing else is added.
 - **Always on Home**: Needs you, a lock where the handle would be and no switch. It stands first and cannot be hidden.
 - **Modules, in order**: one row per module, its handle (`drag_indicator`, 44pt), its name in the row role and its
-  line in `meta`, its switch. A switched-off module's words dim to half. Held, the handle drags the row; tapped, it
+  line in `meta`, its switch. A switched-off module's words dim to half. While none of the services that feed a module
+  is set up, its line says what it needs instead (`Needs TrueNAS or Unraid`, `Needs Seerr`). Stack health, Storage and
+  Discover shelf start off. Held, the handle drags the row; tapped, it
   lifts the row (`fillQuiet`) and its switch gives way to two 44pt arrows, the one at the end of the order dimmed.
 - The hint: `Hold a handle and drag, or tap it and use the arrows. With VoiceOver: Move up, Move down.` (TalkBack on
   Android, a screen reader elsewhere).

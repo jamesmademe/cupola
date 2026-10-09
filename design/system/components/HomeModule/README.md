@@ -2,7 +2,8 @@
 
 One module of the Home in the slab every module shares, the operator's modules of content (Continue watching, Coming
 up, Arrived, Downloads, Requests, Now playing; Featured, which has no slab, is
-[FeaturedPager](../FeaturedPager/README.md)), and the two pieces of the operator's Home that are not modules of content: Needs you at the top and Set up
+[FeaturedPager](../FeaturedPager/README.md)), the three a person adds in Edit Home (Stack health, Storage, Discover
+shelf), and the two pieces of the operator's Home that are not modules of content: Needs you at the top and Set up
 next at the foot. A module decides its state; the frame draws it,
 so no module invents its own way of loading, failing or asking for a service.
 
@@ -17,8 +18,12 @@ words in `lib/features/home/domain/now_playing.dart`), `continue_watching_module
 `ContinueWatchingRow`, words in `lib/features/home/domain/continue_watching.dart`, read by
 `lib/features/home/data/resume.dart`), `coming_up_module.dart` (`HomeComingUpModule`, its rows `CalendarRow.home`, see
 [CalendarAgenda](../CalendarAgenda/README.md), words in `lib/features/home/domain/coming_up.dart`),
-`arrived_module.dart` (`HomeArrivedModule`, `ArrivedCard`, words in `lib/features/home/domain/arrived.dart`) and
-`home_module_parts.dart` (`HomeModuleLink`,
+`arrived_module.dart` (`HomeArrivedModule`, `ArrivedCard`, words in `lib/features/home/domain/arrived.dart`),
+`stack_health_module.dart` (`HomeStackHealthModule`, `StackLightMark`, words in
+`lib/features/home/domain/stack_lights.dart`, read by `lib/features/home/data/stack_lights.dart`), `storage_module.dart`
+(`HomeStorageModule`, `StoragePoolRow`, words in `lib/features/home/domain/storage.dart`, read by
+`lib/features/home/data/storage.dart`), `discover_shelf_module.dart` (`HomeDiscoverShelfModule`, its shelf
+`DiscoverCarousel`) and `home_module_parts.dart` (`HomeModuleLink`,
 `HomeCoverageNote`, `HomeRowArt`, `HomeRowBar`), by
 `test/design_catalog/home_module_catalog_test.dart`. Which modules a person's Home has, in what order, is the registry
 `HomeModule` (`lib/features/home/domain/home_module.dart`) read through the person's saved layout; see
@@ -37,9 +42,11 @@ words in `lib/features/home/domain/now_playing.dart`), `continue_watching_module
 - **Its sources did not answer** (`HomeModuleFrame.silent`): the module keeps its place and says which service and why
   through the classification (`coverageFailureSentence`), as a `FaultBand.section` (red, a source did not answer) or
   `FaultBand.partial` (amber, it answered with a fault), with Retry. What was last known may sit above it, dimmed.
-- **Its service is not set up** (`HomeModuleFrame.needsService`): `Set up TrueNAS to see storage`, what it would show,
-  and `Set up TrueNAS` at the end, the whole slab one target. Only for a module the person switched on in Edit Home;
-  a module on by default whose service is missing is not drawn, and Set up next names the service once.
+- **Its service is not set up** (`HomeModuleFrame.needsService`): no slab yet, a dashed `edge` outline in its place,
+  the service's mark in a 36pt tile, its headline (`Set up TrueNAS to see your storage`) over what it would show, and
+  `Set up TrueNAS` as a quiet pill at the end, the whole outline one target. At a large reading size the pill goes under
+  the words. Only for a module the person switched on in Edit Home; a module on by default whose service is missing is
+  not drawn, and Set up next names the service once.
 
 The slab is `slab`, `AppRadius.slab`, a `hair` edge, padding `gutter` × `slabY`, `md` between modules.
 
@@ -102,6 +109,29 @@ under it, a hairline between rows. A 4pt bar (`HomeRowBar`) says how far somethi
   under the name is the server (`Jellyfin`). Absent when nobody watches; a server that did not answer keeps it in place.
   Read again every 30 s while the Home is seen.
 
+## Stack health, Storage, Discover shelf
+
+Off until the person switches them on in Edit Home: the header already says how many services answer, and the rest
+lives a tab away. Each sits after Now playing.
+
+- **Stack health**: `Stack`, the line `12 of 12 answering · 3 faults` (`Checking 12` before anything answered), then
+  every configured service as its monochrome mark (`ServiceKey.icon`) in a 44pt `fillStrong` tile, the Stack's order,
+  six to a row on the phone. Each mark has one 9pt light at its corner: green answering, amber a fault (a refused key, a
+  connection silent beside one that answered, or a fault Needs you holds for it), red when every connection did not
+  answer, a hollow ring while it is asked. A light eases on once (`motion.standard`) and keeps its colour while the
+  probe is read again. Faults are counted in groups, as Needs you counts them. Under the marks: a service that did not
+  answer, red, with Retry; otherwise `Faults: Sonarr, qBittorrent, TrueNAS` in amber; while nothing has answered,
+  `Asking each service`. The marks are one target, to Stack. Switched on, it never steps aside.
+- **Storage**: `Storage`, the line `TrueNAS` (the servers it read), then each pool, up to four: its name and share in
+  `row` (`tank` · `72%`), a 6pt bar in ink on `fillStrong` (usage is not a state), `31.2 of 43.6 TB` and its state
+  (`Healthy · scrubbed Sunday`, `Degraded`, a dot green or amber), and under it each disk in trouble on an amber wash
+  with a chevron (`Disk sdd reports 8 errors`, `Disk 3 is disabled`). A pool TrueNAS does not call healthy is read
+  again with its topology, the only answer that names the disk. An Unraid array is one pool, `Array`. The pool is one
+  target, to its page. Read again every 60 s while the Home is seen. Without TrueNAS or Unraid it asks for TrueNAS.
+- **Discover shelf**: no slab. Seerr's `Trending this week` as Discover draws it (`DiscoverCarousel`, its posters
+  [CatalogPoster](../CatalogPoster/README.md)), the library's state on every poster, its heading the way into
+  Discover. Never a count. Without Seerr it asks for Seerr: `Set up Seerr to discover movies and series`.
+
 ## Set up next and Edit Home
 
 - **Set up next** (`SetUpNextModule`): at most three services the stack lacks, each with what it adds (`Set up
@@ -123,12 +153,15 @@ Each sheet is drawn in the dark and the light room: the frame ready, loading, si
 you led by a group, by one fault and by a silent service; Set up next over Radarr, Sonarr and Seerr; Downloads moving
 with one stuck, with qBittorrent silent, and with nothing moving; Requests with one row answered; Now playing with two
 playbacks; Continue watching with two titles and asking who you are; Coming up over three days, and with Lidarr silent
-and nothing by Friday; Arrived over a week, and with Radarr 4K silent; the Edit Home row; text at 200% with Downloads,
-and with Continue watching, Coming up and Arrived.
+and nothing by Friday; Arrived over a week, and with Radarr 4K silent; Stack health with three faults, with Radarr
+silent, and checking; Storage with a disk in trouble, and with TrueNAS silent; Storage and Discover shelf asking for
+their services; the Edit Home row; text at 200% with Downloads, with Stack health, Storage and Discover shelf asking for
+Seerr, and with Continue watching, Coming up and Arrived.
 
 ## Do / don't
 
 - Do let a module draw nothing when it has nothing to say, and only then.
 - Don't put a card inside the slab, or a second Retry under a silent module.
 - Don't paint Approve green or Decline red: neither is a state. Red is a service that did not answer.
+- Don't paint a full pool amber: only a state takes colour, and 90% used is a figure.
 - Don't say `Set up X` twice on one Home: a missing service is named by Set up next, once.
