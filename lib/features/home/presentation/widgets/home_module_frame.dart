@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
@@ -24,8 +25,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///  * **its sources did not answer** ([HomeModuleFrame.silent]): the module
 ///    keeps its place and says which service and why, in the classified
 ///    words, with Retry;
-///  * **its service is not set up** ([HomeModuleFrame.needsService]): a dimmed
-///    slab that names the service and stays a target. Only a module the person
+///  * **its service is not set up** ([HomeModuleFrame.needsService]): a dashed
+///    outline that names the service and stays a target. Only a module the person
 ///    switched on in Edit Home gets it; a module that is on by default and
 ///    lacks its service is not drawn, and Set up next names the service once.
 class HomeModuleFrame extends StatelessWidget {
@@ -42,7 +43,8 @@ class HomeModuleFrame extends StatelessWidget {
        onRetry = null,
        service = null,
        onSetUp = null,
-       setUpLine = null;
+       setUpLine = null,
+       headline = null;
 
   /// A module whose sources have not answered yet: its name and the shape of
   /// its rows. [skeleton] is the shape when the module's rows are not two list
@@ -60,7 +62,8 @@ class HomeModuleFrame extends StatelessWidget {
        onRetry = null,
        service = null,
        onSetUp = null,
-       setUpLine = null;
+       setUpLine = null,
+       headline = null;
 
   /// A module whose every source failed: the fault in the words of its cause,
   /// and Retry. [child] is what was last known, drawn dimmed above the fault
@@ -77,14 +80,17 @@ class HomeModuleFrame extends StatelessWidget {
        semanticLabel = null,
        service = null,
        onSetUp = null,
-       setUpLine = null;
+       setUpLine = null,
+       headline = null;
 
-  /// A module the person switched on whose service is not set up: `Set up
-  /// TrueNAS to see your storage`, what it would show, and the way there.
+  /// A module the person switched on whose service is not set up: [headline]
+  /// (`Set up TrueNAS to see your storage`), what it would show, and the way
+  /// there.
   const HomeModuleFrame.needsService({
     super.key,
     required this.title,
     required ServiceKey this.service,
+    required String this.headline,
     required String this.setUpLine,
     required VoidCallback this.onSetUp,
   }) : _state = _FrameState.needsService,
@@ -116,6 +122,7 @@ class HomeModuleFrame extends StatelessWidget {
   final SourceCoverage? coverage;
   final VoidCallback? onRetry;
   final ServiceKey? service;
+  final String? headline;
   final String? setUpLine;
   final VoidCallback? onSetUp;
 
@@ -151,8 +158,20 @@ class HomeModuleFrame extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
         ],
       ),
-      _FrameState.needsService => _setUp(context, room),
+      _FrameState.needsService => const SizedBox.shrink(),
     };
+
+    if (_state == _FrameState.needsService) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          0,
+        ),
+        child: _setUp(context, room),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -229,49 +248,120 @@ class HomeModuleFrame extends StatelessWidget {
         : FaultBand.partial(message: message, onRetry: onRetry!);
   }
 
+  /// Not set up: a dashed outline instead of the slab, since there is
+  /// nothing in it yet; the service's mark, what setting it up would show,
+  /// and `Set up TrueNAS`, the whole outline one target.
   Widget _setUp(BuildContext context, CupolaRoom room) {
     final service = this.service!;
-    final setUp = 'Set up ${service.title}';
+    final setUp = Lexicon.setUp(service.title);
+    final stacked = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final mark = Container(
+      width: 36,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: room.fillStrong,
+        borderRadius: AppRadius.borderRadiusSm,
+        border: Border.all(color: room.hair),
+      ),
+      child: Icon(service.icon, size: 18, color: room.inkSecondary),
+    );
+    final words = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(headline!, style: AppType.row.copyWith(color: room.ink)),
+        const SizedBox(height: 2),
+        Text(setUpLine!, style: AppType.meta.copyWith(color: room.inkTertiary)),
+      ],
+    );
+    final button = Container(
+      constraints: const BoxConstraints(minHeight: 40),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: room.fillStrong,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: room.edge),
+      ),
+      child: Text(
+        setUp,
+        style: AppType.label.weight(FontWeight.w600).copyWith(color: room.ink),
+      ),
+    );
     return PressableScale(
       onTap: onSetUp,
       semanticLabel: '$setUp, $setUpLine',
       semanticHint: 'opens the ${service.title} setup',
       excludeChildSemantics: true,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
+      child: CustomPaint(
+        painter: _DashedOutline(color: room.edge, radius: AppRadius.slab),
         child: Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: stacked
+              ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '$setUp to see ${title.toLowerCase()}',
-                      style: AppType.row.copyWith(color: room.inkSecondary),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        mark,
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: words),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      setUpLine!,
-                      style: AppType.meta.copyWith(color: room.inkTertiary),
-                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    button,
+                  ],
+                )
+              : Row(
+                  children: [
+                    mark,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(child: words),
+                    const SizedBox(width: AppSpacing.sm),
+                    button,
                   ],
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                setUp,
-                style: AppType.label
-                    .weight(FontWeight.w600)
-                    .copyWith(color: room.ink),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
+}
+
+/// A rounded outline drawn in dashes: a place on the Home kept for something
+/// not set up yet.
+class _DashedOutline extends CustomPainter {
+  const _DashedOutline({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  static const _dash = 5.0;
+  static const _gap = 4.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outline = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          (Offset.zero & size).deflate(0.5),
+          Radius.circular(radius),
+        ),
+      );
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (final metric in outline.computeMetrics()) {
+      for (var at = 0.0; at < metric.length; at += _dash + _gap) {
+        canvas.drawPath(metric.extractPath(at, at + _dash), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedOutline old) =>
+      old.color != color || old.radius != radius;
 }
 
 /// The way on from a module's heading.

@@ -1,8 +1,9 @@
 /// What the Home reads again while it is on screen: the downloads and who
-/// is watching, every [homeLiveInterval].
+/// is watching, every [homeLiveInterval], and the storage every
+/// [homeStorageInterval].
 ///
-/// Only those two, and only while their modules are on: the rest of the Home
-/// is read on open, on pull and on return, and a figure that changes by the
+/// Only those, and only while their modules are on: the rest of the Home is
+/// read on open, on pull and on return, and a figure that changes by the
 /// minute is not worth a server's time every thirty seconds.
 library;
 
@@ -11,6 +12,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
+import 'package:cupola/features/home/data/storage.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
@@ -59,6 +61,14 @@ final homeLivePollProvider = Provider.autoDispose<void>((ref) {
           (settings) => module.services.any(settings.isServiceConfigured),
         ),
       );
+  // The pools change by the minute at most: their own, slower clock.
+  if (live(HomeModule.storage)) {
+    ref.gatedPoll(
+      id: 'home.storage',
+      interval: homeStorageInterval,
+      onTick: () => ref.invalidate(homeStorageProvider),
+    );
+  }
   final sources = [
     if (live(HomeModule.downloads)) ...homeDownloadsSources,
     if (live(HomeModule.nowPlaying)) ...homeSessionsSources,

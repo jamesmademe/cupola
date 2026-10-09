@@ -104,14 +104,16 @@ class HomeLayout {
     return listEquals(order, fresh.order) && setEquals(hidden, fresh.hidden);
   }
 
-  /// What Settings says of it: `5 modules`, `5 modules · Requests hidden`,
-  /// `5 modules · 2 hidden`.
+  /// What Settings says of it: how many modules the Home draws, and which
+  /// the person switched off: `9 modules`, `8 modules · Requests hidden`,
+  /// `7 modules · 2 hidden`. A module that starts off is not hidden: it waits
+  /// in Edit Home to be added, and once on it counts.
   String get summary {
-    final total = rows.length;
-    final count = '$total ${total == 1 ? 'module' : 'modules'}';
+    final on = shown.length;
+    final count = '$on ${on == 1 ? 'module' : 'modules'}';
     final off = [
       for (final module in rows)
-        if (!isOn(module)) module,
+        if (!isOn(module) && module.defaultOn) module,
     ];
     return switch (off.length) {
       0 => count,

@@ -99,6 +99,7 @@ enum HomeModule {
       ServiceKey.sabnzbd,
       ServiceKey.nzbget,
     ],
+    needs: 'Needs Radarr, Sonarr or a download client',
   ),
 
   /// The requests that wait for an answer.
@@ -115,6 +116,33 @@ enum HomeModule {
     label: 'Now playing',
     line: 'Who is watching, and on which screen',
     services: [ServiceKey.jellyfin, ServiceKey.plex],
+  ),
+
+  /// Every service's light on one slab: the Stack tab, folded. Off until the
+  /// person switches it on, since the header already answers.
+  stackHealth(
+    audience: Audience.operator,
+    label: 'Stack health',
+    line: 'Every service’s light on one slab',
+    defaultOn: false,
+  ),
+
+  /// How full the pools are, and whether a disk needs the person.
+  storage(
+    audience: Audience.operator,
+    label: 'Storage',
+    line: 'Pools and disks, from TrueNAS or Unraid',
+    services: [ServiceKey.truenas, ServiceKey.unraid],
+    defaultOn: false,
+  ),
+
+  /// One shelf of Discover, with the library's state on every poster.
+  discoverShelf(
+    audience: Audience.operator,
+    label: 'Discover shelf',
+    line: 'Trending this week, from Seerr',
+    services: [ServiceKey.seerr],
+    defaultOn: false,
   ),
 
   /// The services that would add to this Home.
@@ -147,6 +175,8 @@ enum HomeModule {
     required this.line,
     this.placement = HomePlacement.ordered,
     this.services = const [],
+    this.defaultOn = true,
+    this.needs,
   });
 
   /// Whose Home it is on.
@@ -161,12 +191,25 @@ enum HomeModule {
   /// Where it stands.
   final HomePlacement placement;
 
-  /// Whether a Home starts with it on. Every module does today; the ones a
-  /// person adds by choice (the lights of the stack, the storage) will not.
-  bool get defaultOn => true;
+  /// Whether a Home starts with it on. The ones a person adds by choice (the
+  /// lights of the stack, the storage, a shelf of Discover) do not.
+  final bool defaultOn;
 
   /// The services that feed it. Empty when it reads the whole stack.
   final List<ServiceKey> services;
+
+  /// What Edit Home says in place of [line] when none of [services] is set
+  /// up, where naming them one by one would not fit a line. Null: the names.
+  final String? needs;
+
+  /// What Edit Home says of it while none of its services is set up:
+  /// `Needs TrueNAS or Unraid`. Null for a module that reads the whole stack.
+  String? get needsLine {
+    if (services.isEmpty) return null;
+    if (needs case final phrase?) return phrase;
+    final names = [for (final service in services) service.title];
+    return 'Needs ${_orList(names)}';
+  }
 
   /// Whether Edit Home may switch it off. Needs you may not: it is there only
   /// when something is wrong, and then it is the point of the page.
@@ -186,6 +229,12 @@ enum HomeModule {
     for (final module in of(audience))
       if (module.movable) module,
   ];
+
+  /// `Radarr`, `Radarr or Sonarr`, `Radarr, Sonarr or Lidarr`.
+  static String _orList(List<String> names) => switch (names.length) {
+    1 => names.single,
+    _ => '${names.sublist(0, names.length - 1).join(', ')} or ${names.last}',
+  };
 
   /// The module this [name] stored, or null for a name no module has.
   static HomeModule? byName(String name) {

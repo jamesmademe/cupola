@@ -23,10 +23,12 @@ import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/home_live.dart';
+import 'package:cupola/features/home/data/storage.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
 import 'package:cupola/features/home/presentation/widgets/coming_up_module.dart';
 import 'package:cupola/features/home/presentation/widgets/continue_watching_module.dart';
+import 'package:cupola/features/home/presentation/widgets/discover_shelf_module.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/widgets/featured_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
@@ -34,6 +36,8 @@ import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart'
 import 'package:cupola/features/home/presentation/widgets/now_playing_module.dart';
 import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
 import 'package:cupola/features/home/presentation/widgets/set_up_next_module.dart';
+import 'package:cupola/features/home/presentation/widgets/stack_health_module.dart';
+import 'package:cupola/features/home/presentation/widgets/storage_module.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/nothing_set_up.dart';
@@ -138,6 +142,9 @@ Widget homeModuleView(HomeModule module) => switch (module) {
   HomeModule.downloads => const HomeDownloadsModule(),
   HomeModule.requests => const HomeRequestsModule(),
   HomeModule.nowPlaying => const HomeNowPlayingModule(),
+  HomeModule.stackHealth => const HomeStackHealthModule(),
+  HomeModule.storage => const HomeStorageModule(),
+  HomeModule.discoverShelf => const HomeDiscoverShelfModule(),
   HomeModule.setUpNext => const SetUpNextModule(),
   HomeModule.trending => const _TrendingShelf(),
   HomeModule.comingSoon => const _ComingSoonShelf(),
@@ -234,8 +241,17 @@ Future<void> _refreshHome(WidgetRef ref) async {
     settle(ref.read(libraryCalendarProvider.future)),
     settle(ref.read(homeResumeProvider.future)),
     settle(ref.read(featuredProvider.future)),
+    if (_isOn(ref, HomeModule.storage))
+      settle(ref.read(homeStorageProvider.future)),
+    if (_isOn(ref, HomeModule.discoverShelf))
+      settle(ref.read(atriumTrendingProvider.future)),
   ]);
 }
+
+/// Whether the person keeps [module] on: a pull waits only for what the
+/// Home draws.
+bool _isOn(WidgetRef ref, HomeModule module) =>
+    ref.read(homeLayoutProvider).isOn(module);
 
 void _invalidateHome(WidgetRef ref) {
   if (ref.read(shellAudienceProvider) == Audience.requester) {
@@ -266,6 +282,10 @@ void _invalidateHome(WidgetRef ref) {
   ref.invalidate(homeResumeProvider);
   // Whether a media server holds what arrived, for Featured's Play.
   ref.invalidate(mediaStreamCopyProvider);
+  // The pools and arrays, and the shelf of Discover, for those who keep
+  // them on.
+  ref.invalidate(homeStorageProvider);
+  ref.invalidate(atriumTrendingProvider);
   // Each decision source, and what they read that keeps an answer of its own
   // — Prowlarr's indexer status among them, which nothing else here drops, so
   // a pull left a fixed indexer on the list as failing.

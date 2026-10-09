@@ -21,6 +21,7 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/home/data/resume.dart';
+import 'package:cupola/features/home/data/storage.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -127,7 +128,7 @@ void retryDashboardServices(WidgetRef ref, Iterable<ServiceKey> services) {
 
   // What the Home's other modules read of these, each keeping an answer of
   // its own: Arrived's week, Coming up's calendar, Continue watching's
-  // resume. Left cached, a Retry from Needs you brought the service back and
+  // resume, Storage's pools. Left cached, a Retry from Needs you brought the service back and
   // left those modules saying it did not answer.
   if (asked.any(_arrivalSources.contains)) {
     ref.invalidate(servicesArrivalsProvider);
@@ -135,6 +136,9 @@ void retryDashboardServices(WidgetRef ref, Iterable<ServiceKey> services) {
   if (asked.any((service) => CalendarKind.of(service) != null)) {
     ref.invalidate(calendarSourceProvider);
     ref.invalidate(libraryCalendarProvider);
+  }
+  if (asked.contains(ServiceKey.truenas) || asked.contains(ServiceKey.unraid)) {
+    ref.invalidate(homeStorageProvider);
   }
   if (asked.contains(ServiceKey.jellyfin) || asked.contains(ServiceKey.plex)) {
     ref.invalidate(homeResumeProvider);

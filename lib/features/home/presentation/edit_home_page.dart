@@ -14,6 +14,7 @@ import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Edit Home: the person's own Home, reordered and hidden.
 ///
@@ -232,15 +233,32 @@ class _Group extends StatelessWidget {
   }
 }
 
+/// What a row says under a module's name: what it shows, or, while none of
+/// the services that feed it is set up, what it needs (`Needs TrueNAS or
+/// Unraid`), since switched on it would show nothing yet.
+final _lineProvider = Provider.autoDispose.family<String, HomeModule>((
+  ref,
+  module,
+) {
+  final needs = module.needsLine;
+  if (needs == null) return module.line;
+  final fed = ref.watch(
+    currentSettingsProvider.select(
+      (settings) => module.services.any(settings.isServiceConfigured),
+    ),
+  );
+  return fed ? module.line : needs;
+});
+
 /// A module's name and its line, as every row prints them.
-class _Words extends StatelessWidget {
+class _Words extends ConsumerWidget {
   const _Words({required this.module, this.dimmed = false});
 
   final HomeModule module;
   final bool dimmed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final room = CupolaRoom.of(context);
     return AnimatedOpacity(
       opacity: dimmed ? 0.5 : 1,
@@ -252,7 +270,7 @@ class _Words extends StatelessWidget {
           Text(module.label, style: AppType.row.copyWith(color: room.ink)),
           const SizedBox(height: 2),
           Text(
-            module.line,
+            ref.watch(_lineProvider(module)),
             style: AppType.meta.copyWith(color: room.inkSecondary),
           ),
         ],
@@ -305,7 +323,7 @@ class _LockedRow extends StatelessWidget {
 
 /// One module in the order: its handle, its words, then the switch, or the
 /// two arrows while it is lifted.
-class _ModuleRow extends StatelessWidget {
+class _ModuleRow extends ConsumerWidget {
   const _ModuleRow({
     super.key,
     required this.module,
@@ -328,7 +346,7 @@ class _ModuleRow extends StatelessWidget {
   final ValueChanged<bool> onSwitch;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final room = CupolaRoom.of(context);
     final canUp = index > 0;
     final canDown = index < count - 1;
@@ -404,7 +422,7 @@ class _ModuleRow extends StatelessWidget {
             ] else
               Semantics(
                 label: module.label,
-                value: module.line,
+                value: ref.watch(_lineProvider(module)),
                 customSemanticsActions: moves,
                 child: Switch(value: on, onChanged: onSwitch),
               ),
@@ -416,7 +434,7 @@ class _ModuleRow extends StatelessWidget {
 }
 
 /// Set up next: no handle, it stands last; a switch.
-class _FootRow extends StatelessWidget {
+class _FootRow extends ConsumerWidget {
   const _FootRow({
     required this.module,
     required this.on,
@@ -428,7 +446,7 @@ class _FootRow extends StatelessWidget {
   final ValueChanged<bool> onSwitch;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final room = CupolaRoom.of(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 64),
@@ -458,7 +476,7 @@ class _FootRow extends StatelessWidget {
             ),
             Semantics(
               label: module.label,
-              value: module.line,
+              value: ref.watch(_lineProvider(module)),
               child: Switch(value: on, onChanged: onSwitch),
             ),
           ],
