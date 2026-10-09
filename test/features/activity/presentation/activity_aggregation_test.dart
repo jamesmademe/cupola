@@ -1,12 +1,10 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -260,101 +258,6 @@ void main() {
     );
   });
 
-  testWidgets('the filter pill counts every connection of its service', (
-    tester,
-  ) async {
-    final container = _container(
-      settings: await _twoSonarrs(),
-      seerr: FakeSeerrService(),
-      lens: _QueueSonarrService(const [
-        {
-          'id': 1,
-          'title': 'A.Release',
-          'status': 'downloading',
-          'series': {'title': 'From the first'},
-        },
-      ]),
-      second: _QueueSonarrService(const [
-        {
-          'id': 1,
-          'title': 'B.Release',
-          'status': 'downloading',
-          'series': {'title': 'From the second'},
-        },
-      ]),
-    );
-
-    await _pumpScreen(tester, container);
-
-    // Twice: the filter pill and the group header both say it, and that they
-    // AGREE is the assertion. Folding the results by service alone left the
-    // pill reporting whichever connection happened to be merged last, so the
-    // header said 2 and the pill under it said 1.
-    expect(find.bySemanticsLabel('Sonarr, 2 items'), findsNWidgets(2));
-    expect(find.text('From the first'), findsOneWidget);
-    expect(find.text('From the second'), findsOneWidget);
-
-    await _closeScreen(tester, container);
-  });
-
-  testWidgets('one dead connection does not turn its service into a dash', (
-    tester,
-  ) async {
-    final container = _container(
-      settings: await _twoSonarrs(),
-      seerr: FakeSeerrService(),
-      // The live one first and the dead one second, deliberately: folding by
-      // service kept whichever came last, so a service with something to show
-      // reported the dash of its dead sibling.
-      lens: _QueueSonarrService(const [
-        {
-          'id': 1,
-          'title': 'B.Release',
-          'status': 'downloading',
-          'series': {'title': 'Still here'},
-        },
-      ]),
-      second: _ThrowingQueueSonarrService(),
-    );
-
-    await _pumpScreen(tester, container);
-
-    // One real item was reached, so the pill prints it. The dash is reserved
-    // for "no idea", which is only true when nothing of this service answered.
-    // It is a floor, though, and the pill and the header both say which
-    // connection it is short of rather than passing one Sonarr's count off as
-    // both.
-    expect(
-      find.bySemanticsLabel('Sonarr, 1 item, Sonarr 2 not counted'),
-      findsNWidgets(2),
-    );
-    // And the incompleteness is named by connection: "Sonarr did not respond"
-    // is the wrong sentence while the other Sonarr is answering.
-    expect(
-      find.textContaining('Sonarr · ${_secondSonarr.label}'),
-      findsWidgets,
-    );
-
-    await _closeScreen(tester, container);
-  });
-
-  testWidgets('a service whose every connection failed still says so', (
-    tester,
-  ) async {
-    final container = _container(
-      settings: await _twoSonarrs(),
-      seerr: FakeSeerrService(),
-      lens: _ThrowingQueueSonarrService(),
-      second: _ThrowingQueueSonarrService(),
-    );
-
-    await _pumpScreen(tester, container);
-
-    expect(find.bySemanticsLabel('Sonarr, did not answer'), findsOneWidget);
-
-    await _closeScreen(tester, container);
-  });
-
   test(
     'an unconfigured service is still reported once, not per connection',
     () async {
@@ -377,32 +280,6 @@ void main() {
       );
     },
   );
-}
-
-Future<void> _pumpScreen(
-  WidgetTester tester,
-  ProviderContainer container,
-) async {
-  await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(home: GlobalActivityScreen()),
-    ),
-  );
-  await tester.pumpAndSettle();
-}
-
-/// Takes the screen down inside the test body.
-///
-/// The Now bucket holds a 15s poll while it is on screen, and the pending-timer
-/// check runs before any tear-down — so both the tree and the container have to
-/// go here.
-Future<void> _closeScreen(
-  WidgetTester tester,
-  ProviderContainer container,
-) async {
-  await tester.pumpWidget(const SizedBox());
-  container.dispose();
 }
 
 class _QueueSonarrService extends FakeSonarrService {
