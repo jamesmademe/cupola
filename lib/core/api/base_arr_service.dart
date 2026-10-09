@@ -169,6 +169,21 @@ mixin ArrActivityMixin {
   /// The service configuration (API version, sort key).
   ArrServiceConfig get config;
 
+  /// The \*arr's own health checks (`/health`), each with its level and its
+  /// words. Not a list is not a healthy server: it throws, like the
+  /// calendar.
+  Future<List<ArrHealthCheck>> getHealth() async {
+    final response = await client.get('/api/${config.apiVersion}/health');
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('The health checks are not a list');
+    }
+    return [
+      for (final item in data)
+        if (item is Map<String, dynamic>) ArrHealthCheck.fromJson(item),
+    ];
+  }
+
   /// Fetches the download queue, page by page, **with its total and whether
   /// the walk reached the end**.
   ///
@@ -894,4 +909,32 @@ String _calendarDate(DateTime value) {
   return '${local.year.toString().padLeft(4, '0')}-'
       '${local.month.toString().padLeft(2, '0')}-'
       '${local.day.toString().padLeft(2, '0')}';
+}
+
+/// One of an \*arr's health checks (`/health`).
+class ArrHealthCheck {
+  const ArrHealthCheck({
+    required this.source,
+    required this.level,
+    required this.message,
+  });
+
+  factory ArrHealthCheck.fromJson(Map<String, dynamic> json) => ArrHealthCheck(
+    source: stringOrNull(json['source']) ?? '',
+    level: (stringOrNull(json['type']) ?? '').toLowerCase(),
+    message: stringOrNull(json['message']) ?? '',
+  );
+
+  /// The check that raised it, e.g. `RootFolderCheck`.
+  final String source;
+
+  /// `ok`, `notice`, `warning` or `error`, lowercased.
+  final String level;
+
+  /// The \*arr's own words.
+  final String message;
+
+  /// An error stops the \*arr's work (a root folder gone, no download client
+  /// it can reach); a warning or a notice is news it shows on its own page.
+  bool get isError => level == 'error';
 }

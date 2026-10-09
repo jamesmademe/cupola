@@ -40,6 +40,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
+import 'package:cupola/core/platform/browser_opener.dart';
 
 /// One thing waiting on a human.
 ///
@@ -216,6 +217,7 @@ class _DecisionControls extends ConsumerWidget {
       decision.kind,
       target: decision.actionTarget,
       renewable: decision.renewable,
+      remedy: decision.remedy,
     );
 
     // Renewing is a write on the certificates of one NPM account, and a
@@ -362,6 +364,42 @@ Future<void> _runDecision(
         client: elsewhere
             ? ref.read(dockgeClientForProvider(decision.instanceId))
             : null,
+      );
+    case DecisionKind.storageAlert:
+      // TrueNAS's dashboard, where its alerts are, on the TrueNAS that
+      // raised this one: the page reads the lens.
+      await bringUnderLens(ref, ServiceKey.truenas, decision.instanceId);
+      if (!context.mounted) return;
+      context.go(ServiceRoutes.truenasDashboard);
+    case DecisionKind.serviceHealth:
+      // The \*arr's own status page, in the browser: a health check is
+      // fixed in the \*arr's settings, which this app does not carry.
+      final base = ref
+          .read(currentSettingsProvider)
+          .instanceById(decision.instanceId)
+          ?.url;
+      final page = base == null ? null : Uri.tryParse(base);
+      if (page == null) return;
+      await ref
+          .read(browserOpenerProvider)
+          .open(
+            page.replace(
+              path: '${page.path.replaceAll(RegExp(r'/+$'), '')}/system/status',
+            ),
+          );
+    case DecisionKind.connectionFault:
+      // The remedy its cause names is in the connection's form; where asking
+      // again is the remedy, the probe is asked again.
+      final route = decision.route;
+      if (decision.remedy != null && route != null) {
+        await context.pushMounted(route);
+        return;
+      }
+      ref.invalidate(
+        instanceSummaryProvider((
+          service: decision.service,
+          instanceId: decision.instanceId,
+        )),
       );
     case DecisionKind.expiringCertificate:
       // The Certificates tab, where Renew and its confirmation are, and where

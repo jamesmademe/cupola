@@ -126,13 +126,14 @@ void main() {
 
       await _advance(tester, const Duration(seconds: 3));
 
-      // The blocked imports lead and the stall is the one thing more: Dockge's
-      // stopped stack is not counted until Dockge has said so.
+      // The blocked imports lead; the stall and TrueNAS's disk alert are the
+      // two things more: Dockge's stopped stack is not counted until Dockge
+      // has said so.
       expect(
         _inNeedsYou(find.text('18 downloads need a manual import')),
         findsOne,
       );
-      expect(_inNeedsYou(find.text('+1')), findsOne);
+      expect(_inNeedsYou(find.text('+2')), findsOne);
 
       await _advance(tester, const Duration(seconds: 7));
       await harness.settle(tester);
@@ -142,7 +143,7 @@ void main() {
         _inNeedsYou(find.textContaining(RegExp(r'^Dockge did not answer at '))),
         findsOne,
       );
-      expect(_inNeedsYou(find.text('+3')), findsOne);
+      expect(_inNeedsYou(find.text('+4')), findsOne);
 
       await harness.unmount(tester);
       await tester.pump(const Duration(seconds: 9));
@@ -221,8 +222,9 @@ void main() {
       ),
     );
     expect(_inNeedsYou(find.text('Retry')), findsOne);
-    // No figure: nothing could be counted, so there is no `+N` either.
-    expect(_inNeedsYou(find.textContaining(RegExp(r'^\+\d'))), findsNothing);
+    // One thing more, and only one: qBittorrent answered, refusing the
+    // sign-in, which is a fault of its own; nothing else could be counted.
+    expect(_inNeedsYou(find.text('+1')), findsOne);
     expect(find.bySemanticsLabel(RegExp(r'^Loading')), findsNothing);
 
     // Seerr is one of the sources that did not answer, and Requests says so

@@ -152,6 +152,9 @@ String needsYouLine(
       // Never grouped (see `groupDecisions`); said anyway, so the switch is
       // total.
       DecisionKind.failedImport => '$count imports failed',
+      DecisionKind.storageAlert => '$count storage alerts',
+      DecisionKind.connectionFault => '$count connections have a fault',
+      DecisionKind.serviceHealth => '$count health checks are failing',
       DecisionKind.failingIndexer => '$count indexers are failing',
       DecisionKind.stoppedStack => '$count stacks stopped',
       DecisionKind.expiringCertificate => '$count certificates are expiring',
@@ -164,6 +167,10 @@ String needsYouLine(
     DecisionKind.stalledDownload =>
       decision.transferFailed ? 'Could not download $title' : '$title is stuck',
     DecisionKind.failedImport => 'Could not import $title',
+    // Each of these titles is already a sentence: TrueNAS's alert in plain
+    // words, the fault's headline, the \*arr's own check.
+    DecisionKind.storageAlert || DecisionKind.connectionFault => title,
+    DecisionKind.serviceHealth => '${decision.service.title}: $title',
     DecisionKind.failingIndexer => 'The $title indexer is failing',
     DecisionKind.stoppedStack => 'The $title stack stopped',
     DecisionKind.expiringCertificate => _certificateLine(

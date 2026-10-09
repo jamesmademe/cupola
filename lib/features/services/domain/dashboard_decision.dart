@@ -75,7 +75,20 @@ enum DecisionSource {
   ]),
 
   /// The imports the \*arrs' history says failed.
-  history([ServiceKey.radarr, ServiceKey.sonarr, ServiceKey.lidarr]);
+  history([ServiceKey.radarr, ServiceKey.sonarr, ServiceKey.lidarr]),
+
+  /// TrueNAS's own alerts, at warning or worse.
+  storage([ServiceKey.truenas]),
+
+  /// The \*arrs' own health checks that report an error.
+  health([ServiceKey.radarr, ServiceKey.sonarr, ServiceKey.lidarr]),
+
+  /// Connections that answered with a refusal or a fault: a refused key, a
+  /// gateway answering in a service's place, a server error. Read off the
+  /// probes the stack's health already makes, so it asks nothing of its own
+  /// and names no service as unread: a connection that did not answer at all
+  /// is the red line above Needs you, never one of its faults.
+  connections([]);
 
   const DecisionSource(this.services);
 
@@ -137,6 +150,21 @@ enum DecisionKind {
   /// An \*arr history record whose import failed. Action: manual import.
   failedImport,
 
+  /// A TrueNAS alert at warning or worse: a disk reporting errors, a pool
+  /// degraded. Action: open the alert.
+  storageAlert,
+
+  /// A connection that answered, with a refusal or a fault: a refused key, a
+  /// gateway in the way, a server error. Action: the remedy its cause names
+  /// (`Paste the key again`, `Check the password`), or Retry where asking
+  /// again can help.
+  connectionFault,
+
+  /// An \*arr health check at the error level: a root folder that is gone, a
+  /// download client it cannot reach. Action: the \*arr's own page, where the
+  /// check is fixed.
+  serviceHealth,
+
   /// An indexer Prowlarr has marked as failing. Action: test it.
   failingIndexer,
 
@@ -167,10 +195,13 @@ extension DecisionKindRank on DecisionKind {
   bool get opensUnderLens => switch (this) {
     DecisionKind.failingIndexer ||
     DecisionKind.stoppedStack ||
-    DecisionKind.expiringCertificate => true,
+    DecisionKind.expiringCertificate ||
+    DecisionKind.storageAlert => true,
     DecisionKind.stalledDownload ||
     DecisionKind.importBlocked ||
     DecisionKind.failedImport ||
+    DecisionKind.connectionFault ||
+    DecisionKind.serviceHealth ||
     DecisionKind.pendingRequest => false,
   };
 }
@@ -200,9 +231,15 @@ class DashboardDecision {
     this.reason,
     this.renewable = true,
     this.transferFailed = false,
+    this.remedy,
   });
 
   final DecisionKind kind;
+
+  /// The remedy a [DecisionKind.connectionFault]'s cause names
+  /// (`failureRemedy`), or null where Retry is the remedy. Null on every
+  /// other kind, whose control is the kind's own.
+  final String? remedy;
 
   /// Unique within its kind — used for the row's key and for nothing else.
   final String id;
@@ -306,6 +343,9 @@ class DashboardDecision {
 bool _groups(DecisionKind kind) => switch (kind) {
   DecisionKind.stalledDownload || DecisionKind.importBlocked => true,
   DecisionKind.failedImport ||
+  DecisionKind.storageAlert ||
+  DecisionKind.connectionFault ||
+  DecisionKind.serviceHealth ||
   DecisionKind.failingIndexer ||
   DecisionKind.stoppedStack ||
   DecisionKind.expiringCertificate ||
@@ -414,6 +454,9 @@ String _groupTitle(DecisionKind kind, int count) => switch (kind) {
   DecisionKind.stalledDownload => '$count stuck downloads',
   // Never grouped — see [_groups]. Named anyway so the switch stays total.
   DecisionKind.failedImport => '$count failed imports',
+  DecisionKind.storageAlert => '$count storage alerts',
+  DecisionKind.connectionFault => '$count connections with a fault',
+  DecisionKind.serviceHealth => '$count failing health checks',
   DecisionKind.failingIndexer => '$count failing indexers',
   DecisionKind.stoppedStack => '$count stopped stacks',
   DecisionKind.expiringCertificate => '$count expiring certificates',
@@ -515,6 +558,9 @@ String _kindNoun(DecisionKind kind) => switch (kind) {
   DecisionKind.stalledDownload => 'stalls',
   DecisionKind.importBlocked => 'blocked imports',
   DecisionKind.failedImport => 'imports',
+  DecisionKind.storageAlert => 'alerts',
+  DecisionKind.connectionFault => 'connections',
+  DecisionKind.serviceHealth => 'health checks',
   DecisionKind.failingIndexer => 'faults',
   DecisionKind.stoppedStack => 'stacks',
   DecisionKind.expiringCertificate => 'certs',
@@ -530,6 +576,7 @@ String decisionActionLabel(
   DecisionKind kind, {
   ServiceKey? target,
   bool renewable = true,
+  String? remedy,
 }) => switch (kind) {
   DecisionKind.stalledDownload => 'Open in ${target?.title ?? 'client'}',
   // The wizard exists for three arrs. Anywhere else the honest control is
@@ -540,6 +587,11 @@ String decisionActionLabel(
         ? 'Manual import'
         : 'Open in ${target.title}',
   DecisionKind.failedImport => 'Fix',
+  DecisionKind.storageAlert => 'Open alert',
+  // The remedy the cause names, or Retry where the same request can still
+  // succeed: the classification's words, never the row's own.
+  DecisionKind.connectionFault => remedy ?? 'Retry',
+  DecisionKind.serviceHealth => 'Open in ${target?.title ?? 'the service'}',
   DecisionKind.failingIndexer => 'Test',
   DecisionKind.stoppedStack => 'Start',
   // `Renew` opens the Certificates tab, where renewal sits beside its
@@ -564,6 +616,9 @@ String decisionUnavailableToast(DecisionKind kind, ServiceKey required) {
     DecisionKind.stalledDownload => 'open this transfer',
     DecisionKind.importBlocked => 'import these files',
     DecisionKind.failedImport => 'fix this import',
+    DecisionKind.storageAlert => 'open this alert',
+    DecisionKind.connectionFault => 'fix this connection',
+    DecisionKind.serviceHealth => 'open this check',
     DecisionKind.failingIndexer => 'test this indexer',
     DecisionKind.stoppedStack => 'start this stack',
     DecisionKind.expiringCertificate => 'renew this certificate',

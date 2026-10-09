@@ -72,6 +72,9 @@ import 'package:cupola/features/truenas/data/truenas_service.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/truenas/domain/models/alert.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 /// A live reachability probe for one service.
 ///
@@ -2946,6 +2949,32 @@ final dashboardDecisionSourceProvider =
                 .toList(growable: false),
             coverage: history.coverage,
           );
+        case DecisionSource.storage:
+          return _decisionsOnEveryConnection(
+            ref,
+            ServiceKey.truenas,
+            (source) => _storageAlertDecisions(ref, source),
+          );
+        case DecisionSource.health:
+          final reads = await Future.wait([
+            for (final service in DecisionSource.health.services)
+              _decisionsOnEveryConnection(
+                ref,
+                service,
+                (source) => _healthDecisions(ref, source),
+              ),
+          ]);
+          return (
+            decisions: [for (final read in reads) ...read.decisions],
+            coverage: SourceCoverage.merge([
+              for (final read in reads) read.coverage,
+            ]),
+          );
+        case DecisionSource.connections:
+          return (
+            decisions: _connectionFaultDecisions(ref),
+            coverage: SourceCoverage.none,
+          );
       }
     }, retry: noProviderRetry);
 
@@ -3222,6 +3251,163 @@ Future<List<DashboardDecision>> _failingIndexerDecisions(
         route: ServiceRoutes.prowlarrIndexer(status.indexerId),
       ),
   ];
+}
+
+/// TrueNAS's alerts that need somebody (warning or worse, not dismissed),
+/// in plain words where the app knows the alert ([trueNasAlertHeadline]).
+Future<List<DashboardDecision>> _storageAlertDecisions(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  final alerts = await TrueNasService(
+    ref.watch(truenasClientForProvider(source.instanceId)),
+  ).getAlerts();
+  return [
+    for (final alert in alerts)
+      if (!alert.dismissed && alert.needsAttention)
+        DashboardDecision(
+          kind: DecisionKind.storageAlert,
+          id: 'truenas-${source.instanceId}-${alert.id}',
+          service: ServiceKey.truenas,
+          title: trueNasAlertHeadline(alert),
+          detail: serviceWithConnection(
+            ServiceKey.truenas,
+            source.name,
+            joiner: ' ',
+          ),
+          occurredAt: switch (alert.datetimeMs) {
+            final ms? => DateTime.fromMillisecondsSinceEpoch(ms),
+            null => null,
+          },
+          route: ServiceRoutes.truenasDashboard,
+          instanceId: source.instanceId,
+          connectionName: source.name,
+          actionInstanceId: source.instanceId,
+        ),
+  ];
+}
+
+/// An \*arr's health checks at the error level, in its own words. A warning
+/// or a notice (an update out, an indexer slow to answer) is news for its own
+/// page, not a fault.
+Future<List<DashboardDecision>> _healthDecisions(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  final ArrActivityMixin arr = switch (source.service) {
+    ServiceKey.radarr => ref.watch(radarrServiceForProvider(source.instanceId)),
+    ServiceKey.sonarr => ref.watch(sonarrServiceForProvider(source.instanceId)),
+    _ => ref.watch(lidarrServiceForProvider(source.instanceId)),
+  };
+  final checks = await arr.getHealth();
+  return [
+    for (final check in checks)
+      if (check.isError && check.message.isNotEmpty)
+        DashboardDecision(
+          kind: DecisionKind.serviceHealth,
+          id:
+              'health-${source.service.routeParam}-${source.instanceId}-'
+              '${check.source}-${check.message.hashCode}',
+          service: source.service,
+          title: check.message,
+          detail: serviceWithConnection(
+            source.service,
+            source.name,
+            joiner: ' ',
+          ),
+          // The \*arr does not date a check.
+          occurredAt: null,
+          route: ServiceRoutes.forService(source.service),
+          instanceId: source.instanceId,
+          connectionName: source.name,
+          actionInstanceId: source.instanceId,
+        ),
+  ];
+}
+
+/// Every connection whose probe answered with a refusal or a fault, as the
+/// fault its classification names. Read off the summaries the stack's health
+/// already asks for, so it adds no request; a connection still being asked
+/// is not here yet, and one that did not answer is the red line, not this.
+List<DashboardDecision> _connectionFaultDecisions(Ref ref) {
+  final settings = ref.watch(currentSettingsProvider);
+  return [
+    for (final service in ServiceKey.values)
+      for (final id in ref.watch(serviceInstanceIdsProvider(service)))
+        if (_answeredWithFault(
+              ref.watch(
+                instanceSummaryProvider((service: service, instanceId: id)),
+              ),
+            )
+            case final failure?)
+          _connectionFaultDecision(
+            service,
+            id,
+            settings.connectionName(id),
+            failure,
+          ),
+  ];
+}
+
+/// The failure of a probe that answered with a refusal or a fault, or null:
+/// answered and well, did not answer, still asking, or a Seerr session that
+/// ended, which is the person's step and blue.
+ClassifiedFailure? _answeredWithFault(AsyncValue<ServiceSummary> summary) {
+  switch (summary) {
+    case AsyncData(:final value):
+      final reason = value.failureReason;
+      if (!value.isFault ||
+          reason == null ||
+          reason == ServiceFailureReason.sessionEnded) {
+        return null;
+      }
+      return value.failure ?? ClassifiedFailure(reason);
+    case AsyncError(:final error):
+      final failure = ClassifiedFailure.of(error);
+      return failureDidNotAnswer(failure.reason) ||
+              failure.reason == ServiceFailureReason.sessionEnded
+          ? null
+          : failure;
+    default:
+      return null;
+  }
+}
+
+DashboardDecision _connectionFaultDecision(
+  ServiceKey service,
+  String instanceId,
+  String? name,
+  ClassifiedFailure failure,
+) {
+  final credential = refusedCredentialOf(service);
+  final subject = serviceWithConnection(service, name, joiner: ' ');
+  return DashboardDecision(
+    kind: DecisionKind.connectionFault,
+    id: 'connection-$instanceId',
+    service: service,
+    title: failureHeadline(
+      failure.reason,
+      subject: subject,
+      credential: credential,
+      gateway: failure.gateway,
+    ),
+    detail: failureLabel(
+      failure.reason,
+      credential: credential,
+      gateway: failure.gateway,
+    ),
+    // A probe dates nothing; the fault is as old as the reading.
+    occurredAt: null,
+    route: ServiceRoutes.settingsForConnection(service, instanceId),
+    instanceId: instanceId,
+    connectionName: name,
+    actionInstanceId: instanceId,
+    remedy: failureRemedy(
+      failure.reason,
+      credential: credential,
+      gateway: failure.gateway,
+    ),
+  );
 }
 
 Future<List<DashboardDecision>> _stoppedStackDecisions(

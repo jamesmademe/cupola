@@ -165,6 +165,32 @@ void main() {
         line(decision(DecisionKind.stoppedStack, 'media')),
         'The media stack stopped',
       );
+      // Titles that are already sentences, and the arr's own words with its
+      // name before them.
+      expect(
+        line(
+          decision(
+            DecisionKind.storageAlert,
+            'Disk sdd reports 8 uncorrectable errors',
+          ),
+        ),
+        'Disk sdd reports 8 uncorrectable errors',
+      );
+      expect(
+        line(
+          decision(
+            DecisionKind.connectionFault,
+            'qBittorrent answered but refused the sign-in',
+          ),
+        ),
+        'qBittorrent answered but refused the sign-in',
+      );
+      expect(
+        line(
+          decision(DecisionKind.serviceHealth, 'Missing root folder: /movies'),
+        ),
+        'Radarr: Missing root folder: /movies',
+      );
     });
 
     test('a group says how many and what they share', () {
