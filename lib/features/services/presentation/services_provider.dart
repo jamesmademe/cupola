@@ -47,6 +47,7 @@ import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/services/presentation/kept_waiting_provider.dart';
 import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
@@ -2923,10 +2924,17 @@ final dashboardDecisionSourceProvider =
           // sources reported one, and the queue has already gated each of those
           // and kept which of them answered.
           final inFlight = await ref.watch(servicesInFlightProvider.future);
+          // A stall kept waiting is out of every count of faults until its day
+          // is up, or until it moves (`kept_waiting.dart`).
+          final kept = ref.watch(keptWaitingProvider);
+          final now = ref.read(stallClockProvider)();
           return (
-            decisions: inFlight.faults
-                .map(_queueFaultDecision)
-                .toList(growable: false),
+            decisions: [
+              for (final item in inFlight.faults)
+                if (item.fault != InFlightFault.stalled ||
+                    !isKeptWaiting(item, kept, now))
+                  _queueFaultDecision(item),
+            ],
             coverage: inFlight.coverage,
           );
         case DecisionSource.history:
