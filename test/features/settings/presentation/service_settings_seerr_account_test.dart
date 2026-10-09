@@ -45,8 +45,9 @@ ConfigProfile _signedOut(ConfigProfile profile) =>
 
 Future<(ProfileHarness, ProviderContainer, _Browser)> _pumpForm(
   WidgetTester tester,
-  ConfigProfile profile,
-) async {
+  ConfigProfile profile, {
+  String instanceId = WorldIds.seerr,
+}) async {
   final browser = _Browser();
   final harness = await ProfileHarness.start(
     profile,
@@ -63,7 +64,7 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _pumpForm(
         theme: AppTheme.darkTheme(),
         home: ServiceSettingsScreen(
           service: ServiceKey.seerr,
-          instanceId: WorldIds.seerr,
+          instanceId: instanceId,
           certificateProber: (_, {pinnedFingerprint = ''}) async => null,
           localNetworkProbe: (_, {timeout = Duration.zero}) async =>
               LocalNetworkAccess.unrestricted,
@@ -130,8 +131,24 @@ void main() {
     final saved = _saved(container);
     expect(saved.account?.session, isEmpty);
     expect(saved.account?.login, WorldSeerrUsers.annaLocal.email);
-    expect(find.textContaining('Signed out of '), findsOneWidget);
+    // Anna's is the requester's app: her words, never the server's name.
+    expect(find.text('You were signed out'), findsOneWidget);
+    expect(find.textContaining('Signed out of '), findsNothing);
     expect(find.text('Sign in again'), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('the operator signed out of a friend\'s Seerr reads it by its '
+      'name (P9)', (tester) async {
+    final (harness, _, _) = await _pumpForm(
+      tester,
+      Profiles.p9.withSeerrSignedOut(WorldIds.seerrFriend),
+      instanceId: WorldIds.seerrFriend,
+    );
+
+    expect(find.textContaining('Signed out of '), findsOneWidget);
+    expect(find.text('You were signed out'), findsNothing);
 
     await harness.unmount(tester);
   });
@@ -144,7 +161,7 @@ void main() {
       tester,
       _signedOut(Profiles.p2),
     );
-    expect(find.textContaining('Signed out of '), findsOneWidget);
+    expect(find.text('You were signed out'), findsOneWidget);
 
     await _tap(tester, harness, find.text('Sign in again'));
     // The way she came in, her email already there.

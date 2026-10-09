@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/platform/browser_opener.dart';
@@ -25,6 +26,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_dialog.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 
 /// How a Seerr connection signs in: the instance's API key, or an account of
 /// one's own.
@@ -651,7 +653,10 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
     );
   }
 
-  SeerrSignInNotice get _signedOutNotice => SeerrSignInNotice.signedOut(_title);
+  SeerrSignInNotice get _signedOutNotice =>
+      ref.read(shellAudienceProvider) == Audience.requester
+      ? SeerrSignInNotice.youWereSignedOut
+      : SeerrSignInNotice.signedOut(_title);
 
   List<Widget> _noticeActions(SeerrSignInNotice notice) {
     final facts = _facts;

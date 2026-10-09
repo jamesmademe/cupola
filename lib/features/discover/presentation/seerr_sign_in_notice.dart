@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
@@ -182,6 +183,15 @@ class SeerrSignInNotice {
     sentence: connectionFailureSentence(
       const ClassifiedFailure(ServiceFailureReason.sessionEnded),
     ),
+  );
+
+  /// The same, as the requester reads it: no server's name, and what signing
+  /// in again is for.
+  static final youWereSignedOut = SeerrSignInNotice._(
+    SeerrSignInNoticeKind.signedOut,
+    tone: failureTone(ServiceFailureReason.sessionEnded),
+    title: Lexicon.youWereSignedOut,
+    sentence: Lexicon.signInToKeepAsking,
   );
 
   static const notSetUp = SeerrSignInNotice._(
