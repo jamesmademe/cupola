@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -88,19 +87,5 @@ void main() {
     // Not a row out of the list: the 4K answered, and is not named as
     // missing.
     expect(feed.failures, isEmpty);
-  });
-
-  testWidgets('P1 on Activity, SABnzbd\'s disk full: the two jobs it stopped '
-      'are stuck in the readout', (tester) async {
-    final harness = await pumpWithProfile(
-      tester,
-      Profiles.p1.withFullDisk(WorldIds.sabnzbd),
-      child: const GlobalActivityScreen(),
-    );
-
-    // Big Buck Bunny, and Elephants Dream and Sintel on the 4K.
-    expect(find.textContaining('3 stuck'), findsOneWidget);
-
-    await harness.unmount(tester);
   });
 }

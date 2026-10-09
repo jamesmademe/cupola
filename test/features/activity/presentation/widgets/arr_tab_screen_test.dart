@@ -4,8 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart';
-import 'package:cupola/features/activity/presentation/widgets/wanted_tab.dart';
+import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -14,48 +13,52 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import '../../../../test_helpers/settings_scope.dart';
 
 void main() {
-  group('ActivityTab', () {
-    testWidgets('switches between queue, history, and blocklist segments', (
-      tester,
-    ) async {
+  group('the Queue and History tabs', () {
+    testWidgets('Queue lists what the arr is downloading', (tester) async {
       final service = _FakeRadarrActivityService(
         queueItems: const [
           {'title': 'Queued.Movie', 'status': 'queued'},
-        ],
-        historyItems: const [
-          {'sourceTitle': 'Grabbed.Release', 'eventType': 'grabbed'},
-        ],
-        blocklistItems: const [
-          {'sourceTitle': 'Blocked.Release', 'message': 'Rejected'},
         ],
       );
 
       await _pumpWithRadarrService(
         tester,
         service: service,
-        child: const ActivityTab(serviceType: ServiceType.movies),
+        child: const ArrTabScreen(
+          serviceType: ServiceType.movies,
+          mode: ArrTabMode.queue,
+        ),
       );
 
       expect(find.text('Queued.Movie'), findsOneWidget);
       expect(service.queueCalls, 1);
+      expect(service.historyCalls, 0);
+    });
 
-      await tester.tap(find.text('History'));
-      await tester.pumpAndSettle();
+    testWidgets('History lists what it grabbed, and says so', (tester) async {
+      final service = _FakeRadarrActivityService(
+        historyItems: const [
+          {'sourceTitle': 'Grabbed.Release', 'eventType': 'grabbed'},
+        ],
+      );
+
+      await _pumpWithRadarrService(
+        tester,
+        service: service,
+        child: const ArrTabScreen(
+          serviceType: ServiceType.movies,
+          mode: ArrTabMode.history,
+        ),
+      );
 
       expect(find.text('Grabbed.Release'), findsOneWidget);
       expect(find.text('Grabbed'), findsOneWidget);
       expect(service.historyCalls, 1);
-
-      await tester.tap(find.text('Blocklist'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Blocked.Release'), findsOneWidget);
-      expect(find.text('Rejected'), findsOneWidget);
-      expect(service.blocklistCalls, 1);
+      expect(service.queueCalls, 0);
     });
   });
 
-  group('WantedTab', () {
+  group('the Wanted tab', () {
     testWidgets('shows missing items and cutoff movie quality profile names', (
       tester,
     ) async {
@@ -82,7 +85,10 @@ void main() {
       await _pumpWithRadarrService(
         tester,
         service: service,
-        child: const WantedTab(serviceType: ServiceType.movies),
+        child: const ArrTabScreen(
+          serviceType: ServiceType.movies,
+          mode: ArrTabMode.wanted,
+        ),
       );
 
       expect(find.text('Missing Movie'), findsOneWidget);
@@ -126,7 +132,10 @@ void main() {
       await _pumpWithRadarrService(
         tester,
         service: service,
-        child: const WantedTab(serviceType: ServiceType.movies),
+        child: const ArrTabScreen(
+          serviceType: ServiceType.movies,
+          mode: ArrTabMode.wanted,
+        ),
       );
 
       await tester.tap(find.text('Cutoff unmet'));
@@ -179,7 +188,10 @@ void main() {
       await _pumpWithSonarrService(
         tester,
         service: service,
-        child: const WantedTab(serviceType: ServiceType.series),
+        child: const ArrTabScreen(
+          serviceType: ServiceType.series,
+          mode: ArrTabMode.wanted,
+        ),
       );
 
       expect(find.text('Missing Show'), findsOneWidget);
@@ -202,7 +214,7 @@ Future<void> _pumpWithRadarrService(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        // Both tabs ask whether there is a Radarr before they read one.
+        // The tabs ask whether there is a Radarr before they read one.
         currentSettingsProvider.overrideWith(
           (ref) => settingsWithServices([ServiceKey.radarr]),
         ),
@@ -222,7 +234,7 @@ Future<void> _pumpWithSonarrService(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        // WantedTab asks whether there is a Sonarr before it reads one.
+        // The tab asks whether there is a Sonarr before it reads one.
         currentSettingsProvider.overrideWith(
           (ref) => settingsWithServices([ServiceKey.sonarr]),
         ),
@@ -238,7 +250,6 @@ class _FakeRadarrActivityService extends RadarrService {
   _FakeRadarrActivityService({
     this.queueItems = const [],
     this.historyItems = const [],
-    this.blocklistItems = const [],
     this.missingItems = const [],
     this.cutoffItems = const [],
     this.qualityProfileResponses = const [],
@@ -246,14 +257,12 @@ class _FakeRadarrActivityService extends RadarrService {
 
   final List<dynamic> queueItems;
   final List<dynamic> historyItems;
-  final List<dynamic> blocklistItems;
   final List<dynamic> missingItems;
   final List<dynamic> cutoffItems;
   final List<List<Map<String, dynamic>>> qualityProfileResponses;
 
   int queueCalls = 0;
   int historyCalls = 0;
-  int blocklistCalls = 0;
   int missingCalls = 0;
   int cutoffCalls = 0;
   int qualityProfileCalls = 0;
@@ -272,12 +281,6 @@ class _FakeRadarrActivityService extends RadarrService {
   }) async {
     historyCalls++;
     return historyItems;
-  }
-
-  @override
-  Future<List<dynamic>> getBlocklist() async {
-    blocklistCalls++;
-    return blocklistItems;
   }
 
   @override

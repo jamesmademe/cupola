@@ -6,8 +6,6 @@ import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart';
-import 'package:cupola/features/activity/presentation/widgets/wanted_tab.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
@@ -127,17 +125,6 @@ void main() {
         ),
       );
     });
-  });
-
-  test('ActivityTab and WantedTab reject the discover service type', () {
-    expect(
-      () => ActivityTab(serviceType: ServiceType.discover),
-      throwsA(isA<AssertionError>()),
-    );
-    expect(
-      () => WantedTab(serviceType: ServiceType.discover),
-      throwsA(isA<AssertionError>()),
-    );
   });
 
   group('global activity providers', () {

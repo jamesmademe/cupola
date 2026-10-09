@@ -1,19 +1,17 @@
 /// Activity reads every qBittorrent connection to join its queue, and a
 /// refused sign-in held on that connection's client stays held here.
 ///
-/// A pull re-reads the page and never lifts it. Activity's Retry sits beside
-/// the failures Activity draws, which are its own sources' (the arrs and
-/// Seerr): a refusing qBittorrent draws no line of its own here yet, so no
-/// Retry on this page sits beside it, and the one beside another source's
-/// failure is not an ask about qBittorrent. Once the page draws the clients'
-/// coverage, the Retry beside a qBittorrent line is a person's ask at it and
-/// lifts the hold (`liftQbittorrentRefusals`), as the Dashboard's does.
+/// A pull re-reads the page and never lifts it. The connection draws a line
+/// of its own in Needs you, with the remedy that is a person's ask at it
+/// (`Sign in again`), and nothing the page does on its own (a pull, a poll,
+/// a return) asks the client again.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
+import 'package:cupola/features/activity/domain/activity_tab.dart';
+import 'package:cupola/features/activity/presentation/activity_page.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -24,58 +22,45 @@ int _signIns(ProfileHarness harness) => harness.network
     .where((request) => request.path == _loginPath)
     .length;
 
-Finder _faultLines() => find.byWidgetPredicate(
-  (widget) =>
-      widget.key is ValueKey<String> &&
-      (widget.key! as ValueKey<String>).value.startsWith('activity-fault-line'),
-);
-
 void main() {
-  testWidgets('P7: a pull and the Retry beside another failure leave a '
-      'refused qBittorrent held', (tester) async {
-    // P7: qBittorrent refuses the sign-in; Lidarr is home-only and away, so
-    // the page draws a failure line, and a Retry, for Lidarr.
+  testWidgets('P7: a pull leaves a refused qBittorrent held, and the page '
+      'names it with the remedy', (tester) async {
+    // P7: qBittorrent refuses the sign-in; Lidarr is home-only and away.
     final harness = await pumpWithProfile(
       tester,
       Profiles.p7,
-      child: const GlobalActivityScreen(),
+      // A phone's height: a pull has to travel a quarter of it to count.
+      surfaceSize: const Size(430, 900),
+      child: const ActivityPage(tab: ActivityTab.all),
     );
     final first = _signIns(harness);
     expect(first, 1, reason: 'the queue join asked qBittorrent once');
 
-    // No line on this page names qBittorrent, so no Retry sits beside it.
-    expect(_faultLines(), findsWidgets);
+    // The connection has its line, and the way out is the person's.
     expect(
-      find.descendant(
-        of: _faultLines(),
-        matching: find.textContaining('qBittorrent'),
-      ),
-      findsNothing,
+      find.text('qBittorrent answered but refused the sign-in'),
+      findsOneWidget,
     );
+    expect(find.text('Sign in again'), findsOneWidget);
 
     int radarrReads() => harness.network.requestsTo(WorldIds.radarr).length;
     final beforePulls = radarrReads();
     for (var pull = 0; pull < 3; pull++) {
-      await tester.fling(
-        find.byType(Scrollable).last,
-        const Offset(0, 400),
-        1000,
+      await tester.drag(
+        find
+            .descendant(
+              of: find.byType(RefreshIndicator),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+        const Offset(0, 300),
       );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(seconds: 1));
       await harness.settle(tester);
     }
     expect(radarrReads(), greaterThan(beforePulls), reason: 'it re-read');
     expect(_signIns(harness), first, reason: 'a pull re-reads, never lifts');
-
-    final retry = find.descendant(
-      of: _faultLines(),
-      matching: find.widgetWithText(TextButton, 'Retry'),
-    );
-    expect(retry, findsWidgets);
-    final beforeRetry = radarrReads();
-    await tester.tap(retry.first);
-    await harness.settle(tester);
-    expect(radarrReads(), greaterThan(beforeRetry), reason: 'it re-read');
-    expect(_signIns(harness), first, reason: 'a Retry beside Lidarr');
 
     await harness.unmount(tester);
   });

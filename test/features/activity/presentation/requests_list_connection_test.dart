@@ -1,10 +1,15 @@
+/// The Requests view reads, and writes to, the connection its address names:
+/// `/activity/requests?i=<connection>`.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/data/activity_live.dart';
+import 'package:cupola/features/activity/domain/activity_tab.dart';
+import 'package:cupola/features/activity/presentation/activity_page.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -21,10 +26,14 @@ const _second = ServiceInstance(
   credential: 'key-2',
 );
 
-Future<List<Override>> _settings() => settingsScopeOverrides(
-  configured: activityServiceKeys,
-  customize: (settings) => settings.copyWithInstance(_second),
-);
+Future<List<Override>> _settings() async => [
+  ...await settingsScopeOverrides(
+    configured: const [ServiceKey.seerr],
+    customize: (settings) => settings.copyWithInstance(_second),
+  ),
+  // A page on its own clock would leave timers behind the test.
+  activityLivePollProvider.overrideWith((ref, tab) {}),
+];
 
 SeerrRequest _request(int id, String title) => SeerrRequest(
   id: id,
@@ -39,14 +48,13 @@ Future<void> _pump(
   required ProviderContainer container,
   String? instanceId,
 }) async {
+  await tester.binding.setSurfaceSize(const Size(430, 2400));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp(
-        home: ActivityScreen(
-          serviceType: ServiceType.discover,
-          instanceId: instanceId,
-        ),
+        home: ActivityPage(tab: ActivityTab.requests, requestsOf: instanceId),
       ),
     ),
   );
@@ -54,10 +62,9 @@ Future<void> _pump(
 }
 
 void main() {
-  // The other half of the routing problem. A request row in the aggregated feed
-  // opens this list; if the list resolves through the lens, a row that came off
-  // the second Seerr opens the first Seerr's requests — the defect moved rather
-  // than closed.
+  // A request row in the page opens this list; if the list resolves through
+  // the lens, a row that came off the second Seerr opens the first Seerr's
+  // requests: the defect moved rather than closed.
   testWidgets('the list shows the connection it was opened for', (
     tester,
   ) async {
@@ -98,27 +105,6 @@ void main() {
     expect(find.textContaining('2026-08-01'), findsNothing);
   });
 
-  testWidgets('and says whose requests these are', (tester) async {
-    final container = ProviderContainer(
-      overrides: [
-        ...await _settings(),
-        seerrServiceProvider.overrideWith(
-          (ref) => _RequestsSeerrService(const []),
-        ),
-        seerrServiceForProvider(
-          _second.id,
-        ).overrideWithValue(_RequestsSeerrService(const [])),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await _pump(tester, container: container, instanceId: _second.id);
-
-    // Named after the connection the link carried, not after the lens — which
-    // is still sitting on the first Seerr.
-    expect(find.text('Requests · Anime'), findsOneWidget);
-  });
-
   testWidgets('with no connection named it stays on the lens', (tester) async {
     final lens = _RequestsSeerrService([_request(1, 'From the first')]);
     final other = _RequestsSeerrService([_request(1, 'From the second')]);
@@ -139,13 +125,11 @@ void main() {
   });
 
   // A link outlives the connection it names: the user opens a request row,
-  // deletes that Seerr in Settings, then comes back to the screen from history
-  // or a deep link. The title resolves `named` to null and falls back to the
-  // lens; handing the dead id to the list as well would print "not configured"
-  // under a header naming a server that is up.
-  testWidgets('a link naming a connection that is gone falls back to the lens', (
-    tester,
-  ) async {
+  // deletes that Seerr in Settings, then comes back to the page from history
+  // or a deep link. The list falls back to the lens; handing the dead id to
+  // it would print "not configured" for a server that is up.
+  testWidgets('a link naming a connection that is gone falls back to the '
+      'lens', (tester) async {
     final lens = _RequestsSeerrService([_request(1, 'From the first')]);
     final other = _RequestsSeerrService([_request(1, 'From the second')]);
 
@@ -160,16 +144,11 @@ void main() {
 
     await _pump(tester, container: container, instanceId: 'seerr-deleted');
 
-    // The header names the lens — the first Seerr, which carries no label, so
-    // it is called by its place, never by its id.
-    expect(find.text('Requests · Seerr 1'), findsOneWidget);
-    // …and the list under it is that same server's, rather than an error state
-    // about a connection nothing on this screen mentions.
     expect(find.text('From the first'), findsOneWidget);
     expect(find.textContaining('not configured'), findsNothing);
   });
 
-  // Every write on this screen is keyed by a per-instance request id too.
+  // Every write on this list is keyed by a per-instance request id too.
   testWidgets('a delete on this list goes to the connection it belongs to', (
     tester,
   ) async {
@@ -211,11 +190,7 @@ void main() {
 
     await _pump(tester, container: container, instanceId: _second.id);
 
-    // The card's own button is a `FilledButton.icon`, whose runtime type is a
-    // private subclass — `find.byType` matches exactly, so it is found by text.
-    // The dialog's confirm is a plain `FilledButton`, which is what tells the
-    // two apart once both are on screen.
-    await tester.tap(find.text('Approve'));
+    await tester.tap(find.byTooltip('Approve From the second'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
     await tester.pumpAndSettle();

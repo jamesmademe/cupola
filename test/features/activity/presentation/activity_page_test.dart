@@ -70,6 +70,7 @@ Future<ProfileHarness> _pump(
   double textScale = 1,
   Size size = const Size(430, 8000),
   List<Override> overrides = const [],
+  List<ProviderObserver> observers = const [],
 }) async => _mount(
   tester,
   await ProfileHarness.start(
@@ -81,6 +82,7 @@ Future<ProfileHarness> _pump(
   requestsOf: requestsOf,
   textScale: textScale,
   size: size,
+  observers: observers,
 );
 
 /// Mounts the page on a harness the test has already scripted.
@@ -91,6 +93,7 @@ Future<ProfileHarness> _mount(
   String? requestsOf,
   double textScale = 1,
   Size size = const Size(430, 8000),
+  List<ProviderObserver> observers = const [],
 }) async {
   harness.network.followFakeTime(tester.binding);
   await tester.binding.setSurfaceSize(size);
@@ -98,6 +101,7 @@ Future<ProfileHarness> _mount(
   await tester.pumpWidget(
     ProviderScope(
       overrides: harness.overrides,
+      observers: observers,
       child: MaterialApp(
         theme: AppTheme.darkTheme(),
         home: Builder(
@@ -569,6 +573,25 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('P1, SABnzbd\'s disk full: the two jobs it stopped are stuck '
+        'in the readout beside the one that was', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1.withFullDisk(WorldIds.sabnzbd),
+        ActivityTab.all,
+      );
+
+      // Big Buck Bunny, and Elephants Dream and Sintel on the 4K.
+      expect(_readout(tester), contains('3 stuck'));
+      expect(_sections(tester), contains(startsWith('Downloads · ')));
+      expect(
+        _sections(tester).firstWhere((line) => line.startsWith('Downloads')),
+        endsWith('3 stuck'),
+      );
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('no search, no group', (tester) async {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.downloads);
 
@@ -779,11 +802,49 @@ void main() {
       await harness.unmount(tester);
     });
 
-    testWidgets('P4: with no Seerr it says it is not set up', (tester) async {
-      final harness = await _pump(tester, Profiles.p4, ActivityTab.requests);
+    testWidgets('P4: with no Seerr it says it is not set up, and asks '
+        'nobody', (tester) async {
+      final failures = _FailureLog();
+      final harness = await _pump(
+        tester,
+        Profiles.p4,
+        ActivityTab.requests,
+        observers: [failures],
+      );
+      // Past the first retry a failing read would have scheduled.
+      await tester.pump(const Duration(minutes: 1));
 
       expect(find.text('Seerr is not set up'), findsOneWidget);
       expect(find.byType(RequestsList), findsOneWidget);
+      expect(find.text('Set up Seerr'), findsOneWidget);
+      // The dead end this replaced: an error state whose Retry asked nobody.
+      expect(find.text('Retry'), findsNothing);
+      expect(failures.providers, isEmpty);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P3: with a Seerr it reads it, and says nothing is not set '
+        'up', (tester) async {
+      final harness = await _pump(tester, Profiles.p3, ActivityTab.requests);
+
+      expect(find.text('Seerr is not set up'), findsNothing);
+      expect(harness.network.requestsTo(WorldIds.seerr), isNotEmpty);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a link naming a Seerr that is gone reads the lens\'s list, '
+        'not a Seerr that is not set up', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        ActivityTab.requests,
+        requestsOf: 'seerr-deleted',
+      );
+
+      expect(find.text('Seerr is not set up'), findsNothing);
+      expect(find.text('Charge (2022)'), findsOneWidget);
 
       await harness.unmount(tester);
     });
@@ -1495,4 +1556,18 @@ void main() {
       expect(requestsWaitLine(0), '0 requests wait for your approval');
     });
   });
+}
+
+/// Every provider that failed while the page was up.
+final class _FailureLog extends ProviderObserver {
+  final providers = <String>[];
+
+  @override
+  void providerDidFail(
+    ProviderObserverContext context,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    providers.add('${context.provider.name ?? context.provider}: $error');
+  }
 }
