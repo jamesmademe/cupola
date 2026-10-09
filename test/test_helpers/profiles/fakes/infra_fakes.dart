@@ -150,7 +150,17 @@ class TrueNasPeer extends WebSocketPeer {
         ];
       case 'pool.query':
         return [
-          _pool(1, 'tank', size: 43.6e12, allocated: 31.2e12),
+          _pool(
+            1,
+            'tank',
+            size: 43.6e12,
+            allocated: 31.2e12,
+            // Six disks in RAIDZ2; sdd counted the errors its alert reports.
+            disks: {
+              for (final disk in ['sda', 'sdb', 'sdc', 'sdd', 'sde', 'sdf'])
+                disk: disk == 'sdd' ? 8 : 0,
+            },
+          ),
           _pool(2, 'fast', size: 1.8e12, allocated: 0.6e12),
         ];
       case 'update.check_available':
@@ -174,6 +184,7 @@ class TrueNasPeer extends WebSocketPeer {
     String name, {
     required double size,
     required double allocated,
+    Map<String, int> disks = const {},
   }) => {
     'id': id,
     'name': name,
@@ -184,7 +195,28 @@ class TrueNasPeer extends WebSocketPeer {
     'size': size.round(),
     'allocated': allocated.round(),
     'free': (size - allocated).round(),
-    'topology': {'data': const <Object?>[], 'cache': const <Object?>[]},
+    'topology': {
+      'data': [
+        if (disks.isNotEmpty)
+          {
+            'type': 'RAIDZ2',
+            'status': 'ONLINE',
+            'children': [
+              for (final MapEntry(key: disk, value: errors) in disks.entries)
+                {
+                  'disk': disk,
+                  'status': 'ONLINE',
+                  'stats': {
+                    'read_errors': 0,
+                    'write_errors': 0,
+                    'checksum_errors': errors,
+                  },
+                },
+            ],
+          },
+      ],
+      'cache': const <Object?>[],
+    },
     'scan': {
       'function': 'SCRUB',
       'state': 'FINISHED',

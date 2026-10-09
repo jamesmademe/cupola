@@ -233,6 +233,7 @@ class DashboardDecision {
     this.transferFailed = false,
     this.remedy,
     this.downloadKeys = const [],
+    this.subject,
   });
 
   final DecisionKind kind;
@@ -329,6 +330,10 @@ class DashboardDecision {
   /// one card per key, since each stuck download has a way out of its own.
   /// Empty on every other kind.
   final List<String> downloadKeys;
+
+  /// What the fault is about inside its service, where a remedy needs it:
+  /// the disk a TrueNAS alert names (`sdd`), whose pool a scrub repairs.
+  final String? subject;
 
   bool get isFault => kind.isFault;
 

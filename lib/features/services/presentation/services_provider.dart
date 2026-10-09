@@ -3492,6 +3492,9 @@ Future<List<DashboardDecision>> _storageAlertDecisions(
             source.name,
             joiner: ' ',
           ),
+          // TrueNAS's own sentence, for Why?; the disk, for its pool's scrub.
+          reason: alert.message.trim().isEmpty ? null : alert.message.trim(),
+          subject: trueNasDiskErrors(alert)?.disk,
           occurredAt: switch (alert.datetimeMs) {
             final ms? => DateTime.fromMillisecondsSinceEpoch(ms),
             null => null,

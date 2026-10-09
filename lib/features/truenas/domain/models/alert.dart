@@ -60,6 +60,24 @@ class TrueNasAlert {
 
 final _uncorrected = RegExp(r'^(\d+) uncorrectable errors? reported for (\S+)');
 
+/// The disk [alert] reports uncorrectable errors on, and how many: from its
+/// `ue` and `name`, or from TrueNAS's own sentence when it came without them
+/// (`8 uncorrectable errors reported for sdd (ZL2PQR7T).`). Null for any
+/// other alert.
+({String disk, int errors})? trueNasDiskErrors(TrueNasAlert alert) {
+  var errors = alert.args['ue'];
+  var disk = alert.args['name'];
+  if (errors is! int || disk is! String) {
+    final match = _uncorrected.firstMatch(alert.message);
+    errors = int.tryParse(match?.group(1) ?? '');
+    disk = match?.group(2);
+  }
+  if (errors is int && disk is String && disk.isNotEmpty) {
+    return (disk: disk, errors: errors);
+  }
+  return null;
+}
+
 /// What [alert] says, as a fault's headline.
 ///
 /// A disk's uncorrectable errors (TrueNAS's "Uncorrected Errors Detected",
@@ -67,16 +85,7 @@ final _uncorrected = RegExp(r'^(\d+) uncorrectable errors? reported for (\S+)');
 /// `Disk sdd reports 8 uncorrectable errors`. Any other alert reads its own
 /// message, up to its first full stop: TrueNAS writes them as sentences.
 String trueNasAlertHeadline(TrueNasAlert alert) {
-  var errors = alert.args['ue'];
-  var disk = alert.args['name'];
-  // The same alert when it came without its figures: TrueNAS's own sentence,
-  // `8 uncorrectable errors reported for sdd (ZL2PQR7T).`
-  if (errors is! int || disk is! String) {
-    final match = _uncorrected.firstMatch(alert.message);
-    errors = int.tryParse(match?.group(1) ?? '');
-    disk = match?.group(2);
-  }
-  if (errors is int && disk is String && disk.isNotEmpty) {
+  if (trueNasDiskErrors(alert) case (:final disk, :final errors)) {
     return 'Disk $disk reports $errors uncorrectable '
         '${errors == 1 ? 'error' : 'errors'}';
   }

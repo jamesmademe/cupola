@@ -96,6 +96,10 @@ class TrueNasPool {
   /// When the last scan finished, or null while it runs or when none has.
   final DateTime? scanEndedAt;
 
+  /// How long the running scan has left by TrueNAS's estimate
+  /// (`total_secs_left`), or null when none runs or it gave none.
+  final int? scanSecondsLeft;
+
   const TrueNasPool({
     this.id,
     required this.name,
@@ -110,6 +114,7 @@ class TrueNasPool {
     this.scanPercentage,
     this.scanFunction,
     this.scanEndedAt,
+    this.scanSecondsLeft,
   });
 
   /// Every disk of every vdev, in topology order.
@@ -127,6 +132,14 @@ class TrueNasPool {
   }
 
   bool get hasTopology => topology.values.any((v) => v.isNotEmpty);
+
+  /// Whether a scrub or a resilver is running now.
+  bool get isScanning => scanState?.toUpperCase() == 'SCANNING';
+
+  /// The disk named [disk] (`sdd`) among its vdevs, or null when the
+  /// topology holds none by that name.
+  TrueNasVdevMember? memberNamed(String disk) =>
+      members.where((member) => member.name == disk).firstOrNull;
 
   factory TrueNasPool.fromJson(Map<String, dynamic> json) {
     // pool.query returns size/allocated either at the top level or nested in
@@ -187,6 +200,7 @@ class TrueNasPool {
       scanEndedAt: endMs == null || endMs <= 0
           ? null
           : DateTime.fromMillisecondsSinceEpoch(endMs, isUtc: true),
+      scanSecondsLeft: intOrNull(scan?['total_secs_left']),
     );
   }
 }
