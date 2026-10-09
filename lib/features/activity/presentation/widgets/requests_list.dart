@@ -17,7 +17,7 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
+import 'package:cupola/features/requests/presentation/widgets/request_answer_controls.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -246,9 +246,8 @@ class _RequestCard extends ConsumerWidget {
             ),
             // A pending request is the one row in this app that exists purely to
             // be decided, so the decision is named rather than hidden behind an
-            // overflow glyph — the same reasoning that gives the queue detail
-            // sheet worded buttons. `Wrap` rather than `Row` so the pair reflows
-            // instead of overflowing at an accessibility reading size.
+            // overflow glyph, and it is the same control every list of waiting
+            // requests draws.
             //
             // Gated on the request's **own** status, never on `displayStatus`:
             // media availability overrides that getter, so a request still
@@ -259,51 +258,11 @@ class _RequestCard extends ConsumerWidget {
             // of the operator's that may not approve keeps the pair, dimmed.
             if (waiting && decide.isDrawn) ...[
               const SizedBox(height: AppSpacing.md),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  RoleGatedAction.builder(
-                    verdict: decide,
-                    onTap: () => _approve(context, ref),
-                    builder: (context, onPressed, annotate) =>
-                        FilledButton.icon(
-                          onPressed: onPressed,
-                          // Busy at once, in the glyph's place, while the
-                          // approval reads where it goes and is sent.
-                          icon: SeerrApprovalGlyph(
-                            instanceId: instanceId,
-                            requestId: request.id,
-                            size: 18,
-                            idle: Opacity(
-                              opacity: decide.acts
-                                  ? 1
-                                  : GatedAffordance.dimmedOpacity,
-                              child: const Icon(
-                                Icons.check_circle_outline_rounded,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                          label: annotate(const Text('Approve')),
-                        ),
-                  ),
-                  RoleGatedAction.builder(
-                    verdict: decide,
-                    onTap: () => _decline(context, ref),
-                    builder: (context, onPressed, annotate) =>
-                        OutlinedButton.icon(
-                          onPressed: onPressed,
-                          icon: Opacity(
-                            opacity: decide.acts
-                                ? 1
-                                : GatedAffordance.dimmedOpacity,
-                            child: const Icon(Icons.cancel_outlined, size: 18),
-                          ),
-                          label: annotate(const Text('Decline')),
-                        ),
-                  ),
-                ],
+              RequestAnswerControls.row(
+                instanceId: instanceId,
+                requestId: request.id,
+                title: request.media?.title ?? 'This request',
+                request: request,
               ),
             ],
           ],
@@ -332,41 +291,6 @@ class _RequestCard extends ConsumerWidget {
             'Default profile',
       ?createdAt,
     ].join(' · ');
-  }
-
-  /// Through the app's one approve path, whose confirmation names the server
-  /// the request goes to. This card used to keep a copy of its own that said
-  /// only the title.
-  Future<void> _approve(BuildContext context, WidgetRef ref) =>
-      ActivityActions.approveRequest(
-        context,
-        ref,
-        instanceId: instanceId,
-        requestId: request.id,
-        title: request.media?.title ?? 'This request',
-        request: request,
-      );
-
-  Future<void> _decline(BuildContext context, WidgetRef ref) async {
-    final result = await showAppConfirmDialog(
-      context: context,
-      title: 'Decline request?',
-      message: request.media?.title,
-      icon: Icons.cancel_outlined,
-      confirmLabel: 'Decline request',
-    );
-
-    if (!result.confirmed || !context.mounted) return;
-
-    await _run(
-      context,
-      ref,
-      action: () => ref
-          .read(seerrServiceForProvider(instanceId))
-          .declineRequest(request.id),
-      successMessage: 'Request declined',
-      failureMessage: 'Could not decline the request',
-    );
   }
 
   /// Deletes the request, or, for an account that only takes back its own
