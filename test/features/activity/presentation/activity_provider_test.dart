@@ -128,57 +128,6 @@ void main() {
   });
 
   group('global activity providers', () {
-    test('combines requests, queue, and history sorted newest first', () async {
-      final container = createContainer(
-        requests: const [
-          SeerrRequest(
-            id: 1,
-            status: RequestStatus.approved,
-            media: RequestMedia(title: 'Shogun'),
-            createdAt: '2026-04-03T09:05:00Z',
-            type: 'tv',
-            requestedBy: RequestedBy(id: 1, displayName: 'sarah'),
-          ),
-        ],
-        radarrService: _ActivityRadarrService(
-          queue: const [
-            {
-              'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
-              'status': 'downloading',
-              'estimatedCompletionTime': '2026-04-03T14:32:00Z',
-              'size': 100,
-              'sizeleft': 25,
-              'movie': {'title': 'Furiosa', 'year': 2024},
-            },
-          ],
-          history: const [
-            {
-              'sourceTitle': 'Dune.Part.Two.2024',
-              'eventType': 'downloadImported',
-              'date': '2026-04-02T11:18:00Z',
-              'movie': {'title': 'Dune: Part Two'},
-            },
-          ],
-        ),
-      );
-
-      final feed = await container.read(globalActivityFeedProvider.future);
-      final items = feed.items;
-
-      expect(items.map((item) => item.title), [
-        'Furiosa',
-        'Shogun',
-        'Dune: Part Two',
-      ]);
-      expect(items.first.subtitle, contains('Furiosa.2024.2160p.WEB-DL-GROUP'));
-      expect(items.first.kind, GlobalActivityKind.queue);
-      expect(items.first.service, ServiceKey.radarr);
-      expect(items.first.progress, 0.75);
-      expect(items[1].kind, GlobalActivityKind.request);
-      expect(items[1].service, ServiceKey.seerr);
-      expect(items[2].kind, GlobalActivityKind.history);
-    });
-
     test('keeps global queue available when one service fails', () async {
       final container = createContainer(
         radarrService: _ThrowingQueueRadarrService(),
@@ -194,7 +143,7 @@ void main() {
         ),
       );
 
-      final feed = await container.read(globalQueueItemsProvider.future);
+      final feed = await container.read(globalNowItemsProvider.future);
       final items = feed.items;
 
       expect(items, hasLength(1));
@@ -226,7 +175,7 @@ void main() {
           lidarrService: _ThrowingQueueLidarrService(),
         );
 
-        final feed = await container.read(globalQueueItemsProvider.future);
+        final feed = await container.read(globalNowItemsProvider.future);
 
         // Nothing was reached, so "no items" means "we have no idea" — the case
         // that used to render as "Nothing downloading right now".
@@ -253,7 +202,7 @@ void main() {
         ),
       );
 
-      final feed = await container.read(globalQueueItemsProvider.future);
+      final feed = await container.read(globalNowItemsProvider.future);
 
       expect(feed.items, hasLength(1));
       expect(feed.failures, isEmpty);
@@ -297,7 +246,7 @@ void main() {
         ),
       );
 
-      final feed = await _loadPagedFeed(container, globalWantedFeedProvider);
+      final feed = await _loadPagedFeed(container, _wantedFeed);
       final items = feed.items;
 
       expect(items.map((item) => item.kind), [
@@ -318,7 +267,7 @@ void main() {
         radarrService: _TotalledWantedRadarrService(missing: 30, cutoff: 12),
       );
 
-      final feed = await _loadPagedFeed(container, globalWantedFeedProvider);
+      final feed = await _loadPagedFeed(container, _wantedFeed);
       final radarr = feed.results.singleWhere(
         (result) => result.service == ServiceKey.radarr,
       );
@@ -332,7 +281,7 @@ void main() {
         radarrService: _TotalledWantedRadarrService(missing: 30, cutoff: null),
       );
 
-      final feed = await _loadPagedFeed(container, globalWantedFeedProvider);
+      final feed = await _loadPagedFeed(container, _wantedFeed);
       final radarr = feed.results.singleWhere(
         (result) => result.service == ServiceKey.radarr,
       );
@@ -591,7 +540,7 @@ void main() {
       // field that fixes it, and the two must stay different facts.
       final container = createContainer(radarrService: _QueueRadarrService());
 
-      final feed = await container.read(globalQueueItemsProvider.future);
+      final feed = await container.read(globalNowItemsProvider.future);
       final item = feed.items.single;
 
       expect(item.figures, contains('7.5\u00A0GB'));
@@ -606,7 +555,7 @@ void main() {
       // wanted row is a title and a date; it has no measurement to line up.
       final container = createContainer(radarrService: _MissingRadarrService());
 
-      final feed = await _loadPagedFeed(container, globalMissingFeedProvider);
+      final feed = await _loadPagedFeed(container, _missingFeed);
 
       expect(feed.items.single.figures, isEmpty);
     });
@@ -761,6 +710,18 @@ class _TotalledWantedRadarrService extends FakeRadarrService {
   );
 }
 
+/// Wanted, as the old Activity read it: the paged feed still pages any kind,
+/// and these two hold what it does with Wanted's two halves.
+final _wantedFeed = NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
+  () => PagedArrFeedNotifier(
+    kinds: const [GlobalActivityKind.missing, GlobalActivityKind.cutoff],
+  ),
+);
+
+final _missingFeed = NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
+  () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.missing]),
+);
+
 Future<ActivityFeed> _loadPagedFeed(
   ProviderContainer container,
   NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState> provider,
@@ -772,21 +733,14 @@ Future<ActivityFeed> _loadPagedFeed(
 
 class _ActivityRadarrService extends FakeRadarrService {
   _ActivityRadarrService({
-    this.queue = const [],
     this.history = const [],
     this.missing = const [],
     this.cutoff = const [],
   });
 
-  final List<dynamic> queue;
   final List<dynamic> history;
   final List<dynamic> missing;
   final List<dynamic> cutoff;
-
-  @override
-  Future<List<dynamic>> getQueue({
-    Map<String, dynamic>? queryParameters,
-  }) async => queue;
 
   @override
   Future<List<dynamic>> getHistory({

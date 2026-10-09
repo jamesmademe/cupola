@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/lifecycle/gated_poll.dart'; // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
@@ -38,27 +37,7 @@ export 'package:cupola/features/activity/domain/global_activity_status.dart'
 
 final activityRefreshVersionProvider = StateProvider<int>((ref) => 0);
 
-/// Bumped by the 15s "Now" poll, and only by it.
-///
-/// Separate from [activityRefreshVersionProvider] on purpose: a poll tick must
-/// reload the queues — the only rows that change by the second — without
-/// refetching the Seerr request history, which is settled until the user acts
-/// on it. Refetching every page of it every 15 seconds is a cost that grows
-/// with the library for a list that is usually identical to the one already on
-/// screen.
-final activityQueuePollVersionProvider = StateProvider<int>((ref) => 0);
-
 const _globalActivityPageSize = 50;
-
-/// How often the "Now" bucket refreshes itself.
-///
-/// A bucket named "Now" that shows a snapshot from whenever the tab was last
-/// opened is not a live readout — a download sat at 43% until the user pulled to
-/// refresh. Deliberately far slower than qBittorrent's 3s: that polls one local
-/// endpoint for one list, whereas each tick here fans out to three \*arr
-/// services, over a LAN, VPN or Tailscale link where a request can take a
-/// second. 15s keeps the number honest without hammering someone's home server.
-const _nowPollInterval = Duration(seconds: 15);
 
 /// One service's contribution to a feed load.
 ///
@@ -99,8 +78,7 @@ class ActivityServiceResult {
   ///
   /// **Null means unanswered, never none.** A caller that gets null must print
   /// a figure it can defend — "20 shown" — or no figure at all; falling back to
-  /// `items.length` reinstates the defect one layer up. The service tiles read
-  /// this through [activityCount], and print `—` for null.
+  /// `items.length` reinstates the defect one layer up.
   final int? total;
 
   /// Non-null when the service was configured but did not answer.
@@ -268,87 +246,6 @@ class ActivityFeed {
 String notCountedClause(Iterable<ActivityServiceResult> missing) =>
     '${Lexicon.names(missing.map((r) => r.name))} not counted';
 
-/// How many records some connections hold, **as their servers reported it**,
-/// and which connections that figure leaves out.
-class ActivityCount {
-  const ActivityCount({
-    required this.total,
-    required this.notCounted,
-    this.incomplete = false,
-    this.cutShort = false,
-  });
-
-  /// The sum of the totals the answering connections reported, or null when
-  /// none answered, or when one that answered did not say how many it has: a
-  /// sum with an unknown term is unknown.
-  final int? total;
-
-  /// The connections that were asked and failed. [total] is short by
-  /// whatever they hold.
-  final List<ActivityServiceResult> notCounted;
-
-  /// A connection that answered is missing a page of its rows: [total] is
-  /// right, and the rows under it are not all of them.
-  final bool incomplete;
-
-  /// A connection that answered could only say how many rows reached us, not
-  /// how many it has ([ActivityServiceResult.cutShort]), so its share of
-  /// [total] is a floor. Nothing is missing to name: the mark says it alone.
-  final bool cutShort;
-
-  /// [total] is true of the connections that answered and short of the whole,
-  /// or holds a share that is itself a floor: never to be printed as the
-  /// total.
-  bool get isFloor => total != null && (notCounted.isNotEmpty || cutShort);
-}
-
-/// How many records [service] has in a bucket across its connections, or
-/// every service when [service] is null.
-///
-/// Summed from [ActivityServiceResult.total], never from `items.length`.
-/// History and Wanted load fifty rows per connection and then page, so a count
-/// of the loaded rows said "Sonarr 50" over a backlog of 2 369, and "100" after
-/// one Show more: a number that moved while the data did not.
-///
-/// A connection that failed adds nothing to the sum and is listed in
-/// [ActivityCount.notCounted], so a caller can say the figure is a floor and
-/// name what it is missing. It used to be left out without a word, which made
-/// one Sonarr's queue read as the queue of every Sonarr.
-ActivityCount activityCount(
-  Iterable<ActivityServiceResult> results, {
-  ServiceKey? service,
-}) {
-  var total = 0;
-  var any = false;
-  var unknown = false;
-  var incomplete = false;
-  var cutShort = false;
-  final notCounted = <ActivityServiceResult>[];
-  for (final result in results) {
-    if (service != null && result.service != service) continue;
-    if (result.failed) {
-      notCounted.add(result);
-      continue;
-    }
-    if (!result.reached) continue;
-    incomplete = incomplete || result.incomplete;
-    cutShort = cutShort || result.cutShort;
-    final count = result.total;
-    if (count == null) {
-      unknown = true;
-      continue;
-    }
-    any = true;
-    total += count;
-  }
-  return ActivityCount(
-    total: any && !unknown ? total : null,
-    notCounted: notCounted,
-    incomplete: incomplete,
-    cutShort: cutShort,
-  );
-}
-
 class GlobalActivityItem {
   final GlobalActivityKind kind;
   final ServiceKey service;
@@ -471,20 +368,6 @@ class GlobalActivityItem {
   /// The \*arr record id, used by the queue write actions.
   int? get recordId => intOrNull(raw?['id']);
 }
-
-/// Auto-refresh for the "Now" bucket.
-///
-/// Three services per tick, so it runs on two conditions at once: the Now bucket
-/// is the selected one, and the Activity page is the page on screen. Each tick
-/// bumps the queue-only version — the queues are live data, the Seerr requests
-/// are not.
-final activityNowPollingProvider = Provider.autoDispose<void>((ref) {
-  ref.gatedPoll(
-    id: 'activity.now',
-    interval: _nowPollInterval,
-    onTick: () => ref.read(activityQueuePollVersionProvider.notifier).state++,
-  );
-});
 
 /// The services that can appear in the global feed, in display order.
 const globalActivityServices = [
@@ -611,42 +494,6 @@ final connectionArrServiceProvider =
       };
     });
 
-/// Only the services the user has actually configured.
-///
-/// The filter row used to be a `static const` of four, so a user running Radarr
-/// alone still got Sonarr, Lidarr and Seerr chips, each leading to a confident
-/// "Nothing downloading right now".
-final configuredActivityServicesProvider = Provider<List<ServiceKey>>((ref) {
-  final settings = ref.watch(settingsProvider);
-  return globalActivityServices
-      .where(settings.isServiceConfigured)
-      .toList(growable: false);
-});
-
-final globalActivityFeedProvider = FutureProvider<ActivityFeed>((ref) async {
-  ref.watch(activityRefreshVersionProvider);
-  ref.watch(activityQueuePollVersionProvider);
-  final clients = _readClients(ref);
-  return _mergeJoined(
-    await Future.wait([
-      ..._loadRequestResults(ref),
-      ..._loadArrResults(ref, GlobalActivityKind.queue),
-      ..._loadArrResults(ref, GlobalActivityKind.history),
-    ]),
-    await clients,
-  );
-});
-
-final globalQueueItemsProvider = FutureProvider<ActivityFeed>((ref) async {
-  ref.watch(activityRefreshVersionProvider);
-  ref.watch(activityQueuePollVersionProvider);
-  final clients = _readClients(ref);
-  return _mergeJoined(
-    await Future.wait(_loadArrResults(ref, GlobalActivityKind.queue)),
-    await clients,
-  );
-});
-
 /// "Now" bucket: active downloads (queue) plus the Seerr requests still in
 /// motion (waiting for approval, being processed, failed), so requests remain
 /// first-class in the unified view.
@@ -655,12 +502,10 @@ final globalQueueItemsProvider = FutureProvider<ActivityFeed>((ref) async {
 /// paged and hydrated in full, and listed ones delivered years ago under
 /// Downloading. Read through Seerr's own filters ([activeRequestsForProvider]).
 ///
-/// Watches both versions: the poll tick (queues only, requests served from the
-/// provider's cache) and the manual refresh version (everything fresh,
-/// requests invalidated by the pull).
+/// Reads again on the manual refresh version (everything fresh, requests
+/// invalidated by the pull).
 final globalNowItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
-  ref.watch(activityQueuePollVersionProvider);
   final clients = _readClients(ref);
   return _mergeJoined(
     await Future.wait([
@@ -857,24 +702,6 @@ FinishedToday finishedTodayOf(
     complete: complete,
   );
 }
-
-/// Wanted "All" bucket: missing and cutoff unmet, paged like History.
-final globalWantedFeedProvider =
-    NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
-      () => PagedArrFeedNotifier(
-        kinds: const [GlobalActivityKind.missing, GlobalActivityKind.cutoff],
-      ),
-    );
-
-final globalMissingFeedProvider =
-    NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
-      () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.missing]),
-    );
-
-final globalCutoffFeedProvider =
-    NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
-      () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.cutoff]),
-    );
 
 /// How many records the first page of a paged bucket asks for.
 ///

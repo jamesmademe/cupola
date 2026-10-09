@@ -41,6 +41,7 @@ ProviderContainer _container({
     overrides: [
       ...settings,
       requestsProvider.overrideWith((ref) async => const []),
+      activeRequestsForProvider.overrideWith((ref, id) async => const []),
       if (seerr != null) seerrServiceProvider.overrideWith((ref) => seerr),
       radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
       lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
@@ -87,7 +88,7 @@ void main() {
         ]),
       );
 
-      final feed = await container.read(globalQueueItemsProvider.future);
+      final feed = await container.read(globalNowItemsProvider.future);
 
       expect(
         feed.items.map((item) => item.title),
@@ -127,7 +128,7 @@ void main() {
       second: _QueueSonarrService(const []),
     );
 
-    final feed = await container.read(globalQueueItemsProvider.future);
+    final feed = await container.read(globalNowItemsProvider.future);
     final sonarrRow = feed.items.firstWhere(
       (item) => item.service == ServiceKey.sonarr,
     );
@@ -151,7 +152,7 @@ void main() {
       ]),
     );
 
-    final feed = await container.read(globalQueueItemsProvider.future);
+    final feed = await container.read(globalNowItemsProvider.future);
     final row = feed.items.firstWhere((i) => i.service == ServiceKey.sonarr);
 
     expect(row.instanceLabel, isEmpty);
@@ -175,7 +176,7 @@ void main() {
       ]),
     );
 
-    final feed = await container.read(globalQueueItemsProvider.future);
+    final feed = await container.read(globalNowItemsProvider.future);
 
     // The survivor is intact.
     expect(
@@ -207,7 +208,7 @@ void main() {
       second: _QueueSonarrService(const []),
     );
 
-    final feed = await container.read(globalQueueItemsProvider.future);
+    final feed = await container.read(globalNowItemsProvider.future);
 
     expect(feed.failures, isEmpty);
     expect(feed.isPartial, isFalse);
@@ -226,7 +227,7 @@ void main() {
         second: _ThrowingQueueSonarrService(),
       );
 
-      final feed = await container.read(globalQueueItemsProvider.future);
+      final feed = await container.read(globalNowItemsProvider.future);
 
       // Radarr and Lidarr answered, so the screen must not claim total failure.
       expect(feed.allConfiguredFailed, isFalse);
@@ -268,7 +269,7 @@ void main() {
         lens: _QueueSonarrService(const []),
       );
 
-      final feed = await container.read(globalQueueItemsProvider.future);
+      final feed = await container.read(globalNowItemsProvider.future);
 
       expect(
         feed.unconfigured.map((r) => r.service),

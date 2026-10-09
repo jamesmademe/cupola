@@ -17,33 +17,6 @@ import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-GlobalActivityItem _queued(ServiceKey service, String title) =>
-    GlobalActivityItem(
-      kind: GlobalActivityKind.queue,
-      service: service,
-      serviceType: ServiceType.movies,
-      title: title,
-      subtitle: '',
-      status: const MediaStatusInfo(
-        labelOverride: 'Downloading',
-        toneOverride: StatusTone.info,
-      ),
-    );
-
-ActivityServiceResult _answered(
-  ServiceKey service,
-  List<GlobalActivityItem> items, {
-  String instanceId = '',
-  String label = '',
-}) => ActivityServiceResult(
-  service: service,
-  instanceId: instanceId,
-  label: label,
-  items: items,
-  total: items.length,
-  configured: true,
-);
-
 ActivityServiceResult _silent(
   ServiceKey service, {
   String instanceId = '',
@@ -58,28 +31,13 @@ ActivityServiceResult _silent(
 );
 
 void main() {
-  group('the service counts', () {
-    test('a failed connection makes the count a floor and is named', () {
-      final count = activityCount([
-        _answered(ServiceKey.sonarr, [_queued(ServiceKey.sonarr, 'A')]),
+  test('a connection that did not answer is named as not counted', () {
+    expect(
+      notCountedClause([
         _silent(ServiceKey.sonarr, instanceId: 'anime', label: 'Anime'),
-        _answered(ServiceKey.radarr, const []),
-      ], service: ServiceKey.sonarr);
-
-      expect(count.total, 1);
-      expect(count.isFloor, isTrue);
-      expect(notCountedClause(count.notCounted), 'Sonarr Anime not counted');
-    });
-
-    test('every connection answering is a total, not a floor', () {
-      final count = activityCount([
-        _answered(ServiceKey.sonarr, [_queued(ServiceKey.sonarr, 'A')]),
-        _answered(ServiceKey.radarr, [_queued(ServiceKey.radarr, 'B')]),
-      ]);
-
-      expect(count.total, 2);
-      expect(count.isFloor, isFalse);
-    });
+      ]),
+      'Sonarr Anime not counted',
+    );
   });
 
   group('Finished today', () {

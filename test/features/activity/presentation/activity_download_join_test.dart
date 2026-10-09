@@ -43,7 +43,7 @@ void main() {
       Profiles.p1.withDownloads([_qbError]),
     );
     final container = harness.container(retry: (_, _) => null);
-    final feed = await container.read(globalQueueItemsProvider.future);
+    final feed = await container.read(globalNowItemsProvider.future);
 
     final coffeeRun = _record(feed, _qbError.id);
     expect(coffeeRun.download?.clientService, ServiceKey.qbittorrent);

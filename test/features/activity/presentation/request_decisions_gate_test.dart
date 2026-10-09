@@ -134,7 +134,7 @@ void main() {
     Future<List<GlobalActivityItem>> requestRows(ConfigProfile profile) async {
       final harness = await ProfileHarness.start(profile);
       final container = harness.container(retry: (_, _) => null);
-      final feed = await container.read(globalActivityFeedProvider.future);
+      final feed = await container.read(globalNowItemsProvider.future);
       return [
         for (final row in feed.items)
           if (row.kind == GlobalActivityKind.request) row,

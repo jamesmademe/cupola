@@ -68,7 +68,7 @@ void main() {
     );
     final container = harness.container(retry: (_, _) => null);
 
-    final queue = await container.read(globalQueueItemsProvider.future);
+    final queue = await container.read(globalNowItemsProvider.future);
     final sprite = queue.items.singleWhere(
       (item) =>
           '${item.raw?['downloadId']}'.toLowerCase() ==
@@ -78,7 +78,9 @@ void main() {
     expect(sprite.names?.machineName, 'Sprite.Fright.2021.1080p.WEB');
     expect(sprite.names?.machineKind, MachineNameKind.release);
 
-    final feed = await container.read(globalActivityFeedProvider.future);
+    final history = container.read(globalHistoryFeedProvider.notifier);
+    await history.loading;
+    final feed = container.read(globalHistoryFeedProvider).feed!;
     final coffeeRun = feed.items.singleWhere(
       (item) =>
           item.kind == GlobalActivityKind.history &&
