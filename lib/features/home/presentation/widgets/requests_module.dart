@@ -76,7 +76,7 @@ class HomeRequestsModule extends ConsumerWidget {
             !answered.containsKey(decision.id))
           decision,
     ];
-    final rows = [...waiting, for (final a in answered.values) a.decision];
+    final rows = [...waiting, for (final a in answered.values) ?a.decision];
     if (rows.isEmpty) {
       // With one Seerr silent, its requests are unknown, not absent.
       if (coverage.failed.isNotEmpty) {

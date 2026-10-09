@@ -12,7 +12,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
-import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/sample_age.dart';
@@ -22,7 +21,6 @@ import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
@@ -31,8 +29,7 @@ import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
-import 'package:cupola/features/discover/domain/seerr_grant.dart';
-import 'package:cupola/features/home/data/answered_requests.dart';
+import 'package:cupola/features/requests/presentation/widgets/request_answer_controls.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -596,94 +593,24 @@ class _RequestRow extends ConsumerWidget {
                 ),
               ),
             ),
-            if (outcome == null)
+            if (outcome == null && decision.actionId != null)
               Padding(
                 padding: const EdgeInsets.only(
                   top: AppSpacing.sm,
                   left: HomeRowArt.width + AppSpacing.sm,
                 ),
-                child: _RequestControls(decision: decision),
+                child: RequestAnswerControls.row(
+                  // The Seerr the request came off: the module reads every
+                  // one, and a request id is per server.
+                  instanceId: decision.instanceId,
+                  requestId: decision.actionId!,
+                  title: decision.title,
+                  decision: decision,
+                ),
               ),
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Approve and Decline, gated by the Seerr the request came off: an account
-/// of the operator's that may not approve there keeps the pair, dimmed.
-class _RequestControls extends ConsumerWidget {
-  const _RequestControls({required this.decision});
-
-  final DashboardDecision decision;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final id = decision.actionId;
-    final decide = ref
-        .watch(roleGateProvider(decision.instanceId))
-        .operatorAction(SeerrAbility.approve);
-    if (!decide.isDrawn) return const SizedBox.shrink();
-
-    Future<void> approve() async {
-      if (id == null) return;
-      // Held before the wait: the row goes once Seerr's list is read again,
-      // and its answer stays in its place.
-      final answered = ref.read(answeredRequestsProvider.notifier);
-      final outcome = await ActivityActions.approveRequest(
-        context,
-        ref,
-        // The Seerr the request came off: the module reads every one, and a
-        // request id is per server.
-        instanceId: decision.instanceId,
-        requestId: id,
-        title: decision.title,
-      );
-      if (outcome != null) answered.answer(decision, outcome);
-    }
-
-    Future<void> decline() async {
-      if (id == null) return;
-      final answered = ref.read(answeredRequestsProvider.notifier);
-      final declined = await ActivityActions.declineRequest(
-        context,
-        ref,
-        instanceId: decision.instanceId,
-        requestId: id,
-        title: decision.title,
-      );
-      if (declined) answered.answer(decision, 'Declined');
-    }
-
-    Widget button(String verb, VoidCallback onTap, {required bool ink}) =>
-        Expanded(
-          child: RoleGatedAction.builder(
-            verdict: decide,
-            onTap: onTap,
-            builder: (context, onPressed, annotate) {
-              // The button says its verb; a screen reader and a long press
-              // hear the title with it.
-              final named = '$verb ${decision.title}';
-              final content = annotate(Text(verb, semanticsLabel: named));
-              final pressed = id == null ? null : onPressed;
-              return Tooltip(
-                message: named,
-                excludeFromSemantics: true,
-                child: ink
-                    ? FilledButton(onPressed: pressed, child: content)
-                    : OutlinedButton(onPressed: pressed, child: content),
-              );
-            },
-          ),
-        );
-
-    return Row(
-      children: [
-        button('Approve', approve, ink: true),
-        const SizedBox(width: AppSpacing.sm),
-        button('Decline', decline, ink: false),
-      ],
     );
   }
 }

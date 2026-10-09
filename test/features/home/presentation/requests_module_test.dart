@@ -100,6 +100,44 @@ void main() {
     );
   });
 
+  testWidgets('a request answered elsewhere leaves the list at once, with no '
+      'row of its own', (tester) async {
+    final charge = _request('Charge', 1);
+    final metropolis = _request('Metropolis', 2, hoursAgo: 20);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(configured: const [ServiceKey.seerr]),
+          // Seerr's list as it was read, before the answer reached it.
+          dashboardDecisionSourceProvider.overrideWith(
+            (ref, source) async => (
+              decisions: [charge, metropolis],
+              coverage: SourceCoverage.none,
+            ),
+          ),
+          pendingRequestCountProvider.overrideWith(
+            (ref) async => (count: 1, floor: false),
+          ),
+          answeredRequestsProvider.overrideWith(
+            // Answered from the Activity feed, say: no Home row to keep.
+            () => _Answered({charge.id: (decision: null, outcome: 'Declined')}),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: const Scaffold(body: HomeRequestsModule()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Metropolis'), findsOne);
+    expect(find.byTooltip('Approve Metropolis'), findsOne);
+    expect(find.text('Charge'), findsNothing);
+    expect(find.byTooltip('Approve Charge'), findsNothing);
+    expect(find.text('Declined'), findsNothing);
+  });
+
   testWidgets('read again, the answered rows give way', (tester) async {
     final container = ProviderContainer(
       overrides: [

@@ -211,10 +211,11 @@ class ActivityActions {
     if (!_decides(context, ref, instanceId)) return null;
     // Captured before any wait: the approval outlives the control that
     // started it, and the notifier is the container's, not the widget's.
-    final approvals = ref.read(seerrApprovalsInFlightProvider.notifier);
+    final approvals = ref.read(requestAnswersInFlightProvider.notifier);
     final key = (instanceId: instanceId, requestId: requestId);
-    // A second tap while the first is still being read or sent does nothing.
-    var owned = approvals.begin(key, SeerrApprovalPhase.checking);
+    // A second tap while an answer to this request is still being read or
+    // sent does nothing.
+    var owned = approvals.begin(key, RequestAnswerPhase.checking);
     if (!owned) return null;
     try {
       final (:message, :approved) = await _approveConfirmation(
@@ -240,7 +241,7 @@ class ActivityActions {
 
       if (!result.confirmed) return null;
       if (!context.mounted) return null;
-      owned = approvals.begin(key, SeerrApprovalPhase.approving);
+      owned = approvals.begin(key, RequestAnswerPhase.approving);
       if (!owned) return null;
 
       final done = await _run(
@@ -314,6 +315,9 @@ class ActivityActions {
 
   /// Declines a request, leaving the media alone. True when it went
   /// through.
+  ///
+  /// Busy like an approval: while the decline is sent, and while an answer to
+  /// the same request is on its way, a second tap does nothing.
   static Future<bool> declineRequest(
     BuildContext context,
     WidgetRef ref, {
@@ -322,6 +326,10 @@ class ActivityActions {
     required String title,
   }) async {
     if (!_decides(context, ref, instanceId)) return false;
+    // Captured before any wait, like the approval's.
+    final answers = ref.read(requestAnswersInFlightProvider.notifier);
+    final key = (instanceId: instanceId, requestId: requestId);
+    if (answers.isInFlight(key)) return false;
     final result = await showAppConfirmDialog(
       context: context,
       title: 'Decline this request?',
@@ -334,18 +342,23 @@ class ActivityActions {
 
     if (!result.confirmed) return false;
     if (!context.mounted) return false;
+    if (!answers.begin(key, RequestAnswerPhase.declining)) return false;
 
-    return _run(
-      context,
-      ref,
-      service: ServiceKey.seerr,
-      action: () => ref
-          .read(seerrServiceForProvider(instanceId))
-          .declineRequest(requestId),
-      successMessage: 'Request declined',
-      failureMessage: 'Could not decline this request',
-      invalidateRequests: true,
-    );
+    try {
+      return await _run(
+        context,
+        ref,
+        service: ServiceKey.seerr,
+        action: () => ref
+            .read(seerrServiceForProvider(instanceId))
+            .declineRequest(requestId),
+        successMessage: 'Request declined',
+        failureMessage: 'Could not decline this request',
+        invalidateRequests: true,
+      );
+    } finally {
+      answers.end(key);
+    }
   }
 
   /// Runs a mutation, reports it, and refreshes the feed.
@@ -407,63 +420,68 @@ class ActivityActions {
   }
 }
 
-/// One approval, named by the Seerr it is sent to and the request's id there.
-typedef SeerrApprovalKey = ({String instanceId, int requestId});
+/// One answer, named by the Seerr it is sent to and the request's id there.
+typedef RequestAnswerKey = ({String instanceId, int requestId});
 
-/// Where an approval is between its tap and its answer.
-enum SeerrApprovalPhase {
+/// Where an answer to a request is between its tap and its reply.
+enum RequestAnswerPhase {
   /// Reading where the request goes, before the confirmation opens.
   checking('Checking where it goes'),
 
   /// The approval itself, sent and not yet answered.
-  approving('Approving');
+  approving('Approving'),
 
-  const SeerrApprovalPhase(this.spoken);
+  /// The decline itself, sent and not yet answered.
+  declining('Declining');
+
+  const RequestAnswerPhase(this.spoken);
 
   /// What a screen reader hears of the busy control.
   final String spoken;
+
+  /// Whether the Approve control is the busy one: the two phases of an
+  /// approval, as against a decline.
+  bool get isApproval => this != declining;
 }
 
-/// The approvals in flight, and how far each has got.
+/// The answers in flight, and how far each has got.
 ///
-/// What makes the tapped control busy at once, and a second tap a no-op: an
-/// approval used to read for up to eight seconds with nothing on screen, and
-/// every tap meanwhile started another read and, in the end, another
-/// confirmation.
-class SeerrApprovalsInFlight
-    extends Notifier<Map<SeerrApprovalKey, SeerrApprovalPhase>> {
+/// What makes the tapped control busy at once, the other one of the pair
+/// quiet, and a second tap a no-op: an approval used to read for up to eight
+/// seconds with nothing on screen, and every tap meanwhile started another
+/// read and, in the end, another confirmation.
+class RequestAnswersInFlight
+    extends Notifier<Map<RequestAnswerKey, RequestAnswerPhase>> {
   @override
-  Map<SeerrApprovalKey, SeerrApprovalPhase> build() => const {};
+  Map<RequestAnswerKey, RequestAnswerPhase> build() => const {};
+
+  /// Whether an answer to [key] is on its way, in any phase.
+  bool isInFlight(RequestAnswerKey key) => state.containsKey(key);
 
   /// Marks [key] as at [phase]. False, and nothing changes, when it is
   /// already in flight.
-  bool begin(SeerrApprovalKey key, SeerrApprovalPhase phase) {
+  bool begin(RequestAnswerKey key, RequestAnswerPhase phase) {
     if (state.containsKey(key)) return false;
     state = {...state, key: phase};
     return true;
   }
 
   /// Marks [key] as done. Safe to call when it is not in flight.
-  void end(SeerrApprovalKey key) {
+  void end(RequestAnswerKey key) {
     if (!state.containsKey(key)) return;
     state = {...state}..remove(key);
   }
 }
 
-final seerrApprovalsInFlightProvider =
+final requestAnswersInFlightProvider =
     NotifierProvider<
-      SeerrApprovalsInFlight,
-      Map<SeerrApprovalKey, SeerrApprovalPhase>
-    >(SeerrApprovalsInFlight.new);
+      RequestAnswersInFlight,
+      Map<RequestAnswerKey, RequestAnswerPhase>
+    >(RequestAnswersInFlight.new);
 
 /// An Approve control's glyph: [idle], or while the approval of
 /// [requestId] on [instanceId] is in flight, a ring in the same ink and at
 /// the same [size], so the control keeps its target and its place.
-///
-/// The ring carries the phase as the control's value, `Checking where it
-/// goes` or `Approving`: annotated here, inside the button, because a
-/// `Semantics` wrapped around a button lands on a node the screen reader
-/// never focuses.
 class SeerrApprovalGlyph extends ConsumerWidget {
   const SeerrApprovalGlyph({
     super.key,
@@ -481,11 +499,11 @@ class SeerrApprovalGlyph extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final phase = ref.watch(
-      seerrApprovalsInFlightProvider.select(
+      requestAnswersInFlightProvider.select(
         (inFlight) => inFlight[(instanceId: instanceId, requestId: requestId)],
       ),
     );
-    if (phase == null) return idle;
+    if (phase == null || !phase.isApproval) return idle;
     return Semantics(
       value: phase.spoken,
       child: SizedBox.square(
