@@ -72,7 +72,7 @@ Future<void> _pumpRow(
             Scaffold(body: GlobalActivityItemTile(item: item)),
       ),
       GoRoute(
-        path: '/activity/:type',
+        path: '/activity/requests',
         builder: (context, state) {
           pushed?.add(state.uri.toString());
           return const Scaffold(body: Text('destination'));
@@ -249,7 +249,7 @@ void main() {
     await tester.tap(find.text('On the second Seerr'));
     await tester.pumpAndSettle();
 
-    expect(pushed, ['/activity/discover?i=${_second.id}']);
+    expect(pushed, ['/activity/requests?i=${_second.id}']);
   });
 
   testWidgets('and carries no connection when the row has none', (
@@ -274,7 +274,7 @@ void main() {
     await tester.tap(find.text('The only Seerr'));
     await tester.pumpAndSettle();
 
-    expect(pushed, ['/activity/discover']);
+    expect(pushed, ['/activity/requests']);
   });
 }
 

@@ -301,21 +301,63 @@ void main() {
     });
   });
 
-  group('Activity › Searching', () {
-    testWidgets('the empty state teaches the affordance by name', (
-      tester,
-    ) async {
+  group('Activity › Downloads › Searching', () {
+    testWidgets('with no search the group draws nothing, and the heading is '
+        'never built', (tester) async {
+      var headings = 0;
       await tester.pumpWidget(
-        _host(const ReleaseSearchesBody(bottomPadding: 0)),
+        _host(
+          SingleChildScrollView(
+            child: ReleaseSearchesGroup(
+              heading: (count) {
+                headings++;
+                return Text('$count searches');
+              },
+            ),
+          ),
+        ),
       );
       await tester.pump();
 
-      expect(find.text('No searches running'), findsOneWidget);
-      expect(
-        find.textContaining(ReleaseSearchHandoffCopy.action),
-        findsOneWidget,
-        reason: 'the empty state must name the button it is pointing at',
+      expect(find.byType(ReleaseSearchJobCard), findsNothing);
+      expect(find.text('No searches running'), findsNothing);
+      expect(headings, 0);
+    });
+
+    testWidgets('the heading is built with how many searches there are', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: await settingsScopeOverrides(),
       );
+      final notifier = container.read(releaseSearchJobsProvider.notifier);
+      notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
+      notifier.start(_season);
+      notifier.start(
+        ReleaseSearchTarget.movie(movieId: 9, label: 'Dune: Part Two'),
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ReleaseSearchesGroup(
+                  heading: (count) => Text('Searching · $count'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Searching · 2'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      container.dispose();
     });
 
     testWidgets('lists every job, newest first', (tester) async {
@@ -336,7 +378,9 @@ void main() {
           container: container,
           child: MaterialApp(
             theme: AppTheme.darkTheme(),
-            home: const Scaffold(body: ReleaseSearchesBody(bottomPadding: 0)),
+            home: const Scaffold(
+              body: SingleChildScrollView(child: ReleaseSearchesGroup()),
+            ),
           ),
         ),
       );
@@ -583,7 +627,9 @@ void main() {
           container: container,
           child: MaterialApp(
             theme: AppTheme.darkTheme(),
-            home: const Scaffold(body: ReleaseSearchesBody(bottomPadding: 0)),
+            home: const Scaffold(
+              body: SingleChildScrollView(child: ReleaseSearchesGroup()),
+            ),
           ),
         ),
       );
@@ -635,7 +681,9 @@ void main() {
           container: container,
           child: MaterialApp(
             theme: AppTheme.darkTheme(),
-            home: const Scaffold(body: ReleaseSearchesBody(bottomPadding: 0)),
+            home: const Scaffold(
+              body: SingleChildScrollView(child: ReleaseSearchesGroup()),
+            ),
           ),
         ),
       );
@@ -670,7 +718,9 @@ void main() {
           container: container,
           child: MaterialApp(
             theme: AppTheme.darkTheme(),
-            home: const Scaffold(body: ReleaseSearchesBody(bottomPadding: 0)),
+            home: const Scaffold(
+              body: SingleChildScrollView(child: ReleaseSearchesGroup()),
+            ),
           ),
         ),
       );

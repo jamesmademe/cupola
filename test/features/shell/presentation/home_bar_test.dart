@@ -268,6 +268,13 @@ void main() {
 
     for (final denied in [
       '/activity',
+      // Each of Activity's views, and the page's old addresses: Activity is
+      // the operator's whole, whichever way it is reached.
+      '/activity/downloads',
+      '/activity/requests',
+      '/activity/requests?i=seerr',
+      '/activity/history',
+      '/activity/blocklist',
       '/activity/discover',
       '/stack',
       '/stack/radarr',

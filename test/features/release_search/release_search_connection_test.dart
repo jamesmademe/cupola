@@ -92,7 +92,9 @@ void main() {
           container: container,
           child: MaterialApp(
             theme: AppTheme.darkTheme(),
-            home: const Scaffold(body: ReleaseSearchesBody(bottomPadding: 0)),
+            home: const Scaffold(
+              body: SingleChildScrollView(child: ReleaseSearchesGroup()),
+            ),
           ),
         ),
       );
