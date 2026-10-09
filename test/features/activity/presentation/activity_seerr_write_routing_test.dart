@@ -91,20 +91,16 @@ Future<void> _pumpRow(
   await tester.pumpAndSettle();
 }
 
-/// Takes the row's overflow menu through Approve.
+/// Takes the row's own Approve through its confirmation.
 Future<void> _approve(WidgetTester tester) async {
-  await tester.tap(find.byIcon(Icons.more_vert_rounded));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Approve request'));
+  await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
   await tester.pumpAndSettle();
   await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
   await tester.pumpAndSettle();
 }
 
 Future<void> _decline(WidgetTester tester) async {
-  await tester.tap(find.byIcon(Icons.more_vert_rounded));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Decline request'));
+  await tester.tap(find.widgetWithText(OutlinedButton, 'Decline'));
   await tester.pumpAndSettle();
   await tester.tap(find.widgetWithText(FilledButton, 'Decline request'));
   await tester.pumpAndSettle();

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
@@ -13,13 +12,13 @@ import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart' as dynamic_utils;
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/connection_badge.dart';
-import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
+import 'package:cupola/features/requests/presentation/widgets/request_answer_controls.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpers.dart';
 import 'package:cupola/features/activity/presentation/widgets/detail_sheets.dart';
@@ -330,14 +329,8 @@ class GlobalActivityItemTile extends ConsumerWidget {
     // Resolved once here and handed to [_writeActions]; see
     // [canManualImportFrom] for the two gates.
     final canManualImport = canManualImportFrom(item);
-    final writeActions = _writeActions(
-      canManualImport: canManualImport,
-      decide: item.kind == GlobalActivityKind.request
-          ? ref
-                .watch(roleGateProvider(item.instanceId))
-                .operatorAction(SeerrAbility.approve)
-          : const Live(),
-    );
+    final writeActions = _writeActions(canManualImport: canManualImport);
+    final answers = _answersRequest(ref);
     final icon = switch (item.kind) {
       GlobalActivityKind.request => Icons.person_add_alt_1_rounded,
       GlobalActivityKind.queue => Icons.downloading_rounded,
@@ -390,6 +383,14 @@ class GlobalActivityItemTile extends ConsumerWidget {
         onOpen: onOpen,
         trailing: trailing,
         actions: writeActions,
+        answer: answers
+            ? RequestAnswerControls.compact(
+                instanceId: item.instanceId,
+                requestId: item.request!.id,
+                title: item.title,
+                request: item.request,
+              )
+            : null,
         compact:
             MediaQuery.sizeOf(context).width < AppBreakpoints.desktopCompact,
       );
@@ -541,6 +542,19 @@ class GlobalActivityItemTile extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  // A request that waits is answered where it is listed, with
+                  // the one pair every list of them draws.
+                  if (answers) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    RequestAnswerControls.row(
+                      // The row's own connection, never the lens: a request
+                      // id is per Seerr.
+                      instanceId: item.instanceId,
+                      requestId: item.request!.id,
+                      title: item.title,
+                      request: item.request,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -566,37 +580,37 @@ class GlobalActivityItemTile extends ConsumerWidget {
     );
   }
 
+  /// Whether this row carries the pair that answers its request: a request
+  /// that waits, on a Seerr whose gate lets the account decide there.
+  ///
+  /// Gated on the request's **own** status, never on `displayStatus`. That
+  /// getter is overridden by media availability, so a request that is still
+  /// waiting for approval reports "Available" the moment the media exists
+  /// anywhere, and would silently lose the only action it needs. The pair is
+  /// left out of the requester's app, and an account that may not approve
+  /// keeps it, dimmed, saying why when pressed.
+  bool _answersRequest(WidgetRef ref) {
+    final request = item.request;
+    if (item.kind != GlobalActivityKind.request ||
+        request == null ||
+        request.status != RequestStatus.pendingApproval) {
+      return false;
+    }
+    return ref
+        .watch(roleGateProvider(item.instanceId))
+        .operatorAction(SeerrAbility.approve)
+        .isDrawn;
+  }
+
   /// The write actions this row supports.
   ///
   /// Empty for history (nothing to change about something that happened) and
-  /// whenever the record has no id to act on.
+  /// whenever the record has no id to act on. A request has no \*arr record at
+  /// all, so it has none here: it is answered by its own pair, see
+  /// [_answersRequest].
   ///
   /// [canManualImport] gates the manual-import fast path — see the switch.
-  ///
-  /// [decide] is what the gate of the request's Seerr says about approving
-  /// there: the pair is left out of the requester's app, and an account that
-  /// may not approve keeps it, dimmed, saying why when chosen.
-  List<_RowAction> _writeActions({
-    required bool canManualImport,
-    required GateVerdict decide,
-  }) {
-    // Requests are checked before the `recordId` guard, not after: they are the
-    // one kind that carries no \*arr record at all, so that guard would drop them
-    // before they were ever considered.
-    if (item.kind == GlobalActivityKind.request) {
-      final request = item.request;
-      // Gate on the request's **own** status, never on `displayStatus`. That
-      // getter is overridden by media availability, so a request that is still
-      // waiting for approval reports "Available" the moment the media exists
-      // anywhere — and would silently lose the only action it needs.
-      if (request == null ||
-          request.status != RequestStatus.pendingApproval ||
-          !decide.isDrawn) {
-        return const [];
-      }
-      return const [_RowAction.approveRequest, _RowAction.declineRequest];
-    }
-
+  List<_RowAction> _writeActions({required bool canManualImport}) {
     if (item.recordId == null) return const [];
     if (!item.serviceType.supportsArrActivity) return const [];
     return switch (item.kind) {
@@ -707,12 +721,6 @@ class GlobalActivityItemTile extends ConsumerWidget {
 
 /// A write action available on an Activity row.
 enum _RowAction {
-  approveRequest(
-    'Approve request',
-    Icons.check_circle_outline_rounded,
-    destructive: false,
-  ),
-  declineRequest('Decline request', Icons.cancel_outlined, destructive: true),
   manualImport(
     'Manual import',
     Icons.drive_file_move_rounded,
@@ -739,10 +747,6 @@ enum _RowAction {
   final String label;
   final IconData icon;
   final bool destructive;
-
-  /// Approve or Decline: a decision on a Seerr request, which the gate of
-  /// that Seerr may dim.
-  bool get decidesRequest => this == approveRequest || this == declineRequest;
 }
 
 /// The same actions as buttons, for the detail sheet.
@@ -813,7 +817,6 @@ class _RowActionsMenu extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final blocked = _decisionBlockedReason(ref, item);
 
     return PopupMenuButton<_RowAction>(
       tooltip: 'Actions for ${item.title}',
@@ -823,8 +826,7 @@ class _RowActionsMenu extends ConsumerWidget {
         color: colorScheme.onSurfaceVariant,
       ),
       onSelected: (action) => _runRowAction(context, ref, item, action),
-      itemBuilder: (context) =>
-          _rowActionMenuItems(context, actions, blocked: blocked),
+      itemBuilder: (context) => _rowActionMenuItems(context, actions),
     );
   }
 }
@@ -836,15 +838,10 @@ class _RowActionsMenu extends ConsumerWidget {
 /// whole desktop layer: hover and right-click are accelerators, so every item
 /// here is also reachable from a control that is simply *there*, and a phone
 /// loses nothing by having no pointer.
-///
-/// [blocked] is why the account may not decide on a request, when it may
-/// not: Approve and Decline then stay, dimmed and hinted, and say it when
-/// chosen.
 List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
   BuildContext context,
-  List<_RowAction> actions, {
-  String? blocked,
-}) {
+  List<_RowAction> actions,
+) {
   final colorScheme = Theme.of(context).colorScheme;
   // One ink for every item, destructive or not: red means unreachable and
   // nothing else, and the confirmation each one opens says what it does.
@@ -862,32 +859,11 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
             // and painted the debug stripe over the menu. Wrapping rather
             // than ellipsising — a menu item that reads "Remove from
             // blockli…" is worse than one that takes two lines.
-            Flexible(
-              child: GatedAffordance.annotateFor(
-                enabled: blocked == null || !action.decidesRequest,
-                hint: action.decidesRequest ? blocked : null,
-                child: Text(action.label),
-              ),
-            ),
+            Flexible(child: Text(action.label)),
           ],
         ),
       ),
   ];
-}
-
-/// Why the account a request row came off may not approve or decline it, or
-/// null when it may (or the row is no request).
-///
-/// Watched while building; read, with [listen] false, from a callback.
-String? _decisionBlockedReason(
-  WidgetRef ref,
-  GlobalActivityItem item, {
-  bool listen = true,
-}) {
-  if (item.kind != GlobalActivityKind.request) return null;
-  final provider = roleGateProvider(item.instanceId);
-  final gate = listen ? ref.watch(provider) : ref.read(provider);
-  return gate.operatorAction(SeerrAbility.approve).reason;
 }
 
 /// Dispatches one [_RowAction] against [item].
@@ -999,28 +975,6 @@ void _runRowAction(
   _RowAction action,
 ) {
   switch (action) {
-    case _RowAction.approveRequest:
-      final requestId = item.request?.id;
-      if (requestId == null) return;
-      ActivityActions.approveRequest(
-        context,
-        ref,
-        // The row's own connection, never the lens: a request id is per Seerr.
-        instanceId: item.instanceId,
-        requestId: requestId,
-        title: item.title,
-        request: item.request,
-      );
-    case _RowAction.declineRequest:
-      final requestId = item.request?.id;
-      if (requestId == null) return;
-      ActivityActions.declineRequest(
-        context,
-        ref,
-        instanceId: item.instanceId,
-        requestId: requestId,
-        title: item.title,
-      );
     case _RowAction.manualImport:
       openManualImportFrom(context, item);
     case _RowAction.blocklistAndRetry:
@@ -1394,6 +1348,7 @@ class _DesktopActivityRow extends ConsumerStatefulWidget {
     required this.onOpen,
     required this.trailing,
     required this.actions,
+    required this.answer,
     required this.compact,
   });
 
@@ -1412,6 +1367,11 @@ class _DesktopActivityRow extends ConsumerStatefulWidget {
   /// Offered again on a right-click. The same list the `⋮` button shows, from
   /// the same place — see [_rowActionMenuItems].
   final List<_RowAction> actions;
+
+  /// The pair that answers the row's request, when it is one that waits: the
+  /// compact one, always in the row and never revealed by hover, since the
+  /// phone has no hover.
+  final Widget? answer;
 
   /// A desktop window below 1100.
   ///
@@ -1445,11 +1405,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
         Rect.fromPoints(globalPosition, globalPosition),
         Offset.zero & overlay.size,
       ),
-      items: _rowActionMenuItems(
-        context,
-        widget.actions,
-        blocked: _decisionBlockedReason(ref, widget.item, listen: false),
-      ),
+      items: _rowActionMenuItems(context, widget.actions),
     );
     if (action == null || !mounted) return;
     _runRowAction(context, ref, widget.item, action);
@@ -1459,16 +1415,12 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
   ///
   /// The first non-destructive item, which is the rescue verb on every kind
   /// that has one — `Manual import` on a stuck download, `Blocklist and search`
-  /// on a failed grab, `Approve request` on a pending request. Destructive
-  /// actions are never promoted: a Remove that appears under the pointer on
-  /// hover is a control the user did not ask to have within reach.
-  ///
-  /// Never a decision the account may not make: it stays in the menu, dimmed.
+  /// on a failed grab. Destructive actions are never promoted: a Remove that
+  /// appears under the pointer on hover is a control the user did not ask to
+  /// have within reach.
   _RowAction? get _primaryAction {
-    final blocked = _decisionBlockedReason(ref, widget.item) != null;
     for (final action in widget.actions) {
       if (action.destructive) continue;
-      if (blocked && action.decidesRequest) continue;
       return action;
     }
     return null;
@@ -1592,6 +1544,10 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                   ],
                 ),
               ),
+              if (widget.answer != null) ...[
+                const SizedBox(width: AppSpacing.md),
+                widget.answer!,
+              ],
               if (promoted != null) ...[
                 const SizedBox(width: AppSpacing.md),
                 _PromotedRowAction(item: item, action: promoted),
