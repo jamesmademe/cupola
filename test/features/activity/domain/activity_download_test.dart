@@ -125,16 +125,19 @@ void main() {
 
     test('minutes under the hour, then hours, then days from the second '
         'day', () {
-      expect(words(Duration.zero), 'nothing for 0 min');
-      expect(words(const Duration(minutes: 40)), 'nothing for 40 min');
+      expect(words(Duration.zero), 'nothing for 0\u00A0min');
+      expect(words(const Duration(minutes: 40)), 'nothing for 40\u00A0min');
       expect(
         words(const Duration(minutes: 59, seconds: 59)),
-        'nothing for 59 min',
+        'nothing for 59\u00A0min',
       );
-      expect(words(const Duration(hours: 1)), 'nothing for 1 h');
-      expect(words(const Duration(hours: 3)), 'nothing for 3 h');
+      expect(words(const Duration(hours: 1)), 'nothing for 1\u00A0h');
+      expect(words(const Duration(hours: 3)), 'nothing for 3\u00A0h');
       // A day and a half is hours: 'days' starts at the second day.
-      expect(words(const Duration(hours: 47, minutes: 59)), 'nothing for 47 h');
+      expect(
+        words(const Duration(hours: 47, minutes: 59)),
+        'nothing for 47\u00A0h',
+      );
       expect(words(const Duration(days: 2)), 'nothing for 2 days');
       expect(words(const Duration(days: 9, hours: 5)), 'nothing for 9 days');
     });
@@ -142,8 +145,11 @@ void main() {
 
   group('queuedWords', () {
     test('where the client estimates it, when it starts', () {
-      expect(queuedWords(360), 'Queued · starts in about 6 min');
-      expect(queuedWords(5400), 'Queued · starts in about 1 h 30 min');
+      expect(queuedWords(360), 'Queued · starts in about 6\u00A0min');
+      expect(
+        queuedWords(5400),
+        'Queued · starts in about 1\u00A0h 30\u00A0min',
+      );
     });
 
     test('where it does not, or it already should have, just Queued', () {

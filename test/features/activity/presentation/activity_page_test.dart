@@ -560,14 +560,14 @@ void main() {
       expect(ys, [...ys]..sort());
       // The stuck row says where it stopped and how long nothing came.
       expect(find.text('Stuck at 47%'), findsOneWidget);
-      expect(find.text('nothing for 3 h'), findsOneWidget);
+      expect(find.text('nothing for 3\u00A0h'), findsOneWidget);
       // Which way the bytes go, and a moving row's own speed.
       expect(find.text('Radarr 4K → SABnzbd'), findsNWidgets(2));
-      expect(find.text('12.1 MB/s'), findsOneWidget);
+      expect(find.text('12.1\u00A0MB/s'), findsOneWidget);
       // Whose request brought it, and when it should be ready.
       expect(find.text("Anna's request · ready around 21:04"), findsOneWidget);
       // Up next: when SABnzbd says it starts, and who asked.
-      expect(find.text('Queued · starts in about 6 min'), findsOneWidget);
+      expect(find.text('Queued · starts in about 6\u00A0min'), findsOneWidget);
       expect(find.text("Anna's request"), findsOneWidget);
 
       await harness.unmount(tester);
