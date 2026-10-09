@@ -19,6 +19,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
@@ -200,11 +201,11 @@ class DecisionRow extends ConsumerWidget {
                       ),
                       child: Align(
                         alignment: AlignmentDirectional.centerStart,
-                        child: _DecisionControls(decision: decision),
+                        child: DecisionControl(decision: decision),
                       ),
                     )
                   else
-                    _DecisionControls(decision: decision),
+                    DecisionControl(decision: decision),
               ],
             ),
           ),
@@ -233,21 +234,37 @@ Future<void> openDecision(
   await context.pushMounted(route);
 }
 
-/// The trailing control, or the two of them a request needs.
-class _DecisionControls extends ConsumerWidget {
-  const _DecisionControls({required this.decision});
+/// A decision's control: the row's trailing button, or ([DecisionControl.fill])
+/// the amber fill a fault's card leads its remedies with.
+///
+/// Both are gated alike: a write the credential may not make is dimmed with
+/// the reason, a control on a service with no connection is dimmed and names
+/// it. Never hidden, never `Semantics(enabled: false)`.
+class DecisionControl extends ConsumerWidget {
+  const DecisionControl({super.key, required this.decision})
+    : _fill = false,
+      label = null;
+
+  /// The fill, full width, labelled [label] when the card names the remedy
+  /// otherwise than the row does (`Review 18`).
+  const DecisionControl.fill({super.key, required this.decision, this.label})
+    : _fill = true;
 
   final DashboardDecision decision;
+  final String? label;
+  final bool _fill;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final required = decision.requiresService;
-    final label = decisionActionLabel(
-      decision.kind,
-      target: decision.actionTarget,
-      renewable: decision.renewable,
-      remedy: decision.remedy,
-    );
+    final label =
+        this.label ??
+        decisionActionLabel(
+          decision.kind,
+          target: decision.actionTarget,
+          renewable: decision.renewable,
+          remedy: decision.remedy,
+        );
 
     // Renewing is a write on the certificates of one NPM account, and a
     // view-only account cannot make it: the same gate the Certificates tab
@@ -273,6 +290,7 @@ class _DecisionControls extends ConsumerWidget {
           label: label,
           onPressed: onPressed,
           annotate: annotate,
+          fill: _fill,
         ),
       );
     }
@@ -281,6 +299,7 @@ class _DecisionControls extends ConsumerWidget {
       return _DecisionActionButton(
         label: label,
         onPressed: () => _runDecision(context, ref, decision),
+        fill: _fill,
       );
     }
 
@@ -297,6 +316,7 @@ class _DecisionControls extends ConsumerWidget {
         label: label,
         onPressed: onPressed,
         annotate: annotate,
+        fill: _fill,
       ),
     );
   }
@@ -305,7 +325,7 @@ class _DecisionControls extends ConsumerWidget {
 /// What the trailing control does, per kind.
 ///
 /// Two of the six are real writes from here — approve and decline are handled by
-/// [_DecisionControls] above, and Start and Test are below — because both are a
+/// [DecisionControl] above, and Start and Test are below — because both are a
 /// single confirmed call this app already owns. The other three *navigate to
 /// where the act happens*: a manual import is a three-station wizard, opening a
 /// stalled transfer is by design a jump into its client (decision 30: resume in
@@ -496,10 +516,14 @@ class _DecisionActionButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.annotate,
+    this.fill = false,
   });
 
   final String label;
   final VoidCallback onPressed;
+
+  /// The fault's one amber fill, full width, rather than a quiet text button.
+  final bool fill;
 
   /// The dim and hint of a cross-service gate, applied to the label inside
   /// the button. Null for a decision with no other service to reach.
@@ -509,6 +533,17 @@ class _DecisionActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    if (fill) {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: remedyFillStyle(context),
+          child: (annotate ?? (content) => content)(Text(label)),
+        ),
+      );
+    }
 
     return TextButton(
       onPressed: onPressed,

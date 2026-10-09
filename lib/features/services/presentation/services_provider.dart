@@ -3797,6 +3797,7 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
     // row.
     requiresService: _clientServiceFor(item),
     transferFailed: item.fault == InFlightFault.failed,
+    downloadKeys: [keptWaitingKey(item)],
   );
 }
 

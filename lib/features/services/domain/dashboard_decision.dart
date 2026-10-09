@@ -232,6 +232,7 @@ class DashboardDecision {
     this.renewable = true,
     this.transferFailed = false,
     this.remedy,
+    this.downloadKeys = const [],
   });
 
   final DecisionKind kind;
@@ -322,6 +323,12 @@ class DashboardDecision {
   /// stopped moving it. The row's detail already says `Failed`; this is what
   /// a sentence about the transfer reads, so it never calls a failure stuck.
   final bool transferFailed;
+
+  /// For a stalled download, the key its transfer is known by across reads
+  /// (`keptWaitingKey`); a folded row carries every member's. Activity draws
+  /// one card per key, since each stuck download has a way out of its own.
+  /// Empty on every other kind.
+  final List<String> downloadKeys;
 
   bool get isFault => kind.isFault;
 
@@ -446,6 +453,7 @@ DashboardDecision _groupOf(List<DashboardDecision> members) {
     actionInstanceId: first.actionInstanceId,
     importPath: shared((member) => member.importPath),
     transferFailed: members.every((member) => member.transferFailed),
+    downloadKeys: [for (final member in members) ...member.downloadKeys],
   );
 }
 
