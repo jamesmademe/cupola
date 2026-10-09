@@ -1275,11 +1275,59 @@ const arrivalsWindow = Duration(days: 7);
 /// it is the week's total, and the module can say `4 new` rather than `4+`.
 /// The import event is asked for by name and checked again on each record, so
 /// a server that ignores the filter still gives only imports.
-final servicesArrivalsProvider = FutureProvider.autoDispose<ArrHistory>((
-  ref,
-) async {
+final servicesArrivalsProvider = FutureProvider.autoDispose<ArrHistory>(
+  (ref) => _readHistorySince(
+    ref,
+    events: const {
+      ServiceKey.radarr: 'downloadFolderImported',
+      ServiceKey.sonarr: 'downloadFolderImported',
+      ServiceKey.lidarr: 'trackFileImported',
+    },
+    keep: ArrImportOutcome.imported,
+  ),
+);
+
+/// The downloads that failed in the last [arrivalsWindow]: one
+/// `/history/since` per connection of Radarr, Sonarr and Lidarr, in the shape
+/// of [servicesArrivalsProvider], read through the same clock
+/// ([arrivalsSinceProvider]) and with the same coverage, so the week's
+/// failures and the week's imports are one window and cannot drift.
+///
+/// `downloadFailed` is asked for by name and checked again on each record: a
+/// server that ignores the filter, or a failed *import*, which is a decision
+/// of its own, is not a failed download and is dropped.
+final servicesFailuresSinceProvider = FutureProvider.autoDispose<ArrHistory>(
+  (ref) => _readHistorySince(
+    ref,
+    events: const {
+      ServiceKey.radarr: 'downloadFailed',
+      ServiceKey.sonarr: 'downloadFailed',
+      ServiceKey.lidarr: 'downloadFailed',
+    },
+    keep: ArrImportOutcome.failed,
+    exactEvent: true,
+  ),
+);
+
+/// The records of one kind that [arrivalsWindow] holds, per connection of the
+/// arrs [events] names: the one body behind [servicesArrivalsProvider] and
+/// [servicesFailuresSinceProvider].
+///
+/// [events] is the event type each arr is asked for, by name. A record is kept
+/// when it classifies as [keep], and, with [exactEvent], only when it is the
+/// very event asked for: an outcome can have more than one event
+/// (`importFailed` is a failure too), and a read that wants the one must not
+/// take the other. A connection that fails is named in the coverage and
+/// takes nobody else's records with it.
+Future<ArrHistory> _readHistorySince(
+  Ref ref, {
+  required Map<ServiceKey, String> events,
+  required ArrImportOutcome keep,
+  bool exactEvent = false,
+}) async {
   final since = ref.watch(arrivalsSinceProvider);
   Future<ArrHistory> from(_MergeConnection source) async {
+    final event = events[source.service]!;
     try {
       final records = await switch (source.service) {
         ServiceKey.radarr =>
@@ -1287,18 +1335,15 @@ final servicesArrivalsProvider = FutureProvider.autoDispose<ArrHistory>((
               .watch(radarrServiceForProvider(source.instanceId))
               .getHistorySince(
                 since,
-                queryParameters: const {
-                  'eventType': 'downloadFolderImported',
-                  'includeMovie': true,
-                },
+                queryParameters: {'eventType': event, 'includeMovie': true},
               ),
         ServiceKey.sonarr =>
           ref
               .watch(sonarrServiceForProvider(source.instanceId))
               .getHistorySince(
                 since,
-                queryParameters: const {
-                  'eventType': 'downloadFolderImported',
+                queryParameters: {
+                  'eventType': event,
                   'includeSeries': true,
                   'includeEpisode': true,
                 },
@@ -1308,8 +1353,8 @@ final servicesArrivalsProvider = FutureProvider.autoDispose<ArrHistory>((
               .watch(lidarrServiceForProvider(source.instanceId))
               .getHistorySince(
                 since,
-                queryParameters: const {
-                  'eventType': 'trackFileImported',
+                queryParameters: {
+                  'eventType': event,
                   'includeArtist': true,
                   'includeAlbum': true,
                 },
@@ -1318,15 +1363,16 @@ final servicesArrivalsProvider = FutureProvider.autoDispose<ArrHistory>((
       return (
         entries: [
           for (final record in records.whereType<Map>().map(stringKeyMap))
-            _historyEntryFrom(
-              source.service,
-              record,
-              instanceId: source.instanceId,
-              connectionName: source.name,
-              baseUrl: source.connection.url,
-              apiKey: source.connection.apiKey,
-            ),
-        ].where((entry) => entry.outcome == ArrImportOutcome.imported).toList(),
+            if (!exactEvent || stringOrNull(record['eventType']) == event)
+              _historyEntryFrom(
+                source.service,
+                record,
+                instanceId: source.instanceId,
+                connectionName: source.name,
+                baseUrl: source.connection.url,
+                apiKey: source.connection.apiKey,
+              ),
+        ].where((entry) => entry.outcome == keep).toList(),
         coverage: SourceCoverage.answeredBy(
           source.service,
           instanceId: source.instanceId,
@@ -1347,18 +1393,14 @@ final servicesArrivalsProvider = FutureProvider.autoDispose<ArrHistory>((
   }
 
   final results = await Future.wait([
-    for (final service in const [
-      ServiceKey.radarr,
-      ServiceKey.sonarr,
-      ServiceKey.lidarr,
-    ])
+    for (final service in events.keys)
       for (final source in _watchMergeConnections(ref, service)) from(source),
   ]);
   return (
     entries: results.expand((result) => result.entries).toList(growable: false),
     coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
   );
-});
+}
 
 /// The moment Arrived's week starts: [arrivalsWindow] before now, read once
 /// per reading so every connection is asked the same window.
