@@ -34,7 +34,10 @@ words in `lib/features/home/domain/now_playing.dart`), `continue_watching_module
 
 The Home is drawn at 390 and is one column everywhere: on a tablet and in a desktop window it stops at the reading
 well, 720 (`AppBreakpoints.wellInset`), centred, Featured as wide as the well and every module under it at the well's
-measure. Beside a title open on a tablet it keeps the phone's 440 column.
+measure. A shelf of posters (Trending this week, Coming soon, the Discover shelf) runs across the page instead, its
+heading and first poster on the well's line (`HomeWell`), so its posters scroll to the page's edge: cut at the well's
+edge with the page empty beside it, a shelf reads as broken. Beside a title open on a tablet it keeps the phone's 440
+column.
 
 ## The five states
 

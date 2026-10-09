@@ -50,6 +50,14 @@ class DiscoverCarousel extends StatelessWidget {
   static const double _posterWidth = 104;
   static const double _posterHeight = 156;
 
+  /// How far the heading and the first poster stand from the row's edges.
+  ///
+  /// The row spans the page so its posters scroll to the page's edge, and the
+  /// page's own margin goes here, so the first poster stands on the line of
+  /// the column above it: a row cut off at the column's edge on a wide page
+  /// reads as broken, with nothing beside the cut.
+  final double inset;
+
   const DiscoverCarousel({
     super.key,
     required this.title,
@@ -60,14 +68,16 @@ class DiscoverCarousel extends StatelessWidget {
     this.onRetry,
     this.subtitle,
     this.metaOf,
+    this.inset = AppSpacing.lg,
   });
 
   @override
   Widget build(BuildContext context) {
     // While loading, show a header + skeleton rail so layout doesn't jump.
     return items.when(
-      loading: () =>
-          _shell(child: AppSkeleton.posterRow(height: _posterHeight)),
+      loading: () => _shell(
+        child: AppSkeleton.posterRow(height: _posterHeight, inset: inset),
+      ),
       error: (error, _) {
         // A Seerr nobody set up is the page's to say, once, not every row's.
         // Matched on the phrase the app throws for it; see `AsyncValueWidget`.
@@ -79,16 +89,25 @@ class DiscoverCarousel extends StatelessWidget {
             'so this row is missing.';
         final retry = onRetry;
         return _shell(
+          // On the heading's line: the retry line keeps a margin of its own.
           child: retry != null
-              ? InlineErrorRetry(
-                  message: message,
-                  error: error,
-                  service: ServiceKey.seerr,
-                  onRetry: retry,
+              ? Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: inset - AppSpacing.lg,
+                  ),
+                  child: InlineErrorRetry(
+                    message: message,
+                    error: error,
+                    service: ServiceKey.seerr,
+                    onRetry: retry,
+                  ),
                 )
-              : failureDidNotAnswer(classifyConnectionFailure(error))
-              ? FaultNote.unreachable(message: message)
-              : FaultNote.fault(message: message),
+              : Padding(
+                  padding: EdgeInsets.symmetric(horizontal: inset),
+                  child: failureDidNotAnswer(classifyConnectionFailure(error))
+                      ? FaultNote.unreachable(message: message)
+                      : FaultNote.fault(message: message),
+                ),
           // The skeleton's height is the rail's; the line is not a rail, and
           // the page should not hold a poster-sized gap under it.
           compact: true,
@@ -101,7 +120,7 @@ class DiscoverCarousel extends StatelessWidget {
             height: CatalogPoster.heightFor(context, _posterWidth),
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.symmetric(horizontal: inset),
               itemCount: list.length,
               separatorBuilder: (_, _) =>
                   const SizedBox(width: AppSpacing.carouselGap),
@@ -118,12 +137,16 @@ class DiscoverCarousel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(
-          title: title,
-          subtitle: subtitle,
-          // Nothing to see all of when the row failed.
-          showChevron: onSeeAll != null && !compact,
-          onTap: compact ? null : onSeeAll,
+        // The heading pads itself by the default margin.
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: inset - AppSpacing.lg),
+          child: SectionHeader(
+            title: title,
+            subtitle: subtitle,
+            // Nothing to see all of when the row failed.
+            showChevron: onSeeAll != null && !compact,
+            onTap: compact ? null : onSeeAll,
+          ),
         ),
         SizedBox(height: compact ? 0 : AppSpacing.md),
         child,

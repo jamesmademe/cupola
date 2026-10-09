@@ -38,6 +38,7 @@ import 'package:cupola/features/home/presentation/widgets/discover_shelf_module.
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/widgets/featured_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
+import 'package:cupola/features/home/presentation/widgets/home_well.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
 import 'package:cupola/features/home/presentation/widgets/now_playing_module.dart';
 import 'package:cupola/features/home/presentation/widgets/ready_to_watch_module.dart';
@@ -114,33 +115,41 @@ class HomeScreen extends ConsumerWidget {
                     onRefresh: () => _refreshHome(ref),
                     // One column, in the reading well on a tablet and in a
                     // window: Featured as wide as the well, every module
-                    // under it at its phone's measure grown to the well's.
+                    // under it at its phone's measure grown to the well's,
+                    // and the shelves across the page (`HomeWell`).
                     child: LayoutBuilder(
-                      builder: (context, box) {
-                        final inset = AppBreakpoints.wellInset(box.maxWidth);
-                        return ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.fromLTRB(
-                            inset,
-                            0,
-                            inset,
-                            bottomPadding,
-                          ),
-                          children: [
-                            HomeHeader(
-                              showsHealth: !requester,
-                              trailing: requester
-                                  ? const _AccountButton()
-                                  : null,
-                            ),
-                            if (requester) const _RequesterFailureLine(),
-                            for (final module in layout.shown)
-                              homeModuleView(module),
-                            if (!requester) const EditHomeRow(),
-                            const SizedBox(height: AppSpacing.lg),
-                          ],
-                        );
-                      },
+                      builder: (context, box) => HomeWell(
+                        inset: AppBreakpoints.wellInset(box.maxWidth),
+                        child: Builder(
+                          builder: (context) {
+                            Widget column(Widget child) =>
+                                HomeWell.column(context, child);
+                            return ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.only(bottom: bottomPadding),
+                              children: [
+                                column(
+                                  HomeHeader(
+                                    showsHealth: !requester,
+                                    trailing: requester
+                                        ? const _AccountButton()
+                                        : null,
+                                  ),
+                                ),
+                                if (requester)
+                                  column(const _RequesterFailureLine()),
+                                for (final module in layout.shown)
+                                  if (_shelves.contains(module))
+                                    homeModuleView(module)
+                                  else
+                                    column(homeModuleView(module)),
+                                if (!requester) column(const EditHomeRow()),
+                                const SizedBox(height: AppSpacing.lg),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                   const Positioned(
@@ -155,6 +164,14 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 }
+
+/// The modules that are a shelf of posters: they span the page and keep
+/// their own column (`HomeWell.shelfInsetOf`).
+const _shelves = {
+  HomeModule.trending,
+  HomeModule.comingSoon,
+  HomeModule.discoverShelf,
+};
 
 /// The widget that draws [module]: exhaustive, so a module cannot join the
 /// registry without one.
@@ -218,6 +235,7 @@ class _TrendingShelf extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => DiscoverCarousel(
     title: HomeModule.trending.label,
     sectionId: 'home_trending',
+    inset: HomeWell.shelfInsetOf(context),
     items: _shelfItems(ref.watch(atriumTrendingProvider)),
     onSeeAll: () => context.go(ServiceRoutes.discover),
   );
@@ -232,6 +250,7 @@ class _ComingSoonShelf extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => DiscoverCarousel(
     title: HomeModule.comingSoon.label,
     sectionId: 'home_coming_soon',
+    inset: HomeWell.shelfInsetOf(context),
     items: _shelfItems(ref.watch(comingSoonProvider)),
     metaOf: (item) => switch (item.releaseDate) {
       final date? when date.isNotEmpty => formatShortDate(date),

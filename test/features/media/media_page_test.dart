@@ -9,10 +9,13 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
 import 'package:cupola/core/widgets/machine_name.dart';
+import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
@@ -133,6 +136,40 @@ Future<void> _answer(WidgetTester tester) async {
 }
 
 void main() {
+  for (final (name, width, gutter) in [
+    ('a phone', 390.0, AppSpacing.lg),
+    // A page wider than the well: the column centred in it.
+    ('a wide page', 1400.0, (1400 - AppBreakpoints.contentWell) / 2),
+  ]) {
+    testWidgets('on $name More like this runs across the page, its heading and '
+        'first poster on the column\'s line', (tester) async {
+      // Inside the column's margin the row's own margin doubled it, and the
+      // posters were cut at the column's edge.
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.tearsOfSteel,
+        width: width,
+        height: 6000,
+      );
+
+      final heading = find.text('More like this');
+      expect(heading, findsOneWidget);
+      expect(tester.getTopLeft(heading).dx, gutter);
+      final row = find.ancestor(
+        of: find.text(WorldTitles.sintel.title).last,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is ListView && widget.scrollDirection == Axis.horizontal,
+        ),
+      );
+      expect(tester.getRect(row).width, width);
+      expect(tester.getTopLeft(find.byType(CatalogPoster).first).dx, gutter);
+
+      await harness.unmount(tester);
+    });
+  }
+
   testWidgets('P1, Tears of Steel: its title, Play on Jellyfin, its rows', (
     tester,
   ) async {

@@ -11,6 +11,7 @@ import 'package:cupola/features/discover/presentation/catalog_providers.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
+import 'package:cupola/features/home/presentation/widgets/home_well.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
@@ -31,16 +32,21 @@ class HomeDiscoverShelfModule extends ConsumerWidget {
         (s) => s.isServiceConfigured(ServiceKey.seerr),
       ),
     );
+    // A shelf spans the page (`HomeWell`); the frame that asks for Seerr is
+    // a module like the others, in the column.
     if (!seerr) {
-      return HomeModuleFrame.needsService(
-        title: HomeModule.discoverShelf.label,
-        service: ServiceKey.seerr,
-        headline: 'Set up Seerr to discover movies and series',
-        setUpLine: 'Trending, collections, picks from what you watched',
-        onSetUp: () => openSettings(
-          context,
-          ref,
-          to: ServiceRoutes.setUp(ServiceKey.seerr),
+      return HomeWell.column(
+        context,
+        HomeModuleFrame.needsService(
+          title: HomeModule.discoverShelf.label,
+          service: ServiceKey.seerr,
+          headline: 'Set up Seerr to discover movies and series',
+          setUpLine: 'Trending, collections, picks from what you watched',
+          onSetUp: () => openSettings(
+            context,
+            ref,
+            to: ServiceRoutes.setUp(ServiceKey.seerr),
+          ),
         ),
       );
     }
@@ -49,6 +55,7 @@ class HomeDiscoverShelfModule extends ConsumerWidget {
       child: DiscoverCarousel(
         title: 'Trending this week',
         sectionId: 'home_shelf',
+        inset: HomeWell.shelfInsetOf(context),
         items: ref.watch(atriumTrendingProvider),
         onSeeAll: () => context.go(ServiceRoutes.discover),
         onRetry: () => ref.invalidate(atriumTrendingProvider),

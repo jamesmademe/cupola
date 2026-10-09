@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
     show calendarClockProvider;
+import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
+import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
 import 'package:cupola/features/requests/presentation/requests_screen.dart';
@@ -82,4 +85,34 @@ void main() {
 
     await harness.unmount(tester);
   });
+
+  for (final (name, width) in [('a phone', 390.0), ('a tablet', 1180.0)]) {
+    testWidgets('her shelves on $name run across the page, the first poster '
+        'on the column\'s line', (tester) async {
+      // Inside the well a shelf was cut at the well's edge, with the page
+      // empty beside the cut.
+      final harness = await pump(
+        tester,
+        const HomeScreen(),
+        profile: Profiles.p2,
+        size: Size(width, 3000),
+      );
+
+      final line = AppBreakpoints.wellInset(width) + AppSpacing.lg;
+      final heading = find.text(HomeModule.trending.label);
+      expect(heading, findsOneWidget);
+      expect(tester.getTopLeft(heading).dx, line);
+      final shelf = find.ancestor(
+        of: find.byType(CatalogPoster).first,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is ListView && widget.scrollDirection == Axis.horizontal,
+        ),
+      );
+      expect(tester.getRect(shelf).width, width);
+      expect(tester.getTopLeft(find.byType(CatalogPoster).first).dx, line);
+
+      await harness.unmount(tester);
+    });
+  }
 }

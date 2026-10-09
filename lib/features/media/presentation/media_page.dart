@@ -892,9 +892,11 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           // the page: More like this steps aside rather than say it again.
           if (recommendations != null && !recommendations.hasError) ...[
             const SizedBox(height: AppSpacing.section),
+            // Across the page, its first poster on the column's line.
             DiscoverCarousel(
               title: 'More like this',
               sectionId: 'media-more-like-this',
+              inset: gutter,
               forcedMediaType: mediaKey.isMovie ? 'movie' : 'tv',
               items: recommendations,
             ),
@@ -926,6 +928,12 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             ],
           );
         }
+        // Clear of the floating bar, which grows with the reading size;
+        // where there is none, a margin.
+        final bottom = math.max(
+          AppSpacing.xxxl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+        );
         return CustomScrollView(
           slivers: [
             SliverPadding(
@@ -933,12 +941,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 gutter,
                 top + AppSpacing.md,
                 gutter,
-                // Clear of the floating bar, which grows with the
-                // reading size; where there is none, a margin.
-                math.max(
-                  AppSpacing.xxxl,
-                  FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                ),
+                more.isEmpty ? bottom : 0,
               ),
               sliver: SliverList.list(
                 children: [
@@ -970,10 +973,14 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                     ...serve,
                     ...reference,
                   ],
-                  ...more,
                 ],
               ),
             ),
+            if (more.isNotEmpty)
+              SliverPadding(
+                padding: EdgeInsets.only(bottom: bottom),
+                sliver: SliverList.list(children: more),
+              ),
           ],
         );
       },

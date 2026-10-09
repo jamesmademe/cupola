@@ -15,6 +15,7 @@ class AppSkeleton {
     double height = 168,
     double aspectRatio = 2 / 3,
     int count = 6,
+    double inset = AppSpacing.lg,
   }) {
     final width = height * aspectRatio;
     return SizedBox(
@@ -22,7 +23,7 @@ class AppSkeleton {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        padding: EdgeInsets.symmetric(horizontal: inset),
         itemCount: count,
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
         itemBuilder: (_, _) =>
