@@ -153,6 +153,24 @@ enum HomeModule {
     placement: HomePlacement.last,
   ),
 
+  /// The requester's Featured: the newest thing she asked for that arrived
+  /// in the last seven days, with the way to watch it.
+  readyToWatch(
+    audience: Audience.requester,
+    label: 'Ready to watch',
+    line: 'The newest thing you asked for that arrived',
+    services: [ServiceKey.seerr],
+  ),
+
+  /// What she asked for that is still on its way, and when it will be
+  /// ready.
+  yourRequests(
+    audience: Audience.requester,
+    label: 'Your requests',
+    line: 'What you asked for, and when it will be ready',
+    services: [ServiceKey.seerr],
+  ),
+
   /// Seerr's shelf of the week, with her state on every poster.
   trending(
     audience: Audience.requester,
@@ -165,7 +183,7 @@ enum HomeModule {
   comingSoon(
     audience: Audience.requester,
     label: 'Coming soon',
-    line: 'Movies and series on their way',
+    line: 'Movies and series with a release date ahead',
     services: [ServiceKey.seerr],
   );
 

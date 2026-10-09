@@ -15,6 +15,7 @@ import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/featured.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
+import 'package:cupola/features/requests/data/my_requests_provider.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -190,13 +191,19 @@ final featuredLightProvider = Provider.autoDispose.family<TitleLight?, String>((
   return drawn ? ref.watch(titleLightProvider(url)).value : null;
 });
 
-/// The light the operator's Home is lit by: the slide in front, while
-/// Featured is on the Home and has one; else the lamp.
+/// The light a Home is lit by: on the operator's, the slide of Featured in
+/// front; on the requester's, the title Ready to watch leads with; else the
+/// lamp.
 final featuredRoomLightProvider = Provider.autoDispose<Color?>((ref) {
-  if (ref.watch(shellAudienceProvider) != Audience.operator) return null;
-  if (!ref.watch(homeLayoutProvider).shown.contains(HomeModule.featured)) {
-    return null;
+  final shown = ref.watch(homeLayoutProvider).shown;
+  if (ref.watch(shellAudienceProvider) == Audience.requester) {
+    if (!shown.contains(HomeModule.readyToWatch)) return null;
+    final lead = ref.watch(myRequestsProvider).requests?.ready.firstOrNull;
+    if (lead == null) return null;
+    final url = lead.art.url;
+    return ref.watch(featuredLightProvider(url))?.light;
   }
+  if (!shown.contains(HomeModule.featured)) return null;
   final slides = ref.watch(featuredProvider).value;
   if (slides == null || slides.isEmpty) return null;
   final index = ref.watch(featuredViewProvider.select((view) => view.index));

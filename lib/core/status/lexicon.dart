@@ -213,6 +213,30 @@ abstract final class Lexicon {
   /// same call as the operator's delete, named for what it is to its owner.
   static const cancelRequest = 'Cancel request';
 
+  /// After [cancelRequest]: the request is gone.
+  static const requestCanceled = 'Request canceled';
+
+  /// The requester's word for a title she asked for that is on the server
+  /// and new to it: the last seven days. Older, it is [onTheServer].
+  static const readyToWatch = 'Ready to watch';
+
+  /// A request whoever runs the server said no to: an answer, never a
+  /// fault, so neutral.
+  static const declined = 'Declined';
+
+  /// Under [declined]: who answered, never a name.
+  static const declinedByOwner = "Declined by the server's owner";
+
+  /// Under [onItsWayState] when Seerr sees no download it can measure.
+  static const beingFetched = 'Being fetched';
+
+  /// A title she asked for whose files were taken off the server: it can be
+  /// asked for again.
+  static const removedFromServer = 'Removed from the server';
+
+  /// Under [removedFromServer].
+  static const askAgain = 'You can ask for it again.';
+
   /// Seerr's 401 on cancelling a request that is no longer waiting.
   static const noLongerCancellable =
       "It was already approved, so it can't be canceled here.";

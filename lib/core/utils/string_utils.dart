@@ -95,6 +95,16 @@ String formatShortDate(String isoDate, {DateTime? now}) {
       : '$day ${parsed.year}';
 }
 
+/// [day] as a day and a month, `12 Sep`, with the year only when it is not
+/// [now]'s: `12 Sep 2025`. For a day that is past and named with no weekday,
+/// as `On the server since 12 Sep`.
+String formatDayMonth(DateTime day, {DateTime? now}) {
+  final words = '${day.day} ${_shortMonthNames[day.month - 1]}';
+  return day.year == (now ?? DateTime.now()).year
+      ? words
+      : '$words ${day.year}';
+}
+
 /// The weekday of [day] in full: `Thursday`. For the Home's date and for
 /// what a screen reader says of a day, where `Thu` would be read as letters.
 String weekdayName(DateTime day) => _fullWeekdayNames[day.weekday - 1];

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -8,6 +9,10 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/brief_failure_line.dart';
+import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -34,10 +39,13 @@ import 'package:cupola/features/home/presentation/widgets/featured_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
 import 'package:cupola/features/home/presentation/widgets/now_playing_module.dart';
+import 'package:cupola/features/home/presentation/widgets/ready_to_watch_module.dart';
 import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
 import 'package:cupola/features/home/presentation/widgets/set_up_next_module.dart';
 import 'package:cupola/features/home/presentation/widgets/stack_health_module.dart';
 import 'package:cupola/features/home/presentation/widgets/storage_module.dart';
+import 'package:cupola/features/home/presentation/widgets/your_requests_module.dart';
+import 'package:cupola/features/requests/data/my_requests_provider.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/nothing_set_up.dart';
@@ -111,6 +119,7 @@ class HomeScreen extends ConsumerWidget {
                           showsHealth: !requester,
                           trailing: requester ? const _AccountButton() : null,
                         ),
+                        if (requester) const _RequesterFailureLine(),
                         for (final module in layout.shown)
                           homeModuleView(module),
                         if (!requester) const EditHomeRow(),
@@ -146,9 +155,45 @@ Widget homeModuleView(HomeModule module) => switch (module) {
   HomeModule.storage => const HomeStorageModule(),
   HomeModule.discoverShelf => const HomeDiscoverShelfModule(),
   HomeModule.setUpNext => const SetUpNextModule(),
+  HomeModule.readyToWatch => const HomeReadyToWatchModule(),
+  HomeModule.yourRequests => const HomeYourRequestsModule(),
   HomeModule.trending => const _TrendingShelf(),
   HomeModule.comingSoon => const _ComingSoonShelf(),
 };
+
+/// The requester's one failure, above everything: `Can't reach the server
+/// since 20:41` and Retry, or `You were signed out` and Sign in again,
+/// whichever of her reads it came from. The modules under it keep what they
+/// last knew and draw no failure of their own.
+class _RequesterFailureLine extends ConsumerWidget {
+  const _RequesterFailureLine();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final error = ref.watch(requesterHomeFailureProvider);
+    if (error == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        0,
+      ),
+      child: BriefFailureLine.line(
+        error: error,
+        service: ServiceKey.seerr,
+        onRetry: () => retryRequesterHome(ref),
+      ),
+    );
+  }
+}
+
+/// A shelf of the requester's Home: absent when its read failed and nothing
+/// was known before, since the Home's one line says the server did not
+/// answer.
+AsyncValue<List<MediaPreview>> _shelfItems(
+  AsyncValue<List<MediaPreview>> read,
+) => read.hasError && !read.hasValue ? const AsyncData(<MediaPreview>[]) : read;
 
 class _TrendingShelf extends ConsumerWidget {
   const _TrendingShelf();
@@ -157,11 +202,13 @@ class _TrendingShelf extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => DiscoverCarousel(
     title: HomeModule.trending.label,
     sectionId: 'home_trending',
-    items: ref.watch(atriumTrendingProvider),
-    onRetry: () => ref.invalidate(atriumTrendingProvider),
+    items: _shelfItems(ref.watch(atriumTrendingProvider)),
+    onSeeAll: () => context.go(ServiceRoutes.discover),
   );
 }
 
+/// What comes out soon, each poster with its day (`Fri 2 Oct`), no region
+/// and no count: not out yet is the backlog, never a fault.
 class _ComingSoonShelf extends ConsumerWidget {
   const _ComingSoonShelf();
 
@@ -169,8 +216,12 @@ class _ComingSoonShelf extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => DiscoverCarousel(
     title: HomeModule.comingSoon.label,
     sectionId: 'home_coming_soon',
-    items: ref.watch(comingSoonProvider),
-    onRetry: () => ref.invalidate(comingSoonProvider),
+    items: _shelfItems(ref.watch(comingSoonProvider)),
+    metaOf: (item) => switch (item.releaseDate) {
+      final date? when date.isNotEmpty => formatShortDate(date),
+      _ => null,
+    },
+    onSeeAll: () => context.go(ServiceRoutes.discoverCalendar),
   );
 }
 
@@ -227,6 +278,7 @@ Future<void> _refreshHome(WidgetRef ref) async {
 
   if (ref.read(shellAudienceProvider) == Audience.requester) {
     await Future.wait([
+      settle(ref.read(requestsProvider.future)),
       settle(ref.read(atriumTrendingProvider.future)),
       settle(ref.read(comingSoonProvider.future)),
     ]);
@@ -255,8 +307,7 @@ bool _isOn(WidgetRef ref, HomeModule module) =>
 
 void _invalidateHome(WidgetRef ref) {
   if (ref.read(shellAudienceProvider) == Audience.requester) {
-    ref.invalidate(atriumTrendingProvider);
-    ref.invalidate(comingSoonProvider);
+    retryRequesterHome(ref);
     return;
   }
   // The rows answered since the last read give way to Seerr's list.

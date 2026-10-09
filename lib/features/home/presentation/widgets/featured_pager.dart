@@ -18,6 +18,7 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart'
     show mediaLeadStyle;
@@ -46,6 +47,8 @@ class FeaturedPage {
     required this.lead,
     this.second,
     this.light,
+    this.eyebrow,
+    this.eyebrowTone,
   });
 
   final String title;
@@ -71,6 +74,11 @@ class FeaturedPage {
 
   /// The slide's light, once its artwork is read; null for the lamp.
   final TitleLight? light;
+
+  /// A line above the title, `Ready to watch · since 18:40`, with a dot in
+  /// [eyebrowTone] before it; null for none, as on Featured.
+  final String? eyebrow;
+  final StatusTone? eyebrowTone;
 }
 
 /// Up to three slides, one in front, moving on every [AppAnimation.dwell].
@@ -104,9 +112,13 @@ class FeaturedPager extends StatefulWidget {
     this.onArtDrawn,
     this.live = true,
     this.advances = true,
+    this.label = 'Featured',
   });
 
   final List<FeaturedPage> pages;
+
+  /// What the module is called to a screen reader.
+  final String label;
 
   /// The slide in front when the pager is built.
   final int initialIndex;
@@ -350,7 +362,7 @@ class _FeaturedPagerState extends State<FeaturedPager>
     return Semantics(
       container: true,
       explicitChildNodes: true,
-      label: 'Featured',
+      label: widget.label,
       child: Listener(
         onPointerDown: _down,
         onPointerUp: _up,
@@ -613,9 +625,59 @@ class _FeaturedCopy extends StatelessWidget {
           );
     // At a large reading size the two buttons go one under the other.
     final stacked = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final eyebrow = page.eyebrow;
+    final eyebrowTone = page.eyebrowTone;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (eyebrow != null) ...[
+          ExcludeSemantics(
+            // The dot rides the first line, however many the words take:
+            // centred on a line of `meta` at this reading size.
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (eyebrowTone != null) ...[
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top:
+                          (MediaQuery.textScalerOf(context).scale(
+                                AppType.meta.fontSize! *
+                                    (AppType.meta.height ?? 1),
+                              ) -
+                              7) /
+                          2,
+                    ),
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: statusToneColor(
+                          Theme.of(context).colorScheme,
+                          eyebrowTone,
+                          surface: room.ground,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s),
+                ],
+                Flexible(
+                  child: Text(
+                    eyebrow,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppType.meta
+                        .weight(FontWeight.w600)
+                        .copyWith(color: room.inkSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
         Padding(
           padding: EdgeInsets.only(right: inset),
           child: ExcludeSemantics(
