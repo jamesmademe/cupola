@@ -13,7 +13,8 @@ import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
-import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
+import 'package:cupola/features/discover/presentation/seerr_overview_provider.dart';
+import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -222,21 +223,45 @@ void main() {
     });
   });
 
-  group("the Seerr home's Needs a decision", () {
-    testWidgets('P2: the requester has none', (tester) async {
-      final harness = await _pump(
+  group("the Seerr overview's Needs a decision", () {
+    // The requests the region would read, counted by a stand-in for the
+    // provider that reads them.
+    Future<(ProfileHarness, List<int>)> pumpOverview(
+      WidgetTester tester,
+      ConfigProfile profile,
+    ) async {
+      final reads = <int>[];
+      final harness = await pumpWithProfile(
         tester,
-        Profiles.p2,
-        const SingleChildScrollView(child: SeerrDecisionsSection()),
+        profile,
+        child: const SeerrOverviewScreen(topPadding: 0),
+        surfaceSize: const Size(430, 3000),
+        overrides: [
+          seerrOverviewDecisionsProvider.overrideWith((ref) async {
+            reads.add(reads.length);
+            return (rows: const <SeerrOverviewRow>[], total: 0, isFloor: false);
+          }),
+        ],
       );
+      return (harness, reads);
+    }
+
+    testWidgets('P2: the requester has none, and nothing is read for it', (
+      tester,
+    ) async {
+      final (harness, reads) = await pumpOverview(tester, Profiles.p2);
 
       expect(find.text('Needs a decision'), findsNothing);
-      expect(
-        harness.network
-            .requestsTo(WorldIds.seerr)
-            .where((r) => r.path == '/api/v1/request'),
-        isEmpty,
-      );
+      expect(reads, isEmpty);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P1: the key has the region, and it is read', (tester) async {
+      final (harness, reads) = await pumpOverview(tester, Profiles.p1);
+
+      expect(find.text('Needs a decision'), findsOneWidget);
+      expect(reads, isNotEmpty);
 
       await harness.unmount(tester);
     });

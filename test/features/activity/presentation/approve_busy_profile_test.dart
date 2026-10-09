@@ -26,7 +26,7 @@ void main() {
       Profiles.p6.withLatency(WorldIds.seerr, const Duration(seconds: 1)),
       child: const ServiceAllRequestsScreen(),
     );
-    final approve = find.byTooltip('Approve request for Charge');
+    final approve = find.byTooltip('Approve Charge');
     await tester.ensureVisible(approve);
     await tester.pump();
     final rect = tester.getRect(approve);
@@ -34,7 +34,7 @@ void main() {
     await tester.tap(approve);
     await tester.pump();
 
-    // Busy in the first frame, where the glyph was, at the glyph's size.
+    // Busy in the first frame, in the button's own place, without it moving.
     expect(
       find.descendant(
         of: approve,
@@ -44,9 +44,11 @@ void main() {
     );
     expect(tester.getRect(approve), rect);
     expect(
-      tester.getSemantics(approve),
+      tester.getSemantics(
+        find.descendant(of: approve, matching: find.byType(FilledButton)),
+      ),
       containsSemantics(
-        tooltip: 'Approve request for Charge',
+        label: 'Approve Charge',
         value: 'Checking where it goes',
         isButton: true,
         isEnabled: true,

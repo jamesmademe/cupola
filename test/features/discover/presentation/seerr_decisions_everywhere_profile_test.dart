@@ -44,11 +44,11 @@ void main() {
       final harness = await pump(tester);
 
       for (final title in ['Charge', 'Metropolis']) {
-        expect(find.byTooltip('Approve request for $title'), findsOneWidget);
-        expect(find.byTooltip('Decline request for $title'), findsOneWidget);
+        expect(find.byTooltip('Approve $title'), findsOneWidget);
+        expect(find.byTooltip('Decline $title'), findsOneWidget);
       }
       // Processing is not a decision.
-      expect(find.byTooltip('Approve request for Sprite Fright'), findsNothing);
+      expect(find.byTooltip('Approve Sprite Fright'), findsNothing);
 
       await harness.unmount(tester);
     });
@@ -58,7 +58,7 @@ void main() {
     ) async {
       final harness = await pump(tester);
 
-      final button = find.byTooltip('Approve request for Charge');
+      final button = find.byTooltip('Approve Charge');
       await tester.ensureVisible(button);
       await tester.tap(button);
       await harness.settle(tester);
@@ -80,7 +80,7 @@ void main() {
       await answer(
         tester,
         harness,
-        tooltip: 'Decline request for Metropolis',
+        tooltip: 'Decline Metropolis',
         confirm: 'Decline request',
       );
 
@@ -105,10 +105,10 @@ void main() {
       final harness = await pump(tester);
 
       for (final title in ['Charge', 'Metropolis']) {
-        expect(find.byTooltip('Approve request for $title'), findsOneWidget);
-        expect(find.byTooltip('Decline request for $title'), findsOneWidget);
+        expect(find.byTooltip('Approve $title'), findsOneWidget);
+        expect(find.byTooltip('Decline $title'), findsOneWidget);
       }
-      expect(find.byTooltip('Approve request for Sprite Fright'), findsNothing);
+      expect(find.byTooltip('Approve Sprite Fright'), findsNothing);
       expect(
         find.byTooltip('Delete request for Sprite Fright'),
         findsOneWidget,
@@ -125,7 +125,7 @@ void main() {
       await answer(
         tester,
         harness,
-        tooltip: 'Approve request for Metropolis',
+        tooltip: 'Approve Metropolis',
         confirm: 'Approve request',
       );
 

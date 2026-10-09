@@ -70,7 +70,7 @@ void main() {
       // Approved already: not hers to take back from here.
       expect(find.byTooltip('Cancel request for Sprite Fright'), findsNothing);
       expect(find.textContaining(WorldPeople.anna), findsNothing);
-      expect(find.byTooltip('Approve request for Charge'), findsNothing);
+      expect(find.byTooltip('Approve Charge'), findsNothing);
 
       await harness.unmount(tester);
     });

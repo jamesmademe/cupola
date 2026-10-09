@@ -24,7 +24,7 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 
 import 'package:cupola/features/discover/presentation/seerr_overview_provider.dart';
 
-import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
+import 'package:cupola/features/requests/presentation/widgets/request_answer_controls.dart';
 
 import 'package:cupola/features/services/domain/service_tab.dart';
 
@@ -122,10 +122,9 @@ class _OverviewBody extends ConsumerWidget {
 
 /// The region the whole page is ordered around.
 ///
-/// It stays on screen with its empty state when nothing is waiting, unlike the
-/// dashboard's `SeerrDecisionsSection` which vanishes: this is a *tab*, and a
-/// tab whose first region disappears leaves the user unable to tell a working
-/// auto-approve rule from a page that failed to load.
+/// It stays on screen with its empty state when nothing is waiting: this is a
+/// *tab*, and a tab whose first region disappears leaves the user unable to
+/// tell a working auto-approve rule from a page that failed to load.
 class _DecisionsSection extends ConsumerWidget {
   const _DecisionsSection();
 
@@ -176,22 +175,33 @@ class _DecisionsSection extends ConsumerWidget {
 ///
 /// The header links to the Requests tab, which answers it; this row used to
 /// be the one place the waiting request was listed without the answer. The
-/// pair is the dashboard's own ([SeerrDecisionButton]), kept out of the row's
-/// sentence so each button keeps a node of its own.
+/// pair is the one every list draws ([RequestAnswerControls]), under the
+/// row's words and outside its sentence so each button keeps a node of its
+/// own, in line with the title it answers.
 class _DecisionRow extends StatelessWidget {
   const _DecisionRow({required this.row});
 
   final SeerrOverviewRow row;
 
+  /// The dot's width and the gap after it: where the row's words start.
+  static const double _indent = 8 + AppSpacing.sm;
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: _RequestRow(row: row)),
-        const SizedBox(width: AppSpacing.sm),
-        SeerrDecisionButton.decline(request: row.request, title: row.headline),
-        SeerrDecisionButton.approve(request: row.request, title: row.headline),
+        _RequestRow(row: row),
+        Padding(
+          padding: const EdgeInsets.only(left: _indent, bottom: AppSpacing.md),
+          // The lens's own Seerr, which the overview reads.
+          child: RequestAnswerControls.row(
+            instanceId: '',
+            requestId: row.request.id,
+            title: row.headline,
+            request: row.request,
+          ),
+        ),
       ],
     );
   }

@@ -140,6 +140,98 @@ void main() {
     );
   });
 
+  testWidgets('what waits is counted', (tester) async {
+    await _pump(
+      tester,
+      service: _scripted(requests: [_request(id: 1), _request(id: 2)]),
+    );
+
+    expect(find.text('2 requests waiting'), findsOneWidget);
+    expect(find.textContaining('+ requests'), findsNothing);
+  });
+
+  testWidgets('a lost page of requests makes the count a floor', (
+    tester,
+  ) async {
+    // Seerr holds ten; a page of them did not arrive, so the two waiting
+    // ones counted here are the least there are.
+    await _pump(
+      tester,
+      service: _scripted(
+        requests: SeerrRequestList(
+          [_request(id: 1), _request(id: 2)],
+          total: 10,
+          isPartial: true,
+        ),
+      ),
+    );
+    expect(find.text('2+ requests waiting'), findsOneWidget);
+    expect(find.text('2 requests waiting'), findsNothing);
+  });
+
+  testWidgets('with nothing waiting the region stays, and says so', (
+    tester,
+  ) async {
+    // A stack with auto-approvals sits here permanently: the region is a
+    // tab's, so it does not vanish into a page that looks failed.
+    await _pump(
+      tester,
+      service: _scripted(
+        requests: [
+          SeerrRequest(
+            id: 1,
+            status: RequestStatus.approved,
+            media: const RequestMedia(title: 'Dune', tmdbId: 1),
+            createdAt: '2026-09-01T00:00:00Z',
+            type: 'movie',
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('Needs a decision'), findsOneWidget);
+    expect(find.text('Nothing waiting on you'), findsOneWidget);
+    expect(find.byTooltip('Approve Dune'), findsNothing);
+  });
+
+  testWidgets('a Seerr that did not answer says so, never that nothing '
+      'waits', (tester) async {
+    await _pump(tester, service: _FailingRequestsSeerr());
+
+    expect(find.byType(AppErrorState), findsWidgets);
+    expect(find.text('Nothing waiting on you'), findsNothing);
+  });
+
+  testWidgets('each waiting request carries its two answers, named by its '
+      'title, whole at a phone width and twice the reading size', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      size: const Size(360, 3200),
+      textScaleFactor: 2.0,
+      service: _scripted(
+        requests: [
+          _request(id: 1, title: 'Dune', requester: 'Ada'),
+          _request(
+            id: 2,
+            title: 'The Lord of the Rings: The Fellowship of the Ring',
+            requester: 'Konstantinos Papadopoulos',
+          ),
+        ],
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    for (final verb in ['Approve', 'Decline']) {
+      final button = find.byTooltip('$verb Dune');
+      expect(button, findsOneWidget);
+      // Reachable at 2x: a control that overflows out of the row is a
+      // control nobody can press.
+      expect(tester.getRect(button).right, lessThanOrEqualTo(360));
+    }
+  });
+
   testWidgets('nothing overflows at an accessibility reading size', (
     tester,
   ) async {
@@ -189,8 +281,9 @@ Future<void> _pump(
   String? version = '2.2.0',
   bool configured = true,
   double textScaleFactor = 1.0,
+  Size size = const Size(420, 2600),
 }) async {
-  await tester.binding.setSurfaceSize(const Size(420, 2600));
+  await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
   await tester.pumpWidget(
@@ -251,6 +344,12 @@ class _ScriptedSeerr extends FakeSeerrService {
   @override
   Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) async =>
       trending;
+}
+
+class _FailingRequestsSeerr extends _ScriptedSeerr {
+  @override
+  Future<List<SeerrRequest>> getRequests() async =>
+      throw Exception('requests failed');
 }
 
 class _FailingTrendingSeerr extends _ScriptedSeerr {

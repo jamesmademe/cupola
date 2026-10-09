@@ -28,7 +28,8 @@ import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/requests/presentation/widgets/request_answer_controls.dart';
 import 'package:cupola/features/services/domain/seerr_request_filter.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -271,18 +272,22 @@ class _RequestListRow extends ConsumerWidget {
             requester: requester,
             gate: gate,
           ),
-          // A waiting request is answered where it is listed, with the
-          // dashboard's own pair, on a line of its own so the title keeps its
-          // width on a phone. "N waiting" links here, and this was the one
-          // list of them without the answer. Gated on the request's own
-          // status, never on displayStatus.
-          if (request.status == RequestStatus.pendingApproval)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                SeerrDecisionButton.decline(request: request, title: title),
-                SeerrDecisionButton.approve(request: request, title: title),
-              ],
+          // A waiting request is answered where it is listed, with the one
+          // pair every list draws, on a line of its own so the title keeps its
+          // width on a phone. "N waiting" links here. Gated on the request's
+          // own status, never on displayStatus; the requester's app has no
+          // pair, and the gap that would go with it goes too.
+          if (request.status == RequestStatus.pendingApproval &&
+              gate.operatorAction(SeerrAbility.approve).isDrawn)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              // The lens's own Seerr, which this list reads.
+              child: RequestAnswerControls.row(
+                instanceId: '',
+                requestId: request.id,
+                title: title,
+                request: request,
+              ),
             ),
         ],
       ),
