@@ -55,7 +55,7 @@ class SeriesScreen extends ConsumerWidget {
     return MediaBrowseScaffold<SonarrSeries>(
       title: 'TV series',
       searchHint: 'Search series',
-      activityRoute: '/activity/series',
+      activityRoute: '${ServiceRoutes.sonarr}/queue',
       navigationSection: NavigationSection.stack,
       serviceName: 'Sonarr',
       service: ServiceKey.sonarr,

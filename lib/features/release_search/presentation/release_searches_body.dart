@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
-import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
@@ -25,16 +24,19 @@ final releaseSearchTickProvider = Provider.autoDispose<void>((ref) {
   );
 });
 
-/// Activity › Now › **Searching**.
+/// The searches still running, and the finished ones whose releases can
+/// still be picked: the group at the head of Activity's Downloads, drawn
+/// only while there is one.
 ///
-/// The gerund completes the grammar of the bucket it joins, where the siblings
-/// are Downloading and Streaming — and Now is where live things go. Completed
-/// searches stay because their *window* is still live even once the search is
-/// not.
-class ReleaseSearchesBody extends ConsumerWidget {
-  const ReleaseSearchesBody({super.key, required this.bottomPadding});
+/// Holds the notification's half of the handoff too: a tapped "pick one"
+/// opens its sheet here, so the group is built (empty or not) wherever the
+/// notification lands.
+class ReleaseSearchesGroup extends ConsumerWidget {
+  const ReleaseSearchesGroup({super.key, this.heading});
 
-  final double bottomPadding;
+  /// What stands above the cards while there are any: the page's section
+  /// heading, built with the number of searches.
+  final Widget Function(int count)? heading;
 
   /// Opens the sheet a tapped notification asked for, once.
   ///
@@ -76,24 +78,8 @@ class ReleaseSearchesBody extends ConsumerWidget {
     ref.watchWhileLive(context, releaseSearchTickProvider);
     _openPendingSheet(context, ref);
     final jobs = ref.watch(releaseSearchJobsProvider);
+    if (jobs.isEmpty) return const SizedBox.shrink();
     final now = DateTime.now();
-
-    if (jobs.isEmpty) {
-      return SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.xxl,
-          AppSpacing.lg,
-          bottomPadding,
-        ),
-        child: const AppEmptyState(
-          icon: Icons.travel_explore_rounded,
-          title: 'No searches running',
-          // Teaches the affordance rather than only reporting the absence.
-          message: ReleaseSearchHandoffCopy.emptyStateHint,
-        ),
-      );
-    }
 
     // Queue positions are 1-based and counted oldest-first, which is the order
     // the manager actually starts them in.
@@ -103,42 +89,43 @@ class ReleaseSearchesBody extends ConsumerWidget {
         .reversed
         .toList();
 
-    return ListView.separated(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        bottomPadding,
-      ),
-      itemCount: jobs.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        final job = jobs[index];
-        final queueIndex = queued.indexWhere((j) => j.id == job.id);
-        return ReleaseSearchJobCard(
-          job: job,
-          now: now,
-          connection: ref.watch(
-            currentSettingsProvider.select(job.target.connectionIn),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ?heading?.call(jobs.length),
+        for (final (index, job) in jobs.indexed) ...[
+          if (index > 0) const SizedBox(height: AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: ReleaseSearchJobCard(
+              job: job,
+              now: now,
+              connection: ref.watch(
+                currentSettingsProvider.select(job.target.connectionIn),
+              ),
+              queuePosition: switch (queued.indexWhere((j) => j.id == job.id)) {
+                final position when position > 0 => position,
+                _ => null,
+              },
+              expandVerdict: true,
+              onTap: () => ReleaseSearchSheet.show(
+                context: context,
+                ref: ref,
+                jobId: job.id,
+                target: job.target,
+                reusedResults: job.status == ReleaseSearchJobStatus.completed,
+              ),
+              onCancel: () =>
+                  ref.read(releaseSearchJobsProvider.notifier).cancel(job.id),
+              onSearchAgain: () => ref
+                  .read(releaseSearchJobsProvider.notifier)
+                  .searchAgain(job.target),
+              onDismiss: () =>
+                  ref.read(releaseSearchJobsProvider.notifier).dismiss(job.id),
+            ),
           ),
-          queuePosition: queueIndex <= 0 ? null : queueIndex,
-          expandVerdict: true,
-          onTap: () => ReleaseSearchSheet.show(
-            context: context,
-            ref: ref,
-            jobId: job.id,
-            target: job.target,
-            reusedResults: job.status == ReleaseSearchJobStatus.completed,
-          ),
-          onCancel: () =>
-              ref.read(releaseSearchJobsProvider.notifier).cancel(job.id),
-          onSearchAgain: () => ref
-              .read(releaseSearchJobsProvider.notifier)
-              .searchAgain(job.target),
-          onDismiss: () =>
-              ref.read(releaseSearchJobsProvider.notifier).dismiss(job.id),
-        );
-      },
+        ],
+      ],
     );
   }
 }

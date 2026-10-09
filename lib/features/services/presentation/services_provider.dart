@@ -3195,10 +3195,8 @@ final pendingRequestCountProvider = FutureProvider<({int count, bool floor})?>((
 
 /// The requests list of one Seerr connection, the one destination that
 /// honours a connection in its link.
-String _seerrRequestsListRoute(String instanceId) => Uri(
-  path: '/activity/discover',
-  queryParameters: {'i': instanceId},
-).toString();
+String _seerrRequestsListRoute(String instanceId) =>
+    ServiceRoutes.activityRequestsOf(instanceId);
 
 String _seerrRequestRoute(SeerrRequest request) {
   final media = request.media;

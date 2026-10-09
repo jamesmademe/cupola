@@ -55,7 +55,19 @@ class DecisionRow extends ConsumerWidget {
     required this.decision,
     this.divided = false,
     this.outcome,
-  });
+  }) : _stacked = false;
+
+  /// The row of a page that lists every fault (Activity): the control under
+  /// the words, at their start, so neither the words nor the control is cut
+  /// to make room for the other.
+  const DecisionRow.stacked({
+    super.key,
+    required this.decision,
+    this.divided = false,
+    this.outcome,
+  }) : _stacked = true;
+
+  final bool _stacked;
 
   final DashboardDecision decision;
 
@@ -121,10 +133,17 @@ class DecisionRow extends ConsumerWidget {
           excludeFromSemantics: true,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
-            child: Row(
+            child: Flex(
+              direction: _stacked ? Axis.vertical : Axis.horizontal,
+              mainAxisSize: _stacked ? MainAxisSize.min : MainAxisSize.max,
+              crossAxisAlignment: _stacked
+                  ? CrossAxisAlignment.stretch
+                  : CrossAxisAlignment.center,
               children: [
                 // Everything the row's own label already speaks.
-                Expanded(
+                Flexible(
+                  flex: _stacked ? 0 : 1,
+                  fit: _stacked ? FlexFit.loose : FlexFit.tight,
                   child: ExcludeSemantics(
                     child: Row(
                       children: [
@@ -148,7 +167,7 @@ class DecisionRow extends ConsumerWidget {
                             children: [
                               Text(
                                 decision.title,
-                                maxLines: 1,
+                                maxLines: _stacked ? 3 : 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodyMedium?.weight(
                                   FontWeight.w600,
@@ -156,7 +175,7 @@ class DecisionRow extends ConsumerWidget {
                               ),
                               Text(
                                 outcome ?? decision.detail,
-                                maxLines: 2,
+                                maxLines: _stacked ? 4 : 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: decision.isFault && outcome == null
@@ -172,7 +191,20 @@ class DecisionRow extends ConsumerWidget {
                   ),
                 ),
                 // Not excluded: these are the point of the row.
-                if (outcome == null) _DecisionControls(decision: decision),
+                if (outcome == null)
+                  if (_stacked)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: AppSpacing.xs,
+                        left: 38 + AppSpacing.sm,
+                      ),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: _DecisionControls(decision: decision),
+                      ),
+                    )
+                  else
+                    _DecisionControls(decision: decision),
               ],
             ),
           ),

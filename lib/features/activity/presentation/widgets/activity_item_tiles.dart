@@ -8,6 +8,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart' as dynamic_utils;
 import 'package:cupola/core/widgets/app_card.dart';
@@ -887,15 +888,12 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
 /// closed.
 ///
 /// This route carried an `?i=` once before and it was removed in review,
-/// correctly, because nothing read it. `ActivityScreen` reads it now.
+/// correctly, because nothing read it. Activity's Requests reads it now.
 ///
 /// Omitted when the row names no connection — a single-Seerr stack, or a
 /// fixture predating the merge — so the ordinary link stays the ordinary link.
-String _requestsLocation(String instanceId) {
-  final path = '/activity/${ServiceType.discover.name}';
-  if (instanceId.isEmpty) return path;
-  return Uri(path: path, queryParameters: {'i': instanceId}).toString();
-}
+String _requestsLocation(String instanceId) =>
+    ServiceRoutes.activityRequestsOf(instanceId);
 
 /// Whether [item] can hand the import wizard a folder on disk.
 ///

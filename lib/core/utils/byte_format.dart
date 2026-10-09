@@ -143,3 +143,21 @@ double _pow1024(int exponent) {
   }
   return scale;
 }
+
+/// A rate [formatBytesPerSecond] wrote, as a screen reader should say it:
+/// `40.4 megabytes a second`, where `MB/s` would be read letter by letter.
+String spokenBytesPerSecond(String rate) {
+  const units = {
+    ' B/s': ' bytes a second',
+    ' KB/s': ' kilobytes a second',
+    ' MB/s': ' megabytes a second',
+    ' GB/s': ' gigabytes a second',
+    ' TB/s': ' terabytes a second',
+  };
+  for (final MapEntry(:key, :value) in units.entries) {
+    if (rate.endsWith(key)) {
+      return '${rate.substring(0, rate.length - key.length)}$value';
+    }
+  }
+  return rate;
+}

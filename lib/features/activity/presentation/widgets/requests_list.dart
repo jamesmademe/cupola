@@ -41,7 +41,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// variable face does not reach the `wght` axis and silently keeps the role's
 /// weight.
 class RequestsList extends ConsumerWidget {
-  const RequestsList({super.key, this.instanceId = ''});
+  const RequestsList({super.key, this.instanceId = ''}) : _embedded = false;
+
+  /// The list inside a page that scrolls and refreshes it: the cards in a
+  /// column, with no scroll and no pull of their own (Activity's Requests).
+  const RequestsList.embedded({super.key, this.instanceId = ''})
+    : _embedded = true;
+
+  final bool _embedded;
 
   /// Which Seerr this list belongs to, from the route's `?i=`.
   ///
@@ -90,6 +97,7 @@ class RequestsList extends ConsumerWidget {
       return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
     }
     final requestsAsync = ref.watch(requestsForProvider(instanceId));
+    if (_embedded) return _embeddedBody(context, ref, requestsAsync);
 
     return RefreshIndicator(
       onRefresh: () async => _reload(ref),
@@ -138,6 +146,53 @@ class RequestsList extends ConsumerWidget {
                 _RequestCard(request: requests[index], instanceId: instanceId),
           );
         },
+      ),
+    );
+  }
+
+  /// The embedded list's states, as a column: the shape of the cards while
+  /// it is read, the failure with Retry, the empty line, or the cards.
+  Widget _embeddedBody(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<SeerrRequest>> requestsAsync,
+  ) {
+    final requests = requestsAsync.value;
+    if (requests == null) {
+      if (requestsAsync.hasError) {
+        return AppErrorState(
+          error: requestsAsync.error!,
+          service: ServiceKey.seerr,
+          instanceId: instanceId,
+          onRetry: () => _reload(ref),
+        );
+      }
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.md),
+        child: AppSkeleton.listRows(count: 5),
+      );
+    }
+    if (requests.isEmpty) {
+      final namesSeerr = ref
+          .watch(roleGateProvider(instanceId))
+          .namesService(ServiceKey.seerr);
+      return AppEmptyState(
+        icon: Icons.person_add_alt_1_rounded,
+        title: 'No requests yet',
+        message: namesSeerr
+            ? 'Requests made in Seerr, by you or anyone you share it '
+                  'with, will appear here.'
+            : Lexicon.yourRequestsAppearHere,
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final request in requests)
+            _RequestCard(request: request, instanceId: instanceId),
+        ],
       ),
     );
   }

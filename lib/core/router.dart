@@ -26,8 +26,9 @@ import 'package:cupola/features/shell/presentation/shell_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
-import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
+import 'package:cupola/features/activity/domain/activity_tab.dart';
+import 'package:cupola/features/activity/presentation/activity_blocklist_page.dart';
+import 'package:cupola/features/activity/presentation/activity_page.dart';
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
 import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
@@ -169,17 +170,18 @@ const double _serviceTabTopPadding =
 /// same cost on every switch, so not shader warm-up. Tabs are siblings, not a
 /// hierarchy; a fade is what Material prescribes for top-level destinations,
 /// and it costs one blend per frame instead of the Zoom's layered scale.
-Page<void> _tabPage(GoRouterState state, Widget child) => CustomTransitionPage(
-  key: state.pageKey,
-  transitionDuration: AppAnimation.durationSm,
-  reverseTransitionDuration: AppAnimation.durationSm,
-  transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-      FadeTransition(
-        opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
-        child: child,
-      ),
-  child: child,
-);
+Page<void> _tabPage(GoRouterState state, Widget child, {LocalKey? key}) =>
+    CustomTransitionPage(
+      key: key ?? state.pageKey,
+      transitionDuration: AppAnimation.durationSm,
+      reverseTransitionDuration: AppAnimation.durationSm,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+          FadeTransition(
+            opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
+            child: child,
+          ),
+      child: child,
+    );
 
 /// A route whose page is a plain [RouteUtils.cupertinoPage] around [child].
 ///
@@ -2806,6 +2808,33 @@ String _preserveQuery(Uri source, String path) {
   return '$path$query';
 }
 
+/// Activity's views besides All, each at its own address and beside All in
+/// the branch rather than under it: a view replaces the page, it is not
+/// pushed onto it. A title opened from one still hangs under `/activity`
+/// (`ServiceRoutes.mediaMountFor`), and Back returns to the view.
+final List<RouteBase> _activityViews = [
+  for (final tab in ActivityTab.values)
+    if (tab != ActivityTab.all)
+      GoRoute(
+        path: tab.location,
+        pageBuilder: (context, state) => _activityPage(state, tab),
+      ),
+];
+
+/// Activity at [tab]: one page whichever view the address names, so moving
+/// between views changes what it draws and leaves the page where it is, with
+/// no transition and no second header.
+Page<void> _activityPage(GoRouterState state, ActivityTab tab) => _tabPage(
+  state,
+  ActivityPage(
+    tab: tab,
+    requestsOf: tab == ActivityTab.requests
+        ? state.uri.queryParameters['i']
+        : null,
+  ),
+  key: const ValueKey('activity'),
+);
+
 /// The route at the root of each tab's own navigator.
 ///
 /// A switch on [NavTab] rather than a hand-ordered list, so the branch order
@@ -2851,9 +2880,14 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
   ),
   NavTab.activity => GoRoute(
     path: ServiceRoutes.activity,
-    pageBuilder: (context, state) =>
-        _tabPage(state, const GlobalActivityScreen()),
-    routes: _mediaRoutes(),
+    pageBuilder: (context, state) => _activityPage(state, ActivityTab.all),
+    routes: [
+      _page(
+        ServiceRoutes.activityBlocklistSegment,
+        (state) => const ActivityBlocklistPage(),
+      ),
+      ..._mediaRoutes(),
+    ],
   ),
   // The catalogue, browsed at rest and searched by typing. Its see-alls hang
   // under it; the bare details Seerr's room and the pre-rename `/discover`
@@ -2980,14 +3014,19 @@ ServiceKey? _settingsServiceOf(GoRouterState state) {
   return null;
 }
 
-/// The kind of activity an `/activity/<type>` location names, or null.
-ServiceType? _activityTypeOf(GoRouterState state) {
-  final name = state.pathParameters['type'];
-  for (final type in ServiceType.values) {
-    if (type.name == name) return type;
-  }
-  return null;
-}
+/// Where an `/activity/<type>` location from before the views lands: an
+/// arr's queue for `movies`, `series` and `music`, the Requests view for
+/// `discover` (with its `?i=`), All for anything else.
+String _legacyActivityTarget(GoRouterState state) =>
+    switch (state.pathParameters['type']) {
+      'movies' => '${ServiceRoutes.radarr}/${ServiceTab.queue.segment}',
+      'series' => '${ServiceRoutes.sonarr}/${ServiceTab.queue.segment}',
+      'music' => '${ServiceRoutes.lidarr}/${ServiceTab.queue.segment}',
+      'discover' => ServiceRoutes.activityRequestsOf(
+        state.uri.queryParameters['i'],
+      ),
+      _ => ServiceRoutes.activity,
+    };
 
 /// Rewrites a location from where the stack used to live — `/dashboard…`
 /// while it was the first tab, `/services…` before that — onto `/stack…`, in
@@ -3096,7 +3135,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           for (final tab in NavTab.values)
             StatefulShellBranch(
               navigatorKey: branchNavigatorKeyFor(tab),
-              routes: [_branchRootFor(tab)],
+              routes: [
+                _branchRootFor(tab),
+                if (tab == NavTab.activity) ..._activityViews,
+              ],
             ),
         ],
       ),
@@ -3181,29 +3223,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       _moviesRoutes(path: '/movies'),
       _seriesRoutes(path: '/series'),
       _musicRoutes(path: '/music'),
-      // The per-service activity drill-down: already full-screen above the
-      // shell, and unchanged by the migration.
+      // Where Activity's per-service pages lived: a queue is its arr's own
+      // tab now, and Seerr's requests are Activity's Requests. One hop, the
+      // query kept; anything else under `/activity` that no view names lands
+      // on All.
       GoRoute(
         path: '/activity/:type',
-        // A kind of activity the app does not know is not the movies'. It used
-        // to open Radarr's, under a link that named something else; it lands
-        // on Activity itself instead.
-        redirect: (context, state) =>
-            _activityTypeOf(state) == null ? '/activity' : null,
-        builder: (context, state) {
-          final type = _activityTypeOf(state)!;
-          // `?i=` reaches the requests branch only, because that is the only
-          // branch that honours it: the \*arr tabs under here read their queue
-          // through the lens from top to bottom, and handing them a connection
-          // they ignore is how this route grew a parameter nothing read the
-          // first time. Giving those tabs one is that feature's work.
-          return ActivityScreen(
-            serviceType: type,
-            instanceId: type == ServiceType.discover
-                ? state.uri.queryParameters['i']
-                : null,
-          );
-        },
+        redirect: (context, state) => _legacyActivityTarget(state),
       ),
     ],
   );

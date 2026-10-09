@@ -93,6 +93,7 @@ export 'media_search_popup_menu.dart';
 // Navigation
 export 'floating_bottom_nav_bar.dart';
 export 'floating_nav_rail.dart';
+export 'page_tabs.dart';
 export 'selection_pills.dart';
 
 // Service tabs

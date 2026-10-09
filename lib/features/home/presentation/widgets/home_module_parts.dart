@@ -86,21 +86,36 @@ class HomeCoverageNote extends StatelessWidget {
 /// The 36×54 art beside a module's row: the title's poster, or the plate of
 /// the service it came from when there is none.
 class HomeRowArt extends StatelessWidget {
-  const HomeRowArt({super.key, required this.posterUrl, required this.icon});
+  const HomeRowArt({super.key, required this.posterUrl, required this.icon})
+    : _width = width,
+      _height = height;
+
+  /// The 44×66 art of a page's row, where the row carries more lines
+  /// (Activity's downloads and what finished).
+  const HomeRowArt.large({
+    super.key,
+    required this.posterUrl,
+    required this.icon,
+  }) : _width = largeWidth,
+       _height = largeHeight;
 
   final String? posterUrl;
   final IconData icon;
+  final double _width;
+  final double _height;
 
   static const width = 36.0;
   static const height = 54.0;
+  static const largeWidth = 44.0;
+  static const largeHeight = 66.0;
 
   @override
   Widget build(BuildContext context) {
     final url = posterUrl;
     final room = CupolaRoom.of(context);
     return SizedBox(
-      width: width,
-      height: height,
+      width: _width,
+      height: _height,
       child: url == null || url.isEmpty
           ? DecoratedBox(
               decoration: BoxDecoration(

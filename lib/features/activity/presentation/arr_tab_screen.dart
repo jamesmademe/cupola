@@ -30,14 +30,10 @@ enum ArrTabMode { queue, wanted, history }
 /// label, so this screen keeps the selected tab as the only content and leaves
 /// the wanted/cutoff distinction as the one meaningful second axis.
 ///
-/// **What it draws is the same as `WantedTab`/`ActivityTab`, deliberately.**
-/// The two surfaces disagreeing is the defect, not the duplication: a Sonarr
-/// Wanted list is a flat wall of episode rows until it is grouped by series
-/// and season, and a Radarr cutoff row without its quality-profile name does
-/// not say what cutoff it is failing. Both behaviours live in widgets those
-/// pages already share — [SonarrWantedHierarchy] and `WantedItemTile`'s
-/// `qualityProfileName` — so this screen calls them rather than growing a
-/// second, shallower rendering of the same records.
+/// A Sonarr Wanted list is a flat wall of episode rows until it is grouped
+/// by series and season, and a Radarr cutoff row without its quality-profile
+/// name does not say what cutoff it is failing: [SonarrWantedHierarchy] and
+/// `WantedItemTile`'s `qualityProfileName` say both.
 class ArrTabScreen extends ConsumerStatefulWidget {
   const ArrTabScreen({
     super.key,

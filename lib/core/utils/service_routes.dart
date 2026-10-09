@@ -552,6 +552,22 @@ class ServiceRoutes {
 
   /// The two top-level tabs a title can be opened from besides the Dashboard.
   static const activity = '/activity';
+
+  /// Activity's other three views, each at its own address (All is
+  /// [activity]): what is downloading and waits its turn, the household's
+  /// requests, and the last seven days.
+  static const activityDownloads = '$activity/downloads';
+  static const activityRequests = '$activity/requests';
+  static const activityHistory = '$activity/history';
+
+  /// Every arr's blocklist in one, from the foot of History.
+  static const activityBlocklistSegment = 'blocklist';
+  static const activityBlocklist = '$activity/$activityBlocklistSegment';
+
+  /// The requests of one Seerr connection, or of every one when
+  /// [instanceId] is null.
+  static String activityRequestsOf(String? instanceId) =>
+      _withQuery(activityRequests, {'i': instanceId});
   static const discover = '/discover';
 
   /// The calendar of everything the household's arrs date in the next
@@ -569,8 +585,8 @@ class ServiceRoutes {
   /// and a tab left and come back to still shows the title.
   ///
   /// The root mounts it once more, for the pages that sit above the tabs
-  /// (`/activity/movies`, the import flow): a page pushed into a tab from one
-  /// of those would open underneath it.
+  /// (the import flow): a page pushed into a tab from one of those would open
+  /// underneath it.
   static const mediaMountServices = {
     ServiceKey.seerr,
     ServiceKey.radarr,
@@ -590,7 +606,7 @@ class ServiceRoutes {
           '$stack/$service/$tab',
         ['stack', ...] => stack,
         ['home', ...] => home,
-        ['activity'] || ['activity', 'media', ...] => activity,
+        ['activity', ...] => activity,
         ['discover', ...] => discover,
         ['requests', ...] => requests,
         _ => '',

@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/router.dart';
-import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
@@ -198,12 +198,10 @@ final releaseSearchNotificationsProvider = Provider(
         ref.read(releaseSearchJobsProvider.notifier).jobById(payload) != null) {
       ref.read(pendingReleaseSearchJobProvider.notifier).request(payload);
     }
-    // Both halves are needed, and the second is the one a device pass found
-    // missing: routing to /activity alone lands on whichever bucket the user
-    // last used, so the Searching list is never built and nothing consumes the
-    // request above.
-    selectActivitySearching(ref);
-    ref.read(routerProvider).go('/activity');
+    // Downloads, whose head holds the searches: the view that consumes the
+    // request above. The address names it, so it is the view whichever one
+    // was last open.
+    ref.read(routerProvider).go(ServiceRoutes.activityDownloads);
   }),
 );
 
