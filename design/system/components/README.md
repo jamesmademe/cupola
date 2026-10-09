@@ -32,6 +32,7 @@ cards live in [`../motion/`](../motion/).
 | Lists | [ActivityRows](ActivityRows/README.md) | `lib/features/activity/presentation/widgets/activity_download_row.dart`, `lib/features/activity/presentation/widgets/activity_history_row.dart` |
 | Metadata | [TagChip](TagChip/README.md) | `lib/core/widgets/tag_chip.dart` |
 | Metadata | [MachineName](MachineName/README.md) | `lib/core/widgets/machine_name.dart` |
+| Status | [FaultCard](FaultCard/README.md) | `lib/features/activity/presentation/widgets/fault_card.dart` |
 | Status | [AppErrorState](AppErrorState/README.md) | `lib/core/widgets/app_error_state.dart`, `lib/core/widgets/inline_error_retry.dart`, `lib/core/widgets/brief_failure_line.dart` |
 | Status | [CapabilityBanner](CapabilityBanner/README.md) | `lib/core/widgets/capability_banner.dart`, `lib/core/capability/capability_copy.dart` |
 | Status | [ConnectionBadge](ConnectionBadge/README.md) | `lib/core/widgets/connection_badge.dart` |

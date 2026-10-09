@@ -23,7 +23,7 @@ At a large reading size (a text scale of 1.3 and over) the count goes under the 
 
 ## Semantics
 
-The heading is one node: a header whose label is the name and the count (`Downloads, 4 moving, 1 stuck`), or the `semanticLabel`; a button with the hint when it leads somewhere. The parts inside are silenced. A slab link is one button labelled `label, meta`.
+The heading is one node: a header whose label is the name and the count (`Downloads, 4 moving, 1 stuck`), or the `semanticLabel`; a button with the hint when it leads somewhere. The parts inside are silenced. A slab link is one button labelled `label, meta`, the dots between its counts said as pauses (`All 120 requests, 2 processing, 1 declined`).
 
 The section draws no tone: the rows do, through `statusToneColor`.
 

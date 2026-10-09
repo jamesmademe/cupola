@@ -15,6 +15,7 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/page_tabs.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/activity/data/acted_faults.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/activity/domain/activity_history.dart';
 import 'package:cupola/features/activity/domain/activity_readout.dart';
@@ -24,7 +25,9 @@ import 'package:cupola/features/activity/domain/everyones_requests.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_download_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
+import 'package:cupola/features/activity/presentation/widgets/decision_fault_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
+import 'package:cupola/features/activity/presentation/widgets/stuck_download_card.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
@@ -474,19 +477,58 @@ String requestsWaitLine(int count) => count == 1
     ? '1 request waits for your approval'
     : '$count requests wait for your approval';
 
-/// Needs you: every fault with its way out, then the requests that wait for
-/// an answer. The same list the Home's banner counts.
-class _NeedsYouSection extends ConsumerWidget {
+/// One card of Needs you: a fault's decision, or one stuck download of it,
+/// since each stuck download has a way out of its own.
+typedef _FaultEntry = ({
+  String id,
+  DashboardDecision? decision,
+  String? downloadKey,
+});
+
+List<_FaultEntry> _faultEntries(Iterable<DashboardDecision> faults) => [
+  for (final decision in faults)
+    if (decision.kind == DecisionKind.stalledDownload &&
+        decision.downloadKeys.isNotEmpty)
+      for (final key in decision.downloadKeys)
+        (id: 'download-$key', decision: null, downloadKey: key)
+    else
+      (id: decision.id, decision: decision, downloadKey: null),
+];
+
+/// Needs you: every fault on its card with its way out, then the requests
+/// that wait for an answer. The same list the Home's banner counts.
+class _NeedsYouSection extends ConsumerStatefulWidget {
   const _NeedsYouSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_NeedsYouSection> createState() => _NeedsYouSectionState();
+}
+
+class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
+  /// The cards as last drawn, for a card acted on to keep its place.
+  List<_FaultEntry> _shown = const [];
+
+  @override
+  Widget build(BuildContext context) {
     final decisions = ref.watch(dashboardDecisionsProvider);
     final answered = ref.watch(answeredRequestsProvider);
-    final faults = [
-      for (final decision in decisions.decisions)
-        if (decision.isFault) decision,
-    ];
+    final acted = ref.watch(actedFaultsProvider);
+    final entries = _faultEntries(
+      decisions.decisions.where((decision) => decision.isFault),
+    );
+    // A download acted on leaves the list as the queue is read again; its
+    // note stays where its card was until Activity is read again.
+    final present = {for (final entry in entries) entry.id};
+    final cards = [...entries];
+    for (final (index, entry) in _shown.indexed) {
+      final key = entry.downloadKey;
+      if (key != null &&
+          acted.containsKey(key) &&
+          !present.contains(entry.id)) {
+        cards.insert(index.clamp(0, cards.length), entry);
+      }
+    }
+    _shown = cards;
     final waiting = [
       for (final decision in decisions.decisions)
         if (decision.kind == DecisionKind.pendingRequest &&
@@ -495,7 +537,7 @@ class _NeedsYouSection extends ConsumerWidget {
     ];
     final requests = [...waiting, for (final a in answered.values) ?a.decision];
     final coverage = decisions.coverage;
-    if (faults.isEmpty && requests.isEmpty) {
+    if (cards.isEmpty && requests.isEmpty) {
       final note = coverage.failed.isEmpty ? null : coverageNote(coverage);
       if (note == null) return const SizedBox.shrink();
       return ActivitySection(
@@ -512,29 +554,37 @@ class _NeedsYouSection extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final room = CupolaRoom.of(context);
     final blue = statusToneColor(scheme, StatusTone.info, surface: room.slab);
+    final meta = needsYouMeta(faults: entries.length, requests: waiting.length);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ActivitySection(
           title: 'Needs you',
-          meta: needsYouMeta(faults: faults.length, requests: waiting.length),
+          meta: meta.isEmpty ? null : meta,
           children: [
             if (note != null)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.md),
                 child: HomeCoverageNote(note: note, coverage: coverage),
               ),
-            for (final (index, decision) in faults.indexed)
-              DecisionRow.stacked(
-                key: ValueKey(decision.id),
-                decision: decision,
-                divided: index > 0,
-              ),
-            if (faults.isEmpty) ..._requestRows(requests, answered, blue),
+            for (final (index, entry) in cards.indexed)
+              if (entry.downloadKey case final key?)
+                StuckDownloadCard(
+                  key: ValueKey(entry.id),
+                  downloadKey: key,
+                  divided: index > 0,
+                )
+              else
+                DecisionFaultCard(
+                  key: ValueKey(entry.id),
+                  decision: entry.decision!,
+                  divided: index > 0,
+                ),
+            if (cards.isEmpty) ..._requestRows(requests, answered, blue),
           ],
         ),
-        if (faults.isNotEmpty && requests.isNotEmpty)
+        if (cards.isNotEmpty && requests.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.gutter,

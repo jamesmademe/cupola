@@ -9,6 +9,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/lifecycle/gated_poll.dart';
+import 'package:cupola/features/activity/data/acted_faults.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
@@ -92,8 +93,10 @@ void invalidateActivity(WidgetRef ref, ActivityTab tab) {
       ref.invalidate(servicesArrHistoryProvider);
       ref.invalidate(releaseSearchJobsProvider);
       if (tab == ActivityTab.all) {
-        // The rows answered here give way to Seerr's list.
+        // The rows answered here give way to Seerr's list, and the notes of
+        // the downloads acted on to the queue's.
         ref.read(answeredRequestsProvider.notifier).clear();
+        ref.read(actedFaultsProvider.notifier).clear();
         for (final source in homeSessionsSources) {
           ref.invalidate(source);
         }

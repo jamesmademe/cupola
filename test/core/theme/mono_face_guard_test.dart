@@ -192,6 +192,11 @@ const _monoUses = <({String file, int uses, String prints})>[
     prints: 'the file an import became, exactly as the library names it',
   ),
   (
+    file: 'lib/features/activity/presentation/widgets/fault_card.dart',
+    uses: 1,
+    prints: 'the release a stuck download is, as its client names it',
+  ),
+  (
     file: 'lib/features/home/presentation/widgets/downloads_module.dart',
     uses: 1,
     prints:

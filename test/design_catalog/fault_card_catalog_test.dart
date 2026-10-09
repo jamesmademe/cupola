@@ -1,0 +1,146 @@
+@Tags(['catalog'])
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/widgets/failure_remedy.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
+import 'package:cupola/features/activity/presentation/widgets/fault_card.dart';
+import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
+
+import 'catalog.dart';
+
+/// The amber fill, as the cards build it.
+class _Fill extends StatelessWidget {
+  const _Fill(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: FilledButton(
+      onPressed: () {},
+      style: remedyFillStyle(context),
+      child: Text(label),
+    ),
+  );
+}
+
+const _poster = HomeRowArt.large(posterUrl: '', icon: Icons.movie_outlined);
+
+FaultCard _stuck({bool divided = false}) => FaultCard(
+  headline: 'Big Buck Bunny is stuck at 47%',
+  explanation:
+      'Nothing has arrived for 3 hours, and nobody sharing it has the whole '
+      'file any more.',
+  art: _poster,
+  release: 'Big.Buck.Bunny.2008.1080p.BluRay',
+  proof: 'Nothing for 3\u00A0h · Radarr → qBittorrent',
+  progress: 0.47,
+  primary: const _Fill('Try another download'),
+  primarySubtitle:
+      "Radarr drops this one (1.1\u00A0GB so far), won't pick it again, and "
+      'looks for another.',
+  secondary: [
+    (label: 'Remove', onPressed: () {}, semanticLabel: null),
+    (label: 'Keep waiting', onPressed: () {}, semanticLabel: null),
+  ],
+  divided: divided,
+);
+
+void main() {
+  catalogCard(
+    'FaultCard',
+    scenes: [
+      CatalogScene(
+        'FaultCard() · a stuck download: its proof, the amber fill with '
+        'what it does, and the quieter two',
+        (_) => ActivitySlab(children: [_stuck()]),
+        width: 390,
+      ),
+      CatalogScene(
+        'FaultCard() · a group of blocked imports, its cause behind Why?, '
+        'one way out',
+        (_) => const ActivitySlab(
+          children: [
+            FaultCard(
+              headline: '18 downloads need a manual import',
+              explanation:
+                  "Sonarr finished them and won't import them on its own.",
+              source: 'Sonarr',
+              why:
+                  'Found matching series via grab history, but release was '
+                  'matched to series by ID. Automatic import is not possible.',
+              art: HomeRowArt.large(posterUrl: '', icon: Icons.tv_outlined),
+              primary: _Fill('Review 18'),
+            ),
+          ],
+        ),
+        width: 390,
+      ),
+      CatalogScene(
+        'FaultCard(note:) · once a way out was taken: what happened in '
+        'place of the controls, with Undo where it can be taken back',
+        (_) => ActivitySlab(
+          children: [
+            const FaultCard(
+              headline: 'Elephants Dream is stuck at 31%',
+              art: _poster,
+              note: (
+                text: 'Dropped · Radarr 4K is looking for another download',
+                onUndo: null,
+              ),
+            ),
+            FaultCard(
+              headline: 'Big Buck Bunny is stuck at 47%',
+              art: _poster,
+              note: (
+                text:
+                    'Hidden until tomorrow 20:53 · it comes back if nothing '
+                    'moves',
+                onUndo: () {},
+              ),
+              divided: true,
+            ),
+          ],
+        ),
+        width: 390,
+      ),
+      CatalogScene(
+        'FaultCard.whole() · the Needs you page: a slab of its own, the '
+        'headline larger, the evidence whole, Why? open',
+        (_) => const ActivitySlab(
+          children: [
+            FaultCard.whole(
+              headline: 'Disk sdd reports 8 uncorrectable errors',
+              explanation:
+                  'sdd could not read some data by itself. The pool is still '
+                  'healthy: a scrub reads every block and repairs it from the '
+                  'other disks.',
+              source: 'TrueNAS · pool tank',
+              why: '8 uncorrectable errors reported for sdd (ZL2PQR7T).',
+              art: HomeRowArt.large(posterUrl: '', icon: Icons.storage_rounded),
+              evidence: ['Pool tank · Healthy · 72%', 'Disk sdd · 8 errors'],
+              primary: _Fill('Scrub tank'),
+            ),
+          ],
+        ),
+        width: 390,
+      ),
+      CatalogScene(
+        'Text at 200% · every line wraps, the buttons keep their target',
+        (_) => ActivitySlab(children: [_stuck()]),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'On the desktop · a stuck download in the page well',
+        (_) => ActivitySlab(children: [_stuck()]),
+        width: 560,
+        platform: CatalogPlatform.desktop,
+      ),
+    ],
+  );
+}

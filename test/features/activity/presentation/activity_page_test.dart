@@ -22,6 +22,7 @@ import 'package:cupola/features/activity/presentation/activity_page.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_download_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
+import 'package:cupola/features/activity/presentation/widgets/fault_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -303,9 +304,10 @@ void main() {
       expect((faults, requests), (4, 3));
       expect(find.text('4 faults · 3 requests'), findsOneWidget);
       expect(find.text('3 requests wait for your approval'), findsOneWidget);
-      // Every one of them is a row: faults stacked with their way out, the
-      // requests with Approve and Decline.
-      expect(find.byType(DecisionRow), findsNWidgets(faults + requests));
+      // Every fault is a card with its way out, every request a row with
+      // Approve and Decline.
+      expect(find.byType(FaultCard), findsNWidgets(faults));
+      expect(find.byType(DecisionRow), findsNWidgets(requests));
       for (final title in ['Charge', 'Metropolis', 'Night Shift']) {
         expect(find.byTooltip('Approve $title'), findsOneWidget);
       }
