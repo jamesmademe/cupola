@@ -922,7 +922,7 @@ class SonarrFake extends ArrFake {
                 e,
                 'WEBDL-1080p',
                 1080,
-                c.ago(const Duration(hours: 2, minutes: 43)),
+                c.agoToday(const Duration(hours: 2, minutes: 43)),
               )
             else
               _episodeFile(

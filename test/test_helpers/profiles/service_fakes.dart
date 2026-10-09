@@ -25,6 +25,15 @@ class ServerContext {
   /// [age] before [now], as the ISO-8601 UTC string every service here sends.
   String ago(Duration age) => now.subtract(age).toUtc().toIso8601String();
 
+  /// [age] before [now], but never before [now]'s local midnight: a record the
+  /// world calls today stays today when the suite runs just after midnight.
+  String agoToday(Duration age) {
+    final sinceMidnight = now.difference(
+      DateTime(now.year, now.month, now.day),
+    );
+    return ago(age < sinceMidnight ? age : sinceMidnight);
+  }
+
   /// [lead] after [now].
   String ahead(Duration lead) => now.add(lead).toUtc().toIso8601String();
 }
