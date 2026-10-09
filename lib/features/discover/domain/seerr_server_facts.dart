@@ -25,7 +25,16 @@ enum SeerrMediaServer {
   emby,
 
   /// `mediaServerType` 4: the server has none yet.
-  notConfigured,
+  notConfigured;
+
+  /// The button that opens a title in [server], from Seerr's link to it:
+  /// `Watch on Jellyfin`, or `Watch` when it is not known.
+  static String watchLabel(SeerrMediaServer? server) => switch (server) {
+    SeerrMediaServer.plex => 'Watch on Plex',
+    SeerrMediaServer.jellyfin => 'Watch on Jellyfin',
+    SeerrMediaServer.emby => 'Watch on Emby',
+    _ => 'Watch',
+  };
 }
 
 /// A way to sign in to a Seerr server with one's own account.

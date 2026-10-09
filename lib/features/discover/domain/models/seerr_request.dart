@@ -1,4 +1,5 @@
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/features/discover/domain/seerr_download.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/discover/domain/seerr_numbering.dart';
 
@@ -136,6 +137,27 @@ class SeerrRequest {
   final bool canRemove;
   final RequestedBy? requestedBy;
 
+  /// When Seerr last changed the request: an answer's time, for a request
+  /// that was approved or declined. Null when the row does not say.
+  final String? updatedAt;
+
+  /// The downloads Seerr follows for the copy this request asked for: the
+  /// 4K ones for a 4K request.
+  List<SeerrDownload> get downloads => switch (media) {
+    null => const [],
+    final media => is4k ? media.downloads4k : media.downloads,
+  };
+
+  /// Seerr's link to the title in the player it is set up with, the copy
+  /// this request asked for first; null while the player does not hold it.
+  String? get watchUrl => switch (media) {
+    null => null,
+    final media =>
+      is4k
+          ? media.mediaUrl4k ?? media.mediaUrl
+          : media.mediaUrl ?? media.mediaUrl4k,
+  };
+
   /// The copy this request is about, on the arr that holds it: its id there
   /// and Seerr's id of that server, the 4K copy for a 4K request. Null while
   /// no arr holds that copy yet.
@@ -161,6 +183,7 @@ class SeerrRequest {
     this.tags,
     this.canRemove = false,
     this.requestedBy,
+    this.updatedAt,
   });
 
   /// [numbering] is the numbering of the server that sent [json], for its
@@ -198,6 +221,7 @@ class SeerrRequest {
       requestedBy: json['requestedBy'] != null
           ? RequestedBy.fromJson(json['requestedBy'])
           : null,
+      updatedAt: json['updatedAt']?.toString(),
     );
   }
 
@@ -219,6 +243,7 @@ class SeerrRequest {
       tags: tags,
       canRemove: canRemove,
       requestedBy: requestedBy,
+      updatedAt: updatedAt,
     );
   }
 
@@ -378,6 +403,25 @@ class RequestMedia {
   /// `serviceId`, `externalServiceId4k` and `serviceId4k`).
   final List<SeerrMediaCopy> copies;
 
+  /// What Seerr follows of each copy's download (`downloadStatus`,
+  /// `downloadStatus4k`).
+  final List<SeerrDownload> downloads;
+  final List<SeerrDownload> downloads4k;
+
+  /// Seerr's link to each copy in the player it is set up with, once the
+  /// player holds it (`mediaUrl`, `mediaUrl4k`).
+  final String? mediaUrl;
+  final String? mediaUrl4k;
+
+  /// When the player first held the title (`mediaAddedAt`).
+  final DateTime? addedAt;
+
+  /// The wide artwork and TMDB's score, from the title's own page: the
+  /// request's row carries neither, so they come with its title.
+  final String? backdropPath;
+  final double? voteAverage;
+  final int? voteCount;
+
   const RequestMedia({
     this.id,
     this.title,
@@ -391,6 +435,14 @@ class RequestMedia {
     this.mediaType,
     this.posterPath,
     this.copies = const [],
+    this.downloads = const [],
+    this.downloads4k = const [],
+    this.mediaUrl,
+    this.mediaUrl4k,
+    this.addedAt,
+    this.backdropPath,
+    this.voteAverage,
+    this.voteCount,
   });
 
   factory RequestMedia.fromJson(
@@ -432,10 +484,39 @@ class RequestMedia {
       mediaType: mediaType,
       posterPath: posterPath,
       copies: SeerrMediaCopy.fromMediaInfo(json),
+      downloads: SeerrDownload.listOf(json['downloadStatus']),
+      downloads4k: SeerrDownload.listOf(json['downloadStatus4k']),
+      mediaUrl: _link(json['mediaUrl']),
+      mediaUrl4k: _link(json['mediaUrl4k']),
+      addedAt: DateTime.tryParse(
+        json['mediaAddedAt']?.toString() ?? '',
+      )?.toLocal(),
+      backdropPath:
+          json['backdropPath']?.toString() ?? json['backdrop_path']?.toString(),
+      voteAverage: switch (json['voteAverage']) {
+        final num value => value.toDouble(),
+        _ => null,
+      },
+      voteCount: switch (json['voteCount']) {
+        final num value => value.toInt(),
+        _ => null,
+      },
     );
   }
 
-  RequestMedia copyWith({String? title, String? year, String? posterPath}) {
+  static String? _link(Object? value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
+  RequestMedia copyWith({
+    String? title,
+    String? year,
+    String? posterPath,
+    String? backdropPath,
+    double? voteAverage,
+    int? voteCount,
+  }) {
     return RequestMedia(
       id: id,
       title: title ?? this.title,
@@ -449,6 +530,14 @@ class RequestMedia {
       mediaType: mediaType,
       posterPath: posterPath ?? this.posterPath,
       copies: copies,
+      downloads: downloads,
+      downloads4k: downloads4k,
+      mediaUrl: mediaUrl,
+      mediaUrl4k: mediaUrl4k,
+      addedAt: addedAt,
+      backdropPath: backdropPath ?? this.backdropPath,
+      voteAverage: voteAverage ?? this.voteAverage,
+      voteCount: voteCount ?? this.voteCount,
     );
   }
 }

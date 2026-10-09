@@ -321,15 +321,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       verdict: words.open ? roleGate.requestAction(kind) : const Live(),
       watch: watchAt == null || !watchAt.hasScheme
           ? null
-          : (
-              label: switch (player) {
-                SeerrMediaServer.plex => 'Watch on Plex',
-                SeerrMediaServer.jellyfin => 'Watch on Jellyfin',
-                SeerrMediaServer.emby => 'Watch on Emby',
-                _ => 'Watch',
-              },
-              url: watchAt,
-            ),
+          : (label: SeerrMediaServer.watchLabel(player), url: watchAt),
     );
   }
 

@@ -20,6 +20,17 @@ import 'package:cupola/features/discover/domain/seerr_search.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// What a request's row lacks and its title's page has: the name, the year,
+/// the artwork and TMDB's score.
+typedef _RequestTitle = ({
+  String? title,
+  String? year,
+  String? posterPath,
+  String? backdropPath,
+  double? voteAverage,
+  int? voteCount,
+});
+
 /// Thrown when a request has already been acted on somewhere else.
 ///
 /// Worth a type of its own because it is not an error on our side: the same
@@ -198,13 +209,13 @@ class SeerrService {
   /// the first paint wait for a serial walk.
   static const int _hydrationConcurrency = 8;
 
-  /// tmdbId → hydrated title metadata.
+  /// `movie:550` → hydrated title metadata. Keyed by kind as well as TMDB
+  /// id, since a movie and a series can share the number.
   ///
   /// Without this every refresh re-fetched the details of the same unknown
   /// titles from Seerr's TMDB passthrough — the list only grows, so a refresh
   /// that ran N calls ran N calls every time.
-  final Map<int, ({String? title, String? year, String? posterPath})>
-  _mediaCache = {};
+  final Map<String, _RequestTitle> _mediaCache = {};
 
   /// [numbering] when the caller already knows what the server follows, as
   /// a test does; otherwise [numbering()] asks the server the first time a
@@ -596,49 +607,47 @@ class SeerrService {
         title == null ||
         title == 'Unknown Media' ||
         title.startsWith('Unknown Media (');
+    // Seerr's request rows carry no title, so a real one is always
+    // hydrated, and takes its artwork and score with it.
     if (!needsTitle && media.posterPath != null) return request;
 
     final tmdbId = media.tmdbId;
     if (tmdbId == null) return request;
 
-    final cached = _mediaCache[tmdbId];
+    final key = '${media.mediaType}:$tmdbId';
+    final cached = _mediaCache[key];
     if (cached != null) {
       return _applyHydration(request, cached);
     }
 
     try {
-      if (media.mediaType == 'movie') {
-        final details = await getMovie(tmdbId);
-        _mediaCache[tmdbId] = (
-          title: details['title']?.toString(),
-          year: details['releaseDate']?.toString().substring(0, 4),
-          posterPath:
-              details['posterPath']?.toString() ??
-              details['poster_path']?.toString(),
-        );
-      } else if (media.mediaType == 'tv') {
-        final details = await getTv(tmdbId);
-        _mediaCache[tmdbId] = (
-          title: details['name']?.toString(),
-          year: details['firstAirDate']?.toString().substring(0, 4),
-          posterPath:
-              details['posterPath']?.toString() ??
-              details['poster_path']?.toString(),
-        );
-      } else {
-        return request;
-      }
-      return _applyHydration(request, _mediaCache[tmdbId]!);
+      final movie = media.mediaType == 'movie';
+      if (!movie && media.mediaType != 'tv') return request;
+      final details = movie ? await getMovie(tmdbId) : await getTv(tmdbId);
+      final entry = _mediaCache[key] = (
+        title: details[movie ? 'title' : 'name']?.toString(),
+        year: details[movie ? 'releaseDate' : 'firstAirDate']
+            ?.toString()
+            .substring(0, 4),
+        posterPath:
+            details['posterPath']?.toString() ??
+            details['poster_path']?.toString(),
+        backdropPath:
+            details['backdropPath']?.toString() ??
+            details['backdrop_path']?.toString(),
+        voteAverage: doubleOrNull(
+          details['voteAverage'] ?? details['vote_average'],
+        ),
+        voteCount: intOrNull(details['voteCount'] ?? details['vote_count']),
+      );
+      return _applyHydration(request, entry);
     } catch (e) {
       // Ignore hydration errors
       return request;
     }
   }
 
-  SeerrRequest _applyHydration(
-    SeerrRequest request,
-    ({String? title, String? year, String? posterPath}) entry,
-  ) {
+  SeerrRequest _applyHydration(SeerrRequest request, _RequestTitle entry) {
     final media = request.media;
     if (media == null) return request;
     return request.copyWith(
@@ -646,6 +655,9 @@ class SeerrService {
         title: entry.title ?? media.title,
         year: entry.year ?? media.year,
         posterPath: entry.posterPath ?? media.posterPath,
+        backdropPath: entry.backdropPath,
+        voteAverage: entry.voteAverage,
+        voteCount: entry.voteCount,
       ),
     );
   }
