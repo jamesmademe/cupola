@@ -15,7 +15,6 @@ import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_known_arr.dart';
 import 'package:cupola/features/discover/domain/seerr_quota.dart';
 import 'package:cupola/features/discover/domain/seerr_refusal.dart';
-import 'package:cupola/features/discover/domain/seerr_request_update.dart';
 import 'package:cupola/features/discover/domain/seerr_search.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -825,57 +824,6 @@ class SeerrService {
     await _guardConflict(
       () => _client.post('/api/v1/request/$requestId/approve'),
     );
-  }
-
-  /// Approves [request] after changing where it goes: to [server], with
-  /// [profileId] and [rootFolder] (any left null stays as the request has
-  /// it).
-  ///
-  /// Two writes, in order: `PUT /api/v1/request/{id}` with the change
-  /// ([seerrRequestUpdateBody]), then `POST /api/v1/request/{id}/approve`.
-  /// Seerr sends the request on approval with whatever the request then
-  /// carries, so the edit has to land first. **When the edit fails, nothing
-  /// is approved** and the failure is thrown: approving anyway would send
-  /// the request where the person had just said not to. A 404 or 409 is the
-  /// race [SeerrRequestConflict] describes; Seerr edits only a request still
-  /// waiting. A 202 is Seerr keeping the request as it was (every season of
-  /// a series already claimed by another request), and is the same refusal.
-  ///
-  /// A change that asks for nothing new is not sent; the request is approved
-  /// as it stands. A change to a [server] of the wrong kind or copy, or to a
-  /// series request with no seasons, is refused before anything is sent
-  /// ([ArgumentError]).
-  Future<void> approveRequestWithChanges(
-    SeerrRequest request, {
-    SeerrArrServer? server,
-    int? profileId,
-    String? rootFolder,
-  }) async {
-    if (seerrRequestChanges(
-      request,
-      server: server,
-      profileId: profileId,
-      rootFolder: rootFolder,
-    )) {
-      final body = seerrRequestUpdateBody(
-        request,
-        server: server,
-        profileId: profileId,
-        rootFolder: rootFolder,
-      );
-      await _guardConflict(() async {
-        final response = await _client.put(
-          '/api/v1/request/${request.id}',
-          data: body,
-        );
-        if (response.statusCode == 202) {
-          throw const SeerrRequestConflict(
-            'Seerr kept that request as it was, so it was not approved.',
-          );
-        }
-      });
-    }
-    await approveRequest(request.id);
   }
 
   /// Declines a request, leaving the media untouched.
