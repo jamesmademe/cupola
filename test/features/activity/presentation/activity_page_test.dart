@@ -168,6 +168,22 @@ WorldDownload _torrent(
   speed: speed,
 );
 
+/// A grab of [arr], a Sonarr connection, moving through qBittorrent.
+WorldDownload _grab(int n, String arr) => WorldDownload(
+  id: 'a1f0c3d4e5f60718293a4b5c6d7e8f90123458${n.toString().padLeft(2, '0')}',
+  release: 'Show.$n.S01E01.1080p',
+  client: 'qbittorrent',
+  state: DownloadState.downloading,
+  progress: 0.4,
+  size: _gb,
+  arr: arr,
+  title: WorldTitles.cosmosLaundromat,
+  season: 1,
+  episode: n,
+  speed: 2 * _mb,
+  eta: const Duration(minutes: 10),
+);
+
 /// A history record as an arr sends it, with the movie it embeds.
 Map<String, Object?> _import(
   ProfileHarness harness,
@@ -330,6 +346,74 @@ void main() {
       expect(find.text('2 processing'), findsOneWidget);
 
       await harness.unmount(tester);
+    });
+
+    group('a Seerr list that lost a page', () {
+      /// 120 requests in pages of 50, the first page answering and every
+      /// later one failing. [count] is what Seerr's first page says it holds.
+      Future<ProfileHarness> lostPage(
+        WidgetTester tester, {
+        required int? count,
+      }) async {
+        final harness = await ProfileHarness.start(
+          Profiles.p2,
+          now: _now,
+          overrides: _clocks,
+        );
+        harness.network.on(WorldIds.seerr, 'GET', '/api/v1/request', (request) {
+          final skip = int.tryParse(request.query['skip'] ?? '') ?? 0;
+          if (skip >= 50) {
+            return NetworkReply.json({'message': 'boom'}, status: 500);
+          }
+          return NetworkReply.json({
+            'pageInfo': {'pages': 3, 'pageSize': 50, 'results': ?count},
+            'results': [
+              for (var i = 0; i < 50; i++)
+                {
+                  'id': i + 1,
+                  'status': 2,
+                  'createdAt': '2026-10-09T10:00:00.000Z',
+                  'type': 'movie',
+                  'media': {
+                    'id': i + 1,
+                    'tmdbId': 1000 + i,
+                    'status': 3,
+                    'mediaType': 'movie',
+                    'title': 'Request ${i + 1}',
+                  },
+                },
+            ],
+          });
+        });
+        return _mount(tester, harness, ActivityTab.all);
+      }
+
+      testWidgets("keeps Seerr's own count: 120, never the 50 that came", (
+        tester,
+      ) async {
+        final harness = await lostPage(tester, count: 120);
+
+        expect(_sections(tester), contains("Everyone's requests · 120 total"));
+        expect(find.text('All 120 requests'), findsOneWidget);
+        expect(find.text('50 total'), findsNothing);
+        // What is tallied over the rows that came is short of the whole, so
+        // it is left unsaid.
+        expect(find.textContaining('processing'), findsNothing);
+
+        await harness.unmount(tester);
+      });
+
+      testWidgets('with no count from Seerr the rows are a floor: 50+', (
+        tester,
+      ) async {
+        final harness = await lostPage(tester, count: null);
+
+        expect(_sections(tester), contains("Everyone's requests · 50+ total"));
+        expect(find.text('All 50+ requests'), findsOneWidget);
+        expect(find.text('50 total'), findsNothing);
+
+        await harness.unmount(tester);
+      });
     });
 
     testWidgets('Downloads on All stops at five rows and leads to the '
@@ -1021,6 +1105,139 @@ void main() {
       final words = _readout(tester).toList();
       expect(words, contains('18.0 MB/s'));
       expect(words, isNot(contains('40.4 MB/s')));
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P3 with Radarr and Sonarr both down: no figure at all, '
+        'never Nothing moving', (tester) async {
+      final handle = tester.ensureSemantics();
+      final harness = await _pump(
+        tester,
+        Profiles.p3
+            .withBehaviour(WorldIds.radarr, ConnectionBehaviour.didNotAnswer)
+            .withBehaviour(WorldIds.sonarr, ConnectionBehaviour.didNotAnswer),
+        ActivityTab.all,
+      );
+
+      // Nobody was asked who could answer: the count is a dash, not a zero.
+      expect(_readout(tester).toList(), ['Activity', '— moving']);
+      expect(find.text('Nothing moving'), findsNothing);
+      expect(
+        find.semantics.byLabel('Activity\nmoving, count unavailable'),
+        findsOneWidget,
+      );
+      expect(_titles(tester), isNot(contains('Downloads')));
+
+      handle.dispose();
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a full page of the queue with no total is a floor, never '
+        'the figure: 202+, not 202', (tester) async {
+      final harness = await ProfileHarness.start(
+        Profiles.p3,
+        now: _now,
+        overrides: _clocks,
+      );
+      // A server behind a proxy that drops `totalRecords`: one full page of
+      // the queue, and nothing to say whether a second one follows.
+      harness.network.on(
+        WorldIds.radarr,
+        'GET',
+        '/api/v3/queue',
+        (_) => NetworkReply.json({
+          'page': 1,
+          'pageSize': 200,
+          'records': [
+            for (var i = 0; i < 200; i++)
+              {
+                'id': i + 1,
+                'title': 'Release.$i',
+                'status': 'downloading',
+                'size': 1000,
+                'sizeleft': 500,
+              },
+          ],
+        }),
+      );
+      await _mount(tester, harness, ActivityTab.all);
+
+      // Radarr's 200 and Sonarr's two, and the walk may not be over.
+      expect(_readout(tester).toList(), ['Activity', '202+ moving']);
+      expect(find.text('202+ moving'), findsWidgets);
+      expect(find.text('202 moving'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P2, Seerr alone: nothing about a queue is claimed beyond '
+        'the readout, and no Downloads', (tester) async {
+      final harness = await _pump(tester, Profiles.p2, ActivityTab.all);
+
+      expect(_titles(tester), ["Everyone's requests"]);
+      expect(find.textContaining('in the queue'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P6, Sonarr Anime silent: its own name is the one left out, '
+        'the other Sonarr is counted', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p6.withBehaviour(
+          WorldIds.sonarrAnime,
+          ConnectionBehaviour.didNotAnswer,
+        ),
+        ActivityTab.all,
+      );
+
+      expect(find.text('Not in the total: Sonarr Anime'), findsWidgets);
+      expect(find.text('Not in the total: Sonarr'), findsNothing);
+      expect(_readout(tester).first, 'Activity');
+      expect(_readout(tester), contains('4 moving'));
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P6: two Sonarr connections, each one\'s downloads counted '
+        'once and each row naming its own', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p6.withDownloads([
+          _grab(1, WorldIds.sonarr),
+          _grab(2, WorldIds.sonarrAnime),
+        ]),
+        ActivityTab.downloads,
+      );
+
+      // Four moving and the stuck one in the world, and the two grabs.
+      expect(_sections(tester).first, 'Downloads · 6 moving · 1 stuck');
+      expect(find.text('Sonarr 1 → qBittorrent'), findsWidgets);
+      expect(find.text('Sonarr Anime → qBittorrent'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P6, both Sonarr connections silent: each one is named, '
+        'by its own name', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p6
+            .withBehaviour(WorldIds.sonarr, ConnectionBehaviour.didNotAnswer)
+            .withBehaviour(
+              WorldIds.sonarrAnime,
+              ConnectionBehaviour.didNotAnswer,
+            ),
+        ActivityTab.all,
+      );
+
+      expect(
+        find.text('Not in the total: Sonarr 1, Sonarr Anime'),
+        findsWidgets,
+      );
+      // The rest of the page is the other services', counted whole.
+      expect(_readout(tester), contains('4 moving'));
 
       await harness.unmount(tester);
     });
