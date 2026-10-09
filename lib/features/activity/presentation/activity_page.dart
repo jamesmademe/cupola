@@ -785,7 +785,7 @@ class _DownloadsSection extends ConsumerWidget {
     return ActivitySection(
       title: _title,
       meta: meta,
-      semanticLabel: [_title, spokenCountPhrase(meta)].join(', '),
+      semanticLabel: [_title, spokenDownloadsSubtitle(meta)].join(', '),
       children: [
         if (note != null)
           Padding(
