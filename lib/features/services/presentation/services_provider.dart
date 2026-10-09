@@ -1330,6 +1330,10 @@ final arrivalsSinceProvider = Provider.autoDispose<DateTime>(
   (ref) => ref.watch(arrivalsClockProvider)().subtract(arrivalsWindow),
 );
 
+/// The clock a stall is measured by: a torrent is stuck once nothing has
+/// arrived for [stuckAfter] before it. A test pins it.
+final stallClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
 /// The clock Arrived reads its week and its `2 h ago` by. A test pins it.
 final arrivalsClockProvider = Provider<DateTime Function()>(
   (ref) => DateTime.now,
@@ -1362,6 +1366,7 @@ class ServiceQueueItem {
     this.etaSeconds,
     this.fault,
     this.stalledSince,
+    this.swarmSeeds,
     this.warning,
     this.clientRateBytesPerSecond,
     this.route,
@@ -1415,6 +1420,13 @@ class ServiceQueueItem {
   /// qBittorrent's last activity, or the \*arr's `added`. Feeds the decision's
   /// ranking.
   final DateTime? stalledSince;
+
+  /// How many peers with the whole file the trackers know of, on a torrent
+  /// client's row (qBittorrent's `num_complete`), or null when the client does
+  /// not say. On a stall it picks the remedy: somebody has the file but none
+  /// is reachable, so asking the trackers again can help, or nobody has it,
+  /// and only another download can ([stuckRemedyFor]).
+  final int? swarmSeeds;
 
   /// The source's own message about this row, when there is one.
   final String? warning;
@@ -1506,6 +1518,7 @@ class ServiceQueueItem {
     etaSeconds: etaSeconds,
     fault: fault,
     stalledSince: stalledSince,
+    swarmSeeds: swarmSeeds,
     warning: warning,
     clientRateBytesPerSecond: clientRateBytesPerSecond,
     route: route,
@@ -1531,6 +1544,11 @@ class ServiceQueueItem {
 
   /// Whether this transfer is genuinely moving, or waiting to.
   bool get isActive => fault == null && !held;
+
+  /// Whether this row's client dates the last byte it received (qBittorrent,
+  /// Transmission), so that its own clock, not a flag, decides a stall.
+  bool get measuresIdle =>
+      service == ServiceKey.qbittorrent || service == ServiceKey.transmission;
 }
 
 /// Everything currently transferring, across every configured source.
@@ -2063,8 +2081,15 @@ ServiceQueueItem _joinedQueueItem(
   // The \*arr's fault first: an import it refuses is the more specific truth.
   // The client's stall second — the \*arr polls its client on a minute's delay
   // and can still be calling a dead transfer "downloading".
-  final fault = arr.fault ?? client.fault;
-  final faultFromClient = arr.fault == null && client.fault != null;
+  //
+  // Except a stall, where the torrent client measured how long nothing has
+  // arrived: the \*arr's "stalled" is the client's own instant flag, read a
+  // minute late, and it would raise the fault the 30 minutes hold back.
+  final arrStallOverruled =
+      arr.fault == InFlightFault.stalled && client.measuresIdle;
+  final arrFault = arrStallOverruled ? null : arr.fault;
+  final fault = arrFault ?? client.fault;
+  final faultFromClient = arrFault == null && client.fault != null;
   // The byte pair travels together: one side's done over the other's total
   // is a figure neither source reported.
   final clientMeasured = client.totalBytes != null;
@@ -2081,7 +2106,12 @@ ServiceQueueItem _joinedQueueItem(
     etaSeconds: client.etaSeconds ?? arr.etaSeconds,
     fault: fault,
     stalledSince: faultFromClient ? client.stalledSince : arr.stalledSince,
-    warning: arr.warning ?? client.warning,
+    swarmSeeds: client.swarmSeeds,
+    // A stall the client overruled takes the \*arr's message with it; one the
+    // client confirms keeps it, the more telling of the two.
+    warning: arrStallOverruled && fault != InFlightFault.stalled
+        ? client.warning
+        : arr.warning ?? client.warning,
     clientRateBytesPerSecond: client.clientRateBytesPerSecond,
     route: arr.route,
     detail: faultFromClient ? client.detail : arr.detail,
@@ -2118,9 +2148,10 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
       : await ref
             .watch(qbittorrentServiceForProvider(source.instanceId))
             .getTorrents();
+  final now = ref.watch(stallClockProvider)();
   final read = [
     for (final torrent in torrents)
-      if (qbittorrentInFlight(torrent.state) case final reading?)
+      if (qbittorrentInFlight(torrent, now: now) case final reading?)
         (torrent: torrent, reading: reading),
   ];
 
@@ -2160,7 +2191,11 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
         held: reading.held,
         stalledSince: reading.fault == null
             ? null
-            : _epochSeconds(torrent.lastActivity),
+            : idleSince(
+                lastActivity: torrent.lastActivity,
+                added: torrent.addedOn,
+              ),
+        swarmSeeds: torrent.swarmSeeds < 0 ? null : torrent.swarmSeeds,
         detail: joinDisplayParts([
           formatSpeed(torrent.dlSpeed),
           countedNoun(torrent.seeders, 'seed', 'seeds'),
@@ -2187,9 +2222,10 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
       : await ref
             .watch(transmissionClientForProvider(source.instanceId))
             .torrents();
+  final now = ref.watch(stallClockProvider)();
   final read = [
     for (final torrent in torrents)
-      if (transmissionInFlight(torrent) case final reading?)
+      if (transmissionInFlight(torrent, now: now) case final reading?)
         (torrent: torrent, reading: reading),
   ];
 
@@ -2230,7 +2266,10 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
         held: reading.held,
         stalledSince: reading.fault == null
             ? null
-            : _epochSeconds(torrent.activityDate),
+            : idleSince(
+                lastActivity: torrent.activityDate,
+                added: torrent.addedDate,
+              ),
         detail: joinDisplayParts([
           formatSpeed(torrent.rateDownload),
           countedNoun(torrent.peersSendingToUs, 'peer', 'peers'),
@@ -2248,9 +2287,6 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
 const int _qbNoEta = 8640000;
 
 int? _qbEta(int eta) => eta <= 0 || eta >= _qbNoEta ? null : eta;
-
-DateTime? _epochSeconds(int seconds) =>
-    seconds <= 0 ? null : DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
 
 /// SABnzbd's queue, as in-flight items, with its faults: a job SABnzbd paused
 /// itself, and every job of a queue its disk stopped. See

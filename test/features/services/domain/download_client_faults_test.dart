@@ -1,16 +1,26 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
+
+/// The moment every reading below is taken at.
+final _now = DateTime(2026, 10, 9, 21);
+
+/// [_now] less [ago], in the epoch seconds the clients send.
+int _secondsAgo(Duration ago) =>
+    _now.subtract(ago).millisecondsSinceEpoch ~/ 1000;
 
 TransmissionTorrent _torrent({
   int status = 4,
   int error = 0,
   String errorString = '',
   bool isStalled = false,
+  int activityDate = 0,
+  int addedDate = 0,
 }) => TransmissionTorrent.fromJson({
   'hashString': 'abc',
   'name': 'Night.Shift.S02E04.1080p.WEB',
@@ -18,14 +28,25 @@ TransmissionTorrent _torrent({
   'error': error,
   'errorString': errorString,
   'isStalled': isStalled,
+  'activityDate': activityDate,
+  'addedDate': addedDate,
 });
+
+Torrent _qb(String state, {int lastActivity = 0, int addedOn = 0}) =>
+    Torrent.fromJson({
+      'hash': 'abc',
+      'name': 'Big.Buck.Bunny.2008.1080p.BluRay',
+      'state': state,
+      'last_activity': lastActivity,
+      'added_on': addedOn,
+    });
 
 void main() {
   group('transmissionInFlight', () {
     test('a downloading, queued or verifying torrent is a transfer', () {
       for (final status in [4, 3, 2, 1]) {
         expect(
-          transmissionInFlight(_torrent(status: status)),
+          transmissionInFlight(_torrent(status: status), now: _now),
           const InFlightReading.moving(),
           reason: 'status $status',
         );
@@ -35,7 +56,7 @@ void main() {
     test('a seeding or a finished stopped torrent is not in flight', () {
       for (final status in [6, 5, 0]) {
         expect(
-          transmissionInFlight(_torrent(status: status)),
+          transmissionInFlight(_torrent(status: status), now: _now),
           isNull,
           reason: 'status $status',
         );
@@ -51,6 +72,7 @@ void main() {
             'status': 0,
             'leftUntilDone': 1024,
           }),
+          now: _now,
         ),
         const InFlightReading.held(),
       );
@@ -58,7 +80,7 @@ void main() {
 
     test('a stalled download is a stall', () {
       expect(
-        transmissionInFlight(_torrent(isStalled: true)),
+        transmissionInFlight(_torrent(isStalled: true), now: _now),
         const InFlightReading.fault(InFlightFault.stalled),
       );
     });
@@ -69,6 +91,7 @@ void main() {
         expect(
           transmissionInFlight(
             _torrent(status: status, error: 3, errorString: 'No data found!'),
+            now: _now,
           ),
           const InFlightReading.fault(
             InFlightFault.failed,
@@ -83,6 +106,7 @@ void main() {
       expect(
         transmissionInFlight(
           _torrent(error: 2, errorString: 'Torrent not registered'),
+          now: _now,
         ),
         const InFlightReading.fault(
           InFlightFault.failed,
@@ -90,7 +114,10 @@ void main() {
         ),
       );
       expect(
-        transmissionInFlight(_torrent(error: 1, errorString: 'Timed out')),
+        transmissionInFlight(
+          _torrent(error: 1, errorString: 'Timed out'),
+          now: _now,
+        ),
         const InFlightReading.moving(),
       );
     });
@@ -108,7 +135,7 @@ void main() {
         'allocating',
       ]) {
         expect(
-          qbittorrentInFlight(state),
+          qbittorrentInFlight(_qb(state), now: _now),
           const InFlightReading.moving(),
           reason: state,
         );
@@ -117,18 +144,18 @@ void main() {
 
     test('a stalled download is a stall', () {
       expect(
-        qbittorrentInFlight('stalledDL'),
+        qbittorrentInFlight(_qb('stalledDL'), now: _now),
         const InFlightReading.fault(InFlightFault.stalled),
       );
     });
 
     test('error and missingFiles are failures, never dropped', () {
       expect(
-        qbittorrentInFlight('error'),
+        qbittorrentInFlight(_qb('error'), now: _now),
         const InFlightReading.fault(InFlightFault.failed),
       );
       expect(
-        qbittorrentInFlight('missingFiles'),
+        qbittorrentInFlight(_qb('missingFiles'), now: _now),
         const InFlightReading.fault(
           InFlightFault.failed,
           reason: qbittorrentMissingFiles,
@@ -149,18 +176,126 @@ void main() {
         'checkingUP',
         'something-new',
       ]) {
-        expect(qbittorrentInFlight(state), isNull, reason: state);
+        expect(
+          qbittorrentInFlight(_qb(state), now: _now),
+          isNull,
+          reason: state,
+        );
       }
     });
 
     test('a download paused or stopped on purpose is held', () {
       for (final state in ['pausedDL', 'stoppedDL']) {
         expect(
-          qbittorrentInFlight(state),
+          qbittorrentInFlight(_qb(state), now: _now),
           const InFlightReading.held(),
           reason: state,
         );
       }
+    });
+  });
+
+  group('stuck only after 30 minutes with nothing arriving', () {
+    test('qBittorrent: stalledDL is a slow moment until 30 minutes pass', () {
+      expect(
+        qbittorrentInFlight(
+          _qb(
+            'stalledDL',
+            lastActivity: _secondsAgo(const Duration(minutes: 29)),
+          ),
+          now: _now,
+        ),
+        const InFlightReading.moving(),
+      );
+      expect(
+        qbittorrentInFlight(
+          _qb('stalledDL', lastActivity: _secondsAgo(stuckAfter)),
+          now: _now,
+        ),
+        const InFlightReading.fault(InFlightFault.stalled),
+      );
+    });
+
+    test('qBittorrent: a metadata wait nobody answers is stuck at 30 '
+        'minutes, dated from when it was added', () {
+      expect(
+        qbittorrentInFlight(
+          _qb('metaDL', addedOn: _secondsAgo(const Duration(minutes: 10))),
+          now: _now,
+        ),
+        const InFlightReading.moving(),
+      );
+      expect(
+        qbittorrentInFlight(
+          _qb('metaDL', addedOn: _secondsAgo(const Duration(days: 2))),
+          now: _now,
+        ),
+        const InFlightReading.fault(InFlightFault.stalled),
+      );
+    });
+
+    test('qBittorrent: a torrent that received data lately is not stuck, '
+        'however long ago it was added', () {
+      expect(
+        qbittorrentInFlight(
+          _qb(
+            'stalledDL',
+            addedOn: _secondsAgo(const Duration(days: 3)),
+            lastActivity: _secondsAgo(const Duration(minutes: 5)),
+          ),
+          now: _now,
+        ),
+        const InFlightReading.moving(),
+      );
+    });
+
+    test('Transmission: isStalled is a stall at 30 minutes by '
+        'activityDate', () {
+      expect(
+        transmissionInFlight(
+          _torrent(
+            isStalled: true,
+            activityDate: _secondsAgo(const Duration(minutes: 12)),
+          ),
+          now: _now,
+        ),
+        const InFlightReading.moving(),
+      );
+      expect(
+        transmissionInFlight(
+          _torrent(
+            isStalled: true,
+            activityDate: _secondsAgo(const Duration(hours: 3)),
+          ),
+          now: _now,
+        ),
+        const InFlightReading.fault(InFlightFault.stalled),
+      );
+    });
+
+    test('idleSince reads the last activity, else the time added, else '
+        'nothing', () {
+      expect(
+        idleSince(lastActivity: 1000, added: 10),
+        DateTime.fromMillisecondsSinceEpoch(1000 * 1000),
+      );
+      expect(
+        idleSince(lastActivity: 0, added: 10),
+        DateTime.fromMillisecondsSinceEpoch(10 * 1000),
+      );
+      expect(idleSince(lastActivity: 0, added: 0), isNull);
+    });
+  });
+
+  group('stuckRemedyFor', () {
+    test('somebody has the whole file: look for peers again', () {
+      expect(stuckRemedyFor(swarmSeeds: 3), StuckRemedy.lookForPeers);
+    });
+
+    test('nobody has it, or the client cannot say: try another '
+        'download', () {
+      expect(stuckRemedyFor(swarmSeeds: 0), StuckRemedy.tryAnotherDownload);
+      expect(stuckRemedyFor(swarmSeeds: null), StuckRemedy.tryAnotherDownload);
     });
   });
 

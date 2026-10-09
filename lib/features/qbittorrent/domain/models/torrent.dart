@@ -87,6 +87,10 @@ class Torrent {
   final int leechers;
   final int seeders;
 
+  /// Peers with the whole file that the trackers know of (`num_complete`),
+  /// connected or not; -1 when the client did not say.
+  final int swarmSeeds;
+
   // Optional fields from `/torrents/info` (mirrors the qB WebUI General tab).
   // All defaulted so existing tests/fixtures that only set the original 16
   // fields keep passing unchanged. -1 sentinels follow qB's "no limit"
@@ -126,6 +130,7 @@ class Torrent {
     required this.completed,
     required this.leechers,
     required this.seeders,
+    this.swarmSeeds = -1,
     this.contentPath = '',
     this.dlLimit = -1,
     this.upLimit = -1,
@@ -163,6 +168,9 @@ class Torrent {
       completed: parseInt(json['completed']),
       leechers: parseInt(json['num_leechs']),
       seeders: parseInt(json['num_seeds']),
+      swarmSeeds: json['num_complete'] is num
+          ? (json['num_complete'] as num).toInt()
+          : -1,
       contentPath: json['content_path'] as String? ?? '',
       dlLimit: parseInt(json['dl_limit']),
       upLimit: parseInt(json['up_limit']),

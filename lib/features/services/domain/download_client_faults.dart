@@ -70,8 +70,13 @@ class InFlightReading {
 /// * `error` 2, a tracker error, on an incoming torrent is a failure: the
 ///   model's [TransmissionErrorKind.isBlocking] rule. A tracker *warning* is
 ///   announce noise and stays a transfer.
-/// * `isStalled` on a downloading torrent is a stall.
-InFlightReading? transmissionInFlight(TransmissionTorrent torrent) {
+/// * `isStalled` on a downloading torrent is a stall once nothing has arrived
+///   for [stuckAfter], by `activityDate` (or `addedDate` for a torrent that
+///   never received a byte). Before that it is a transfer at no speed.
+InFlightReading? transmissionInFlight(
+  TransmissionTorrent torrent, {
+  required DateTime now,
+}) {
   if (torrent.errorKind == TransmissionErrorKind.localError) {
     return InFlightReading.fault(InFlightFault.failed, reason: torrent.warning);
   }
@@ -84,15 +89,26 @@ InFlightReading? transmissionInFlight(TransmissionTorrent torrent) {
     return InFlightReading.fault(InFlightFault.failed, reason: torrent.warning);
   }
   if (torrent.isStalled && torrent.status == TransmissionStatus.download) {
-    return const InFlightReading.fault(InFlightFault.stalled);
+    return _stuckOnceIdle(
+      idleSince(lastActivity: torrent.activityDate, added: torrent.addedDate),
+      now,
+      unknownIsStuck: true,
+    );
   }
   return const InFlightReading.moving();
 }
 
 /// A qBittorrent torrent (`/api/v2/torrents/info`), or null when it is not in
-/// flight. Decided on `state`, the raw wire value.
+/// flight. Decided on `state`, the raw wire value, and on how long nothing
+/// has arrived.
 ///
-/// `stalledDL` is a stall. `error` and `missingFiles` are failures on any
+/// `stalledDL` is a stall once nothing has arrived for [stuckAfter], by
+/// `last_activity` (or `added_on` for a torrent that never received a byte):
+/// qBittorrent sets it at any instant the payload rate is zero, so on its own
+/// it is a slow moment, not a fault. `metaDL`, fetching the torrent's
+/// metadata, is the same: it waits on peers, and a magnet nobody answers sits
+/// in it at 0% for good, so past [stuckAfter] it is a stall too. `error` and
+/// `missingFiles` are failures on any
 /// row, a finished one included: qBittorrent stops a torrent it cannot read
 /// or write, and dropping it with the seeding library made a broken download
 /// vanish from Home with nothing saying so. `missingFiles` says why; a bare
@@ -100,7 +116,8 @@ InFlightReading? transmissionInFlight(TransmissionTorrent torrent) {
 /// or stopped on purpose (`pausedDL`, `stoppedDL`) is held. Seeding, checking
 /// and a finished torrent stopped (`pausedUP`, `stoppedUP`) are not in
 /// flight.
-InFlightReading? qbittorrentInFlight(String? state) {
+InFlightReading? qbittorrentInFlight(Torrent torrent, {required DateTime now}) {
+  final state = torrent.state;
   if (state == 'pausedDL' || state == 'stoppedDL') {
     return const InFlightReading.held();
   }
@@ -110,12 +127,22 @@ InFlightReading? qbittorrentInFlight(String? state) {
       reason: qbittorrentMissingFiles,
     );
   }
+  final idle = idleSince(
+    lastActivity: torrent.lastActivity,
+    added: torrent.addedOn,
+  );
   return switch (TorrentState.fromString(state)) {
     TorrentState.downloading ||
-    TorrentState.metaDownloading ||
     TorrentState.queuedDl => const InFlightReading.moving(),
+    // Without a date to measure by, the metadata wait is taken as a
+    // transfer: the client has not said anything is wrong.
+    TorrentState.metaDownloading => _stuckOnceIdle(
+      idle,
+      now,
+      unknownIsStuck: false,
+    ),
     // `stalled` is only ever `stalledDL`: a stalled upload parses as seeding.
-    TorrentState.stalled => const InFlightReading.fault(InFlightFault.stalled),
+    TorrentState.stalled => _stuckOnceIdle(idle, now, unknownIsStuck: true),
     TorrentState.error => const InFlightReading.fault(InFlightFault.failed),
     TorrentState.seeding ||
     TorrentState.checking ||
@@ -123,6 +150,40 @@ InFlightReading? qbittorrentInFlight(String? state) {
     TorrentState.queuedUp ||
     TorrentState.unknown => null,
   };
+}
+
+/// How long a download goes with nothing arriving before it is stuck.
+///
+/// The word promises it (`Stuck` only after 30 minutes with nothing arriving):
+/// a torrent client's own stall flag flips on at any instant the rate touches
+/// zero, so a fault raised on the flag alone came and went with every slow
+/// minute of a healthy download.
+const Duration stuckAfter = Duration(minutes: 30);
+
+/// When a torrent last received anything, from the client's epoch seconds:
+/// [lastActivity] when the client recorded one, else [added], since a torrent
+/// that never received a byte has waited since it was added. Null when the
+/// client gave neither.
+DateTime? idleSince({required int lastActivity, required int added}) {
+  final seconds = lastActivity > 0 ? lastActivity : added;
+  if (seconds <= 0) return null;
+  return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+}
+
+/// A stall once [since] is at least [stuckAfter] before [now], a transfer
+/// before that. With no date, [unknownIsStuck] decides: the client's own
+/// stall flag stands, a metadata wait does not.
+InFlightReading _stuckOnceIdle(
+  DateTime? since,
+  DateTime now, {
+  required bool unknownIsStuck,
+}) {
+  final stuck = since == null
+      ? unknownIsStuck
+      : now.difference(since) >= stuckAfter;
+  return stuck
+      ? const InFlightReading.fault(InFlightFault.stalled)
+      : const InFlightReading.moving();
 }
 
 /// What a `missingFiles` torrent's decision says: its data is not where

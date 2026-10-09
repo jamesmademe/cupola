@@ -50,6 +50,26 @@ enum InFlightFault {
   failed,
 }
 
+/// What to try first on a stuck download.
+enum StuckRemedy {
+  /// Somebody has the whole file but nobody is reachable: ask the trackers
+  /// for peers again. What has arrived stays.
+  lookForPeers,
+
+  /// Nobody has the whole file, or the client cannot say: the arr drops this
+  /// download, will not pick it again, and looks for another.
+  tryAnotherDownload,
+}
+
+/// The remedy for a stuck download, from what the trackers know: peers with
+/// the whole file ([swarmSeeds], qBittorrent's `num_complete`) that none of
+/// this torrent's connections reached. Without that count, another download is
+/// the remedy that works whatever the cause.
+StuckRemedy stuckRemedyFor({required int? swarmSeeds}) =>
+    swarmSeeds != null && swarmSeeds > 0
+    ? StuckRemedy.lookForPeers
+    : StuckRemedy.tryAnotherDownload;
+
 /// The fault an \*arr `/queue` record reports, or null while it is still a
 /// transfer.
 ///
