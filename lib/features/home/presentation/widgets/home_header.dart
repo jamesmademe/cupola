@@ -85,15 +85,29 @@ class HomeHeader extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(AppRadius.thumb),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 44),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(month, style: monthStyle),
-                      Text(' · ', style: monthStyle),
-                      _HealthDot(health: health),
-                      const SizedBox(width: 7),
-                      Flexible(child: Text(line, style: monthStyle)),
-                    ],
+                  // One line of words with the light set in it, so at a large
+                  // reading size it wraps as a sentence does: two texts in a
+                  // row wrapped the health in a column of its own. The word
+                  // joiner keeps the light with the figure after it.
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1,
+                    child: Text.rich(
+                      TextSpan(
+                        style: monthStyle,
+                        children: [
+                          TextSpan(text: '$month · '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 7),
+                              child: _HealthDot(health: health),
+                            ),
+                          ),
+                          TextSpan(text: '\u2060$line'),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

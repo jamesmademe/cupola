@@ -1,6 +1,10 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 
@@ -64,4 +68,55 @@ void main() {
       'Checking 12 services',
     );
   });
+
+  testWidgets('the month and the health are one line of words, which wraps '
+      'as a sentence at a large reading size', (tester) async {
+    // Two texts in a row wrapped the health inside a column of its own beside
+    // "October ·" at twice the size.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          calendarClockProvider.overrideWithValue(
+            () => DateTime(2026, 10, 9, 14),
+          ),
+          stackHealthProvider.overrideWith(
+            () => _Fixed(health(configured: 10, answering: 10)),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: const MediaQuery(
+            data: MediaQueryData(
+              size: Size(390, 844),
+              textScaler: TextScaler.linear(2),
+            ),
+            child: Scaffold(body: HomeHeader()),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is RichText &&
+            widget.text.toPlainText().startsWith('October · ') &&
+            widget.text.toPlainText().endsWith('10 of 10 answering'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel('October. Stack: 10 of 10 services answering'),
+      findsOneWidget,
+    );
+  });
+}
+
+class _Fixed extends StackHealthNotifier {
+  _Fixed(this.health);
+
+  final StackHealth health;
+
+  @override
+  StackHealth build() => health;
 }
