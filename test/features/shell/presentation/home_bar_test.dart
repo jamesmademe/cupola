@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,6 +31,7 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
+import 'package:cupola/features/shell/presentation/settings_back_claim.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 
@@ -111,6 +114,85 @@ void main() {
       expect(await tester.binding.handlePopRoute(), isTrue);
       await tester.pumpAndSettle();
       expect(_location(container), ServiceRoutes.stack);
+    });
+
+    testWidgets('on Settings the app claims Android\'s back, so a predictive '
+        'back goes to the tab and does not leave the app', (tester) async {
+      // With predictive back the system hands a back to the app only when the
+      // framework has claimed it, and on a branch root no navigator does.
+      final calls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          calls.add(call);
+          return null;
+        },
+      );
+      // Nothing claimed yet is the system's back.
+      bool lastClaim() =>
+          calls
+              .where(
+                (call) =>
+                    call.method == 'SystemNavigator.setFrameworkHandlesBack',
+              )
+              .map((call) => call.arguments as bool)
+              .lastOrNull ??
+          false;
+
+      final container = await _pump(tester, _operator);
+      // The app tells the engine only once it is in front.
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        'flutter/lifecycle',
+        const StringCodec().encodeMessage(AppLifecycleState.resumed.toString()),
+        (_) {},
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(_tab(NavTab.stack));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      expect(lastClaim(), isTrue);
+
+      // A page pushed inside Settings and popped again leaves the claim.
+      container.read(routerProvider).go(ServiceRoutes.settingsHome);
+      await tester.pumpAndSettle();
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pumpAndSettle();
+      expect(_location(container), ServiceRoutes.settings);
+      expect(lastClaim(), isTrue);
+
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pumpAndSettle();
+      expect(_location(container), ServiceRoutes.stack);
+      expect(
+        lastClaim(),
+        isFalse,
+        reason: 'back on a tab root belongs to the system again',
+      );
+    });
+
+    test('the app claims the back for Settings above every navigator', () {
+      // The page tests pump their own app; this holds the real one's builder.
+      expect(
+        File('lib/main.dart').readAsStringSync(),
+        contains('child: SettingsBackClaim('),
+      );
+    });
+
+    testWidgets('a tab left from Settings keeps its own back', (tester) async {
+      // The control: Settings stays built in its branch when a tab is
+      // tapped, and its back must not answer from there.
+      final container = await _pump(tester, _operator);
+      await tester.tap(_tab(NavTab.stack));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(_tab(NavTab.home));
+      await tester.pumpAndSettle();
+      expect(await tester.binding.handlePopRoute(), isFalse);
+      await tester.pumpAndSettle();
+      expect(_location(container), ServiceRoutes.home);
     });
 
     testWidgets('a location from the Dashboard lands on Stack in one hop, '
@@ -368,9 +450,12 @@ Future<ProviderContainer> _pump(
       container: container,
       child: MaterialApp.router(
         routerConfig: container.read(routerProvider),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(disableAnimations: true),
-          child: child!,
+        // As the app's own builder claims Android's back for Settings.
+        builder: (context, child) => SettingsBackClaim(
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
         ),
       ),
     ),

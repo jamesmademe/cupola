@@ -10,6 +10,7 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/home/presentation/widgets/settings_home_row.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/regions.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_app_rows.dart';
@@ -91,12 +92,18 @@ class SettingsHomeScreen extends ConsumerWidget {
       ),
     );
     if (from == null) return page;
-    // Android's back, which on a branch root would otherwise leave the app.
-    // Only while this page is the one on top: a pushed settings page pops
-    // first, through its own navigator.
+    // Android's back, which on a branch root would otherwise leave the app
+    // (the shell claims it for this page). Only while this page is the one on
+    // top: a pushed settings page pops first, through its own navigator, and
+    // a tab tapped from here leaves the page built in its branch, where its
+    // route is still its navigator's current one.
     return BackButtonListener(
       onBackButtonPressed: () async {
         if (!(ModalRoute.of(context)?.isCurrent ?? false)) return false;
+        final shell = StatefulNavigationShell.maybeOf(context);
+        if (shell != null && shell.currentIndex != NavTab.settings.index) {
+          return false;
+        }
         goBack();
         return true;
       },

@@ -21,6 +21,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/shell/presentation/settings_back_claim.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -180,16 +181,19 @@ class CupolaApp extends ConsumerWidget {
       //
       // Around all of it, the live region `announce()` speaks through where
       // the engine has no announcement channel (Android): one, above every
-      // route, so a TalkBack user hears what a VoiceOver user hears. And the
-      // system bars in the room's ink (`ThemedSystemBars`).
+      // route, so a TalkBack user hears what a VoiceOver user hears. The
+      // system bars in the room's ink (`ThemedSystemBars`). And Android's back
+      // claimed for Settings, above every navigator (`SettingsBackClaim`).
       builder: (context, child) => ThemedSystemBars(
         child: AnnouncementHost(
-          child: DefaultTextHeightBehavior(
-            textHeightBehavior: const TextHeightBehavior(
-              applyHeightToFirstAscent: false,
-              applyHeightToLastDescent: false,
+          child: SettingsBackClaim(
+            child: DefaultTextHeightBehavior(
+              textHeightBehavior: const TextHeightBehavior(
+                applyHeightToFirstAscent: false,
+                applyHeightToLastDescent: false,
+              ),
+              child: child ?? const SizedBox.shrink(),
             ),
-            child: child ?? const SizedBox.shrink(),
           ),
         ),
       ),
