@@ -25,6 +25,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_download_
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
@@ -607,12 +608,19 @@ class _EveryonesRequestsSection extends ConsumerWidget {
     final now = ref.watch(arrivalsClockProvider)();
     final requests = myRequestsOf(list, now: now, stale: read.hasError);
     final rows = everyonesLatest(requests);
-    final summary = everyonesSummary(requests);
-    final total = list.length;
+    // Seerr's own count when it gave one: a page that did not arrive left the
+    // rows short of the household's requests, and their number is then a
+    // floor, never the total. What is tallied over them (how many are being
+    // fetched, how many were declined) is left unsaid rather than understated.
+    final whole = holdsEveryRequest(list);
+    final server = list is SeerrRequestList ? list.total : null;
+    final total = server ?? list.length;
+    final figure = server == null && !whole ? '$total+' : '$total';
+    final summary = whole ? everyonesSummary(requests) : '';
 
     return ActivitySection(
       title: _title,
-      meta: '$total total',
+      meta: '$figure total',
       children: [
         for (final (index, mine) in rows.indexed)
           _EveryoneRow(
@@ -622,7 +630,7 @@ class _EveryonesRequestsSection extends ConsumerWidget {
             divided: index > 0,
           ),
         ActivitySlabLink(
-          label: total == 1 ? 'All requests' : 'All $total requests',
+          label: figure == '1' ? 'All requests' : 'All $figure requests',
           meta: summary.isEmpty ? null : summary,
           divided: rows.isNotEmpty,
           onTap: () => context.go(ActivityTab.requests.location),
