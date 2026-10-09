@@ -108,4 +108,31 @@ void main() {
       expect(wantedSubtitle({}, ServiceType.movies), isNull);
     });
   });
+
+  group('formatRelativeDateTime', () {
+    final now = DateTime(2026, 10, 9, 20, 30);
+
+    test('counts back within the week', () {
+      // The figure and its unit are held together by a no-break space.
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 9, 18, 30), now: now),
+        '2\u00A0h ago',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 6, 20, 0), now: now),
+        '3 days ago',
+      );
+    });
+
+    test('names the day past a week, as the app dates, never ISO', () {
+      expect(
+        formatRelativeDateTime(DateTime(2026, 9, 29, 12), now: now),
+        'Tue 29 Sep',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2025, 9, 29, 12), now: now),
+        'Mon 29 Sep 2025',
+      );
+    });
+  });
 }

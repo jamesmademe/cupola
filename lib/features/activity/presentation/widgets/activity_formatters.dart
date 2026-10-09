@@ -72,7 +72,7 @@ String formatRelativeActivityDate(String? isoDate, {DateTime? now}) {
 }
 
 /// Relative label for an already-parsed timestamp: `just now`, `20 min ago`,
-/// `3 h ago`, `2 days ago`, then an absolute date beyond a week.
+/// `3 h ago`, `2 days ago`, then the day beyond a week (`Tue 29 Sep`).
 ///
 /// Split out from [formatRelativeActivityDate] so callers holding a `DateTime`
 /// — the global activity feed keeps one as `sortDate` — do not have to
@@ -103,7 +103,8 @@ String formatRelativeDateTime(DateTime date, {DateTime? now}) {
     return isFuture ? 'in $days $unit' : '$days $unit ago';
   }
 
-  return formatIsoDate(local.toIso8601String());
+  // The app's date, `Tue 29 Sep`, with the year only when it is another.
+  return formatShortDate(local.toIso8601String(), now: reference);
 }
 
 String formatActivityDateTime(String? isoDate) {
