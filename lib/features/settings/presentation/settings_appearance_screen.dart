@@ -42,7 +42,7 @@ class SettingsAppearanceScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            SettingsGroupCard(
+            SettingsGroupCard.choices(
               children: [
                 for (final mode in AppThemeMode.values)
                   SettingsChoiceRow(

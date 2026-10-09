@@ -110,7 +110,7 @@ class _SettingsRegionScreenState extends ConsumerState<SettingsRegionScreen> {
             ),
             const SizedBox(height: AppSpacing.lg),
             if (_query.isEmpty) ...[
-              SettingsGroupCard(
+              SettingsGroupCard.choices(
                 children: [
                   SettingsChoiceRow(
                     label: _label(selected),
@@ -129,7 +129,7 @@ class _SettingsRegionScreenState extends ConsumerState<SettingsRegionScreen> {
                 message: 'Try the country name or its two-letter code.',
               )
             else
-              SettingsGroupCard(
+              SettingsGroupCard.choices(
                 children: [
                   for (final entry in matches)
                     SettingsChoiceRow(

@@ -601,7 +601,18 @@ class SettingsCard extends StatelessWidget {
 class SettingsGroupCard extends StatelessWidget {
   final List<Widget> children;
 
-  const SettingsGroupCard({super.key, required this.children});
+  /// Where the hairline between two rows starts: under the words, past the
+  /// rows' glyph well.
+  final double _dividerIndent;
+
+  /// Rows that lead with a glyph in its well (`SettingsCard`).
+  const SettingsGroupCard({super.key, required this.children})
+    : _dividerIndent = AppSpacing.lg + 36 + AppSpacing.lg;
+
+  /// Rows with no glyph (`SettingsChoiceRow`): the hairline starts where
+  /// their words do, not under a well that is not there.
+  const SettingsGroupCard.choices({super.key, required this.children})
+    : _dividerIndent = AppSpacing.lg;
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +633,7 @@ class SettingsGroupCard extends StatelessWidget {
                 Divider(
                   height: 1,
                   thickness: 1,
-                  indent: AppSpacing.lg + 36 + AppSpacing.lg,
+                  indent: _dividerIndent,
                   color: colorScheme.outlineVariant,
                 ),
               children[index],
