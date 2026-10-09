@@ -145,6 +145,14 @@ class CatalogPoster extends ConsumerWidget {
                       score,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      // A day cut short ("Thu 29 O…") loses its month.
+                      textScaler: TextScaleMetrics.wholeWordScaler(
+                        TextScaleMetrics.clampedScalerOf(context),
+                        text: score,
+                        style: _scoreStyle(theme.textTheme),
+                        width: width,
+                        maxLines: 1,
+                      ),
                       style: _scoreStyle(
                         theme.textTheme,
                       )?.copyWith(color: CupolaThemeColors.of(context).dimText),

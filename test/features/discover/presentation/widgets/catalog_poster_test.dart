@@ -185,4 +185,47 @@ void main() {
       closeTo(TextScaleMetrics.defaultMaxScaleFactor, 0.001),
     );
   });
+
+  testWidgets('at twice the reading size the line under the title is whole on '
+      'its one line', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          audienceProvider.overrideWithValue(Audience.operator),
+          seerrNumberingProvider.overrideWith((ref) async => null),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    height: CatalogPoster.heightFor(context, 104),
+                    child: const CatalogPoster(
+                      item: MediaPreview(
+                        id: 6,
+                        title: 'Up',
+                        mediaType: 'movie',
+                      ),
+                      heroTag: 'poster_6',
+                      width: 104,
+                      // Six square letters: whole at the reading size, too wide at 1.6.
+                      meta: 'Sat 10',
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final line = titleOf(tester, 'Sat 10');
+    expect(line.didExceedMaxLines, isFalse);
+  });
 }
