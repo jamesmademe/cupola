@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/home/domain/downloads.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart'
@@ -16,8 +18,8 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One download on Activity: its art, its title and the release it is, which
-/// way its bytes travel, how far it got and how fast; a stuck one says where
-/// it stopped and since when, in amber.
+/// way its bytes travel, how far it got and how fast, and who asked for it;
+/// a stuck one says where it stopped and since when, in amber.
 ///
 /// The remedy of a stuck one is in Needs you, once: the row only shows it.
 class ActivityDownloadRow extends ConsumerWidget {
@@ -25,23 +27,39 @@ class ActivityDownloadRow extends ConsumerWidget {
     super.key,
     required this.item,
     required this.now,
+    this.request,
     this.divided = false,
-  });
+  }) : _queued = false;
+
+  /// A download waiting its turn, in Up next: `Queued · starts in about
+  /// 6 min` in blue under the release, and which way it will travel.
+  const ActivityDownloadRow.queued({
+    super.key,
+    required this.item,
+    required this.now,
+    this.request,
+    this.divided = false,
+  }) : _queued = true;
 
   final ServiceQueueItem item;
 
-  /// The clock its `nothing for 3 h` is read by.
+  /// The clock its `nothing for 3 h` and `ready around 21:10` are read by.
   final DateTime now;
+
+  /// The household request that asked for it, when Seerr holds one.
+  final SeerrRequest? request;
 
   /// Whether a hairline separates it from the row above.
   final bool divided;
+
+  final bool _queued;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final room = CupolaRoom.of(context);
     final fault = item.fault;
-    final stuck = isDownloadFault(fault);
+    final stuck = !_queued && isDownloadFault(fault);
     final tone = statusToneColor(
       scheme,
       stuck ? StatusTone.warning : StatusTone.info,
@@ -50,7 +68,9 @@ class ActivityDownloadRow extends ConsumerWidget {
     final percent = item.progress == null
         ? null
         : wholePercent(item.progress! * 100);
-    final value = stuck
+    final value = _queued
+        ? ''
+        : stuck
         ? stuckValue(fault!, percent: percent)
         : movingValue(percent: percent, etaSeconds: item.etaSeconds);
     final route = downloadRoute(item);
@@ -60,7 +80,17 @@ class ActivityDownloadRow extends ConsumerWidget {
     final evidence = stuck
         ? nothingForWords(item.stalledSince, now: now)
         : null;
-    final spokenValue = stuck
+    final speed = _queued || stuck || item.rateBytesPerSecond == null
+        ? null
+        : formatBytesPerSecond(item.rateBytesPerSecond!);
+    final asked = switch (request) {
+      final request? => requestLine(item, request, now: now),
+      null => null,
+    };
+    final waiting = _queued ? queuedWords(item.startsInSeconds) : null;
+    final spokenValue = _queued
+        ? waiting!
+        : stuck
         ? spokenPercents(value)
         : spokenMovingValue(percent: percent, etaSeconds: item.etaSeconds);
 
@@ -76,11 +106,19 @@ class ActivityDownloadRow extends ConsumerWidget {
       style: AppType.meta.copyWith(color: room.inkSecondary),
     );
     final secondary = AppType.meta.tabular.copyWith(color: room.inkSecondary);
+    // Under the bar, at its end: how fast, or since when nothing arrived.
+    final underBar = speed ?? evidence;
 
     return ActivityRowFrame(
       divided: divided,
       label: item.title,
-      value: [spokenValue, route, ?evidence].join(', '),
+      value: [
+        spokenValue,
+        route,
+        if (speed != null) spokenBytesPerSecond(speed),
+        ?evidence,
+        ?asked,
+      ].join(', '),
       onTap: () => openActivityDownload(context, ref, item),
       art: HomeRowArt.large(posterUrl: item.posterUrl, icon: item.service.icon),
       children: [
@@ -98,7 +136,10 @@ class ActivityDownloadRow extends ConsumerWidget {
             softWrap: false,
             style: AppType.mono.copyWith(color: room.inkSecondary),
           ),
-        if (large) ...[
+        if (waiting != null) ...[
+          _Dotted(words: waiting, color: tone),
+          routeText,
+        ] else if (large) ...[
           routeText,
           if (value.isNotEmpty) valueText,
         ] else
@@ -113,18 +154,55 @@ class ActivityDownloadRow extends ConsumerWidget {
               ],
             ],
           ),
-        if (item.progress case final progress?) ...[
-          const SizedBox(height: AppSpacing.xs),
-          HomeRowBar(value: progress, color: tone),
-        ],
-        if (evidence != null)
+        if (!_queued)
+          if (item.progress case final progress?) ...[
+            const SizedBox(height: AppSpacing.xs),
+            HomeRowBar(value: progress, color: tone),
+          ],
+        if (underBar != null)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Align(
               alignment: AlignmentDirectional.centerEnd,
-              child: Text(evidence, style: secondary),
+              child: Text(underBar, style: secondary),
             ),
           ),
+        if (asked != null)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xxs),
+            child: Text(
+              asked,
+              style: AppType.meta.copyWith(color: room.inkSecondary),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A state with its dot before it: `• Queued · starts in about 6 min`.
+class _Dotted extends StatelessWidget {
+  const _Dotted({required this.words, required this.color});
+
+  final String words;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppType.meta.weight(FontWeight.w600).copyWith(color: color);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          ),
+        ),
+        const SizedBox(width: 7),
+        Expanded(child: Text(words, style: style)),
       ],
     );
   }

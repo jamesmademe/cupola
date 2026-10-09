@@ -49,11 +49,16 @@ class ActivityHistoryRow extends ConsumerWidget {
       joiner: ' ',
     );
     final reason = failed ? entry.reason : null;
+    // The file it became, in the machine's own spelling.
+    final file = switch (entry.fileName?.trim()) {
+      final name? when name.isNotEmpty && name != entry.title => name,
+      _ => null,
+    };
 
     return ActivityRowFrame(
       divided: divided,
       label: title,
-      value: [event, ?reason, source].join(', '),
+      value: [event, ?file, ?reason, source].join(', '),
       onTap: () => openArrTitle(
         context,
         service: entry.service,
@@ -71,6 +76,14 @@ class ActivityHistoryRow extends ConsumerWidget {
           overflow: TextOverflow.ellipsis,
           style: AppType.row.copyWith(color: room.ink),
         ),
+        if (file != null)
+          Text(
+            file,
+            maxLines: 1,
+            overflow: TextOverflow.fade,
+            softWrap: false,
+            style: AppType.mono.copyWith(color: room.inkSecondary),
+          ),
         Padding(
           padding: const EdgeInsets.only(top: AppSpacing.xxs),
           child: Row(

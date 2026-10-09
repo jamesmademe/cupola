@@ -113,6 +113,7 @@ void invalidateActivity(WidgetRef ref, ActivityTab tab) {
       }
     case ActivityTab.history:
       ref.invalidate(servicesArrivalsProvider);
+      ref.invalidate(servicesFailuresSinceProvider);
   }
 }
 
@@ -135,7 +136,9 @@ Future<void> refreshActivity(WidgetRef ref, ActivityTab tab) async {
         settle(ref.read(dashboardDecisionSourceProvider(source).future)),
     ],
     if (tab == ActivityTab.requests) settle(ref.read(requestsProvider.future)),
-    if (tab == ActivityTab.history)
+    if (tab == ActivityTab.history) ...[
       settle(ref.read(servicesArrivalsProvider.future)),
+      settle(ref.read(servicesFailuresSinceProvider.future)),
+    ],
   ]);
 }

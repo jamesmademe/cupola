@@ -18,12 +18,14 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/activity/domain/activity_history.dart';
 import 'package:cupola/features/activity/domain/activity_readout.dart';
+import 'package:cupola/features/activity/domain/activity_download.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/domain/everyones_requests.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_download_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/domain/downloads.dart';
@@ -73,6 +75,9 @@ const _historyServices = [
 
 /// How many downloads All draws before the way to Downloads.
 const _allDownloadsLimit = 5;
+
+/// How many waiting downloads All draws before the way to Downloads.
+const _allUpNextLimit = 3;
 
 /// How many of today's imports All draws before the way to History.
 const _allFinishedLimit = 5;
@@ -179,6 +184,7 @@ class ActivityPage extends ConsumerWidget {
       _EveryonesRequestsSection(),
       _WatchingNowSection(),
       _DownloadsSection(limit: _allDownloadsLimit),
+      _UpNextSection(limit: _allUpNextLimit),
       _FinishedTodaySection(),
       _HistoryFoot(),
     ],
@@ -190,6 +196,7 @@ class ActivityPage extends ConsumerWidget {
         ),
       ),
       const _DownloadsSection(),
+      const _UpNextSection(),
     ],
     ActivityTab.requests => [
       RequestsList.embedded(
@@ -307,7 +314,7 @@ class _Readout extends ConsumerWidget {
         .where((item) => isDownloadFault(item.fault))
         .length;
     final parts = activityReadoutParts(
-      moving: data.activeCount,
+      moving: data.movingCount,
       stuck: stuck,
       rateBytesPerSecond: data.rateBytesPerSecond,
       coverage: coverage,
@@ -566,7 +573,7 @@ class _NeedsYouSection extends ConsumerWidget {
 class _EveryonesRequestsSection extends ConsumerWidget {
   const _EveryonesRequestsSection();
 
-  static const _title = 'Everyone’s requests';
+  static const _title = "Everyone's requests";
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -750,7 +757,7 @@ class _DownloadsSection extends ConsumerWidget {
     final coverage = queue.coverage;
     final moving = [
       for (final item in queue.items)
-        if (item.isActive) item,
+        if (item.isMoving) item,
     ];
     final stuck = [
       for (final item in queue.items)
@@ -766,6 +773,7 @@ class _DownloadsSection extends ConsumerWidget {
     final rows = cap == null
         ? [...moving, ...stuck]
         : downloadRowsOf(moving, stuck, limit: cap);
+    final requests = ref.watch(_householdRequestsProvider);
     final total = moving.length + stuck.length;
     final meta = [
       if (moving.isNotEmpty) '${coveredFigure(moving.length, coverage)} moving',
@@ -789,11 +797,73 @@ class _DownloadsSection extends ConsumerWidget {
             key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
             item: item,
             now: now,
+            request: requestFor(item, requests),
             divided: index > 0,
           ),
         if (total > rows.length)
           ActivitySlabLink(
             label: 'All $total downloads',
+            onTap: () => context.go(ActivityTab.downloads.location),
+          ),
+      ],
+    );
+  }
+}
+
+/// The household's requests the downloads are matched against: the lens
+/// Seerr's list while one is set up, as last read; nothing otherwise.
+final _householdRequestsProvider = Provider.autoDispose<List<SeerrRequest>>((
+  ref,
+) {
+  final seerr = ref.watch(
+    currentSettingsProvider.select(
+      (settings) => settings.isServiceConfigured(ServiceKey.seerr),
+    ),
+  );
+  if (!seerr) return const [];
+  return ref.watch(requestsProvider).value ?? const [];
+});
+
+/// Up next: the downloads waiting their turn, in the order they will start,
+/// with when where the client says. On All at most [limit].
+class _UpNextSection extends ConsumerWidget {
+  const _UpNextSection({this.limit});
+
+  final int? limit;
+
+  static const _title = 'Up next';
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final queue = ref.watch(servicesQueueProvider).value;
+    if (queue == null) return const SizedBox.shrink();
+    final queued = [
+      for (final item in queue.items)
+        if (item.isActive && item.queued) item,
+    ];
+    if (queued.isEmpty) return const SizedBox.shrink();
+    final cap = limit;
+    final rows = cap == null ? queued : queued.take(cap).toList();
+    final count = coveredFigure(queued.length, queue.coverage);
+    final meta = '$count queued';
+    final now = ref.watch(stallClockProvider)();
+    final requests = ref.watch(_householdRequestsProvider);
+    return ActivitySection(
+      title: _title,
+      meta: meta,
+      semanticLabel: [_title, spokenCountPhrase(meta)].join(', '),
+      children: [
+        for (final (index, item) in rows.indexed)
+          ActivityDownloadRow.queued(
+            key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
+            item: item,
+            now: now,
+            request: requestFor(item, requests),
+            divided: index > 0,
+          ),
+        if (queued.length > rows.length)
+          ActivitySlabLink(
+            label: 'All ${queued.length} queued',
             onTap: () => context.go(ActivityTab.downloads.location),
           ),
       ],
@@ -877,13 +947,26 @@ class _FinishedTodaySection extends ConsumerWidget {
   }
 }
 
+/// The week History draws: what was imported and what failed, one list
+/// over the coverage of both reads.
+final _weekProvider = FutureProvider.autoDispose<ArrHistory>((ref) async {
+  final reads = await Future.wait([
+    ref.watch(servicesArrivalsProvider.future),
+    ref.watch(servicesFailuresSinceProvider.future),
+  ]);
+  return (
+    entries: [for (final read in reads) ...read.entries],
+    coverage: SourceCoverage.merge(reads.map((read) => read.coverage)),
+  );
+});
+
 /// History: the last seven days, a section a day, newest first.
 class _HistoryDays extends ConsumerWidget {
   const _HistoryDays();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final read = ref.watch(servicesArrivalsProvider);
+    final read = ref.watch(_weekProvider);
     final value = read.value;
     final room = CupolaRoom.of(context);
     if (value == null) {
@@ -898,7 +981,10 @@ class _HistoryDays extends ConsumerWidget {
         child: BriefFailureLine.line(
           error: read.error!,
           service: ServiceKey.radarr,
-          onRetry: () => ref.invalidate(servicesArrivalsProvider),
+          onRetry: () {
+            ref.invalidate(servicesArrivalsProvider);
+            ref.invalidate(servicesFailuresSinceProvider);
+          },
         ),
       );
     }
