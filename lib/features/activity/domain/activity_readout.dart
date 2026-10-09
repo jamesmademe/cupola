@@ -39,7 +39,8 @@ class ActivityReadoutPart {
 
 /// What is moving, how fast and what is stuck: `4 moving · 40.4 MB/s ·
 /// 1 stuck`. Empty when nothing moves and nothing is stuck: the page then
-/// says [nothingMoving].
+/// says [nothingMoving]. When no source answered there is no count to be
+/// empty, and the readout is `— moving`.
 ///
 /// The counts are over the queues [coverage] read, a floor when a walk
 /// stopped short. The speed is the download clients' own rates added up,
@@ -52,7 +53,12 @@ List<ActivityReadoutPart> activityReadoutParts({
   int? rateBytesPerSecond,
   SourceCoverage coverage = SourceCoverage.none,
 }) {
-  if (moving == 0 && stuck == 0) return const [];
+  if (moving == 0 && stuck == 0) {
+    // Nobody answered: nothing was counted, which is not nothing moving.
+    return coverage.everySourceFailed
+        ? [ActivityReadoutPart(Lexicon.noFigure, 'moving')]
+        : const [];
+  }
   final speed = rateBytesPerSecond == null || moving == 0
       ? null
       : formatBytesPerSecond(rateBytesPerSecond);

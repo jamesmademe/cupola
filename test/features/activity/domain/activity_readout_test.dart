@@ -114,6 +114,35 @@ void main() {
       );
     });
 
+    test('nothing counted because nobody answered is a dash, not Nothing '
+        'moving', () {
+      final everyone = SourceCoverage.failure(
+        ServiceKey.radarr,
+        Exception('down'),
+      );
+
+      expect(
+        _words(activityReadoutParts(moving: 0, stuck: 0, coverage: everyone)),
+        ['— moving'],
+      );
+      expect(
+        spokenActivityReadout(
+          activityReadoutParts(moving: 0, stuck: 0, coverage: everyone),
+        ),
+        'moving, count unavailable',
+      );
+      // Some answering is an answer: the empty queue is nothing moving, and
+      // the failed one is named under the title.
+      final some = SourceCoverage.merge([
+        SourceCoverage.answeredBy(ServiceKey.sonarr),
+        everyone,
+      ]);
+      expect(
+        activityReadoutParts(moving: 0, stuck: 0, coverage: some),
+        isEmpty,
+      );
+    });
+
     test('a part reads, compares and prints as its words', () {
       const part = ActivityReadoutPart('4', 'moving');
       expect(part.toString(), '4 moving');
