@@ -56,7 +56,8 @@ List<ActivityReadoutPart> activityReadoutParts({
   final speed = rateBytesPerSecond == null || moving == 0
       ? null
       : formatBytesPerSecond(rateBytesPerSecond);
-  final space = speed?.indexOf(' ') ?? -1;
+  // The figure and its unit are held by a no-break space (`withUnit`).
+  final space = speed?.indexOf(RegExp('[ \u00A0]')) ?? -1;
   return [
     if (moving > 0)
       ActivityReadoutPart(coveredFigure(moving, coverage), 'moving'),
