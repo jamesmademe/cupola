@@ -3,6 +3,7 @@
 library;
 
 import 'package:cupola/core/utils/duration_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/requests/domain/my_requests.dart'
     show aroundWords;
@@ -36,8 +37,8 @@ String? nothingForWords(DateTime? since, {required DateTime now}) {
   if (idle.isNegative) return null;
   final words = switch (idle) {
     _ when idle.inDays >= 2 => '${idle.inDays} days',
-    _ when idle.inHours >= 1 => '${idle.inHours} h',
-    _ => '${idle.inMinutes} min',
+    _ when idle.inHours >= 1 => withUnit(idle.inHours, 'h'),
+    _ => withUnit(idle.inMinutes, 'min'),
   };
   return 'nothing for $words';
 }
