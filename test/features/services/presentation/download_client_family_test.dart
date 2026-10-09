@@ -296,9 +296,13 @@ void main() {
       );
 
       // Big Buck Bunny's stall and the two broken torrents are stuck; the
-      // five that move are the same five as without them.
+      // four that move are the same four as without them. Sintel on the 4K
+      // waits its turn in SABnzbd: it used to be counted among the moving
+      // (`5 moving`) and is now said apart, after what is stuck.
       expect(
-        _inDownloads(find.text('5 moving · 3 stuck · 40.4\u00A0MB/s')),
+        _inDownloads(
+          find.text('4 moving · 3 stuck · 1 queued · 40.4\u00A0MB/s'),
+        ),
         findsOneWidget,
       );
       // Each says it failed, and carries its remedy: another download of
@@ -544,9 +548,14 @@ void main() {
         isNot(contains(pausedGrab.id)),
       );
       expect(inFlight.held, 1);
-      // Sprite Fright, Cosmos E4 and E5, Elephants Dream and Sintel on the
-      // 4K: what was moving before the pause, and nothing more.
-      expect(inFlight.activeCount, 5);
+      // Sprite Fright, Cosmos E4 and E5 and Elephants Dream: what was moving
+      // before the pause, and nothing more. Sintel on the 4K waits its turn:
+      // it was counted as moving (5) and is queued now.
+      expect(inFlight.activeCount, 4);
+      expect(inFlight.movingCount, 4);
+      expect(inFlight.queued.map((item) => item.downloadId), [
+        WorldDownloads.sintel4k.id,
+      ]);
     });
 
     test('P1, SABnzbd paused on purpose: its jobs are held, as a paused '

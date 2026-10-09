@@ -91,8 +91,9 @@ class HomeDownloadsModule extends ConsumerWidget {
     final rows = downloadRowsOf(data.preview, stuck);
     final clientSetUp = _clients.any(settings.isServiceConfigured);
     final subtitle = downloadsSubtitle(
-      moving: data.activeCount,
+      moving: data.movingCount,
       stuck: stuck.length,
+      queued: data.queued.length,
       clientSetUp: clientSetUp,
       clientSilent: coverage.failedServices.any(_clients.contains),
       rateBytesPerSecond: data.rateBytesPerSecond,

@@ -315,7 +315,12 @@ void main() {
     // SABnzbd's rate is missing from the sum: its rows are joined to the 4K
     // Radarr's, and the rate is the part only SABnzbd can say. The speed is a
     // dash, not the half of it that qBittorrent reported.
-    expect(_inDownloads(find.text('5 moving · 1 stuck · —')), findsOne);
+    // Sintel's record says `queued`, and SABnzbd, the client that could say
+    // otherwise, did not answer: it is queued, not moving.
+    expect(
+      _inDownloads(find.text('4 moving · 1 stuck · 1 queued · —')),
+      findsOne,
+    );
     expect(_inDownloads(find.textContaining('MB/s')), findsNothing);
 
     down = false;
@@ -326,8 +331,9 @@ void main() {
     // Needs you, the note under Downloads, and SABnzbd's own rows.
     expect(find.textContaining('did not answer'), findsNothing);
     expect(find.textContaining('Not in the total'), findsNothing);
+    // Sintel is queued in SABnzbd again, and not counted among the moving.
     expect(
-      _inDownloads(find.text('5 moving · 1 stuck · 40.4\u00A0MB/s')),
+      _inDownloads(find.text('4 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s')),
       findsOne,
     );
 

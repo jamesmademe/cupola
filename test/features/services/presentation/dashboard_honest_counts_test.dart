@@ -42,7 +42,12 @@ void main() {
       surfaceSize: _tall,
     );
 
-    expect(find.text('5 moving · 1 stuck · 40.4\u00A0MB/s'), findsOne);
+    // Sintel on the 4K waits its turn: said apart, after what is stuck. It
+    // was counted among the moving (`5 moving`) before.
+    expect(
+      find.text('4 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s'),
+      findsOne,
+    );
     // Four titles: the HD's Coffee Run and Sintel, the 4K's Spring and Tears
     // of Steel. The HD's older copy of Tears of Steel is outside the week, and
     // Sonarr's episode is of a series that was already there.
@@ -69,7 +74,9 @@ void main() {
     // rest. Which of them did not answer is Needs you's sentence, so the note
     // does not say it a second time. The speed is a dash: two clients that are
     // set up did not answer, and the rate of the others would understate it.
-    expect(find.text('5 moving · 1 stuck · —'), findsOne);
+    // Sintel's record says `queued`, and nothing else reads it: it is one of
+    // the queued, not of the moving.
+    expect(find.text('4 moving · 1 stuck · 1 queued · —'), findsOne);
     const inFlightNote = 'Not in the total: Lidarr, SABnzbd, qBittorrent';
     expect(find.text(inFlightNote), findsOne);
 
@@ -109,7 +116,7 @@ void main() {
     // the dash as an unknown speed.
     expect(
       find.bySemanticsLabel(
-        'Downloads, 5 moving, 1 stuck, speed unknown, '
+        'Downloads, 4 moving, 1 stuck, 1 queued, speed unknown, '
         'Not in the total: Lidarr, SABnzbd, qBittorrent',
       ),
       findsOne,

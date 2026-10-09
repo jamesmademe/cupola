@@ -36,13 +36,14 @@ void main() {
         downloadsSubtitle(
           moving: 3,
           stuck: 1,
+          queued: 0,
           clientSetUp: true,
           rateBytesPerSecond: 40400000,
         ),
         matches(RegExp('^3 moving · 1 stuck · \\d+(\\.\\d)?\\u00A0MB/s\$')),
       );
       expect(
-        downloadsSubtitle(moving: 0, stuck: 2, clientSetUp: true),
+        downloadsSubtitle(moving: 0, stuck: 2, queued: 0, clientSetUp: true),
         '2 stuck',
       );
     });
@@ -53,6 +54,7 @@ void main() {
         downloadsSubtitle(
           moving: 4,
           stuck: 0,
+          queued: 0,
           clientSetUp: true,
           clientSilent: true,
           rateBytesPerSecond: 1000,
@@ -63,6 +65,7 @@ void main() {
         downloadsSubtitle(
           moving: 3,
           stuck: 1,
+          queued: 0,
           clientSetUp: false,
           rateBytesPerSecond: 1000,
         ),
@@ -72,8 +75,69 @@ void main() {
 
     test('nothing moving says so', () {
       expect(
-        downloadsSubtitle(moving: 0, stuck: 0, clientSetUp: true),
+        downloadsSubtitle(moving: 0, stuck: 0, queued: 0, clientSetUp: true),
         'Nothing moving',
+      );
+    });
+
+    test('what waits its turn is said after what is stuck', () {
+      expect(
+        downloadsSubtitle(
+          moving: 3,
+          stuck: 1,
+          queued: 1,
+          clientSetUp: true,
+          rateBytesPerSecond: 40400000,
+        ),
+        matches(
+          RegExp('^3 moving · 1 stuck · 1 queued · \\d+(\\.\\d)?\\u00A0MB/s\$'),
+        ),
+      );
+      expect(
+        downloadsSubtitle(moving: 3, stuck: 0, queued: 2, clientSetUp: false),
+        '3 moving · 2 queued',
+      );
+    });
+
+    test('with nothing moving or stuck, queued stands alone, and the speed '
+        'follows it', () {
+      expect(
+        downloadsSubtitle(moving: 0, stuck: 0, queued: 1, clientSetUp: true),
+        '1 queued',
+      );
+      expect(
+        downloadsSubtitle(
+          moving: 0,
+          stuck: 0,
+          queued: 1,
+          clientSetUp: true,
+          rateBytesPerSecond: 2000000,
+        ),
+        matches(RegExp('^1 queued · \\d+(\\.\\d)?\\u00A0MB/s\$')),
+      );
+      expect(
+        downloadsSubtitle(moving: 0, stuck: 2, queued: 1, clientSetUp: true),
+        '2 stuck · 1 queued',
+      );
+    });
+
+    test('a queued count over a walk cut short is a floor, and is said '
+        'so', () {
+      final coverage = SourceCoverage.answeredBy(
+        ServiceKey.sonarr,
+        cutShort: true,
+      );
+      final line = downloadsSubtitle(
+        moving: 2,
+        stuck: 0,
+        queued: 5,
+        clientSetUp: false,
+        coverage: coverage,
+      );
+      expect(line, '2+ moving · 5+ queued');
+      expect(
+        spokenDownloadsSubtitle(line),
+        'at least 2 moving, at least 5 queued',
       );
     });
 
@@ -86,6 +150,7 @@ void main() {
         downloadsSubtitle(
           moving: 200,
           stuck: 3,
+          queued: 0,
           clientSetUp: false,
           coverage: coverage,
         ),
@@ -103,6 +168,13 @@ void main() {
         spokenDownloadsSubtitle('200+ moving · 3+ stuck'),
         'at least 200 moving, at least 3 stuck',
       );
+      expect(
+        spokenDownloadsSubtitle(
+          '3 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s',
+        ),
+        '3 moving, 1 stuck, 1 queued, 40.4\u00A0MB/s',
+      );
+      expect(spokenDownloadsSubtitle('1 queued'), '1 queued');
     });
   });
 

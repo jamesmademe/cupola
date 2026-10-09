@@ -269,6 +269,31 @@ void main() {
     });
   });
 
+  group('arrQueueIsQueued', () {
+    test('`queued` and `delay` are waiting their turn, however they are '
+        'cased', () {
+      for (final status in ['queued', 'delay', 'Queued', ' DELAY ']) {
+        expect(arrQueueIsQueued({'status': status}), isTrue, reason: status);
+      }
+    });
+
+    test('every other status, and none, is not', () {
+      for (final status in [
+        'downloading',
+        'paused',
+        'completed',
+        'warning',
+        'failed',
+        'downloadClientUnavailable',
+        '',
+      ]) {
+        expect(arrQueueIsQueued({'status': status}), isFalse, reason: status);
+      }
+      expect(arrQueueIsQueued(const {}), isFalse);
+      expect(arrQueueIsQueued({'status': 3}), isFalse);
+    });
+  });
+
   group('arrQueueFault', () {
     test('a blocked import is an import fault, not a stall', () {
       expect(

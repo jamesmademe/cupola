@@ -1,5 +1,5 @@
 /// The words of the Home's Downloads module: what is moving, what is stuck,
-/// and how fast, read at a glance from four rows.
+/// what waits its turn, and how fast, read at a glance from four rows.
 ///
 /// The module draws the transfers that move and the ones that stopped
 /// moving, each with its remedy in the row. A finished download the arr will
@@ -42,7 +42,13 @@ List<T> downloadRowsOf<T>(
   return [...moving.take(limit - faults.length), ...faults];
 }
 
-/// The line under the module's name: `3 moving · 1 stuck · 40.4 MB/s`.
+/// The line under the module's name: `3 moving · 1 stuck · 1 queued ·
+/// 40.4 MB/s`.
+///
+/// What waits its turn ([queued]) is said after what is stuck, and alone when
+/// nothing moves or is stuck (`1 queued`): a download that has not started is
+/// not moving, and the line no longer counts it so. `Nothing moving` only
+/// when all three are zero.
 ///
 /// The counts are over the queues [coverage] read, a floor when a walk
 /// stopped short. The speed is the download clients' own rates added up, and
@@ -53,12 +59,13 @@ List<T> downloadRowsOf<T>(
 String downloadsSubtitle({
   required int moving,
   required int stuck,
+  required int queued,
   required bool clientSetUp,
   bool clientSilent = false,
   int? rateBytesPerSecond,
   SourceCoverage coverage = SourceCoverage.none,
 }) {
-  if (moving == 0 && stuck == 0) return 'Nothing moving';
+  if (moving == 0 && stuck == 0 && queued == 0) return 'Nothing moving';
   final speed = !clientSetUp
       ? null
       : clientSilent
@@ -67,8 +74,9 @@ String downloadsSubtitle({
       ? null
       : formatBytesPerSecond(rateBytesPerSecond);
   return [
-    if (moving > 0 || stuck == 0) '${coveredFigure(moving, coverage)} moving',
+    if (moving > 0) '${coveredFigure(moving, coverage)} moving',
     if (stuck > 0) '${coveredFigure(stuck, coverage)} stuck',
+    if (queued > 0) '${coveredFigure(queued, coverage)} queued',
     ?speed,
   ].join(' · ');
 }

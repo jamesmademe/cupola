@@ -40,6 +40,8 @@ void main() {
           (ref) async => (
             preview: const <ServiceQueueItem>[],
             activeCount: 0,
+            movingCount: 0,
+            queued: const <ServiceQueueItem>[],
             faults: [item],
             held: 0,
             rateBytesPerSecond: null,

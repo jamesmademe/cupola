@@ -122,6 +122,8 @@ final _evening = (
     ),
   ],
   activeCount: 3,
+  movingCount: 3,
+  queued: const <ServiceQueueItem>[],
   faults: [
     _download(
       'Big Buck Bunny',
@@ -503,6 +505,8 @@ void main() {
             (ref) async => (
               preview: _evening.preview,
               activeCount: 3,
+              movingCount: 3,
+              queued: const <ServiceQueueItem>[],
               faults: const <ServiceQueueItem>[],
               held: 0,
               rateBytesPerSecond: null,
@@ -530,6 +534,8 @@ void main() {
             (ref) async => (
               preview: const <ServiceQueueItem>[],
               activeCount: 0,
+              movingCount: 0,
+              queued: const <ServiceQueueItem>[],
               faults: const <ServiceQueueItem>[],
               held: 0,
               rateBytesPerSecond: 0,

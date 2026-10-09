@@ -43,14 +43,33 @@ Torrent _qb(String state, {int lastActivity = 0, int addedOn = 0}) =>
 
 void main() {
   group('transmissionInFlight', () {
-    test('a downloading, queued or verifying torrent is a transfer', () {
-      for (final status in [4, 3, 2, 1]) {
+    test('a downloading or verifying torrent is a transfer', () {
+      // Download wait (3) is not here: it is in line, and not moving.
+      for (final status in [4, 2, 1]) {
         expect(
           transmissionInFlight(_torrent(status: status), now: _now),
           const InFlightReading.moving(),
           reason: 'status $status',
         );
       }
+    });
+
+    test('a download waiting its turn (status 3) is queued, not moving', () {
+      expect(
+        transmissionInFlight(_torrent(status: 3), now: _now),
+        const InFlightReading.queued(),
+      );
+      // A queue wait does not hide a fault: the daemon's own error stands.
+      expect(
+        transmissionInFlight(
+          _torrent(status: 3, error: 3, errorString: 'No space left'),
+          now: _now,
+        ),
+        const InFlightReading.fault(
+          InFlightFault.failed,
+          reason: 'No space left',
+        ),
+      );
     });
 
     test('a seeding or a finished stopped torrent is not in flight', () {
@@ -124,13 +143,11 @@ void main() {
   });
 
   group('qbittorrentInFlight', () {
-    test('downloading, fetching metadata, moving and queued are '
-        'transfers', () {
+    test('downloading, fetching metadata and moving are transfers', () {
       for (final state in [
         'downloading',
         'forcedDL',
         'metaDL',
-        'queuedDL',
         'moving',
         'allocating',
       ]) {
@@ -140,6 +157,15 @@ void main() {
           reason: state,
         );
       }
+    });
+
+    test('a download waiting its turn (queuedDL) is queued, not moving', () {
+      expect(
+        qbittorrentInFlight(_qb('queuedDL'), now: _now),
+        const InFlightReading.queued(),
+      );
+      // A queued upload is a seeding torrent's wait, and not in flight.
+      expect(qbittorrentInFlight(_qb('queuedUP'), now: _now), isNull);
     });
 
     test('a stalled download is a stall', () {
@@ -284,6 +310,26 @@ void main() {
         DateTime.fromMillisecondsSinceEpoch(10 * 1000),
       );
       expect(idleSince(lastActivity: 0, added: 0), isNull);
+    });
+  });
+
+  group('InFlightReading', () {
+    test('queued is its own reading, equal to itself and to nothing else', () {
+      expect(const InFlightReading.queued(), const InFlightReading.queued());
+      expect(
+        const InFlightReading.queued(),
+        isNot(const InFlightReading.moving()),
+      );
+      expect(const InFlightReading.queued().fault, isNull);
+      expect(const InFlightReading.queued().held, isFalse);
+      expect(const InFlightReading.queued().queued, isTrue);
+      expect(const InFlightReading.moving().queued, isFalse);
+      expect(const InFlightReading.held().queued, isFalse);
+      expect(
+        const InFlightReading.fault(InFlightFault.stalled).queued,
+        isFalse,
+      );
+      expect(const InFlightReading.queued().toString(), contains('queued'));
     });
   });
 
@@ -460,6 +506,44 @@ void main() {
       );
     });
 
+    test('a job waiting for its turn (Queued) is queued, not moving', () {
+      expect(
+        sabnzbdSlotInFlight(slot(status: 'Queued'), stoppedByDisk: false),
+        const InFlightReading.queued(),
+      );
+      expect(
+        sabnzbdSlotInFlight(slot(status: 'queued'), stoppedByDisk: false),
+        const InFlightReading.queued(),
+      );
+      // Only what SABnzbd calls Queued: Downloading, Fetching and a
+      // propagation wait stay what they were.
+      for (final status in ['Downloading', 'Fetching', 'Propagating']) {
+        expect(
+          sabnzbdSlotInFlight(slot(status: status), stoppedByDisk: false),
+          const InFlightReading.moving(),
+          reason: status,
+        );
+      }
+    });
+
+    test('a start is the finish of the job ahead: a queue of three, one '
+        'moving and two queued', () {
+      // `timeleft` is cumulative: this one ends in 5 min, the next in 5 + 6,
+      // the last in 5 + 6 + 9.
+      expect(sabnzbdStartsInSeconds([300, 660, 1200]), [null, 300, 660]);
+    });
+
+    test('a start is dated by the nearest job ahead that has a figure', () {
+      // SABnzbd prints 0:00:00 for a job it skips (paused, propagating): it
+      // adds nothing to the running total, and is no figure.
+      expect(sabnzbdStartsInSeconds([300, 0, 660]), [null, 300, 300]);
+      expect(sabnzbdStartsInSeconds([0, 0, 660]), [null, null, null]);
+      expect(sabnzbdStartsInSeconds([null, 300, 660]), [null, null, 300]);
+      // No speed: every figure is 0:00:00, and nobody can say.
+      expect(sabnzbdStartsInSeconds([0, 0, 0]), [null, null, null]);
+      expect(sabnzbdStartsInSeconds(const []), isEmpty);
+    });
+
     test('a queue somebody paused holds its jobs, and still stalls the ones '
         'SABnzbd held', () {
       expect(
@@ -617,6 +701,26 @@ void main() {
         nzbgetGroupInFlight(group(status: 'UNPACKING'), stoppedByDisk: true),
         const InFlightReading.moving(),
       );
+    });
+
+    test('a QUEUED group is queued, not moving; anything else that fetches or '
+        'unpacks still is', () {
+      expect(
+        nzbgetGroupInFlight(group(status: 'QUEUED'), stoppedByDisk: false),
+        const InFlightReading.queued(),
+      );
+      for (final status in [
+        'DOWNLOADING',
+        'FETCHING',
+        'UNPACKING',
+        'PP_QUEUED',
+      ]) {
+        expect(
+          nzbgetGroupInFlight(group(status: status), stoppedByDisk: false),
+          const InFlightReading.moving(),
+          reason: status,
+        );
+      }
     });
 
     test('a group somebody paused, or a queue paused on purpose, is held; '

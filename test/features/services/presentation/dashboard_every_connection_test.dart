@@ -134,21 +134,24 @@ void main() {
       value.style?.fontFeatures,
       contains(const FontFeature.tabularFigures()),
     );
-    // Both of the 4K's movies were joined to the SABnzbd moving them: the
-    // module draws four rows, so the second one is read off the data.
+    // Both of the 4K's movies were joined to the SABnzbd holding them: the
+    // module draws four rows, so they are read off the data. Elephants Dream
+    // moves, and Sintel waits its turn in SABnzbd: it is in `queued`, where
+    // it was in `preview` (counted as moving) before.
     final container = ProviderScope.containerOf(
       tester.element(find.byType(HomeScreen)),
     );
-    final fourK = container
-        .read(servicesInFlightProvider)
-        .requireValue
-        .preview
-        .where((item) => item.instanceId == WorldIds.radarr4k);
+    final inFlight = container.read(servicesInFlightProvider).requireValue;
+    final fourK = [
+      ...inFlight.preview,
+      ...inFlight.queued,
+    ].where((item) => item.instanceId == WorldIds.radarr4k);
     expect(fourK, hasLength(2));
     expect(
       fourK.map((item) => item.clientService),
       everyElement(ServiceKey.sabnzbd),
     );
+    expect(inFlight.queued.map((item) => item.instanceId), [WorldIds.radarr4k]);
     // The HD's own rows say which Radarr too, now that there are two.
     expect(
       _within(HomeDownloadsModule, find.text('Sprite Fright · Radarr 1')),
@@ -392,12 +395,13 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(HomeScreen)),
     );
+    final inFlight = container.read(servicesInFlightProvider).requireValue;
+    // The one that moves and the one that waits its turn.
     expect(
-      container
-          .read(servicesInFlightProvider)
-          .requireValue
-          .preview
-          .where((item) => item.instanceId == WorldIds.radarr4k),
+      [
+        ...inFlight.preview,
+        ...inFlight.queued,
+      ].where((item) => item.instanceId == WorldIds.radarr4k),
       hasLength(2),
     );
     // Arrived draws the 4K's cards, says whose they are, and names the Radarr
@@ -418,11 +422,11 @@ void main() {
       findsOne,
     );
     // A figure over the connections that answered, never a dash over a
-    // Radarr that did.
+    // Radarr that did. Sintel on the 4K waits its turn, and is said apart.
     expect(
       _within(
         HomeDownloadsModule,
-        find.text('5 moving · 1 stuck · 40.4\u00A0MB/s'),
+        find.text('4 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s'),
       ),
       findsOne,
     );

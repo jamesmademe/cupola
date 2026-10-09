@@ -22,6 +22,7 @@ import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
+import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
@@ -1384,6 +1385,11 @@ class ServiceQueueItem {
     this.outputPath,
     this.category,
     this.held = false,
+    this.queued = false,
+    this.startsInSeconds,
+    this.rateBytesPerSecond,
+    this.tmdbId,
+    this.tvdbId,
     this.posterUrl,
     MediaNames? names,
   }) : _names = names;
@@ -1536,6 +1542,11 @@ class ServiceQueueItem {
     outputPath: outputPath,
     category: category,
     held: held,
+    queued: queued,
+    startsInSeconds: startsInSeconds,
+    rateBytesPerSecond: rateBytesPerSecond,
+    tmdbId: tmdbId,
+    tvdbId: tvdbId,
     posterUrl: posterUrl,
     names: names,
   );
@@ -1546,8 +1557,47 @@ class ServiceQueueItem {
   /// joined is held.
   final bool held;
 
+  /// Waiting its turn to download, with bytes still to come: in line at its
+  /// client (qBittorrent's `queuedDL`, Transmission's download wait, a
+  /// SABnzbd `Queued` job, an NZBGet `QUEUED` group), or an \*arr record
+  /// whose `status` is `queued` or `delay`. Not a fault, not held, and not
+  /// moving ([isMoving]): it used to be counted as moving, so four transfers
+  /// and one that had not started read "5 moving".
+  ///
+  /// An \*arr row joined to a client row takes the client's word, as it does
+  /// for progress.
+  final bool queued;
+
+  /// How long until a queued job starts, in seconds, or null when nothing
+  /// says. SABnzbd only: it dates each job's finish (`timeleft`, counted
+  /// from the head of the queue), so a job starts when the one ahead of it
+  /// finishes. The other clients give no estimate.
+  final int? startsInSeconds;
+
+  /// The speed of **this** transfer, in bytes a second, or null when the
+  /// source says nothing. Distinct from [clientRateBytesPerSecond], the whole
+  /// client's: qBittorrent's `dlspeed` and Transmission's `rateDownload` are
+  /// per torrent. SABnzbd and NZBGet report a rate for the client only, so
+  /// they give it to the one job that is downloading when exactly one is,
+  /// and none otherwise. An \*arr row joined to a client row takes the
+  /// client row's. Never 0 for a figure nobody took.
+  final int? rateBytesPerSecond;
+
+  /// The title's TMDB id on an \*arr row, from the movie Radarr (or the
+  /// series Sonarr) embeds in the queue record: what lets a page match a
+  /// download to the Seerr request that asked for it. Null on a client's own
+  /// row and when the record carries none.
+  final int? tmdbId;
+
+  /// The series' TVDB id on a Sonarr row, from the series the queue record
+  /// embeds. Null elsewhere and when the record carries none.
+  final int? tvdbId;
+
   /// Whether this transfer is genuinely moving, or waiting to.
   bool get isActive => fault == null && !held;
+
+  /// Whether this transfer is moving now: active, and not waiting its turn.
+  bool get isMoving => isActive && !queued;
 
   /// Whether this row's client dates the last byte it received (qBittorrent,
   /// Transmission), so that its own clock, not a flag, decides a stall.
@@ -1628,6 +1678,12 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
         (index) => (index: index, item: items[index]),
         growable: false,
       )..sort((a, b) {
+        // What waits its turn goes after everything else, in the order its
+        // client queues it: a queue's order is the only thing that says
+        // which starts next, and a queued torrent's progress says nothing
+        // about it.
+        if (a.item.queued != b.item.queued) return a.item.queued ? 1 : -1;
+        if (a.item.queued) return a.index.compareTo(b.index);
         final progressA = a.item.progress;
         final progressB = b.item.progress;
         if (progressA != progressB) {
@@ -1998,11 +2054,18 @@ typedef ServicesQueue = ({
 /// states how many transfers there are, and it used to state it by counting
 /// the capped list — thirty downloads read "5 downloading".
 ///
+/// [preview] and [activeCount] are the **moving** rows only: a download
+/// waiting its turn is not moving, and is in [queued] instead, in its
+/// client's queue order, for the page that says when it starts. [movingCount]
+/// is the same figure as [activeCount] under its honest name.
+///
 /// [coverage] is the queue's: [activeCount] is a count over the sources that
 /// answered, and only over them.
 typedef ServicesInFlight = ({
   List<ServiceQueueItem> preview,
   int activeCount,
+  int movingCount,
+  List<ServiceQueueItem> queued,
   List<ServiceQueueItem> faults,
   int held,
   int? rateBytesPerSecond,
@@ -2013,7 +2076,10 @@ typedef ServicesInFlight = ({
 final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
   final queue = await ref.watch(servicesQueueProvider.future);
   final items = queue.items;
-  final active = items.where((item) => item.isActive).toList(growable: false);
+  final moving = items.where((item) => item.isMoving).toList(growable: false);
+  final queued = items
+      .where((item) => item.isActive && item.queued)
+      .toList(growable: false);
   final faults = items
       .where((item) => item.fault != null)
       .toList(growable: false);
@@ -2038,8 +2104,10 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
   }
 
   return (
-    preview: active.take(servicesQueuePreviewLimit).toList(growable: false),
-    activeCount: active.length,
+    preview: moving.take(servicesQueuePreviewLimit).toList(growable: false),
+    activeCount: moving.length,
+    movingCount: moving.length,
+    queued: queued,
     faults: faults,
     held: held,
     rateBytesPerSecond: rates.isEmpty
@@ -2128,6 +2196,13 @@ ServiceQueueItem _joinedQueueItem(
     outputPath: arr.outputPath,
     // The client's word on a pause, which is fresher than the arr's.
     held: fault == null && client.held,
+    // And on waiting its turn, as on progress: the arr's `queued` is its
+    // minute-old reading of the same client.
+    queued: fault == null && !client.held && client.queued,
+    startsInSeconds: client.startsInSeconds,
+    rateBytesPerSecond: client.rateBytesPerSecond,
+    tmdbId: arr.tmdbId,
+    tvdbId: arr.tvdbId,
     posterUrl: arr.posterUrl,
     // The arr's names, and the release the client is moving when the arr's
     // record did not carry one: a matched row never loses its release name.
@@ -2193,6 +2268,9 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
         fault: reading.fault,
         warning: reading.reason,
         held: reading.held,
+        queued: reading.queued,
+        // This torrent's own `dlspeed`.
+        rateBytesPerSecond: torrent.dlSpeed,
         stalledSince: reading.fault == null
             ? null
             : idleSince(
@@ -2268,6 +2346,9 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
         fault: reading.fault,
         warning: reading.reason,
         held: reading.held,
+        queued: reading.queued,
+        // This torrent's own `rateDownload`.
+        rateBytesPerSecond: torrent.rateDownload,
         stalledSince: reading.fault == null
             ? null
             : idleSince(
@@ -2334,8 +2415,19 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
       ),
   ];
 
-  return [
+  // When each queued job starts: the finish of the one ahead of it.
+  final startsIn = sabnzbdStartsInSeconds([
+    for (final slot in queue.slots) parseClockDuration(slot.timeLeft),
+  ]);
+  // SABnzbd reports one speed, for the whole queue. It is the speed of the
+  // job that is downloading when exactly one is, and nobody's otherwise.
+  final downloading = [
     for (final (:slot, :reading) in read)
+      if (_isMovingSlot(slot, reading)) slot.nzoId,
+  ];
+
+  return [
+    for (final (index, (:slot, :reading)) in read.indexed)
       ServiceQueueItem(
         service: ServiceKey.sabnzbd,
         id: slot.nzoId,
@@ -2369,11 +2461,25 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
         // decision, and not in flight. A queue its disk stopped is a fault,
         // and says so.
         held: reading.held,
+        queued: reading.queued,
+        startsInSeconds: reading.queued ? startsIn[index] : null,
+        rateBytesPerSecond:
+            downloading.length == 1 && downloading.single == slot.nzoId
+            ? rate
+            : null,
         warning: reading.reason,
         route: ServiceRoutes.forService(ServiceKey.sabnzbd),
         category: slot.category,
       ),
   ];
+}
+
+/// Whether a SABnzbd slot is fetching articles right now: moving by the
+/// client's reading, and in the `Downloading` or `Fetching` status.
+bool _isMovingSlot(SabnzbdQueueSlot slot, InFlightReading reading) {
+  if (reading.fault != null || reading.held || reading.queued) return false;
+  final status = slot.status.toLowerCase();
+  return status == 'downloading' || status == 'fetching';
 }
 
 Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
@@ -2410,17 +2516,31 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
     ],
   );
 
-  return groups
-      .map(
-        (group) => (
-          group: group,
-          reading: nzbgetGroupInFlight(
-            group,
-            stoppedByDisk: stoppedByDisk,
-            pausedOnPurpose: status.paused && !stoppedByDisk,
-          ),
+  final read = [
+    for (final group in groups)
+      (
+        group: group,
+        reading: nzbgetGroupInFlight(
+          group,
+          stoppedByDisk: stoppedByDisk,
+          pausedOnPurpose: status.paused && !stoppedByDisk,
         ),
-      )
+      ),
+  ];
+  // NZBGet reports one speed, for the whole client. It is the speed of the
+  // group that is downloading when exactly one is, and nobody's otherwise.
+  // A group being unpacked or repaired reads as moving too, and is not
+  // downloading.
+  final downloading = [
+    for (final (:group, :reading) in read)
+      if (reading.fault == null &&
+          !reading.held &&
+          !reading.queued &&
+          group.status.toUpperCase() == 'DOWNLOADING')
+        group.nzbId,
+  ];
+
+  return read
       .map(
         (row) => ServiceQueueItem(
           service: ServiceKey.nzbget,
@@ -2458,6 +2578,11 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
           fault: row.reading.fault,
           warning: row.reading.reason,
           held: row.reading.held,
+          queued: row.reading.queued,
+          rateBytesPerSecond:
+              downloading.length == 1 && downloading.single == row.group.nzbId
+              ? status.downloadRateBytes
+              : null,
           route: ServiceRoutes.forService(ServiceKey.nzbget),
           category: row.group.category,
         ),
@@ -2681,6 +2806,9 @@ ServiceQueueItem _queueItemFromRecords(
 
   final mediaIds = {for (final record in records) _queueMediaId(record)};
   final mediaId = mediaIds.length == 1 ? mediaIds.single : null;
+  final held =
+      fault == null &&
+      ArrQueueEntry.fromQueueItem(typedItem)?.pipeline == MediaPipeline.paused;
 
   return ServiceQueueItem(
     service: service,
@@ -2719,10 +2847,19 @@ ServiceQueueItem _queueItemFromRecords(
     names: names,
     // The arr's own record of a pause, standing until a client row says
     // otherwise.
-    held:
-        fault == null &&
-        ArrQueueEntry.fromQueueItem(typedItem)?.pipeline ==
-            MediaPipeline.paused,
+    held: held,
+    // And of a wait: `queued` or `delay` on every record of the download,
+    // standing until a client row says otherwise.
+    queued: fault == null && !held && records.every(arrQueueIsQueued),
+    // The title's ids, as the record embeds the movie or the series.
+    tmdbId: _embeddedId(typedItem, switch (service) {
+      ServiceKey.radarr => 'movie',
+      ServiceKey.sonarr => 'series',
+      _ => null,
+    }, 'tmdbId'),
+    tvdbId: service == ServiceKey.sonarr
+        ? _embeddedId(typedItem, 'series', 'tvdbId')
+        : null,
     // With the connection: a queue record's ids are its server's, and the
     // same film id names a different film on the other Radarr.
     route: switch (service) {
@@ -2778,6 +2915,15 @@ String? _queuePosterUrl(Map<String, dynamic> record) {
     if (images is List) return remotePosterOf(images);
   }
   return null;
+}
+
+/// [key] of the movie or series [record] embeds under [embed], or null when
+/// the record embeds none, or names no real one (an unmatched download is
+/// `0`).
+int? _embeddedId(Map<String, dynamic> record, String? embed, String key) {
+  if (embed == null) return null;
+  final id = intOrNull(mapOrNull(record[embed])?[key]);
+  return id == null || id <= 0 ? null : id;
 }
 
 /// The library item a queue record belongs to, or null when it names none.

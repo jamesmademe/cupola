@@ -33,12 +33,15 @@ ServiceQueueItem _item(
 
 ServicesInFlight _inFlight({
   List<ServiceQueueItem> moving = const [],
+  List<ServiceQueueItem> queued = const [],
   List<ServiceQueueItem> faults = const [],
   int? rate,
   SourceCoverage coverage = SourceCoverage.none,
 }) => (
   preview: moving,
   activeCount: moving.length,
+  movingCount: moving.length,
+  queued: queued,
   faults: faults,
   held: 0,
   rateBytesPerSecond: rate,
@@ -124,6 +127,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Open in qBittorrent'), findsOne);
     expect(find.text('Remove'), findsOne);
+  });
+
+  testWidgets('what waits its turn is counted after what is stuck, and is no '
+      'row of the module', (tester) async {
+    await pump(
+      tester,
+      _inFlight(
+        moving: [
+          _item('Sprite Fright', id: '1', client: ServiceKey.qbittorrent),
+        ],
+        queued: [
+          ServiceQueueItem(
+            service: ServiceKey.radarr,
+            id: '5',
+            title: 'Sintel',
+            progress: 0,
+            clientLabel: 'SABnzbd',
+            queued: true,
+          ),
+        ],
+        rate: 1000000,
+      ),
+    );
+
+    expect(find.textContaining(RegExp(r'^1 moving · 1 queued · ')), findsOne);
+    expect(find.text('Sprite Fright'), findsOne);
+    expect(find.text('Sintel'), findsNothing);
   });
 
   testWidgets('Try another download asks before it blocklists', (tester) async {

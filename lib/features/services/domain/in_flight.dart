@@ -106,6 +106,19 @@ InFlightFault? arrQueueFault(Map<String, dynamic> record) {
   };
 }
 
+/// Whether an \*arr `/queue` record is waiting its turn rather than
+/// transferring: its `status` is `queued` (in line at the download client) or
+/// `delay` (held back by the release delay profile).
+///
+/// By the status the record names and no other: an arr that sends a word
+/// this does not know reads as moving, as it always has.
+bool arrQueueIsQueued(Map<String, dynamic> record) {
+  final status = record['status'];
+  if (status is! String) return false;
+  final word = status.trim().toLowerCase();
+  return word == 'queued' || word == 'delay';
+}
+
 /// `1 peer`, `6 peers`, `0 seeds`: a count and its noun, in the singular for
 /// one and only for one.
 String countedNoun(int count, String singular, String plural) =>

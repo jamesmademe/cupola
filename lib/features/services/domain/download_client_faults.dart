@@ -16,20 +16,39 @@ import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
-/// One client row, read: a transfer, a download held on purpose, or a fault,
-/// with the client's own words for the fault when it gave any.
+/// One client row, read: a transfer, a download waiting its turn, a download
+/// held on purpose, or a fault, with the client's own words for the fault
+/// when it gave any.
 class InFlightReading {
-  /// Bytes are moving, or waiting their turn to.
-  const InFlightReading.moving() : fault = null, reason = null, held = false;
+  /// Bytes are moving, or about to: a transfer that has begun.
+  const InFlightReading.moving()
+    : fault = null,
+      reason = null,
+      held = false,
+      queued = false;
+
+  /// A download waiting its turn to start: the client has it in line behind
+  /// others and has not begun. Still to come, so it is not backlog and not a
+  /// fault; and not moving either, which is what it used to be counted as.
+  const InFlightReading.queued()
+    : fault = null,
+      reason = null,
+      held = false,
+      queued = true;
 
   /// A download somebody stopped on purpose, with bytes still to come: the
   /// backlog, which the tone rule files under neutral. Not in flight and not
   /// a fault, the same on every client.
-  const InFlightReading.held() : fault = null, reason = null, held = true;
+  const InFlightReading.held()
+    : fault = null,
+      reason = null,
+      held = true,
+      queued = false;
 
   /// The row stopped being a transfer, for [reason] when the client said why.
   const InFlightReading.fault(InFlightFault this.fault, {this.reason})
-    : held = false;
+    : held = false,
+      queued = false;
 
   final InFlightFault? fault;
 
@@ -40,19 +59,23 @@ class InFlightReading {
   /// Stopped on purpose: see [InFlightReading.held].
   final bool held;
 
+  /// Waiting its turn: see [InFlightReading.queued].
+  final bool queued;
+
   @override
   bool operator ==(Object other) =>
       other is InFlightReading &&
       other.fault == fault &&
       other.reason == reason &&
-      other.held == held;
+      other.held == held &&
+      other.queued == queued;
 
   @override
-  int get hashCode => Object.hash(fault, reason, held);
+  int get hashCode => Object.hash(fault, reason, held, queued);
 
   @override
   String toString() =>
-      'InFlightReading(${fault?.name ?? (held ? 'held' : 'moving')}'
+      'InFlightReading(${fault?.name ?? (held ? 'held' : (queued ? 'queued' : 'moving'))}'
       '${reason == null ? '' : ', $reason'})';
 }
 
@@ -64,7 +87,9 @@ class InFlightReading {
 ///   (the disk is gone, full or read-only). It stops the torrent whatever it
 ///   was doing, so it is a fault on any row, a seeding one included.
 /// * Otherwise only the incoming states are in flight: `download`,
-///   `downloadWait`, `check`, `checkWait`. A stopped torrent with bytes still
+///   `downloadWait`, `check`, `checkWait`. `downloadWait` (status 3) is a
+///   download waiting its turn in the daemon's queue: queued, not moving.
+///   A stopped torrent with bytes still
 ///   to come (`leftUntilDone`) was stopped on purpose and is held; a stopped
 ///   or seeding one with nothing left to fetch is not in flight at all.
 /// * `error` 2, a tracker error, on an incoming torrent is a failure: the
@@ -95,6 +120,9 @@ InFlightReading? transmissionInFlight(
       unknownIsStuck: true,
     );
   }
+  if (torrent.status == TransmissionStatus.downloadWait) {
+    return const InFlightReading.queued();
+  }
   return const InFlightReading.moving();
 }
 
@@ -113,7 +141,8 @@ InFlightReading? transmissionInFlight(
 /// or write, and dropping it with the seeding library made a broken download
 /// vanish from Home with nothing saying so. `missingFiles` says why; a bare
 /// `error` does not, and the API carries no message for it. A download paused
-/// or stopped on purpose (`pausedDL`, `stoppedDL`) is held. Seeding, checking
+/// or stopped on purpose (`pausedDL`, `stoppedDL`) is held, and one waiting
+/// its turn behind the client's active limit (`queuedDL`) is queued. Seeding, checking
 /// and a finished torrent stopped (`pausedUP`, `stoppedUP`) are not in
 /// flight.
 InFlightReading? qbittorrentInFlight(Torrent torrent, {required DateTime now}) {
@@ -132,8 +161,8 @@ InFlightReading? qbittorrentInFlight(Torrent torrent, {required DateTime now}) {
     added: torrent.addedOn,
   );
   return switch (TorrentState.fromString(state)) {
-    TorrentState.downloading ||
-    TorrentState.queuedDl => const InFlightReading.moving(),
+    TorrentState.downloading => const InFlightReading.moving(),
+    TorrentState.queuedDl => const InFlightReading.queued(),
     // Without a date to measure by, the metadata wait is taken as a
     // transfer: the client has not said anything is wrong.
     TorrentState.metaDownloading => _stuckOnceIdle(
@@ -270,6 +299,9 @@ String? sabnzbdLabelReason(String label) {
 ///   somebody's pause, and is held.
 /// * [stoppedByDisk] ([usenetQueueStoppedByDisk]) stalls every other job.
 /// * [pausedOnPurpose], a queue somebody paused, holds every other job.
+/// * A slot `status` of `Queued` (SABnzbd's `Status.QUEUED`, a job waiting
+///   for its turn to download) is queued, once the cases above have had
+///   their say.
 InFlightReading sabnzbdSlotInFlight(
   SabnzbdQueueSlot slot, {
   required bool stoppedByDisk,
@@ -293,7 +325,34 @@ InFlightReading sabnzbdSlotInFlight(
     );
   }
   if (pausedOnPurpose) return const InFlightReading.held();
+  if (slot.status.toLowerCase() == 'queued') {
+    return const InFlightReading.queued();
+  }
   return const InFlightReading.moving();
+}
+
+/// When each job of a SABnzbd queue starts, in seconds, in queue order, from
+/// each slot's [finishesIn]: its `timeleft` as a number of seconds, null for
+/// a slot that gave none.
+///
+/// SABnzbd's per-slot `timeleft` is cumulative: `build_queue` (`api.py`)
+/// keeps a running total of the bytes left, adds each slot's own to it, and
+/// prints the time that total takes at the current speed. So each figure is
+/// when **that** job finishes, counting every job ahead of it, and a job
+/// starts when the one before it has finished. A slot SABnzbd skips (paused,
+/// held for propagation) prints `0:00:00` and adds nothing to the total; zero
+/// is no figure, so the job is dated by the nearest slot ahead that has one.
+/// The first job, and one with nothing ahead of it that has a figure, starts
+/// at no time anybody knows: null. Read the figure only for a job that is
+/// queued; a moving job's start is behind it.
+List<int?> sabnzbdStartsInSeconds(List<int?> finishesIn) {
+  final starts = <int?>[];
+  int? ahead;
+  for (final finish in finishesIn) {
+    starts.add(ahead);
+    if (finish != null && finish > 0) ahead = finish;
+  }
+  return starts;
 }
 
 /// Whether an NZBGet `listgroups` status is one in which the group is still
@@ -344,6 +403,8 @@ const String unwantedFileReason = 'Unwanted file type';
 ///   still fetching, and [pausedOnPurpose], a download queue somebody
 ///   paused, holds them. A pause of the download queue does not stop
 ///   post-processing, so a group being unpacked stays in flight.
+/// * A `QUEUED` group, waiting for its turn to download, is queued, once the
+///   cases above have had their say.
 InFlightReading nzbgetGroupInFlight(
   NzbgetGroup group, {
   required bool stoppedByDisk,
@@ -391,5 +452,6 @@ InFlightReading nzbgetGroupInFlight(
   if (pausedOnPurpose && nzbgetIsFetching(status)) {
     return const InFlightReading.held();
   }
+  if (status == 'QUEUED') return const InFlightReading.queued();
   return const InFlightReading.moving();
 }
