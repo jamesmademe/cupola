@@ -112,6 +112,18 @@ abstract final class AppBreakpoints {
   /// a line too long to follow.
   static const double readingWell = DesignTokens.breakpointReadingWell;
 
+  /// How far a page read as one column insets its content on each side so
+  /// that it stops at [well] and centres: nothing on a phone, or in a pane
+  /// no wider than the well.
+  ///
+  /// Touch and window alike, unlike [DesktopContentWell]: a tablet's page
+  /// stretched across 1100pt is as long a line as a window's, and the page
+  /// that keeps the column beside an open title is narrower than the well
+  /// and is left alone. The list itself stays as wide as its pane, so it
+  /// scrolls from anywhere across it.
+  static double wellInset(double width, {double well = readingWell}) =>
+      width > well ? (width - well) / 2 : 0;
+
   /// Width below which a desktop window paints the touch shell.
   ///
   /// 720 is the compact artboard, the narrowest frame the window shell is drawn

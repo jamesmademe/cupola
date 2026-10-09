@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
@@ -76,17 +77,29 @@ class RequestsScreen extends ConsumerWidget {
                   await ref.read(requestsProvider.future);
                 } catch (_) {}
               },
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(bottom: bottomPadding),
-                children: [
-                  if (configured)
-                    const _RequestsBody()
-                  else ...[
-                    const _Header(requests: null),
-                    const _NothingAsked(),
-                  ],
-                ],
+              // One column in the reading well on a tablet and in a window,
+              // as her Home.
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final inset = AppBreakpoints.wellInset(box.maxWidth);
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      inset,
+                      0,
+                      inset,
+                      bottomPadding,
+                    ),
+                    children: [
+                      if (configured)
+                        const _RequestsBody()
+                      else ...[
+                        const _Header(requests: null),
+                        const _NothingAsked(),
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
             const Positioned(

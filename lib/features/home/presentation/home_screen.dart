@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
@@ -111,20 +112,35 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   RefreshIndicator(
                     onRefresh: () => _refreshHome(ref),
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.only(bottom: bottomPadding),
-                      children: [
-                        HomeHeader(
-                          showsHealth: !requester,
-                          trailing: requester ? const _AccountButton() : null,
-                        ),
-                        if (requester) const _RequesterFailureLine(),
-                        for (final module in layout.shown)
-                          homeModuleView(module),
-                        if (!requester) const EditHomeRow(),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
+                    // One column, in the reading well on a tablet and in a
+                    // window: Featured as wide as the well, every module
+                    // under it at its phone's measure grown to the well's.
+                    child: LayoutBuilder(
+                      builder: (context, box) {
+                        final inset = AppBreakpoints.wellInset(box.maxWidth);
+                        return ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            inset,
+                            0,
+                            inset,
+                            bottomPadding,
+                          ),
+                          children: [
+                            HomeHeader(
+                              showsHealth: !requester,
+                              trailing: requester
+                                  ? const _AccountButton()
+                                  : null,
+                            ),
+                            if (requester) const _RequesterFailureLine(),
+                            for (final module in layout.shown)
+                              homeModuleView(module),
+                            if (!requester) const EditHomeRow(),
+                            const SizedBox(height: AppSpacing.lg),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   const Positioned(
