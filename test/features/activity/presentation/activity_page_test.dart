@@ -12,7 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
+import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/page_tabs.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart';
@@ -559,6 +561,58 @@ void main() {
       },
     );
 
+    testWidgets('a read again keeps the rows on screen: a pull or a poll '
+        'never blanks the list', (tester) async {
+      final gate = Completer<void>();
+      var reads = 0;
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        ActivityTab.downloads,
+        overrides: [
+          servicesQueueProvider.overrideWith((ref) async {
+            reads++;
+            // The first read answers; every later one is held open, so the
+            // reload itself is what is on screen.
+            if (reads > 1) await gate.future;
+            return (
+              items: const [
+                ServiceQueueItem(
+                  service: ServiceKey.radarr,
+                  id: '1',
+                  title: 'Furiosa.2024.2160p',
+                  progress: 0.75,
+                  clientLabel: 'qBittorrent',
+                  clientService: ServiceKey.qbittorrent,
+                  etaSeconds: 600,
+                ),
+              ],
+              coverage: SourceCoverage.none,
+            );
+          }),
+        ],
+      );
+      expect(find.byType(ActivityDownloadRow), findsOneWidget);
+      expect(_sections(tester), ['Downloads · 1 moving']);
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(ActivityPage)),
+      ).invalidate(servicesQueueProvider);
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(reads, 2);
+
+      // Mid-read the row and the count are the last answer's.
+      expect(find.byType(ActivityDownloadRow), findsOneWidget);
+      expect(_sections(tester), ['Downloads · 1 moving']);
+      expect(find.text('Nothing is downloading'), findsNothing);
+
+      gate.complete();
+      await harness.settle(tester);
+      expect(find.byType(ActivityDownloadRow), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('a queue that could not be read says so in its own place, '
         'with a Retry that reads it again', (tester) async {
       var reads = 0;
@@ -849,6 +903,80 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('a connection that did not answer is red, never a fault in '
+        'Needs you', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1.withBehaviour(
+          WorldIds.sonarr,
+          ConnectionBehaviour.didNotAnswer,
+        ),
+        ActivityTab.all,
+      );
+
+      expect(find.text('Not in the total: Sonarr'), findsWidgets);
+      expect(find.textContaining('did not respond'), findsNothing);
+      expect(find.text('Paste the key again'), findsNothing);
+      // Silence is the one red on the page: the note under the title wears it.
+      final note = find.ancestor(
+        of: find.text('Not in the total: Sonarr').first,
+        matching: find.byType(FaultNote),
+      );
+      expect(note, findsOneWidget);
+      final glyph = find.descendant(
+        of: note,
+        matching: find.byIcon(Icons.error_outline_rounded),
+      );
+      expect(glyph, findsOneWidget);
+      final scheme = Theme.of(tester.element(glyph)).colorScheme;
+      expect(
+        tester.widget<Icon>(glyph).color,
+        statusToneColor(scheme, StatusTone.error),
+      );
+      // Nothing about Sonarr is a fault to answer: its silence is not one.
+      expect(find.text('Refused the key'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a connection that refused the key is an amber fault with '
+        'its remedy, never "did not answer"', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1.withBehaviour(
+          WorldIds.sonarr,
+          ConnectionBehaviour.refusesKey,
+        ),
+        ActivityTab.all,
+      );
+
+      // In Needs you, in the connection's own words, with the one way out.
+      expect(find.text('Sonarr answered but refused the key'), findsOneWidget);
+      expect(find.text('Paste the key again'), findsOneWidget);
+      expect(find.textContaining('did not answer'), findsNothing);
+      expect(
+        _sections(tester).firstWhere((line) => line.startsWith('Needs you')),
+        'Needs you · 4 faults · 3 requests',
+      );
+      // And the note under the title is the amber one, not the red.
+      final note = find.ancestor(
+        of: find.text('Not in the total: Sonarr').first,
+        matching: find.byType(FaultNote),
+      );
+      final glyph = find.descendant(
+        of: note,
+        matching: find.byIcon(Icons.warning_amber_rounded),
+      );
+      expect(glyph, findsOneWidget);
+      final scheme = Theme.of(tester.element(glyph)).colorScheme;
+      expect(
+        tester.widget<Icon>(glyph).color,
+        statusToneColor(scheme, StatusTone.warning),
+      );
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('P7: three sources are out, each named once under the title, '
         'and no speed is claimed over none', (tester) async {
       final harness = await _pump(tester, Profiles.p7, ActivityTab.all);
@@ -900,6 +1028,8 @@ void main() {
       await tester.tap(find.byTooltip('More'));
       await tester.pumpAndSettle();
       expect(find.text('Manual import…'), findsOneWidget);
+      // Sentence case, a word rather than an icon's tooltip.
+      expect(find.text('Manual Import…'), findsNothing);
       await tester.tap(find.text('Manual import…'));
       await tester.pumpAndSettle();
 
