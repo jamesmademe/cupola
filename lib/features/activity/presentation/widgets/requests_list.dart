@@ -7,6 +7,7 @@ import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
@@ -277,9 +278,12 @@ class _RequestCard extends ConsumerWidget {
     final seasons = request.seasons
         ?.map((season) => season.seasonNumber)
         .join(', ');
-    final createdAt = DateTime.tryParse(
-      request.createdAt,
-    )?.toLocal().toString().split(' ')[0];
+    // The day as the app says dates, `Tue 29 Sep`: the sortable
+    // `2026-09-29` is the dense feed's voice.
+    final created = DateTime.tryParse(request.createdAt);
+    final createdAt = created == null
+        ? null
+        : formatShortDate(created.toLocal().toIso8601String());
 
     return [
       request.type == 'tv' ? 'TV' : 'Movie',

@@ -19,6 +19,7 @@ import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/string_utils.dart' show formatShortDate;
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -114,10 +115,24 @@ String seerrRequestDetail(
   final created = DateTime.tryParse(request.createdAt);
   return joinDisplayParts([
     if (namesWho) request.requestedBy?.displayName,
-    created == null ? null : formatRelativeDateTime(created, now: now),
+    created == null ? null : _askedWhen(created, now: now),
     request.type == 'tv' ? 'TV' : 'Movie',
     (showsProfile ? request.profileName : null) ?? (request.is4k ? '4K' : null),
   ]);
+}
+
+/// When a request was asked, as its row says it: `4 h ago`, `2 days ago`
+/// within the week, then the date as the app says dates, `Tue 29 Sep`, with
+/// a year only when it is another year.
+///
+/// [formatRelativeDateTime] says the sortable `2026-09-02` past a week, which
+/// is the Activity feed's dense voice and no other row's.
+String _askedWhen(DateTime created, {required DateTime now}) {
+  final local = created.toLocal();
+  if (now.toLocal().difference(local).abs() < const Duration(days: 7)) {
+    return formatRelativeDateTime(created, now: now);
+  }
+  return formatShortDate(local.toIso8601String(), now: now.toLocal());
 }
 
 /// What the gate of the lens's Seerr lets a request row say.

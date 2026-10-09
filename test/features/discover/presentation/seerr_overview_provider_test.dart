@@ -86,6 +86,30 @@ void main() {
     });
   });
 
+  group('seerrRequestDetail, past a week', () {
+    // Local times, so the day each says is the day the test names.
+    final today = DateTime(2026, 9, 16, 12);
+    String when(DateTime asked) => seerrRequestDetail(
+      _request(id: 1, title: 'X', createdAt: asked.toIso8601String()),
+      now: today,
+    );
+
+    test('says the day as the app says dates, never the sortable one', () {
+      expect(when(DateTime(2026, 9, 6, 12)), 'Sun 6 Sep · Movie');
+      expect(when(DateTime(2026, 9, 6, 12)), isNot(contains('2026-09-06')));
+    });
+
+    test('adds the year only when it is another one', () {
+      expect(when(DateTime(2025, 12, 24, 12)), 'Wed 24 Dec 2025 · Movie');
+    });
+
+    test('is still relative within the week, and dated from the seventh '
+        'day', () {
+      expect(when(DateTime(2026, 9, 10, 12)), '6 days ago · Movie');
+      expect(when(DateTime(2026, 9, 9, 12)), 'Wed 9 Sep · Movie');
+    });
+  });
+
   group('seerrProcessingSection', () {
     test('keeps approved and processing, drops everything settled', () {
       final section = seerrProcessingSection([

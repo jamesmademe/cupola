@@ -79,6 +79,25 @@ void main() {
     expect(find.text('From the first'), findsNothing);
   });
 
+  testWidgets('a card says the day as the app says dates', (tester) async {
+    // 1 August 2026 is a Saturday. The sortable 2026-08-01 is the dense
+    // feed's voice, and the year only appears when it is another year.
+    final container = ProviderContainer(
+      overrides: [
+        ...await _settings(),
+        seerrServiceProvider.overrideWith(
+          (ref) => _RequestsSeerrService([_request(1, 'From the first')]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await _pump(tester, container: container);
+
+    expect(find.textContaining('Sat 1 Aug'), findsOneWidget);
+    expect(find.textContaining('2026-08-01'), findsNothing);
+  });
+
   testWidgets('and says whose requests these are', (tester) async {
     final container = ProviderContainer(
       overrides: [
