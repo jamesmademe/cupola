@@ -17,7 +17,6 @@ class SettingsAppearanceScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
-    final theme = Theme.of(context);
 
     return AmbientScaffold(
       // No accent: a settings pane has no artwork, so its room is lit by the
@@ -31,17 +30,10 @@ class SettingsAppearanceScreen extends ConsumerWidget {
             AppSpacing.lg,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
+          // No lead-in: the three choices say what they do, and the one this
+          // page had promised a color for each service, which the app never
+          // paints (color is information, and a service accent is not).
           children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-              child: Text(
-                'Both themes are first-class, light is not an inverted '
-                'afterthought. Each service keeps its own color either way.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
             SettingsGroupCard.choices(
               children: [
                 for (final mode in AppThemeMode.values)
