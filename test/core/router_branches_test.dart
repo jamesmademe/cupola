@@ -8,6 +8,7 @@ import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/page_tabs.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart';
@@ -615,6 +616,69 @@ void main() {
 
       router.go(NavTab.home.routePath);
       await tester.pumpAndSettle();
+    });
+
+    testWidgets('a view change changes the address and leaves the page where '
+        'it is', (tester) async {
+      final router = await pumpRouter(
+        tester,
+        at: NavTab.activity.routePath,
+        configured: const [ServiceKey.radarr],
+      );
+      final page = tester.state(find.byType(ActivityPage));
+      Finder viewTab(ActivityTab tab) => find.descendant(
+        of: find.byType(PageTabs<ActivityTab>),
+        matching: find.text(tab.label),
+      );
+
+      for (final tab in [
+        ActivityTab.downloads,
+        ActivityTab.requests,
+        ActivityTab.history,
+        ActivityTab.all,
+      ]) {
+        await tester.tap(viewTab(tab));
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.path, tab.location, reason: tab.name);
+        expect(
+          tester.widget<ActivityPage>(find.byType(ActivityPage)).tab,
+          tab,
+          reason: tab.name,
+        );
+        // The same page and the one header: a view is not a new screen.
+        expect(
+          identical(tester.state(find.byType(ActivityPage)), page),
+          isTrue,
+          reason: tab.name,
+        );
+        expect(find.byType(PageTabs<ActivityTab>), findsOneWidget);
+        expect(find.byType(FloatingBottomNavBar), findsOneWidget);
+      }
+    });
+
+    testWidgets('a view is not pushed: Back from one leaves Activity, not '
+        'the view before', (tester) async {
+      final router = await pumpRouter(
+        tester,
+        at: NavTab.activity.routePath,
+        configured: const [ServiceKey.radarr],
+      );
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(PageTabs<ActivityTab>),
+          matching: find.text(ActivityTab.history.label),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, ActivityTab.history.location);
+      expect(
+        router.canPop(),
+        isFalse,
+        reason: 'a view replaces the page: nothing was stacked on All',
+      );
     });
 
     testWidgets('an old per-service activity link lands in a tab, with its nav '
