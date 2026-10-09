@@ -77,6 +77,7 @@ ServiceQueueItem _download(
   double? progress,
   int? eta,
   InFlightFault? fault,
+  bool queued = false,
   ServiceKey service = ServiceKey.radarr,
 }) => ServiceQueueItem(
   service: service,
@@ -86,6 +87,7 @@ ServiceQueueItem _download(
   clientLabel: 'qBittorrent',
   etaSeconds: eta,
   fault: fault,
+  queued: queued,
   clientService: ServiceKey.qbittorrent,
   posterUrl: CatalogArt.poster,
   names: MediaNames(
@@ -95,7 +97,8 @@ ServiceQueueItem _download(
   ),
 );
 
-/// Three moving and one stuck, as the household's evening has them.
+/// Three moving, one stuck and one waiting its turn, as the household's
+/// evening has them.
 final _evening = (
   preview: [
     _download(
@@ -123,7 +126,15 @@ final _evening = (
   ],
   activeCount: 3,
   movingCount: 3,
-  queued: const <ServiceQueueItem>[],
+  queued: [
+    _download(
+      'Sintel · 2160p',
+      'Sintel.2010.2160p.BluRay',
+      id: '5',
+      progress: 0,
+      queued: true,
+    ),
+  ],
   faults: [
     _download(
       'Big Buck Bunny',
@@ -485,7 +496,8 @@ void main() {
       ),
       CatalogScene(
         'Downloads · what moves, how far and how long; the stuck one in '
-        'amber with Try another download and More',
+        'amber with Try another download and More; what waits its turn is '
+        'counted after it (`1 queued`) and has no row',
         (_) => const HomeDownloadsModule(),
         width: 390,
         overrides: [

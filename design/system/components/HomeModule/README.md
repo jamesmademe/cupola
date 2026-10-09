@@ -104,8 +104,9 @@ under it, a hairline between rows. A 4pt bar (`HomeRowBar`) says how far somethi
   (downloading is information), its release under it in mono (a machine string, exactly as named), a blue bar. A
   stalled or failed one is chosen first and drawn last, its value amber (`Stuck at 47%`, `Failed`), its bar amber, and
   under it `Try another download` in the amber fill with a 44pt More (`Open in qBittorrent`, `Remove`); a torrent no
-  arr asked for offers `Open in qBittorrent` alone. The line under the name counts `3 moving · 1 stuck` and the clients'
-  speed, `—` while a client that is set up did not answer; with no client, `Speeds come from your download client`
+  arr asked for offers `Open in qBittorrent` alone. The line under the name counts `3 moving · 1 stuck · 1 queued` and
+  the clients' speed (`1 queued` alone when that is all there is): a download waiting its turn at its client is queued,
+  not moving, and has no row here. The speed is `—` while a client that is set up did not answer; with no client, `Speeds come from your download client`
   under the rows. A blocked import is not a download: the footnote names it once (`18 need a manual import · in Needs
   you`). Nothing moving is `Nothing is downloading` with `The last download finished at 18:52.`, and the link reads
   `Activity`. At a large reading size the value goes under the title. The module is read again every 30 s while the
@@ -183,7 +184,7 @@ need you. Review`), announced when it appears. Each Set up next row is one butto
 
 Each sheet is drawn in the dark and the light room: the frame ready, loading, silent and needing a service; Needs
 you led by a group, by one fault and by a silent service; Set up next over Radarr, Sonarr and Seerr; Downloads moving
-with one stuck, with qBittorrent silent, and with nothing moving; Requests with one row answered; Now playing with two
+with one stuck and one queued, with qBittorrent silent, and with nothing moving; Requests with one row answered; Now playing with two
 playbacks; Continue watching with two titles and asking who you are; Coming up over three days, and with Lidarr silent
 and nothing by Friday; Arrived over a week, and with Radarr 4K silent; Stack health with three faults, with Radarr
 silent, and checking; Storage with a disk in trouble, and with TrueNAS silent; Storage and Discover shelf asking for
