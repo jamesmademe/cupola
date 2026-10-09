@@ -1103,7 +1103,10 @@ Widget _screen(_Page page) => switch (page) {
 List<String> _regionsOnPage(WidgetTester tester) {
   final list = tester.widget<ListView>(find.byType(ListView));
   final children = (list.childrenDelegate as SliverChildListDelegate).children;
-  return [for (final child in children) child.runtimeType.toString()];
+  // Wider than the reading well, the Home sets each module in its column.
+  Widget region(Widget child) =>
+      child is Padding && child.child != null ? child.child! : child;
+  return [for (final child in children) region(child).runtimeType.toString()];
 }
 
 /// Pumps [page] with every source overridden.
