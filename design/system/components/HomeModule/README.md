@@ -111,9 +111,11 @@ under it, a hairline between rows. A 4pt bar (`HomeRowBar`) says how far somethi
   `Activity`. At a large reading size the value goes under the title. The module is read again every 30 s while the
   Home is on screen.
 - **Requests**: `2 wait for you`, from Seerr's own count. A row says who and when (`Anna · 2 h ago`); under it
-  `Approve` in the ink fill and `Decline` outlined, the same width. Neither takes a tone: a request is not a fault.
-  Approved or declined here, the row says what happened (`Approved · sent to Radarr`, `Declined`) without its buttons,
-  in its place, until the Home is read again. `See all requests` when more wait than the rows show.
+  `Approve` in the ink fill and `Decline` outlined, the same width: the pair every list of waiting requests draws
+  ([RequestAnswerControls](../RequestAnswerControls/README.md), `.row`, busy while an answer is on its way). Neither
+  takes a tone: a request is not a fault. Approved or declined, here or from any other list, the row says what happened
+  (`Approved · sent to Radarr`, `Declined`) without its buttons, in its place, until the Home is read again; a request
+  answered from another list leaves the module at once. `See all requests` when more wait than the rows show.
 - **Now playing**: one row per playback, a disc with the viewer's initial, `Anna · Sintel` (an episode by its code),
   `Living room TV · 9 min left` (`Stopped` while the player holds it), an ink bar: watching is not a status. The line
   under the name is the server (`Jellyfin`). Absent when nobody watches; a server that did not answer keeps it in place.

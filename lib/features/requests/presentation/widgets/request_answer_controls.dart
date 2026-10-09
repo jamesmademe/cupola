@@ -227,7 +227,12 @@ class RequestAnswerControls extends ConsumerWidget {
                 children: [
                   lead,
                   const SizedBox(width: AppSpacing.sm),
-                  Flexible(child: label),
+                  // Scaled down rather than cut short when the ring leaves
+                  // the verb too little room, at a large reading size: the
+                  // button says what it is for while it works.
+                  Flexible(
+                    child: FittedBox(fit: BoxFit.scaleDown, child: label),
+                  ),
                 ],
               );
         final annotated = annotate(content);
@@ -255,7 +260,7 @@ class RequestAnswerControls extends ConsumerWidget {
   }
 
   /// A 28pt plate: [MaterialTapTargetSize.padded] keeps the 44pt target
-  /// round it, and the density is pinned because the desktop's compact one
+  /// around it, and the density is pinned because the desktop's compact one
   /// would take 8pt off the minimum.
   static ButtonStyle _compactStyle(BuildContext context) => ButtonStyle(
     visualDensity: VisualDensity.standard,

@@ -18,6 +18,7 @@ cards live in [`../motion/`](../motion/).
 | Actions | [CrossServiceAction](CrossServiceAction/README.md) | `lib/core/widgets/cross_service_action.dart` |
 | Actions | [HeaderActionRow](HeaderActionRow/README.md) | `lib/core/widgets/header_action_row.dart`, `lib/core/status/media_action.dart` |
 | Actions | [ReelCommandButton](ReelCommandButton/README.md) | `lib/core/widgets/reel_command_button.dart`, `lib/core/reel_motion.dart` |
+| Actions | [RequestAnswerControls](RequestAnswerControls/README.md) | `lib/features/requests/presentation/widgets/request_answer_controls.dart`, `lib/features/activity/presentation/widgets/activity_actions.dart`, `lib/features/home/data/answered_requests.dart` |
 | Navigation | [FloatingBottomNavBar](FloatingBottomNavBar/README.md) | `lib/core/widgets/floating_bottom_nav_bar.dart`, `lib/features/settings/domain/nav_tab.dart`, `lib/features/shell/presentation/shell_screen.dart` |
 | Navigation | [FloatingNavRail](FloatingNavRail/README.md) | `lib/core/widgets/floating_nav_rail.dart`, `lib/features/shell/presentation/shell_screen.dart` |
 | Navigation | [SearchBarHeader](SearchBarHeader/README.md) | `lib/core/widgets/search_bar_header.dart` |
