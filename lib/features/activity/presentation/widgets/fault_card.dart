@@ -16,6 +16,10 @@ typedef FaultCardAction = ({
 /// way out can be taken back.
 typedef FaultCardNote = ({String text, VoidCallback? onUndo});
 
+/// Work the remedy started and that is still running, in place of the fill:
+/// `Scrubbing tank · 2% · about 9 h left`, and how far it got.
+typedef FaultCardRunning = ({String text, double? progress});
+
 /// One fault in Needs you, with its way out on the card.
 ///
 /// A headline that is a sentence (`Big Buck Bunny is stuck at 47%`) by an
@@ -45,6 +49,7 @@ class FaultCard extends StatefulWidget {
     this.evidence = const [],
     this.primary,
     this.primarySubtitle,
+    this.running,
     this.secondary = const [],
     this.note,
     this.divided = false,
@@ -63,6 +68,7 @@ class FaultCard extends StatefulWidget {
     this.evidence = const [],
     this.primary,
     this.primarySubtitle,
+    this.running,
     this.secondary = const [],
     this.note,
   }) : divided = false,
@@ -103,6 +109,9 @@ class FaultCard extends StatefulWidget {
   /// What [primary] does: `Radarr drops this one (1.1 GB so far), won't pick
   /// it again, and looks for another.`
   final String? primarySubtitle;
+
+  /// Work under way, drawn in place of [primary]: blue, informational.
+  final FaultCardRunning? running;
 
   /// The quieter ways out, at most two, beside each other.
   final List<FaultCardAction> secondary;
@@ -264,8 +273,12 @@ class _FaultCardState extends State<FaultCard> {
         : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ?card.primary,
-              if (card.primarySubtitle case final subtitle?) ...[
+              if (card.running case final running?)
+                _Running(running: running)
+              else
+                ?card.primary,
+              if (card.primarySubtitle case final subtitle?
+                  when card.running == null) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   subtitle,
@@ -354,6 +367,50 @@ class _Note extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _Running extends StatelessWidget {
+  const _Running({required this.running});
+
+  final FaultCardRunning running;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final blue = statusToneColor(
+      Theme.of(context).colorScheme,
+      StatusTone.info,
+      surface: room.slab,
+    );
+    final progress = running.progress;
+    return Semantics(
+      liveRegion: true,
+      label: running.text,
+      excludeSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(running.text, style: AppType.label.copyWith(color: blue)),
+            if (progress != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: progress.clamp(0, 1).toDouble(),
+                  minHeight: 4,
+                  color: blue,
+                  backgroundColor: room.fillTrack,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

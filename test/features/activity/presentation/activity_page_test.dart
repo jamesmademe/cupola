@@ -23,6 +23,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_download_
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
 import 'package:cupola/features/activity/presentation/widgets/fault_card.dart';
+import 'package:cupola/features/activity/presentation/widgets/needs_you_cards.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';

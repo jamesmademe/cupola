@@ -561,6 +561,8 @@ class ServiceRoutes {
   static const activityHistory = '$activity/history';
 
   /// Every arr's blocklist in one, from the foot of History.
+  static const activityNeedsYouSegment = 'needs-you';
+  static const activityNeedsYou = '$activity/$activityNeedsYouSegment';
   static const activityBlocklistSegment = 'blocklist';
   static const activityBlocklist = '$activity/$activityBlocklistSegment';
 

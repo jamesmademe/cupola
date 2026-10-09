@@ -28,6 +28,7 @@ import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/activity_blocklist_page.dart';
+import 'package:cupola/features/activity/presentation/activity_needs_you_page.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart';
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
 import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
@@ -2882,6 +2883,10 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
     path: ServiceRoutes.activity,
     pageBuilder: (context, state) => _activityPage(state, ActivityTab.all),
     routes: [
+      _page(
+        ServiceRoutes.activityNeedsYouSegment,
+        (state) => const ActivityNeedsYouPage(),
+      ),
       _page(
         ServiceRoutes.activityBlocklistSegment,
         (state) => const ActivityBlocklistPage(),

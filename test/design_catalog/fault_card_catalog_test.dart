@@ -130,6 +130,34 @@ void main() {
         width: 390,
       ),
       CatalogScene(
+        'FaultCard(running:) · work the remedy started, in blue in place of '
+        'the fill, with the way out beside it',
+        (_) => ActivitySlab(
+          children: [
+            FaultCard(
+              headline: 'Disk sdd reports 8 uncorrectable errors',
+              explanation:
+                  'sdd could not read some data by itself. The pool is still '
+                  'healthy: a scrub reads every block and repairs it from the '
+                  'other disks.',
+              source: 'TrueNAS · pool tank',
+              art: const HomeRowArt.large(
+                posterUrl: '',
+                icon: Icons.storage_rounded,
+              ),
+              running: (
+                text: 'Scrubbing tank · 2% · about 9\u00A0h left',
+                progress: 0.02,
+              ),
+              secondary: [
+                (label: 'Open alert', onPressed: () {}, semanticLabel: null),
+              ],
+            ),
+          ],
+        ),
+        width: 390,
+      ),
+      CatalogScene(
         'Text at 200% · every line wraps, the buttons keep their target',
         (_) => ActivitySlab(children: [_stuck()]),
         width: 390,

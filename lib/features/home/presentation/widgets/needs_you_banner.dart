@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/home/domain/needs_you.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 
@@ -24,8 +25,9 @@ import 'package:cupola/features/shell/domain/stack_health.dart';
 ///
 /// One target, as drawn. A service that did not answer leads, in red, and
 /// the line is its Retry; otherwise the largest group of equal faults leads,
-/// in amber, and the line is Review, which opens the place that fault is
-/// fixed today. The line never runs a remedy itself.
+/// in amber, and the line is Review, which opens Activity's Needs you, where
+/// every fault is on its card with its way out. The line never runs a remedy
+/// itself.
 class NeedsYouBanner extends ConsumerWidget {
   const NeedsYouBanner({super.key});
 
@@ -54,12 +56,13 @@ class NeedsYouBanner extends ConsumerWidget {
     );
     if (needs == null) return const SizedBox.shrink();
 
-    final lead = needs.lead;
     return NeedsYouLine(
       needs: needs,
       onTap: needs.leadsWithSilence
           ? () => retryDashboardServices(ref, needs.silent)
-          : () => openDecision(context, ref, lead!),
+          // Every fault and its way out is on one page; the lead is the
+          // first card there.
+          : () => context.go(ServiceRoutes.activityNeedsYou),
     );
   }
 }

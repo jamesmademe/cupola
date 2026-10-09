@@ -12,6 +12,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart';
 import 'package:cupola/features/activity/presentation/widgets/decision_fault_card.dart';
+import 'package:cupola/features/activity/presentation/widgets/storage_alert_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/stuck_download_card.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/services/presentation/kept_waiting_provider.dart';
@@ -230,16 +231,57 @@ void main() {
   ) async {
     final harness = await _pump(tester);
 
-    expect(find.byType(DecisionFaultCard), findsNWidgets(3));
+    expect(find.byType(DecisionFaultCard), findsNWidgets(2));
     expect(find.text('18 downloads need a manual import'), findsOneWidget);
     expect(find.text('Review 18'), findsOneWidget);
+    expect(find.text('immich stopped'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P1: a disk with errors says what they mean for its pool, and '
+      'offers the scrub that repairs it', (tester) async {
+    final harness = await _pump(tester);
+
+    expect(find.byType(StorageAlertCard), findsOneWidget);
     expect(
       find.text('Disk sdd reports 8 uncorrectable errors'),
       findsOneWidget,
     );
+    expect(
+      find.text(
+        'sdd could not read some data by itself. The pool is still healthy: '
+        'a scrub reads every block and repairs it from the other disks.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('TrueNAS · pool tank'), findsOneWidget);
+    expect(find.text('Scrub tank'), findsOneWidget);
     expect(find.text('Open alert'), findsOneWidget);
-    expect(find.text('immich stopped'), findsOneWidget);
-    expect(find.text('Start'), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('Scrub tank asks first, then asks that TrueNAS to scrub tank', (
+    tester,
+  ) async {
+    final harness = await _pump(tester);
+    bool scrubs((String, String) call) => call.$2 == 'pool.scrub.scrub';
+
+    await tester.tap(find.text('Scrub tank'));
+    await tester.pumpAndSettle();
+    expect(find.text('Scrub tank?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(harness.network.rpcCalls.where(scrubs), isEmpty);
+
+    await tester.tap(find.text('Scrub tank'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Scrub tank').last);
+    await harness.settle(tester);
+
+    expect(harness.network.rpcCalls.where(scrubs).single.$1, WorldIds.truenas);
 
     await harness.unmount(tester);
   });

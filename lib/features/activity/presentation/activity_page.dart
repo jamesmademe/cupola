@@ -25,9 +25,8 @@ import 'package:cupola/features/activity/domain/everyones_requests.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_download_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
-import 'package:cupola/features/activity/presentation/widgets/decision_fault_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
-import 'package:cupola/features/activity/presentation/widgets/stuck_download_card.dart';
+import 'package:cupola/features/activity/presentation/widgets/needs_you_cards.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
@@ -44,8 +43,6 @@ import 'package:cupola/features/requests/presentation/my_request_actions.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart'
-    show DecisionRow;
 import 'package:cupola/features/services/presentation/nothing_set_up.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -472,29 +469,6 @@ String needsYouMeta({required int faults, required int requests}) => [
   if (requests > 0) requests == 1 ? '1 request' : '$requests requests',
 ].join(' · ');
 
-/// `2 requests wait for your approval`.
-String requestsWaitLine(int count) => count == 1
-    ? '1 request waits for your approval'
-    : '$count requests wait for your approval';
-
-/// One card of Needs you: a fault's decision, or one stuck download of it,
-/// since each stuck download has a way out of its own.
-typedef _FaultEntry = ({
-  String id,
-  DashboardDecision? decision,
-  String? downloadKey,
-});
-
-List<_FaultEntry> _faultEntries(Iterable<DashboardDecision> faults) => [
-  for (final decision in faults)
-    if (decision.kind == DecisionKind.stalledDownload &&
-        decision.downloadKeys.isNotEmpty)
-      for (final key in decision.downloadKeys)
-        (id: 'download-$key', decision: null, downloadKey: key)
-    else
-      (id: decision.id, decision: decision, downloadKey: null),
-];
-
 /// Needs you: every fault on its card with its way out, then the requests
 /// that wait for an answer. The same list the Home's banner counts.
 class _NeedsYouSection extends ConsumerStatefulWidget {
@@ -506,14 +480,14 @@ class _NeedsYouSection extends ConsumerStatefulWidget {
 
 class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
   /// The cards as last drawn, for a card acted on to keep its place.
-  List<_FaultEntry> _shown = const [];
+  List<FaultEntry> _shown = const [];
 
   @override
   Widget build(BuildContext context) {
     final decisions = ref.watch(dashboardDecisionsProvider);
     final answered = ref.watch(answeredRequestsProvider);
     final acted = ref.watch(actedFaultsProvider);
-    final entries = _faultEntries(
+    final entries = faultEntriesOf(
       decisions.decisions.where((decision) => decision.isFault),
     );
     // A download acted on leaves the list as the queue is read again; its
@@ -562,6 +536,11 @@ class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
         ActivitySection(
           title: 'Needs you',
           meta: meta.isEmpty ? null : meta,
+          // The count leads to the page that holds every card whole.
+          onOpen: meta.isEmpty
+              ? null
+              : () => context.push(ServiceRoutes.activityNeedsYou),
+          openHint: 'Opens Needs you',
           children: [
             if (note != null)
               Padding(
@@ -569,19 +548,12 @@ class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
                 child: HomeCoverageNote(note: note, coverage: coverage),
               ),
             for (final (index, entry) in cards.indexed)
-              if (entry.downloadKey case final key?)
-                StuckDownloadCard(
-                  key: ValueKey(entry.id),
-                  downloadKey: key,
-                  divided: index > 0,
-                )
-              else
-                DecisionFaultCard(
-                  key: ValueKey(entry.id),
-                  decision: entry.decision!,
-                  divided: index > 0,
-                ),
-            if (cards.isEmpty) ..._requestRows(requests, answered, blue),
+              NeedsYouCard(
+                key: ValueKey(entry.id),
+                entry: entry,
+                divided: index > 0,
+              ),
+            if (cards.isEmpty) ...requestRowsOf(requests, answered, blue),
           ],
         ),
         if (cards.isNotEmpty && requests.isNotEmpty)
@@ -593,50 +565,11 @@ class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
               0,
             ),
             child: ActivitySlab(
-              children: _requestRows(requests, answered, blue),
+              children: requestRowsOf(requests, answered, blue),
             ),
           ),
       ],
     );
-  }
-
-  List<Widget> _requestRows(
-    List<DashboardDecision> requests,
-    Map<String, AnsweredRequest> answered,
-    Color blue,
-  ) {
-    final waiting = requests
-        .where((decision) => !answered.containsKey(decision.id))
-        .length;
-    return [
-      if (waiting > 0)
-        Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.lg),
-          child: Row(
-            children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: blue),
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  requestsWaitLine(waiting),
-                  style: AppType.label.copyWith(color: blue),
-                ),
-              ),
-            ],
-          ),
-        ),
-      for (final (index, decision) in requests.indexed)
-        DecisionRow(
-          key: ValueKey(decision.id),
-          decision: decision,
-          divided: index > 0,
-          outcome: answered[decision.id]?.outcome,
-        ),
-    ];
   }
 }
 

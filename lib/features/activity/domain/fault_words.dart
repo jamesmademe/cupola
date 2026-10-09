@@ -60,9 +60,16 @@ FaultWords faultWordsOf(DashboardDecision decision) {
       source: source,
       why: null,
     ),
-    DecisionKind.storageAlert ||
-    DecisionKind.connectionFault ||
-    DecisionKind.serviceHealth => (
+    // TrueNAS's own sentence behind Why?, when the headline is the app's.
+    DecisionKind.storageAlert => (
+      headline: _withoutStop(decision.title),
+      explanation: null,
+      source: source,
+      why: why == null || why.isEmpty || _withoutStop(why) == decision.title
+          ? null
+          : sentence(why),
+    ),
+    DecisionKind.connectionFault || DecisionKind.serviceHealth => (
       headline: _withoutStop(decision.title),
       explanation: null,
       source: source,

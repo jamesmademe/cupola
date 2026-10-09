@@ -99,7 +99,9 @@ class ActivitySection extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        count,
+                        // Under the name, at a large size, the count wraps
+                        // rather than run past the page.
+                        if (stacked) Flexible(child: count) else count,
                         const SizedBox(width: AppSpacing.xxs),
                         Icon(
                           Icons.chevron_right_rounded,

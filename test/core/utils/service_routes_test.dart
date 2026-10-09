@@ -750,6 +750,7 @@ void main() {
           ServiceRoutes.activityRequests,
           '${ServiceRoutes.activityRequests}?i=seerr-cabin',
           ServiceRoutes.activityHistory,
+          ServiceRoutes.activityNeedsYou,
           ServiceRoutes.activityBlocklist,
         ]) {
           expect(
