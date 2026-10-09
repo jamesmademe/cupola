@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -314,10 +315,15 @@ final _settings = StateProvider<SettingsModel>((ref) => _operator);
 
 /// A tab of the bar, by its glyph: the pill writes only the selected tab's
 /// name.
-Finder _tab(NavTab tab) => find.byWidgetPredicate(
-  (widget) =>
-      widget is Icon &&
-      (widget.icon == tab.icon || widget.icon == tab.selectedIcon),
+/// [tab]'s glyph in the bar, not a page's button that shares it (Discover
+/// on the requester's Home).
+Finder _tab(NavTab tab) => find.descendant(
+  of: find.byType(FloatingBottomNavBar),
+  matching: find.byWidgetPredicate(
+    (widget) =>
+        widget is Icon &&
+        (widget.icon == tab.icon || widget.icon == tab.selectedIcon),
+  ),
 );
 
 String _location(ProviderContainer container) =>

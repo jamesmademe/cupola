@@ -179,6 +179,14 @@ class SeerrFake extends ServiceFake {
       // is there, whole or in part.
       if (hd == 4 || hd == 5)
         'mediaUrl': '${WorldHosts.jellyfin}/web/#/details?id=jf-${t.key}',
+      // When the player first held it: Coffee Run this afternoon, Sintel
+      // two days ago, the rest of what is there long before.
+      if (hd == 4 || hd == 5)
+        'mediaAddedAt': c.ago(switch (t.key) {
+          'coffeeRun' => const Duration(hours: 3),
+          'sintel' => const Duration(days: 2),
+          _ => const Duration(days: 25),
+        }),
       // A series' seasons, each with its own status. Cosmos Laundromat: the
       // first on the server, the second in part. Night Shift: the first on
       // the server, the second asked for by nobody, the third waiting.

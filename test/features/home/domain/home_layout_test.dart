@@ -32,6 +32,8 @@ void main() {
         HomeModule.setUpNext,
       ]);
       expect(HomeModule.of(requester), [
+        HomeModule.readyToWatch,
+        HomeModule.yourRequests,
         HomeModule.trending,
         HomeModule.comingSoon,
       ]);
@@ -336,7 +338,7 @@ void main() {
         layout.switched(HomeModule.storage, on: true).summary,
         '10 modules',
       );
-      expect(HomeLayout.defaultFor(requester).summary, '2 modules');
+      expect(HomeLayout.defaultFor(requester).summary, '4 modules');
     });
   });
 }

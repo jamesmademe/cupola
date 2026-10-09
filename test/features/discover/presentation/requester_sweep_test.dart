@@ -24,6 +24,8 @@ import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/requests/presentation/requests_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/fakes/media_fakes.dart';
@@ -80,6 +82,10 @@ void _expectNothingOfTheOperators(WidgetTester tester, String where) {
 }
 
 final _pages = <String, Widget>{
+  // Her Home: what arrived, what is on its way, the shelves; and her page
+  // of requests, with Cancel request on the one that waits.
+  'the Home': const HomeScreen(),
+  'the Requests tab': const RequestsScreen(),
   'the Discover tab': const DiscoverPage(),
   // The one page a title has: the requester's reads no service but the
   // players, and no copy's fault, whatever the household holds.
@@ -199,6 +205,8 @@ void main() {
     final line = RegExp(r"^Can't reach the server since \d\d:\d\d\.?$");
 
     for (final name in [
+      'the Home',
+      'the Requests tab',
       'the Discover tab',
       'the Media page, a movie of hers',
       'the global search',
