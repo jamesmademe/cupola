@@ -54,6 +54,8 @@ canceled here.` A failure: `Could not cancel the request. Nothing changed.` Her 
 
 ## Her page
 
+One column, as her Home: on a tablet and in a window it stops at the reading well (720), centred, and beside an open
+title it keeps the phone's 440.
 `Requests` in `screen`, then `● 1 ready to watch · ● 3 on the way` (green, blue; a part with nothing in it is left
 out). Each request that waits on its card, newest first; then one slab of the rest, what moves first: downloading, on
 its way, ready to watch, the answers, what has long been on the server. Empty: `Requests you make will appear here.`

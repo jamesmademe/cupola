@@ -27,7 +27,7 @@ A horizontal drag rubber-bands the bar up to 15pt with growing resistance and sp
 
 ## Where it is not used
 
-At `AppBreakpoints.touchRail` (840) and wider on a touch device, a `NavigationRail` takes over with the same destinations, labels and badges on `surfaceContainerLow` with the theme's `secondaryContainer` indicator. A desktop window drawing the desktop shell navigates from `DesktopNavRail` instead.
+At `AppBreakpoints.touchRail` (840) and wider on a touch device, the bar stands on its side: [FloatingNavRail](../FloatingNavRail/README.md), the same destinations, glass and badge at the middle of the leading edge. A desktop window drawing the desktop shell navigates from [DesktopNavRail](../DesktopNavRail/README.md) instead.
 
 ## The consumer provides
 

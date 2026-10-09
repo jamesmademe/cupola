@@ -19,6 +19,7 @@ cards live in [`../motion/`](../motion/).
 | Actions | [HeaderActionRow](HeaderActionRow/README.md) | `lib/core/widgets/header_action_row.dart`, `lib/core/status/media_action.dart` |
 | Actions | [ReelCommandButton](ReelCommandButton/README.md) | `lib/core/widgets/reel_command_button.dart`, `lib/core/reel_motion.dart` |
 | Navigation | [FloatingBottomNavBar](FloatingBottomNavBar/README.md) | `lib/core/widgets/floating_bottom_nav_bar.dart`, `lib/features/settings/domain/nav_tab.dart`, `lib/features/shell/presentation/shell_screen.dart` |
+| Navigation | [FloatingNavRail](FloatingNavRail/README.md) | `lib/core/widgets/floating_nav_rail.dart`, `lib/features/shell/presentation/shell_screen.dart` |
 | Navigation | [SearchBarHeader](SearchBarHeader/README.md) | `lib/core/widgets/search_bar_header.dart` |
 | Navigation | [SelectionPills](SelectionPills/README.md) | `lib/core/widgets/selection_pills.dart` |
 | Navigation | [ServiceTabBar](ServiceTabBar/README.md) | `lib/core/widgets/service_tab_bar.dart`, `lib/features/services/domain/service_tab.dart` |
@@ -74,7 +75,7 @@ cards live in [`../motion/`](../motion/).
 | Service surfaces | [ServiceOverview](ServiceOverview/README.md) | `lib/core/widgets/service_overview.dart`, `lib/features/movies/presentation/radarr_overview_screen.dart` |
 | Service surfaces | [ServiceRing](ServiceRing/README.md) | `lib/core/widgets/service_ring.dart` |
 | Desktop shell | [CommandDeck](CommandDeck/README.md) | `lib/features/shell/presentation/desktop/command_deck.dart`, `lib/features/shell/domain/command_deck_entry.dart` |
-| Desktop shell | [DesktopNavRail](DesktopNavRail/README.md) | `lib/features/shell/presentation/desktop/desktop_nav_rail.dart`, `lib/features/settings/domain/nav_tab.dart` |
+| Desktop shell | [DesktopNavRail](DesktopNavRail/README.md) | `lib/features/shell/presentation/desktop/desktop_nav_rail.dart`, `lib/features/shell/presentation/desktop/desktop_rail_services.dart`, `lib/features/settings/domain/nav_tab.dart` |
 | Desktop shell | [DesktopShell](DesktopShell/README.md) | `lib/features/shell/presentation/desktop/desktop_shell.dart` |
 | Desktop shell | [InspectorPane](InspectorPane/README.md) | `lib/features/shell/presentation/desktop/inspector_pane.dart`, `lib/features/shell/domain/inspector_state.dart` |
 | Desktop shell | [ServicePortal](ServicePortal/README.md) | `lib/features/shell/presentation/service_portal.dart` |

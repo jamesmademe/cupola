@@ -13,9 +13,10 @@ Chrome strip (`WindowChrome`):
   - *Lens: 4K* — a readout, not a button, shown only when the current service has two connections, naming the active one by the app's one rule (`SettingsModel.connectionName`: the user's name, else *Radarr 2* from its place; never a label a single connection kept from a sibling since removed); `dns` outlined, on (a choice in force); its tooltip says *Showing Radarr · 4K. Change it from the deck.*
   - *Refresh all ⌘R* and *Inspector ⌥I* — real buttons; the inspector chip is on while the pane is open.
   - Compact drops every label and keeps glyph and key (the lens, which has no key, keeps only its glyph).
+  - **The requester's chrome** has no *Inspector*: what it follows is the stack's activity, the operator's. Her window has no deck strip under it and no command deck: the breadcrumb and *Refresh all ⌘R* are the whole of it.
 - Keys print `⌘ ⌥ ⇧` on Apple platforms and `Ctrl+`, `Alt+`, `Shift+` elsewhere.
 
-Deck strip (`ServiceDeck`, starts right of the 56pt rail):
+Deck strip (`ServiceDeck`, starts right of the sidebar, 232 or 56 folded; the operator's only):
 
 - `fullHeight` 52, `compactHeight` 40; padding 0 `space-lg` (`space-md` compact); bottom hairline `outline-variant` at 55%.
 - The deck carries the fleet, not the room: no wash, no bloom, no border of the room's light. The room light lives on the service header below it (`ServiceTabBar.header`).

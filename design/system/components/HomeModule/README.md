@@ -32,6 +32,10 @@ words in `lib/features/home/domain/now_playing.dart`), `continue_watching_module
 `HomeModule` (`lib/features/home/domain/home_module.dart`) read through the person's saved layout; see
 [EditHome](../EditHome/README.md).
 
+The Home is drawn at 390 and is one column everywhere: on a tablet and in a desktop window it stops at the reading
+well, 720 (`AppBreakpoints.wellInset`), centred, Featured as wide as the well and every module under it at the well's
+measure. Beside a title open on a tablet it keeps the phone's 440 column.
+
 ## The five states
 
 - **Loading** (`HomeModuleFrame.loading`): the module's name in the section role over the shape of its rows (two

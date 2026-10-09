@@ -11,12 +11,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
@@ -26,10 +28,15 @@ import 'package:cupola/features/services/presentation/service_tab_scaffold.dart'
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/requests/presentation/requests_screen.dart';
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
+import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
+import 'package:cupola/features/shell/presentation/desktop/desktop_rail_services.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_shell.dart';
 import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 
@@ -227,9 +234,61 @@ List<FloatingNavDestination> _destinations() => [
 
 late SharedPreferences _prefs;
 
-/// The window at Radarr's Overview, with its own root container and router.
+/// The requester's connection: her own Seerr account, which may only ask.
+const _herSettings = SettingsModel(
+  instances: [
+    ServiceInstance(
+      id: 'seerr',
+      service: ServiceKey.seerr,
+      url: 'https://seerr.lan',
+      account: SeerrAccountSignIn(
+        kind: SeerrAccountKind.local,
+        login: 'anna@home.lan',
+        userId: 7,
+        displayName: 'Anna',
+        session: 'session',
+        permissions: 32,
+      ),
+    ),
+  ],
+);
+
+/// The sidebar's services as a stack of sixteen reads them: Seerr's requests
+/// wait, Sonarr and Prowlarr did not answer, the rest are calm.
+const _railServices = <DesktopRailService>[
+  (
+    service: ServiceKey.seerr,
+    tone: StatusTone.info,
+    state: '2 requests wait for approval',
+  ),
+  (service: ServiceKey.jellyfin, tone: null, state: null),
+  (service: ServiceKey.radarr, tone: null, state: null),
+  (service: ServiceKey.sonarr, tone: StatusTone.error, state: 'did not answer'),
+  (service: ServiceKey.lidarr, tone: null, state: null),
+  (service: ServiceKey.bazarr, tone: null, state: null),
+  (
+    service: ServiceKey.prowlarr,
+    tone: StatusTone.error,
+    state: 'did not answer',
+  ),
+  (service: ServiceKey.qbittorrent, tone: null, state: null),
+  (service: ServiceKey.sabnzbd, tone: null, state: null),
+  (service: ServiceKey.truenas, tone: null, state: null),
+  (service: ServiceKey.dockge, tone: null, state: null),
+];
+
+class _Requester extends ShellAudienceNotifier {
+  @override
+  Audience build() => Audience.requester;
+}
+
+/// The window at Radarr's Overview, with its own root container and router;
+/// or, for [requester], her window on her page of requests.
 class _Window extends StatefulWidget {
-  const _Window();
+  const _Window() : requester = false;
+  const _Window.requester() : requester = true;
+
+  final bool requester;
 
   @override
   State<_Window> createState() => _WindowState();
@@ -242,7 +301,14 @@ class _WindowState extends State<_Window> {
     overrides: [
       sharedPreferencesProvider.overrideWithValue(_prefs),
       secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
-      initialSettingsProvider.overrideWithValue(_settings),
+      initialSettingsProvider.overrideWithValue(
+        widget.requester ? _herSettings : _settings,
+      ),
+      desktopRailServicesProvider.overrideWithValue(_railServices),
+      if (widget.requester) ...[
+        shellAudienceProvider.overrideWith(_Requester.new),
+        requestsProvider.overrideWith((ref) async => const []),
+      ],
       initialOnboardingCompletedProvider.overrideWithValue(true),
       initialActiveInstancesProvider.overrideWithValue(const {}),
       stackHealthProvider.overrideWith(_FixedHealth.new),
@@ -269,8 +335,31 @@ class _WindowState extends State<_Window> {
   );
 
   late final _router = GoRouter(
-    initialLocation: ServiceRoutes.radarrOverview,
+    initialLocation: widget.requester
+        ? ServiceRoutes.requests
+        : ServiceRoutes.radarrOverview,
     routes: [
+      GoRoute(
+        path: ServiceRoutes.requests,
+        builder: (_, _) => DesktopShell(
+          navigationShell: const RequestsScreen(),
+          currentTab: NavTab.requests,
+          destinations: [
+            for (final tab in NavTab.barFor(Audience.requester))
+              FloatingNavDestination(
+                icon: tab.icon,
+                selectedIcon: tab.selectedIcon,
+                railIcon: tab.railIcon,
+                label: tab.label,
+              ),
+          ],
+          selectedIndex: NavTab.barFor(
+            Audience.requester,
+          ).indexOf(NavTab.requests),
+          onDestinationSelected: (_) {},
+          onSettings: () {},
+        ),
+      ),
       GoRoute(
         path: '/stack',
         builder: (_, _) => const SizedBox.shrink(),
@@ -344,6 +433,15 @@ void main() {
         (_) => const _Window(),
         width: 960,
         height: 640,
+        platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
+        'DesktopShell · the requester\'s 1280 × 800 window on her Requests · '
+        'her three sections and no service, no deck and no command deck, no '
+        'inspector; her page in the reading well',
+        (_) => const _Window.requester(),
+        width: 1280,
+        height: 800,
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
