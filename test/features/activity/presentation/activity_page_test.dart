@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
@@ -512,6 +513,14 @@ void main() {
       expect(find.text('Searching'), findsWidgets);
       expect(find.text('1 search'), findsOneWidget);
       expect(find.byType(ReleaseSearchJobCard), findsOneWidget);
+      // A pull reaches it as it reaches the rest: it is in the page's scroll.
+      expect(
+        find.ancestor(
+          of: find.byType(ReleaseSearchJobCard),
+          matching: find.byType(RefreshIndicator),
+        ),
+        findsOneWidget,
+      );
       expect(
         tester.getTopLeft(find.text('Searching').first).dy,
         lessThan(
@@ -877,6 +886,119 @@ void main() {
       await tester.tap(find.text('Retry'));
       await harness.settle(tester);
       expect(reads, greaterThan(first));
+
+      await harness.unmount(tester);
+    });
+  });
+
+  group('reading again', () {
+    // A phone's height: a pull has to travel a quarter of it to count.
+    const phone = Size(430, 900);
+
+    int reads(ProfileHarness harness, String id, String path) => harness.network
+        .requestsTo(id)
+        .where((request) => request.uri.path.startsWith(path))
+        .length;
+
+    Future<void> pull(WidgetTester tester, ProfileHarness harness) async {
+      await tester.drag(
+        find
+            .descendant(
+              of: find.byType(RefreshIndicator),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+        const Offset(0, 300),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(seconds: 1));
+      await harness.settle(tester);
+    }
+
+    testWidgets('a pull on Downloads reads the queues again', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        ActivityTab.downloads,
+        size: phone,
+      );
+      final before = reads(harness, WorldIds.radarr, '/api/v3/queue');
+      expect(before, greaterThan(0));
+
+      await pull(tester, harness);
+
+      expect(
+        reads(harness, WorldIds.radarr, '/api/v3/queue'),
+        greaterThan(before),
+      );
+      // What it read again is on screen, not a skeleton.
+      expect(find.byType(ActivityDownloadRow), findsWidgets);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a pull on History reads the week again, both halves', (
+      tester,
+    ) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        ActivityTab.history,
+        size: phone,
+      );
+      final before = reads(harness, WorldIds.radarr, '/api/v3/history/since');
+      expect(before, greaterThan(1));
+
+      await pull(tester, harness);
+
+      expect(
+        reads(harness, WorldIds.radarr, '/api/v3/history/since'),
+        greaterThan(before),
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a pull on Requests reads the list again', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        ActivityTab.requests,
+        size: phone,
+      );
+      final before = reads(harness, WorldIds.seerr, '/api/v1/request');
+      expect(before, greaterThan(0));
+
+      await pull(tester, harness);
+
+      expect(
+        reads(harness, WorldIds.seerr, '/api/v1/request'),
+        greaterThan(before),
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a second tap on the Activity tab reads the page again', (
+      tester,
+    ) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        ActivityTab.all,
+        size: phone,
+      );
+      final before = reads(harness, WorldIds.radarr, '/api/v3/queue');
+
+      ProviderScope.containerOf(tester.element(find.byType(ActivityPage)))
+          .read(navigationRefreshProvider(NavigationSection.activity).notifier)
+          .state++;
+      await harness.settle(tester);
+
+      expect(
+        reads(harness, WorldIds.radarr, '/api/v3/queue'),
+        greaterThan(before),
+      );
 
       await harness.unmount(tester);
     });
