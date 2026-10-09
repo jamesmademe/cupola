@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 
 /// One entry in the settings section list.
 typedef SettingsSection = ({String label, String location, IconData icon});
@@ -24,7 +27,7 @@ typedef SettingsSection = ({String label, String location, IconData icon});
 /// its own route, deep links still resolve from the path alone, and the window
 /// strip's breadcrumb keeps working because nothing was pushed onto a stack it
 /// cannot see.
-class SettingsMasterDetail extends StatelessWidget {
+class SettingsMasterDetail extends ConsumerWidget {
   const SettingsMasterDetail({super.key, required this.child});
 
   /// The page. Shown alone on a phone, and to the right of the list otherwise.
@@ -91,9 +94,40 @@ class SettingsMasterDetail extends StatelessWidget {
     ),
   ];
 
+  /// The requester's rail: her account first, then what she sets for
+  /// herself. No connections, trust store or release search, which are the
+  /// operator's; no Hints, which teach the Portal, which her app has not.
+  static const List<SettingsSection> requesterSections = [
+    (label: 'Overview', location: '/settings', icon: Icons.tune_rounded),
+    (
+      label: 'Account',
+      location: '/settings/account',
+      icon: Icons.person_outline_rounded,
+    ),
+    (
+      label: 'Appearance',
+      location: '/settings/appearance',
+      icon: Icons.palette_rounded,
+    ),
+    (label: 'Home', location: '/settings/home', icon: Icons.home_outlined),
+    (
+      label: 'Region',
+      location: '/settings/region',
+      icon: Icons.language_rounded,
+    ),
+  ];
+
+  /// The rail of whoever the app is for.
+  static List<SettingsSection> sectionsFor(Audience audience) =>
+      switch (audience) {
+        Audience.operator => sections,
+        Audience.requester => requesterSections,
+      };
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (!showsRail(context)) return child;
+    final sections = sectionsFor(ref.watch(shellAudienceProvider));
 
     final colorScheme = Theme.of(context).colorScheme;
     final location = GoRouterState.of(context).uri.path;
@@ -130,7 +164,7 @@ class SettingsMasterDetail extends StatelessWidget {
                           // Longest match wins, so `/settings/service/radarr`
                           // still lights Connections rather than falling back
                           // to the root.
-                          selected: _isSelected(section, location),
+                          selected: _isSelected(sections, section, location),
                         ),
                     ],
                   ),
@@ -163,7 +197,11 @@ class SettingsMasterDetail extends StatelessWidget {
     );
   }
 
-  static bool _isSelected(SettingsSection section, String location) {
+  static bool _isSelected(
+    List<SettingsSection> sections,
+    SettingsSection section,
+    String location,
+  ) {
     final best = sections
         .where(
           (s) =>

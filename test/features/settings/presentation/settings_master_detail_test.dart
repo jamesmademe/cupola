@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
 /// The settings rail: which row it lights, and what it calls the first one.
@@ -109,7 +111,17 @@ Future<void> _pumpRail(WidgetTester tester, {required String location}) async {
   addTearDown(router.dispose);
 
   await tester.pumpWidget(
-    ProviderScope(child: MaterialApp.router(routerConfig: router)),
+    ProviderScope(
+      overrides: [shellAudienceProvider.overrideWith(_Operator.new)],
+      child: MaterialApp.router(routerConfig: router),
+    ),
   );
   await tester.pumpAndSettle();
+}
+
+/// The rail is drawn for whoever the app is for; these tests read the
+/// operator's.
+class _Operator extends ShellAudienceNotifier {
+  @override
+  Audience build() => Audience.operator;
 }

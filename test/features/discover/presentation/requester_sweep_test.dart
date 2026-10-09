@@ -31,7 +31,12 @@ import 'package:cupola/features/search/presentation/global_search_provider.dart'
 import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/requests/presentation/requests_screen.dart';
+import 'package:cupola/features/home/presentation/edit_home_page.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/presentation/requester_account_page.dart';
+import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
+import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
+import 'package:cupola/features/settings/presentation/settings_region_screen.dart';
 
 import '../../../test_helpers/profiles/fakes/media_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
@@ -80,8 +85,9 @@ List<String> _words(WidgetTester tester) => [
 void _expectNothingOfTheOperators(WidgetTester tester, String where) {
   final met = <String>[
     for (final word in _words(tester))
-      for (final pattern in _never)
-        if (pattern.hasMatch(word)) '"$word" (${pattern.pattern})',
+      if (!_herAccountLine.hasMatch(word))
+        for (final pattern in _never)
+          if (pattern.hasMatch(word)) '"$word" (${pattern.pattern})',
   ];
   expect(met, isEmpty, reason: where);
 }
@@ -138,7 +144,17 @@ final _pages = <String, Widget>{
   'the global search': const DiscoverPage(),
   // Her calendar comes from her requests, and says no service.
   'the calendar': const CalendarPage(),
+  // Her Settings: her account, what she sets for herself, the app.
+  'Settings': const SettingsHomeScreen(),
+  'her account': const RequesterAccountPage(),
+  'Region': const SettingsRegionScreen(),
+  'Appearance': const SettingsAppearanceScreen(),
+  'Edit Home': const EditHomePage(),
 };
+
+/// The one service name she reads besides the players: her server's own, in
+/// her account, beside its address (the spec of the requester, § 6.2).
+final _herAccountLine = RegExp(r'^\S+ · nas\.home\.arpa:5055$');
 
 Future<ProfileHarness> _pump(
   WidgetTester tester,
@@ -273,6 +289,8 @@ void main() {
       ('the Home', null),
       ('the Requests tab', ServiceRoutes.requests),
       ('the Discover tab', ServiceRoutes.discover),
+      ('Settings', ServiceRoutes.settings),
+      ('her account', ServiceRoutes.settingsAccount),
     ]) {
       testWidgets('on a Mac, $name: her sections, no service, no '
           'inspector, no deck', (tester) async {

@@ -51,6 +51,7 @@ import 'package:cupola/features/settings/presentation/settings_appearance_screen
 import 'package:cupola/features/settings/presentation/settings_hints_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_region_screen.dart';
+import 'package:cupola/features/settings/presentation/requester_account_page.dart';
 import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
 import 'package:cupola/features/settings/presentation/trusted_certificates_screen.dart';
@@ -2932,6 +2933,14 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
         redirect: (context, state) => '/settings/connections',
       ),
       _page('region', (state) => const SettingsRegionScreen()),
+      // The requester's account. The operator's lives in the connection's
+      // form, where `_audienceRedirect` sends him.
+      _page(
+        'account',
+        (state) => RequesterAccountPage(
+          instanceId: state.uri.queryParameters['i'] ?? '',
+        ),
+      ),
       _page('certificates', (state) => const TrustedCertificatesScreen()),
       _page(
         'service/:service',
@@ -3003,8 +3012,10 @@ String? _rewriteLegacyStackPath(Uri uri) {
 
 /// Where [audience] may not be: the requester's app has no control room, so
 /// Activity, Stack and every service's room, and the import flow, send her
-/// Home; the operator has no tab of the requester's own requests, so that
-/// one sends him to Seerr's. Null where [audience] may be.
+/// Home, and the operator's two settings pages send her to Settings; the
+/// operator has no tab of the requester's own requests, so that one sends him
+/// to Seerr's, and no account page, so that one sends him to the
+/// connection's form. Null where [audience] may be.
 ///
 /// Read from the shell's held audience ([shellAudienceProvider]), so a route
 /// never disagrees with the bar on screen.
@@ -3016,8 +3027,20 @@ String? _audienceRedirect(Uri uri, Audience audience) {
             under(ServiceRoutes.stack) ||
             under(manualImportPathPrefix) =>
       ServiceRoutes.home,
+    // Her Settings hold no trust store and no release search: both are the
+    // operator's, of servers she does not run.
+    Audience.requester
+        when under(ServiceRoutes.settingsCertificates) ||
+            under(ServiceRoutes.settingsBackgroundSearch) =>
+      ServiceRoutes.settings,
     Audience.operator when under(ServiceRoutes.requests) =>
       ServiceRoutes.seerrRequests,
+    // His account is in the connection's form, among its address and key.
+    Audience.operator when under(ServiceRoutes.settingsAccount) =>
+      ServiceRoutes.settingsForConnection(
+        ServiceKey.seerr,
+        uri.queryParameters['i'] ?? '',
+      ),
     _ => null,
   };
 }

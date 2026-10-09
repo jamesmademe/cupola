@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -28,22 +29,28 @@ final Uri _githubUri = Uri.parse('https://github.com/matthw-labs/seekarr');
 final Uri _feedbackUri = Uri(scheme: 'mailto', path: 'matthw.labs@gmail.com');
 
 /// GitHub, Send feedback, Support development, Licenses & trademarks — the
-/// four rows of the About group, in that order.
-List<Widget> settingsAboutRows(BuildContext context) {
+/// four rows of the About group, in that order. The requester's group has no
+/// GitHub: source, issues and releases are for whoever runs the app's
+/// servers, and she asks for movies.
+List<Widget> settingsAboutRows(
+  BuildContext context, {
+  Audience audience = Audience.operator,
+}) {
   final colorScheme = Theme.of(context).colorScheme;
   return [
-    SettingsCard.grouped(
-      leading: const Icon(Icons.code_rounded),
-      title: 'GitHub',
-      subtitle: 'Source, issues and releases',
-      accentColor: colorScheme.onSurfaceVariant,
-      semanticHint: 'opens the repository in your browser',
-      onTap: () => _launchExternalUri(
-        context: context,
-        uri: _githubUri,
-        failureMessage: 'Unable to open the GitHub repository.',
+    if (audience == Audience.operator)
+      SettingsCard.grouped(
+        leading: const Icon(Icons.code_rounded),
+        title: 'GitHub',
+        subtitle: 'Source, issues and releases',
+        accentColor: colorScheme.onSurfaceVariant,
+        semanticHint: 'opens the repository in your browser',
+        onTap: () => _launchExternalUri(
+          context: context,
+          uri: _githubUri,
+          failureMessage: 'Unable to open the GitHub repository.',
+        ),
       ),
-    ),
     SettingsCard.grouped(
       leading: const Icon(Icons.feedback_rounded),
       title: 'Send feedback',

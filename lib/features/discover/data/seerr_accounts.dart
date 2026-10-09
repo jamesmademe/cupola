@@ -79,6 +79,32 @@ class SeerrAccounts {
     await sessionEnded(connectionId);
   }
 
+  /// Removes [connectionId]'s account from this device: signed out of the
+  /// server first, so its session ends there too rather than 30 days after it
+  /// was last used, then the whole connection forgotten, with its pinned
+  /// certificate when nothing else reaches that address, and the lens if it
+  /// was on it. Nothing on the server changes: the requests stay there.
+  Future<void> remove(String connectionId) async {
+    final settings = _ref.read(currentSettingsProvider);
+    final instance = settings.instanceById(connectionId);
+    if (instance == null) return;
+    await signOutOfSeerr(
+      instance,
+      pinnedCertFingerprint: settings.pinForUrl(instance.url),
+    );
+    final now = _ref.read(currentSettingsProvider);
+    await _ref
+        .read(settingsProvider.notifier)
+        .updateSettings(
+          now
+              .copyWithoutInstance(connectionId)
+              .copyWithoutUnusedCertificate(instance.url),
+        );
+    if (_ref.read(activeInstancesProvider)[ServiceKey.seerr] == connectionId) {
+      await _ref.read(activeInstancesProvider.notifier).clear(ServiceKey.seerr);
+    }
+  }
+
   /// The server no longer knows [connectionId]'s session: it is emptied, and
   /// the connection is signed out. Everything else stays.
   Future<void> sessionEnded(String connectionId) =>

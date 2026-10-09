@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -14,10 +15,12 @@ import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/regions.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_app_rows.dart';
+import 'package:cupola/features/settings/presentation/widgets/requester_settings_rows.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_summary_cards.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 
 export 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart'
     show SettingsSectionLabel;
@@ -77,17 +80,19 @@ class SettingsHomeScreen extends ConsumerWidget {
             ? SettingsSummaryPane(padding: padding)
             : ListView(
                 padding: padding,
-                children: [
-                  const ConnectionsSummaryCard(),
-                  const SizedBox(height: AppSpacing.xl),
-                  ..._buildGeneralSection(context, settings),
-                  const SizedBox(height: AppSpacing.xl),
-                  ..._buildSecuritySection(context),
-                  const SizedBox(height: AppSpacing.xl),
-                  ..._buildAboutSection(context),
-                  const SizedBox(height: AppSpacing.xl),
-                  ..._buildDangerZoneSection(),
-                ],
+                children: ref.watch(shellAudienceProvider) == Audience.requester
+                    ? _requesterIndex(context, settings)
+                    : [
+                        const ConnectionsSummaryCard(),
+                        const SizedBox(height: AppSpacing.xl),
+                        ..._buildGeneralSection(context, settings),
+                        const SizedBox(height: AppSpacing.xl),
+                        ..._buildSecuritySection(context),
+                        const SizedBox(height: AppSpacing.xl),
+                        ..._buildAboutSection(context),
+                        const SizedBox(height: AppSpacing.xl),
+                        ..._buildDangerZoneSection(),
+                      ],
               ),
       ),
     );
@@ -111,6 +116,53 @@ class SettingsHomeScreen extends ConsumerWidget {
     );
   }
 
+  /// The requester's Settings (the spec of the requester, § 6.2): her
+  /// account, what she sets for herself, the app, and last the one way into
+  /// the operator's app. None of the operator's rows: no connections, release
+  /// search, trust store, onboarding replay or reset, and no Hints, which
+  /// teach the Portal her app has not.
+  List<Widget> _requesterIndex(BuildContext context, SettingsModel settings) {
+    return [
+      const RequesterAccountCard(),
+      const SizedBox(height: AppSpacing.xl),
+      const SettingsSectionLabel('General'),
+      const SizedBox(height: AppSpacing.sm),
+      SettingsGroupCard(
+        children: [
+          _regionRow(context, settings),
+          _appearanceRow(context, settings),
+          const SettingsHomeRow(),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.xl),
+      const SettingsSectionLabel('About'),
+      const SizedBox(height: AppSpacing.sm),
+      SettingsGroupCard(
+        children: settingsAboutRows(context, audience: Audience.requester),
+      ),
+      const SizedBox(height: AppSpacing.xl),
+      const SettingsGroupCard(children: [SetUpAServiceRow()]),
+    ];
+  }
+
+  Widget _regionRow(BuildContext context, SettingsModel settings) =>
+      SettingsCard.grouped(
+        leading: const Icon(Icons.language_rounded),
+        title: 'Region',
+        subtitle: _formatRegionLabel(settings.region),
+        semanticHint: 'opens the region picker',
+        onTap: () => context.push('/settings/region'),
+      );
+
+  Widget _appearanceRow(BuildContext context, SettingsModel settings) =>
+      SettingsCard.grouped(
+        leading: const Icon(Icons.palette_rounded),
+        title: 'Appearance',
+        subtitle: settings.themeMode.label,
+        semanticHint: 'opens the appearance picker',
+        onTap: () => context.push('/settings/appearance'),
+      );
+
   List<Widget> _buildGeneralSection(
     BuildContext context,
     SettingsModel settings,
@@ -125,20 +177,8 @@ class SettingsHomeScreen extends ConsumerWidget {
           // verdict — and Region wore `AppColors.success` while Send feedback
           // wore the amber this system reserves for a fault. A preference has
           // no state to report.
-          SettingsCard.grouped(
-            leading: const Icon(Icons.language_rounded),
-            title: 'Region',
-            subtitle: _formatRegionLabel(settings.region),
-            semanticHint: 'opens the region picker',
-            onTap: () => context.push('/settings/region'),
-          ),
-          SettingsCard.grouped(
-            leading: const Icon(Icons.palette_rounded),
-            title: 'Appearance',
-            subtitle: settings.themeMode.label,
-            semanticHint: 'opens the appearance picker',
-            onTap: () => context.push('/settings/appearance'),
-          ),
+          _regionRow(context, settings),
+          _appearanceRow(context, settings),
           const SettingsHomeRow(),
           SettingsCard.grouped(
             leading: const Icon(Icons.travel_explore_rounded),

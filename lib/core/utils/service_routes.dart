@@ -665,6 +665,16 @@ class ServiceRoutes {
   static const settings = '/settings';
   static const settingsConnections = '$settings/connections';
 
+  /// The requester's account: who she is signed in as on a Seerr, signing
+  /// out and back in, and removing the server. [instanceId] picks the
+  /// connection when she asks more than one; empty, the first.
+  static const settingsAccount = '$settings/account';
+  static const settingsCertificates = '$settings/certificates';
+  static const settingsBackgroundSearch = '$settings/background-search';
+
+  static String settingsAccountFor({String instanceId = ''}) =>
+      _withQuery(settingsAccount, {'i': instanceId});
+
   /// Edit Home again, from Settings: the same page, whose way back is
   /// Settings.
   static const settingsHome = '$settings/home';

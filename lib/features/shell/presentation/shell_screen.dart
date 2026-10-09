@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_identity.dart';
@@ -159,6 +160,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   bool _demoCanPlay() =>
       mounted &&
       _portalDrawn(context) &&
+      ref.read(shellAudienceProvider) == Audience.operator &&
       !MediaQuery.accessibleNavigationOf(context) &&
       !MediaQuery.disableAnimationsOf(context) &&
       ref.read(portalHintsProvider).demoBouncePending;
@@ -203,13 +205,18 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // is drawn for ([NavTab.barFor]), so the bar's selection is where that
     // tab sits in it — none, in Settings, which has no place in the bar.
     final currentTab = NavTab.values[widget.navigationShell.currentIndex];
-    final barTabs = NavTab.barFor(ref.watch(shellAudienceProvider));
+    final audience = ref.watch(shellAudienceProvider);
+    final barTabs = NavTab.barFor(audience);
     final selectedIndex = barTabs.indexOf(currentTab);
     final useRail =
         MediaQuery.sizeOf(context).width >= AppBreakpoints.touchRail;
     // The Portal's drag is unusable under a screen reader; there the bar keeps
     // its pure elastic and switching stays on the accessible paths.
     final accessibleNav = MediaQuery.accessibleNavigationOf(context);
+    // The Portal is the floor of the services, and the requester's app has
+    // none: her bar has no Stack, and every room sends her Home. No drag, no
+    // coach mark, no demo bounce.
+    final portalOn = !accessibleNav && audience == Audience.operator;
 
     // Any change to what sits under the card closes an open Portal and drops
     // the stale snapshot. Post-frame: starting animations inside build is not
@@ -382,8 +389,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                               controller: _portal,
                               child: widget.navigationShell,
                             ),
-                            if (!accessibleNav)
-                              PortalCoachMark(controller: _portal),
+                            if (portalOn) PortalCoachMark(controller: _portal),
                           ],
                         ),
                       ),
@@ -396,7 +402,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                             ? _withPortalAction(destination)
                             : destination,
                     ],
-                    verticalDragDelegate: accessibleNav ? null : _portal,
+                    verticalDragDelegate: portalOn ? _portal : null,
                   ),
                 ),
               ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -20,10 +21,12 @@ import 'package:cupola/features/settings/domain/regions.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
+import 'package:cupola/features/settings/presentation/widgets/requester_settings_rows.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_app_rows.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:cupola/features/settings/presentation/widgets/test_all_connections_button.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 
 /// The six cards of the settings summary — and the rule all six obey: **print
 /// only what is wrong.**
@@ -48,13 +51,34 @@ import 'package:cupola/features/shell/domain/portal_hints.dart';
 /// sheet, the onboarding replay or Reset. They are the phone's own rows
 /// (`settings_app_rows.dart`) under the phone's own labels, in the phone's
 /// order; Reset keeps its confirmation.
-class SettingsSummaryPane extends StatelessWidget {
+class SettingsSummaryPane extends ConsumerWidget {
   const SettingsSummaryPane({super.key, required this.padding});
 
   final EdgeInsetsGeometry padding;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The requester's pane holds what her phone's index holds (the spec of
+    // the requester, § 6.2), in the pane's grammar.
+    if (ref.watch(shellAudienceProvider) == Audience.requester) {
+      return ListView(
+        padding: padding,
+        children: [
+          const RequesterAccountCard(),
+          const SizedBox(height: AppSpacing.xl),
+          const _RegionSummaryCard(),
+          const SizedBox(height: AppSpacing.xl),
+          const _AppearanceSummaryCard(),
+          const SizedBox(height: AppSpacing.xl),
+          _SummaryCard(
+            label: 'About',
+            children: settingsAboutRows(context, audience: Audience.requester),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          const SettingsGroupCard(children: [SetUpAServiceRow()]),
+        ],
+      );
+    }
     return ListView(
       padding: padding,
       children: const [
