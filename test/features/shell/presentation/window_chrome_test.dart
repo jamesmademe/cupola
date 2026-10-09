@@ -1,7 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
@@ -24,7 +29,17 @@ void main() {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            initialOnboardingCompletedProvider.overrideWith((ref) => true),
+            currentSettingsProvider.overrideWith(
+              (ref) => const SettingsModel(),
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
       await tester.pump();
 
       expect(tester.takeException(), isNull);

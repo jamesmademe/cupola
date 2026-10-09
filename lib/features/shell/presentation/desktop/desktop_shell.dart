@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/settings/data/connection_test_command.dart';
@@ -14,9 +16,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/command_deck_entry.dart';
 import 'package:cupola/features/shell/domain/inspector_state.dart';
 import 'package:cupola/features/shell/domain/screen_search.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
+import 'package:cupola/features/shell/presentation/desktop/desktop_rail_services.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 import 'package:cupola/features/shell/presentation/desktop/service_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
@@ -162,12 +166,22 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     final colorScheme = Theme.of(context).colorScheme;
     final compact = AppBreakpoints.isCompactDesktop(context);
     final chromeHeight = WindowChrome.heightFor(compact: compact);
-    final deckHeight = ServiceDeck.heightFor(compact: compact);
     final inspector = ref.watch(inspectorStateProvider);
+    // The requester's window: her sections, no services, no inspector, whose
+    // activity is the operator's, and no command deck, which reaches every
+    // room and connection by name.
+    final requester = ref.watch(shellAudienceProvider) == Audience.requester;
+    // Nor the strip of the deck: it speaks of rooms and of the stack.
+    final deckHeight = requester
+        ? 0.0
+        : ServiceDeck.heightFor(compact: compact);
+    final railWidth = DesktopNavRail.widthFor(compact: compact);
 
     // Recents for the deck, recorded here because this is the one widget that
     // sees every location change in the window.
     final location = GoRouterState.of(context).uri.path;
+    final room = requester ? null : _roomOf(location);
+    final inspectorShown = !requester && inspector.open && !compact;
     if (_lastLocation != location) {
       _lastLocation = location;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -181,12 +195,13 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
         actions: <Type, Action<Intent>>{
           OpenCommandDeckIntent: CallbackAction<OpenCommandDeckIntent>(
             onInvoke: (_) {
-              _openDeck();
+              if (!requester) _openDeck();
               return null;
             },
           ),
           ToggleInspectorIntent: CallbackAction<ToggleInspectorIntent>(
             onInvoke: (_) {
+              if (requester) return null;
               ref.read(inspectorStateProvider.notifier).toggle();
               return null;
             },
@@ -207,7 +222,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
           ),
           CycleServiceIntent: CallbackAction<CycleServiceIntent>(
             onInvoke: (intent) {
-              _cycleService(intent.delta);
+              if (!requester) _cycleService(intent.delta);
               return null;
             },
           ),
@@ -232,6 +247,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
           ),
           OpenInInspectorIntent: CallbackAction<OpenInInspectorIntent>(
             onInvoke: (_) {
+              if (requester) return null;
               ref.read(inspectorStateProvider.notifier).setOpen(true);
               return null;
             },
@@ -258,7 +274,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
               children: [
                 Positioned(
                   top: chromeHeight + deckHeight,
-                  left: DesktopNavRail.width,
+                  left: railWidth,
                   right: 0,
                   bottom: 0,
                   // No status bar at the foot: everything it printed is on
@@ -267,7 +283,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                   child: Row(
                     children: [
                       Expanded(child: widget.navigationShell),
-                      if (inspector.open && !compact) ...[
+                      if (inspectorShown) ...[
                         const InspectorSplitHandle(),
                         SizedBox(
                           width: inspector.width,
@@ -282,14 +298,15 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                   left: 0,
                   right: 0,
                   height: chromeHeight,
-                  child: WindowChrome(inspectorOpen: inspector.open),
+                  child: WindowChrome(inspectorOpen: inspectorShown),
                 ),
                 Positioned(
                   top: chromeHeight,
                   left: 0,
-                  width: DesktopNavRail.width,
+                  width: railWidth,
                   bottom: 0,
                   child: DesktopNavRail(
+                    compact: compact,
                     selectedIndex: widget.selectedIndex,
                     destinations: widget.destinations,
                     onDestinationSelected: widget.onDestinationSelected,
@@ -301,23 +318,30 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                     ),
                     settingsSelected: widget.currentTab == NavTab.settings,
                     onSettings: widget.onSettings,
-                    onCommandDeck: _openDeck,
+                    services: requester
+                        ? const []
+                        : ref.watch(desktopRailServicesProvider),
+                    selectedService: room,
+                    onService: (service) => GoRouter.of(
+                      context,
+                    ).go(ServiceRoutes.forService(service)),
                   ),
                 ),
-                Positioned(
-                  top: chromeHeight,
-                  left: DesktopNavRail.width,
-                  right: 0,
-                  height: deckHeight,
-                  child: ServiceDeck(
-                    compact: compact,
-                    onCommandDeck: _openDeck,
+                if (!requester)
+                  Positioned(
+                    top: chromeHeight,
+                    left: railWidth,
+                    right: 0,
+                    height: deckHeight,
+                    child: ServiceDeck(
+                      compact: compact,
+                      onCommandDeck: _openDeck,
+                    ),
                   ),
-                ),
                 if (_deckOpen)
                   Positioned(
                     top: chromeHeight,
-                    left: DesktopNavRail.width,
+                    left: railWidth,
                     right: 0,
                     bottom: 0,
                     child: _DeckOverlay(
@@ -337,6 +361,18 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
 
 /// Escape while an overlay is up. Disabled otherwise, which is the whole point:
 /// a disabled action is skipped by the dispatcher instead of swallowing the key.
+/// The service whose room [location] is in, or null outside the rooms.
+ServiceKey? _roomOf(String location) {
+  final segments = Uri.parse(location).pathSegments;
+  if (segments.length < 2 || '/${segments.first}' != NavTab.stack.routePath) {
+    return null;
+  }
+  for (final service in ServiceKey.values) {
+    if (service.routeParam == segments[1]) return service;
+  }
+  return null;
+}
+
 class _CloseOverlayAction extends Action<CloseOverlayIntent> {
   _CloseOverlayAction({required this.enabled, required this.onClose});
 

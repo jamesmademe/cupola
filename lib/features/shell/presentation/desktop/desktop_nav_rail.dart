@@ -4,20 +4,29 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 
-/// The 56pt section rail: the person's sections, then Settings and the deck's
-/// key at the foot of it.
+/// The window's sidebar: the person's sections with their keys, the services
+/// with what each needs, and Settings at the foot.
 ///
-/// Takes the *same* [FloatingNavDestination] list the phone's bottom bar does
-/// rather than rebuilding one from `NavTab`. That is the whole point: badge
-/// counts and their spoken labels are set in one place, so a desktop window
-/// cannot end up as the one form factor where a finished search is never
-/// announced.
+/// Takes the *same* [FloatingNavDestination] list the phone's bar does rather
+/// than rebuilding one from `NavTab`. That is the whole point: badge counts and
+/// their spoken labels are set in one place, so a desktop window cannot end up
+/// as the one form factor where a finished search is never announced.
 ///
-/// Icon-only, which is why every item carries a tooltip with its name *and* its
-/// shortcut: the rail is the app's main teaching surface for the keyboard map,
-/// and an unlabelled glyph with no tooltip is a guess.
+/// At full width each item is its glyph, its name and its key (`⌘1`), so the
+/// sidebar is where the keyboard map is learnt. The services follow under
+/// their heading, each a way into its room with a light only where it needs a
+/// look: amber for a fault, red for one that did not answer, blue for
+/// requests that wait. A calm service carries no light, so the one that does
+/// is seen. The requester's sidebar has no services: she reads no service.
+///
+/// Narrower than [AppBreakpoints.desktopCompact] the sidebar folds to its
+/// 56pt rail: the sections and Settings as glyphs, each with a tooltip that
+/// says its name and key. The services stay on Stack and the deck.
 class DesktopNavRail extends StatelessWidget {
   const DesktopNavRail({
     super.key,
@@ -27,7 +36,10 @@ class DesktopNavRail extends StatelessWidget {
     required this.settings,
     required this.settingsSelected,
     required this.onSettings,
-    required this.onCommandDeck,
+    this.compact = false,
+    this.services = const [],
+    this.selectedService,
+    this.onService,
   });
 
   final int selectedIndex;
@@ -40,21 +52,33 @@ class DesktopNavRail extends StatelessWidget {
   final bool settingsSelected;
   final VoidCallback onSettings;
 
-  /// Opening the deck from the rail's own key hint, for a pointer that has
-  /// never met the shortcut.
-  final VoidCallback onCommandDeck;
+  /// The folded rail of a narrow window.
+  final bool compact;
 
-  static const double width = 56;
+  /// The configured services in Stack's order, each with its light. Empty for
+  /// the requester, and not drawn on the folded rail.
+  final List<DesktopRailService> services;
+
+  /// The service whose room the window is in, lit in place of Stack.
+  final ServiceKey? selectedService;
+  final ValueChanged<ServiceKey>? onService;
+
+  static const double fullWidth = 232;
+  static const double compactWidth = 56;
+
+  static double widthFor({required bool compact}) =>
+      compact ? compactWidth : fullWidth;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final dim = CupolaThemeColors.of(context).dimText;
     return Semantics(
       container: true,
       explicitChildNodes: true,
       label: 'Section navigation',
       child: Container(
-        width: width,
+        width: widthFor(compact: compact),
         decoration: BoxDecoration(
           border: Border(
             right: BorderSide(
@@ -62,38 +86,265 @@ class DesktopNavRail extends StatelessWidget {
             ),
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          child: Column(
-            children: [
-              for (var i = 0; i < destinations.length; i++)
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: i == destinations.length - 1 ? 0 : AppSpacing.sm,
-                  ),
-                  child: _RailItem(
-                    destination: destinations[i],
-                    selected: i == selectedIndex,
-                    shortcut: ShellShortcuts.section(i),
-                    onPressed: () => onDestinationSelected(i),
-                  ),
+        child: compact
+            ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < destinations.length; i++)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          bottom: i == destinations.length - 1
+                              ? 0
+                              : AppSpacing.sm,
+                        ),
+                        child: _RailItem(
+                          destination: destinations[i],
+                          selected: i == selectedIndex,
+                          shortcut: ShellShortcuts.section(i),
+                          onPressed: () => onDestinationSelected(i),
+                        ),
+                      ),
+                    const Spacer(),
+                    _RailItem(
+                      destination: settings,
+                      selected: settingsSelected,
+                      shortcut: ShellShortcuts.settings,
+                      onPressed: onSettings,
+                    ),
+                  ],
                 ),
-              const Spacer(),
-              _RailItem(
-                destination: settings,
-                selected: settingsSelected,
-                shortcut: ShellShortcuts.settings,
-                onPressed: onSettings,
+              )
+            : Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.row,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < destinations.length; i++)
+                      _SidebarItem(
+                        glyph: _destinationGlyph(destinations[i]),
+                        label: destinations[i].label,
+                        spoken: destinations[i].badgeSemanticLabel == null
+                            ? destinations[i].label
+                            : '${destinations[i].label}, '
+                                  '${destinations[i].badgeSemanticLabel}',
+                        badge: destinations[i].badgeCount > 0
+                            ? destinations[i].badgeLabel
+                            : null,
+                        shortcut: ShellShortcuts.section(i),
+                        selected: i == selectedIndex && selectedService == null,
+                        onPressed: () => onDestinationSelected(i),
+                      ),
+                    Expanded(
+                      child: services.isEmpty
+                          ? const SizedBox.shrink()
+                          : ListView(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.md,
+                              ),
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    AppSpacing.row,
+                                    0,
+                                    AppSpacing.row,
+                                    AppSpacing.xs,
+                                  ),
+                                  child: Semantics(
+                                    header: true,
+                                    child: Text(
+                                      'Services',
+                                      textScaler: _SidebarItem.scalerOf(
+                                        context,
+                                      ),
+                                      style: AppType.meta.copyWith(color: dim),
+                                    ),
+                                  ),
+                                ),
+                                for (final row in services)
+                                  _SidebarItem(
+                                    glyph: Icon(
+                                      row.service.icon,
+                                      size: 20,
+                                      weight: 300,
+                                      opticalSize: 20,
+                                    ),
+                                    label: row.service.title,
+                                    spoken: row.state == null
+                                        ? row.service.title
+                                        : '${row.service.title}, ${row.state}',
+                                    light: row.tone,
+                                    selected: row.service == selectedService,
+                                    onPressed: () =>
+                                        onService?.call(row.service),
+                                  ),
+                              ],
+                            ),
+                    ),
+                    _SidebarItem(
+                      glyph: _destinationGlyph(settings),
+                      label: settings.label,
+                      spoken: settings.label,
+                      shortcut: ShellShortcuts.settings,
+                      selected: settingsSelected,
+                      onPressed: onSettings,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Container(
-                width: 26,
-                height: 1,
-                color: colorScheme.outlineVariant,
+      ),
+    );
+  }
+
+  static Widget _destinationGlyph(FloatingNavDestination destination) => Icon(
+    destination.railIcon ?? destination.icon,
+    size: 20,
+    weight: 300,
+    fill: 0,
+    opticalSize: 20,
+  );
+}
+
+/// A service of the sidebar: its light, if it needs a look, and what the
+/// light says aloud.
+typedef DesktopRailService = ({
+  ServiceKey service,
+  StatusTone? tone,
+  String? state,
+});
+
+/// One row of the full sidebar: the glyph, the name, then the key or the
+/// light at its end.
+class _SidebarItem extends StatefulWidget {
+  const _SidebarItem({
+    required this.glyph,
+    required this.label,
+    required this.spoken,
+    required this.selected,
+    required this.onPressed,
+    this.shortcut,
+    this.badge,
+    this.light,
+  });
+
+  final Widget glyph;
+  final String label;
+  final String spoken;
+  final bool selected;
+  final VoidCallback onPressed;
+  final String? shortcut;
+
+  /// The count of the section's badge, in ink, before its key.
+  final String? badge;
+
+  /// The service's light, or null when it is calm.
+  final StatusTone? light;
+
+  /// A row: the 44pt target of every control in the window.
+  static const double height = 44;
+
+  /// The names grow with the reading size as far as the phone's bar lets
+  /// its own, and no further: the sidebar is chrome, its width fixed, and a
+  /// name cut short at twice the size says less than one a little smaller.
+  static TextScaler scalerOf(BuildContext context) => MediaQuery.textScalerOf(
+    context,
+  ).clamp(maxScaleFactor: FloatingNavBarMetrics.maxTextScaleFactor);
+
+  @override
+  State<_SidebarItem> createState() => _SidebarItemState();
+}
+
+class _SidebarItemState extends State<_SidebarItem> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final room = CupolaRoom.of(context);
+    final dim = CupolaThemeColors.of(context).dimText;
+    final ink = widget.selected || _hovered
+        ? colorScheme.onSurface
+        : colorScheme.onSurfaceVariant;
+    final light = widget.light;
+    final shortcut = widget.shortcut;
+    final badge = widget.badge;
+
+    return Semantics(
+      button: true,
+      container: true,
+      enabled: true,
+      selected: widget.selected,
+      label: widget.spoken,
+      hint: shortcut,
+      onTap: widget.onPressed,
+      child: ExcludeSemantics(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onPressed,
+            child: AnimatedContainer(
+              duration: AppAnimation.durationXs,
+              constraints: const BoxConstraints(minHeight: _SidebarItem.height),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.row),
+              decoration: BoxDecoration(
+                color: widget.selected
+                    ? room.fillStrong
+                    : (_hovered ? room.fillQuiet : Colors.transparent),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              const SizedBox(height: AppSpacing.sm + 2),
-              _DeckKeyHint(onPressed: onCommandDeck),
-            ],
+              child: Row(
+                children: [
+                  IconTheme.merge(
+                    data: IconThemeData(color: ink),
+                    child: widget.glyph,
+                  ),
+                  const SizedBox(width: AppSpacing.row),
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textScaler: _SidebarItem.scalerOf(context),
+                      style: AppType.row.copyWith(color: ink),
+                    ),
+                  ),
+                  if (badge != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    _RailBadge(label: badge),
+                  ],
+                  if (shortcut != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      shortcut,
+                      textScaler: _SidebarItem.scalerOf(context),
+                      style: AppTheme.chrome(
+                        context,
+                        size: 12,
+                        color: dim,
+                      ).mono,
+                    ),
+                  ],
+                  if (light != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      key: ValueKey('desktop-rail-light-${widget.label}'),
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: statusToneColor(colorScheme, light),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -168,7 +419,7 @@ class _RailItemState extends State<_RailItem> {
               Positioned(
                 top: _RailBadge.top,
                 left: _RailBadge.left,
-                child: _RailBadge(destination: destination),
+                child: _RailBadge(label: destination.badgeLabel),
               ),
             ],
           );
@@ -224,9 +475,10 @@ class _RailItemState extends State<_RailItem> {
 
 /// The count, on the ink disc — never a status tone, never a section's colour.
 class _RailBadge extends StatelessWidget {
-  const _RailBadge({required this.destination});
+  const _RailBadge({required this.label});
 
-  final FloatingNavDestination destination;
+  /// The count as [FloatingNavDestination.badgeLabel] prints it.
+  final String label;
 
   /// Offset of the badge's top-left corner from the 20pt glyph's.
   ///
@@ -268,7 +520,7 @@ class _RailBadge extends StatelessWidget {
         widthFactor: 1,
         heightFactor: 1,
         child: Text(
-          destination.badgeLabel,
+          label,
           textScaler: MediaQuery.textScalerOf(
             context,
           ).clamp(maxScaleFactor: maxScale),
@@ -279,72 +531,6 @@ class _RailBadge extends StatelessWidget {
             color: colorScheme.onPrimary,
             height: 1,
           ).tabular,
-        ),
-      ),
-    );
-  }
-}
-
-/// `⌘K` at the foot of the rail: the deck's key, and a button in its own right.
-///
-/// Both, deliberately. A shortcut nobody can click is invisible to everyone who
-/// does not already know it, and a button with no key printed on it teaches
-/// nothing — this is the one control in the shell whose job is to be read.
-class _DeckKeyHint extends StatefulWidget {
-  const _DeckKeyHint({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  State<_DeckKeyHint> createState() => _DeckKeyHintState();
-}
-
-class _DeckKeyHintState extends State<_DeckKeyHint> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      container: true,
-      enabled: true,
-      label: 'Jump to anything, ${ShellShortcuts.commandDeck}',
-      hint: 'Open the command deck',
-      onTap: widget.onPressed,
-      child: ExcludeSemantics(
-        child: Tooltip(
-          message: 'Jump to anything  ${ShellShortcuts.commandDeck}',
-          waitDuration: const Duration(milliseconds: 500),
-          excludeFromSemantics: true,
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            onEnter: (_) => setState(() => _hovered = true),
-            onExit: (_) => setState(() => _hovered = false),
-            child: IconButton(
-              tooltip: 'Jump to anything, ${ShellShortcuts.commandDeck}',
-              onPressed: widget.onPressed,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs,
-                vertical: AppSpacing.xs,
-              ),
-              constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-              style: const ButtonStyle(
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                overlayColor: WidgetStatePropertyAll(Colors.transparent),
-              ),
-              icon: Text(
-                ShellShortcuts.commandDeck,
-                style: AppTheme.chrome(
-                  context,
-                  size: 11,
-                  color: _hovered
-                      ? colorScheme.onSurface
-                      : CupolaThemeColors.of(context).dimText,
-                ).mono,
-              ),
-            ),
-          ),
         ),
       ),
     );

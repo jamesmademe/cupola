@@ -6,6 +6,8 @@ import 'package:window_manager/window_manager.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/theme.dart';
@@ -57,6 +59,8 @@ class WindowChrome extends ConsumerWidget {
     final location = uri.path;
     final crumbs = ShellBreadcrumb.of(location);
     final lens = _lensFor(ref, uri);
+    // The inspector follows the stack's activity, which is the operator's.
+    final requester = ref.watch(shellAudienceProvider) == Audience.requester;
 
     return Semantics(
       container: true,
@@ -102,16 +106,20 @@ class WindowChrome extends ConsumerWidget {
                     onPressed: () =>
                         Actions.invoke(context, const RefreshAllIntent()),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  _ChromeChip(
-                    compact: compact,
-                    label: 'Inspector',
-                    shortcut: ShellShortcuts.inspector,
-                    icon: Icons.insights_rounded,
-                    on: inspectorOpen,
-                    onPressed: () =>
-                        Actions.invoke(context, const ToggleInspectorIntent()),
-                  ),
+                  if (!requester) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    _ChromeChip(
+                      compact: compact,
+                      label: 'Inspector',
+                      shortcut: ShellShortcuts.inspector,
+                      icon: Icons.insights_rounded,
+                      on: inspectorOpen,
+                      onPressed: () => Actions.invoke(
+                        context,
+                        const ToggleInspectorIntent(),
+                      ),
+                    ),
+                  ],
                   if (DesktopWindow.drawsOwnButtons) ...[
                     const SizedBox(width: AppSpacing.md),
                     const _CaptionButtons(),

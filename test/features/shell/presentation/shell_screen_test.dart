@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/widgets/floating_nav_rail.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -407,7 +409,7 @@ void main() {
       // instead of on leaving Cupola.
       final harness = await _pumpShell(tester, viewport: _railViewport);
 
-      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(FloatingNavRail), findsOneWidget);
       expect(find.byType(ReleaseSearchLifecycle), findsOneWidget);
       expect(harness.container.read(appInForegroundProvider), isTrue);
 
@@ -454,22 +456,25 @@ void main() {
 
       expect(
         find.descendant(
-          of: find.byType(NavigationRail),
-          matching: find.byType(Badge),
+          of: find.byType(FloatingNavRail),
+          matching: find.byKey(const ValueKey('floating-nav-badge')),
         ),
         findsOneWidget,
       );
       // A number painted on an icon is invisible to a screen reader, so it has
       // to reach the spoken label too — the same string the bottom bar speaks.
-      final activityLabel = tester.widget<Text>(
-        find.descendant(
-          of: find.byType(NavigationRail),
-          matching: find.text('Activity'),
-        ),
-      );
+      final labels = [
+        for (final node in tester.widgetList<Semantics>(
+          find.descendant(
+            of: find.byType(FloatingNavRail),
+            matching: find.byType(Semantics),
+          ),
+        ))
+          ?node.properties.label,
+      ];
       expect(
-        activityLabel.semanticsLabel,
-        'Activity, 3 finished searches to look at',
+        labels,
+        contains(startsWith('Activity, 3 finished searches to look at\n')),
       );
     });
 
@@ -478,8 +483,8 @@ void main() {
 
       expect(
         find.descendant(
-          of: find.byType(NavigationRail),
-          matching: find.byType(Badge),
+          of: find.byType(FloatingNavRail),
+          matching: find.byKey(const ValueKey('floating-nav-badge')),
         ),
         findsNothing,
       );
@@ -932,7 +937,7 @@ void main() {
         viewport: _railViewport,
       );
 
-      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(FloatingNavRail), findsOneWidget);
       expect(find.semantics.byPredicate(_offersPortal), findsNothing);
       semantics.dispose();
     });
@@ -1034,7 +1039,7 @@ void main() {
         overrides: await _lensOverrides(),
         viewport: _railViewport,
       );
-      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(FloatingNavRail), findsOneWidget);
 
       harness.router.go('/stack/radarr');
       await tester.pumpAndSettle();
@@ -1238,7 +1243,7 @@ Future<_ShellHarness> _pumpShell(
   WidgetTester tester, {
   String initialLocation = '/home',
   // Phone width by default, so the shell renders the FloatingBottomNavBar rather
-  // than the wide-window NavigationRail (the rail breakpoint is 840).
+  // than the wide-window rail (the rail breakpoint is 840).
   Size viewport = const Size(400, 900),
   // The matrix resolves its columns against a preferred cell width, so the one
   // test that opens the Portal needs a viewport in real device pixels rather

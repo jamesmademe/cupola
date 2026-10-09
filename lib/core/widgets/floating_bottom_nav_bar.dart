@@ -900,7 +900,7 @@ class _NavBarItem extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _BadgedIcon(
+                    NavBadgedIcon(
                       count: destination.badgeCount,
                       label: destination.badgeLabel,
                       child: AnimatedSwitcher(
@@ -958,14 +958,16 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-/// A count on a navigation icon.
+/// A count on a navigation icon: the phone's bar and the tablet's rail
+/// draw the same one.
 ///
 /// Deliberately ink rather than a status tone — see
 /// [FloatingNavDestination.badgeCount]. Excluded from semantics because the
 /// destination already speaks the count in its label; a second node would read
 /// the number twice.
-class _BadgedIcon extends StatelessWidget {
-  const _BadgedIcon({
+class NavBadgedIcon extends StatelessWidget {
+  const NavBadgedIcon({
+    super.key,
     required this.count,
     required this.label,
     required this.child,

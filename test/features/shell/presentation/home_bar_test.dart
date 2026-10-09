@@ -29,6 +29,7 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
+import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 
 import '../../../test_helpers/fake_services.dart';
@@ -229,7 +230,18 @@ void main() {
           _operator,
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
         );
-        expect(find.byTooltip('Settings  ⌘,'), findsOneWidget);
+        final settings = find.descendant(
+          of: find.byType(DesktopNavRail),
+          matching: find.text('Settings'),
+        );
+        expect(settings, findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(DesktopNavRail),
+            matching: find.text('⌘,'),
+          ),
+          findsOneWidget,
+        );
 
         await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
         await tester.sendKeyEvent(LogicalKeyboardKey.comma);
@@ -244,7 +256,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(_location(container), ServiceRoutes.home);
 
-        await tester.tap(find.byTooltip('Settings  ⌘,'));
+        await tester.tap(settings);
         await tester.pumpAndSettle();
         expect(_location(container), ServiceRoutes.settings);
       } finally {

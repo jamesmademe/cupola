@@ -13,6 +13,8 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/floating_nav_rail.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -303,32 +305,48 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
     final Widget touchShell = useRail
         ? Scaffold(
-            body: Row(
-              children: [
-                // SafeArea on the rail side only: on a tablet held on its
-                // side the camera housing and the rounded corner sit on the
-                // leading edge, and the rail was laid out underneath them.
-                // The content keeps its own insets. Only tablets reach this
-                // branch on touch — the phone is portrait-only and never
-                // 840pt wide — but tablets still rotate, so the inset is
-                // real.
-                SafeArea(
-                  right: false,
-                  child: _ServicesNavRail(
-                    selectedIndex: selectedIndex,
-                    destinations: destinations,
-                    onDestinationSelected: select,
+            // The room's own light under the rail, so the strip it floats in
+            // continues the page beside it instead of framing it: the page's
+            // glow is centred near this same corner, and the two meet at the
+            // page's edge within a shade.
+            body: AmbientBackground(
+              child: Row(
+                children: [
+                  // SafeArea on the rail side only: on a tablet held on its
+                  // side the camera housing and the rounded corner sit on the
+                  // leading edge, and the rail was laid out underneath them.
+                  // The content keeps its own insets. Only tablets reach this
+                  // branch on touch — the phone is portrait-only and never
+                  // 840pt wide — but tablets still rotate, so the inset is
+                  // real.
+                  SafeArea(
+                    right: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: FloatingNavRail.margin,
+                      ),
+                      // The phone's bar on its side, floating at the middle of
+                      // the edge where a thumb holding the tablet reaches it.
+                      child: Align(
+                        widthFactor: 1,
+                        child: FloatingNavRail(
+                          selectedIndex: selectedIndex,
+                          destinations: destinations,
+                          onDestinationSelected: select,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                // A title opened here is drawn beside the page it came
-                // from once the window is wide enough.
-                Expanded(
-                  child: MediaSplitLayout(
-                    location: GoRouterState.of(context).uri,
-                    child: widget.navigationShell,
+                  // A title opened here is drawn beside the page it came
+                  // from once the window is wide enough.
+                  Expanded(
+                    child: MediaSplitLayout(
+                      location: GoRouterState.of(context).uri,
+                      child: widget.navigationShell,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           )
         // The phone layout is the only one the Portal exists in, so it is the
@@ -510,81 +528,4 @@ class _ClosePortalAction extends Action<CloseOverlayIntent> {
 
   @override
   void invoke(CloseOverlayIntent intent) => portal.closeFromUi();
-}
-
-/// Side navigation shown on tablet and desktop widths.
-///
-/// Takes the *same* [FloatingNavDestination] list the bottom bar does rather
-/// than rebuilding one from [NavTab]. That is the whole point: badge counts and
-/// their spoken labels are set in one place, so a desktop window cannot end up
-/// as the one form factor where a finished search is never announced.
-class _ServicesNavRail extends StatelessWidget {
-  const _ServicesNavRail({
-    required this.selectedIndex,
-    required this.destinations,
-    required this.onDestinationSelected,
-  });
-
-  final int selectedIndex;
-  final List<FloatingNavDestination> destinations;
-  final ValueChanged<int> onDestinationSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return NavigationRail(
-      selectedIndex: selectedIndex >= 0 ? selectedIndex : null,
-      onDestinationSelected: onDestinationSelected,
-      labelType: NavigationRailLabelType.all,
-      backgroundColor: colorScheme.surfaceContainerLow,
-      indicatorColor: colorScheme.secondaryContainer,
-      destinations: [
-        for (final destination in destinations)
-          NavigationRailDestination(
-            icon: _RailBadgedIcon(
-              destination: destination,
-              icon: destination.icon,
-            ),
-            selectedIcon: _RailBadgedIcon(
-              destination: destination,
-              icon: destination.selectedIcon,
-            ),
-            // The count joins the *spoken* label the way the bottom bar does it:
-            // a number painted on an icon is invisible to a screen reader, and
-            // the badge itself is excluded so it is not then read twice.
-            label: Text(
-              destination.label,
-              semanticsLabel: destination.badgeSemanticLabel == null
-                  ? null
-                  : '${destination.label}, ${destination.badgeSemanticLabel}',
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// A rail icon carrying its destination's count, in ink — never a status tone,
-/// for the reason [FloatingNavDestination.badgeCount] documents.
-class _RailBadgedIcon extends StatelessWidget {
-  const _RailBadgedIcon({required this.destination, required this.icon});
-
-  final FloatingNavDestination destination;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    if (destination.badgeCount <= 0) return Icon(icon);
-    final colorScheme = Theme.of(context).colorScheme;
-    return ExcludeSemantics(
-      child: Badge(
-        // The same "9+" cap as the floating bar and the desktop rail.
-        label: Text(destination.badgeLabel),
-        backgroundColor: colorScheme.primary,
-        textColor: colorScheme.onPrimary,
-        child: Icon(icon),
-      ),
-    );
-  }
 }

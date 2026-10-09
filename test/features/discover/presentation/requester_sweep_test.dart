@@ -9,6 +9,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,7 +19,11 @@ import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
 
+import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/floating_nav_rail.dart';
+import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/discover/presentation/collection_page.dart';
 import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
@@ -229,5 +234,120 @@ void main() {
         await harness.unmount(tester);
       });
     }
+  });
+
+  group('her window and her tablet', () {
+    // The platform comes from each test's variant, which sets it and puts it
+    // back around the body.
+    Future<(ProfileHarness, ProviderContainer)> pumpApp(
+      WidgetTester tester, {
+      required Size size,
+      String? location,
+      ConfigProfile? profile,
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final harness = await ProfileHarness.start(profile ?? Profiles.p2);
+      harness.network.followFakeTime(tester.binding);
+      final container = harness.container();
+      final router = container.read(routerProvider);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: AppTheme.darkTheme(),
+            routerConfig: router,
+          ),
+        ),
+      );
+      await harness.settle(tester);
+      if (location != null) {
+        router.go(location);
+        await harness.settle(tester);
+      }
+      return (harness, container);
+    }
+
+    for (final (name, location) in [
+      ('the Home', null),
+      ('the Requests tab', ServiceRoutes.requests),
+      ('the Discover tab', ServiceRoutes.discover),
+    ]) {
+      testWidgets('on a Mac, $name: her sections, no service, no '
+          'inspector, no deck', (tester) async {
+        final (harness, _) = await pumpApp(
+          tester,
+          size: const Size(1440, 900),
+          location: location,
+        );
+
+        expect(find.text('Requests'), findsWidgets);
+        expect(find.text('Services'), findsNothing);
+        expect(find.text('Inspector'), findsNothing);
+        expect(find.textContaining('Jump to'), findsNothing);
+        _expectNothingOfTheOperators(tester, 'P2 on a Mac, $name');
+
+        await harness.unmount(tester);
+      }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+      testWidgets(
+        'on a tablet, $name',
+        (tester) async {
+          final (harness, _) = await pumpApp(
+            tester,
+            size: const Size(1180, 820),
+            location: location,
+          );
+
+          expect(find.byType(FloatingNavRail), findsOne);
+          _expectNothingOfTheOperators(tester, 'P2 on a tablet, $name');
+
+          await harness.unmount(tester);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+    }
+
+    testWidgets('⌘K opens no deck: it reaches every room and connection by '
+        'name', (tester) async {
+      final (harness, _) = await pumpApp(tester, size: const Size(1440, 900));
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      await harness.settle(tester);
+
+      expect(find.byType(CommandDeck), findsNothing);
+      _expectNothingOfTheOperators(tester, 'P2, after ⌘K');
+
+      await harness.unmount(tester);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+    testWidgets(
+      'the same keys open the operator\'s deck (P1)',
+      (tester) async {
+        // A keystroke that reached nothing would pass the test above.
+        final (harness, container) = await pumpApp(
+          tester,
+          size: const Size(1440, 900),
+          profile: Profiles.p1,
+        );
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+        await harness.settle(tester);
+
+        expect(find.byType(CommandDeck), findsOne);
+
+        // Dockge's socket closes with its container, and leaves a timer that
+        // must run out before the test does.
+        await harness.unmount(tester);
+        container.dispose();
+        await tester.pump(const Duration(milliseconds: 1));
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    );
   });
 }

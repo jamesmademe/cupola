@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/floating_nav_rail.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -70,7 +71,7 @@ void main() {
 
       // And none of the touch navigation, at the same size.
       expect(find.byType(FloatingBottomNavBar), findsNothing);
-      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(FloatingNavRail), findsNothing);
     });
   });
 
@@ -89,7 +90,8 @@ void main() {
             .getSemanticsData();
         expect(activitySemantics.flagsCollection.isButton, isTrue);
         expect(activitySemantics.hasAction(SemanticsAction.tap), isTrue);
-        expect(find.bySemanticsLabel('Jump to anything, ⌘K'), findsNWidgets(2));
+        // The deck's own key: the sidebar does not repeat it.
+        expect(find.bySemanticsLabel('Jump to anything, ⌘K'), findsOneWidget);
         // The deck speaks the stack as one sentence, the one the Stack
         // header prints, rather than seventeen glyphs one by one.
         expect(
@@ -108,7 +110,7 @@ void main() {
     await onPlatform(TargetPlatform.android, () async {
       await _pumpShell(tester, overrides: await _world());
 
-      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(FloatingNavRail), findsOneWidget);
       expect(find.byType(WindowChrome), findsNothing);
       expect(find.byType(ServiceDeck), findsNothing);
     });
@@ -536,19 +538,31 @@ void main() {
     await onPlatform(TargetPlatform.macOS, () async {
       final harness = await _pumpShell(tester, overrides: await _world());
 
-      // The rail's button for [label], found by the tooltip it prints.
+      // The sidebar's row for [label], found by the name it prints.
       Finder railButton(String label) => find.descendant(
         of: find.byType(DesktopNavRail),
-        matching: find.byWidgetPredicate(
-          (w) => w is IconButton && (w.tooltip ?? '').startsWith('$label  '),
-        ),
+        matching: find.text(label),
       );
       bool lit(String label) =>
-          tester.widget<IconButton>(railButton(label)).isSelected ?? false;
+          tester
+              .widget<Semantics>(
+                find
+                    .ancestor(
+                      of: railButton(label),
+                      matching: find.byType(Semantics),
+                    )
+                    .first,
+              )
+              .properties
+              .selected ??
+          false;
 
       expect(
-        tester.widget<IconButton>(railButton('Settings')).tooltip,
-        'Settings  ${ShellShortcuts.settings}',
+        find.descendant(
+          of: find.byType(DesktopNavRail),
+          matching: find.text(ShellShortcuts.settings),
+        ),
+        findsOneWidget,
       );
       expect(lit('Settings'), isFalse);
       expect(lit('Home'), isTrue, reason: 'the window opens on the Home');
