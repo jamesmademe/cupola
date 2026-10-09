@@ -199,17 +199,38 @@ class ActivityPage extends ConsumerWidget {
       const _DownloadsSection(),
       const _UpNextSection(),
     ],
-    ActivityTab.requests => [
-      RequestsList.embedded(
-        key: ValueKey(requestsOf ?? ''),
-        instanceId: requestsOf ?? '',
-      ),
-    ],
+    ActivityTab.requests => [_RequestsView(requestsOf)],
     ActivityTab.history => const [
       _HistoryDays(),
       _HistoryFoot(blocklist: true),
     ],
   };
+}
+
+/// The Requests view: the list of the Seerr connection the address names.
+///
+/// A link outlives the connection it names (a row opened, that Seerr deleted
+/// in Settings, the link followed again): the list then reads the lens's, as
+/// a link naming none does. Handed the dead id it would say Seerr is not set
+/// up while one is.
+class _RequestsView extends ConsumerWidget {
+  const _RequestsView(this.instanceId);
+
+  final String? instanceId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final named = instanceId ?? '';
+    final exists = ref.watch(
+      currentSettingsProvider.select(
+        (settings) => settings
+            .configuredInstancesOf(ServiceKey.seerr)
+            .any((instance) => instance.id == named),
+      ),
+    );
+    final resolved = exists ? named : '';
+    return RequestsList.embedded(key: ValueKey(resolved), instanceId: resolved);
+  }
 }
 
 /// The page's name over what is moving: `4 moving · 40.4 MB/s · 1 stuck`,
