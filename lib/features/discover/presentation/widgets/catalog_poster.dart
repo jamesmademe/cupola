@@ -50,7 +50,8 @@ class CatalogPoster extends ConsumerWidget {
 
   /// Two lines of title and one of score, at the reading size the user chose
   /// up to the compact tile's ceiling (`TextScaleMetrics.clampedScalerOf`):
-  /// past it the words ellipsise rather than break inside a word.
+  /// past it the words ellipsise, and a word wider than the tile steps the
+  /// title down until it fits whole (`TextScaleMetrics.wholeWordScaler`).
   static double heightFor(BuildContext context, double width) {
     final theme = Theme.of(context).textTheme;
     final scaler = TextScaleMetrics.clampedScalerOf(context);
@@ -129,6 +130,12 @@ class CatalogPoster extends ConsumerWidget {
                     item.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    textScaler: TextScaleMetrics.wholeWordScaler(
+                      TextScaleMetrics.clampedScalerOf(context),
+                      text: item.title,
+                      style: _titleStyle(theme.textTheme),
+                      width: width,
+                    ),
                     style: _titleStyle(
                       theme.textTheme,
                     )?.copyWith(color: theme.colorScheme.onSurface),

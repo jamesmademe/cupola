@@ -37,6 +37,59 @@ class TextScaleMetrics {
     double maxScaleFactor = defaultMaxScaleFactor,
   }) => MediaQuery.textScalerOf(context).clamp(maxScaleFactor: maxScaleFactor);
 
+  /// [scaler], stepped down only as far as keeps every word of [text] whole on
+  /// a line [width] wide in [style] and, given [maxLines], the whole of it in
+  /// that many lines; never under the default reading size.
+  ///
+  /// A word wider than its line is broken inside it ("Matchbo / x the M…"),
+  /// and a line past the last is cut off, which read worse than the same words
+  /// a little smaller: a compact label would rather shrink to fit, as a label
+  /// does on Apple's platforms. Measured only above the default size, where
+  /// nothing can need it.
+  static TextScaler wholeWordScaler(
+    TextScaler scaler, {
+    required String text,
+    required TextStyle? style,
+    required double width,
+    int? maxLines,
+  }) {
+    final size = style?.fontSize ?? 14;
+    var factor = scaler.scale(size) / size;
+    if (factor <= 1) return scaler;
+    var widest = 0.0;
+    for (final word in text.split(_space)) {
+      if (word.isEmpty) continue;
+      final painter = TextPainter(
+        text: TextSpan(text: word, style: style),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      if (painter.width > widest) widest = painter.width;
+      painter.dispose();
+    }
+    if (widest * factor > width) factor = width / widest;
+    if (maxLines != null) {
+      // Down in small steps until the words take no more lines than given.
+      while (factor > 1 && _lines(text, style, width, factor) > maxLines) {
+        factor -= 0.05;
+      }
+    }
+    return scaler.clamp(maxScaleFactor: factor < 1 ? 1 : factor);
+  }
+
+  static int _lines(String text, TextStyle? style, double width, double f) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: TextScaler.linear(f),
+    )..layout(maxWidth: width);
+    final lines = painter.computeLineMetrics().length;
+    painter.dispose();
+    return lines;
+  }
+
+  static final _space = RegExp(r'\s+');
+
   /// Height for a box whose [base] height includes [textHeight] worth of text at
   /// the default reading size.
   ///

@@ -99,7 +99,8 @@ void main() {
       CatalogScene(
         'Text at 200% · the words follow the reading size to the compact '
         "tile's ceiling (1.6x) and the tile grows with them; past it they "
-        'ellipsise, never breaking inside a word',
+        'ellipsise, and a word wider than the tile (Caligari) steps the '
+        'title down until it fits whole',
         (_) => _rail(),
         width: 500,
         textScale: catalogTextScale,

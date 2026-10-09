@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/theme.dart';
@@ -171,17 +172,33 @@ class StatusBadge extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.xs),
               Flexible(
-                child: Text(
-                  percent ?? info.label,
-                  maxLines: 2,
-                  style: percent != null
-                      ? theme.textTheme.labelSmall!
-                            .weight(FontWeight.w600)
-                            .tabular
-                            .copyWith(color: textColor)
-                      : theme.textTheme.labelSmall!
-                            .weight(FontWeight.w600)
-                            .copyWith(color: textColor),
+                // Words wider than the corner, or more than its two lines,
+                // are stepped down until they fit whole, rather than broken
+                // inside ("Avail / able") or cut off ("Waiting for").
+                child: LayoutBuilder(
+                  builder: (context, box) {
+                    final word = percent ?? info.label;
+                    final style = percent != null
+                        ? theme.textTheme.labelSmall!
+                              .weight(FontWeight.w600)
+                              .tabular
+                              .copyWith(color: textColor)
+                        : theme.textTheme.labelSmall!
+                              .weight(FontWeight.w600)
+                              .copyWith(color: textColor);
+                    return Text(
+                      word,
+                      maxLines: 2,
+                      textScaler: TextScaleMetrics.wholeWordScaler(
+                        MediaQuery.textScalerOf(context),
+                        text: word,
+                        style: style,
+                        width: box.maxWidth,
+                        maxLines: 2,
+                      ),
+                      style: style,
+                    );
+                  },
                 ),
               ),
             ],

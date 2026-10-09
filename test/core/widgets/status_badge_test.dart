@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 
@@ -484,6 +485,56 @@ void main() {
 
       expect(find.byType(AnimatedSwitcher), findsNothing);
       expect(find.text('Available'), findsOneWidget);
+    });
+  });
+
+  group('StatusBadge.poster', () {
+    // The test font draws every letter a square em wide: "Available" is nine
+    // ems, wider at twice the size than the corner of a 160 poster, and
+    // narrower at the reading size.
+    Future<RenderParagraph> pump(WidgetTester tester, double scale) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: const Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 160,
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: StatusBadge.poster(
+                    info: MediaStatusInfo(
+                      availability: MediaAvailability.available,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      return tester.renderObject<RenderParagraph>(find.text('Available'));
+    }
+
+    testWidgets('at twice the reading size its word is never broken inside', (
+      tester,
+    ) async {
+      final word = await pump(tester, 2);
+      final size = word.text.style!.fontSize!;
+      final scale = word.textScaler.scale(size) / size;
+
+      expect(scale, greaterThan(1));
+      expect(word.size.width, greaterThanOrEqualTo(9 * size * scale - 0.5));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('at the reading size it is left as it is', (tester) async {
+      // The control: nothing to step down.
+      final word = await pump(tester, 1);
+      final size = word.text.style!.fontSize!;
+
+      expect(word.textScaler.scale(size), size);
     });
   });
 }
