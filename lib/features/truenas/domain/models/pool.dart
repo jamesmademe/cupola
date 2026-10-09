@@ -5,10 +5,35 @@ class TrueNasVdevMember {
   final String name;
   final String status;
 
-  const TrueNasVdevMember({required this.name, required this.status});
+  /// Read, write and checksum errors ZFS has counted on it, or null when the
+  /// topology carried no counters.
+  final int? errors;
+
+  const TrueNasVdevMember({
+    required this.name,
+    required this.status,
+    this.errors,
+  });
+
+  /// Whether ZFS reports trouble with it: a state other than `ONLINE`, or an
+  /// error counted.
+  bool get troubled =>
+      (status.toUpperCase() != 'ONLINE' && status != 'UNKNOWN') ||
+      (errors ?? 0) > 0;
 
   factory TrueNasVdevMember.fromJson(Map<String, dynamic> json) {
+    final stats = mapOrNull(json['stats']);
+    final counted = stats == null
+        ? null
+        : [
+            intOrNull(stats['read_errors']),
+            intOrNull(stats['write_errors']),
+            intOrNull(stats['checksum_errors']),
+          ].whereType<int>().toList();
     return TrueNasVdevMember(
+      errors: counted == null || counted.isEmpty
+          ? null
+          : counted.fold<int>(0, (sum, n) => sum + n),
       name:
           stringOrNull(json['disk']) ??
           stringOrNull(json['device']) ??
@@ -65,6 +90,12 @@ class TrueNasPool {
   final String? scanState;
   final double? scanPercentage;
 
+  /// What the last scan was: `SCRUB` or `RESILVER`.
+  final String? scanFunction;
+
+  /// When the last scan finished, or null while it runs or when none has.
+  final DateTime? scanEndedAt;
+
   const TrueNasPool({
     this.id,
     required this.name,
@@ -77,7 +108,15 @@ class TrueNasPool {
     this.topology = const {},
     this.scanState,
     this.scanPercentage,
+    this.scanFunction,
+    this.scanEndedAt,
   });
+
+  /// Every disk of every vdev, in topology order.
+  List<TrueNasVdevMember> get members => [
+    for (final vdevs in topology.values)
+      for (final vdev in vdevs) ...vdev.members,
+  ];
 
   /// Used fraction 0..1 when capacity is known, else null.
   double? get usedFraction {
@@ -128,6 +167,8 @@ class TrueNasPool {
     }
 
     final scan = mapOrNull(json['scan']);
+    final endTime = scan?['end_time'];
+    final endMs = endTime is Map ? intOrNull(endTime['\$date']) : null;
 
     return TrueNasPool(
       id: intOrNull(json['id']),
@@ -141,6 +182,11 @@ class TrueNasPool {
       topology: topology,
       scanState: stringOrNull(scan?['state']),
       scanPercentage: doubleOrNull(scan?['percentage']),
+      scanFunction: stringOrNull(scan?['function']),
+      // A pool never scanned can carry the epoch: no finish to tell.
+      scanEndedAt: endMs == null || endMs <= 0
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(endMs, isUtc: true),
     );
   }
 }

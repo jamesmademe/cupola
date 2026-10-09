@@ -22,6 +22,9 @@ class TrueNasService {
 
   Future<List<TrueNasPool>> getPools() => _storage.getPools();
 
+  /// One pool with its topology: its disks and what ZFS counts on them.
+  Future<TrueNasPool?> getPool(String name) => _storage.getPool(name);
+
   Future<List<TrueNasAlert>> getAlerts() => _system.getAlerts();
 
   Future<List<TrueNasServiceItem>> getServices() => _system.getServices();
