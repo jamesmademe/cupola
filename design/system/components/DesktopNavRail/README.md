@@ -14,7 +14,7 @@ Rendered from `lib/features/shell/presentation/desktop/desktop_nav_rail.dart` by
 - **Settings** at the foot with its key, `⌘,`, lit while Settings is open (no section is lit beside it).
 - **Larger text**: the names, keys and heading grow to 1.3, the phone bar's limit, and stop: the sidebar's width is fixed, and a name cut short at twice the size says less than a whole one a little smaller.
 
-The deck's own key, ⌘K, is not repeated here: the deck strip carries *Jump to anything ⌘K*. The requester has neither.
+The deck's own key, ⌘K, is not repeated here: the window's strip carries *Jump to… ⌘K*. The requester has neither.
 
 ## Folded
 

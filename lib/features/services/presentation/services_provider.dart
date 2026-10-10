@@ -3903,10 +3903,10 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
 /// The two live figures one stack card shows.
 ///
 /// Lives here rather than beside `serviceSignalProvider` because it is a
-/// Dashboard concern: the deck, the status bar and the Portal's picker all want
+/// Dashboard concern: the Portal's picker and the aggregate lines all want
 /// exactly one figure and are right to. The card wants two, and reduces the same
 /// KPI list through the same ranking — see `resolveServiceSignalPair` — so the
-/// card's primary and the deck's single figure can never disagree about which
+/// card's primary and the single figure can never disagree about which
 /// metric matters.
 ///
 /// Note the deliberate lack of error handling: an unreachable service leaves

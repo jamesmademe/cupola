@@ -4,6 +4,10 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart'
+    show ServiceFailureReason;
+import 'package:cupola/core/status/media_status.dart' show StatusTone;
+
 import 'package:cupola/features/activity/domain/activity_readout.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -278,6 +282,82 @@ void main() {
         '${local.hour.toString().padLeft(2, '0')}:'
         '${local.minute.toString().padLeft(2, '0')}',
       );
+    });
+  });
+
+  group("the window's answer line", () {
+    const radarr = CoverageSource(ServiceKey.radarr, instanceId: 'radarr');
+    const sonarr = CoverageSource(ServiceKey.sonarr, instanceId: 'sonarr');
+    const seerr = CoverageSource(ServiceKey.seerr, instanceId: 'seerr');
+    final at = DateTime(2026, 10, 9, 20, 53);
+
+    test('every source answered: all of them, and when the last did', () {
+      final line = activityAnswerLine(
+        SourceCoverage(answered: {radarr, sonarr, seerr}),
+        at: at,
+      );
+      expect(line?.text, 'All 3 answered at 20:53');
+      expect(line?.tone, isNull);
+    });
+
+    test('the Needs you page names what it counted', () {
+      expect(
+        activityAnswerLine(
+          SourceCoverage(answered: {radarr, sonarr}),
+          at: at,
+          services: true,
+        )?.text,
+        'All 2 services answered at 20:53',
+      );
+      expect(
+        activityAnswerLine(
+          SourceCoverage(answered: {radarr}),
+          at: at,
+          services: true,
+        )?.text,
+        'The one service answered at 20:53',
+      );
+    });
+
+    test('with the slowest still out: how many did, no tone', () {
+      final line = activityAnswerLine(
+        SourceCoverage(answered: {radarr}, pending: {sonarr, seerr}),
+        at: at,
+      );
+      expect(line?.text, '1 of 3 answered');
+      expect(line?.tone, isNull);
+    });
+
+    test('before any answered, it is asking', () {
+      expect(
+        activityAnswerLine(SourceCoverage(pending: {radarr, sonarr}))?.text,
+        'Asking 2',
+      );
+    });
+
+    test('one that did not answer is red; one that refused, amber', () {
+      final silent = activityAnswerLine(
+        SourceCoverage(
+          answered: {radarr, seerr},
+          failed: {sonarr: ServiceFailureReason.unreachable},
+        ),
+        at: at,
+      );
+      expect(silent?.text, '2 of 3 answered');
+      expect(silent?.tone, StatusTone.error);
+
+      final refused = activityAnswerLine(
+        SourceCoverage(
+          answered: {radarr, seerr},
+          failed: {sonarr: ServiceFailureReason.unauthorized},
+        ),
+        at: at,
+      );
+      expect(refused?.tone, StatusTone.warning);
+    });
+
+    test('nothing to ask says nothing', () {
+      expect(activityAnswerLine(SourceCoverage.none), isNull);
     });
   });
 }

@@ -9,10 +9,15 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/network/connection_failure.dart'
+    show ServiceFailureReason;
+import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/floating_nav_rail.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
@@ -26,8 +31,6 @@ import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
-import 'package:cupola/features/shell/presentation/desktop/service_deck.dart';
-import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
@@ -51,23 +54,17 @@ void main() {
         .setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
-  testWidgets('a desktop window gets chrome, rail and deck — no status bar', (
-    tester,
-  ) async {
+  testWidgets('a desktop window gets one strip, the sidebar and the page — '
+      'no deck, no status bar', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(tester, overrides: await _world());
 
       expect(find.byType(WindowChrome), findsOneWidget);
       expect(find.byType(DesktopNavRail), findsOneWidget);
-      expect(find.byType(ServiceDeck), findsOneWidget);
-      // The foot of the window is the page's: the status bar's one fact of its
-      // own, the sample's age, lives in the deck.
-      expect(find.byType(ShellFreshness), findsOneWidget);
-      expect(
-        tester.getBottomLeft(find.byType(Placeholder).first).dy,
-        900,
-        reason: 'the content reaches the bottom edge of the window',
-      );
+      // The page starts under the one strip and reaches the window's foot.
+      final page = tester.getRect(find.byType(Placeholder).first);
+      expect(page.top, WindowChrome.height);
+      expect(page.bottom, 900, reason: 'no status bar at the foot');
 
       // And none of the touch navigation, at the same size.
       expect(find.byType(FloatingBottomNavBar), findsNothing);
@@ -90,13 +87,17 @@ void main() {
             .getSemanticsData();
         expect(activitySemantics.flagsCollection.isButton, isTrue);
         expect(activitySemantics.hasAction(SemanticsAction.tap), isTrue);
-        // The deck's own key: the sidebar does not repeat it.
+        // The strip's own key: the sidebar does not repeat it.
         expect(find.bySemanticsLabel('Jump to anything, ⌘K'), findsOneWidget);
-        // The deck speaks the stack as one sentence, the one the Stack
-        // header prints, rather than seventeen glyphs one by one.
+        // The inspector's switch says its key and whether the pane is open.
         expect(
-          find.bySemanticsLabel(RegExp(r'^1 of 1 answering')),
-          findsOneWidget,
+          tester.getSemantics(find.bySemanticsLabel('Inspector, ⌥I')),
+          containsSemantics(
+            isButton: true,
+            hasTapAction: true,
+            hasToggledState: true,
+            isToggled: false,
+          ),
         );
       } finally {
         semantics.dispose();
@@ -112,7 +113,6 @@ void main() {
 
       expect(find.byType(FloatingNavRail), findsOneWidget);
       expect(find.byType(WindowChrome), findsNothing);
-      expect(find.byType(ServiceDeck), findsNothing);
     });
   });
 
@@ -129,7 +129,6 @@ void main() {
       expect(find.byType(FloatingBottomNavBar), findsOneWidget);
       expect(find.byType(WindowChrome), findsNothing);
       expect(find.byType(DesktopNavRail), findsNothing);
-      expect(find.byType(ServiceDeck), findsNothing);
       // Still a frameless window: the strip keeps the lights' gutter and the
       // drag region above the phone layout.
       expect(find.byType(WindowDragStrip), findsOneWidget);
@@ -166,46 +165,55 @@ void main() {
     });
   });
 
-  testWidgets('the full window shows the aggregate, not seventeen glyphs', (
-    tester,
-  ) async {
-    // The Room Light Rule: one health figure in the deck, the services on ⌘K.
+  testWidgets('the full window carries the way to anything and the '
+      "inspector's switch", (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(tester, overrides: await _world());
 
-      final deck = tester.widget<ServiceDeck>(find.byType(ServiceDeck));
-      expect(deck.compact, isFalse);
+      final chrome = find.byType(WindowChrome);
       expect(
-        find.descendant(
-          of: find.byType(ServiceDeck),
-          matching: find.textContaining('/ 1'),
-        ),
+        find.descendant(of: chrome, matching: find.text('Jump to…')),
         findsOneWidget,
       );
-      expect(find.byTooltip('Radarr · 4K · online'), findsNothing);
+      expect(find.byTooltip('Inspector  ⌥I'), findsOneWidget);
+      // The stack's health is the sidebar's and Stack's, not the strip's.
+      expect(find.textContaining('/ 1'), findsNothing);
     });
   });
 
-  testWidgets('the compact window keeps the same aggregate', (tester) async {
+  testWidgets('a compact window keeps the way to anything, and no switch for '
+      'a pane it cannot show', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(
         tester,
-        // The compact artboard. Below `AppBreakpoints.desktopCompact` the deck
-        // shows fewer things, not smaller ones.
+        // Below `AppBreakpoints.desktopCompact` the inspector is never laid
+        // out, so a switch for it would do nothing anyone could see.
         viewport: const Size(720, 450),
         overrides: await _world(),
       );
 
-      final deck = tester.widget<ServiceDeck>(find.byType(ServiceDeck));
-      expect(deck.compact, isTrue);
-      // The aggregate the bands added up to, in the deck's own strip.
+      final chrome = find.byType(WindowChrome);
       expect(
-        find.descendant(
-          of: find.byType(ServiceDeck),
-          matching: find.textContaining('/ 1'),
-        ),
+        find.descendant(of: chrome, matching: find.text('Jump')),
         findsOneWidget,
       );
+      expect(find.byTooltip('Inspector  ⌥I'), findsNothing);
+    });
+  });
+
+  testWidgets('the switch opens the inspector and lights while it is open', (
+    tester,
+  ) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+
+      await tester.tap(find.byTooltip('Inspector  ⌥I'));
+      await tester.pumpAndSettle();
+      expect(find.byType(InspectorPane), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Inspector  ⌥I'));
+      await tester.pumpAndSettle();
+      expect(find.byType(InspectorPane), findsNothing);
     });
   });
 
@@ -251,6 +259,16 @@ void main() {
 
       await _press(tester, LogicalKeyboardKey.escape);
       expect(find.byType(CommandDeck), findsNothing);
+    });
+  });
+
+  testWidgets('a click on the way to anything opens the deck', (tester) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+
+      await tester.tap(find.text('Jump to…'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CommandDeck), findsOneWidget);
     });
   });
 
@@ -311,135 +329,131 @@ void main() {
     });
   });
 
-  testWidgets('⌘R dates the sample in the deck', (tester) async {
-    await onPlatform(TargetPlatform.macOS, () async {
-      await _pumpShell(tester, overrides: await _world());
-      expect(find.textContaining('Refreshed'), findsNothing);
+  group("Activity's strip says who of its sources answered", () {
+    DashboardDecisions decisions(SourceCoverage coverage) =>
+        (decisions: const <DashboardDecision>[], coverage: coverage);
+    const radarr = CoverageSource(ServiceKey.radarr, instanceId: 'radarr');
+    const sonarr = CoverageSource(ServiceKey.sonarr, instanceId: 'sonarr');
 
-      await _press(tester, LogicalKeyboardKey.keyR, meta: true);
+    testWidgets('all of them, and when; a click asks them again', (
+      tester,
+    ) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        await _pumpShell(
+          tester,
+          initialLocation: '/activity',
+          overrides: [
+            ...await _world(),
+            dashboardDecisionsProvider.overrideWithValue(
+              decisions(SourceCoverage(answered: {radarr, sonarr})),
+            ),
+            stallClockProvider.overrideWithValue(
+              () => DateTime(2026, 10, 9, 20, 53),
+            ),
+          ],
+        );
 
-      expect(find.text('Refreshed just now'), findsOneWidget);
+        final line = find.text('All 2 answered at 20:53');
+        expect(line, findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ShellScreen)),
+        );
+        final before = container.read(
+          navigationRefreshProvider(NavigationSection.activity),
+        );
+        await tester.tap(line);
+        await tester.pumpAndSettle();
+        expect(
+          container.read(navigationRefreshProvider(NavigationSection.activity)),
+          before + 1,
+        );
+      });
+    });
+
+    testWidgets('one that did not answer: how many did, in red', (
+      tester,
+    ) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        await _pumpShell(
+          tester,
+          initialLocation: '/activity',
+          overrides: [
+            ...await _world(),
+            dashboardDecisionsProvider.overrideWithValue(
+              decisions(
+                SourceCoverage(
+                  answered: {radarr},
+                  failed: {sonarr: ServiceFailureReason.unreachable},
+                ),
+              ),
+            ),
+          ],
+        );
+
+        expect(find.text('1 of 2 answered'), findsOneWidget);
+        expect(
+          find.byTooltip(RegExp('^Sonarr did not answer')),
+          findsOneWidget,
+        );
+      });
+    });
+
+    testWidgets('elsewhere the strip has no answer line', (tester) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        await _pumpShell(
+          tester,
+          overrides: [
+            ...await _world(),
+            dashboardDecisionsProvider.overrideWithValue(
+              decisions(SourceCoverage(answered: {radarr, sonarr})),
+            ),
+          ],
+        );
+        expect(find.textContaining('answered'), findsNothing);
+      });
     });
   });
 
-  group(
-    'the deck and the chrome name a connection only when there are two',
-    () {
-      testWidgets('one Radarr: no label, whatever it kept from a sibling', (
-        tester,
-      ) async {
-        await onPlatform(TargetPlatform.macOS, () async {
-          await _pumpShell(
-            tester,
-            initialLocation: '/stack/radarr/library/item/42',
-            overrides: await _world(),
-          );
-          expect(find.text('4K'), findsNothing);
-          expect(find.textContaining('Lens: '), findsNothing);
-        });
+  group('the chrome names a connection only when there are two', () {
+    testWidgets('one Radarr: no label, whatever it kept from a sibling', (
+      tester,
+    ) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        await _pumpShell(
+          tester,
+          initialLocation: '/stack/radarr/library/item/42',
+          overrides: await _world(),
+        );
+        expect(find.text('4K'), findsNothing);
+        expect(find.textContaining('Lens: '), findsNothing);
       });
+    });
 
-      testWidgets('two Radarr, the lens unnamed: called by its place', (
-        tester,
-      ) async {
-        await onPlatform(TargetPlatform.macOS, () async {
-          final semantics = tester.ensureSemantics();
-          try {
-            await _pumpShell(
-              tester,
-              initialLocation: '/stack/radarr/library/item/42',
-              overrides: await _world(instances: _twoRadarr),
-            );
-            // The derived name is the room's title, with no second label
-            // repeating the service.
-            expect(find.bySemanticsLabel('Viewing Radarr 1'), findsOneWidget);
-            expect(find.textContaining('Lens: Radarr 1'), findsOneWidget);
-          } finally {
-            semantics.dispose();
-          }
-        });
+    testWidgets('two Radarr, the lens unnamed: called by its place', (
+      tester,
+    ) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        await _pumpShell(
+          tester,
+          initialLocation: '/stack/radarr/library/item/42',
+          overrides: await _world(instances: _twoRadarr),
+        );
+        expect(find.textContaining('Lens: Radarr 1'), findsOneWidget);
       });
-    },
-  );
+    });
+  });
 
   testWidgets('a page opened with ?i= names the connection it reads, not '
       'the lens', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
-      final semantics = tester.ensureSemantics();
-      try {
-        // The lens rests on the first Radarr; the film is the 4K's.
-        await _pumpShell(
-          tester,
-          initialLocation: '/stack/radarr/library/item/42?i=radarr-4k00001',
-          overrides: await _world(instances: _twoRadarr),
-        );
-        expect(find.bySemanticsLabel('Viewing Radarr, 4K'), findsOneWidget);
-        expect(find.textContaining('Lens: 4K'), findsOneWidget);
-        expect(find.textContaining('Radarr 1'), findsNothing);
-      } finally {
-        semantics.dispose();
-      }
-    });
-  });
-
-  group('the deck names the room only when the page does not', () {
-    testWidgets('a service tab root: the tab row names it, the deck does not', (
-      tester,
-    ) async {
-      await onPlatform(TargetPlatform.macOS, () async {
-        final semantics = tester.ensureSemantics();
-        try {
-          await _pumpShell(
-            tester,
-            initialLocation: '/stack/radarr/library',
-            overrides: await _world(),
-          );
-          expect(
-            find.bySemanticsLabel(RegExp(r'^Viewing Radarr')),
-            findsNothing,
-          );
-        } finally {
-          semantics.dispose();
-        }
-      });
-    });
-
-    testWidgets('a pushed page has no tab row, so the deck keeps the chip', (
-      tester,
-    ) async {
-      await onPlatform(TargetPlatform.macOS, () async {
-        final semantics = tester.ensureSemantics();
-        try {
-          await _pumpShell(
-            tester,
-            initialLocation: '/stack/radarr/library/item/42',
-            overrides: await _world(),
-          );
-          // One Radarr, so the room alone: its `4K` label outlived the
-          // sibling that made it necessary, and is not printed.
-          expect(find.bySemanticsLabel('Viewing Radarr'), findsOneWidget);
-        } finally {
-          semantics.dispose();
-        }
-      });
-    });
-
-    testWidgets('TrueNAS keeps its band, so the deck keeps the chip', (
-      tester,
-    ) async {
-      await onPlatform(TargetPlatform.macOS, () async {
-        final semantics = tester.ensureSemantics();
-        try {
-          await _pumpShell(
-            tester,
-            initialLocation: '/stack/truenas',
-            overrides: await _world(),
-          );
-          expect(find.bySemanticsLabel('Viewing TrueNAS'), findsOneWidget);
-        } finally {
-          semantics.dispose();
-        }
-      });
+      // The lens rests on the first Radarr; the movie is the 4K's.
+      await _pumpShell(
+        tester,
+        initialLocation: '/stack/radarr/library/item/42?i=radarr-4k00001',
+        overrides: await _world(instances: _twoRadarr),
+      );
+      expect(find.textContaining('Lens: 4K'), findsOneWidget);
+      expect(find.textContaining('Radarr 1'), findsNothing);
     });
   });
 

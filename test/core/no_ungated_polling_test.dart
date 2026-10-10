@@ -19,20 +19,14 @@ void main() {
 
   /// Repeating work that is not polling, and must not be gated.
   ///
-  /// The first two are once-a-second repaints of an elapsed-time readout inside
-  /// a modal sheet. Neither touches the network, and the second accumulates a
+  /// Both are once-a-second repaints of an elapsed-time readout inside a
+  /// modal sheet. Neither touches the network, and the second accumulates a
   /// second per tick rather than reading the clock: pausing it would save
   /// nothing and would make the duration it displays wrong. A rule that forced
   /// them through the polling primitive would buy a tidier scan and a bug.
-  ///
-  /// The third is the desktop status bar's half-minute clock, which re-ages a
-  /// `Refreshed n min ago` label. Same shape of argument: no network, and
-  /// the whole job of the label is to be right at the moment somebody reads it,
-  /// which is exactly the moment a gate would have stopped it.
   const uiClocks = {
     'lib/core/widgets/interactive_search_sheet.dart',
     'lib/features/release_search/presentation/release_search_sheet.dart',
-    'lib/features/shell/presentation/desktop/shell_freshness.dart',
   };
 
   final libFiles = Directory('lib')

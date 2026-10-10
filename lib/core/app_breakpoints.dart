@@ -56,8 +56,8 @@ abstract final class AppBreakpoints {
   /// Width below which the desktop shell uses its compact variants.
   ///
   /// The two drawn desktop sizes are 1440 and 720; this sits between them,
-  /// nearer the top, because the things that collapse — the deck's four glyph
-  /// bands, the TrueNAS section list, a second results column — all stop
+  /// nearer the top, because the things that collapse — the sidebar's names,
+  /// the TrueNAS section list, a second results column — all stop
   /// fitting well before the window is halved. Below it the shell keeps every
   /// part it had and shows fewer items in each, never smaller ones.
   static const double desktopCompact = DesignTokens.breakpointDesktopCompact;

@@ -20,7 +20,7 @@ import 'package:cupola/features/search/presentation/global_search_provider.dart'
 
 /// The deck, open: one field, everything behind it.
 ///
-/// Descends *from* the deck strip rather than appearing over the middle of the
+/// Descends *from* the window's strip rather than appearing over the middle of the
 /// window, so it reads as the same object expanding — which is the desktop
 /// counterpart of the phone's Portal, where the screen recedes into a card and
 /// the floor rises beneath it. Same idea, different room: a pointer does not
@@ -203,7 +203,7 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
   }
 }
 
-/// The field, which replaces the deck's pill in place.
+/// The field, the open form of the strip's way to anything.
 class _DeckField extends StatelessWidget {
   const _DeckField({
     required this.controller,
@@ -400,7 +400,7 @@ class _DeckFooter extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final health = ref.watch(stackHealthProvider);
     // Each hint is a key and what it does. The key is a legend for a physical
-    // key, set in the mono face the rail and the jump pill print theirs in;
+    // key, set in the mono face the rail and the strip print theirs in;
     // what it does is prose, and prose is never mono.
     final hints = <({String key, String does})>[
       (key: '↑↓', does: 'move'),

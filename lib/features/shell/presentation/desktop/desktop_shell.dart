@@ -22,17 +22,14 @@ import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_rail_services.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
-import 'package:cupola/features/shell/presentation/desktop/service_deck.dart';
-import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
-/// The window: chrome, rail, deck, content, inspector, status.
+/// The window: chrome, sidebar, content, inspector.
 ///
 /// The whole of the desktop layer's structure, and the only place that knows
-/// the assembly. Six regions in a fixed order, and the order is the argument:
-/// the chrome says which window this is, the rail which section, the deck which
-/// service — three questions answered before the content, each by a strip
-/// thinner than the one before it.
+/// the assembly. One strip across the top says which page this is and holds
+/// the way to anything; the sidebar says which section and which room; the
+/// page says the rest.
 ///
 /// The content itself is the *unmodified* branch navigator. Nothing here wraps
 /// pages in a desktop-only container, because every screen also has to be a
@@ -150,7 +147,6 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
       final message = testAllConnectionsAnnouncement(testAllConnections(ref));
       SnackBarHelper.info(context, message);
     }
-    ref.read(lastRefreshedAtProvider.notifier).state = DateTime.now();
   }
 
   void _searchThisScreen() {
@@ -171,10 +167,6 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     // activity is the operator's, and no command deck, which reaches every
     // room and connection by name.
     final requester = ref.watch(shellAudienceProvider) == Audience.requester;
-    // Nor the strip of the deck: it speaks of rooms and of the stack.
-    final deckHeight = requester
-        ? 0.0
-        : ServiceDeck.heightFor(compact: compact);
     final railWidth = DesktopNavRail.widthFor(compact: compact);
 
     // Recents for the deck, recorded here because this is the one widget that
@@ -273,13 +265,10 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
               fit: StackFit.expand,
               children: [
                 Positioned(
-                  top: chromeHeight + deckHeight,
+                  top: chromeHeight,
                   left: railWidth,
                   right: 0,
                   bottom: 0,
-                  // No status bar at the foot: everything it printed is on
-                  // screen elsewhere, and its one fact of its own — how fresh
-                  // the sample is — lives in the deck (ShellFreshness).
                   child: Row(
                     children: [
                       Expanded(child: widget.navigationShell),
@@ -298,7 +287,10 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                   left: 0,
                   right: 0,
                   height: chromeHeight,
-                  child: WindowChrome(inspectorOpen: inspectorShown),
+                  child: WindowChrome(
+                    inspectorOpen: inspectorShown,
+                    onCommandDeck: requester ? null : _openDeck,
+                  ),
                 ),
                 Positioned(
                   top: chromeHeight,
@@ -327,17 +319,6 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                     ).go(ServiceRoutes.forService(service)),
                   ),
                 ),
-                if (!requester)
-                  Positioned(
-                    top: chromeHeight,
-                    left: railWidth,
-                    right: 0,
-                    height: deckHeight,
-                    child: ServiceDeck(
-                      compact: compact,
-                      onCommandDeck: _openDeck,
-                    ),
-                  ),
                 if (_deckOpen)
                   Positioned(
                     top: chromeHeight,

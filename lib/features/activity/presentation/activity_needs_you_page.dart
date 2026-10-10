@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/activity/data/activity_answered.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
+import 'package:cupola/features/activity/domain/activity_readout.dart'
+    show activityAnswerLine;
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart'
     show needsYouMeta;
@@ -33,21 +35,11 @@ class ActivityNeedsYouPage extends ConsumerStatefulWidget {
 }
 
 class _ActivityNeedsYouPageState extends ConsumerState<ActivityNeedsYouPage> {
-  /// When every source last answered: the time under the title.
-  DateTime? _answeredAt;
-
   @override
   Widget build(BuildContext context) {
     final decisions = ref.watch(dashboardDecisionsProvider);
     final coverage = decisions.coverage;
-    if (coverage.pending.isEmpty && _answeredAt == null) {
-      _answeredAt = ref.read(stallClockProvider)();
-    }
-    ref.listen(dashboardDecisionsProvider, (previous, next) {
-      if (next.coverage.pending.isEmpty) {
-        _answeredAt = ref.read(stallClockProvider)();
-      }
-    });
+    final answeredAt = ref.watch(activityAnsweredAtProvider);
     final answered = ref.watch(answeredRequestsProvider);
     final entries = faultEntriesOf(
       decisions.decisions.where((decision) => decision.isFault),
@@ -95,8 +87,15 @@ class _ActivityNeedsYouPageState extends ConsumerState<ActivityNeedsYouPage> {
             _Heading(
               faults: entries.length,
               requests: waiting.length,
-              answeredLine: note == null && coverage.answered.isNotEmpty
-                  ? _answeredLine(coverage.answered.length, _answeredAt)
+              answeredLine:
+                  note == null &&
+                      coverage.answered.isNotEmpty &&
+                      coverage.pending.isEmpty
+                  ? activityAnswerLine(
+                      coverage,
+                      at: answeredAt,
+                      services: true,
+                    )?.text
                   : null,
               note: note == null
                   ? null
@@ -127,13 +126,6 @@ class _ActivityNeedsYouPageState extends ConsumerState<ActivityNeedsYouPage> {
       ),
     );
   }
-}
-
-/// `All 12 services answered at 20:53`.
-String? _answeredLine(int count, DateTime? at) {
-  if (at == null) return null;
-  final who = count == 1 ? 'The one service' : 'All $count services';
-  return '$who answered at ${formatClockTime(at)}';
 }
 
 class _Heading extends StatelessWidget {

@@ -11,7 +11,17 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart'
+    show FloatingNavBarMetrics;
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/activity/data/activity_answered.dart';
+import 'package:cupola/features/activity/domain/activity_readout.dart'
+    show activityAnswerLine;
+import 'package:cupola/features/services/domain/source_coverage.dart'
+    show coverageFailureSentence;
+import 'package:cupola/features/services/presentation/services_provider.dart'
+    show dashboardDecisionsProvider;
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -28,12 +38,25 @@ import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 ///
 /// The strip is also the window's *title*: the breadcrumb is the title, never
 /// duplicated elsewhere, which is why the crumbs are links and not a label.
+///
+/// One strip, the window's only one: the title, on Activity who of its
+/// sources answered and when, the way to anything (⌘K) and the inspector's
+/// switch. What the deck strip under it used to carry went to where it is
+/// read: the room to the sidebar's lit row and the page's own header, the
+/// stack's health to the sidebar's lights and Stack.
 class WindowChrome extends ConsumerWidget {
-  const WindowChrome({super.key, required this.inspectorOpen});
+  const WindowChrome({
+    super.key,
+    required this.inspectorOpen,
+    this.onCommandDeck,
+  });
 
-  /// Drives the inspector chip's tone. Passed rather than watched so the strip
-  /// has exactly one reason to rebuild that is not its own.
+  /// Drives the inspector switch's tone. Passed rather than watched so the
+  /// strip has exactly one reason to rebuild that is not its own.
   final bool inspectorOpen;
+
+  /// Opens the command deck; null for the requester's window, which has none.
+  final VoidCallback? onCommandDeck;
 
   /// The drawn height. Same on all three platforms: the OS decides where its
   /// buttons sit, not how much room our chrome takes.
@@ -50,7 +73,6 @@ class WindowChrome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     // Width alone, like [WindowDragStrip]: the strip only ever paints inside a
     // desktop window, so the platform half of the shell test adds nothing.
     final compact =
@@ -62,6 +84,28 @@ class WindowChrome extends ConsumerWidget {
     // The inspector follows the stack's activity, which is the operator's.
     final requester = ref.watch(shellAudienceProvider) == Audience.requester;
 
+    // The strip's words grow with the reading size as far as the sidebar's
+    // and the phone bar's do, and no further: its height is the window's,
+    // and a title or a key cut short at twice the size says less than one a
+    // little smaller.
+    final scaler = MediaQuery.textScalerOf(
+      context,
+    ).clamp(maxScaleFactor: FloatingNavBarMetrics.maxTextScaleFactor);
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: scaler),
+      child: _strip(context, compact, crumbs, lens, location, requester),
+    );
+  }
+
+  Widget _strip(
+    BuildContext context,
+    bool compact,
+    List<Crumb> crumbs,
+    ({ServiceKey service, String label})? lens,
+    String location,
+    bool requester,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Semantics(
       container: true,
       explicitChildNodes: true,
@@ -76,10 +120,7 @@ class WindowChrome extends ConsumerWidget {
         ),
         child: SizedBox(
           height: heightFor(compact: compact),
-          // The whole strip is a drag region, and the buttons inside it still
-          // win: they are hit-tested first, so the drag only starts on the
-          // background between them.
-          child: DragToMoveArea(
+          child: _DragSurface(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               child: Row(
@@ -87,38 +128,28 @@ class WindowChrome extends ConsumerWidget {
                   SizedBox(width: DesktopWindow.leadingButtonGutter),
                   Expanded(child: _Breadcrumb(crumbs: crumbs)),
                   if (lens != null) ...[
-                    _ChromeChip(
+                    const SizedBox(width: AppSpacing.sm),
+                    _LensChip(
                       compact: compact,
                       label: 'Lens: ${lens.label}',
-                      icon: Icons.dns_outlined,
-                      on: true,
                       tooltip:
                           'Showing ${serviceWithConnection(lens.service, lens.label)}. '
                           'Change it from the deck.',
                     ),
-                    const SizedBox(width: AppSpacing.sm),
                   ],
-                  _ChromeChip(
-                    compact: compact,
-                    label: 'Refresh all',
-                    shortcut: ShellShortcuts.refreshAll,
-                    icon: Icons.refresh_rounded,
-                    onPressed: () =>
-                        Actions.invoke(context, const RefreshAllIntent()),
-                  ),
-                  if (!requester) ...[
+                  if (!requester && _readsActivity(location)) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    const _AnswerLine(),
+                  ],
+                  if (onCommandDeck case final open?) ...[
+                    SizedBox(width: compact ? AppSpacing.sm : AppSpacing.md),
+                    _JumpField(compact: compact, onPressed: open),
+                  ],
+                  // The pane is laid out only in a full window: a switch for
+                  // it in a compact one would do nothing anyone could see.
+                  if (!requester && !compact) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    _ChromeChip(
-                      compact: compact,
-                      label: 'Inspector',
-                      shortcut: ShellShortcuts.inspector,
-                      icon: Icons.insights_rounded,
-                      on: inspectorOpen,
-                      onPressed: () => Actions.invoke(
-                        context,
-                        const ToggleInspectorIntent(),
-                      ),
-                    ),
+                    _InspectorSwitch(on: inspectorOpen),
                   ],
                   if (DesktopWindow.drawsOwnButtons) ...[
                     const SizedBox(width: AppSpacing.md),
@@ -156,6 +187,283 @@ class WindowChrome extends ConsumerWidget {
     if (label == null) return null;
     return (service: service, label: label);
   }
+}
+
+/// Whether [location] is one of Activity's pages, whose sources the strip's
+/// answer line speaks for.
+bool _readsActivity(String location) =>
+    location == ServiceRoutes.activity ||
+    location.startsWith('${ServiceRoutes.activity}/');
+
+/// `All 12 answered at 20:53`: who of the sources Activity reads answered,
+/// the same the Home's banner counts, and when the last did. A button: it
+/// asks them all again, as ⌘R does, and its tooltip names who did not answer.
+class _AnswerLine extends ConsumerStatefulWidget {
+  const _AnswerLine();
+
+  @override
+  ConsumerState<_AnswerLine> createState() => _AnswerLineState();
+}
+
+class _AnswerLineState extends ConsumerState<_AnswerLine> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final coverage = ref.watch(dashboardDecisionsProvider).coverage;
+    final line = activityAnswerLine(
+      coverage,
+      at: ref.watch(activityAnsweredAtProvider),
+    );
+    if (line == null) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final dim = CupolaThemeColors.of(context).dimText;
+    final color = switch (line.tone) {
+      final tone? => statusToneColor(scheme, tone, surface: scheme.surface),
+      null => dim,
+    };
+    final failed = coverage.failed.isEmpty
+        ? null
+        : coverageFailureSentence(coverage);
+    final ask = 'Ask again  ${ShellShortcuts.refreshAll}';
+    return Tooltip(
+      message: failed == null ? ask : '$failed\n$ask',
+      waitDuration: const Duration(milliseconds: 500),
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        label: failed == null ? line.text : '${line.text}. $failed',
+        hint: 'Ask again',
+        excludeSemantics: true,
+        onTap: _ask,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: _ask,
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (line.tone != null) ...[
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  line.text,
+                  maxLines: 1,
+                  style:
+                      AppTheme.chrome(
+                        context,
+                        size: 12,
+                        weight: FontWeight.w500,
+                        color: color,
+                      ).tabular.copyWith(
+                        decoration: _hovered ? TextDecoration.underline : null,
+                        decorationColor: color,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _ask() => Actions.invoke(context, const RefreshAllIntent());
+}
+
+/// The way to anything. A field in shape only — it opens the command deck.
+///
+/// Drawn as a field rather than as a button because that is what it does: the
+/// deck it opens is a search, and a control shaped like its own result is how
+/// a command palette teaches itself.
+class _JumpField extends StatefulWidget {
+  const _JumpField({required this.compact, required this.onPressed});
+
+  final bool compact;
+  final VoidCallback onPressed;
+
+  /// The field's width in a full window, room for the words and the key.
+  static const double width = 240;
+
+  @override
+  State<_JumpField> createState() => _JumpFieldState();
+}
+
+class _JumpFieldState extends State<_JumpField> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final dim = CupolaThemeColors.of(context).dimText;
+    final compact = widget.compact;
+    final words = Text(
+      compact ? 'Jump' : 'Jump to…',
+      maxLines: 1,
+      style: AppTheme.chrome(
+        context,
+        size: 12,
+        weight: FontWeight.w500,
+        color: dim,
+      ),
+    );
+    // The key legend, mono as the rail's is, on a cap of its own.
+    final key = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: colorScheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadius.xs),
+      ),
+      child: Text(
+        ShellShortcuts.commandDeck,
+        style: AppTheme.chrome(context, size: 11, color: dim).mono,
+      ),
+    );
+    return Semantics(
+      button: true,
+      container: true,
+      enabled: true,
+      label: 'Jump to anything, ${ShellShortcuts.commandDeck}',
+      hint: 'Open the command deck',
+      onTap: widget.onPressed,
+      child: ExcludeSemantics(
+        child: Tooltip(
+          message: 'Jump to anything  ${ShellShortcuts.commandDeck}',
+          waitDuration: const Duration(milliseconds: 500),
+          excludeFromSemantics: true,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) => setState(() => _hovered = true),
+            onExit: (_) => setState(() => _hovered = false),
+            child: TextButton(
+              onPressed: widget.onPressed,
+              style: ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+                minimumSize: WidgetStatePropertyAll(
+                  Size(
+                    44,
+                    compact ? WindowChrome.compactHeight : WindowChrome.height,
+                  ),
+                ),
+                visualDensity: VisualDensity.standard,
+                overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              ),
+              child: Container(
+                width: compact ? null : _JumpField.width,
+                height: compact ? 26 : 30,
+                padding: EdgeInsets.only(
+                  left: compact ? AppSpacing.sm : AppSpacing.row,
+                  right: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: _hovered ? 0.8 : 0.55,
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: colorScheme.outlineVariant),
+                ),
+                child: Row(
+                  mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+                  children: [
+                    Icon(Icons.search_rounded, size: 14, color: dim),
+                    const SizedBox(width: AppSpacing.sm),
+                    if (compact) words else Expanded(child: words),
+                    const SizedBox(width: AppSpacing.sm),
+                    key,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The inspector's switch: the pane's own glyph, on the room's strong fill
+/// while the pane is open, monochrome like every chip of the strip.
+class _InspectorSwitch extends StatefulWidget {
+  const _InspectorSwitch({required this.on});
+
+  final bool on;
+
+  @override
+  State<_InspectorSwitch> createState() => _InspectorSwitchState();
+}
+
+class _InspectorSwitchState extends State<_InspectorSwitch> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final on = widget.on;
+    final label = 'Inspector, ${ShellShortcuts.inspector}';
+    return Tooltip(
+      message: 'Inspector  ${ShellShortcuts.inspector}',
+      waitDuration: const Duration(milliseconds: 500),
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        toggled: on,
+        label: label,
+        excludeSemantics: true,
+        onTap: _toggle,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: _toggle,
+            behavior: HitTestBehavior.opaque,
+            // The strip's full height and 44 wide: the target, around the
+            // drawn 34 × 28.
+            child: SizedBox(
+              width: 44,
+              height: WindowChrome.height,
+              child: Center(
+                child: Container(
+                  width: 34,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: on
+                        ? CupolaRoom.of(context).fillStrong
+                        : (_hovered
+                              ? colorScheme.onSurface.withValues(alpha: 0.06)
+                              : null),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: colorScheme.outline),
+                  ),
+                  child: Icon(
+                    Icons.view_sidebar_outlined,
+                    size: 16,
+                    color: on
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggle() => Actions.invoke(context, const ToggleInspectorIntent());
 }
 
 /// The window's obligations, for a screen the shell does not host.
@@ -206,7 +514,7 @@ class WindowDragStrip extends StatelessWidget {
       // compact. A strip that agreed with the shell by coincidence would stop
       // agreeing the first time one of the two numbers moved.
       height: WindowChrome.heightFor(compact: compact),
-      child: DragToMoveArea(
+      child: _DragSurface(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Row(
@@ -239,6 +547,30 @@ class WindowDragStrip extends StatelessWidget {
   }
 }
 
+/// The strip's ground moves the window, and a double click on it zooms it as
+/// the OS's own title bar does; [child], the strip's content, lies over it.
+///
+/// The controls are the ground's siblings, not its children: a click on one
+/// never reaches the ground's double-click recogniser, which would otherwise
+/// hold every click in the strip for the double-click timeout before letting
+/// the button have it. What in [child] takes no pointer (the title, the gaps
+/// between the controls) lets the press through to the ground, so the window
+/// drags from there.
+class _DragSurface extends StatelessWidget {
+  const _DragSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      const DragToMoveArea(child: SizedBox.expand()),
+      child,
+    ],
+  );
+}
+
 /// The trail, and therefore the window title.
 class _Breadcrumb extends StatelessWidget {
   const _Breadcrumb({required this.crumbs, this.size = 12, this.dim = false});
@@ -266,12 +598,16 @@ class _Breadcrumb extends StatelessWidget {
       final isLast = i == crumbs.length - 1;
       if (i > 0) {
         children.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: Icon(
-              Icons.chevron_right_rounded,
-              size: 13,
-              color: CupolaThemeColors.of(context).dimText,
+          // Words and chevrons take no pointer, so the window drags from the
+          // title as it does from the OS's own.
+          IgnorePointer(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Icon(
+                Icons.chevron_right_rounded,
+                size: 13,
+                color: CupolaThemeColors.of(context).dimText,
+              ),
             ),
           ),
         );
@@ -294,7 +630,7 @@ class _Breadcrumb extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: crumb.location == null || isLast
-                ? text
+                ? IgnorePointer(child: text)
                 : _CrumbLink(location: crumb.location!, child: text),
           ),
         ),
@@ -344,135 +680,62 @@ class _CrumbLinkState extends State<_CrumbLink> {
   }
 }
 
-/// A 28pt chip in the strip: label, optional shortcut, and whether it is on.
+/// The lens: which connection of a service the page reads, a 28pt readout
+/// in the strip (26 compact), on the room's strong fill since it names a
+/// choice in force.
 ///
-/// It is a control, so it takes the 12dp interactive radius and not full
-/// radius, which in this system means a tag or a piece of metadata. It keeps
-/// that shape when it is on: the room's strong fill under the primary ink
-/// marks it, and the shape stays the same when it is toggled.
-///
-/// Monochrome, like the rest of the chrome: *on* is the selected pill of the
-/// tab bar and the rail, never a section's or a service's colour and never a
-/// status tone. The inspector chip is on while the pane is open; the lens chip
-/// is on for as long as it is shown, since it names a choice in force.
-class _ChromeChip extends StatefulWidget {
-  const _ChromeChip({
+/// It takes the 12dp interactive radius and not full radius, which in this
+/// system means a tag or a piece of metadata, and it is monochrome like the
+/// rest of the chrome. A compact window keeps only its glyph; the tooltip
+/// still says the whole name.
+class _LensChip extends StatelessWidget {
+  const _LensChip({
     required this.label,
+    required this.tooltip,
     this.compact = false,
-    this.shortcut,
-    this.icon,
-    this.on = false,
-    this.onPressed,
-    this.tooltip,
   });
 
   final String label;
-
-  /// In a compact window the label goes and the glyph plus the shortcut stay.
+  final String tooltip;
   final bool compact;
-  final String? shortcut;
-  final IconData? icon;
-  final bool on;
-  final VoidCallback? onPressed;
-  final String? tooltip;
-
-  @override
-  State<_ChromeChip> createState() => _ChromeChipState();
-}
-
-class _ChromeChipState extends State<_ChromeChip> {
-  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final on = widget.on;
-    final labelled = !widget.compact || widget.icon == null;
-    final chip = Container(
-      height: widget.compact ? 26 : 28,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: on
-            ? CupolaRoom.of(context).fillStrong
-            : (_hovered ? colorScheme.onSurface.withValues(alpha: 0.06) : null),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: colorScheme.outline),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.icon != null) ...[
-            Icon(
-              widget.icon,
-              size: 14,
-              color: on ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-          ],
-          if (labelled)
-            Text(
-              widget.label,
-              style: AppTheme.chrome(
-                context,
-                size: 11,
-                weight: FontWeight.w600,
-                color: on
-                    ? colorScheme.onSurface
-                    : colorScheme.onSurfaceVariant,
-              ),
-            ),
-          if (widget.shortcut != null) ...[
-            SizedBox(width: labelled ? 6 : 4),
-            Text(
-              widget.shortcut!,
-              style: AppTheme.chrome(
-                context,
-                size: 11,
-                color: CupolaThemeColors.of(context).dimText,
-              ).mono,
-            ),
-          ],
-        ],
-      ),
-    );
-
-    final semanticLabel = widget.shortcut == null
-        ? widget.label
-        : '${widget.label}, ${widget.shortcut}';
-    final control = widget.onPressed == null
-        ? Semantics(label: semanticLabel, excludeSemantics: true, child: chip)
-        : TextButton(
-            onPressed: widget.onPressed,
-            style: ButtonStyle(
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
-              minimumSize: WidgetStatePropertyAll(
-                Size(
-                  0,
-                  widget.compact
-                      ? WindowChrome.compactHeight
-                      : WindowChrome.height,
-                ),
-              ),
-              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-            ),
-            child: chip,
-          );
-
-    // The actionable chips use a native button so Refresh, Inspector and the
-    // platform caption controls are present in the macOS AX tree. The lens is
-    // intentionally still a readout, not a fake action.
     return Tooltip(
-      message: widget.tooltip ?? semanticLabel,
+      message: tooltip,
       waitDuration: const Duration(milliseconds: 500),
-      excludeFromSemantics: widget.onPressed == null,
-      child: MouseRegion(
-        cursor: widget.onPressed == null
-            ? SystemMouseCursors.basic
-            : SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: control,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: label,
+        excludeSemantics: true,
+        child: Container(
+          height: compact ? 26 : 28,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            color: CupolaRoom.of(context).fillStrong,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: colorScheme.outline),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.dns_outlined, size: 14, color: colorScheme.onSurface),
+              if (!compact) ...[
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
+                    weight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

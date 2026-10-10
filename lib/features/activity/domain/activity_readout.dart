@@ -3,6 +3,7 @@
 library;
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/status/media_status.dart' show StatusTone;
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
@@ -110,3 +111,38 @@ String spokenActivityReadout(List<ActivityReadoutPart> parts) => parts
           : part.spoken,
     )
     .join(', ');
+
+/// Who of the sources Activity reads answered, as the window's chrome says it
+/// beside the title: `All 12 answered at 20:53` once every one did, `9 of 12
+/// answered` while the slowest are still out (no tone) or after one stayed
+/// silent (red) or answered with a fault (amber), `Asking 12` before any did.
+/// [services] names what was counted, as the Needs you page says it: `All 12
+/// services answered at 20:53`. Null with nothing to ask.
+///
+/// [at] is when the last of them answered; without it the line has no time.
+({String text, StatusTone? tone})? activityAnswerLine(
+  SourceCoverage coverage, {
+  DateTime? at,
+  bool services = false,
+}) {
+  final answered = coverage.answered.length;
+  final failed = coverage.failed.length;
+  final pending = coverage.pending.length;
+  final total = answered + failed + pending;
+  if (total == 0) return null;
+  final noun = services ? (total == 1 ? ' service' : ' services') : '';
+  if (answered == 0 && failed == 0) {
+    return (text: 'Asking $total$noun', tone: null);
+  }
+  if (failed == 0 && pending == 0) {
+    final who = total == 1 ? 'The one$noun' : 'All $total$noun';
+    final when = at == null ? '' : ' at ${formatClockTime(at)}';
+    return (text: '$who answered$when', tone: null);
+  }
+  final tone = failed == 0
+      ? null
+      : coverage.anyDidNotAnswer
+      ? StatusTone.error
+      : StatusTone.warning;
+  return (text: '$answered of $total$noun answered', tone: tone);
+}

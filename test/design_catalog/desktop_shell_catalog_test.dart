@@ -38,7 +38,6 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_rail_services.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_shell.dart';
-import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 
 import '../test_helpers/fake_secure_settings_store.dart';
 import '../test_helpers/fake_services.dart';
@@ -312,9 +311,6 @@ class _WindowState extends State<_Window> {
       initialOnboardingCompletedProvider.overrideWithValue(true),
       initialActiveInstancesProvider.overrideWithValue(const {}),
       stackHealthProvider.overrideWith(_FixedHealth.new),
-      lastRefreshedAtProvider.overrideWith(
-        (ref) => _now.subtract(const Duration(minutes: 2)),
-      ),
       radarrServiceProvider.overrideWithValue(_radarr),
       radarrServiceForProvider.overrideWith((ref, id) => _radarr),
       serviceStatusClientFactoryProvider.overrideWithValue(
