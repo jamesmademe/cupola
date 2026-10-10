@@ -121,6 +121,51 @@ class ManualImportService {
     return jsonObjects(response.data, ManualImportItem.fromJson);
   }
 
+  /// The files of one download the arr finished, as it would import them:
+  /// read by the client's id for the download, under the title it was grabbed
+  /// for, as the arr's own queue does. Never a scan of a folder, which would
+  /// sweep in whatever else the client left beside it.
+  Future<List<ManualImportItem>> getDownloadImportItems({
+    required String downloadId,
+    int? mediaId,
+  }) async {
+    final response = await client.get(
+      '$_prefix/manualimport',
+      queryParameters: {
+        'downloadId': downloadId,
+        if (mediaId != null && mediaId > 0) _mediaIdParameter: mediaId,
+        'filterExistingFiles': true,
+        if (service == ServiceKey.lidarr) 'replaceExistingFiles': false,
+      },
+      receiveTimeout: kSlowScanReceiveTimeout,
+    );
+    return jsonObjects(response.data, ManualImportItem.fromJson);
+  }
+
+  String get _mediaIdParameter => switch (service) {
+    ServiceKey.radarr => 'movieId',
+    ServiceKey.lidarr => 'artistId',
+    _ => 'seriesId',
+  };
+
+  /// The quality of each of a series' episode files, by the file's id: what
+  /// an import into that series replaces (`HDTV-720p`).
+  Future<Map<int, String>> getEpisodeFileQualities(int seriesId) async {
+    final response = await client.get(
+      '$_prefix/episodefile',
+      queryParameters: {'seriesId': seriesId},
+    );
+    final qualities = <int, String>{};
+    for (final file in jsonObjects(response.data, (each) => each)) {
+      final id = intOrNull(file['id']) ?? 0;
+      final name = stringOrNull(
+        mapOrNull(mapOrNull(file['quality'])?['quality'])?['name'],
+      );
+      if (id > 0 && name != null) qualities[id] = name;
+    }
+    return qualities;
+  }
+
   Future<List<ManualImportLookupResult>> lookup(String term) async {
     final normalized = term.trim();
     if (normalized.isEmpty) return const [];

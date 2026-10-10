@@ -3769,7 +3769,6 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
       instanceId: item.instanceId,
       connectionName: item.connectionName,
       actionInstanceId: item.instanceId,
-      importPath: item.outputPath,
     );
   }
 

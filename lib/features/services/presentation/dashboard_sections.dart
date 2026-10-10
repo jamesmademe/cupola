@@ -359,19 +359,17 @@ Future<void> _runDecision(
       context.go(ServiceRoutes.forService(target));
     case DecisionKind.importBlocked:
       // Where the wizard does not exist, the control said "Open in …" and
-      // goes there. Otherwise: the wizard, bound to the connection the record
-      // came off, filed under its library item and seeded with the folder the
-      // client wrote to — each only when the decision knows it.
+      // goes there. Otherwise: the Review of every blocked download on the
+      // connection the records came off, one or eighteen, each read by the
+      // client's id for it.
       if (!decision.service.supportsManualImport) {
         context.go(ServiceRoutes.forService(decision.service));
         return;
       }
       context.push(
         manualImportLocation(
-          manualImportBrowsePath,
+          manualImportBlockedPath,
           decision.service,
-          targetId: decision.actionId,
-          folderPath: manualImportFolderFromOutputPath(decision.importPath),
           instanceId: decision.instanceId,
         ),
       );

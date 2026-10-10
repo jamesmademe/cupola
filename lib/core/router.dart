@@ -60,6 +60,7 @@ import 'package:cupola/features/settings/presentation/trusted_certificates_scree
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/import/presentation/manual_import_locate_screen.dart';
 import 'package:cupola/features/import/presentation/manual_import_progress_screen.dart';
+import 'package:cupola/features/import/presentation/blocked_import_review_page.dart';
 import 'package:cupola/features/import/presentation/manual_import_review_screen.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
@@ -3181,6 +3182,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             targetId: targetId,
             instanceId: instanceId,
           ),
+        ),
+      ),
+      GoRoute(
+        path: manualImportBlockedPath,
+        pageBuilder: (context, state) => _manualImportPage(
+          state,
+          (service, targetId, instanceId) =>
+              BlockedImportReviewPage(service: service, instanceId: instanceId),
         ),
       ),
       // Steps of the retired four-screen flow; an old deep link lands on

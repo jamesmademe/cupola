@@ -6,7 +6,7 @@ Rendered from `lib/features/activity/presentation/widgets/fault_card.dart` (`Fau
 
 ## Where it is drawn
 
-Needs you on Activity's All, one card per fault inside the section's slab, divided by hairlines; a stuck download that was folded with others on the Home's list is a card of its own here, since each has a way out of its own. The requests that wait sit under the faults on a slab of their own, as rows with Approve and Decline: a request is somebody waiting, not something broken. `FaultCard.whole` is the Needs you page's card.
+Needs you on Activity's All, one card per fault inside the section's slab, divided by hairlines; a stuck download that was folded with others on the Home's list is a card of its own here, since each has a way out of its own. The requests that wait sit under the faults on a slab of their own, as rows with Approve and Decline: a request is somebody waiting, not something broken. `FaultCard.whole` is the Needs you page's card. Above the cards, the import a Review of blocked imports sent reports itself first ([ImportReview](../ImportReview/README.md)); a failed one is a `FaultCard`.
 
 ## Anatomy
 

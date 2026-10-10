@@ -174,7 +174,6 @@ void main() {
             service: ServiceKey.sonarr,
             instanceId: 'sonarr-1',
             actionId: 7,
-            importPath: '/downloads/pack',
           ),
       ]);
 
@@ -188,7 +187,6 @@ void main() {
       expect(row.occurredAt, DateTime.utc(2024, 1, 1));
       // What every member agrees on travels with the group.
       expect(row.actionId, 7);
-      expect(row.importPath, '/downloads/pack');
       expect(row.instanceId, 'sonarr-1');
       expect(row.route, '/stack/sonarr');
       // Every count surface reads the members, not the rows.
@@ -293,26 +291,13 @@ void main() {
 
     test('a value the members disagree on is dropped, never borrowed', () {
       final row = groupDecisions([
-        _decision(
-          DecisionKind.importBlocked,
-          'a',
-          at: null,
-          actionId: 1,
-          importPath: '/downloads/a',
-        ),
-        _decision(
-          DecisionKind.importBlocked,
-          'b',
-          at: null,
-          actionId: 2,
-          importPath: '/downloads/b',
-        ),
+        _decision(DecisionKind.importBlocked, 'a', at: null, actionId: 1),
+        _decision(DecisionKind.importBlocked, 'b', at: null, actionId: 2),
       ]).single;
 
-      // Filing both under the first one's film, or seeding the wizard with
-      // its folder, would import the second into the wrong place.
+      // Filing both under the first one's movie would import the second into
+      // the wrong place.
       expect(row.actionId, isNull);
-      expect(row.importPath, isNull);
       expect(row.title, '2 need a manual import');
     });
   });
@@ -420,7 +405,6 @@ DashboardDecision _decision(
   ServiceKey? requires,
   String instanceId = '',
   int? actionId,
-  String? importPath,
   String? reason,
 }) => DashboardDecision(
   kind: kind,
@@ -432,6 +416,5 @@ DashboardDecision _decision(
   requiresService: requires,
   instanceId: instanceId,
   actionId: actionId,
-  importPath: importPath,
   reason: reason,
 );

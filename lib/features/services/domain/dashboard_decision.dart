@@ -227,7 +227,6 @@ class DashboardDecision {
     this.instanceId = '',
     this.connectionName,
     this.actionInstanceId = '',
-    this.importPath,
     this.reason,
     this.renewable = true,
     this.transferFailed = false,
@@ -303,10 +302,6 @@ class DashboardDecision {
   /// The connection of [actionTarget] the control opens: the arr's for an
   /// import, the client's for a stall. Empty means "whatever the lens is on".
   final String actionInstanceId;
-
-  /// Where the download sits on disk, for a manual import to be seeded from.
-  /// The queue record's `outputPath`, raw; the control derives the folder.
-  final String? importPath;
 
   /// Why it is waiting, in one clause, when its source said: `Disk full`,
   /// `Password needed`, the client's own message. Already the first clause
@@ -456,7 +451,6 @@ DashboardDecision _groupOf(List<DashboardDecision> members) {
     instanceId: first.instanceId,
     connectionName: first.connectionName,
     actionInstanceId: first.actionInstanceId,
-    importPath: shared((member) => member.importPath),
     transferFailed: members.every((member) => member.transferFailed),
     downloadKeys: [for (final member in members) ...member.downloadKeys],
   );

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 /// A page's views, side by side in one track: one of them is the page.
 ///
@@ -11,6 +12,10 @@ import 'package:cupola/core/theme.dart';
 /// with their own addresses (Activity's All · Downloads · Requests ·
 /// History). A choice inside a section keeps [SelectionPills]; this is the
 /// page's own, so every view is on screen at once and none scrolls away.
+///
+/// A segment may carry a count after its label (`Need you 6`), in a tone when
+/// the count is one ([countOf]): the Review of blocked imports jumps between
+/// its two parts this way.
 ///
 /// The views share the track equally. When a label no longer fits its share
 /// (a long word, a large reading size) the track lays them two by two, so a
@@ -23,6 +28,7 @@ class PageTabs<T> extends StatelessWidget {
     required this.labelBuilder,
     required this.onSelected,
     this.semanticLabel = 'Show',
+    this.countOf,
   });
 
   final List<T> values;
@@ -32,6 +38,15 @@ class PageTabs<T> extends StatelessWidget {
 
   /// What the group is, to a screen reader.
   final String semanticLabel;
+
+  /// The count a segment carries after its label, and its tone, or null for
+  /// none.
+  final ({int count, StatusTone? tone})? Function(T value)? countOf;
+
+  String _measured(T value) => switch (countOf?.call(value)) {
+    final count? => '${labelBuilder(value)}  ${count.count}',
+    null => labelBuilder(value),
+  };
 
   /// Each segment's target at the default reading size: the track is this
   /// and its border.
@@ -67,7 +82,7 @@ class PageTabs<T> extends StatelessWidget {
           var widest = 0.0;
           for (final value in values) {
             final painter = TextPainter(
-              text: TextSpan(text: labelBuilder(value), style: style),
+              text: TextSpan(text: _measured(value), style: style),
               textScaler: scaler,
               textDirection: Directionality.of(context),
               maxLines: 1,
@@ -103,6 +118,7 @@ class PageTabs<T> extends StatelessWidget {
                           Expanded(
                             child: _Segment(
                               label: labelBuilder(value),
+                              count: countOf?.call(value),
                               selected: value == selected,
                               style: style,
                               onTap: () => onSelected(value),
@@ -131,12 +147,14 @@ class PageTabs<T> extends StatelessWidget {
 class _Segment extends StatelessWidget {
   const _Segment({
     required this.label,
+    this.count,
     required this.selected,
     required this.style,
     required this.onTap,
   });
 
   final String label;
+  final ({int count, StatusTone? tone})? count;
   final bool selected;
   final TextStyle style;
   final VoidCallback onTap;
@@ -144,6 +162,14 @@ class _Segment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final count = this.count;
+    final countColor = count?.tone == null
+        ? null
+        : statusToneColor(
+            scheme,
+            count!.tone!,
+            surface: selected ? scheme.primary : CupolaRoom.of(context).slab,
+          );
     final room = CupolaRoom.of(context);
     final still = MediaQuery.disableAnimationsOf(context);
     final duration = still ? Duration.zero : AppAnimation.durationLg;
@@ -154,7 +180,7 @@ class _Segment extends StatelessWidget {
       button: true,
       selected: selected,
       inMutuallyExclusiveGroup: true,
-      label: label,
+      label: count == null ? label : '$label, ${count.count}',
       onTap: selected ? null : onTap,
       excludeSemantics: true,
       child: Material(
@@ -192,8 +218,20 @@ class _Segment extends StatelessWidget {
                 style: style.copyWith(
                   color: selected ? scheme.onPrimary : room.inkSecondary,
                 ),
-                child: Text(
-                  label,
+                child: Text.rich(
+                  TextSpan(
+                    text: label,
+                    children: [
+                      if (count != null)
+                        TextSpan(
+                          text: '  ${count.count}',
+                          style: TextStyle(
+                            color: countColor,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                    ],
+                  ),
                   maxLines: 1,
                   softWrap: false,
                   overflow: TextOverflow.fade,

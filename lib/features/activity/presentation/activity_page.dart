@@ -29,6 +29,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_history_r
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
 import 'package:cupola/features/activity/presentation/widgets/everyone_request_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
+import 'package:cupola/features/activity/presentation/widgets/import_done_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/needs_you_cards.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
@@ -488,7 +489,9 @@ class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
     ];
     final requests = [...waiting, for (final a in answered.values) ?a.decision];
     final coverage = decisions.coverage;
-    if (cards.isEmpty && requests.isEmpty) {
+    // The import a Review sent reports itself here, first.
+    final report = ref.watch(importReportProvider);
+    if (cards.isEmpty && requests.isEmpty && report == null) {
       final note = coverage.failed.isEmpty ? null : coverageNote(coverage);
       if (note == null) return const SizedBox.shrink();
       return ActivitySection(
@@ -524,16 +527,18 @@ class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
                 padding: const EdgeInsets.only(top: AppSpacing.md),
                 child: HomeCoverageNote(note: note, coverage: coverage),
               ),
+            if (report != null) ImportDoneCard(report: report),
             for (final (index, entry) in cards.indexed)
               NeedsYouCard(
                 key: ValueKey(entry.id),
                 entry: entry,
-                divided: index > 0,
+                divided: index > 0 || report != null,
               ),
-            if (cards.isEmpty) ...requestRowsOf(requests, answered, blue),
+            if (cards.isEmpty && report == null)
+              ...requestRowsOf(requests, answered, blue),
           ],
         ),
-        if (cards.isNotEmpty && requests.isNotEmpty)
+        if ((cards.isNotEmpty || report != null) && requests.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.gutter,

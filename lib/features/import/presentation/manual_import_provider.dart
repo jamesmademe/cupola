@@ -1,9 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/import/data/manual_import_service.dart';
+import 'package:cupola/features/import/domain/blocked_import.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_errors.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
+import 'package:cupola/features/services/domain/in_flight.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -122,6 +127,15 @@ class ManualImportFlowState {
   final ManualImportMode importMode;
   final String? error;
 
+  /// Set when this flow is the Review of a connection's blocked imports
+  /// ([ManualImportFlowNotifier.startBlocked]) rather than a scan of a folder.
+  final BlockedImportReview? blocked;
+
+  /// When [command] was first seen finished, on this device's clock: the
+  /// arr's own `ended` is its server's, and a self-hosted clock that runs
+  /// ten minutes off would date the import before it happened.
+  final DateTime? commandEndedAt;
+
   const ManualImportFlowState({
     this.service,
     this.instanceId = '',
@@ -143,6 +157,8 @@ class ManualImportFlowState {
     this.isSubmitting = false,
     this.importMode = ManualImportMode.auto,
     this.error,
+    this.blocked,
+    this.commandEndedAt,
   });
 
   List<ManualImportItem> get selectedItems => items
@@ -298,6 +314,8 @@ class ManualImportFlowState {
     bool? isSubmitting,
     ManualImportMode? importMode,
     Object? error = _noValue,
+    Object? blocked = _noValue,
+    Object? commandEndedAt = _noValue,
   }) {
     return ManualImportFlowState(
       service: identical(service, _noValue)
@@ -332,6 +350,12 @@ class ManualImportFlowState {
       isSubmitting: isSubmitting ?? this.isSubmitting,
       importMode: importMode ?? this.importMode,
       error: identical(error, _noValue) ? this.error : error as String?,
+      blocked: identical(blocked, _noValue)
+          ? this.blocked
+          : blocked as BlockedImportReview?,
+      commandEndedAt: identical(commandEndedAt, _noValue)
+          ? this.commandEndedAt
+          : commandEndedAt as DateTime?,
     );
   }
 }
@@ -348,6 +372,9 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   /// the lens moved, and then posted the import to the 4K one.
   ManualImportService _api(ServiceKey service) =>
       ref.read(manualImportServiceForProvider((service, state.instanceId)));
+
+  /// The device's clock, as Activity reads it.
+  DateTime _clock() => ref.read(stallClockProvider)();
 
   Future<void> start(
     ServiceKey service, {
@@ -392,6 +419,185 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
         isLoadingBrowse: false,
         error: mapImportError(error, service),
       );
+    }
+  }
+
+  /// Opens the Review of every download [service]'s connection finished and
+  /// would not import: what Needs you's `Review 18` leads to.
+  ///
+  /// The downloads are the queue's, as Needs you counts them, so the Review
+  /// holds what the card promised. Each one's files are read by the client's
+  /// id for it (`GET /manualimport?downloadId=`), as the arr's own queue reads
+  /// them, never by scanning a folder, which would sweep in whatever else the
+  /// client left beside them; one that will not list its files takes nobody
+  /// else's with it. The files the arr would take as they are arrive
+  /// selected; the rest wait for the user.
+  ///
+  /// An import of this connection still running keeps its command and its
+  /// files, which stay out of the Review: they are on their way already.
+  Future<void> startBlocked(ServiceKey service, {String? instanceId}) async {
+    final connection = instanceId ?? '';
+    final previous = state;
+    final running =
+        previous.blocked != null &&
+        previous.service == service &&
+        previous.instanceId == connection &&
+        (previous.command?.isActive ?? false);
+    state = ManualImportFlowState(
+      service: service,
+      instanceId: connection,
+      isLoadingItems: true,
+      blocked: const BlockedImportReview(),
+      command: running ? previous.command : null,
+      submittedItems: running ? previous.submittedItems : const [],
+      submittedPaths: running ? previous.submittedPaths : const {},
+    );
+
+    try {
+      final inFlight = await ref.read(servicesInFlightProvider.future);
+      final lens = ref.read(activeInstanceProvider(service))?.id ?? '';
+      final downloads = blockedDownloadsOf(
+        inFlight.faults,
+        service,
+        connection: connection,
+        lens: lens,
+      );
+      final api = _api(service);
+      final reads = await Future.wait([
+        for (final download in downloads)
+          api
+              .getDownloadImportItems(
+                downloadId: download.downloadId,
+                mediaId: download.mediaId,
+              )
+              .then<List<ManualImportItem>?>(
+                (items) => items,
+                onError: (Object _) => null,
+              ),
+      ]);
+      final spent = state.submittedPaths;
+      final seen = <String>{};
+      final items = [
+        for (final read in reads)
+          for (final item in read ?? const <ManualImportItem>[])
+            if (!spent.contains(item.path) && seen.add(item.path)) item,
+      ];
+      final split = splitBlockedImport(service, items);
+      final replacing = await _replacedQualities(service, api, [
+        ...split.clear,
+        ...split.needYou,
+      ]);
+      state = state.copyWith(
+        items: [...split.clear, ...split.needYou],
+        selectedPaths: {for (final item in split.clear) item.path},
+        blocked: BlockedImportReview(
+          downloads: downloads,
+          needYouPaths: [for (final item in split.needYou) item.path],
+          needYouKinds: {
+            for (final item in split.needYou)
+              item.path: needYouKindOf(service, item),
+          },
+          leftOut: split.leftOut,
+          unread: reads.where((read) => read == null).length,
+          replacing: replacing,
+        ),
+        isLoadingItems: false,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isLoadingItems: false,
+        error: mapImportError(error, service),
+      );
+    }
+  }
+
+  /// By path, the quality of the library file each of [items] replaces:
+  /// Sonarr's from the series' episode files, one read per series; Radarr's
+  /// from the movie's own file. A read that fails says nothing, and the
+  /// Review only loses the words `each replaces a 720p file`.
+  Future<Map<String, String>> _replacedQualities(
+    ServiceKey service,
+    ManualImportService api,
+    List<ManualImportItem> items,
+  ) async {
+    final replacing = <String, String>{};
+    switch (service) {
+      case ServiceKey.sonarr:
+        final seriesIds = {
+          for (final item in items)
+            if ((intOrNull(item.series?['id']) ?? 0) > 0)
+              intOrNull(item.series!['id'])!,
+        };
+        final qualities = <int, String>{};
+        await Future.wait([
+          for (final id in seriesIds)
+            api
+                .getEpisodeFileQualities(id)
+                .then(qualities.addAll, onError: (Object _) {}),
+        ]);
+        for (final item in items) {
+          for (final episode in item.episodes) {
+            final name = qualities[intOrNull(episode['episodeFileId']) ?? 0];
+            if (name != null) {
+              replacing[item.path] = name;
+              break;
+            }
+          }
+        }
+      case ServiceKey.radarr:
+        for (final item in items) {
+          final file = mapOrNull(item.movie?['movieFile']);
+          final name = stringOrNull(
+            mapOrNull(mapOrNull(file?['quality'])?['quality'])?['name'],
+          );
+          if (name != null) replacing[item.path] = name;
+        }
+      case _:
+        break;
+    }
+    return replacing;
+  }
+
+  /// Places a file Sonarr could not on [season] and [episode] of the series
+  /// it was grabbed for, and adds it to the import. The words of what stood
+  /// in the way, or null once it is placed.
+  Future<String?> placeEpisode(
+    ManualImportItem item, {
+    required int season,
+    required int episode,
+  }) async {
+    final service = state.service;
+    final series = item.series;
+    final seriesId = intOrNull(series?['id']) ?? 0;
+    if (service != ServiceKey.sonarr || series == null || seriesId <= 0) {
+      return "This file isn't from a series.";
+    }
+    try {
+      final episodes = await getEpisodes(
+        seriesId: seriesId,
+        seasonNumber: season,
+      );
+      final match = episodes
+          .where(
+            (each) =>
+                each.seasonNumber == season && each.episodeNumber == episode,
+          )
+          .firstOrNull;
+      if (match == null) {
+        return '${seasonChipLabel(season)} has no '
+            '${formatEpisodeOrdinal(episode)}.';
+      }
+      final resolved = await applyFixAssignment(
+        item,
+        ManualImportFixAssignment(
+          match: ManualImportLookupResult.fromJson(service!, series),
+          episode: match,
+          episodes: [match],
+        ),
+      );
+      return resolved == null ? state.error : null;
+    } catch (error) {
+      return mapImportError(error, ServiceKey.sonarr);
     }
   }
 
@@ -910,6 +1116,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       final submitted = files.map((item) => item.path).toSet();
       state = state.copyWith(
         command: command,
+        commandEndedAt: command.isActive ? null : _clock(),
         submittedItems: files,
         // The batch is spent: drop it from the selection and record it, so the
         // Review screen behind Track offers no way to send it again.
@@ -963,7 +1170,11 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
       final next = await _startCommand(service, files);
-      state = state.copyWith(command: next, isSubmitting: false);
+      state = state.copyWith(
+        command: next,
+        commandEndedAt: next.isActive ? null : _clock(),
+        isSubmitting: false,
+      );
       return next;
     } catch (error) {
       state = state.copyWith(
@@ -996,7 +1207,10 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     try {
       final api = _api(service);
       final next = await api.getCommand(command.id);
-      state = state.copyWith(command: next);
+      state = state.copyWith(
+        command: next,
+        commandEndedAt: next.isActive ? null : _clock(),
+      );
     } catch (error) {
       state = state.copyWith(error: mapImportError(error, service));
     }
@@ -1042,4 +1256,31 @@ ManualImportFixAssignment _assignmentForItem(
     track: track,
     tracks: tracks,
   );
+}
+
+/// The downloads [service]'s connection finished and would not import, from
+/// the queue's faults: the ones Needs you counts on that connection's card.
+/// An empty id on either side is the lens, as a link that names none is.
+List<BlockedDownload> blockedDownloadsOf(
+  Iterable<ServiceQueueItem> faults,
+  ServiceKey service, {
+  required String connection,
+  required String lens,
+}) {
+  String resolved(String id) => id.isEmpty ? lens : id;
+  final seen = <String>{};
+  return [
+    for (final item in faults)
+      if (item.fault == InFlightFault.needsImport &&
+          item.service == service &&
+          resolved(item.instanceId) == resolved(connection))
+        if (item.downloadId case final downloadId?
+            when downloadId.isNotEmpty && seen.add(downloadId))
+          BlockedDownload(
+            downloadId: downloadId,
+            title: item.title,
+            mediaId: item.mediaId,
+            message: item.warning,
+          ),
+  ];
 }

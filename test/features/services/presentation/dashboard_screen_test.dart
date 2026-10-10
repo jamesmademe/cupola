@@ -641,7 +641,7 @@ void main() {
       expect(find.byType(DecisionRow), findsOneWidget);
     });
 
-    testWidgets('manual import opens the wizard on the record\'s connection', (
+    testWidgets('manual import opens the Review on the record\'s connection', (
       tester,
     ) async {
       Uri? opened;
@@ -653,7 +653,7 @@ void main() {
                 const Scaffold(body: ProvidedDecisionRows()),
           ),
           GoRoute(
-            path: '/import/browse',
+            path: '/import/blocked',
             builder: (context, state) {
               opened = state.uri;
               return const SizedBox.shrink();
@@ -673,7 +673,6 @@ void main() {
             at: DateTime.utc(2024),
             actionId: 12,
             instanceId: 'radarr-hd',
-            importPath: '/downloads/Dune.Part.Two/Dune.Part.Two.mkv',
           ),
         ],
       );
@@ -682,14 +681,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(opened, isNotNull);
-      expect(opened!.queryParameters, {
-        'service': 'radarr',
-        'targetId': '12',
-        'path': '/downloads/Dune.Part.Two',
-        // The `?i=` the import routes accept: the files go into the library
-        // the record came off, not into whichever one the lens is on.
-        'i': 'radarr-hd',
-      });
+      // The Review reads every blocked download of the connection by the
+      // client's id for it: no folder and no title to seed. The `?i=` the
+      // import routes accept: the files go into the library the record came
+      // off, not into whichever one the lens is on.
+      expect(opened!.queryParameters, {'service': 'radarr', 'i': 'radarr-hd'});
     });
   });
 
@@ -1349,7 +1345,6 @@ DashboardDecision _blocked(
   required DateTime at,
   int? actionId,
   String instanceId = '',
-  String? importPath,
 }) => DashboardDecision(
   kind: DecisionKind.importBlocked,
   id: 'blocked-$title',
@@ -1359,7 +1354,6 @@ DashboardDecision _blocked(
   occurredAt: at,
   actionId: actionId,
   instanceId: instanceId,
-  importPath: importPath,
 );
 
 DashboardDecision _request(String title, {required DateTime at}) =>

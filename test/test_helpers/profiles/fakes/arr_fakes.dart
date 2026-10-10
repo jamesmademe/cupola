@@ -140,6 +140,15 @@ abstract class ArrFake extends ServiceFake {
         // No command running: nothing is being searched for.
         case final p when p == '$_base/command':
           return NetworkReply.json(const <Object?>[]);
+        // A command posted here has finished by the time it is read again.
+        case final p when p.startsWith('$_base/command/'):
+          return NetworkReply.json({
+            'id': int.tryParse(p.split('/').last) ?? 1,
+            'name': 'ManualImport',
+            'status': 'completed',
+            'result': 'successful',
+            'ended': c.ago(Duration.zero),
+          });
         case final p when p == '$_base/indexer' && indexers != null:
           return NetworkReply.json(indexers);
         case final p when p == '$_base/manualimport':
@@ -214,7 +223,10 @@ abstract class ArrFake extends ServiceFake {
       'name': d.release,
       'size': d.size,
       'downloadId': d.id.toUpperCase(),
-      'quality': _quality('WEBDL-1080p'),
+      // As its name says: the tapes are 720p.
+      'quality': _quality(
+        d.release.contains('720p') ? 'WEBDL-720p' : 'WEBDL-1080p',
+      ),
       'languages': const [
         {'id': 1, 'name': 'English'},
       ],
@@ -712,6 +724,11 @@ class SonarrFake extends ArrFake {
     };
   }
 
+  /// Whether Cosmos Laundromat's library has a file of [season] [episode]:
+  /// the first season and the second's first three, as `_episodes` says.
+  static bool _hasFile(int season, int episode) =>
+      season == 1 || (season == 2 && episode <= 3);
+
   /// The id Sonarr gives episode [episode] of season [season] of series
   /// [seriesId]: Cosmos Laundromat's are its episode list's, 1001 onwards;
   /// another series' sit in their own thousand (Night Shift's S2 E5, on the
@@ -814,7 +831,14 @@ class SonarrFake extends ArrFake {
                 'seasonNumber': d.season,
                 'episodeNumber': d.episode,
                 'title': 'Episode ${d.episode}',
-                'hasFile': true,
+                // The library's file of it, which the import replaces:
+                // `_episodes` numbers them the same way.
+                if (_hasFile(d.season!, d.episode!)) ...{
+                  'hasFile': true,
+                  'episodeFileId':
+                      episodeIdOf(seriesId, d.season!, d.episode!) + 5000,
+                } else
+                  'hasFile': false,
               },
             ]
           : const <Object?>[],

@@ -10,6 +10,7 @@ import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart'
     show needsYouMeta;
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
+import 'package:cupola/features/activity/presentation/widgets/import_done_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/needs_you_cards.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
@@ -62,6 +63,7 @@ class _ActivityNeedsYouPageState extends ConsumerState<ActivityNeedsYouPage> {
     final scheme = Theme.of(context).colorScheme;
     final blue = statusToneColor(scheme, StatusTone.info, surface: room.slab);
     final note = coverageNote(coverage);
+    final report = ref.watch(importReportProvider);
 
     Widget slab(List<Widget> children) => Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -76,6 +78,7 @@ class _ActivityNeedsYouPageState extends ConsumerState<ActivityNeedsYouPage> {
     // Said only once every source answered: before then, or with one
     // silent, nothing on the page is not nothing wrong.
     final nothing =
+        report == null &&
         entries.isEmpty &&
         requests.isEmpty &&
         coverage.pending.isEmpty &&
@@ -99,6 +102,8 @@ class _ActivityNeedsYouPageState extends ConsumerState<ActivityNeedsYouPage> {
                   ? null
                   : HomeCoverageNote(note: note, coverage: coverage),
             ),
+            if (report != null)
+              slab([ImportDoneCard(report: report, whole: true)]),
             for (final entry in entries)
               slab([
                 NeedsYouCard(

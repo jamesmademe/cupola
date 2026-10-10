@@ -809,7 +809,6 @@ void main() {
         expect(row.title, 'Show · S1 E7');
         expect(row.detail, contains('No files found are eligible for import'));
         expect(row.actionId, 5);
-        expect(row.importPath, '/downloads/Show.S01E7/Show.S01E7.mkv');
       },
     );
   });

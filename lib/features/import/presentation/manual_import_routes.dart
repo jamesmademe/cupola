@@ -15,6 +15,11 @@ const manualImportReviewPath = '$manualImportPathPrefix/review';
 /// Station 3 — Track.
 const manualImportProgressPath = '$manualImportPathPrefix/progress';
 
+/// The Review of every download one connection finished and would not
+/// import: what Needs you's `Review 18` opens. Not a station of the wizard:
+/// the arr already knows where each download is, so nothing is located.
+const manualImportBlockedPath = '$manualImportPathPrefix/blocked';
+
 /// Legacy step paths from the four-screen flow. The router redirects both into
 /// [manualImportReviewPath] so an old deep link never dead-ends.
 const manualImportFolderPath = '$manualImportPathPrefix/folder';

@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/page_tabs.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 
@@ -90,6 +91,29 @@ void main() {
         (_) => _tabs(ActivityTab.requests),
         width: 560,
         platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
+        'PageTabs<String>(countOf:) · the Review\'s jump: a count after each '
+        'label, the second in amber, each selected in turn',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final selected in const ['Clear', 'Need you']) ...[
+              PageTabs<String>(
+                values: const ['Clear', 'Need you'],
+                selected: selected,
+                labelBuilder: (label) => label,
+                countOf: (label) => label == 'Clear'
+                    ? (count: 12, tone: null)
+                    : (count: 6, tone: StatusTone.warning),
+                semanticLabel: 'Jump to',
+                onSelected: (_) {},
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        ),
+        width: 390,
       ),
       CatalogScene(
         'Text at 200% · on the desktop, in the page well',
