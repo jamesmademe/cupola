@@ -4,6 +4,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/activity/domain/everyones_requests.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/requests/domain/my_requests.dart';
@@ -16,12 +17,13 @@ String _ahead(Duration after) => _now.add(after).toUtc().toIso8601String();
 
 /// One request as Seerr sends it. [status] is Seerr's own (1 waiting, 2
 /// approved, 3 declined, 4 failed); [media] the title's (3 processing, 5
-/// available, 6 deleted).
+/// available, 6 blocklisted, 7 deleted).
 SeerrRequest _request(
   int id, {
   int status = 2,
   int? media,
   Duration asked = const Duration(hours: 2),
+  Duration? answered,
   Duration? added,
   double? progress,
   Duration eta = const Duration(minutes: 40),
@@ -30,6 +32,7 @@ SeerrRequest _request(
   'status': status,
   'type': 'movie',
   'createdAt': _at(asked),
+  if (answered != null) 'updatedAt': _at(answered),
   'media': {
     'id': id,
     'tmdbId': 100 + id,
@@ -236,14 +239,30 @@ void main() {
       );
     });
 
-    test('a state with nothing to add is the state alone', () {
-      // Waiting for approval says who and when beside it elsewhere, but the
-      // detail of a no is the state's own words.
+    test('an answer says when it was given, in the owner\'s words', () {
+      // Never the requester's "declined by the server's owner": the one
+      // reading is the owner.
       expect(
-        line(_request(1, status: 3)),
-        'Declined · declined by the '
-        "server's owner",
+        line(_request(1, status: 3, answered: const Duration(hours: 3))),
+        'Declined today',
       );
+      expect(
+        line(_request(1, status: 3, answered: const Duration(days: 1))),
+        'Declined yesterday',
+      );
+      expect(
+        line(_request(1, status: 4, answered: const Duration(days: 3))),
+        "Didn't go through on Tuesday",
+      );
+      expect(
+        line(_request(1, status: 3, answered: const Duration(days: 30))),
+        'Declined on 9 Sep',
+      );
+    });
+
+    test('a state with nothing to add is the state alone', () {
+      expect(line(_request(1, media: 6)), 'Blocked');
+      expect(line(_request(1, media: 7)), 'Removed from the server');
     });
 
     test('a detail the state already says is not said twice', () {
@@ -256,6 +275,20 @@ void main() {
 
     test('the detail leads in the lower case after a middle dot', () {
       expect(line(_request(1, media: 3)), 'On its way · being fetched');
+    });
+  });
+
+  group('everyonesTone', () {
+    test('a request that did not go through is the operator\'s fault to '
+        'mend: amber', () {
+      expect(everyonesTone(MyRequestStage.didNotGoThrough), StatusTone.warning);
+    });
+
+    test('every other stage keeps the household\'s tone', () {
+      for (final stage in MyRequestStage.values) {
+        if (stage == MyRequestStage.didNotGoThrough) continue;
+        expect(everyonesTone(stage), stage.tone, reason: '$stage');
+      }
     });
   });
 }
