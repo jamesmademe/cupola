@@ -720,7 +720,7 @@ class _DownloadsSection extends ConsumerWidget {
     final rows = cap == null
         ? [...moving, ...stuck]
         : downloadRowsOf(moving, stuck, limit: cap);
-    final requests = ref.watch(_householdRequestsProvider);
+    final requests = ref.watch(downloadAskersProvider);
     final total = moving.length + stuck.length;
     final meta = [
       if (moving.isNotEmpty) '${coveredFigure(moving.length, coverage)} moving',
@@ -757,11 +757,10 @@ class _DownloadsSection extends ConsumerWidget {
   }
 }
 
-/// The household's requests the downloads are matched against: the lens
-/// Seerr's list while one is set up, as last read; nothing otherwise.
-final _householdRequestsProvider = Provider.autoDispose<List<SeerrRequest>>((
-  ref,
-) {
+/// The household's requests the downloads are matched against, for who
+/// asked for each (`requestFor`): the lens Seerr's list while one is set up,
+/// as last read; nothing otherwise.
+final downloadAskersProvider = Provider.autoDispose<List<SeerrRequest>>((ref) {
   final seerr = ref.watch(
     currentSettingsProvider.select(
       (settings) => settings.isServiceConfigured(ServiceKey.seerr),
@@ -794,7 +793,7 @@ class _UpNextSection extends ConsumerWidget {
     final count = coveredFigure(queued.length, queue.coverage);
     final meta = '$count queued';
     final now = ref.watch(stallClockProvider)();
-    final requests = ref.watch(_householdRequestsProvider);
+    final requests = ref.watch(downloadAskersProvider);
     return ActivitySection(
       title: _title,
       meta: meta,

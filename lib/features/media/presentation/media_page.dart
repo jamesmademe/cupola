@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_elevation.dart';
-import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
@@ -66,7 +65,6 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_removal.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
-import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/media/presentation/media_series_manage.dart';
 import 'package:cupola/features/media/presentation/media_series_sections.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
@@ -609,7 +607,6 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         ? _manage(rows, settings)
         : const <Widget>[];
     final room = CupolaRoom.of(context);
-    final scheme = Theme.of(context).colorScheme;
     final top = MediaQuery.paddingOf(context).top;
     final waiting = rows.any(
       (row) => row is MediaConnectionRow && row.reading is MediaReadingWaiting,
@@ -639,9 +636,6 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       _ => null,
     };
 
-    final ambient = BoxDecoration(
-      gradient: AppGradients.ambientBackground(scheme, accent: light?.light),
-    );
     final page = LayoutBuilder(
       builder: (context, box) {
         // The page's own width, not the window's: in a tablet's detail
@@ -985,38 +979,8 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         );
       },
     );
-    // The clock stays legible over whatever scrolls under it.
-    final framed = Stack(
-      children: [
-        page,
-        const Positioned(top: 0, left: 0, right: 0, child: StatusBarScrim()),
-      ],
-    );
-    return Scaffold(
-      backgroundColor: room.ground,
-      body: MediaPane.maybeOf(context) == null
-          ? DecoratedBox(decoration: ambient, child: framed)
-          // Beside the list the title's light comes up from the list's side
-          // rather than starting at an edge.
-          : Stack(
-              fit: StackFit.expand,
-              children: [
-                ShaderMask(
-                  blendMode: BlendMode.dstIn,
-                  shaderCallback: (bounds) => LinearGradient(
-                    colors: const [Color(0x00000000), Color(0xFF000000)],
-                    stops: [0, (_paneLightRise / bounds.width).clamp(0, 1)],
-                  ).createShader(bounds),
-                  child: DecoratedBox(decoration: ambient),
-                ),
-                framed,
-              ],
-            ),
-    );
+    return MediaRoom(light: light, child: page);
   }
-
-  /// How far into a pane its title light takes to come up.
-  static const double _paneLightRise = 110;
 
   /// The season the episodes open on: the one Play would continue, else the
   /// latest with an episode that has aired, else the first.

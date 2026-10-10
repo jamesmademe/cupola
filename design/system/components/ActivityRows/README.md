@@ -2,7 +2,7 @@
 
 The rows Activity draws on its slabs: `ActivityDownloadRow` (one download, moving or stuck), `ActivityDownloadRow.queued` (one that waits its turn, in Up next), `ActivityHistoryRow` (one record of what happened: an import or a failed download) and `EveryoneRequestRow` (one of the household's requests). They share one frame, `ActivityRowFrame`: the art at the start, the lines beside it, one sentence to a screen reader, the whole row a target, and what else it offers on a long press.
 
-Rendered from `lib/features/activity/presentation/widgets/activity_download_row.dart` (`ActivityDownloadRow`, `ActivityRowFrame`, `openActivityDownload`, `openArrTitle`) `lib/features/activity/presentation/widgets/activity_history_row.dart` (`ActivityHistoryRow`) and `lib/features/activity/presentation/widgets/everyone_request_row.dart` (`EveryoneRequestRow`), with their words from `lib/features/activity/domain/activity_download.dart`, `lib/features/activity/domain/activity_history.dart` and `lib/features/activity/domain/everyones_requests.dart` (`everyonesLine`, `everyonesTone`), by `test/design_catalog/activity_rows_catalog_test.dart`. The slab they sit on is the [`ActivitySection`](../ActivitySection/README.md) card.
+Rendered from `lib/features/activity/presentation/widgets/activity_download_row.dart` (`ActivityDownloadRow`, `ActivityRowFrame`, `openArrTitle`) `lib/features/activity/presentation/widgets/activity_history_row.dart` (`ActivityHistoryRow`) and `lib/features/activity/presentation/widgets/everyone_request_row.dart` (`EveryoneRequestRow`), with their words from `lib/features/activity/domain/activity_download.dart`, `lib/features/activity/domain/activity_history.dart` and `lib/features/activity/domain/everyones_requests.dart` (`everyonesLine`, `everyonesTone`), by `test/design_catalog/activity_rows_catalog_test.dart`. The slab they sit on is the [`ActivitySection`](../ActivitySection/README.md) card.
 
 ## Where they are drawn
 
@@ -34,7 +34,7 @@ At a large reading size (a text scale of 1.3 and over) a download's route and it
 
 ## What a row opens
 
-- A download opens the title's page in its arr, on the connection the row came from (`/stack/radarr/library/media/movie/…`, with `?i=` naming the connection), pushed over the view it was opened from, so Back returns to it. A transfer no arr asked for opens its client's room (`bringUnderLens`, then the client's page).
+- A download opens its own page ([DownloadDetail](../DownloadDetail/README.md), `openDownload`), pushed over the view it was opened from, so Back returns to it; from there the title's page, or a transfer's client. On a tablet the page opens beside the list, and the row it was opened from wears the selection: the room's strong fill behind it, reaching `AppSpacing.sm` into the slab's inset with `AppRadius.md` corners, as a selected search row's, and `selected` to a screen reader (`ActivityRowFrame(selected:)`).
 - A history record opens the title's page in its arr, the same way.
 - A request opens the title's page (`openMyRequest`).
 
@@ -55,6 +55,7 @@ A row speaks one sentence and silences its parts. The frame is one button labell
 Each sheet is drawn in the dark and the light room, on the phone and on the desktop.
 
 - A moving download with its request; two moving rows with a second connection named and a hairline between them.
+- A row selected beside the open pane on a tablet, on the room's strong fill.
 - A stuck download with its proof; a queued download in Up next with its request; a transfer no arr asked for.
 - A history record: an import with its file and its connection, then a second; a download that failed with its reason.
 - Text at 200%: a moving row and a stuck one; Up next and the client's own row; an import with its file and a failure with its reason.

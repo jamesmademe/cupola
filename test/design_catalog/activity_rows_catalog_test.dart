@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/media_names.dart';
+import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_download_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
 import 'package:cupola/features/activity/presentation/widgets/everyone_request_row.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/media/presentation/media_split.dart'
+    show MediaPaneDownload;
 import 'package:cupola/features/requests/domain/my_requests.dart';
 import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
@@ -211,6 +214,19 @@ void main() {
           ActivityDownloadRow(item: _elephants, now: _now, divided: true),
         ]),
         width: 390,
+      ),
+      CatalogScene(
+        'ActivityDownloadRow() · selected: its page is open beside the list '
+        "on a tablet, and the row sits on the room's strong fill",
+        (_) => SidePaneScope(
+          selected: MediaPaneDownload.selectedFor('1'),
+          location: '/activity/downloads',
+          child: _slab([
+            ActivityDownloadRow(item: _sprite, now: _now, request: _annaAsked),
+            ActivityDownloadRow(item: _elephants, now: _now, divided: true),
+          ]),
+        ),
+        width: 440,
       ),
       CatalogScene(
         'ActivityDownloadRow() · stuck: Stuck at 47% in amber, and the '

@@ -3,6 +3,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
@@ -10,11 +11,12 @@ import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';
+import 'package:cupola/features/activity/domain/download_page.dart'
+    show downloadPageKey;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/home/domain/downloads.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart'
-    show bringUnderLens;
+import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -23,6 +25,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// a stuck one says where it stopped and since when, in amber.
 ///
 /// The remedy of a stuck one is in Needs you, once: the row only shows it.
+/// A tap opens the download's own page (`openDownload`), beside the list on
+/// a tablet, where the row wears the selection.
 class ActivityDownloadRow extends ConsumerWidget {
   const ActivityDownloadRow({
     super.key,
@@ -120,7 +124,8 @@ class ActivityDownloadRow extends ConsumerWidget {
         ?evidence,
         ?asked,
       ].join(', '),
-      onTap: () => openActivityDownload(context, ref, item),
+      onTap: () => context.openDownload(item),
+      selected: context.paneShowsDownload(downloadPageKey(item)),
       art: HomeRowArt.large(posterUrl: item.posterUrl, icon: item.service.icon),
       children: [
         Text(
@@ -221,9 +226,15 @@ class ActivityRowFrame extends StatelessWidget {
     required this.art,
     required this.children,
     this.actions = const [],
+    this.selected = false,
   });
 
   final bool divided;
+
+  /// Whether the pane beside the list shows this row's page, on a tablet:
+  /// the row sits on the room's strong fill, the mark of what is selected,
+  /// and says so to a screen reader.
+  final bool selected;
   final String label;
   final String value;
   final VoidCallback onTap;
@@ -247,6 +258,7 @@ class ActivityRowFrame extends StatelessWidget {
       child: Semantics(
         container: true,
         button: true,
+        selected: selected ? true : null,
         label: label,
         value: value,
         onTap: onTap,
@@ -268,20 +280,25 @@ class ActivityRowFrame extends StatelessWidget {
           onSecondaryTap: actions.isEmpty ? null : menu,
           excludeFromSemantics: true,
           child: ExcludeSemantics(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  art,
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: children,
+            // The fill reaches into the slab's inset, so nothing in the row
+            // moves when it is selected.
+            child: CustomPaint(
+              painter: selected ? _Selected(room.fillStrong) : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    art,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: children,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -289,6 +306,28 @@ class ActivityRowFrame extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The room's strong fill behind a selected row, reaching into the slab's
+/// inset on either side, as a selected search row's does.
+class _Selected extends CustomPainter {
+  const _Selected(this.color);
+
+  final Color color;
+
+  static const double _reach = AppSpacing.sm;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTRB(-_reach, 0, size.width + _reach, size.height);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(AppRadius.md)),
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Selected oldDelegate) => color != oldDelegate.color;
 }
 
 /// One thing a row offers beside opening it: `Delete request`.
@@ -328,31 +367,6 @@ Future<void> showRowActions(
     ],
   );
   if (chosen != null) actions[chosen].onSelected();
-}
-
-/// Opens what a download row is about: the title's page in its arr, on the
-/// connection it came from; the client's room for a transfer no arr asked
-/// for.
-Future<void> openActivityDownload(
-  BuildContext context,
-  WidgetRef ref,
-  ServiceQueueItem item,
-) async {
-  if (await openArrTitle(
-    context,
-    service: item.service,
-    mediaId: item.mediaId,
-    instanceId: item.instanceId,
-  )) {
-    return;
-  }
-  final target = item.clientService ?? item.service;
-  final targetInstance = item.clientService == null
-      ? item.instanceId
-      : item.clientInstanceId;
-  await bringUnderLens(ref, target, targetInstance);
-  if (!context.mounted) return;
-  context.go(ServiceRoutes.forService(target));
 }
 
 /// Opens the page of [mediaId] in [service], on the connection

@@ -29,6 +29,7 @@ import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/activity_blocklist_page.dart';
 import 'package:cupola/features/activity/presentation/activity_needs_you_page.dart';
+import 'package:cupola/features/activity/presentation/download_page.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart';
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
 import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
@@ -2891,6 +2892,25 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       _page(
         ServiceRoutes.activityBlocklistSegment,
         (state) => const ActivityBlocklistPage(),
+      ),
+      // One download, read from its address alone; on a tablet beside the
+      // list, as a title is (`MediaSplit.pageOf`).
+      GoRoute(
+        path: ServiceRoutes.activityDownloadSegment,
+        redirect: (context, state) =>
+            (state.uri.queryParameters['id'] ?? '').trim().isEmpty
+            ? ServiceRoutes.activity
+            : null,
+        pageBuilder: (context, state) => MediaSplit.splits(context)
+            ? SidePaneSlotPage(key: state.pageKey, name: state.uri.toString())
+            : RouteUtils.cupertinoPage(
+                key: state.pageKey,
+                name: state.matchedLocation,
+                child: DownloadPage(
+                  instanceId: state.uri.queryParameters['i'] ?? '',
+                  downloadKey: state.uri.queryParameters['id']!,
+                ),
+              ),
       ),
       ..._mediaRoutes(),
     ],

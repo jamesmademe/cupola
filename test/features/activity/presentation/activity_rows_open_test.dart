@@ -1,6 +1,7 @@
 /// Where a row on Activity opens, in the whole app on a household's servers:
-/// a title lands on its page under the tab it was opened from, a transfer no
-/// arr asked for on its client, and Back returns to the view it left.
+/// a download on its own page, and from there its title under the tab it was
+/// opened from or, for a transfer no arr asked for, its client; an import or
+/// a request on its title; and Back returns to the view it left.
 library;
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart';
+import 'package:cupola/features/activity/presentation/download_page.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 
@@ -103,35 +105,49 @@ ActivityTab _view(WidgetTester tester) =>
     tester.widget<ActivityPage>(find.byType(ActivityPage).first).tab;
 
 void main() {
-  testWidgets('a download an arr asked for opens its title in that arr, and '
-      'Back returns to Downloads', (tester) async {
+  testWidgets('a download an arr asked for opens its own page, and from '
+      'there its title under Activity; Back returns to Downloads', (
+    tester,
+  ) async {
     final (harness, router, container) = await _app(tester, Profiles.p1);
     router.go(ServiceRoutes.activityDownloads);
     await _answer(tester);
 
     await _tap(tester, find.text('Sprite Fright'));
 
-    // The title's one page, under the Library tab of the arr it came from.
+    // The download's own page, by its client's id, on the connection the
+    // row came from.
+    expect(router.state.uri.path, ServiceRoutes.activityDownloadPath);
+    expect(
+      router.state.uri.queryParameters['id']?.toLowerCase(),
+      WorldDownloads.spriteFright.id,
+    );
+    expect(router.state.uri.queryParameters['i'], isNotEmpty);
+    expect(find.byType(DownloadPage), findsOneWidget);
+
+    // The title's one page, under the tab it was opened from.
+    await _tap(tester, find.text('Open Sprite Fright'));
     expect(
       router.state.uri.path,
-      '${ServiceRoutes.radarrLibrary}/media/movie/'
+      '${ServiceRoutes.activity}/media/movie/'
       '${WorldTitles.spriteFright.tmdbId}',
     );
-    // On the connection the row came from, never the lens's.
     expect(router.state.uri.queryParameters['i'], isNotEmpty);
 
     router.pop();
     await _answer(tester);
+    expect(router.state.uri.path, ServiceRoutes.activityDownloadPath);
 
+    router.pop();
+    await _answer(tester);
     expect(router.state.uri.path, ServiceRoutes.activityDownloads);
     expect(_view(tester), ActivityTab.downloads);
 
     await _close(tester, harness, container);
   });
 
-  testWidgets('a transfer no arr asked for opens on its client', (
-    tester,
-  ) async {
+  testWidgets('a transfer no arr asked for opens its own page, and from '
+      'there its client', (tester) async {
     final (harness, router, container) = await _app(
       tester,
       Profiles.p1.withDownloads([
@@ -150,7 +166,9 @@ void main() {
     await _answer(tester);
 
     await _tap(tester, find.text('Hand.Added.2024.1080p'));
+    expect(router.state.uri.path, ServiceRoutes.activityDownloadPath);
 
+    await _tap(tester, find.text('Open in qBittorrent'));
     expect(router.state.uri.path, startsWith(ServiceRoutes.qbittorrent));
 
     await _close(tester, harness, container);

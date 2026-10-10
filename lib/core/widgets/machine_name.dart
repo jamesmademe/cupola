@@ -357,7 +357,9 @@ const _zeroWidthSpace = '\u200B';
 /// segment before it, as it stays whole in a row: a line of its own reading
 /// `mkv` says nothing. The space is drawn but never copied:
 /// [_SelectableMachineName] strips it from anything it puts on the clipboard.
-@visibleForTesting
+///
+/// Also what a fact drawn whole uses for its machine's string (a download's
+/// release on its page), which no one copies from.
 String machineNameWithBreaks(String name) {
   // A name that already carries one cannot be told apart from the inserted
   // ones on the way back out, so it is drawn as it came.

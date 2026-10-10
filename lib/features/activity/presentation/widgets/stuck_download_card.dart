@@ -12,6 +12,8 @@ import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/domain/stuck_download_fault.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart'
     show connectionArrServiceProvider;
+import 'package:cupola/features/activity/presentation/widgets/activity_section.dart'
+    show ActivitySlab;
 import 'package:cupola/features/activity/presentation/widgets/fault_card.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
@@ -36,9 +38,18 @@ class StuckDownloadCard extends ConsumerStatefulWidget {
     required this.downloadKey,
     this.divided = false,
     this.whole = false,
-  });
+  }) : _remedy = false;
+
+  /// The card on the download's own page, under where it stands: its cause
+  /// and its ways out, with nothing the page already says above it (the
+  /// title, the release, the bar).
+  const StuckDownloadCard.remedy({super.key, required this.downloadKey})
+    : divided = false,
+      whole = true,
+      _remedy = true;
 
   final String downloadKey;
+  final bool _remedy;
   final bool divided;
 
   /// The Needs you page's card: a slab of its own.
@@ -118,6 +129,21 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
         if (_busy == null) secondary(action),
     ];
 
+    if (widget._remedy) {
+      // A row of a slab, as in All: the cause at the size of a row, not of
+      // a page's headline, under the readout that already names the fault.
+      return ActivitySlab(
+        children: [
+          FaultCard(
+            headline: words.explanation,
+            primary: primary,
+            primarySubtitle: subtitle,
+            secondary: quiet,
+            note: note,
+          ),
+        ],
+      );
+    }
     return widget.whole
         ? FaultCard.whole(
             headline: words.headline,

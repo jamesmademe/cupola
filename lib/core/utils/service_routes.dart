@@ -570,6 +570,16 @@ class ServiceRoutes {
   /// [instanceId] is null.
   static String activityRequestsOf(String? instanceId) =>
       _withQuery(activityRequests, {'i': instanceId});
+
+  /// One download's page: [instanceId] the connection it was read from
+  /// (its \*arr's, or its client's when no \*arr asked for it), [key] the
+  /// client's id for the transfer (`downloadPageKey`).
+  static const activityDownloadSegment = 'download';
+  static const activityDownloadPath = '$activity/$activityDownloadSegment';
+  static String activityDownload({
+    required String instanceId,
+    required String key,
+  }) => _withQuery(activityDownloadPath, {'i': instanceId, 'id': key});
   static const discover = '/discover';
 
   /// The calendar of everything the household's arrs date in the next

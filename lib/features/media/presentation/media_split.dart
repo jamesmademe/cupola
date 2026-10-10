@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/side_pane_route.dart';
+import 'package:cupola/features/activity/presentation/download_page.dart';
 import 'package:cupola/features/discover/presentation/collection_page.dart';
 import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -105,6 +107,34 @@ final class MediaPaneCollection extends MediaPanePage {
   Widget build() => CollectionPage(collectionId: id);
 }
 
+/// A download in the pane, opened from Activity's lists
+/// (`/activity/download?i=&id=`).
+final class MediaPaneDownload extends MediaPanePage {
+  const MediaPaneDownload({required this.instanceId, required this.key});
+
+  /// The connection it was read from.
+  final String instanceId;
+
+  /// The client's id for the transfer (`downloadPageKey`).
+  final String key;
+
+  /// What the pane shows while it shows the download [key]: what a row
+  /// compares itself with to wear the selection.
+  static Object selectedFor(String key) => (download: key.trim().toLowerCase());
+
+  @override
+  String? get heroTag => null;
+
+  @override
+  Object get selected => selectedFor(key);
+
+  @override
+  Object get identity => (download: key.trim().toLowerCase(), i: instanceId);
+
+  @override
+  Widget build() => DownloadPage(instanceId: instanceId, downloadKey: key);
+}
+
 /// A title opened on a tablet: beside the page it was opened from, not over
 /// it. A person or a collection opened from a list goes beside it the same
 /// way, and one opened from a title in the pane stays in the pane.
@@ -146,10 +176,19 @@ abstract final class MediaSplit {
   }
 
   /// The page [uri] puts in the pane: a title's ([targetOf]), a person's or
-  /// a collection's location under a mount, else null.
+  /// a collection's location under a mount, or a download's, else null.
   static MediaPanePage? pageOf(Uri uri) {
     if (targetOf(uri) case final target?) return MediaPaneTitle(target);
     final segments = uri.pathSegments;
+    if (uri.path == ServiceRoutes.activityDownloadPath) {
+      final key = uri.queryParameters['id']?.trim() ?? '';
+      return key.isEmpty
+          ? null
+          : MediaPaneDownload(
+              instanceId: uri.queryParameters['i'] ?? '',
+              key: key,
+            );
+    }
     final at = segments.lastIndexOf('media');
     if (at < 1 || segments.length != at + 3) return null;
     // Read as the route reads it (`RouteUtils.safeIntParam`): a slot the

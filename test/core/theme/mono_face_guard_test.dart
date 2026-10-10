@@ -197,6 +197,13 @@ const _monoUses = <({String file, int uses, String prints})>[
     prints: 'the release a stuck download is, as its client names it',
   ),
   (
+    file: 'lib/features/activity/presentation/widgets/download_parts.dart',
+    uses: 1,
+    prints:
+        "a download's facts that are a machine's strings: its release, its "
+        "library folder, its client's address",
+  ),
+  (
     file: 'lib/features/import/presentation/blocked_import_parts.dart',
     uses: 5,
     prints:

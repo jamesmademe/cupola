@@ -1,13 +1,65 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart' show StatusBarScrim;
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/media/presentation/media_split.dart';
+
+/// The room a title's page stands in: the ground washed with the title's
+/// [light] (the lamp, unlit), the clock legible over whatever scrolls under
+/// it, and beside a list the light coming up from the list's side rather
+/// than starting at an edge.
+class MediaRoom extends StatelessWidget {
+  const MediaRoom({super.key, required this.light, required this.child});
+
+  final TitleLight? light;
+
+  /// The page.
+  final Widget child;
+
+  /// How far into a pane its title light takes to come up.
+  static const double paneLightRise = 110;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final ambient = BoxDecoration(
+      gradient: AppGradients.ambientBackground(scheme, accent: light?.light),
+    );
+    final framed = Stack(
+      children: [
+        child,
+        const Positioned(top: 0, left: 0, right: 0, child: StatusBarScrim()),
+      ],
+    );
+    return Scaffold(
+      backgroundColor: room.ground,
+      body: MediaPane.maybeOf(context) == null
+          ? DecoratedBox(decoration: ambient, child: framed)
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                ShaderMask(
+                  blendMode: BlendMode.dstIn,
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: const [Color(0x00000000), Color(0xFF000000)],
+                    stops: [0, (paneLightRise / bounds.width).clamp(0, 1)],
+                  ).createShader(bounds),
+                  child: DecoratedBox(decoration: ambient),
+                ),
+                framed,
+              ],
+            ),
+    );
+  }
+}
 
 /// One group of rows on a Media page or one of its sheets: the room's quiet
 /// fill, `AppRadius.group`, a hairline round it and between the rows.

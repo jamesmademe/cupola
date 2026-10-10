@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/activity/domain/download_page.dart'
+    show downloadPageKey;
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/percent_format.dart';
@@ -155,7 +157,8 @@ class HomeDownloadsModule extends ConsumerWidget {
 }
 
 /// One download: its art, its title and how far it got, the release under
-/// it, the bar; and when it stopped, the remedy in the row.
+/// it, the bar; and when it stopped, the remedy in the row. A tap opens the
+/// download's own page in Activity.
 class DownloadRow extends ConsumerWidget {
   const DownloadRow({super.key, required this.item, this.divided = false});
 
@@ -194,7 +197,13 @@ class DownloadRow extends ConsumerWidget {
     final showsRelease =
         release != null && release.isNotEmpty && release != item.title;
 
-    Future<void> open() async => context.go(ServiceRoutes.activity);
+    // Its own page, in Activity, with Activity behind it.
+    Future<void> open() async => context.go(
+      ServiceRoutes.activityDownload(
+        instanceId: item.instanceId,
+        key: downloadPageKey(item),
+      ),
+    );
 
     // At a large reading size the value goes under the title: beside it the
     // title kept three letters.

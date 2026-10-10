@@ -55,6 +55,7 @@ import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/download_join.dart';
 import 'package:cupola/features/services/domain/download_names.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
+import 'package:cupola/features/services/domain/queue_title.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
@@ -953,9 +954,15 @@ class ArrHistoryEntry {
     this.backdropUrl = '',
     this.mediaAddedAt,
     this.fileName,
+    this.downloadId,
   });
 
   final ServiceKey service;
+
+  /// The download client's id for the transfer the record is about (the
+  /// torrent hash, the usenet job's id), as the queue named it: what finds a
+  /// download's import after it left the queue. Null when the record has none.
+  final String? downloadId;
 
   /// The file an import record landed, as the library names it: the last
   /// segment of the record's `data.importedPath`, else the release's
@@ -1177,6 +1184,7 @@ ArrHistoryEntry _historyEntryFrom(
         ? _importedFileName(record, data)
         : null,
     at: parseAddedTimestamp(stringOrNull(record['date'])),
+    downloadId: stringOrNull(record['downloadId']),
     // `statusMessages` is where an \*arr puts the reason an import failed, and
     // `message` is where a failed *grab* puts it. Neither is always present, and
     // a decision row with no reason still says what it is.
@@ -1464,6 +1472,7 @@ class ServiceQueueItem {
     this.tmdbId,
     this.tvdbId,
     this.posterUrl,
+    this.queueTitle,
     MediaNames? names,
   }) : _names = names;
 
@@ -1574,6 +1583,12 @@ class ServiceQueueItem {
   /// shows beside the title. Null on a client's own row.
   final String? posterUrl;
 
+  /// What the \*arr's record says about the title beyond its name (the year,
+  /// the profile, the library folder, the episode): what the download's own
+  /// page states. Null on a client's own row, and when the record embeds no
+  /// title.
+  final QueueTitle? queueTitle;
+
   final MediaNames? _names;
 
   /// What the transfer is and which copy it is ([MediaNames]): on an \*arr
@@ -1621,6 +1636,7 @@ class ServiceQueueItem {
     tmdbId: tmdbId,
     tvdbId: tvdbId,
     posterUrl: posterUrl,
+    queueTitle: queueTitle,
     names: names,
   );
 
@@ -2277,6 +2293,7 @@ ServiceQueueItem _joinedQueueItem(
     tmdbId: arr.tmdbId,
     tvdbId: arr.tvdbId,
     posterUrl: arr.posterUrl,
+    queueTitle: arr.queueTitle,
     // The arr's names, and the release the client is moving when the arr's
     // record did not carry one: a matched row never loses its release name.
     names: arr.names.withMachineName(client.title, MachineNameKind.release),
@@ -2917,6 +2934,7 @@ ServiceQueueItem _queueItemFromRecords(
     mediaId: mediaId,
     outputPath: stringOrNull(typedItem['outputPath']),
     posterUrl: _queuePosterUrl(typedItem),
+    queueTitle: QueueTitle.ofRecord(typedItem, single: records.length == 1),
     names: names,
     // The arr's own record of a pause, standing until a client row says
     // otherwise.

@@ -4,8 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/side_pane_route.dart';
+import 'package:cupola/features/activity/domain/download_page.dart'
+    show downloadPageKey;
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_split.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart'
+    show ServiceQueueItem;
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -23,6 +27,19 @@ extension OpenMedia on BuildContext {
   /// Whether the pane beside this page shows the person [id]'s page.
   bool paneShowsPerson(int id) =>
       SidePaneScope.selectedOf(this) == MediaPanePerson(id: id).selected;
+
+  /// Whether the pane beside this page shows the download [key]'s page.
+  bool paneShowsDownload(String key) =>
+      SidePaneScope.selectedOf(this) == MediaPaneDownload.selectedFor(key);
+
+  /// Pushes [item]'s own page (`ServiceRoutes.activityDownload`), and on a
+  /// tablet beside the list as a title is.
+  Future<void> openDownload(ServiceQueueItem item) => _openBeside(
+    ServiceRoutes.activityDownload(
+      instanceId: item.instanceId,
+      key: downloadPageKey(item),
+    ),
+  );
 
   /// Pushes [key]'s page under the tab the user is on.
   Future<void> openMedia(
