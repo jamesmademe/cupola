@@ -5,13 +5,14 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
+import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_provider.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
@@ -159,20 +160,50 @@ void main() {
   });
 
   group('the requests list', () {
+    Widget board([String only = '']) =>
+        SingleChildScrollView(child: RequestsBoard(only: only));
+
+    /// The actions [title]'s row offers a screen reader.
+    List<String> actionsOf(WidgetTester tester, String title) {
+      final data = tester
+          .getSemantics(find.bySemanticsLabel(title).first)
+          .getSemanticsData();
+      return [
+        for (final id in data.customSemanticsActionIds ?? const <int>[])
+          CustomSemanticsAction.getAction(id)!.label!,
+      ];
+    }
+
+    /// What a long press on [title]'s row offers.
+    Future<void> press(
+      WidgetTester tester,
+      ProfileHarness harness,
+      String title,
+    ) async {
+      final row = find.text(title).first;
+      await tester.ensureVisible(row);
+      await tester.longPress(row);
+      await harness.settle(tester);
+    }
+
     testWidgets('P2: her own waiting request can be cancelled, nothing else', (
       tester,
     ) async {
-      final harness = await _pump(tester, Profiles.p2, const RequestsList());
+      final harness = await _pump(tester, Profiles.p2, board());
 
-      // Charge waits: hers to take back. Sprite Fright was approved: not.
-      expect(find.byTooltip('Cancel request'), findsOneWidget);
-      expect(find.byTooltip('Delete request'), findsNothing);
       expect(find.text('Approve'), findsNothing);
       expect(find.text('Decline'), findsNothing);
-      // No quality profile: the destination is not hers to read.
-      expect(find.textContaining('HD-1080p'), findsNothing);
+      // Sprite Fright was approved: nothing to take back, so the row offers
+      // nothing beside opening it, to a long press or a screen reader.
+      final semantics = tester.ensureSemantics();
+      expect(actionsOf(tester, 'Sprite Fright'), isEmpty);
+      expect(actionsOf(tester, 'Charge'), ['Cancel request']);
+      semantics.dispose();
 
-      await tester.tap(find.byTooltip('Cancel request'));
+      // Charge waits: hers to take back.
+      await press(tester, harness, 'Charge');
+      expect(find.text('Delete request'), findsNothing);
+      await tester.tap(find.text('Cancel request'));
       await harness.settle(tester);
       expect(find.text('Cancel request?'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Cancel request'));
@@ -184,7 +215,7 @@ void main() {
             .where((r) => r.method == 'DELETE'),
         hasLength(1),
       );
-      expect(find.text('Request canceled'), findsOneWidget);
+      expect(find.text('Canceled the request for Charge'), findsOneWidget);
 
       await harness.unmount(tester);
     });
@@ -192,12 +223,35 @@ void main() {
     testWidgets('P1: the key decides and deletes, as it always has', (
       tester,
     ) async {
-      final harness = await _pump(tester, Profiles.p1, const RequestsList());
+      final harness = await _pump(tester, Profiles.p1, board());
 
       expect(find.text('Approve'), findsWidgets);
-      expect(find.byTooltip('Delete request'), findsWidgets);
-      expect(find.byTooltip('Cancel request'), findsNothing);
-      expect(find.textContaining('HD-1080p'), findsWidgets);
+      final semantics = tester.ensureSemantics();
+      expect(actionsOf(tester, 'Sprite Fright'), ['Delete request']);
+      semantics.dispose();
+      await press(tester, harness, 'Sprite Fright');
+      expect(find.text('Delete request'), findsOneWidget);
+      expect(find.text('Cancel request'), findsNothing);
+
+      await tester.tap(find.text('Delete request'));
+      await harness.settle(tester);
+      expect(
+        find.text('This removes the request for Sprite Fright from Seerr.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete request'));
+      await harness.settle(tester);
+      expect(
+        harness.network
+            .requestsTo(WorldIds.seerr)
+            .where((r) => r.method == 'DELETE')
+            .map((r) => r.uri.path),
+        [contains('/api/v1/request/')],
+      );
+      expect(
+        find.text('Deleted the request for Sprite Fright'),
+        findsOneWidget,
+      );
 
       await harness.unmount(tester);
     });
@@ -205,11 +259,7 @@ void main() {
     testWidgets("P9: on Sara's list the decision is dimmed and says why", (
       tester,
     ) async {
-      final harness = await _pump(
-        tester,
-        _p9Sees,
-        const RequestsList(instanceId: WorldIds.seerrFriend),
-      );
+      final harness = await _pump(tester, _p9Sees, board(WorldIds.seerrFriend));
 
       final approve = find.text('Approve').first;
       await tester.ensureVisible(approve);

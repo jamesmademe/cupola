@@ -3320,36 +3320,12 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
             // reports "Available" while nobody has approved it. See
             // `request_ordering.dart`.
             if (decides && isAwaitingApproval(request))
-              DashboardDecision(
-                kind: DecisionKind.pendingRequest,
-                id: 'seerr-${source.instanceId}-${request.id}',
-                service: ServiceKey.seerr,
-                title: request.media?.title ?? 'Unknown media',
-                // Who asked, and on which Seerr once there are two; the row
-                // adds when (`askedAgo`), which a read cannot keep current.
-                detail: joinDisplayParts([
-                  if (source.name != null)
-                    serviceWithConnection(
-                      ServiceKey.seerr,
-                      source.name,
-                      joiner: ' ',
-                    ),
-                  if (namesWho) request.requestedBy?.displayName,
-                ]),
-                occurredAt: parseAddedTimestamp(request.createdAt),
-                actionId: request.id,
+              pendingRequestDecision(
+                request,
                 instanceId: source.instanceId,
-                connectionName: source.name,
-                posterUrl: ImageUtils.buildTmdbPosterUrl(
-                  request.media?.posterPath,
-                ),
-                // Discover resolves through the lens end to end, so a request
-                // off another Seerr opens that Seerr's own requests list,
-                // which honours `?i=`, rather than a media page asking the
-                // lens.
-                route: source.isLens
-                    ? _seerrRequestRoute(request)
-                    : _seerrRequestsListRoute(source.instanceId),
+                name: source.name,
+                isLens: source.isLens,
+                namesWho: namesWho,
               ),
         ],
         coverage: SourceCoverage.answeredBy(
@@ -3382,6 +3358,39 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
     coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
   );
 }
+
+/// [request], waiting on a person, as the decision its row draws: who asked,
+/// and on which Seerr once there are two; the row adds when (`askedAgo`),
+/// which a read cannot keep current. [namesWho] where the connection sees
+/// everyone's requests.
+DashboardDecision pendingRequestDecision(
+  SeerrRequest request, {
+  required String instanceId,
+  required String? name,
+  required bool isLens,
+  required bool namesWho,
+}) => DashboardDecision(
+  kind: DecisionKind.pendingRequest,
+  id: 'seerr-$instanceId-${request.id}',
+  service: ServiceKey.seerr,
+  title: request.media?.title ?? 'Unknown media',
+  detail: joinDisplayParts([
+    if (name != null)
+      serviceWithConnection(ServiceKey.seerr, name, joiner: ' '),
+    if (namesWho) request.requestedBy?.displayName,
+  ]),
+  occurredAt: parseAddedTimestamp(request.createdAt),
+  actionId: request.id,
+  instanceId: instanceId,
+  connectionName: name,
+  posterUrl: ImageUtils.buildTmdbPosterUrl(request.media?.posterPath),
+  // Discover resolves through the lens end to end, so a request off another
+  // Seerr opens that Seerr's own requests list, which honours `?i=`, rather
+  // than a media page asking the lens.
+  route: isLens
+      ? _seerrRequestRoute(request)
+      : _seerrRequestsListRoute(instanceId),
+);
 
 /// How many requests wait for the operator's answer, across every Seerr
 /// they may answer on: Seerr's own count of each, never the length of the

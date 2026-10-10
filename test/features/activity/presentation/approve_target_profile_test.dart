@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
-import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
+import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -18,7 +18,9 @@ void main() {
   Future<ProfileHarness> pump(
     WidgetTester tester,
     ConfigProfile profile, {
-    Widget child = const Scaffold(body: RequestsList()),
+    Widget child = const Scaffold(
+      body: SingleChildScrollView(child: RequestsBoard(only: '')),
+    ),
     void Function(ProfileNetwork network)? routes,
   }) async {
     final harness = await ProfileHarness.start(profile);
@@ -33,9 +35,13 @@ void main() {
     return harness;
   }
 
-  /// Opens the confirmation of the first waiting request on the list.
+  /// Opens the confirmation of Charge where the world's list holds it, or of
+  /// the one request a scripted list holds.
   Future<void> openApprove(WidgetTester tester, ProfileHarness harness) async {
-    final approve = find.text('Approve').first;
+    final charge = find.byTooltip('Approve Charge');
+    final approve = charge.evaluate().isNotEmpty
+        ? charge
+        : find.text('Approve').first;
     await tester.ensureVisible(approve);
     await tester.tap(approve);
     await harness.settle(tester);

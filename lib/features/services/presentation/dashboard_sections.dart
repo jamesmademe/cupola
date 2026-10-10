@@ -22,6 +22,7 @@ import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
@@ -56,6 +57,7 @@ class DecisionRow extends ConsumerWidget {
     required this.decision,
     this.divided = false,
     this.outcome,
+    this.request,
   }) : _stacked = false;
 
   /// The row of a page that lists every fault (Activity): the control under
@@ -66,6 +68,7 @@ class DecisionRow extends ConsumerWidget {
     required this.decision,
     this.divided = false,
     this.outcome,
+    this.request,
   }) : _stacked = true;
 
   final bool _stacked;
@@ -75,6 +78,10 @@ class DecisionRow extends ConsumerWidget {
   /// What happened to it once answered here (`Approved · sent to Radarr`):
   /// the row says so in place of its detail, without its controls.
   final String? outcome;
+
+  /// The waiting request itself, when the caller read it whole: Approve
+  /// names the server it goes to without reading it again.
+  final SeerrRequest? request;
 
   /// Whether a hairline separates it from the row above: every row of a
   /// module but its first.
@@ -87,6 +94,7 @@ class DecisionRow extends ConsumerWidget {
         decision: decision,
         divided: divided,
         outcome: outcome,
+        request: request,
       );
     }
     final theme = Theme.of(context);
@@ -586,11 +594,13 @@ class _RequestRow extends ConsumerWidget {
     required this.decision,
     required this.divided,
     required this.outcome,
+    required this.request,
   });
 
   final DashboardDecision decision;
   final bool divided;
   final String? outcome;
+  final SeerrRequest? request;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -673,6 +683,7 @@ class _RequestRow extends ConsumerWidget {
                   requestId: decision.actionId!,
                   title: decision.title,
                   decision: decision,
+                  request: request,
                 ),
               ),
           ],

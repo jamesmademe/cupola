@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
 
-/// One Seerr, which is the common case and the one the defect lived in.
+/// Seerr's Requests tab, which hosts the household's list and pulls it.
 ///
-/// With a single connection the list is opened for the lens — an empty
+/// One Seerr, which is the common case and the one the defect lived in. With
+/// a single connection the list is read for the lens — an empty
 /// `instanceId` — and `requestsForProvider('')` is then a passthrough of
 /// `requestsProvider`. Dropping only the family entry rebuilds it against a
 /// value the plain provider is still holding, so the gesture re-renders the
@@ -24,7 +25,7 @@ Future<Widget> _app(_CountingSeerrService seerr) async {
       ...await settingsScopeOverrides(configured: const [ServiceKey.seerr]),
       seerrServiceProvider.overrideWith((ref) => seerr),
     ],
-    child: const MaterialApp(home: Scaffold(body: RequestsList())),
+    child: const MaterialApp(home: ServiceAllRequestsScreen()),
   );
 }
 

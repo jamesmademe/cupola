@@ -1024,8 +1024,8 @@ List<ServiceKpi> _seerrKpisFrom(List<SeerrRequest> requests) {
   var available = 0;
   for (final r in requests) {
     // Pending counts the requests that still need a decision, so it reads the
-    // request's OWN status — the same source `request_ordering.dart`,
-    // `seerr_request_filter.dart` and the /activity tiles read, and for the same
+    // request's OWN status — the same source `request_ordering.dart` and the
+    // /activity rows read, and for the same
     // documented reason. `displayStatus` answers a different question: it lets
     // the media's availability override the request, so a request still in
     // pendingApproval whose media Radarr already holds reports "Available" —

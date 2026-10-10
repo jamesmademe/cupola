@@ -12,6 +12,7 @@ import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/features/activity/data/acted_faults.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/activity/data/household_requests.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
@@ -138,7 +139,13 @@ Future<void> refreshActivity(WidgetRef ref, ActivityTab tab) async {
       for (final source in DecisionSource.values)
         settle(ref.read(dashboardDecisionSourceProvider(source).future)),
     ],
-    if (tab == ActivityTab.requests) settle(ref.read(requestsProvider.future)),
+    if (tab == ActivityTab.requests)
+      for (final source in ref.read(householdRequestsProvider(null)))
+        settle(
+          ref.read(
+            requestsForProvider(source.isLens ? '' : source.instanceId).future,
+          ),
+        ),
     if (tab == ActivityTab.history) ...[
       settle(ref.read(servicesArrivalsProvider.future)),
       settle(ref.read(servicesFailuresSinceProvider.future)),

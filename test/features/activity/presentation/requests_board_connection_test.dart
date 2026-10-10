@@ -35,9 +35,13 @@ Future<List<Override>> _settings() async => [
   activityLivePollProvider.overrideWith((ref, tab) {}),
 ];
 
-SeerrRequest _request(int id, String title) => SeerrRequest(
+SeerrRequest _request(
+  int id,
+  String title, {
+  RequestStatus status = RequestStatus.pendingApproval,
+}) => SeerrRequest(
   id: id,
-  status: RequestStatus.pendingApproval,
+  status: status,
   type: 'movie',
   createdAt: '2026-08-01T10:00:00.000Z',
   media: RequestMedia(id: id, tmdbId: id, mediaType: 'movie', title: title),
@@ -86,7 +90,7 @@ void main() {
     expect(find.text('From the first'), findsNothing);
   });
 
-  testWidgets('a card says the day as the app says dates', (tester) async {
+  testWidgets('a row says the day as the app says dates', (tester) async {
     // 1 August 2026 is a Saturday. The sortable 2026-08-01 is the dense
     // feed's voice, and the year only appears when it is another year.
     final container = ProviderContainer(
@@ -105,7 +109,8 @@ void main() {
     expect(find.textContaining('2026-08-01'), findsNothing);
   });
 
-  testWidgets('with no connection named it stays on the lens', (tester) async {
+  testWidgets('with no connection named it reads every one, each row naming '
+      'its own', (tester) async {
     final lens = _RequestsSeerrService([_request(1, 'From the first')]);
     final other = _RequestsSeerrService([_request(1, 'From the second')]);
 
@@ -121,15 +126,18 @@ void main() {
     await _pump(tester, container: container);
 
     expect(find.text('From the first'), findsOneWidget);
-    expect(find.text('From the second'), findsNothing);
+    expect(find.text('From the second'), findsOneWidget);
+    expect(find.textContaining('Seerr Anime'), findsOneWidget);
   });
 
   // A link outlives the connection it names: the user opens a request row,
   // deletes that Seerr in Settings, then comes back to the page from history
-  // or a deep link. The list falls back to the lens; handing the dead id to
-  // it would print "not configured" for a server that is up.
-  testWidgets('a link naming a connection that is gone falls back to the '
-      'lens', (tester) async {
+  // or a deep link. The list reads every Seerr, as a link naming none does;
+  // handing the dead id to it would print "not configured" for a server that
+  // is up.
+  testWidgets('a link naming a connection that is gone reads every one', (
+    tester,
+  ) async {
     final lens = _RequestsSeerrService([_request(1, 'From the first')]);
     final other = _RequestsSeerrService([_request(1, 'From the second')]);
 
@@ -152,8 +160,13 @@ void main() {
   testWidgets('a delete on this list goes to the connection it belongs to', (
     tester,
   ) async {
-    final lens = _RequestsSeerrService([_request(42, 'From the first')]);
-    final other = _RequestsSeerrService([_request(42, 'From the second')]);
+    const approved = RequestStatus.approved;
+    final lens = _RequestsSeerrService([
+      _request(42, 'From the first', status: approved),
+    ]);
+    final other = _RequestsSeerrService([
+      _request(42, 'From the second', status: approved),
+    ]);
 
     final container = ProviderContainer(
       overrides: [
@@ -166,7 +179,10 @@ void main() {
 
     await _pump(tester, container: container, instanceId: _second.id);
 
-    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+    // Delete request is on the row's long press.
+    await tester.longPress(find.text('From the second'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete request'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Delete request'));
     await tester.pumpAndSettle();

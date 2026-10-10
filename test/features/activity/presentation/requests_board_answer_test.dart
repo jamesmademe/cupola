@@ -1,4 +1,4 @@
-/// A request that waits is answered on the requests list with the control
+/// A request that waits is answered on the Requests view with the control
 /// every list draws: the same question, the same busy state, the same word
 /// once it went through.
 library;
@@ -6,7 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
+import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -19,11 +19,15 @@ void main() {
   Future<ProfileHarness> pump(WidgetTester tester) => pumpWithProfile(
     tester,
     Profiles.p1,
-    child: const Scaffold(body: RequestsList()),
-    surfaceSize: const Size(390, 1600),
+    child: Scaffold(
+      body: ListView(children: const [RequestsBoard(only: '')]),
+    ),
+    // Wide enough for the pair to stand side by side in the test's font,
+    // whose letters are as wide as they are tall.
+    surfaceSize: const Size(600, 1600),
   );
 
-  testWidgets('P1: each waiting card carries the pair, named by its title', (
+  testWidgets('P1: each waiting row carries the pair, named by its title', (
     tester,
   ) async {
     final harness = await pump(tester);
@@ -41,7 +45,7 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('P1: Decline asks the one question, and the card says '
+  testWidgets('P1: Decline asks the one question, and the row says '
       'Declined in the pair\'s place', (tester) async {
     final harness = await pump(tester);
 
@@ -49,7 +53,7 @@ void main() {
     await tester.ensureVisible(decline);
     await tester.tap(decline);
     await harness.settle(tester);
-    // The same words as every other list, not a dialog of this card's own.
+    // The same words as every other list, not a dialog of this row's own.
     expect(find.text('Decline this request?'), findsOneWidget);
     expect(
       find.text(
@@ -71,7 +75,7 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('P1: Approve names the server, and the card says where it '
+  testWidgets('P1: Approve names the server, and the row says where it '
       'went', (tester) async {
     final harness = await pump(tester);
 

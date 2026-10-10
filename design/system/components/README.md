@@ -29,7 +29,7 @@ cards live in [`../motion/`](../motion/).
 | Structure | [ActivitySection](ActivitySection/README.md) | `lib/features/activity/presentation/widgets/activity_section.dart` |
 | Containers | [AppCard](AppCard/README.md) | `lib/core/widgets/app_card.dart` |
 | Lists | [ServiceRecordRow](ServiceRecordRow/README.md) | `lib/core/widgets/service_record_row.dart` |
-| Lists | [ActivityRows](ActivityRows/README.md) | `lib/features/activity/presentation/widgets/activity_download_row.dart`, `lib/features/activity/presentation/widgets/activity_history_row.dart` |
+| Lists | [ActivityRows](ActivityRows/README.md) | `lib/features/activity/presentation/widgets/activity_download_row.dart`, `lib/features/activity/presentation/widgets/activity_history_row.dart`, `lib/features/activity/presentation/widgets/everyone_request_row.dart` |
 | Metadata | [TagChip](TagChip/README.md) | `lib/core/widgets/tag_chip.dart` |
 | Metadata | [MachineName](MachineName/README.md) | `lib/core/widgets/machine_name.dart` |
 | Status | [FaultCard](FaultCard/README.md) | `lib/features/activity/presentation/widgets/fault_card.dart` |

@@ -19,6 +19,7 @@ import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/core/widgets/service_list_page.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
@@ -924,7 +925,7 @@ void main() {
       expectClearsTheBar(tester, find.byType(ServiceKpiPeek));
     });
 
-    testWidgets('Seerr Requests draws its filter chips below the tab bar', (
+    testWidgets('Seerr Requests starts its list below the tab bar', (
       tester,
     ) async {
       await pumpHosted(
@@ -938,7 +939,7 @@ void main() {
         ),
       );
 
-      expectClearsTheBar(tester, find.byType(FilterChip));
+      expectClearsTheBar(tester, find.byType(RequestsBoard));
     });
 
     testWidgets('Seerr Issues draws its filter pills below the tab bar', (

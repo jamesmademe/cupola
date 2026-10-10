@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
@@ -55,6 +56,20 @@ void main() {
   });
 
   group('every request', () {
+    /// The actions [title]'s row offers beside opening it: on a long press,
+    /// and among a screen reader's.
+    List<String> actionsOf(WidgetTester tester, String title) {
+      final semantics = tester.ensureSemantics();
+      final data = tester
+          .getSemantics(find.bySemanticsLabel(title).first)
+          .getSemanticsData();
+      semantics.dispose();
+      return [
+        for (final id in data.customSemanticsActionIds ?? const <int>[])
+          CustomSemanticsAction.getAction(id)!.label!,
+      ];
+    }
+
     testWidgets('P2: her own waiting request is hers to cancel', (
       tester,
     ) async {
@@ -65,19 +80,17 @@ void main() {
         surfaceSize: _tall,
       );
 
-      expect(find.byTooltip('Cancel request for Charge'), findsOneWidget);
-      expect(find.byTooltip('Delete request for Charge'), findsNothing);
+      expect(actionsOf(tester, 'Charge'), ['Cancel request']);
       // Approved already: not hers to take back from here.
-      expect(find.byTooltip('Cancel request for Sprite Fright'), findsNothing);
+      expect(actionsOf(tester, 'Sprite Fright'), isEmpty);
       expect(find.textContaining(WorldPeople.anna), findsNothing);
       expect(find.byTooltip('Approve Charge'), findsNothing);
 
       await harness.unmount(tester);
     });
 
-    testWidgets('P1: the key deletes any request and names who asked', (
-      tester,
-    ) async {
+    testWidgets('P1: the key deletes any request it does not answer, and '
+        'names who asked', (tester) async {
       final harness = await pumpWithProfile(
         tester,
         Profiles.p1,
@@ -85,8 +98,9 @@ void main() {
         surfaceSize: _tall,
       );
 
-      expect(find.byTooltip('Delete request for Charge'), findsOneWidget);
-      expect(find.byTooltip('Cancel request for Charge'), findsNothing);
+      expect(actionsOf(tester, 'Sprite Fright'), ['Delete request']);
+      // A waiting one is answered: Decline, not a delete.
+      expect(find.byTooltip('Decline Charge'), findsOneWidget);
       expect(find.textContaining(WorldPeople.anna), findsWidgets);
 
       await harness.unmount(tester);

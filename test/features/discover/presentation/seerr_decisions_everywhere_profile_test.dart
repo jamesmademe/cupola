@@ -109,10 +109,12 @@ void main() {
         expect(find.byTooltip('Decline $title'), findsOneWidget);
       }
       expect(find.byTooltip('Approve Sprite Fright'), findsNothing);
-      expect(
-        find.byTooltip('Delete request for Sprite Fright'),
-        findsOneWidget,
-      );
+      // An approved one is deleted on its row's long press.
+      final sprite = find.text('Sprite Fright');
+      await tester.ensureVisible(sprite);
+      await tester.longPress(sprite);
+      await harness.settle(tester);
+      expect(find.text('Delete request'), findsOneWidget);
 
       await harness.unmount(tester);
     });

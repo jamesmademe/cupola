@@ -1,8 +1,8 @@
 # ActivityRows
 
-The rows Activity draws on its slabs: `ActivityDownloadRow` (one download, moving or stuck), `ActivityDownloadRow.queued` (one that waits its turn, in Up next) and `ActivityHistoryRow` (one record of what happened: an import or a failed download). They share one frame, `ActivityRowFrame`: the art at the start, the lines beside it, one sentence to a screen reader, the whole row a target.
+The rows Activity draws on its slabs: `ActivityDownloadRow` (one download, moving or stuck), `ActivityDownloadRow.queued` (one that waits its turn, in Up next), `ActivityHistoryRow` (one record of what happened: an import or a failed download) and `EveryoneRequestRow` (one of the household's requests). They share one frame, `ActivityRowFrame`: the art at the start, the lines beside it, one sentence to a screen reader, the whole row a target, and what else it offers on a long press.
 
-Rendered from `lib/features/activity/presentation/widgets/activity_download_row.dart` (`ActivityDownloadRow`, `ActivityRowFrame`, `openActivityDownload`, `openArrTitle`) and `lib/features/activity/presentation/widgets/activity_history_row.dart` (`ActivityHistoryRow`), with their words from `lib/features/activity/domain/activity_download.dart` and `lib/features/activity/domain/activity_history.dart`, by `test/design_catalog/activity_rows_catalog_test.dart`. The slab they sit on is the [`ActivitySection`](../ActivitySection/README.md) card.
+Rendered from `lib/features/activity/presentation/widgets/activity_download_row.dart` (`ActivityDownloadRow`, `ActivityRowFrame`, `openActivityDownload`, `openArrTitle`) `lib/features/activity/presentation/widgets/activity_history_row.dart` (`ActivityHistoryRow`) and `lib/features/activity/presentation/widgets/everyone_request_row.dart` (`EveryoneRequestRow`), with their words from `lib/features/activity/domain/activity_download.dart`, `lib/features/activity/domain/activity_history.dart` and `lib/features/activity/domain/everyones_requests.dart` (`everyonesLine`, `everyonesTone`), by `test/design_catalog/activity_rows_catalog_test.dart`. The slab they sit on is the [`ActivitySection`](../ActivitySection/README.md) card.
 
 ## Where they are drawn
 
@@ -11,6 +11,7 @@ Rendered from `lib/features/activity/presentation/widgets/activity_download_row.
 | Activity All and Downloads, Downloads | `ActivityDownloadRow`: what moves as its queue orders it, the stuck ones last |
 | Activity All and Downloads, Up next | `ActivityDownloadRow.queued` |
 | Activity All, Finished today; History, a section a day | `ActivityHistoryRow` |
+| Activity All, Everyone's requests (the latest three); Activity Requests and Seerr's Requests tab (`RequestsBoard`), every request that does not wait for you | `EveryoneRequestRow` |
 
 The remedy of a stuck download is in Needs you, once: the row only shows where it stopped.
 
@@ -25,6 +26,7 @@ The remedy of a stuck download is in Needs you, once: the row only shows where i
 - **Whose request**: when Seerr holds a request for the title, a last line in `meta` in `inkSecondary`: `Anna's request · ready around 21:10` (`tomorrow 09:00` past midnight, the weekday later in the week; just `Anna's request` with no estimate or while it waits its turn). A request that was declined or failed asked for nothing that is coming, and a title with no id matches none.
 - **History, imported**: a dot and `Imported 18:52` in green (the success tone, weight 600, tabular), the file under the title, the arr and its connection at the end in `meta` (`Radarr 4K`).
 - **History, failed**: `Download failed 14:02` in amber, the reason in `meta` (two lines at most), the arr at the end. An event with no outcome of its own reads `Recorded 09:05`.
+- **A request**: the poster (the title's, never the wide artwork), the title in `AppType.row` (two lines) with who asked at its end in `meta`, and under it where it stands and when in its tone, weight 600: `Downloading 62% · ready around 21:10` and `On its way · being fetched` in blue, `Ready to watch since 18:40` and `On the server since 12 Sep` in green, `Declined yesterday`, `Removed from the server` and `Blocked` neutral, `Didn't go through on Tuesday` in amber, the operator's to mend. The owner's words: an answer says when it was given, never the requester's `Declined by the server's owner`. A list that holds two Seerrs adds a third line in `meta`, the row's own (`Seerr Cabin`).
 
 Tones go through `statusToneColor(colorScheme, tone, surface: room.slab)`: the rows sit on the slab, and the contrast is walked against it. Green is a completed import, amber a fault, blue what is queued or on its way. Never red: red is an unreachable service and nothing else.
 
@@ -34,6 +36,11 @@ At a large reading size (a text scale of 1.3 and over) a download's route and it
 
 - A download opens the title's page in its arr, on the connection the row came from (`/stack/radarr/library/media/movie/…`, with `?i=` naming the connection), pushed over the view it was opened from, so Back returns to it. A transfer no arr asked for opens its client's room (`bringUnderLens`, then the client's page).
 - A history record opens the title's page in its arr, the same way.
+- A request opens the title's page (`openMyRequest`).
+
+## What else a row offers
+
+`ActivityRowFrame(actions:)`: nothing drawn on the row. A long press on a phone, a secondary click with a pointer, opens the theme's menu under the finger (`showRowActions`), each action with its glyph; a screen reader finds the same actions among the row's own (`CustomSemanticsAction`). A row with none opens on a long press as on a tap. A request's row offers `Delete request` to the key and to an account that manages requests, `Cancel request` to one that takes back only its own while it waits, and to an account of the operator's that may not, the item says why when chosen.
 
 ## The consumer provides
 

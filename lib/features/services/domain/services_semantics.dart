@@ -249,26 +249,6 @@ String servicesRetryLabel(int count) => count == 2 ? 'Retry both' : 'Retry';
 String servicesSectionOfflineMessage(List<String> offlineServiceTitles) =>
     servicesAlertBandMessage(offlineServiceTitles, maxNamed: 2);
 
-/// What one request row announces after its title.
-///
-/// Shared by the dashboard's Recent Requests rail and the All Requests screen —
-/// only the latter shows a date, hence the optional [dateLabel]. The avatar
-/// initials beside the requester are deliberately not spoken: they are the same
-/// name in shorter form.
-///
-/// A null [requester] says nobody: a row the gate does not let name who asked.
-String seerrRequestRowValue({
-  required String mediaTypeLabel,
-  required String? requester,
-  required String statusLabel,
-  String? dateLabel,
-}) => joinSpokenParts([
-  mediaTypeLabel,
-  if (requester != null) 'requested by $requester',
-  statusLabel,
-  dateLabel,
-]);
-
 /// What one Downloading row announces after its title.
 ///
 /// Warning first, then the progress the user came for, then the release detail

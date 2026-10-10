@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:cupola/core/widgets/app_card.dart';
-import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/widgets/content_card.dart';
 
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -18,107 +15,41 @@ import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
-  testWidgets('all requests renders filter chips and compact request rows', (
+  testWidgets('the tab draws the household\'s list: the one that waits for '
+      'you first, answered there, then everyone\'s', (tester) async {
+    await _pumpAllRequests(tester);
+    await _pumpAsyncContent(tester);
+
+    expect(find.text('All requests'), findsOneWidget);
+    expect(find.text('1 request waits for your approval'), findsOneWidget);
+    expect(find.byTooltip('Approve A Quiet Place'), findsOneWidget);
+    expect(find.text("Everyone's requests"), findsOneWidget);
+    expect(find.text('Shogun'), findsOneWidget);
+    expect(find.text('james'), findsOneWidget);
+    // No filters over the list: it is one list.
+    expect(find.byType(FilterChip), findsNothing);
+  });
+
+  testWidgets('a waiting request waits, though the film is on disk', (
     tester,
   ) async {
     await _pumpAllRequests(tester);
     await _pumpAsyncContent(tester);
 
-    expect(find.text('All requests'), findsOneWidget);
-    expect(find.text('All'), findsOneWidget);
-    // The chip, and A Quiet Place's pill: it still waits for approval.
-    expect(find.text('Waiting for approval'), findsNWidgets(2));
-    expect(find.text('Approved'), findsOneWidget);
-    expect(find.text('Declined'), findsOneWidget);
-    expect(find.text('A Quiet Place'), findsOneWidget);
-    expect(find.text('sarah · Movie'), findsOneWidget);
-    // Sentence case: a per-row pill is a dense label, not an eyebrow.
-    expect(find.text('Partially available'), findsOneWidget);
-    expect(_contentCardWithImage('/quiet-place.jpg'), findsOneWidget);
+    // The trap: it read "Available" beside its own Approve.
+    expect(find.byTooltip('Approve A Quiet Place'), findsOneWidget);
+    expect(find.textContaining('Available'), findsNothing);
+    expect(find.textContaining('Ready to watch'), findsNothing);
   });
 
-  group('filter chips', () {
-    testWidgets('selecting a bucket narrows the list', (tester) async {
-      await _pumpAllRequests(tester);
-      await _pumpAsyncContent(tester);
-
-      // A Quiet Place still waits for approval though the film is on disk:
-      // the trap, where the media's word stands in for the request's.
-      // Approved keeps only Shogun, which was approved and is partly on
-      // disk...
-      await tester.tap(find.text('Approved'));
+  group('delete request, on the row\'s long press', () {
+    Future<void> open(WidgetTester tester) async {
+      await tester.longPress(find.text('Shogun'));
       await _settle(tester);
-
-      expect(find.text('A Quiet Place'), findsNothing);
-      expect(find.text('Shogun'), findsOneWidget);
-
-      // ...and Pending keeps A Quiet Place, by the request's own status, as
-      // the "N waiting" count does. It used to keep neither, and Approved
-      // both.
-      await tester.tap(find.text('Waiting for approval'));
+      await tester.tap(find.text('Delete request'));
       await _settle(tester);
+    }
 
-      expect(find.text('A Quiet Place'), findsOneWidget);
-      expect(find.text('Shogun'), findsNothing);
-    });
-
-    testWidgets('a waiting request reads waiting on its row, though the film '
-        'is on disk', (tester) async {
-      await _pumpAllRequests(tester);
-      await _pumpAsyncContent(tester);
-
-      final row = find.ancestor(
-        of: find.text('A Quiet Place'),
-        matching: find.byType(AppCard),
-      );
-      // The trap: its pill read "Available" beside its own Approve.
-      expect(
-        find.descendant(of: row, matching: find.text('Waiting for approval')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: row, matching: find.text('Available')),
-        findsNothing,
-      );
-      // Past approval the row is about the media: Shogun is partly on disk.
-      final shogun = find.ancestor(
-        of: find.text('Shogun'),
-        matching: find.byType(AppCard),
-      );
-      expect(
-        find.descendant(of: shogun, matching: find.text('Partially available')),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('the selected chip reports its state to a screen reader', (
-      tester,
-    ) async {
-      await _pumpAllRequests(tester);
-      await _pumpAsyncContent(tester);
-
-      // FilterChip supplies the role and selected state; this asserts the chip
-      // is genuinely wired rather than painted selected.
-      expect(
-        tester.getSemantics(find.text('All')),
-        containsSemantics(hasSelectedState: true, isSelected: true),
-      );
-
-      await tester.tap(find.text('Declined'));
-      await _settle(tester);
-
-      expect(
-        tester.getSemantics(find.text('Declined')),
-        containsSemantics(hasSelectedState: true, isSelected: true),
-      );
-      expect(
-        tester.getSemantics(find.text('All')),
-        containsSemantics(hasSelectedState: true, isSelected: false),
-      );
-    });
-  });
-
-  group('delete request', () {
     testWidgets('confirming deletes it and reports the outcome', (
       tester,
     ) async {
@@ -126,20 +57,18 @@ void main() {
       await _pumpAllRequests(tester, seerr: seerr);
       await _pumpAsyncContent(tester);
 
-      // The tooltip names the request, since there is one button per row.
-      await tester.tap(find.byTooltip('Delete request for A Quiet Place'));
-      await _settle(tester);
-
+      await open(tester);
+      expect(
+        find.text('This removes the request for Shogun from Seerr.'),
+        findsOneWidget,
+      );
       await tester.tap(find.widgetWithText(FilledButton, 'Delete request'));
       await _settle(tester);
 
-      expect(seerr.deletedIds, [1]);
+      expect(seerr.deletedIds, [2]);
       // Without feedback the row just vanishes, which reads as a glitch. The
       // SnackBar is also what announces the result, via its liveRegion.
-      expect(
-        find.text('Deleted the request for A Quiet Place'),
-        findsOneWidget,
-      );
+      expect(find.text('Deleted the request for Shogun'), findsOneWidget);
     });
 
     testWidgets('cancelling deletes nothing', (tester) async {
@@ -147,9 +76,7 @@ void main() {
       await _pumpAllRequests(tester, seerr: seerr);
       await _pumpAsyncContent(tester);
 
-      await tester.tap(find.byTooltip('Delete request for A Quiet Place'));
-      await _settle(tester);
-
+      await open(tester);
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
       await _settle(tester);
 
@@ -163,158 +90,51 @@ void main() {
       await _pumpAllRequests(tester, seerr: seerr);
       await _pumpAsyncContent(tester);
 
-      await tester.tap(find.byTooltip('Delete request for A Quiet Place'));
-      await _settle(tester);
+      await open(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Delete request'));
       await _settle(tester);
 
-      // Both registers, in one node: the sentence the user acts on, and the
-      // diagnostic the server actually sent, demoted to its own line by
-      // `SnackBarHelper`'s `detail:` contract rather than interpolated into it.
-      expect(
-        find.textContaining("Could not delete the request."),
-        findsOneWidget,
-      );
-      expect(find.textContaining('HTTP 403'), findsOneWidget);
+      expect(find.textContaining('Could not delete the request.'), findsOne);
+      expect(seerr.deletedIds, isEmpty);
     });
   });
 
   group('semantics', () {
-    testWidgets('a request row is one button, not seven fragments', (
+    testWidgets('a request row is one button, said without its middle dots', (
       tester,
     ) async {
       await _pumpAllRequests(tester);
       await _pumpAsyncContent(tester);
 
       expect(
-        find.semantics.byLabel('A Quiet Place'),
+        find.semantics.byLabel('Shogun'),
         containsSemantics(
-          // The request's own state: it read "Available", the media's.
-          value: 'Movie, requested by sarah, Waiting for approval, 2026-05-02',
+          value: 'On its way, being fetched, james',
           isButton: true,
           hasTapAction: true,
         ),
       );
-
-      // The bare '·' between requester and type used to be its own node, read as
-      // "middle dot"; the avatar initials duplicated the name beside them.
       expect(find.semantics.byLabel('·'), findsNothing);
-      expect(find.semantics.byLabel('S'), findsNothing);
     });
 
-    testWidgets('the delete button stays reachable inside the row', (
-      tester,
-    ) async {
+    testWidgets('Delete request is among the row\'s actions', (tester) async {
+      final semantics = tester.ensureSemantics();
       await _pumpAllRequests(tester);
       await _pumpAsyncContent(tester);
 
-      // The regression guard for the nested-control shape: the row silences its
-      // body but must not silence this button. getSemantics walks up past merged
-      // nodes, so if the row had absorbed it we would get the row's node back —
-      // and the row carries no tooltip.
+      final data = tester
+          .getSemantics(find.bySemanticsLabel('Shogun'))
+          .getSemanticsData();
       expect(
-        tester.getSemantics(find.byTooltip('Delete request for A Quiet Place')),
-        containsSemantics(
-          tooltip: 'Delete request for A Quiet Place',
-          isButton: true,
-          hasTapAction: true,
-        ),
+        [
+          for (final id in data.customSemanticsActionIds ?? const <int>[])
+            CustomSemanticsAction.getAction(id)!.label,
+        ],
+        ['Delete request'],
       );
+      semantics.dispose();
     });
   });
-
-  group('targets and ink', () {
-    testWidgets(
-      'the delete button is a finger target around a 28pt plate',
-      (tester) async {
-        await _pumpAllRequests(tester);
-        await _pumpAsyncContent(tester);
-
-        final button = find.byTooltip('Delete request for A Quiet Place');
-        final hitBox = tester.getSize(
-          find.ancestor(of: button, matching: find.byType(IconButton)),
-        );
-        expect(hitBox.width, greaterThanOrEqualTo(44));
-        expect(hitBox.height, greaterThanOrEqualTo(44));
-
-        // The plate the eye sees did not grow with it.
-        final plate = tester.getSize(
-          find
-              .descendant(
-                of: find.ancestor(
-                  of: button,
-                  matching: find.byType(IconButton),
-                ),
-                matching: find.byType(Material),
-              )
-              .first,
-        );
-        expect(plate, const Size.square(28));
-      },
-      variant: TargetPlatformVariant.mobile(),
-    );
-
-    testWidgets(
-      'a desktop build keeps the 28pt plate as its whole target',
-      (tester) async {
-        await _pumpAllRequests(tester);
-        await _pumpAsyncContent(tester);
-
-        final hitBox = tester.getSize(
-          find.ancestor(
-            of: find.byTooltip('Delete request for A Quiet Place'),
-            matching: find.byType(IconButton),
-          ),
-        );
-        expect(hitBox, const Size.square(28));
-      },
-      variant: TargetPlatformVariant.desktop(),
-    );
-
-    for (final brightness in Brightness.values) {
-      testWidgets('status pills clear 4.5:1 on their own wash '
-          '(${brightness.name})', (tester) async {
-        final theme = brightness == Brightness.light
-            ? AppTheme.lightTheme()
-            : AppTheme.darkTheme();
-        await _pumpAllRequests(tester, theme: theme);
-        await _pumpAsyncContent(tester);
-
-        final pills = find.byWidgetPredicate((widget) {
-          if (widget is! Container || widget.child is! Text) return false;
-          final decoration = widget.decoration;
-          return decoration is BoxDecoration &&
-              decoration.shape == BoxShape.rectangle &&
-              decoration.borderRadius != null &&
-              decoration.color != null;
-        });
-        expect(pills, findsNWidgets(2));
-
-        // The card the pill sits on, which the wash is composited over.
-        final card = theme.colorScheme.surfaceContainer;
-        for (final pill in tester.widgetList<Container>(pills)) {
-          final wash = (pill.decoration! as BoxDecoration).color!;
-          final label = pill.child! as Text;
-          final ink = label.style!.color!;
-          final ground = Color.alphaBlend(wash, card);
-          expect(
-            _contrast(ink, ground),
-            greaterThanOrEqualTo(4.5),
-            reason: '"${label.data}": $ink on $ground',
-          );
-        }
-      });
-    }
-  });
-}
-
-/// WCAG 2.1 relative-luminance contrast ratio between two opaque colours.
-double _contrast(Color a, Color b) {
-  final la = a.computeLuminance();
-  final lb = b.computeLuminance();
-  final hi = la > lb ? la : lb;
-  final lo = la > lb ? lb : la;
-  return (hi + 0.05) / (lo + 0.05);
 }
 
 class _RecordingSeerrService extends FakeSeerrService {
@@ -335,6 +155,8 @@ Future<void> _pumpAllRequests(
   SeerrService? seerr,
   ThemeData? theme,
 }) async {
+  await tester.binding.setSurfaceSize(const Size(430, 1600));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     ProviderScope(
       overrides: _providerOverrides(seerr: seerr),
@@ -402,12 +224,4 @@ Future<void> _pumpAsyncContent(WidgetTester tester) async {
 Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 350));
-}
-
-Finder _contentCardWithImage(String imagePath) {
-  return find.byWidgetPredicate(
-    (widget) =>
-        widget is ContentCard && widget.imageUrl?.contains(imagePath) == true,
-    skipOffstage: false,
-  );
 }

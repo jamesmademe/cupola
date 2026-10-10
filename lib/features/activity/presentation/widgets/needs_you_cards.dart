@@ -9,6 +9,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/activity/presentation/widgets/decision_fault_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/storage_alert_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/stuck_download_card.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
@@ -71,11 +72,15 @@ String requestsWaitLine(int count) => count == 1
 
 /// The requests that wait, under their line in blue, each with Approve and
 /// Decline; one answered here says what happened in their place.
+///
+/// [requestOf] holds the requests read whole, by their decision's id, for
+/// Approve to name the server without reading one again.
 List<Widget> requestRowsOf(
   List<DashboardDecision> requests,
   Map<String, AnsweredRequest> answered,
-  Color blue,
-) {
+  Color blue, {
+  Map<String, SeerrRequest> requestOf = const {},
+}) {
   final waiting = requests
       .where((decision) => !answered.containsKey(decision.id))
       .length;
@@ -106,6 +111,7 @@ List<Widget> requestRowsOf(
         decision: decision,
         divided: index > 0,
         outcome: answered[decision.id]?.outcome,
+        request: requestOf[decision.id],
       ),
   ];
 }

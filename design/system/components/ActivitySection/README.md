@@ -6,7 +6,7 @@ Rendered from `lib/features/activity/presentation/widgets/activity_section.dart`
 
 ## Where it is drawn
 
-Every section of the Activity page: Needs you, Everyone's requests, Watching now, Downloads, Up next and Finished today on All; Downloads and Up next on Downloads. History draws its days the same way, one section a day. The page decides whether a section is drawn: **a section with nothing to say is not drawn, never an empty slab.**
+Every section of the Activity page: Needs you, Everyone's requests, Watching now, Downloads, Up next and Finished today on All; Downloads and Up next on Downloads; Everyone's requests, whole, on Requests and on Seerr's Requests tab (`RequestsBoard`), under the slab of the requests that wait for you. History draws its days the same way, one section a day. The page decides whether a section is drawn: **a section with nothing to say is not drawn, never an empty slab.**
 
 ## Anatomy
 

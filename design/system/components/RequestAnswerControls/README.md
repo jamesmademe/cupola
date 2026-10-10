@@ -16,9 +16,9 @@ write path `lib/features/activity/presentation/widgets/activity_actions.dart` (`
 | Home, Requests module (`DecisionRow`) | `.row` | under the row's words, in line with the title |
 | Activity, a request's card on a phone | `.row` | under the card's words |
 | Activity, a request's table row on a desktop | `.compact` | beside the title, always there, never revealed by hover |
-| Requests list (`/activity/discover`), a card | `.row` | under the card's metadata |
+| Activity Requests (`/activity/requests`) and Seerr's Requests tab: `RequestsBoard`, through `DecisionRow` | `.row` | under the row's words, in line with the title |
+| Activity's Needs you page (`/activity/needs-you`), through `DecisionRow` | `.row` | under the row's words, in line with the title |
 | Seerr overview, Needs a decision | `.row` | under the row's words, in line with the title |
-| Seerr Requests tab | `.row` | under the row's body |
 | A title's page that holds a waiting request (`MediaDecisionCard`) | `.card` | the card's end |
 
 A request is judged by its **own** status, `pendingApproval`, never by `displayStatus`: media that exists anywhere

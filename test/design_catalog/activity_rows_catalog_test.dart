@@ -8,7 +8,9 @@ import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_download_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
+import 'package:cupola/features/activity/presentation/widgets/everyone_request_row.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/requests/domain/my_requests.dart';
 import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -151,6 +153,38 @@ ArrHistoryEntry _entry(
 );
 
 /// Rows on the slab they sit on in Activity.
+/// One of the household's requests at [stage], asked by [who].
+MyRequest _asked(
+  String title,
+  MyRequestStage stage, {
+  required int id,
+  String who = 'Anna',
+  double? progress,
+  Duration? readyIn,
+  Duration? arrived,
+  Duration? answered,
+}) => MyRequest(
+  request: SeerrRequest(
+    id: id,
+    status: RequestStatus.approved,
+    type: 'movie',
+    createdAt: '2026-10-01T18:40:00.000Z',
+    media: RequestMedia(
+      id: id,
+      tmdbId: 1000 + id,
+      mediaType: 'movie',
+      title: title,
+      posterPath: CatalogArt.tmdbPoster,
+    ),
+    requestedBy: RequestedBy(id: 2, displayName: who),
+  ),
+  stage: stage,
+  progress: progress,
+  readyAround: readyIn == null ? null : _now.add(readyIn),
+  arrivedAt: arrived == null ? null : _now.subtract(arrived),
+  answeredAt: answered == null ? null : _now.subtract(answered),
+);
+
 Widget _slab(List<Widget> rows) => Padding(
   padding: const EdgeInsets.symmetric(horizontal: 16),
   child: ActivitySlab(children: rows),
@@ -286,6 +320,82 @@ void main() {
               reason: 'Unable to parse file',
             ),
             divided: true,
+          ),
+        ]),
+        width: 390,
+        textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'EveryoneRequestRow() · the household\'s requests on the Requests '
+        'view: where each stands and when in its tone, who asked at the end; '
+        'blue on its way, green on the server, neutral a no, amber one that '
+        'did not go through',
+        (_) => _slab([
+          EveryoneRequestRow(
+            mine: _asked(
+              'Sprite Fright',
+              MyRequestStage.downloading,
+              id: 1,
+              progress: 0.62,
+              readyIn: const Duration(minutes: 17),
+            ),
+            now: _now,
+            divided: false,
+          ),
+          EveryoneRequestRow(
+            mine: _asked(
+              'Coffee Run',
+              MyRequestStage.readyToWatch,
+              id: 2,
+              arrived: const Duration(hours: 2, minutes: 13),
+            ),
+            now: _now,
+            divided: true,
+          ),
+          EveryoneRequestRow(
+            mine: _asked(
+              'Metropolis',
+              MyRequestStage.declined,
+              id: 3,
+              who: 'Luca',
+              answered: const Duration(days: 1),
+            ),
+            now: _now,
+            divided: true,
+          ),
+          EveryoneRequestRow(
+            mine: _asked(
+              'Cosmos Laundromat',
+              MyRequestStage.didNotGoThrough,
+              id: 4,
+              answered: const Duration(days: 3),
+            ),
+            now: _now,
+            divided: true,
+          ),
+        ]),
+        width: 390,
+      ),
+      CatalogScene(
+        'EveryoneRequestRow(connection:) · a list that holds two Seerrs names '
+        'each row\'s under its state; at 200% the lines wrap, none cut',
+        (_) => _slab([
+          EveryoneRequestRow(
+            mine: _asked(
+              'Tears of Steel',
+              MyRequestStage.onTheServer,
+              id: 5,
+              arrived: const Duration(days: 27),
+            ),
+            now: _now,
+            divided: false,
+            connection: 'Seerr Cabin',
+          ),
+          EveryoneRequestRow(
+            mine: _asked('Sintel', MyRequestStage.onItsWay, id: 6, who: 'Luca'),
+            now: _now,
+            divided: true,
+            connection: 'Seerr Home',
           ),
         ]),
         width: 390,

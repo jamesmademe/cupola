@@ -24,7 +24,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_history_r
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
 import 'package:cupola/features/activity/presentation/widgets/fault_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/needs_you_cards.dart';
-import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
+import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
@@ -761,26 +761,37 @@ void main() {
   });
 
   group('Requests', () {
-    testWidgets('P1: the household\'s requests as cards, with the page\'s own '
-        'pull and no scroll of their own', (tester) async {
+    testWidgets('P1: the three that wait for you, answered where they are, '
+        'then everyone\'s, by Seerr\'s count, in the page\'s own scroll', (
+      tester,
+    ) async {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.requests);
 
-      expect(_titles(tester), isEmpty);
-      expect(find.byType(RequestsList), findsOneWidget);
-      for (final title in [
-        'Charge (2022)',
-        'Metropolis (1927)',
-        'Night Shift (2024)',
-        'Sprite Fright (2021)',
-      ]) {
-        expect(find.text(title), findsOneWidget, reason: title);
+      expect(find.byType(RequestsBoard), findsOneWidget);
+      expect(find.text('3 requests wait for your approval'), findsOneWidget);
+      for (final title in ['Charge', 'Metropolis', 'Night Shift']) {
+        expect(find.byTooltip('Approve $title'), findsOneWidget, reason: title);
       }
-      // The three that wait are answered where they are listed.
-      expect(find.byTooltip('Approve Charge'), findsOneWidget);
+      expect(_titles(tester), ["Everyone's requests"]);
+      // Seerr's own count of every request, the three that wait among them.
+      expect(_inSection("Everyone's requests", find.text('8 total')), findsOne);
+      for (final title in [
+        'Sprite Fright',
+        'Coffee Run',
+        'Sintel',
+        'Tears of Steel',
+        'Cosmos Laundromat',
+      ]) {
+        expect(
+          _inSection("Everyone's requests", find.text(title)),
+          findsOneWidget,
+          reason: title,
+        );
+      }
       // The list is part of the page's own scroll.
       expect(
         find.descendant(
-          of: find.byType(RequestsList),
+          of: find.byType(RequestsBoard),
           matching: find.byType(Scrollable),
         ),
         findsNothing,
@@ -818,7 +829,7 @@ void main() {
       await tester.pump(const Duration(minutes: 1));
 
       expect(find.text('Seerr is not set up'), findsOneWidget);
-      expect(find.byType(RequestsList), findsOneWidget);
+      expect(find.byType(RequestsBoard), findsOneWidget);
       expect(find.text('Set up Seerr'), findsOneWidget);
       // The dead end this replaced: an error state whose Retry asked nobody.
       expect(find.text('Retry'), findsNothing);
@@ -837,8 +848,8 @@ void main() {
       await harness.unmount(tester);
     });
 
-    testWidgets('a link naming a Seerr that is gone reads the lens\'s list, '
-        'not a Seerr that is not set up', (tester) async {
+    testWidgets('a link naming a Seerr that is gone reads every Seerr, not '
+        'a Seerr that is not set up', (tester) async {
       final harness = await _pump(
         tester,
         Profiles.p1,
@@ -847,14 +858,49 @@ void main() {
       );
 
       expect(find.text('Seerr is not set up'), findsNothing);
-      expect(find.text('Charge (2022)'), findsOneWidget);
+      expect(find.byTooltip('Approve Charge'), findsOneWidget);
+      expect(find.textContaining(' only'), findsNothing);
 
       await harness.unmount(tester);
     });
 
-    testWidgets('the connection the address names is the one read', (
-      tester,
-    ) async {
+    testWidgets('with two Seerrs every one is read, and each row names its '
+        'own', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1.withConnection(WorldConnections.seerrCabin),
+        ActivityTab.requests,
+      );
+
+      for (final id in [WorldIds.seerr, WorldIds.seerrCabin]) {
+        expect(
+          harness.network
+              .requestsTo(id)
+              .where((r) => r.path == '/api/v1/request'),
+          isNotEmpty,
+          reason: id,
+        );
+      }
+      // The same world behind both: each request twice, once on each.
+      expect(find.byTooltip('Approve Charge'), findsNWidgets(2));
+      expect(find.text('6 requests wait for your approval'), findsOneWidget);
+      expect(
+        _inSection("Everyone's requests", find.text('16 total')),
+        findsOne,
+      );
+      expect(
+        _inSection(
+          "Everyone's requests",
+          find.textContaining(RegExp(r'^Seerr \S')),
+        ),
+        findsNWidgets(10),
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('the connection the address names is the one read, said '
+        'once, with the way back to every Seerr', (tester) async {
       final harness = await _pump(
         tester,
         Profiles.p1.withConnection(WorldConnections.seerrCabin),
@@ -863,7 +909,7 @@ void main() {
       );
 
       expect(
-        tester.widget<RequestsList>(find.byType(RequestsList)).instanceId,
+        tester.widget<RequestsBoard>(find.byType(RequestsBoard)).only,
         WorldIds.seerrCabin,
       );
       expect(
@@ -872,6 +918,9 @@ void main() {
             .where((r) => r.path == '/api/v1/request'),
         isNotEmpty,
       );
+      expect(find.byTooltip('Approve Charge'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^Seerr .+ only$')), findsOneWidget);
+      expect(find.text('Show every Seerr'), findsOneWidget);
 
       await harness.unmount(tester);
     });

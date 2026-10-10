@@ -143,17 +143,4 @@ void main() {
       expect(servicesAlertBandMessage(['', '   ']), isEmpty);
     });
   });
-
-  group('seerrRequestRowValue', () {
-    test('names the requester instead of leaving a bare handle', () {
-      expect(
-        seerrRequestRowValue(
-          mediaTypeLabel: 'Movie',
-          requester: 'sarah',
-          statusLabel: 'Available',
-        ),
-        'Movie, requested by sarah, Available',
-      );
-    });
-  });
 }

@@ -21,13 +21,15 @@ import 'package:cupola/features/activity/domain/activity_history.dart';
 import 'package:cupola/features/activity/domain/activity_readout.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/features/activity/data/household_requests.dart';
 import 'package:cupola/features/activity/domain/everyones_requests.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_download_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
-import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
+import 'package:cupola/features/activity/presentation/widgets/everyone_request_row.dart';
+import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 import 'package:cupola/features/activity/presentation/widgets/needs_you_cards.dart';
-import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
@@ -39,7 +41,6 @@ import 'package:cupola/features/home/presentation/widgets/now_playing_module.dar
 import 'package:cupola/features/import/presentation/import_service_picker_sheet.dart';
 import 'package:cupola/features/release_search/presentation/release_searches_body.dart';
 import 'package:cupola/features/requests/domain/my_requests.dart';
-import 'package:cupola/features/requests/presentation/my_request_actions.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
@@ -199,38 +200,14 @@ class ActivityPage extends ConsumerWidget {
       const _DownloadsSection(),
       const _UpNextSection(),
     ],
-    ActivityTab.requests => [_RequestsView(requestsOf)],
+    ActivityTab.requests => [
+      RequestsBoard(key: ValueKey(requestsOf), only: requestsOf),
+    ],
     ActivityTab.history => const [
       _HistoryDays(),
       _HistoryFoot(blocklist: true),
     ],
   };
-}
-
-/// The Requests view: the list of the Seerr connection the address names.
-///
-/// A link outlives the connection it names (a row opened, that Seerr deleted
-/// in Settings, the link followed again): the list then reads the lens's, as
-/// a link naming none does. Handed the dead id it would say Seerr is not set
-/// up while one is.
-class _RequestsView extends ConsumerWidget {
-  const _RequestsView(this.instanceId);
-
-  final String? instanceId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final named = instanceId ?? '';
-    final exists = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings
-            .configuredInstancesOf(ServiceKey.seerr)
-            .any((instance) => instance.id == named),
-      ),
-    );
-    final resolved = exists ? named : '';
-    return RequestsList.embedded(key: ValueKey(resolved), instanceId: resolved);
-  }
 }
 
 /// The page's name over what is moving: `4 moving · 40.4 MB/s · 1 stuck`,
@@ -574,7 +551,8 @@ class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
 }
 
 /// Everyone's requests: the latest that move or arrived, who asked them, and
-/// the way to all of them.
+/// the way to all of them. Every Seerr's, as the Requests view reads them, so
+/// the count on the link is the count there.
 class _EveryonesRequestsSection extends ConsumerWidget {
   const _EveryonesRequestsSection();
 
@@ -582,121 +560,73 @@ class _EveryonesRequestsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.seerr),
-      ),
-    )) {
-      return const SizedBox.shrink();
-    }
-    final read = ref.watch(requestsProvider);
-    final list = read.value;
-    if (list == null) {
-      if (!read.hasError) return const SizedBox.shrink();
-      return ActivitySection(
-        title: _title,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: BriefFailureLine.line(
-              error: read.error!,
-              service: ServiceKey.seerr,
-              onRetry: () =>
-                  retryDashboardServices(ref, const [ServiceKey.seerr]),
-            ),
-          ),
-        ],
-      );
-    }
-    if (list.isEmpty) return const SizedBox.shrink();
+    final reads = ref.watch(householdRequestsProvider(null));
+    if (reads.isEmpty) return const SizedBox.shrink();
     final now = ref.watch(arrivalsClockProvider)();
-    final requests = myRequestsOf(list, now: now, stale: read.hasError);
+    final household = householdRequestsOf(
+      reads,
+      now: now,
+      gateOf: (id) => ref.watch(roleGateOfProvider(id)),
+      named: reads.length > 1,
+    );
+    if (household.pending) return const SizedBox.shrink();
+    final failures = [
+      for (final source in household.failed)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: BriefFailureLine.line(
+            error: source.read.error!,
+            service: ServiceKey.seerr,
+            instanceId: source.instanceId,
+            onRetry: () =>
+                retryDashboardServices(ref, const [ServiceKey.seerr]),
+          ),
+        ),
+    ];
+    if (household.isEmpty) {
+      if (failures.isEmpty) return const SizedBox.shrink();
+      return ActivitySection(title: _title, children: failures);
+    }
+    final connectionOf = Map<SeerrRequest, String?>.identity()
+      ..addEntries([
+        for (final entry in household.rest)
+          MapEntry(entry.mine.request, entry.connection),
+      ]);
+    final namesWhoOf = Map<SeerrRequest, bool>.identity()
+      ..addEntries([
+        for (final entry in household.rest)
+          MapEntry(entry.mine.request, entry.namesWho),
+      ]);
+    final requests = MyRequests([
+      for (final entry in household.rest) entry.mine,
+    ]);
     final rows = everyonesLatest(requests);
-    // Seerr's own count when it gave one: a page that did not arrive left the
+    // Seerr's own count: a page or a Seerr that did not arrive leaves the
     // rows short of the household's requests, and their number is then a
     // floor, never the total. What is tallied over them (how many are being
     // fetched, how many were declined) is left unsaid rather than understated.
-    final whole = holdsEveryRequest(list);
-    final server = list is SeerrRequestList ? list.total : null;
-    final total = server ?? list.length;
-    final figure = server == null && !whole ? '$total+' : '$total';
-    final summary = whole ? everyonesSummary(requests) : '';
+    final figure = '${household.total}${household.floor ? '+' : ''}';
+    final summary = household.whole ? everyonesSummary(requests) : '';
 
     return ActivitySection(
       title: _title,
-      meta: '$figure total',
+      meta: household.totalLabel,
       children: [
+        ...failures,
         for (final (index, mine) in rows.indexed)
-          _EveryoneRow(
+          EveryoneRequestRow(
             key: ValueKey(mine.request.id),
             mine: mine,
             now: now,
-            divided: index > 0,
+            divided: index > 0 || failures.isNotEmpty,
+            connection: connectionOf[mine.request],
+            namesWho: namesWhoOf[mine.request] ?? false,
           ),
         ActivitySlabLink(
           label: figure == '1' ? 'All requests' : 'All $figure requests',
           meta: summary.isEmpty ? null : summary,
-          divided: rows.isNotEmpty,
+          divided: rows.isNotEmpty || failures.isNotEmpty,
           onTap: () => context.go(ActivityTab.requests.location),
-        ),
-      ],
-    );
-  }
-}
-
-/// One of the household's requests: the title, where it stands and when, and
-/// who asked.
-class _EveryoneRow extends StatelessWidget {
-  const _EveryoneRow({
-    super.key,
-    required this.mine,
-    required this.now,
-    required this.divided,
-  });
-
-  final MyRequest mine;
-  final DateTime now;
-  final bool divided;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final tone = statusToneColor(scheme, mine.stage.tone, surface: room.slab);
-    final line = everyonesLine(mine, now);
-    final who = mine.request.requestedBy?.displayName;
-    final art = mine.art;
-    return ActivityRowFrame(
-      divided: divided,
-      label: mine.title,
-      value: [line, ?who].join(', '),
-      onTap: () => openMyRequest(context, mine),
-      art: HomeRowArt(
-        posterUrl: art.url.isEmpty ? null : art.url,
-        icon: ServiceKey.seerr.icon,
-      ),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Expanded(
-              child: Text(
-                mine.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppType.row.copyWith(color: room.ink),
-              ),
-            ),
-            if (who != null && who.isNotEmpty) ...[
-              const SizedBox(width: AppSpacing.sm),
-              Text(who, style: AppType.meta.copyWith(color: room.inkSecondary)),
-            ],
-          ],
-        ),
-        Text(
-          line,
-          style: AppType.meta.weight(FontWeight.w600).copyWith(color: tone),
         ),
       ],
     );
