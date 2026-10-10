@@ -7,7 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
 import 'package:cupola/features/activity/presentation/widgets/fault_card.dart';
+import 'package:cupola/features/activity/presentation/widgets/needs_you_cards.dart'
+    show RequestsWaitRow;
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
+import 'package:cupola/features/services/domain/dashboard_decision.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
 
@@ -169,6 +173,76 @@ void main() {
         width: 560,
         platform: CatalogPlatform.desktop,
       ),
+      CatalogScene(
+        'FaultCard.row() · All on a desktop: a line a fault, its remedy '
+        'beside it at the size of its words, the quieter ways behind ⋯; the '
+        'requests that wait a line of their own, with Review',
+        (_) => _rows(),
+        width: 784,
+        platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
+        'FaultCard.row() · the list beside an open download on a tablet '
+        '(440): the remedy under the words',
+        (_) => _rows(),
+        width: 440,
+      ),
+      CatalogScene(
+        'Text at 200% · FaultCard.row(), the remedy under the words',
+        (_) => _rows(),
+        width: 784,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
+      ),
     ],
   );
 }
+
+/// Needs you on All, a line a fault and one for the requests.
+Widget _rows() => ActivitySlab(
+  children: [
+    FaultCard.row(
+      headline: 'Big Buck Bunny is stuck at 47%',
+      art: _poster,
+      proof: 'Nothing for 3\u00A0h · Radarr → qBittorrent',
+      primary: const _Fill('Try another download'),
+      secondary: [
+        (label: 'Remove', onPressed: () {}, semanticLabel: null),
+        (label: 'Keep waiting', onPressed: () {}, semanticLabel: null),
+      ],
+    ),
+    const FaultCard.row(
+      headline: '18 downloads need a manual import',
+      source: 'Sonarr · Cosmos Laundromat',
+      art: HomeRowArt.large(posterUrl: '', icon: Icons.tv_outlined),
+      primary: _Fill('Review 18'),
+      divided: true,
+    ),
+    FaultCard.row(
+      headline: 'Disk sdd reports 8 uncorrectable errors',
+      source: 'TrueNAS · pool tank',
+      art: const HomeRowArt.large(posterUrl: '', icon: Icons.storage_rounded),
+      primary: const _Fill('Scrub tank'),
+      secondary: [(label: 'Open alert', onPressed: () {}, semanticLabel: null)],
+      divided: true,
+    ),
+    RequestsWaitRow(
+      requests: [
+        for (final (id, title, who) in const [
+          (1, 'Charge', 'Anna'),
+          (2, 'Metropolis', 'Luca'),
+        ])
+          DashboardDecision(
+            kind: DecisionKind.pendingRequest,
+            id: 'seerr-$id',
+            service: ServiceKey.seerr,
+            title: title,
+            detail: who,
+            occurredAt: null,
+          ),
+      ],
+      onReview: () {},
+      divided: true,
+    ),
+  ],
+);

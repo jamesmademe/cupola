@@ -38,7 +38,18 @@ class StuckDownloadCard extends ConsumerStatefulWidget {
     required this.downloadKey,
     this.divided = false,
     this.whole = false,
-  }) : _remedy = false;
+  }) : _remedy = false,
+       _row = false;
+
+  /// A line of a wide list ([FaultCard.row]): the remedy beside it, Remove
+  /// and Keep waiting behind its ⋯.
+  const StuckDownloadCard.row({
+    super.key,
+    required this.downloadKey,
+    this.divided = false,
+  }) : whole = false,
+       _remedy = false,
+       _row = true;
 
   /// The card on the download's own page, under where it stands: its cause
   /// and its ways out, with nothing the page already says above it (the
@@ -46,10 +57,12 @@ class StuckDownloadCard extends ConsumerStatefulWidget {
   const StuckDownloadCard.remedy({super.key, required this.downloadKey})
     : divided = false,
       whole = true,
-      _remedy = true;
+      _remedy = true,
+      _row = false;
 
   final String downloadKey;
   final bool _remedy;
+  final bool _row;
   final bool divided;
 
   /// The Needs you page's card: a slab of its own.
@@ -144,33 +157,25 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
         ],
       );
     }
-    return widget.whole
-        ? FaultCard.whole(
-            headline: words.headline,
-            explanation: words.explanation,
-            source: words.source,
-            art: art,
-            release: words.release,
-            proof: words.proof,
-            progress: words.progress,
-            primary: primary,
-            primarySubtitle: subtitle,
-            secondary: quiet,
-            note: note,
-          )
-        : FaultCard(
-            headline: words.headline,
-            explanation: words.explanation,
-            art: art,
-            release: words.release,
-            proof: words.proof,
-            progress: words.progress,
-            primary: primary,
-            primarySubtitle: subtitle,
-            secondary: quiet,
-            note: note,
-            divided: widget.divided,
-          );
+    return FaultCard.inForm(
+      widget._row
+          ? FaultCardForm.row
+          : widget.whole
+          ? FaultCardForm.whole
+          : FaultCardForm.card,
+      headline: words.headline,
+      explanation: words.explanation,
+      source: widget.whole ? words.source : null,
+      art: art,
+      release: words.release,
+      proof: words.proof,
+      progress: words.progress,
+      primary: primary,
+      primarySubtitle: subtitle,
+      secondary: quiet,
+      note: note,
+      divided: widget.divided,
+    );
   }
 
   Future<void> _take(StuckAction action, ServiceQueueItem item) async {

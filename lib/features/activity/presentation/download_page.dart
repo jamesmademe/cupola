@@ -8,25 +8,20 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/core/utils/snack_bar_helper.dart';
-import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
-import 'package:cupola/features/activity/data/download_writes.dart';
+import 'package:cupola/features/activity/data/selected_download.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
 import 'package:cupola/features/activity/domain/download_page.dart';
-import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/domain/stuck_download_fault.dart';
 import 'package:cupola/features/activity/presentation/activity_page.dart'
     show downloadAskersProvider;
-import 'package:cupola/features/activity/presentation/activity_provider.dart'
-    show connectionArrServiceProvider;
+import 'package:cupola/features/activity/presentation/download_actions.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/decision_fault_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/download_parts.dart';
 import 'package:cupola/features/activity/presentation/widgets/stuck_download_card.dart';
-import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart'
     show HomeCoverageNote;
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -51,8 +46,6 @@ import 'package:cupola/features/services/presentation/kept_waiting_provider.dart
     show keptWaitingKey;
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/connection_presentation.dart'
-    show writeFailureReason;
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One download's own page (`/activity/download?i=&id=`): who it is, where
@@ -68,7 +61,16 @@ class DownloadPage extends ConsumerStatefulWidget {
     super.key,
     required this.instanceId,
     required this.downloadKey,
-  });
+  }) : _inspector = false;
+
+  /// The page as the desktop's inspector holds it, beside the table where
+  /// the download was chosen: no room of its own, no way back, the pane's
+  /// column. Removing the download clears the choice.
+  const DownloadPage.inspector({
+    super.key,
+    required this.instanceId,
+    required this.downloadKey,
+  }) : _inspector = true;
 
   /// The connection the download was read from: its \*arr's, or its
   /// client's when no \*arr asked for it.
@@ -76,6 +78,8 @@ class DownloadPage extends ConsumerStatefulWidget {
 
   /// The client's id for the transfer ([downloadPageKey]).
   final String downloadKey;
+
+  final bool _inspector;
 
   @override
   ConsumerState<DownloadPage> createState() => _DownloadPageState();
@@ -142,6 +146,34 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
         ? null
         : ref.watch(titleLightProvider(poster)).value;
 
+    List<Widget> body(double column) => switch ((queue.value, item)) {
+      (null, _) => [
+        const SizedBox(height: AppSpacing.lg),
+        AppSkeleton.detailBody(),
+      ],
+      (final value?, null) => _gone(value, now),
+      (_, final item?) => _download(
+        item,
+        now,
+        wide: column >= 520,
+        light: light,
+      ),
+    };
+
+    if (widget._inspector) {
+      return LayoutBuilder(
+        builder: (context, box) => ListView(
+          padding: const EdgeInsets.fromLTRB(
+            _inspectorInset,
+            AppSpacing.sm,
+            _inspectorInset,
+            AppSpacing.xl,
+          ),
+          children: body(box.maxWidth - 2 * _inspectorInset),
+        ),
+      );
+    }
+
     final page = LayoutBuilder(
       builder: (context, box) {
         final column = (box.maxWidth - 2 * AppSpacing.lg).clamp(
@@ -150,19 +182,7 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
         );
         final gutter = (box.maxWidth - column) / 2;
         final insets = MediaQuery.paddingOf(context);
-        final children = switch ((queue.value, item)) {
-          (null, _) => [
-            const SizedBox(height: AppSpacing.lg),
-            AppSkeleton.detailBody(),
-          ],
-          (final value?, null) => _gone(value, now),
-          (_, final item?) => _download(
-            item,
-            now,
-            wide: column >= 520,
-            light: light,
-          ),
-        };
+        final children = body(column);
         return RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(
@@ -334,17 +354,10 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
   }
 
   Future<void> _refresh() async {
-    _invalidateQueue();
+    invalidateDownloads(ref);
     try {
       await ref.read(servicesQueueProvider.future);
     } catch (_) {}
-  }
-
-  void _invalidateQueue() {
-    for (final source in homeDownloadsSources) {
-      ref.invalidate(source);
-    }
-    ref.invalidate(dashboardDecisionSourceProvider(DecisionSource.queue));
   }
 
   /// The title's page, under Activity: a movie or a series by TMDB's id
@@ -387,73 +400,38 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
 
   /// Stop, or Resume once stopped, in the client moving the bytes.
   Future<void> _stop(ServiceQueueItem item) async {
-    final client = downloadClientOf(item);
-    if (client == null) return;
     final stop = !(_held ?? item.held);
     setState(() => _busy = true);
-    try {
-      await setDownloadStopped(ref, client, stopped: stop);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _busy = false);
-      SnackBarHelper.error(
-        context,
-        '${stop ? 'Could not stop' : 'Could not resume'} ${item.title}. '
-        '${writeFailureReason(client.client, error)}',
-        cause: error,
-      );
-      return;
-    }
+    final done = await stopDownload(context, ref, item, stop: stop);
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _held = stop;
-      _heldReads = 0;
+      if (done) {
+        _held = stop;
+        _heldReads = 0;
+      }
     });
-    _invalidateQueue();
   }
 
-  /// Remove, after the neutral question Needs you asks: through the \*arr's
-  /// queue, never the client alone, and the title stays wanted. Then the
-  /// page closes, since there is nothing left on it.
+  /// Remove, after the neutral question Needs you asks. Then the page
+  /// closes, since there is nothing left on it; in the inspector, the choice
+  /// is cleared.
   Future<void> _remove(ServiceQueueItem item) async {
-    final ask = removeConfirmation(item);
-    final answer = await showAppConfirmDialog(
-      context: context,
-      title: ask.title,
-      message: ask.message,
-      confirmLabel: ask.confirm,
-      icon: Icons.delete_outline_rounded,
+    final removed = await removeDownload(
+      context,
+      ref,
+      item,
+      onConfirmed: () => setState(() => _busy = true),
     );
-    if (!answer.confirmed || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      await ref
-          .read(
-            connectionArrServiceProvider((
-              _typeOf(item.service),
-              item.instanceId,
-            )),
-          )
-          .removeFromQueue(
-            int.parse(item.id),
-            removeFromClient: true,
-            blocklist: false,
-          );
-    } catch (error) {
-      if (!mounted) return;
+    if (!mounted) return;
+    if (!removed) {
       setState(() => _busy = false);
-      SnackBarHelper.error(
-        context,
-        "Could not remove ${item.title}'s download. "
-        '${writeFailureReason(item.service, error)}',
-        cause: error,
-      );
       return;
     }
-    if (!mounted) return;
-    _invalidateQueue();
-    SnackBarHelper.success(context, stuckActionNote(StuckAction.remove, item));
+    if (widget._inspector) {
+      ref.read(selectedDownloadProvider.notifier).clear();
+      return;
+    }
     final pane = MediaPane.maybeOf(context);
     if (pane != null) {
       pane.onBack();
@@ -463,11 +441,8 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
   }
 }
 
-ServiceType _typeOf(ServiceKey service) => switch (service) {
-  ServiceKey.sonarr => ServiceType.series,
-  ServiceKey.lidarr => ServiceType.music,
-  _ => ServiceType.movies,
-};
+/// The inspector's inset, the pane's own.
+const double _inspectorInset = 14;
 
 /// What can be done: the title's page lit by its light, then Stop (Resume
 /// once stopped) and Remove side by side, as a Media page sets its lead

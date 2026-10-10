@@ -197,6 +197,11 @@ const _monoUses = <({String file, int uses, String prints})>[
     prints: 'the release a stuck download is, as its client names it',
   ),
   (
+    file: 'lib/features/activity/presentation/widgets/download_table.dart',
+    uses: 1,
+    prints: "the release a download came as, under its title in the table",
+  ),
+  (
     file: 'lib/features/activity/presentation/widgets/download_parts.dart',
     uses: 1,
     prints:

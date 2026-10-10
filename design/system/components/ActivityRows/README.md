@@ -13,7 +13,7 @@ Rendered from `lib/features/activity/presentation/widgets/activity_download_row.
 | Activity All, Finished today; History, a section a day | `ActivityHistoryRow` |
 | Activity All, Everyone's requests (the latest three); Activity Requests and Seerr's Requests tab (`RequestsBoard`), every request that does not wait for you | `EveryoneRequestRow` |
 
-The remedy of a stuck download is in Needs you, once: the row only shows where it stopped.
+The remedy of a stuck download is in Needs you, once: the row only shows where it stopped. In a desktop window the downloads and Up next are a table instead ([DownloadTable](../DownloadTable/README.md)); the rows are a touch build's, at every width.
 
 ## Anatomy
 

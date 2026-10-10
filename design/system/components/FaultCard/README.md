@@ -2,11 +2,11 @@
 
 One fault in Needs you, with its way out on the card: a headline that is a sentence by an amber warning glyph, what it means, which service raised it, the service's own words behind Why?, the proof a download carries, and the remedy. `StuckDownloadCard` builds one for each stuck download, with its four ways out; `StorageAlertCard` one for a TrueNAS alert about a disk, with its pool's evidence and Scrub; `DecisionFaultCard` one for every other kind of fault, with the control the Home's row has.
 
-Rendered from `lib/features/activity/presentation/widgets/fault_card.dart` (`FaultCard`, `FaultCard.whole`) by `test/design_catalog/fault_card_catalog_test.dart`. The words come from `lib/features/activity/domain/stuck_download_fault.dart` and `lib/features/activity/domain/fault_words.dart`, never from the widget.
+Rendered from `lib/features/activity/presentation/widgets/fault_card.dart` (`FaultCard`, `FaultCard.whole`, `FaultCard.row`; and `RequestsWaitRow` from `needs_you_cards.dart`) by `test/design_catalog/fault_card_catalog_test.dart`. The words come from `lib/features/activity/domain/stuck_download_fault.dart` and `lib/features/activity/domain/fault_words.dart`, never from the widget.
 
 ## Where it is drawn
 
-Needs you on Activity's All, one card per fault inside the section's slab, divided by hairlines; a stuck download that was folded with others on the Home's list is a card of its own here, since each has a way out of its own. The requests that wait sit under the faults on a slab of their own, as rows with Approve and Decline: a request is somebody waiting, not something broken. `FaultCard.whole` is the Needs you page's card. Above the cards, the import a Review of blocked imports sent reports itself first ([ImportReview](../ImportReview/README.md)); a failed one is a `FaultCard`.
+Needs you on Activity's All, one card per fault inside the section's slab, divided by hairlines; a stuck download that was folded with others on the Home's list is a card of its own here, since each has a way out of its own. The requests that wait sit under the faults on a slab of their own, as rows with Approve and Decline: a request is somebody waiting, not something broken. `FaultCard.whole` is the Needs you page's card. On a tablet (a window from 1024) and on the desktop, All draws `FaultCard.row` instead (`NeedsYouCard.row`): a line a fault, and the requests that wait one line of their own (`RequestsWaitRow`); the whole card is on the Needs you page, where the section's count leads. Above the cards, the import a Review of blocked imports sent reports itself first ([ImportReview](../ImportReview/README.md)); a failed one is a `FaultCard`.
 
 ## Anatomy
 
@@ -18,6 +18,15 @@ Needs you on Activity's All, one card per fault inside the section's slab, divid
 - Remedy: the one amber fill, full width (`remedyFillStyle`), what it does under it in `AppType.meta` (`Radarr drops this one (1.1 GB so far), won't pick it again, and looks for another.`), then at most two quieter ways out as `OutlinedButton`s side by side, each taking half.
 - Work the remedy started and that still runs (`running`) takes the fill's place, in blue since it is information and not a fault: `Scrubbing tank · 2% · about 9 h left` in `AppType.label`, a 4pt bar under it, the quieter ways out still beside it. The card reads it again every minute while it runs.
 - Once a way out was taken, the controls give way to a note in `AppType.label` (`Dropped · Radarr is looking for another download`), with `Undo` where it can be taken back (Keep waiting). The note stays where the card was until Activity is read again.
+
+## The row (`FaultCard.row`)
+
+One line of a wide list: Needs you on a tablet and a desktop.
+
+- The art at 36×54 (the card's art, scaled), `AppSpacing.md`, then the words: the headline in `AppType.row` (two lines at most) after the 16px amber glyph, and under it one line in `AppType.meta` `inkSecondary`, the proof when there is one (`Nothing for 3 h · Radarr → qBittorrent`), else the source (`Sonarr · Cosmos Laundromat`, `TrueNAS · pool tank`). No explanation, no Why?, no release, no bar: they are the card's.
+- Beside the words, the remedy at the size of its words (`IntrinsicWidth` over the card's own fill), and the quieter ways out behind a 44pt outlined ⋯ (`Remove`, `Keep waiting`; `Open alert`), whose menu speaks *More ways out, Big Buck Bunny is stuck at 47%*. Narrower than 480, or at a large reading size, the remedy and the ⋯ go under the words, as on a tablet's list beside an open download.
+- Work that runs and a way out taken say so under the words, in place of the controls, as on the card.
+- **The requests** (`RequestsWaitRow`): the Seerr glyph's plate, `2 requests wait for your approval` in `AppType.row` the ink after a 7pt blue dot, under it what and who of the first two (`Charge · Anna · Metropolis · Luca`, then `· 3 more`), and `Review`, outlined, which opens the Requests view where each has its Approve and Decline.
 
 ## The consumer provides
 
@@ -38,6 +47,7 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 - `FaultCard.whole`: a storage alert with its evidence and Why? open.
 - Text at 200%.
 - The desktop: a stuck download in the page well.
+- `FaultCard.row` on a desktop's All (784): three faults and the requests' line; beside an open download on a tablet (440), the remedy under the words; text at 200%.
 
 ## Do / don't
 

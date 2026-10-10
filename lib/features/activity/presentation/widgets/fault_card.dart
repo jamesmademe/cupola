@@ -53,7 +53,7 @@ class FaultCard extends StatefulWidget {
     this.secondary = const [],
     this.note,
     this.divided = false,
-  }) : _whole = false;
+  }) : _form = FaultCardForm.card;
 
   const FaultCard.whole({
     super.key,
@@ -72,7 +72,52 @@ class FaultCard extends StatefulWidget {
     this.secondary = const [],
     this.note,
   }) : divided = false,
-       _whole = true;
+       _form = FaultCardForm.whole;
+
+  /// One line of a list, where the whole card is a click away (All on a
+  /// tablet or a desktop): the art, the headline by its glyph, the line under
+  /// it ([proof], else [source]), and the remedy beside them, the quieter
+  /// ways out behind a ⋯. What it means, Why? and the proof's release and bar
+  /// are the card's.
+  const FaultCard.row({
+    super.key,
+    required this.headline,
+    this.source,
+    this.explanation,
+    this.why,
+    this.art,
+    this.release,
+    this.proof,
+    this.progress,
+    this.evidence = const [],
+    this.primary,
+    this.primarySubtitle,
+    this.running,
+    this.secondary = const [],
+    this.note,
+    this.divided = false,
+  }) : _form = FaultCardForm.row;
+
+  /// The card in [form], for a caller that draws all three.
+  const FaultCard.inForm(
+    FaultCardForm form, {
+    super.key,
+    required this.headline,
+    this.source,
+    this.explanation,
+    this.why,
+    this.art,
+    this.release,
+    this.proof,
+    this.progress,
+    this.evidence = const [],
+    this.primary,
+    this.primarySubtitle,
+    this.running,
+    this.secondary = const [],
+    this.note,
+    this.divided = false,
+  }) : _form = form;
 
   /// `Big Buck Bunny is stuck at 47%`.
   final String headline;
@@ -122,17 +167,25 @@ class FaultCard extends StatefulWidget {
   /// Whether a hairline separates it from the card above, inside a slab.
   final bool divided;
 
-  final bool _whole;
+  final FaultCardForm _form;
+
+  bool get _whole => _form == FaultCardForm.whole;
 
   @override
   State<FaultCard> createState() => _FaultCardState();
 }
+
+/// The three forms of a fault's card: in a list ([FaultCard]), a page's
+/// slab of its own ([FaultCard.whole]), a line of a wide list
+/// ([FaultCard.row]).
+enum FaultCardForm { card, whole, row }
 
 class _FaultCardState extends State<FaultCard> {
   late bool _whyOpen = widget._whole;
 
   @override
   Widget build(BuildContext context) {
+    if (widget._form == FaultCardForm.row) return _FaultRow(card: widget);
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final amber = statusToneColor(
@@ -328,6 +381,186 @@ class _FaultCardState extends State<FaultCard> {
         border: card.divided ? Border(top: BorderSide(color: room.hair)) : null,
       ),
       child: content,
+    );
+  }
+}
+
+/// [FaultCard.row]: one line of a wide list.
+class _FaultRow extends StatelessWidget {
+  const _FaultRow({required this.card});
+
+  final FaultCard card;
+
+  /// Narrower than this, the remedy goes under the words, as on a tablet's
+  /// list beside an open title.
+  static const double _besideFrom = 480;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final amber = statusToneColor(
+      Theme.of(context).colorScheme,
+      StatusTone.warning,
+      surface: room.slab,
+    );
+    final note = card.note;
+    final running = card.running;
+    final line = card.proof ?? card.source;
+    final large = MediaQuery.textScalerOf(context).scale(10) >= 13;
+
+    final words = Semantics(
+      container: true,
+      label: [card.headline, ?line].join('. '),
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(Icons.warning_rounded, size: 16, color: amber),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  card.headline,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppType.row.copyWith(color: room.ink),
+                ),
+              ),
+            ],
+          ),
+          if (line != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 16 + AppSpacing.xs),
+              child: Text(
+                line,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppType.meta.copyWith(color: room.inkSecondary),
+              ),
+            ),
+        ],
+      ),
+    );
+
+    // The remedy at the size of its words, never the card's full width.
+    final primary = card.primary;
+    final controls = <Widget>[
+      if (primary != null) IntrinsicWidth(child: primary),
+      if (card.secondary.isNotEmpty) ...[
+        const SizedBox(width: AppSpacing.sm),
+        _MoreWaysOut(actions: card.secondary, about: card.headline),
+      ],
+    ];
+    final settled = note != null || running != null;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: card.divided ? Border(top: BorderSide(color: room.hair)) : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final beside = !large && box.maxWidth >= _besideFrom;
+            final column = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                words,
+                if (note != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  _Note(note: note),
+                ] else if (running != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  _Running(running: running),
+                ] else if (!beside && controls.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(children: controls),
+                ],
+              ],
+            );
+            return Row(
+              children: [
+                if (card.art case final art?) ...[
+                  SizedBox(
+                    width: _artWidth,
+                    height: _artHeight,
+                    child: FittedBox(child: art),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                ],
+                Expanded(child: column),
+                if (beside && !settled && controls.isNotEmpty) ...[
+                  const SizedBox(width: AppSpacing.md),
+                  ...controls,
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  static const double _artWidth = 36;
+  static const double _artHeight = 54;
+}
+
+/// A row's quieter ways out, behind ⋯: `Remove`, `Keep waiting`.
+class _MoreWaysOut extends StatelessWidget {
+  const _MoreWaysOut({required this.actions, required this.about});
+
+  final List<FaultCardAction> actions;
+
+  /// The headline, for a screen reader to say whose ways out these are.
+  final String about;
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (context) => OutlinedButton(
+        onPressed: () async {
+          final box = context.findRenderObject()! as RenderBox;
+          final overlay =
+              Overlay.of(context).context.findRenderObject()! as RenderBox;
+          final at = box.localToGlobal(
+            box.size.bottomLeft(Offset.zero),
+            ancestor: overlay,
+          );
+          final chosen = await showMenu<int>(
+            context: context,
+            position: RelativeRect.fromRect(
+              at & const Size(1, 1),
+              Offset.zero & overlay.size,
+            ),
+            items: [
+              for (final (index, action) in actions.indexed)
+                PopupMenuItem(
+                  value: index,
+                  child: Text(
+                    action.label,
+                    semanticsLabel: action.semanticLabel,
+                  ),
+                ),
+            ],
+          );
+          if (chosen != null) actions[chosen].onPressed();
+        },
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.standard,
+        ),
+        child: Icon(
+          Icons.more_horiz_rounded,
+          size: 18,
+          semanticLabel: 'More ways out, $about',
+        ),
+      ),
     );
   }
 }

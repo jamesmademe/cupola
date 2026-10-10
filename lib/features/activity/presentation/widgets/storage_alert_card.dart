@@ -40,13 +40,23 @@ class StorageAlertCard extends ConsumerStatefulWidget {
     required this.decision,
     this.divided = false,
     this.whole = false,
-  });
+  }) : _row = false;
+
+  /// A line of a wide list ([FaultCard.row]).
+  const StorageAlertCard.row({
+    super.key,
+    required this.decision,
+    this.divided = false,
+  }) : whole = false,
+       _row = true;
 
   final DashboardDecision decision;
   final bool divided;
 
   /// The Needs you page's card: a slab of its own, the pool's evidence.
   final bool whole;
+
+  final bool _row;
 
   @override
   ConsumerState<StorageAlertCard> createState() => _StorageAlertCardState();
@@ -59,11 +69,13 @@ class _StorageAlertCardState extends ConsumerState<StorageAlertCard> {
   Widget build(BuildContext context) {
     final decision = widget.decision;
     final disk = decision.subject;
-    final plain = DecisionFaultCard(
-      decision: decision,
-      divided: widget.divided,
-      whole: widget.whole,
-    );
+    final plain = widget._row
+        ? DecisionFaultCard.row(decision: decision, divided: widget.divided)
+        : DecisionFaultCard(
+            decision: decision,
+            divided: widget.divided,
+            whole: widget.whole,
+          );
     if (disk == null) return plain;
     final key = (instanceId: decision.instanceId, disk: disk);
     final pool = ref.watch(storageAlertPoolProvider(key)).value;
@@ -110,29 +122,23 @@ class _StorageAlertCardState extends ConsumerState<StorageAlertCard> {
       ),
     );
 
-    return widget.whole
-        ? FaultCard.whole(
-            headline: words.headline,
-            explanation: diskErrorsExplanation(disk, pool),
-            source: source,
-            why: words.why,
-            art: art,
-            evidence: poolEvidence(disk, pool),
-            primary: scrub,
-            running: running,
-            secondary: [openAlert],
-          )
-        : FaultCard(
-            headline: words.headline,
-            explanation: diskErrorsExplanation(disk, pool),
-            source: source,
-            why: words.why,
-            art: art,
-            primary: scrub,
-            running: running,
-            secondary: [openAlert],
-            divided: widget.divided,
-          );
+    return FaultCard.inForm(
+      widget._row
+          ? FaultCardForm.row
+          : widget.whole
+          ? FaultCardForm.whole
+          : FaultCardForm.card,
+      headline: words.headline,
+      explanation: diskErrorsExplanation(disk, pool),
+      source: source,
+      why: words.why,
+      art: art,
+      evidence: widget.whole ? poolEvidence(disk, pool) : const [],
+      primary: scrub,
+      running: running,
+      secondary: [openAlert],
+      divided: widget.divided,
+    );
   }
 
   Future<void> _scrub(TrueNasPool pool) async {

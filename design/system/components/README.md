@@ -30,10 +30,11 @@ cards live in [`../motion/`](../motion/).
 | Containers | [AppCard](AppCard/README.md) | `lib/core/widgets/app_card.dart` |
 | Lists | [ServiceRecordRow](ServiceRecordRow/README.md) | `lib/core/widgets/service_record_row.dart` |
 | Lists | [ActivityRows](ActivityRows/README.md) | `lib/features/activity/presentation/widgets/activity_download_row.dart`, `lib/features/activity/presentation/widgets/activity_history_row.dart`, `lib/features/activity/presentation/widgets/everyone_request_row.dart` |
+| Lists | [DownloadTable](DownloadTable/README.md) | `lib/features/activity/presentation/widgets/download_table.dart`, `lib/features/activity/domain/download_table.dart` |
 | Metadata | [TagChip](TagChip/README.md) | `lib/core/widgets/tag_chip.dart` |
 | Metadata | [MachineName](MachineName/README.md) | `lib/core/widgets/machine_name.dart` |
 | Status | [DownloadDetail](DownloadDetail/README.md) | `lib/features/activity/presentation/download_page.dart`, `lib/features/activity/presentation/widgets/download_parts.dart` |
-| Status | [FaultCard](FaultCard/README.md) | `lib/features/activity/presentation/widgets/fault_card.dart` |
+| Status | [FaultCard](FaultCard/README.md) | `lib/features/activity/presentation/widgets/fault_card.dart`, `lib/features/activity/presentation/widgets/needs_you_cards.dart` |
 | Status | [ImportReview](ImportReview/README.md) | `lib/features/import/presentation/blocked_import_review_page.dart`, `lib/features/import/presentation/blocked_import_parts.dart`, `lib/features/activity/presentation/widgets/import_done_card.dart` |
 | Status | [AppErrorState](AppErrorState/README.md) | `lib/core/widgets/app_error_state.dart`, `lib/core/widgets/inline_error_retry.dart`, `lib/core/widgets/brief_failure_line.dart` |
 | Status | [CapabilityBanner](CapabilityBanner/README.md) | `lib/core/widgets/capability_banner.dart`, `lib/core/capability/capability_copy.dart` |

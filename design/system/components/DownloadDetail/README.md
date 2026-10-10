@@ -15,10 +15,11 @@ The catalog test is `test/design_catalog/download_detail_catalog_test.dart`. The
 |---|---|
 | `/activity/download?i=&id=`, under Activity | a row of Downloads or Up next (`openDownload`); the Home's Downloads row (`go`, Activity behind it); a link |
 | beside the list, on a touch window from 1024 (`MediaSplitLayout`) | the same row; the row wears the selection ([ActivityRows](../ActivityRows/README.md)) |
+| the desktop's inspector (`DownloadPage.inspector`) | a click on a row of the table |
 
 `i` is the connection the download was read from: its \*arr's, or its client's when no \*arr asked for it. `id` is the client's id for the transfer (the torrent hash, the usenet job's id), which the client's own row shares, so a link made before an \*arr claimed a torrent still finds it (`downloadAt`). The page is read from the address alone.
 
-The desktop draws the same page until the inspector takes it.
+On the desktop a click on a row of the table ([DownloadTable](../DownloadTable/README.md)) chooses the download and the inspector holds its page (`DownloadPage.inspector`): no room of its own and no back plate, the pane's 14 inset and its column, so the hero keeps the phone's 88 poster and the steps go two to a line. Removing it there clears the choice instead of closing a page. A second click, Return, or the inspector's first button opens the page itself.
 
 ## The page
 
@@ -58,6 +59,7 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 - The readout downloading with four minutes of speed under the figure; queued; stopped; stuck; finished and waiting for an import.
 - The facts.
 - Text at 200%: the steps one to a line, the facts stacked.
+- In the inspector (360): a stuck download, the remedy under the readout.
 - Beside the list on a tablet (620): the steps side by side, the speed beside the figure.
 
 ## Do / don't

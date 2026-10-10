@@ -283,7 +283,7 @@ class ActivityRowFrame extends StatelessWidget {
             // The fill reaches into the slab's inset, so nothing in the row
             // moves when it is selected.
             child: CustomPaint(
-              painter: selected ? _Selected(room.fillStrong) : null,
+              painter: selected ? SelectedRowPainter(room.fillStrong) : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: Row(
@@ -310,8 +310,8 @@ class ActivityRowFrame extends StatelessWidget {
 
 /// The room's strong fill behind a selected row, reaching into the slab's
 /// inset on either side, as a selected search row's does.
-class _Selected extends CustomPainter {
-  const _Selected(this.color);
+class SelectedRowPainter extends CustomPainter {
+  const SelectedRowPainter(this.color);
 
   final Color color;
 
@@ -327,7 +327,8 @@ class _Selected extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_Selected oldDelegate) => color != oldDelegate.color;
+  bool shouldRepaint(SelectedRowPainter oldDelegate) =>
+      color != oldDelegate.color;
 }
 
 /// One thing a row offers beside opening it: `Delete request`.

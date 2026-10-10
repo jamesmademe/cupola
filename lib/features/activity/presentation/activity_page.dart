@@ -27,6 +27,7 @@ import 'package:cupola/features/activity/domain/everyones_requests.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_download_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_history_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart';
+import 'package:cupola/features/activity/presentation/widgets/download_table.dart';
 import 'package:cupola/features/activity/presentation/widgets/everyone_request_row.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 import 'package:cupola/features/activity/presentation/widgets/import_done_card.dart';
@@ -132,7 +133,14 @@ class ActivityPage extends ConsumerWidget {
                     onRefresh: () => refreshActivity(ref, tab),
                     child: LayoutBuilder(
                       builder: (context, box) => HomeWell(
-                        inset: AppBreakpoints.wellInset(box.maxWidth),
+                        // A desktop window reads the downloads as a table,
+                        // which wants the width a reading column gives up.
+                        inset: AppBreakpoints.wellInset(
+                          box.maxWidth,
+                          well: AppBreakpoints.isDesktopShell(context)
+                              ? AppBreakpoints.contentWell
+                              : AppBreakpoints.readingWell,
+                        ),
                         child: Builder(
                           builder: (context) {
                             Widget column(Widget child) =>
@@ -510,6 +518,43 @@ class _NeedsYouSectionState extends ConsumerState<_NeedsYouSection> {
     final blue = statusToneColor(scheme, StatusTone.info, surface: room.slab);
     final meta = needsYouMeta(faults: entries.length, requests: waiting.length);
 
+    // On a tablet and a desktop each fault is one line with its remedy, and
+    // the requests one line with Review: the whole card is on Needs you's
+    // own page, where the count leads.
+    final wide =
+        AppBreakpoints.isDesktopShell(context) ||
+        MediaQuery.sizeOf(context).width >= AppBreakpoints.touchSplit;
+    if (wide && (cards.isNotEmpty || report != null || waiting.isNotEmpty)) {
+      return ActivitySection(
+        title: 'Needs you',
+        meta: meta.isEmpty ? null : meta,
+        onOpen: meta.isEmpty
+            ? null
+            : () => context.push(ServiceRoutes.activityNeedsYou),
+        openHint: 'Opens Needs you',
+        children: [
+          if (note != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: HomeCoverageNote(note: note, coverage: coverage),
+            ),
+          if (report != null) ImportDoneCard(report: report),
+          for (final (index, entry) in cards.indexed)
+            NeedsYouCard.row(
+              key: ValueKey(entry.id),
+              entry: entry,
+              divided: index > 0 || report != null,
+            ),
+          if (waiting.isNotEmpty)
+            RequestsWaitRow(
+              requests: waiting,
+              divided: cards.isNotEmpty || report != null,
+              onReview: () => context.go(ActivityTab.requests.location),
+            ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -739,14 +784,19 @@ class _DownloadsSection extends ConsumerWidget {
             padding: const EdgeInsets.only(top: AppSpacing.md),
             child: HomeCoverageNote(note: note, coverage: coverage),
           ),
-        for (final (index, item) in rows.indexed)
-          ActivityDownloadRow(
-            key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
-            item: item,
-            now: now,
-            request: requestFor(item, requests),
-            divided: index > 0,
-          ),
+        // A desktop window reads them as a table, the chosen one in the
+        // inspector.
+        if (AppBreakpoints.isDesktopShell(context))
+          DownloadTable(items: rows, now: now, requests: requests)
+        else
+          for (final (index, item) in rows.indexed)
+            ActivityDownloadRow(
+              key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
+              item: item,
+              now: now,
+              request: requestFor(item, requests),
+              divided: index > 0,
+            ),
         if (total > rows.length)
           ActivitySlabLink(
             label: 'All $total downloads',
@@ -799,14 +849,17 @@ class _UpNextSection extends ConsumerWidget {
       meta: meta,
       semanticLabel: [_title, spokenCountPhrase(meta)].join(', '),
       children: [
-        for (final (index, item) in rows.indexed)
-          ActivityDownloadRow.queued(
-            key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
-            item: item,
-            now: now,
-            request: requestFor(item, requests),
-            divided: index > 0,
-          ),
+        if (AppBreakpoints.isDesktopShell(context))
+          DownloadTable.queued(items: rows, now: now, requests: requests)
+        else
+          for (final (index, item) in rows.indexed)
+            ActivityDownloadRow.queued(
+              key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
+              item: item,
+              now: now,
+              request: requestFor(item, requests),
+              divided: index > 0,
+            ),
         if (queued.length > rows.length)
           ActivitySlabLink(
             label: 'All ${queued.length} queued',

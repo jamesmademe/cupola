@@ -17,13 +17,23 @@ class DecisionFaultCard extends StatelessWidget {
     required this.decision,
     this.divided = false,
     this.whole = false,
-  });
+  }) : _row = false;
+
+  /// A line of a wide list ([FaultCard.row]).
+  const DecisionFaultCard.row({
+    super.key,
+    required this.decision,
+    this.divided = false,
+  }) : whole = false,
+       _row = true;
 
   final DashboardDecision decision;
   final bool divided;
 
   /// The Needs you page's card: a slab of its own.
   final bool whole;
+
+  final bool _row;
 
   @override
   Widget build(BuildContext context) {
@@ -36,23 +46,19 @@ class DecisionFaultCard extends StatelessWidget {
       decision: decision,
       label: faultActionLabel(decision),
     );
-    return whole
-        ? FaultCard.whole(
-            headline: words.headline,
-            explanation: words.explanation,
-            source: words.source,
-            why: words.why,
-            art: art,
-            primary: primary,
-          )
-        : FaultCard(
-            headline: words.headline,
-            explanation: words.explanation,
-            source: words.source,
-            why: words.why,
-            art: art,
-            primary: primary,
-            divided: divided,
-          );
+    return FaultCard.inForm(
+      _row
+          ? FaultCardForm.row
+          : whole
+          ? FaultCardForm.whole
+          : FaultCardForm.card,
+      headline: words.headline,
+      explanation: words.explanation,
+      source: words.source,
+      why: words.why,
+      art: art,
+      primary: primary,
+      divided: divided,
+    );
   }
 }

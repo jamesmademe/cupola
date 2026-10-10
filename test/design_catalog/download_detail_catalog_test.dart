@@ -198,6 +198,21 @@ void main() {
         overrides: _page(_sprite()),
       ),
       CatalogScene(
+        'DownloadPage.inspector() · a stuck download chosen in the desktop\'s '
+        'table, in the inspector\'s 360: no room and no way back, the '
+        'remedy under the readout, the steps two to a line',
+        (_) => SizedBox(
+          height: 1240,
+          child: DownloadPage.inspector(
+            instanceId: _radarr,
+            downloadKey: _hash,
+          ),
+        ),
+        width: 360,
+        platform: CatalogPlatform.desktop,
+        overrides: _page(_sprite(fault: InFlightFault.stalled)),
+      ),
+      CatalogScene(
         'DownloadHero() · the poster, the title, the year and who asked',
         (_) => const DownloadHero(
           title: 'Sprite Fright',

@@ -8,7 +8,10 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/activity/data/selected_download.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
+import 'package:cupola/features/activity/presentation/download_page.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
@@ -37,6 +40,8 @@ class InspectorPane extends ConsumerWidget {
     // The same fold the Dashboard header counts: this card names a service
     // only when every connection of it is dark.
     final offline = ref.watch(unreachableServicesProvider);
+    // A download chosen in Activity's table: the pane is its page.
+    final selected = ref.watch(selectedDownloadProvider);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -50,33 +55,42 @@ class InspectorPane extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _InspectorHeader(),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                ...switch (queue) {
-                  // The feed carries each connection's failure rather than
-                  // throwing, so "could not be read" is decided here, from the
-                  // connections, and not only by an `AsyncError` that a load
-                  // with per-connection errors never produces. Without this,
-                  // three \*arrs that all failed read "Nothing downloading".
-                  AsyncData(:final value) => [
-                    if (value.noArrAnswered)
-                      const _InspectorNote(_queueUnreadNote)
-                    else if (value.items.isEmpty)
-                      _InspectorNote(_emptyQueueNote(value)),
-                    for (final item in value.items.take(8))
-                      _QueueRow(item: item),
-                  ],
-                  AsyncError() => const [_InspectorNote(_queueUnreadNote)],
-                  _ => const [_InspectorNote('Reading the queue…')],
-                },
-                if (offline.isNotEmpty) _UnreachableCard(services: offline),
-                const _FinishedToday(),
-              ],
+          _InspectorHeader(selected: selected),
+          if (selected != null)
+            Expanded(
+              child: DownloadPage.inspector(
+                key: ValueKey(selected),
+                instanceId: selected.instanceId,
+                downloadKey: selected.key,
+              ),
+            )
+          else
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  ...switch (queue) {
+                    // The feed carries each connection's failure rather than
+                    // throwing, so "could not be read" is decided here, from the
+                    // connections, and not only by an `AsyncError` that a load
+                    // with per-connection errors never produces. Without this,
+                    // three \*arrs that all failed read "Nothing downloading".
+                    AsyncData(:final value) => [
+                      if (value.noArrAnswered)
+                        const _InspectorNote(_queueUnreadNote)
+                      else if (value.items.isEmpty)
+                        _InspectorNote(_emptyQueueNote(value)),
+                      for (final item in value.items.take(8))
+                        _QueueRow(item: item),
+                    ],
+                    AsyncError() => const [_InspectorNote(_queueUnreadNote)],
+                    _ => const [_InspectorNote('Reading the queue…')],
+                  },
+                  if (offline.isNotEmpty) _UnreachableCard(services: offline),
+                  const _FinishedToday(),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -109,8 +123,13 @@ Color _paneSurface(ColorScheme colorScheme) =>
     colorScheme.surfaceContainerLowest;
 
 /// 44pt, matching the window strip above it, so the two read as one bar.
+///
+/// Over a chosen download it reads `Selected download`: its first button
+/// opens the download's page, its second goes back to the queue.
 class _InspectorHeader extends ConsumerWidget {
-  const _InspectorHeader();
+  const _InspectorHeader({this.selected});
+
+  final DownloadSelection? selected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,37 +150,66 @@ class _InspectorHeader extends ConsumerWidget {
           // named by its title beside the glyph, and a section colour here once
           // measured 2.20:1 on paper.
           Icon(
-            Icons.insights_rounded,
+            selected == null ? Icons.insights_rounded : Icons.download_rounded,
             size: 16,
             color: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              'Activity',
-              style: AppTheme.chrome(
-                context,
-                size: 13,
-                weight: FontWeight.w600,
-                color: colorScheme.onSurface,
+            child: Semantics(
+              header: true,
+              child: Text(
+                selected == null ? 'Activity' : 'Selected download',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.chrome(
+                  context,
+                  size: 13,
+                  weight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
               ),
             ),
           ),
-          IconButton(
-            onPressed: () => GoRouter.of(context).go(NavTab.activity.routePath),
-            icon: const Icon(Icons.open_in_full_rounded, size: 15),
-            iconSize: 15,
-            visualDensity: VisualDensity.compact,
-            tooltip: 'Open the full Activity screen',
-          ),
-          IconButton(
-            onPressed: () =>
-                ref.read(inspectorStateProvider.notifier).setOpen(false),
-            icon: const Icon(Icons.close_rounded, size: 16),
-            iconSize: 16,
-            visualDensity: VisualDensity.compact,
-            tooltip: 'Close inspector  ${ShellShortcuts.inspector}',
-          ),
+          if (selected case final download?) ...[
+            IconButton(
+              onPressed: () => GoRouter.of(context).go(
+                ServiceRoutes.activityDownload(
+                  instanceId: download.instanceId,
+                  key: download.key,
+                ),
+              ),
+              icon: const Icon(Icons.open_in_full_rounded, size: 15),
+              iconSize: 15,
+              visualDensity: VisualDensity.compact,
+              tooltip: "Open the download's page",
+            ),
+            IconButton(
+              onPressed: () =>
+                  ref.read(selectedDownloadProvider.notifier).clear(),
+              icon: const Icon(Icons.close_rounded, size: 16),
+              iconSize: 16,
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Back to the queue',
+            ),
+          ] else ...[
+            IconButton(
+              onPressed: () =>
+                  GoRouter.of(context).go(NavTab.activity.routePath),
+              icon: const Icon(Icons.open_in_full_rounded, size: 15),
+              iconSize: 15,
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Open the full Activity screen',
+            ),
+            IconButton(
+              onPressed: () =>
+                  ref.read(inspectorStateProvider.notifier).setOpen(false),
+              icon: const Icon(Icons.close_rounded, size: 16),
+              iconSize: 16,
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Close inspector  ${ShellShortcuts.inspector}',
+            ),
+          ],
         ],
       ),
     );
