@@ -42,6 +42,19 @@ MediaEpisodesGraph? watchEpisodesGraph(
   return graph.isEmpty ? null : graph;
 }
 
+/// One cell's width and the gap after it, for a row of [longest] episodes
+/// across [width]: the same for every season of a series, so episode 5 sits
+/// under episode 5 and a season of 24 is not drawn thinner than one of 8
+/// beside it (11/10). Gaps close up to a hairline when the cells would
+/// otherwise vanish between them.
+({double cell, double gap}) _cellsAcross(double width, int longest) {
+  if (longest <= 1) return (cell: width, gap: 0);
+  double across(double gap) => (width - gap * (longest - 1)) / longest;
+  final roomy = across(3);
+  if (roomy >= 6) return (cell: roomy, gap: 3);
+  return (cell: math.max(1, across(1)), gap: 1);
+}
+
 /// `Best · S2 E6 8.9`, the lead of a graph's summary.
 String _bestOf(MediaEpisodeFacts best) =>
     '${formatEpisodeCode(best.season, best.number)} '
@@ -100,6 +113,10 @@ class MediaEpisodesGraphPanel extends ConsumerWidget {
     );
     if (graph == null) return const SizedBox.shrink();
     final best = graph.best.first;
+    // Every season's cells measured on the longest one.
+    final longest = graph.seasons
+        .map((season) => season.episodes.length)
+        .reduce(math.max);
     final stronger = graph.stronger;
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.section),
@@ -167,23 +184,30 @@ class MediaEpisodesGraphPanel extends ConsumerWidget {
                         ),
                       ),
                       Expanded(
-                        child: Row(
-                          children: [
-                            for (final (index, episode)
-                                in season.episodes.indexed) ...[
-                              if (index > 0) const SizedBox(width: 3),
-                              Expanded(
-                                child: SizedBox(
-                                  height: 16,
-                                  child: _Cell(
-                                    episode: episode,
-                                    light: light,
-                                    radius: 5,
+                        child: LayoutBuilder(
+                          builder: (context, box) {
+                            final (:cell, :gap) = _cellsAcross(
+                              box.maxWidth,
+                              longest,
+                            );
+                            return Row(
+                              children: [
+                                for (final (index, episode)
+                                    in season.episodes.indexed) ...[
+                                  if (index > 0) SizedBox(width: gap),
+                                  SizedBox(
+                                    width: cell,
+                                    height: 16,
+                                    child: _Cell(
+                                      episode: episode,
+                                      light: light,
+                                      radius: math.min(5, cell / 2),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ],
-                          ],
+                                ],
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ],

@@ -211,88 +211,98 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     );
     final count = catalogCountPhrase(_totalResults);
 
-    return RefreshIndicator(
-      edgeOffset: top,
-      onRefresh: () async => _restart(),
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              gutter,
-              top + AppSpacing.md,
-              gutter,
-              0,
+    return MediaPinnedPlates(
+      inset: gutter,
+      child: RefreshIndicator(
+        edgeOffset: top,
+        onRefresh: () async => _restart(),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                gutter,
+                top + AppSpacing.md,
+                gutter,
+                0,
+              ),
+              sliver: SliverToBoxAdapter(child: _Head(title: _title(ref))),
             ),
-            sliver: SliverToBoxAdapter(child: _Head(title: _title(ref))),
-          ),
-          // The controls carry the gutter themselves: the pills scroll to
-          // the well's edges.
-          SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: side),
-            sliver: SliverToBoxAdapter(
-              child: _Controls(query: _query, onChanged: _ask),
+            // The controls carry the gutter themselves: the pills scroll to
+            // the well's edges.
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: side),
+              sliver: SliverToBoxAdapter(
+                child: _Controls(query: _query, onChanged: _ask),
+              ),
             ),
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(gutter, AppSpacing.md, gutter, 0),
-            sliver: PagingListener<int, MediaPreview>(
-              controller: _paging,
-              builder: (context, state, fetchNextPage) =>
-                  PagedSliverGrid<int, MediaPreview>(
-                    state: state,
-                    fetchNextPage: fetchNextPage,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      mainAxisExtent: CatalogPoster.heightFor(
-                        context,
-                        tileWidth,
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(gutter, AppSpacing.md, gutter, 0),
+              sliver: PagingListener<int, MediaPreview>(
+                controller: _paging,
+                builder: (context, state, fetchNextPage) =>
+                    PagedSliverGrid<int, MediaPreview>(
+                      state: state,
+                      fetchNextPage: fetchNextPage,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        mainAxisExtent: CatalogPoster.heightFor(
+                          context,
+                          tileWidth,
+                        ),
+                        crossAxisSpacing: AppSpacing.gridGap,
+                        mainAxisSpacing: AppSpacing.lg,
                       ),
-                      crossAxisSpacing: AppSpacing.gridGap,
-                      mainAxisSpacing: AppSpacing.lg,
+                      builderDelegate: PagedChildBuilderDelegate<MediaPreview>(
+                        // A first page Seerr did not give is a failure in its
+                        // own words, never the "nothing here" of a list that
+                        // answered empty.
+                        firstPageErrorIndicatorBuilder: (_) => AppErrorState(
+                          error:
+                              state.error ??
+                              const ClassifiedFailure(
+                                ServiceFailureReason.unknown,
+                              ),
+                          serviceName: ServiceKey.seerr.title,
+                          service: ServiceKey.seerr,
+                          onRetry: _restart,
+                        ),
+                        noItemsFoundIndicatorBuilder: (_) => _Nothing(
+                          hidden: ref.read(catalogHideOwnedProvider),
+                        ),
+                        itemBuilder: (context, item, index) => CatalogPoster(
+                          item: item,
+                          heroTag:
+                              'catalog_${item.mediaType}_${item.id}_$index',
+                          width: tileWidth,
+                        ),
+                      ),
                     ),
-                    builderDelegate: PagedChildBuilderDelegate<MediaPreview>(
-                      // A first page Seerr did not give is a failure in its
-                      // own words, never the "nothing here" of a list that
-                      // answered empty.
-                      firstPageErrorIndicatorBuilder: (_) => AppErrorState(
-                        error:
-                            state.error ??
-                            const ClassifiedFailure(
-                              ServiceFailureReason.unknown,
-                            ),
-                        serviceName: ServiceKey.seerr.title,
-                        service: ServiceKey.seerr,
-                        onRetry: _restart,
-                      ),
-                      noItemsFoundIndicatorBuilder: (_) =>
-                          _Nothing(hidden: ref.read(catalogHideOwnedProvider)),
-                      itemBuilder: (context, item, index) => CatalogPoster(
-                        item: item,
-                        heroTag: 'catalog_${item.mediaType}_${item.id}_$index',
-                        width: tileWidth,
-                      ),
-                    ),
+              ),
+            ),
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                gutter,
+                AppSpacing.lg,
+                gutter,
+                bottom,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Text(
+                  // The trending list's figure is TMDB's cap, not a count.
+                  [
+                    'Scores from TMDB',
+                    if (count != null && _query.base != CatalogBase.trending)
+                      count,
+                  ].join(' · '),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: CupolaThemeColors.of(context).dimText,
                   ),
-            ),
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(gutter, AppSpacing.lg, gutter, bottom),
-            sliver: SliverToBoxAdapter(
-              child: Text(
-                // The trending list's figure is TMDB's cap, not a count.
-                [
-                  'Scores from TMDB',
-                  if (count != null && _query.base != CatalogBase.trending)
-                    count,
-                ].join(' · '),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: CupolaThemeColors.of(context).dimText,
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -313,7 +323,8 @@ class _Head extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const MediaBackPlate(),
+        // The back plate floats here, pinned (`MediaPinnedPlates`).
+        const SizedBox(height: MediaPinnedPlates.reserve),
         const SizedBox(height: AppSpacing.md),
         Semantics(
           header: true,

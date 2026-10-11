@@ -55,110 +55,111 @@ class _EditHomePageState extends ConsumerState<EditHomePage> {
     return AmbientScaffold(
       body: Stack(
         children: [
-          ListView(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.gutter,
-              MediaQuery.paddingOf(context).top + AppSpacing.sm,
-              AppSpacing.gutter,
-              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-            ),
-            children: [
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: MediaBackPlate(),
+          MediaPinnedPlates(
+            inset: AppSpacing.gutter,
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                MediaQuery.paddingOf(context).top + AppSpacing.sm,
+                AppSpacing.gutter,
+                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
               ),
-              const SizedBox(height: AppSpacing.md),
-              Semantics(
-                header: true,
-                child: Text(
-                  'Edit Home',
-                  style: AppType.room.copyWith(color: room.ink),
+              children: [
+                // The back plate floats here, pinned (`MediaPinnedPlates`).
+                const SizedBox(height: MediaPinnedPlates.reserve),
+                const SizedBox(height: AppSpacing.md),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Edit Home',
+                    style: AppType.room.copyWith(color: room.ink),
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                _intro(layout.audience),
-                style: AppType.body.copyWith(color: room.inkSecondary),
-              ),
-              const SizedBox(height: AppSpacing.scaleXl),
-              if (first.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  _intro(layout.audience),
+                  style: AppType.body.copyWith(color: room.inkSecondary),
+                ),
+                const SizedBox(height: AppSpacing.scaleXl),
+                if (first.isNotEmpty) ...[
+                  _Group(
+                    label: 'Always on Home',
+                    children: [
+                      for (final module in first) _LockedRow(module: module),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 _Group(
-                  label: 'Always on Home',
+                  label: 'Modules, in order',
                   children: [
-                    for (final module in first) _LockedRow(module: module),
+                    ReorderableListView(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      proxyDecorator: (child, index, animation) => Material(
+                        color: room.raised,
+                        borderRadius: BorderRadius.circular(AppRadius.group),
+                        elevation: 6,
+                        child: child,
+                      ),
+                      onReorderStart: (_) => setState(() => _lifted = null),
+                      onReorder: notifier.reorder,
+                      children: [
+                        for (final (index, module) in layout.order.indexed)
+                          _ModuleRow(
+                            key: ValueKey(module),
+                            module: module,
+                            index: index,
+                            count: layout.order.length,
+                            on: layout.isOn(module),
+                            lifted: _lifted == module,
+                            onLift: () => setState(
+                              () => _lifted = _lifted == module ? null : module,
+                            ),
+                            onMove: (by) => notifier.move(module, by),
+                            onSwitch: (on) => notifier.setOn(module, on: on),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-              _Group(
-                label: 'Modules, in order',
-                children: [
-                  ReorderableListView(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    buildDefaultDragHandles: false,
-                    proxyDecorator: (child, index, animation) => Material(
-                      color: room.raised,
-                      borderRadius: BorderRadius.circular(AppRadius.group),
-                      elevation: 6,
-                      child: child,
-                    ),
-                    onReorderStart: (_) => setState(() => _lifted = null),
-                    onReorder: notifier.reorder,
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Hold a handle and drag, or tap it and use the arrows. '
+                  'With ${_screenReader()}: Move up, Move down.',
+                  style: AppType.caption.copyWith(color: room.inkSecondary),
+                ),
+                if (last.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _Group(
+                    label: 'At the foot of Home',
                     children: [
-                      for (final (index, module) in layout.order.indexed)
-                        _ModuleRow(
-                          key: ValueKey(module),
+                      for (final module in last)
+                        _FootRow(
                           module: module,
-                          index: index,
-                          count: layout.order.length,
                           on: layout.isOn(module),
-                          lifted: _lifted == module,
-                          onLift: () => setState(
-                            () => _lifted = _lifted == module ? null : module,
-                          ),
-                          onMove: (by) => notifier.move(module, by),
                           onSwitch: (on) => notifier.setOn(module, on: on),
                         ),
                     ],
                   ),
                 ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Hold a handle and drag, or tap it and use the arrows. '
-                'With ${_screenReader()}: Move up, Move down.',
-                style: AppType.caption.copyWith(color: room.inkSecondary),
-              ),
-              if (last.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.md),
-                _Group(
-                  label: 'At the foot of Home',
-                  children: [
-                    for (final module in last)
-                      _FootRow(
-                        module: module,
-                        on: layout.isOn(module),
-                        onSwitch: (on) => notifier.setOn(module, on: on),
-                      ),
-                  ],
+                const SizedBox(height: AppSpacing.scaleXl),
+                _ResetButton(
+                  onPressed: layout.isDefault
+                      ? null
+                      : () {
+                          setState(() => _lifted = null);
+                          notifier.reset();
+                        },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  _otherPerson(layout.audience),
+                  style: AppType.meta.copyWith(color: room.inkSecondary),
                 ),
               ],
-              const SizedBox(height: AppSpacing.scaleXl),
-              _ResetButton(
-                onPressed: layout.isDefault
-                    ? null
-                    : () {
-                        setState(() => _lifted = null);
-                        notifier.reset();
-                      },
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                _otherPerson(layout.audience),
-                style: AppType.meta.copyWith(color: room.inkSecondary),
-              ),
-            ],
+            ),
           ),
           const Positioned(top: 0, left: 0, right: 0, child: StatusBarScrim()),
         ],

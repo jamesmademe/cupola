@@ -20,6 +20,7 @@ import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/media/presentation/media_series_sections.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
@@ -169,6 +170,32 @@ void main() {
       await harness.unmount(tester);
     });
   }
+
+  testWidgets('Manage reaches its heading on a series the list has not '
+      'built down to yet', (tester) async {
+    final harness = await _pump(
+      tester,
+      Profiles.p1,
+      WorldTitles.cosmosLaundromat,
+      key: MediaKey.tv(WorldTitles.cosmosLaundromat.tmdbId),
+      height: 844,
+    );
+    final heading = find.byWidgetPredicate(
+      (widget) => widget is MediaHeading && widget.text == 'Manage',
+    );
+    // The button, the only Manage while the heading is unbuilt: below the
+    // seasons, past what the list builds ahead.
+    final button = find.text('Manage');
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    expect(heading, findsNothing);
+
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    expect(heading.hitTestable(), findsOneWidget);
+    await harness.unmount(tester);
+  });
 
   testWidgets('P1, Tears of Steel: its title, Play on Jellyfin, its rows', (
     tester,
@@ -1351,6 +1378,16 @@ void main() {
 
       expect(find.text('S1 · 7.8'), findsOneWidget);
       expect(find.text('S2 · 8.2'), findsOneWidget);
+      // One cell width for every season, measured on the longest: a season
+      // of few episodes is not drawn in fatter bars than its neighbour.
+      final widths = {
+        for (final cell
+            in find
+                .byWidgetPredicate((w) => w.runtimeType.toString() == '_Cell')
+                .evaluate())
+          (cell.renderObject! as RenderBox).size.width,
+      };
+      expect(widths, hasLength(1));
       expect(
         find.bySemanticsLabel(
           'Episodes graph. Best: S2 E6, 8.9. Season 2 is the stronger one',

@@ -469,14 +469,41 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     return null;
   }
 
-  void _toManage() {
+  /// Brings Manage into view.
+  ///
+  /// A long series builds its seasons first, and the list builds Manage only
+  /// once it scrolls near it: until it has, the page runs down a screen at a
+  /// time, then settles on the heading. A key with no context was a tap that
+  /// did nothing (Manage on Grey's Anatomy, 11/10).
+  Future<void> _toManage() async {
+    final still = MediaQuery.disableAnimationsOf(context);
+    final controller = PrimaryScrollController.maybeOf(context);
+    for (var step = 0; _manageKey.currentContext == null && step < 60; step++) {
+      // One list: the page's own (a pane beside a list keeps to itself).
+      if (controller == null || controller.positions.length != 1) return;
+      final position = controller.position;
+      if (position.pixels >= position.maxScrollExtent) return;
+      final next = math.min(
+        position.pixels + position.viewportDimension,
+        position.maxScrollExtent,
+      );
+      if (still) {
+        position.jumpTo(next);
+        await WidgetsBinding.instance.endOfFrame;
+      } else {
+        await position.animateTo(
+          next,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.linear,
+        );
+      }
+      if (!mounted) return;
+    }
     final target = _manageKey.currentContext;
-    if (target == null) return;
-    Scrollable.ensureVisible(
+    if (target == null || !target.mounted) return;
+    await Scrollable.ensureVisible(
       target,
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : const Duration(milliseconds: 420),
+      duration: still ? Duration.zero : const Duration(milliseconds: 420),
       curve: Curves.easeOutCubic,
     );
   }
@@ -646,7 +673,8 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         );
         final gutter = (box.maxWidth - column) / 2;
         final head = <Widget>[
-          const Align(alignment: Alignment.centerLeft, child: MediaBackPlate()),
+          // The back plate floats here, pinned (`MediaPinnedPlates`).
+          const SizedBox(height: MediaPinnedPlates.reserve),
           const SizedBox(height: AppSpacing.md),
           _Hero(
             onArtDrawn: _artDrawn,
@@ -897,29 +925,33 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           ],
         ];
         if ((silentSeerr, silence) case (final row?, final failure?)) {
-          return CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  gutter,
-                  top + AppSpacing.md,
-                  gutter,
-                  0,
+          return MediaPinnedPlates(
+            inset: gutter,
+            child: CustomScrollView(
+              primary: true,
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    gutter,
+                    top + AppSpacing.md,
+                    gutter,
+                    0,
+                  ),
+                  sliver: SliverToBoxAdapter(child: head.first),
                 ),
-                sliver: SliverToBoxAdapter(child: head.first),
-              ),
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: AppErrorState(
-                  service: ServiceKey.seerr,
-                  instanceId: row.connection.id,
-                  error: failure,
-                  onRetry: failureRetryHelps(failure.reason)
-                      ? () => retryMediaRow(ref, mediaKey, row)
-                      : null,
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: AppErrorState(
+                    service: ServiceKey.seerr,
+                    instanceId: row.connection.id,
+                    error: failure,
+                    onRetry: failureRetryHelps(failure.reason)
+                        ? () => retryMediaRow(ref, mediaKey, row)
+                        : null,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         }
         // Clear of the floating bar, which grows with the reading size;
@@ -928,54 +960,60 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           AppSpacing.xxxl,
           FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         );
-        return CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                gutter,
-                top + AppSpacing.md,
-                gutter,
-                more.isEmpty ? bottom : 0,
-              ),
-              sliver: SliverList.list(
-                children: [
-                  ...head,
-                  if (box.maxWidth >= AppBreakpoints.touchRail)
-                    // Two tracks: who the title is and what to do with it
-                    // on the left, the servers and Manage beside it.
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [...act, ...reference],
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.xl),
-                        SizedBox(
-                          width: _sideTrack,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: serve,
-                          ),
-                        ),
-                      ],
-                    )
-                  else ...[
-                    ...act,
-                    ...serve,
-                    ...reference,
-                  ],
-                ],
-              ),
-            ),
-            if (more.isNotEmpty)
+        // The route's primary list, on every platform: Manage and a tap on
+        // the status bar both find it there.
+        return MediaPinnedPlates(
+          inset: gutter,
+          child: CustomScrollView(
+            primary: true,
+            slivers: [
               SliverPadding(
-                padding: EdgeInsets.only(bottom: bottom),
-                sliver: SliverList.list(children: more),
+                padding: EdgeInsets.fromLTRB(
+                  gutter,
+                  top + AppSpacing.md,
+                  gutter,
+                  more.isEmpty ? bottom : 0,
+                ),
+                sliver: SliverList.list(
+                  children: [
+                    ...head,
+                    if (box.maxWidth >= AppBreakpoints.touchRail)
+                      // Two tracks: who the title is and what to do with it
+                      // on the left, the servers and Manage beside it.
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [...act, ...reference],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xl),
+                          SizedBox(
+                            width: _sideTrack,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: serve,
+                            ),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      ...act,
+                      ...serve,
+                      ...reference,
+                    ],
+                  ],
+                ),
               ),
-          ],
+              if (more.isNotEmpty)
+                SliverPadding(
+                  padding: EdgeInsets.only(bottom: bottom),
+                  sliver: SliverList.list(children: more),
+                ),
+            ],
+          ),
         );
       },
     );

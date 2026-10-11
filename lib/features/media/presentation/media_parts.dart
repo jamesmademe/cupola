@@ -306,6 +306,69 @@ class MediaLinkRow extends StatelessWidget {
   }
 }
 
+/// A page's plates, pinned where they rest at its head: the back plate at
+/// the start, and [trailing] (the page's other actions) at the end. The page
+/// scrolls under them, so the way back never leaves the screen: it used to
+/// scroll away under the clock with the page (11/10), where iOS keeps its
+/// back control.
+///
+/// The page leaves [reserve] at the head of its list where the plates rest,
+/// so nothing moves when they float.
+class MediaPinnedPlates extends StatelessWidget {
+  const MediaPinnedPlates({
+    super.key,
+    required this.inset,
+    required this.child,
+    this.trailing,
+  });
+
+  /// The height the page keeps at its head for the plates.
+  static const double reserve = DesignTokens.sizeTouch;
+
+  /// From each side of the page: its column's gutter.
+  final double inset;
+  final Widget? trailing;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: [
+      child,
+      PositionedDirectional(
+        top: MediaQuery.paddingOf(context).top + AppSpacing.md,
+        start: inset,
+        end: inset,
+        // Only the plates take a touch: the gap between them is the page's.
+        child: Row(
+          children: [
+            const _Glass(child: MediaBackPlate()),
+            const Spacer(),
+            if (trailing case final trailing?) _Glass(child: trailing),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+/// The floating bar's glass behind a pinned plate: the plate's own fill is
+/// a tint for the room's floor, and over a page scrolling under it the glyph
+/// lost to whatever passed beneath (a score's figures, 11/10).
+class _Glass extends StatelessWidget {
+  const _Glass({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: CupolaThemeColors.of(context).glassSurface,
+      borderRadius: BorderRadius.circular(AppRadius.control),
+    ),
+    child: child,
+  );
+}
+
 /// The back control: a 44 plate at rest over the room. In a tablet's pane it
 /// goes back to the title opened before, or closes the pane.
 class MediaBackPlate extends StatelessWidget {

@@ -137,33 +137,35 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     if (!ref.watch(hasCalendarProvider)) {
       return AmbientScaffold(
-        body: ListView(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            top + AppSpacing.md,
-            AppSpacing.lg,
-            bottom,
-          ),
-          children: [
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: MediaBackPlate(),
+        body: MediaPinnedPlates(
+          inset: AppSpacing.lg,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              top + AppSpacing.md,
+              AppSpacing.lg,
+              bottom,
             ),
-            const SizedBox(height: AppSpacing.xxl),
-            AppEmptyState(
-              icon: Icons.calendar_month_rounded,
-              title: 'Nothing to put on a calendar yet',
-              message:
-                  'Set up Radarr, Sonarr, Lidarr or Readarr to see what '
-                  'comes out and airs in the next ${CalendarWindow.days} '
-                  'days.',
-              action: FilledButton(
-                // `go`: Connections lives in the Settings branch.
-                onPressed: () => context.go(ServiceRoutes.settingsConnections),
-                child: const Text('Set up a service'),
+            children: [
+              // The back plate floats here, pinned (`MediaPinnedPlates`).
+              const SizedBox(height: MediaPinnedPlates.reserve),
+              const SizedBox(height: AppSpacing.xxl),
+              AppEmptyState(
+                icon: Icons.calendar_month_rounded,
+                title: 'Nothing to put on a calendar yet',
+                message:
+                    'Set up Radarr, Sonarr, Lidarr or Readarr to see what '
+                    'comes out and airs in the next ${CalendarWindow.days} '
+                    'days.',
+                action: FilledButton(
+                  // `go`: Connections lives in the Settings branch.
+                  onPressed: () =>
+                      context.go(ServiceRoutes.settingsConnections),
+                  child: const Text('Set up a service'),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -494,10 +496,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               builder: (context, box) {
                 if (box.maxWidth < _gridWidth) {
                   // Wider than a phone, the agenda keeps a phone's measure.
-                  return scroll(
-                    agenda(),
-                    side: ((box.maxWidth - AppBreakpoints.readingWell) / 2)
-                        .clamp(0, double.infinity),
+                  final side = ((box.maxWidth - AppBreakpoints.readingWell) / 2)
+                      .clamp(0.0, double.infinity);
+                  return MediaPinnedPlates(
+                    inset: side + AppSpacing.lg,
+                    trailing: _TodayPlate(onTap: () => _today(window)),
+                    child: scroll(agenda(), side: side),
                   );
                 }
                 return Focus(
@@ -989,13 +993,9 @@ class _Head extends StatelessWidget {
             ],
           )
         else ...[
-          Row(
-            children: [
-              const MediaBackPlate(),
-              const Spacer(),
-              _TodayPlate(onTap: onToday),
-            ],
-          ),
+          // Back and Today float here, pinned over the agenda
+          // (`MediaPinnedPlates`).
+          const SizedBox(height: MediaPinnedPlates.reserve),
           const SizedBox(height: AppSpacing.md),
           name,
         ],

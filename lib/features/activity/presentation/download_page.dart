@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,7 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/activity/data/selected_download.dart';
@@ -188,23 +191,28 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
         final gutter = (box.maxWidth - column) / 2;
         final insets = MediaQuery.paddingOf(context);
         final children = body(column);
-        return RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(
-              gutter,
-              insets.top + AppSpacing.md,
-              gutter,
-              insets.bottom + AppSpacing.xxl,
-            ),
-            children: [
-              const Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: MediaBackPlate(),
+        return MediaPinnedPlates(
+          inset: gutter,
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                gutter,
+                insets.top + AppSpacing.md,
+                gutter,
+                // Clear of the floating bar; where there is none, a margin.
+                math.max(
+                  AppSpacing.xxl,
+                  FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              ...children,
-            ],
+              children: [
+                // The back plate floats here, pinned (`MediaPinnedPlates`).
+                const SizedBox(height: MediaPinnedPlates.reserve),
+                const SizedBox(height: AppSpacing.md),
+                ...children,
+              ],
+            ),
           ),
         );
       },

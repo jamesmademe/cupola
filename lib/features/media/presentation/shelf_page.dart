@@ -153,19 +153,9 @@ class ShelfPage extends StatelessWidget {
               ),
               sliver: SliverMainAxisGroup(
                 slivers: [
-                  SliverToBoxAdapter(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const MediaBackPlate(),
-                        if (onMore case final onMore?)
-                          MediaPlate(
-                            label: moreLabel ?? 'More actions',
-                            icon: Icons.more_horiz_rounded,
-                            onTap: onMore,
-                          ),
-                      ],
-                    ),
+                  // Back and More float here, pinned (`MediaPinnedPlates`).
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: MediaPinnedPlates.reserve),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
@@ -197,13 +187,24 @@ class ShelfPage extends StatelessWidget {
             ),
           ],
         );
-        return onRefresh == null
-            ? scroll
-            : RefreshIndicator(
-                edgeOffset: top,
-                onRefresh: onRefresh!,
-                child: scroll,
-              );
+        return MediaPinnedPlates(
+          inset: gutter,
+          trailing: switch (onMore) {
+            final onMore? => MediaPlate(
+              label: moreLabel ?? 'More actions',
+              icon: Icons.more_horiz_rounded,
+              onTap: onMore,
+            ),
+            null => null,
+          },
+          child: onRefresh == null
+              ? scroll
+              : RefreshIndicator(
+                  edgeOffset: top,
+                  onRefresh: onRefresh!,
+                  child: scroll,
+                ),
+        );
       },
     );
     final ambient = BoxDecoration(
