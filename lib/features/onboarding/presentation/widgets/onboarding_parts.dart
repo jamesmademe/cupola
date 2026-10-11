@@ -335,7 +335,11 @@ class OnboardingKeyboardDismiss extends StatelessWidget {
   Widget build(BuildContext context) => TextButton.icon(
     // Names the action rather than saying "Done", which on a form step reads as
     // finishing the step rather than closing the keyboard.
-    onPressed: () => FocusScope.of(context).unfocus(),
+    //
+    // The field's own focus, as the walk's other dismissals do. Unfocusing
+    // the route's whole scope took the focus out of the page, and on a phone
+    // a tap on the field then left the keyboard down (11/10).
+    onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
     icon: const Icon(Icons.keyboard_hide_rounded, size: 18),
     label: const Text('Hide keyboard'),
   );
@@ -1166,9 +1170,10 @@ class _OnboardingFieldState extends State<OnboardingField> {
                         color: scheme.onSurfaceVariant,
                       ),
                       isDense: true,
-                      // Every state is borderless: the container draws the frame,
-                      // and the app-wide focused border would paint a second box
-                      // inside this one.
+                      // Every state is borderless and unfilled: the container
+                      // draws the frame and the well, and the app-wide fill and
+                      // focused border would paint a second box inside this one.
+                      filled: false,
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,

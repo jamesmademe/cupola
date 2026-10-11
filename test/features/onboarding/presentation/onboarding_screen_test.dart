@@ -391,6 +391,23 @@ void main() {
       expect(field.controller!.text, 'https://nas.local:8989');
     });
 
+    testWidgets('no port is offered beside a name a reverse proxy answers', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester);
+      await _tap(tester, 'Set up my stack');
+      await _pick(tester, 'Sonarr');
+      await _tap(tester, 'Continue with 1');
+      expect(_semantics('Use port 8989'), findsOneWidget);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'https://sonarr.example.com',
+      );
+      await tester.pumpAndSettle();
+      expect(_semantics('Use port 8989'), findsNothing);
+    });
+
     testWidgets('the next service starts with an empty address', (
       tester,
     ) async {
@@ -973,6 +990,30 @@ void main() {
       expect(find.text('Hide keyboard'), findsOneWidget);
       final bar = tester.getRect(find.text('Hide keyboard'));
       expect(bar.bottom, lessThanOrEqualTo(phone.height - keyboard));
+    });
+
+    testWidgets('a keyboard put away comes back with a tap on the field', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      final field = find.byType(TextField).first;
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      await raiseKeyboard(tester);
+
+      await tester.tap(find.text('Hide keyboard'));
+      await tester.pump();
+      tester.view.viewInsets = FakeViewPadding.zero;
+      await tester.pumpAndSettle();
+      final node = tester.widget<TextField>(field).focusNode!;
+      expect(node.hasFocus, isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      expect(node.hasFocus, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
     });
   });
 }

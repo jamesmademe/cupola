@@ -502,4 +502,35 @@ void main() {
       }
     });
   });
+
+  group('offersDefaultPort', () {
+    test('yes where the port belongs on the host', () {
+      for (final raw in [
+        '',
+        '192.168.1.20',
+        'http://192.168.1.20',
+        'https://100.101.102.103',
+        'nas',
+        'https://nas.local',
+        'https://nas.home.arpa',
+        'nas.tail1234.ts.net',
+        'http://seerr.example.com',
+        'https://192.168.1.20:5055',
+        'nas:8989',
+      ]) {
+        expect(UrlUtils.offersDefaultPort(raw), isTrue, reason: raw);
+      }
+    });
+
+    test('no where a path follows or a proxy answers', () {
+      for (final raw in [
+        'https://nas.local/sonarr',
+        'https://seerr.example.com',
+        'seerr.example.com',
+        'https://example.com/seerr/',
+      ]) {
+        expect(UrlUtils.offersDefaultPort(raw), isFalse, reason: raw);
+      }
+    });
+  });
 }

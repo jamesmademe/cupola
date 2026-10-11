@@ -276,6 +276,32 @@ class UrlUtils {
     return localNetworkHostVerdict(bare) == true;
   }
 
+  /// Whether a service's default port is worth offering beside [raw], the
+  /// address typed so far.
+  ///
+  /// Yes while nothing is typed (the suggestion carries the last host over),
+  /// and for a host the port belongs on: an address, a name on the local
+  /// network, a Tailscale name, or one that names a port already (perhaps
+  /// another service's). No for an address with a path, and for an https
+  /// name on the internet, which a reverse proxy answers on 443: `:5055` beside `https://seerr.example.com` invited a
+  /// port that breaks it (11/10).
+  static bool offersDefaultPort(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return true;
+    final uri = Uri.tryParse(normalizeBaseUrl(value));
+    if (uri == null || uri.host.isEmpty) return true;
+    // A port typed already may be another service's: the chip swaps it.
+    if (uri.hasPort) return true;
+    if (uri.path.isNotEmpty && uri.path != '/') return false;
+    final host = uri.host.toLowerCase();
+    if (InternetAddress.tryParse(host.replaceAll(RegExp(r'[\[\]]'), '')) !=
+        null) {
+      return true;
+    }
+    if (_isPrivateHost(host) || host.endsWith('.ts.net')) return true;
+    return uri.scheme != 'https';
+  }
+
   /// Warns when [rawUrl] would send credentials in cleartext to a host outside
   /// the local network, and null when there is nothing to warn about.
   ///

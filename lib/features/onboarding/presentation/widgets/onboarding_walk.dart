@@ -472,9 +472,14 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
         help:
             "${service.title}'s default port is ${service.defaultPort}. "
             'Behind a reverse proxy, use the address you reach it on.',
-        trailing: _PortChip(
-          port: service.defaultPort,
-          onTap: widget.onSuggestPort,
+        trailing: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: widget.urlController,
+          builder: (context, value, _) => UrlUtils.offersDefaultPort(value.text)
+              ? _PortChip(
+                  port: service.defaultPort,
+                  onTap: widget.onSuggestPort,
+                )
+              : const SizedBox.shrink(),
         ),
       ),
       if (service.usesApiKey) ...[

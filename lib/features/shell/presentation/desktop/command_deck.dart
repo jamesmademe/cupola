@@ -251,6 +251,8 @@ class _DeckField extends StatelessWidget {
               ),
               decoration: InputDecoration(
                 isDense: true,
+                // The deck draws the well: the app-wide fill would sit inside.
+                filled: false,
                 border: InputBorder.none,
                 hintText: 'Jump to a service, a title, a screen',
                 hintStyle: AppTheme.chrome(
