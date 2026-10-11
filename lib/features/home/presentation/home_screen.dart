@@ -98,6 +98,8 @@ class HomeScreen extends ConsumerWidget {
     // Downloads and Now playing, read again every thirty seconds while this
     // is the page on screen; the requester's Home has neither.
     if (!requester) ref.watchWhileLive(context, homeLivePollProvider);
+    // A server that did not answer, asked again until it does.
+    ref.watchWhileLive(context, homeRecoveryPollProvider);
 
     return RefreshOnReturn(
       id: 'home',

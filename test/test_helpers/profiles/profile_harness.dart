@@ -44,6 +44,8 @@ class ProfileHarness {
       // poll's timer would outlive a container disposed at teardown. The
       // poll has its own test.
       homeLivePollProvider.overrideWith((ref) {}),
+      // The probe of a silent server, for the same reason.
+      homeRecoveryPollProvider.overrideWith((ref) {}),
       // Activity's, for the same reason.
       activityLivePollProvider.overrideWith((ref, tab) {}),
       // Featured standing still, for the same reason: its slides move on a

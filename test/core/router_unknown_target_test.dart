@@ -31,6 +31,7 @@ void main() {
       overrides: [
         ...await settingsScopeOverrides(),
         homeLivePollProvider.overrideWith((ref) {}),
+        homeRecoveryPollProvider.overrideWith((ref) {}),
         // The page's own polls: a test about routes ends before the
         // container that holds their timers is disposed.
         activityLivePollProvider.overrideWith((ref, tab) {}),

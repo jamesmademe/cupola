@@ -191,6 +191,7 @@ void main() {
         // The Home's thirty-second poll: a test about routes ends before the
         // container that holds its timer is disposed.
         homeLivePollProvider.overrideWith((ref) {}),
+        homeRecoveryPollProvider.overrideWith((ref) {}),
         // And Activity's, for the same reason.
         activityLivePollProvider.overrideWith((ref, tab) {}),
         featuredAdvancesProvider.overrideWithValue(false),

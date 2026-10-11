@@ -447,6 +447,7 @@ Future<ProviderContainer> _pump(
       // The Home's thirty-second poll: a test about the bar ends before the
       // container that holds its timer is disposed.
       homeLivePollProvider.overrideWith((ref) {}),
+      homeRecoveryPollProvider.overrideWith((ref) {}),
       featuredAdvancesProvider.overrideWithValue(false),
     ],
   );
