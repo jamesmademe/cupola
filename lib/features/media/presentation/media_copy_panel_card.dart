@@ -37,6 +37,7 @@ class MediaCopyPanelCard extends ConsumerWidget {
     required this.movie,
     required this.status,
     required this.onChanged,
+    this.onOpenDownload,
   });
 
   final ServiceInstance connection;
@@ -46,6 +47,10 @@ class MediaCopyPanelCard extends ConsumerWidget {
   final RadarrMovie movie;
   final MediaStatusInfo status;
   final VoidCallback onChanged;
+
+  /// Opens the download this copy is, on its own page, when the queue holds
+  /// it. Null when there is none to open.
+  final VoidCallback? onOpenDownload;
 
   ({String connectionId, int movieId}) get _copy =>
       (connectionId: connection.id, movieId: movie.id);
@@ -75,6 +80,7 @@ class MediaCopyPanelCard extends ConsumerWidget {
     return _Panel(
       panel: panel,
       onAction: (action) => _act(context, ref, action, record),
+      onOpenDownload: onOpenDownload,
     );
   }
 
@@ -167,10 +173,15 @@ class MediaCopyPanelCard extends ConsumerWidget {
 /// The panel itself: a slab with the headline, the source and the status,
 /// the sentence, the release, the bar, then the actions.
 class _Panel extends StatelessWidget {
-  const _Panel({required this.panel, required this.onAction});
+  const _Panel({
+    required this.panel,
+    required this.onAction,
+    this.onOpenDownload,
+  });
 
   final MediaCopyPanel panel;
   final ValueChanged<MediaCopyAction> onAction;
+  final VoidCallback? onOpenDownload;
 
   @override
   Widget build(BuildContext context) {
@@ -305,6 +316,15 @@ class _Panel extends StatelessWidget {
                 label: Text(action.label),
               ),
             ],
+          ],
+          // The download's own page, quiet, after the panel's ways out.
+          if (onOpenDownload case final open?) ...[
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: open,
+              icon: const Icon(Icons.chevron_right_rounded, size: 18),
+              label: const Text('Open download'),
+            ),
           ],
         ],
       ),

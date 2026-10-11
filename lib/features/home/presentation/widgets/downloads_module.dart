@@ -171,14 +171,23 @@ class HomeDownloadsModule extends ConsumerWidget {
 
 /// One download: its art, its title and how far it got, the release under
 /// it, the bar; and when it stopped, the remedy in the row. A tap opens the
-/// download's own page in Activity.
+/// download's own page: in Activity, unless the list that draws it says
+/// otherwise ([onOpen], a title's page opens it beside the title).
 class DownloadRow extends ConsumerWidget {
-  const DownloadRow({super.key, required this.item, this.divided = false});
+  const DownloadRow({
+    super.key,
+    required this.item,
+    this.divided = false,
+    this.onOpen,
+  });
 
   final ServiceQueueItem item;
 
   /// Whether a hairline separates it from the row above.
   final bool divided;
+
+  /// What a tap does. Null: the download's page in Activity.
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -223,13 +232,16 @@ class DownloadRow extends ConsumerWidget {
     final showsRelease =
         release != null && release.isNotEmpty && release != item.title;
 
-    // Its own page, in Activity, with Activity behind it.
-    Future<void> open() async => context.go(
-      ServiceRoutes.activityDownload(
-        instanceId: item.instanceId,
-        key: downloadPageKey(item),
-      ),
-    );
+    // Its own page, in Activity, with Activity behind it, unless the list
+    // that draws the row opens it somewhere else.
+    final VoidCallback open =
+        onOpen ??
+        () => context.go(
+          ServiceRoutes.activityDownload(
+            instanceId: item.instanceId,
+            key: downloadPageKey(item),
+          ),
+        );
 
     // At a large reading size the value goes under the title: beside it the
     // title kept three letters.

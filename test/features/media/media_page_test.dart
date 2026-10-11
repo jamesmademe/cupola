@@ -16,6 +16,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
 import 'package:cupola/core/widgets/machine_name.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
+import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
@@ -125,6 +126,10 @@ Future<(ProfileHarness, GoRouter)> _pumpRouted(
       ),
       GoRoute(
         path: '/import/review',
+        builder: (context, state) => Text('at ${state.uri}'),
+      ),
+      GoRoute(
+        path: ServiceRoutes.activityDownloadPath,
         builder: (context, state) => Text('at ${state.uri}'),
       ),
     ],
@@ -253,6 +258,62 @@ void main() {
     await tester.ensureVisible(band);
     expect(band, findsOneWidget);
     expect(find.text('Collection'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P1, a series downloading: its downloads sit under the lead, and '
+      'a row opens its own page beside the title', (tester) async {
+    final (harness, router) = await _pumpRouted(
+      tester,
+      Profiles.p1,
+      WorldTitles.cosmosLaundromat,
+      key: MediaKey.tv(WorldTitles.cosmosLaundromat.tmdbId),
+    );
+
+    final rows = find.byType(DownloadRow);
+    expect(rows, findsWidgets);
+    await tester.ensureVisible(rows.first);
+    await tester.tap(rows.first);
+    await _answer(tester);
+
+    final at = router.state.uri;
+    expect(at.path, ServiceRoutes.activityDownloadPath);
+    expect(at.queryParameters['i'], WorldIds.sonarr);
+    expect(at.queryParameters['id'], isNotEmpty);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P1, a title with nothing in the queue shows no download rows', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.tearsOfSteel);
+
+    expect(find.byType(DownloadRow), findsNothing);
+    expect(find.textContaining('more in Activity'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P1, a copy that leads with its download says so once: Open '
+      'download, and no row beside it', (tester) async {
+    final (harness, router) = await _pumpRouted(
+      tester,
+      Profiles.p1,
+      WorldTitles.bigBuckBunny,
+    );
+
+    // The copy panel speaks for its own download: no row repeats it.
+    expect(find.byType(DownloadRow), findsNothing);
+    final open = find.widgetWithText(OutlinedButton, 'Open download');
+    await tester.ensureVisible(open);
+    await tester.tap(open);
+    await _answer(tester);
+
+    final at = router.state.uri;
+    expect(at.path, ServiceRoutes.activityDownloadPath);
+    expect(at.queryParameters['i'], WorldIds.radarr);
 
     await harness.unmount(tester);
   });

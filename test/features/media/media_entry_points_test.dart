@@ -162,6 +162,13 @@ void main() {
     expect(_shown(tester).map((page) => page.mediaKey), [
       MediaKey.tv(WorldTitles.cosmosLaundromat.tmdbId),
     ]);
+    // Under the lead, the title's downloads now stand above the episodes: the
+    // page reads down to them.
+    await tester.scrollUntilVisible(
+      find.text('Episodes'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Episodes'), findsWidgets);
 
     await _close(tester, harness, container);

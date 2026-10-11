@@ -54,6 +54,7 @@ import 'package:cupola/features/discover/presentation/seerr_request_words.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_title_row.dart'
     show seerrSendsToProvider;
+import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
@@ -78,6 +79,7 @@ import 'package:cupola/features/media/domain/media_facts.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
@@ -637,6 +639,28 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             ),
           ),
     ];
+    // The title's downloads, read from the queue. Nothing while the queue has
+    // not answered, and nothing once it failed. The copy panel that leads
+    // already speaks for its own download, so that one is not listed twice:
+    // its panel opens it instead.
+    final queueRead = ref.watch(servicesQueueProvider);
+    final queued = queueRead.hasError
+        ? const <ServiceQueueItem>[]
+        : queueRead.value?.items ?? const <ServiceQueueItem>[];
+    final panelCopy = lead is MediaLeadCopy
+        ? _radarrMovieOf(rows, lead.connection.id)
+        : null;
+    bool isPanelDownload(ServiceQueueItem item) =>
+        panelCopy != null &&
+        lead is MediaLeadCopy &&
+        item.service == ServiceKey.radarr &&
+        item.instanceId == lead.connection.id &&
+        item.mediaId == panelCopy.id;
+    final panelDownload = queued.where(isPanelDownload).firstOrNull;
+    final titleDownloads = [
+      for (final item in _titleDownloads(rows, queued))
+        if (!isPanelDownload(item)) item,
+    ];
     final request = lead is MediaLeadRequest ? _requestOf(lead, rows) : null;
     // The request the add sheet may offer instead, read here, where the page
     // watches Seerr.
@@ -779,6 +803,9 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               movie: _radarrMovieOf(rows, connection.id)!,
               status: status,
               onChanged: () => _readArrsAgain(rows),
+              onOpenDownload: panelDownload == null
+                  ? null
+                  : () => context.openDownload(panelDownload),
             )
           else
             _LeadBar(
@@ -835,6 +862,12 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               serverName: (lead) =>
                   settings.connectionTitle(lead.server.id, lead.server.service),
             ),
+          // A title that is downloading leads to its download's own page, right
+          // under the lead.
+          if (titleDownloads.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            _TitleDownloads(items: titleDownloads),
+          ],
           if (decisions.isNotEmpty && !decisionLeads) ...[
             const SizedBox(height: AppSpacing.md),
             _decisionCards(
@@ -2090,6 +2123,71 @@ class _ScoresLine extends StatelessWidget {
 
 /// The one action that leads, and the three beside it: Trailer, Watchlist,
 /// Manage.
+/// The queue's downloads of the title: those the arrs hold it under, on one
+/// of the page's connections (a Radarr movie or a Sonarr series of [rows]),
+/// in the queue's own order.
+List<ServiceQueueItem> _titleDownloads(
+  List<MediaRow> rows,
+  List<ServiceQueueItem> queue,
+) {
+  final held = <(ServiceKey, String, int)>{};
+  for (final row in rows) {
+    if (row case MediaConnectionRow(
+      :final connection,
+      reading: MediaReadingAnswered(:final answer),
+    )) {
+      switch (answer.value) {
+        case MediaRadarrCopy(movie: final movie?):
+          held.add((ServiceKey.radarr, connection.id, movie.id));
+        case MediaSonarrCopy(series: final series?):
+          held.add((ServiceKey.sonarr, connection.id, series.id));
+        default:
+      }
+    }
+  }
+  return [
+    for (final item in queue)
+      if (item.mediaId case final id?
+          when held.contains((item.service, item.instanceId, id)))
+        item,
+  ];
+}
+
+/// The title's downloads under its lead: each one a Home download row, three
+/// at most, then how many more are in Activity. A row opens the download's own
+/// page beside or over the title, never by switching to Activity.
+class _TitleDownloads extends StatelessWidget {
+  const _TitleDownloads({required this.items});
+
+  final List<ServiceQueueItem> items;
+
+  /// Rows drawn before the rest is counted.
+  static const _limit = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    final more = items.length - _limit;
+    return MediaGroup(
+      children: [
+        for (final item in items.take(_limit))
+          DownloadRow(
+            key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
+            item: item,
+            onOpen: () => context.openDownload(item),
+          ),
+        if (more > 0)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              onPressed: () => context.go(ServiceRoutes.activity),
+              child: Text('$more more in Activity'),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _LeadBar extends StatelessWidget {
   const _LeadBar({
     required this.lead,
