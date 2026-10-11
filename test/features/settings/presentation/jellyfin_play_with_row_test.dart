@@ -77,6 +77,11 @@ void main() {
     expect(find.text('Streamyfin'), findsOneWidget);
     expect(find.text('Jellyfin in the browser'), findsOneWidget);
     expect(find.text('Swiftfin'), findsNothing);
+    // The browser last, as in the sheet that plays a title.
+    expect(
+      tester.getTopLeft(find.text('Streamyfin')).dy,
+      lessThan(tester.getTopLeft(find.text('Jellyfin in the browser')).dy),
+    );
 
     await tester.tap(find.text('Streamyfin'));
     await tester.pumpAndSettle();

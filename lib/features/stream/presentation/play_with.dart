@@ -151,25 +151,32 @@ class _PlayWithSheetState extends State<_PlayWithSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Nothing is chosen until the viewer taps: no row carries a check.
         for (final player in widget.players)
-          ListTile(
-            title: Text(player.label),
-            subtitle: Text(player.line),
-            onTap: () => Navigator.of(context).pop((player, _remember)),
+          SettingsChoiceRow(
+            label: player.label,
+            description: player.line,
+            selected: false,
+            onSelected: () => Navigator.of(context).pop((player, _remember)),
           ),
         const SizedBox(height: AppSpacing.sm),
         CheckboxListTile(
           value: _remember,
           onChanged: (value) => setState(() => _remember = value ?? false),
           controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           title: const Text('Remember my choice'),
-          subtitle: const Text(
+          // The secondary ink, as every subtitle.
+          subtitle: Text(
             'Change it in Settings, on your Jellyfin connection.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ],
@@ -178,14 +185,17 @@ class _PlayWithSheetState extends State<_PlayWithSheet> {
 }
 
 /// The Settings choice of the app a Jellyfin title plays in: `Ask every time`,
-/// or one of the players installed here. Chosen in a sheet, saved at once.
+/// or one of the players installed here, the browser last. Chosen in a sheet,
+/// saved at once.
 Future<void> chooseStreamPlayer(BuildContext context, WidgetRef ref) async {
   final launcher = ref.read(streamAppLauncherProvider);
   final installed = <StreamPlayer>[];
   for (final player in StreamPlayer.values) {
     final probe = player.probe;
-    if (probe == null || await launcher.canOpen(probe)) installed.add(player);
+    if (probe != null && await launcher.canOpen(probe)) installed.add(player);
   }
+  // The browser last, as in the sheet that plays a title.
+  installed.add(StreamPlayer.web);
   if (!context.mounted) return;
   await AppBottomSheet.show<void>(
     context: context,
