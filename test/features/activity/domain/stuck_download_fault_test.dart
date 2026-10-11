@@ -237,6 +237,25 @@ void main() {
         startsWith('Stops it and deletes what has arrived.'),
       );
     });
+
+    test('a season pack is named by its episodes, never by the row\'s count '
+        'of them', () {
+      const pack = ServiceQueueItem(
+        service: ServiceKey.sonarr,
+        id: '1518635975',
+        title: 'Cupertino · 8 episodes',
+        subject: 'Cupertino S1 E1–E8',
+        progress: 1,
+        clientLabel: 'qBittorrent',
+        fault: InFlightFault.needsImport,
+      );
+      final ask = removeConfirmation(pack);
+      expect(ask.title, "Remove Cupertino S1 E1–E8's download?");
+      expect(
+        ask.message,
+        endsWith('Cupertino S1 E1–E8 stays in your wanted list.'),
+      );
+    });
   });
 
   group('the note once a way out was taken', () {

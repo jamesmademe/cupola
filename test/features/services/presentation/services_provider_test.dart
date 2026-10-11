@@ -722,6 +722,9 @@ void main() {
 
       expect(items, hasLength(1));
       expect(items.single.title, 'The Boys · 3 episodes');
+      // A sentence names it by its episodes: `The Boys S4 E1–E3 needs a
+      // manual import`, never `The Boys · 3 episodes needs …`.
+      expect(items.single.subject, 'The Boys S4 E1–E3');
       // The pack's figures once, never summed into three times its size.
       expect(items.single.totalBytes, 300);
       expect(items.single.progress, 0.5);

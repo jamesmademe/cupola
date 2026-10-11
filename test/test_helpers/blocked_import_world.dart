@@ -177,7 +177,7 @@ class FakeBlockedImportService extends ManualImportService {
       500 + season * 100 + episode: 'HDTV-720p',
   };
 
-  final reads = <({String downloadId, int? mediaId})>[];
+  final reads = <String>[];
   List<ManualImportItem>? posted;
   ManualImportCommandStatus command = ManualImportCommandStatus.fromJson(const {
     'id': 41,
@@ -188,9 +188,8 @@ class FakeBlockedImportService extends ManualImportService {
   @override
   Future<List<ManualImportItem>> getDownloadImportItems({
     required String downloadId,
-    int? mediaId,
   }) async {
-    reads.add((downloadId: downloadId, mediaId: mediaId));
+    reads.add(downloadId);
     if (failing.contains(downloadId)) {
       throw DioException(
         requestOptions: RequestOptions(path: '/api/v3/manualimport'),

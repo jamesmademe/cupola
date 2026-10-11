@@ -7,7 +7,9 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/activity/presentation/download_actions.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart'
     show ActivitySlab;
 import 'package:cupola/features/import/domain/blocked_import.dart';
@@ -15,6 +17,8 @@ import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/presentation/blocked_import_parts.dart';
 import 'package:cupola/features/import/presentation/manual_import_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart'
+    show servicesInFlightProvider;
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The Review of the downloads one arr's connection finished and would not
@@ -115,6 +119,29 @@ class _BlockedImportReviewPageState
     }
   }
 
+  /// Removes [download] through the arr's queue, after Needs you's neutral
+  /// question; what went in stays in the library. Back where the Review was
+  /// opened once it is gone.
+  Future<void> _remove(BlockedDownload download) async {
+    final faults = ref.read(servicesInFlightProvider).value?.faults ?? [];
+    final wanted = download.downloadId.toLowerCase();
+    final item = faults
+        .where(
+          (item) =>
+              item.service == widget.service &&
+              item.downloadId?.toLowerCase() == wanted,
+        )
+        .firstOrNull;
+    if (item == null) return;
+    final removed = await removeDownload(context, ref, item);
+    if (!mounted || !removed) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(ServiceRoutes.activityNeedsYou);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(manualImportFlowProvider);
@@ -142,6 +169,23 @@ class _BlockedImportReviewPageState
         service: service,
         instanceId: widget.instanceId,
         onRetry: _read,
+      );
+    } else if (total == 0 && review != null && review.leftOut > 0) {
+      // The arr still lists them, and every file in them went in already.
+      final one = review.downloads.length == 1;
+      body = AppEmptyStatePage(
+        emptyState: AppEmptyState(
+          icon: Icons.check_circle_outline_rounded,
+          title: 'Nothing left to import',
+          message: blockedImportSpentWords(service, one: one),
+          action: one
+              ? FilledButton(
+                  style: remedyFillStyle(context),
+                  onPressed: () => _remove(review.downloads.single),
+                  child: const Text('Remove download'),
+                )
+              : null,
+        ),
       );
     } else if (total == 0) {
       body = AppEmptyStatePage(
@@ -205,8 +249,9 @@ class _BlockedImportReviewPageState
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final total = clear.length + needYou.length;
-    final messages = distinctMessages([
-      for (final download in review.downloads) download.message,
+    final messages = blockedImportMessages(review.downloads, [
+      ...needYou,
+      ...clear,
     ]);
     final cause = blockedImportCauseOf(messages);
     final titles = {

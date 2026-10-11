@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/import/domain/blocked_import.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -33,6 +34,18 @@ void main() {
         blockedImportCauseOf(['Unable to parse file']),
         BlockedImportCause.unrecognised,
       );
+      // Sonarr 4, live: a season pack whose files' names say no episode.
+      expect(
+        blockedImportCauseOf([
+          'Single episode file contains all episodes in seasons. Review file '
+              'name or manually import',
+        ]),
+        BlockedImportCause.unrecognised,
+      );
+      expect(
+        blockedImportCauseOf(['Unknown Series']),
+        BlockedImportCause.unrecognised,
+      );
       expect(
         blockedImportCauseOf([
           'One or more episodes expected in this release were not imported '
@@ -53,6 +66,119 @@ void main() {
         BlockedImportCause.unrecognised,
       );
     });
+  });
+
+  test("a release's sum of its files is the cause only when nothing else "
+      'is', () {
+    // Sonarr 4, live: a season pack whose files name no episode, beside a
+    // release whose name names no series.
+    final pack = ManualImportItem.fromJson({
+      'path':
+          '/downloads/tv-sonarr/Cupertino.S01.720p.WEB-LAB/cpt.part.one.mkv',
+      'relativePath': 'cpt.part.one.mkv',
+      'rejections': [
+        {
+          'type': 'permanent',
+          'reason':
+              'Single episode file contains all episodes in seasons. Review '
+              'file name or manually import',
+        },
+      ],
+    });
+    const summary =
+        'One or more episodes expected in this release were not imported or '
+        'missing from the release';
+    const packDownload = BlockedDownload(
+      downloadId: 'EE94CCA3',
+      title: 'Cupertino.S01.720p.WEB-LAB',
+      message: summary,
+    );
+    const mismatch = BlockedDownload(
+      downloadId: 'C70AE8B3',
+      title: 'Cupertino.720p.WEB-LAB',
+      message:
+          'Series title mismatch; automatic import is not possible. Check '
+          'the download troubleshooting entry on the wiki for common causes.',
+    );
+
+    final messages = blockedImportMessages([packDownload], [pack]);
+    expect(messages, [summary, startsWith('Single episode file')]);
+    expect(blockedImportCauseOf(messages), BlockedImportCause.unrecognised);
+    expect(
+      blockedImportCauseOf(blockedImportMessages([packDownload, mismatch], [])),
+      BlockedImportCause.namesDontMatch,
+    );
+    // Nothing else said: the sum is all there is.
+    expect(blockedImportCauseOf([summary]), BlockedImportCause.incomplete);
+  });
+
+  test("a season pack's unnamed file asks for its episode, never `Add it "
+      "anyway` as all of the season's; an unknown release asks for its "
+      'series', () {
+    // Sonarr 4, live.
+    final pack = ManualImportItem.fromJson({
+      'path':
+          '/downloads/tv-sonarr/Cupertino.S01.720p.WEB-LAB/cpt.part.one.mkv',
+      'relativePath': 'cpt.part.one.mkv',
+      'series': {'id': 9, 'title': 'Cupertino'},
+      'seasonNumber': 1,
+      'episodes': [
+        for (var n = 1; n <= 8; n++)
+          {'id': 600 + n, 'seasonNumber': 1, 'episodeNumber': n},
+      ],
+      'rejections': [
+        {
+          'type': 'permanent',
+          'reason':
+              'Single episode file contains all episodes in seasons. Review '
+              'file name or manually import',
+        },
+      ],
+    });
+    final unknown = ManualImportItem.fromJson({
+      'path': '/downloads/tv-sonarr/Cupertino.720p.WEB-LAB/Cupertino.720p.mkv',
+      'relativePath': 'Cupertino.720p.mkv',
+      'rejections': [
+        {'type': 'permanent', 'reason': 'Unknown Series'},
+      ],
+    });
+
+    expect(needYouKindOf(ServiceKey.sonarr, pack), NeedYouKind.episode);
+    expect(needYouKindOf(ServiceKey.sonarr, unknown), NeedYouKind.identity);
+    expect(pack.isMatchedFor(ServiceKey.sonarr), isFalse);
+    // The season stays: the row asks for the episode from there.
+    expect(pack.episodes, isEmpty);
+    expect(pack.seasonNumber, 1);
+  });
+
+  test('a file the arr already took from this download stays out, though '
+      'Sonarr lists it again while the rest of the pack waits', () {
+    // Sonarr 4, live, after E1 and E2 went in from a season pack.
+    final taken = ManualImportItem.fromJson({
+      'path':
+          '/downloads/tv-sonarr/Cupertino.S01.720p.WEB-LAB/cpt.part.one.mkv',
+      'relativePath': 'cpt.part.one.mkv',
+      'series': {'id': 9, 'title': 'Cupertino'},
+      'seasonNumber': 1,
+      'rejections': [
+        {
+          'type': 'permanent',
+          'reason': 'Episode file already imported at 10/11/2026 09:11:21',
+        },
+        {
+          'type': 'permanent',
+          'reason':
+              'Single episode file contains all episodes in seasons. Review '
+              'file name or manually import',
+        },
+      ],
+    });
+
+    final split = splitBlockedImport(ServiceKey.sonarr, [taken]);
+
+    expect(split.needYou, isEmpty);
+    expect(split.clear, isEmpty);
+    expect(split.leftOut, 1);
   });
 
   test('eighteen downloads stopped for one reason say it once', () {

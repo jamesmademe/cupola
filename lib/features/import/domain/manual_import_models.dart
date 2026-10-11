@@ -169,6 +169,10 @@ class ManualImportItem {
 
   factory ManualImportItem.fromJson(Map<String, dynamic> json) {
     final path = stringOrNull(json['path']) ?? '';
+    final rejections = jsonObjects(
+      json['rejections'],
+      ManualImportRejection.fromJson,
+    );
     return ManualImportItem(
       id: intOrNull(json['id']) ?? path.hashCode,
       path: path,
@@ -180,7 +184,12 @@ class ManualImportItem {
       movieFileId: intOrNull(json['movieFileId']),
       series: mapOrNull(json['series']),
       seasonNumber: intOrNull(json['seasonNumber']),
-      episodes: jsonObjects(json['episodes'], (item) => item),
+      // Sonarr maps a season pack's file whose name names no episode to
+      // every episode of the season, and says so: that is no reading of the
+      // file, and imported as it stands it would fill the whole season.
+      episodes: rejections.any(_isSeasonPackGuess)
+          ? const []
+          : jsonObjects(json['episodes'], (item) => item),
       episodeFileId: intOrNull(json['episodeFileId']),
       artist: mapOrNull(json['artist']),
       album: mapOrNull(json['album']),
@@ -199,10 +208,7 @@ class ManualImportItem {
       additionalFile: json['additionalFile'] == true,
       replaceExistingFiles: json['replaceExistingFiles'] == true,
       disableReleaseSwitching: json['disableReleaseSwitching'] == true,
-      rejections: jsonObjects(
-        json['rejections'],
-        ManualImportRejection.fromJson,
-      ),
+      rejections: rejections,
     );
   }
 
@@ -225,6 +231,12 @@ class ManualImportItem {
     // Radarr/Sonarr use 0 for "no existing file" in manual import payloads.
     return (movieFileId ?? 0) > 0 || (episodeFileId ?? 0) > 0;
   }
+
+  /// The arr says this very file went in already (`Episode file already
+  /// imported at 10/11/2026 09:11:21`): Sonarr lists it again while the rest
+  /// of its download waits, and names no file id for it.
+  bool get wasImportedFromHere =>
+      rejections.any((item) => _alreadyImportedReason.hasMatch(item.reason));
 
   bool get hasBlockingIdentityRejection =>
       rejections.any((item) => item.isPermanent && _isIdentityRejection(item));
@@ -872,6 +884,11 @@ List<ManualImportRejection> _removeIdentityRejections(
 /// makes the file a sample.
 final _sampleReason = RegExp(r'\bsamples?\b', caseSensitive: false);
 
+final _alreadyImportedReason = RegExp(
+  r'\bfile already imported\b',
+  caseSensitive: false,
+);
+
 bool _isIdentityRejection(ManualImportRejection rejection) {
   if (!rejection.isPermanent) return false;
   final reason = rejection.reason.toLowerCase();
@@ -888,8 +905,18 @@ bool _isIdentityRejection(ManualImportRejection rejection) {
       reason.contains('unable to determine artist') ||
       reason.contains('unable to determine album') ||
       reason.contains('unable to determine episode') ||
-      reason.contains('unable to determine track');
+      reason.contains('unable to determine track') ||
+      // Sonarr 4 and Radarr 5, live: a release whose name names no title.
+      reason.startsWith('unknown series') ||
+      reason.startsWith('unknown movie') ||
+      reason.startsWith('unknown artist') ||
+      _isSeasonPackGuess(rejection);
 }
+
+/// Sonarr 4, live: the file of a season pack whose name names no episode,
+/// which it maps to every episode of the season.
+bool _isSeasonPackGuess(ManualImportRejection rejection) =>
+    rejection.reason.toLowerCase().contains('contains all episodes in seasons');
 
 String? _extractQualityName(Map<String, dynamic>? quality) {
   final directQuality = mapOrNull(quality?['quality']);

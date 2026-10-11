@@ -466,10 +466,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       final reads = await Future.wait([
         for (final download in downloads)
           api
-              .getDownloadImportItems(
-                downloadId: download.downloadId,
-                mediaId: download.mediaId,
-              )
+              .getDownloadImportItems(downloadId: download.downloadId)
               .then<List<ManualImportItem>?>(
                 (items) => items,
                 onError: (Object _) => null,

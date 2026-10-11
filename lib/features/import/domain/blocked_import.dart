@@ -100,7 +100,7 @@ final _causes = <(RegExp, BlockedImportCause)>[
   (
     RegExp(
       r'unable to (parse|identify|determine)|unknown (series|movie|artist)|'
-      r'invalid season or episode',
+      r'invalid season or episode|contains all episodes in seasons',
       caseSensitive: false,
     ),
     BlockedImportCause.unrecognised,
@@ -116,14 +116,23 @@ final _causes = <(RegExp, BlockedImportCause)>[
 ];
 
 /// The first cause the app recognises among [messages], in their order.
+/// `incomplete` only when nothing else is recognised: Sonarr writes `One or
+/// more episodes expected in this release were not imported` over any
+/// release some of whose files stayed out, so it is the sum of the files'
+/// causes, not one of its own.
 BlockedImportCause blockedImportCauseOf(Iterable<String?> messages) {
+  var incomplete = false;
   for (final message in messages) {
     if (message == null) continue;
     for (final (pattern, cause) in _causes) {
-      if (pattern.hasMatch(message)) return cause;
+      if (!pattern.hasMatch(message)) continue;
+      if (cause != BlockedImportCause.incomplete) return cause;
+      incomplete = true;
     }
   }
-  return BlockedImportCause.unknown;
+  return incomplete
+      ? BlockedImportCause.incomplete
+      : BlockedImportCause.unknown;
 }
 
 /// [messages] once each, in their order: eighteen downloads stopped for one
@@ -138,6 +147,27 @@ List<String> distinctMessages(Iterable<String?> messages) {
         message.trim(),
   ];
 }
+
+/// What the arr said, once each: of each of [downloads], then of each of
+/// [files] the Review shows, whose words carry the cause when a download's
+/// own line is only their sum.
+List<String> blockedImportMessages(
+  Iterable<BlockedDownload> downloads,
+  Iterable<ManualImportItem> files,
+) => distinctMessages([
+  for (final download in downloads) download.message,
+  for (final file in files)
+    for (final rejection in file.rejections) rejection.reason,
+]);
+
+/// Under `Nothing left to import`, when the arr still holds downloads whose
+/// files all went in already: Sonarr keeps a season pack queued until every
+/// episode it expected arrives, and the rest are not in it.
+String blockedImportSpentWords(ServiceKey service, {required bool one}) => one
+    ? "${service.title} took what this download had and waits for files "
+          "that aren't in it. Removing it keeps what went in."
+    : "${service.title} took what these downloads had and waits for files "
+          "that aren't in them. Removing them keeps what went in.";
 
 /// `Review 18 imports`: one import per file.
 String blockedImportTitle(int files) =>
@@ -253,7 +283,13 @@ enum NeedYouKind {
 
 /// Which choice [item] needs.
 NeedYouKind needYouKindOf(ServiceKey service, ManualImportItem item) {
-  if (!item.hasBlockingRequirementsFor(service)) return NeedYouKind.refused;
+  // A file the arr cannot name is never refused, whatever it mapped it to:
+  // Sonarr maps a season pack's unnamed file to every episode of the season,
+  // and `Add it anyway` would import it as all of them.
+  if (!item.hasBlockingRequirementsFor(service) &&
+      !item.hasBlockingIdentityRejection) {
+    return NeedYouKind.refused;
+  }
   if (service == ServiceKey.sonarr &&
       (intOrNull(item.series?['id']) ?? 0) > 0) {
     return NeedYouKind.episode;
@@ -284,7 +320,8 @@ BlockedImportSplit splitBlockedImport(
   for (final item in items) {
     if (!manualImportIsSupportedFile(service, item) ||
         item.isSample ||
-        item.isAlreadyImported) {
+        item.isAlreadyImported ||
+        item.wasImportedFromHere) {
       leftOut++;
     } else if (item.isReadyForImportFor(service) &&
         !item.rejections.any((rejection) => rejection.isPermanent)) {
@@ -453,49 +490,6 @@ Map<int, int> seasonSizesOf(Map<String, dynamic>? series) {
     if (number != null && total > 0) sizes[number] = total;
   }
   return sizes;
-}
-
-/// `S1 and S2 E1–E2`: each season's runs, a gap starting a new run, and a
-/// season whole ([sizes] says how many episodes it has) by its code alone.
-String? episodeRunsLine(
-  Map<int, List<int>> bySeason, {
-  Map<int, int> sizes = const {},
-}) {
-  final seasons = <String>[];
-  for (final MapEntry(key: season, value: numbers) in bySeason.entries) {
-    if (numbers.isEmpty) continue;
-    final size = sizes[season];
-    if (size != null &&
-        numbers.length == size &&
-        numbers.first == 1 &&
-        numbers.last == size) {
-      seasons.add(formatSeasonCode(season));
-      continue;
-    }
-    final runs = <List<int>>[];
-    for (final number in numbers) {
-      if (runs.isNotEmpty && number == runs.last.last + 1) {
-        runs.last.add(number);
-      } else {
-        runs.add([number]);
-      }
-    }
-    final first = formatEpisodeRange(season, runs.first)!;
-    seasons.add(
-      [
-        first,
-        for (final run in runs.skip(1))
-          run.length == 1
-              ? formatEpisodeOrdinal(run.single)
-              : '${formatEpisodeOrdinal(run.first)}'
-                    '–${formatEpisodeOrdinal(run.last)}',
-      ].join(', '),
-    );
-  }
-  if (seasons.isEmpty) return null;
-  if (seasons.length == 1) return seasons.single;
-  return '${seasons.sublist(0, seasons.length - 1).join(', ')} and '
-      '${seasons.last}';
 }
 
 /// `12 episodes imported`, `Big Buck Bunny imported`, `3 movies imported`;

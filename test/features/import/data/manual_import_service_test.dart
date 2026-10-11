@@ -347,4 +347,25 @@ void main() {
       expect(client.lastGetReceiveTimeout, kSlowScanReceiveTimeout);
     });
   });
+
+  group('ManualImportService.getDownloadImportItems', () {
+    test('reads a download by its id alone, never with the title\'s id: '
+        'Sonarr then walks the series folder, and a new series has none '
+        'yet', () async {
+      final client = FakeApiClient();
+      client.getResponseData = const [];
+      final service = ManualImportService(
+        client: client,
+        service: ServiceKey.sonarr,
+      );
+
+      await service.getDownloadImportItems(downloadId: 'EE94CCA3');
+
+      expect(client.lastGetPath, '/api/v3/manualimport');
+      expect(client.lastGetQueryParameters, {
+        'downloadId': 'EE94CCA3',
+        'filterExistingFiles': true,
+      });
+    });
+  });
 }

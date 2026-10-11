@@ -13,6 +13,7 @@ import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
@@ -1443,6 +1444,7 @@ class ServiceQueueItem {
   const ServiceQueueItem({
     required this.service,
     required this.title,
+    this.subject,
     required this.progress,
     required this.clientLabel,
     this.id = '',
@@ -1483,6 +1485,14 @@ class ServiceQueueItem {
   final String id;
 
   final String title;
+
+  /// What a sentence calls it, when that is not [title]: `Cupertino S1
+  /// E1–E8` for the season pack a row calls `Cupertino · 8 episodes`, which
+  /// cannot be the subject of `… needs a manual import`.
+  final String? subject;
+
+  /// What a sentence or a spoken label calls it: [subject], or [title].
+  String get sentenceTitle => subject ?? title;
 
   /// Fraction complete, or null when the client did not say. Null is not zero:
   /// a usenet item that has not started reports nothing, and sorting it as 0%
@@ -1607,6 +1617,7 @@ class ServiceQueueItem {
   ServiceQueueItem withNames(MediaNames names) => ServiceQueueItem(
     service: service,
     title: title,
+    subject: subject,
     progress: progress,
     clientLabel: clientLabel,
     id: id,
@@ -2259,6 +2270,7 @@ ServiceQueueItem _joinedQueueItem(
     service: arr.service,
     id: arr.id,
     title: arr.title,
+    subject: arr.subject,
     progress: client.progress ?? arr.progress,
     clientLabel: arr.clientLabel,
     quality: arr.quality,
@@ -2904,6 +2916,7 @@ ServiceQueueItem _queueItemFromRecords(
     service: service,
     id: '${intOrNull(typedItem['id']) ?? 0}',
     title: title,
+    subject: records.length == 1 ? null : _packSubject(service, records),
     progress: queueProgress(typedItem),
     quality: _queueQualityLabel(typedItem['quality']),
     // Derived from the two figures the record actually carries, and only when
@@ -3047,6 +3060,32 @@ String _packTitle(ServiceKey service, List<Map<String, dynamic>> records) {
     name ?? arrReleaseTitle(first) ?? 'Unknown release',
     '${records.length} $unit',
   ]);
+}
+
+/// A Sonarr pack in a sentence: the series and the episodes its records
+/// name, `Cupertino S1 E1–E8`. Null for the other arrs, whose packs' titles
+/// already read as a noun, and when the records name no episode.
+String? _packSubject(ServiceKey service, List<Map<String, dynamic>> records) {
+  if (service != ServiceKey.sonarr) return null;
+  final series = arrSeriesTitle(records.first);
+  final bySeason = <int, List<int>>{};
+  for (final record in records) {
+    final episode = mapOrNull(record['episode']);
+    final season = intOrNull(
+      episode?['seasonNumber'] ?? record['seasonNumber'],
+    );
+    final number = intOrNull(
+      episode?['episodeNumber'] ?? record['episodeNumber'],
+    );
+    if (season == null || number == null) continue;
+    bySeason.putIfAbsent(season, () => []).add(number);
+  }
+  final runs = episodeRunsLine({
+    for (final season in bySeason.keys.toList()..sort())
+      season: bySeason[season]!.toSet().toList()..sort(),
+  });
+  if (series == null || runs == null) return null;
+  return '$series $runs';
 }
 
 /// A pack's names: `The Boys · 8 episodes` and the pack's release, or the
@@ -3772,7 +3811,9 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
       // With the connection: two Radarr both number their queues from one.
       id: 'import-blocked-${item.service.routeParam}-${item.instanceId}-${item.id}',
       service: item.service,
-      title: item.title,
+      // Read in a sentence (`… needs a manual import`), so a pack is named
+      // by its episodes, not by the row's count of them.
+      title: item.subject ?? item.title,
       // The shape `_failedImportDecision` prints, so the two import faults read
       // alike. No client: the bytes are on disk, and the client is not where
       // this is fixed. The connection is named when there are two.

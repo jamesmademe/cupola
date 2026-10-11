@@ -45,7 +45,7 @@ Future<bool> stopDownload(
     if (context.mounted) {
       SnackBarHelper.error(
         context,
-        '${stop ? 'Could not stop' : 'Could not resume'} ${item.title}. '
+        '${stop ? 'Could not stop' : 'Could not resume'} ${item.sentenceTitle}. '
         '${writeFailureReason(client.client, error)}',
         cause: error,
       );
@@ -93,7 +93,7 @@ Future<bool> removeDownload(
     if (context.mounted) {
       SnackBarHelper.error(
         context,
-        "Could not remove ${item.title}'s download. "
+        "Could not remove ${item.sentenceTitle}'s download. "
         '${writeFailureReason(item.service, error)}',
         cause: error,
       );

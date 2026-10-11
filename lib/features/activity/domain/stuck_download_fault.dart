@@ -92,13 +92,13 @@ StuckActions stuckActionsFor(ServiceQueueItem item) {
 /// The card's headline: `Big Buck Bunny is stuck at 47%`, `… is stuck` when
 /// its client gave no figure, `… failed` when the client gave up on it.
 String stuckHeadline(ServiceQueueItem item) {
-  if (item.fault == InFlightFault.failed) return '${item.title} failed';
+  if (item.fault == InFlightFault.failed) return '${item.sentenceTitle} failed';
   final percent = item.progress == null
       ? null
       : (item.progress! * 100).floor().clamp(0, 99);
   return percent == null
-      ? '${item.title} is stuck'
-      : '${item.title} is stuck at ${formatPercent(percent)}';
+      ? '${item.sentenceTitle} is stuck'
+      : '${item.sentenceTitle} is stuck at ${formatPercent(percent)}';
 }
 
 /// How long nothing has arrived, in a sentence's words: `3 hours`,
@@ -203,11 +203,11 @@ typedef RemoveConfirmation = ({String title, String message, String confirm});
 RemoveConfirmation removeConfirmation(ServiceQueueItem item) {
   final arrived = arrivedBytes(item);
   return (
-    title: "Remove ${item.title}'s download?",
+    title: "Remove ${item.sentenceTitle}'s download?",
     message:
         'Stops it and deletes '
         '${arrived == null ? 'what has arrived' : 'the $arrived'}. '
-        '${item.title} stays in your wanted list.',
+        '${item.sentenceTitle} stays in your wanted list.',
     confirm: 'Remove download',
   );
 }
@@ -221,7 +221,8 @@ String stuckActionNote(StuckAction action, ServiceQueueItem item) =>
         'Dropped · ${arrName(item)} is looking for another download',
       StuckAction.lookForPeers =>
         'Asked again · ${clientName(item)} is looking for peers',
-      StuckAction.remove => 'Removed · ${item.title} stays in your wanted list',
+      StuckAction.remove =>
+        'Removed · ${item.sentenceTitle} stays in your wanted list',
       // Kept waiting says until when: [keptWaitingNote].
       StuckAction.keepWaiting => 'Hidden · it comes back if nothing moves',
       StuckAction.openClient => '',

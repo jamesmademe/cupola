@@ -102,7 +102,7 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
     FaultCardAction secondary(StuckAction action) => (
       label: stuckActionLabel(action, item),
       onPressed: () => _take(action, item),
-      semanticLabel: '${stuckActionLabel(action, item)}, ${item.title}',
+      semanticLabel: '${stuckActionLabel(action, item)}, ${item.sentenceTitle}',
     );
 
     final primaryLabel = stuckActionLabel(actions.primary, item);
@@ -118,7 +118,7 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
               )
             : Text(
                 primaryLabel,
-                semanticsLabel: '$primaryLabel, ${item.title}',
+                semanticsLabel: '$primaryLabel, ${item.sentenceTitle}',
               ),
       ),
     );
@@ -211,7 +211,7 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
           action,
           item,
           service: item.service,
-          failure: "Could not remove ${item.title}'s download",
+          failure: "Could not remove ${item.sentenceTitle}'s download",
           call: () => _arr(item).removeFromQueue(
             int.parse(item.id),
             removeFromClient: true,

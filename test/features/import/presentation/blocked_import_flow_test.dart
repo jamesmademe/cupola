@@ -31,7 +31,7 @@ void main() {
           .startBlocked(ServiceKey.sonarr, instanceId: blockedImportConnection);
 
       expect(fake.reads, hasLength(18));
-      expect(fake.reads.first, (downloadId: 'clear-1-1', mediaId: 7));
+      expect(fake.reads.first, 'clear-1-1');
       final state = container.read(manualImportFlowProvider);
       expect(state.isLoadingItems, isFalse);
       expect(state.items, hasLength(18));
@@ -78,10 +78,7 @@ void main() {
               instanceId: blockedImportConnection,
             );
 
-        expect(
-          [for (final read in fake.reads) read.downloadId],
-          ['clear-1-1', 'clear-1-2'],
-        );
+        expect(fake.reads, ['clear-1-1', 'clear-1-2']);
       },
     );
 

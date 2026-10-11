@@ -51,3 +51,46 @@ String? formatEpisodeRange(int season, Iterable<int> episodes) {
   return '${formatEpisodeCode(season, sorted.first)}'
       '–${formatEpisodeOrdinal(sorted.last)}';
 }
+
+/// `S1 and S2 E1–E2`: each season's runs, a gap starting a new run, and a
+/// season whole ([sizes] says how many episodes it has) by its code alone.
+String? episodeRunsLine(
+  Map<int, List<int>> bySeason, {
+  Map<int, int> sizes = const {},
+}) {
+  final seasons = <String>[];
+  for (final MapEntry(key: season, value: numbers) in bySeason.entries) {
+    if (numbers.isEmpty) continue;
+    final size = sizes[season];
+    if (size != null &&
+        numbers.length == size &&
+        numbers.first == 1 &&
+        numbers.last == size) {
+      seasons.add(formatSeasonCode(season));
+      continue;
+    }
+    final runs = <List<int>>[];
+    for (final number in numbers) {
+      if (runs.isNotEmpty && number == runs.last.last + 1) {
+        runs.last.add(number);
+      } else {
+        runs.add([number]);
+      }
+    }
+    final first = formatEpisodeRange(season, runs.first)!;
+    seasons.add(
+      [
+        first,
+        for (final run in runs.skip(1))
+          run.length == 1
+              ? formatEpisodeOrdinal(run.single)
+              : '${formatEpisodeOrdinal(run.first)}'
+                    '–${formatEpisodeOrdinal(run.last)}',
+      ].join(', '),
+    );
+  }
+  if (seasons.isEmpty) return null;
+  if (seasons.length == 1) return seasons.single;
+  return '${seasons.sublist(0, seasons.length - 1).join(', ')} and '
+      '${seasons.last}';
+}
