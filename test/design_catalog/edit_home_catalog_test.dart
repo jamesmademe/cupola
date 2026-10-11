@@ -38,9 +38,9 @@ void main() {
     overrides: () async => settingsScopeOverrides(),
     scenes: [
       CatalogScene(
-        'EditHomePage · the operator\'s default: Needs you locked first, the '
-        'modules in order with their handles and switches, Set up next at '
-        'the foot, Reset dimmed',
+        'EditHomePage · the operator\'s default: Needs you first with its '
+        'handle and no switch, the modules in order with their handles and '
+        'switches, Set up next at the foot, Reset dimmed',
         (_) => const EditHomePage(),
         width: 390,
         height: 860,

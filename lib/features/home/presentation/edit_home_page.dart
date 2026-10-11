@@ -20,10 +20,10 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 ///
 /// Nothing is added here: the Home starts from the default for its person,
 /// and this page moves and switches off what the registry gives it. Needs you
-/// stands first and cannot be switched off; Set up next stands last. A module
-/// moves by its handle: held and dragged, or tapped, which lifts it and offers
-/// the two arrows, the way a thumb and a screen reader can both use. With a
-/// screen reader each row also carries Move up and Move down.
+/// starts first and can be moved, but it has no switch; Set up next stands
+/// last. A module moves by its handle: held and dragged, or tapped, which lifts
+/// it and offers the two arrows, the way a thumb and a screen reader can both
+/// use. With a screen reader each row also carries Move up and Move down.
 ///
 /// The same page at `/home/edit` and `/settings/home`; its way back is where
 /// it was opened from.
@@ -43,10 +43,6 @@ class _EditHomePageState extends ConsumerState<EditHomePage> {
     final room = CupolaRoom.of(context);
     final layout = ref.watch(homeLayoutProvider);
     final notifier = ref.read(homeLayoutProvider.notifier);
-    final first = [
-      for (final module in layout.rows)
-        if (module.placement == HomePlacement.first) module,
-    ];
     final last = [
       for (final module in layout.rows)
         if (module.placement == HomePlacement.last) module,
@@ -81,15 +77,6 @@ class _EditHomePageState extends ConsumerState<EditHomePage> {
                   style: AppType.body.copyWith(color: room.inkSecondary),
                 ),
                 const SizedBox(height: AppSpacing.scaleXl),
-                if (first.isNotEmpty) ...[
-                  _Group(
-                    label: 'Always on Home',
-                    children: [
-                      for (final module in first) _LockedRow(module: module),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
                 _Group(
                   label: 'Modules, in order',
                   children: [
@@ -280,48 +267,6 @@ class _Words extends ConsumerWidget {
   }
 }
 
-/// Needs you: a lock where the handle would be, and no switch.
-class _LockedRow extends StatelessWidget {
-  const _LockedRow({required this.module});
-
-  final HomeModule module;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    return Semantics(
-      container: true,
-      label: '${module.label}, always first',
-      value: module.line,
-      excludeSemantics: true,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 64),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: Icon(
-                  Icons.lock_outline_rounded,
-                  size: 20,
-                  color: room.inkTertiary,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(child: _Words(module: module)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// One module in the order: its handle, its words, then the switch, or the
 /// two arrows while it is lifted.
 class _ModuleRow extends ConsumerWidget {
@@ -420,7 +365,7 @@ class _ModuleRow extends ConsumerWidget {
                 label: 'Move ${module.label} down',
                 onTap: canDown ? () => onMove(1) : null,
               ),
-            ] else
+            ] else if (module.hideable)
               Semantics(
                 label: module.label,
                 value: ref.watch(_lineProvider(module)),

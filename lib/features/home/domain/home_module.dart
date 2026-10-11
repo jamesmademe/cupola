@@ -16,13 +16,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Where a module stands on its Home.
 enum HomePlacement {
-  /// Before every other module, whatever the layout says: Needs you.
-  first,
-
-  /// In the person's order.
+  /// In the person's order, from its default place.
   ordered,
 
-  /// After every other module: Set up next, which speaks of the Home itself.
+  /// After every other module, whatever the layout says: Set up next, which
+  /// speaks of the Home itself.
   last,
 }
 
@@ -32,12 +30,14 @@ enum HomePlacement {
 /// operator's modules first, then the requester's. A person reorders and hides
 /// their own; nothing else is added.
 enum HomeModule {
-  /// The fault in the lead, how many more, the way in.
+  /// The fault in the lead, how many more, the way in. First by default, and a
+  /// person may move it; it is never hidden, since it is only there when
+  /// something is wrong.
   needsYou(
     audience: Audience.operator,
     label: 'Needs you',
-    line: 'Always first, and only there when something is wrong',
-    placement: HomePlacement.first,
+    line: 'First by default, and only there when something is wrong',
+    hideable: false,
   ),
 
   /// Up to three slides, moving on by themselves: what somebody was
@@ -192,6 +192,7 @@ enum HomeModule {
     required this.label,
     required this.line,
     this.placement = HomePlacement.ordered,
+    this.hideable = true,
     this.services = const [],
     this.defaultOn = true,
     this.needs,
@@ -208,6 +209,10 @@ enum HomeModule {
 
   /// Where it stands.
   final HomePlacement placement;
+
+  /// Whether Edit Home may switch it off. Needs you may not: it is there only
+  /// when something is wrong, and then it is the point of the page.
+  final bool hideable;
 
   /// Whether a Home starts with it on. The ones a person adds by choice (the
   /// lights of the stack, the storage, a shelf of Discover) do not.
@@ -229,11 +234,8 @@ enum HomeModule {
     return 'Needs ${_orList(names)}';
   }
 
-  /// Whether Edit Home may switch it off. Needs you may not: it is there only
-  /// when something is wrong, and then it is the point of the page.
-  bool get hideable => placement != HomePlacement.first;
-
-  /// Whether Edit Home may move it. The two that stand at an end stay there.
+  /// Whether Edit Home may move it. Set up next stands at the foot and stays
+  /// there.
   bool get movable => placement == HomePlacement.ordered;
 
   /// Every module of [audience]'s Home, in its default order.

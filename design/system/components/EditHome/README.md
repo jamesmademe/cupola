@@ -18,9 +18,8 @@ the page it was opened from (`MediaBackPlate`).
 
 - The back plate, `Edit Home` in the room role, and one paragraph: the Home starts from the default for its person;
   reorder and hide, nothing else is added.
-- **Always on Home**: Needs you, a lock where the handle would be and no switch. It stands first and cannot be hidden.
-- **Modules, in order**: one row per module, its handle (`drag_indicator`, 44pt), its name in the row role and its
-  line in `meta`, its switch. A switched-off module's words dim to half. While none of the services that feed a module
+- **Modules, in order**: one row per module, Needs you first by default, its handle (`drag_indicator`, 44pt), its name in
+  the row role and its line in `meta`, its switch. Needs you has no switch: it can be moved, never hidden. A switched-off module's words dim to half. While none of the services that feed a module
   is set up, its line says what it needs instead (`Needs TrueNAS or Unraid`, `Needs Seerr`). Stack health, Storage and
   Discover shelf start off. Held, the handle drags the row; tapped, it
   lifts the row (`fillQuiet`) and its switch gives way to two 44pt arrows, the one at the end of the order dimmed.
@@ -34,7 +33,7 @@ Groups are `slab` under a `hair` edge, `AppRadius.group`, rows at least 64pt wit
 
 ## Semantics
 
-Each group is named (`Always on Home`, `Modules, in order`, `At the foot of Home`). The handle is a toggle button,
+Each group is named (`Modules, in order`, `At the foot of Home`). The handle is a toggle button,
 `Move Arrived` and, lifted, `Put Arrived down`; the arrows say `Move Arrived up` and `Move Arrived down`. The switch
 carries the module's name and line. The handle and the switch both carry the custom actions Move up and Move down, so
 a screen reader can reorder from wherever it lands on the row.

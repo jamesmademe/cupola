@@ -39,13 +39,14 @@ void main() {
       ]);
     });
 
-    test('Needs you can be neither moved nor hidden; Set up next can be '
-        'hidden but not moved', () {
+    test('Needs you can be moved but never hidden; Set up next can be hidden '
+        'but not moved', () {
       expect(HomeModule.needsYou.hideable, isFalse);
-      expect(HomeModule.needsYou.movable, isFalse);
+      expect(HomeModule.needsYou.movable, isTrue);
       expect(HomeModule.setUpNext.hideable, isTrue);
       expect(HomeModule.setUpNext.movable, isFalse);
       expect(HomeModule.orderedOf(operator), [
+        HomeModule.needsYou,
         HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
@@ -113,6 +114,7 @@ void main() {
         operator,
       );
       expect(layout.order, [
+        HomeModule.needsYou,
         HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
@@ -138,6 +140,7 @@ void main() {
       // default, wherever the person moved that one to.
       final layout = HomeLayout.read(stored(['requests', 'arrived']), operator);
       expect(layout.order, [
+        HomeModule.needsYou,
         HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
@@ -163,37 +166,29 @@ void main() {
       expect(read.isOn(HomeModule.stackHealth), isFalse);
     });
 
-    test('a new first module enters first', () {
+    test('a layout written before Needs you existed starts with it', () {
+      // The first build wrote no Needs you into the order: it enters at the
+      // top, where the registry puts it by default.
       final layout = HomeLayout.read(
         stored(['requests', 'downloads']),
         operator,
       );
-      expect(layout.order.first, HomeModule.featured);
+      expect(layout.order.first, HomeModule.needsYou);
+      expect(layout.rows.first, HomeModule.needsYou);
     });
 
-    test('Needs you stands first and Set up next last, whatever the file '
-        'says', () {
+    test('Set up next stays last whatever the file says, and Needs you is '
+        'never hidden', () {
       final layout = HomeLayout.read(
         stored(
-          ['setUpNext', 'requests', 'needsYou', 'downloads', 'arrived'],
+          ['setUpNext', 'requests', 'downloads', 'arrived'],
           hidden: ['needsYou'],
         ),
         operator,
       );
-      expect(layout.order, [
-        HomeModule.featured,
-        HomeModule.continueWatching,
-        HomeModule.comingUp,
-        HomeModule.requests,
-        HomeModule.nowPlaying,
-        HomeModule.stackHealth,
-        HomeModule.storage,
-        HomeModule.discoverShelf,
-        HomeModule.downloads,
-        HomeModule.arrived,
-      ]);
-      expect(layout.rows.first, HomeModule.needsYou);
       expect(layout.rows.last, HomeModule.setUpNext);
+      expect(layout.order, isNot(contains(HomeModule.setUpNext)));
+      expect(layout.rows.first, HomeModule.needsYou);
       expect(layout.isOn(HomeModule.needsYou), isTrue);
     });
 
@@ -203,6 +198,7 @@ void main() {
         operator,
       );
       expect(layout.order, [
+        HomeModule.needsYou,
         HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
@@ -245,9 +241,10 @@ void main() {
     final layout = HomeLayout.defaultFor(operator);
 
     test('a move is clamped to the ends of the order', () {
-      expect(layout.moved(HomeModule.featured, -1), same(layout));
+      expect(layout.moved(HomeModule.needsYou, -1), same(layout));
       expect(layout.moved(HomeModule.discoverShelf, 5), same(layout));
       expect(layout.moved(HomeModule.arrived, 1).order, [
+        HomeModule.needsYou,
         HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
@@ -265,15 +262,30 @@ void main() {
       );
     });
 
-    test('a module that is not ordered does not move', () {
-      expect(layout.moved(HomeModule.needsYou, 1), same(layout));
+    test('Needs you moves within the order; Set up next is not in it', () {
+      expect(layout.moved(HomeModule.needsYou, 1).order.take(2), [
+        HomeModule.featured,
+        HomeModule.needsYou,
+      ]);
       expect(layout.moved(HomeModule.setUpNext, -1), same(layout));
+    });
+
+    test('moved to third, Needs you is drawn third, and it reads back so', () {
+      final moved = layout.moved(HomeModule.needsYou, 2);
+      expect(moved.shown.take(3), [
+        HomeModule.featured,
+        HomeModule.continueWatching,
+        HomeModule.needsYou,
+      ]);
+      final read = HomeLayout.read(moved.toJson(), operator);
+      expect(read.shown.take(3), moved.shown.take(3));
     });
 
     test('a drag counts the dragged module\'s own slot, as a reorderable '
         'list reports it', () {
-      // Arrived dropped below Requests: the list reports index 6.
-      expect(layout.reordered(3, 6).order, [
+      // Arrived dropped below Requests: the list reports index 7.
+      expect(layout.reordered(4, 7).order, [
+        HomeModule.needsYou,
         HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,
@@ -285,9 +297,10 @@ void main() {
         HomeModule.storage,
         HomeModule.discoverShelf,
       ]);
-      // Requests dropped on top.
-      expect(layout.reordered(5, 0).order, [
+      // Requests dropped on top, above Needs you: it is the person's order.
+      expect(layout.reordered(6, 0).order, [
         HomeModule.requests,
+        HomeModule.needsYou,
         HomeModule.featured,
         HomeModule.continueWatching,
         HomeModule.comingUp,

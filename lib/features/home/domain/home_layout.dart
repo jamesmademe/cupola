@@ -9,7 +9,8 @@
 ///  * a name no module has any more is dropped;
 ///  * a module the layout does not know yet enters at its default place, on
 ///    or off as the registry starts it;
-///  * Needs you stands first and Set up next last whatever the file says.
+///  * Set up next stands last whatever the file says. Needs you is first by
+///    default and may be moved, but it is never hidden.
 ///
 /// A file this build cannot read (another version, a damaged value) is the
 /// default layout: arranging the Home again costs a minute, a Home that does
@@ -78,11 +79,8 @@ class HomeLayout {
   /// The modules switched off.
   final Set<HomeModule> hidden;
 
-  /// What Edit Home lists: the pinned first module, the ordered ones, the
-  /// pinned last one.
+  /// What Edit Home lists: the ordered modules, then the one pinned at the foot.
   List<HomeModule> get rows => [
-    for (final module in HomeModule.of(audience))
-      if (module.placement == HomePlacement.first) module,
     ...order,
     for (final module in HomeModule.of(audience))
       if (module.placement == HomePlacement.last) module,

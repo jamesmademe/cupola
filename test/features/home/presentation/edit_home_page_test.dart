@@ -64,15 +64,27 @@ void main() {
     return container;
   }
 
-  testWidgets('lists Needs you locked, the ordered modules, then Set up '
-      'next, with Reset dimmed on the default', (tester) async {
+  testWidgets('lists Needs you first with a handle and no switch, then the '
+      'ordered modules, then Set up next, with Reset dimmed on the default', (
+    tester,
+  ) async {
     await pump(tester);
 
     for (final module in HomeModule.of(Audience.operator)) {
       expect(find.text(module.label), findsOneWidget, reason: module.label);
     }
-    expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
-    // Needs you has no switch; the ten ordered modules and Set up next do.
+    expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
+    // Needs you moves like the others, by its handle, and has no switch.
+    final needsYouRow = find.ancestor(
+      of: find.text('Needs you'),
+      matching: find.byType(Row),
+    );
+    expect(find.bySemanticsLabel('Move Needs you'), findsOneWidget);
+    expect(
+      find.descendant(of: needsYouRow.first, matching: find.byType(Switch)),
+      findsNothing,
+    );
+    // The ten ordered modules and Set up next each have one.
     expect(find.byType(Switch), findsNWidgets(11));
     final reset = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
     expect(reset.onPressed, isNull);
@@ -96,6 +108,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(homeLayoutProvider).order, [
+      HomeModule.needsYou,
       HomeModule.featured,
       HomeModule.continueWatching,
       HomeModule.comingUp,
@@ -168,11 +181,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(container.read(homeLayoutProvider).order.take(5), [
+      HomeModule.needsYou,
       HomeModule.featured,
       HomeModule.continueWatching,
       HomeModule.comingUp,
       HomeModule.downloads,
-      HomeModule.arrived,
     ]);
     handle.dispose();
   });
@@ -204,7 +217,6 @@ void main() {
 
     expect(find.text('Trending this week'), findsOneWidget);
     expect(find.text('Needs you'), findsNothing);
-    expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
     expect(container.read(homeLayoutProvider).isDefault, isTrue);
 
     await tester.tap(find.byType(Switch).first);

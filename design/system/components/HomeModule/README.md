@@ -4,7 +4,7 @@ One module of the Home in the slab every module shares, the operator's modules o
 up, Arrived, Downloads, Requests, Now playing; Featured, which has no slab, is
 [FeaturedPager](../FeaturedPager/README.md)), the three a person adds in Edit Home (Stack health, Storage, Discover
 shelf), the requester's (Ready to watch, Your requests, Trending this week, Coming soon), and the two pieces of the
-operator's Home that are not modules of content: Needs you at the top and Set up next at the foot. A module decides
+operator's Home that are not modules of content: Needs you, first by default and movable in Edit Home, and Set up next at the foot. A module decides
 its state; the frame draws it,
 so no module invents its own way of loading, failing or asking for a service.
 
@@ -62,7 +62,7 @@ The slab is `slab`, `AppRadius.slab`, a `hair` edge, padding `gutter` × `slabY`
 
 ## Needs you
 
-One line, one target, first on the operator's Home and absent when nothing is wrong (the header's `12 of 12
+One line, one target, first on the operator's Home by default (the person may move it) and absent when nothing is wrong (the header's `12 of 12
 answering` already answers) or before anything answered (no space is held for it).
 
 - A service that did not answer leads, the glyph red: `Radarr did not answer at 20:53`, and the line is its Retry
