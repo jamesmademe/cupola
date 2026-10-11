@@ -96,7 +96,8 @@ String spokenDownloadsSubtitle(String subtitle) => subtitle
 /// alone when the other is unknown, empty when both are.
 String movingValue({int? percent, int? etaSeconds}) => [
   if (percent != null) formatPercent(percent),
-  if (etaSeconds != null && etaSeconds >= 0)
+  // Zero is no estimate: SABnzbd says `0:00:00` of a job nothing reaches.
+  if (etaSeconds != null && etaSeconds > 0)
     formatTimeSpan(Duration(seconds: etaSeconds)),
 ].join(' · ');
 
@@ -113,7 +114,7 @@ String stuckValue(InFlightFault fault, {int? percent}) => switch (fault) {
 /// A row's value as a screen reader should say it: `88 percent, 1 min left`.
 String spokenMovingValue({int? percent, int? etaSeconds}) => [
   if (percent != null) '${spokenPercent(percent)} done',
-  if (etaSeconds != null && etaSeconds >= 0)
+  if (etaSeconds != null && etaSeconds > 0)
     '${formatTimeSpan(Duration(seconds: etaSeconds))} left',
 ].join(', ');
 

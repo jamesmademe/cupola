@@ -595,6 +595,27 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('P1, SABnzbd paused: what it holds is listed last, stopped, '
+        'where its Resume is; All leaves it out', (tester) async {
+      final paused = Profiles.p1.withPausedQueue(WorldIds.sabnzbd);
+      var harness = await _pump(tester, paused, ActivityTab.downloads);
+
+      expect(find.textContaining('Stopped at'), findsWidgets);
+      // Last: below every row that moves or is stuck.
+      final stoppedY = tester
+          .getTopLeft(find.textContaining('Stopped at').first)
+          .dy;
+      expect(
+        tester.getTopLeft(find.text('Stuck at 47%')).dy,
+        lessThan(stoppedY),
+      );
+      await harness.unmount(tester);
+
+      harness = await _pump(tester, paused, ActivityTab.all);
+      expect(find.textContaining('Stopped at'), findsNothing);
+      await harness.unmount(tester);
+    });
+
     testWidgets('no search, no group', (tester) async {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.downloads);
 

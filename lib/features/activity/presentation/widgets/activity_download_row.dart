@@ -13,6 +13,8 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';
 import 'package:cupola/features/activity/domain/download_page.dart'
     show downloadPageKey;
+import 'package:cupola/features/activity/domain/download_table.dart'
+    show downloadProgressCell;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/home/domain/downloads.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
@@ -22,7 +24,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One download on Activity: its art, its title and the release it is, which
 /// way its bytes travel, how far it got and how fast, and who asked for it;
-/// a stuck one says where it stopped and since when, in amber.
+/// a stuck one says where it stopped and since when, in amber; one stopped on
+/// purpose says where, in the neutral.
 ///
 /// The remedy of a stuck one is in Needs you, once: the row only shows it.
 /// A tap opens the download's own page (`openDownload`), beside the list on
@@ -65,9 +68,15 @@ class ActivityDownloadRow extends ConsumerWidget {
     final room = CupolaRoom.of(context);
     final fault = item.fault;
     final stuck = !_queued && isDownloadFault(fault);
+    // Stopped on purpose: the neutral, `Stopped at 62%`, and no speed.
+    final stopped = !_queued && !stuck && item.held;
     final tone = statusToneColor(
       scheme,
-      stuck ? StatusTone.warning : StatusTone.info,
+      stuck
+          ? StatusTone.warning
+          : stopped
+          ? StatusTone.neutral
+          : StatusTone.info,
       surface: room.slab,
     );
     final percent = item.progress == null
@@ -77,6 +86,8 @@ class ActivityDownloadRow extends ConsumerWidget {
         ? ''
         : stuck
         ? stuckValue(fault!, percent: percent)
+        : stopped
+        ? downloadProgressCell(item).text
         : movingValue(percent: percent, etaSeconds: item.etaSeconds);
     final route = downloadRoute(item);
     final release = item.names.machineName;
@@ -85,7 +96,7 @@ class ActivityDownloadRow extends ConsumerWidget {
     final evidence = stuck
         ? nothingForWords(item.stalledSince, now: now)
         : null;
-    final speed = _queued || stuck || item.rateBytesPerSecond == null
+    final speed = _queued || stuck || stopped || item.rateBytesPerSecond == null
         ? null
         : formatBytesPerSecond(item.rateBytesPerSecond!);
     final asked = switch (request) {
@@ -95,7 +106,7 @@ class ActivityDownloadRow extends ConsumerWidget {
     final waiting = _queued ? queuedWords(item.startsInSeconds) : null;
     final spokenValue = _queued
         ? waiting!
-        : stuck
+        : stuck || stopped
         ? spokenPercents(value)
         : spokenMovingValue(percent: percent, etaSeconds: item.etaSeconds);
 

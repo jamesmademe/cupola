@@ -257,6 +257,12 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
       _Commands(
         item: item,
         quiet: fault != null,
+        // A remedy that opens the client is the page's Open already.
+        opensClient:
+            fault != null &&
+            (item.fault == InFlightFault.stalled ||
+                item.fault == InFlightFault.failed) &&
+            stuckActionsFor(item).primary == StuckAction.openClient,
         held: _held ?? item.held,
         busy: _busy,
         light: light,
@@ -452,6 +458,7 @@ class _Commands extends StatelessWidget {
   const _Commands({
     required this.item,
     required this.quiet,
+    this.opensClient = false,
     required this.held,
     required this.busy,
     required this.light,
@@ -464,6 +471,10 @@ class _Commands extends StatelessWidget {
 
   /// Whether a fault's remedy leads above.
   final bool quiet;
+
+  /// Whether that remedy is `Open in qBittorrent`: then a transfer no title
+  /// owns has no Open of its own to add.
+  final bool opensClient;
   final bool held;
   final bool busy;
   final TitleLight? light;
@@ -474,6 +485,7 @@ class _Commands extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titled = item.mediaId != null || item.tmdbId != null;
+    final showsOpen = titled || !opensClient;
     final name = item.queueTitle?.name ?? item.title;
     final label = Text(titled ? 'Open $name' : 'Open in ${clientName(item)}');
     final lead = quiet
@@ -515,9 +527,9 @@ class _Commands extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        lead,
+        if (showsOpen) lead,
         if (rest.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.row),
+          if (showsOpen) const SizedBox(height: AppSpacing.row),
           if (downloadStacked(context))
             for (final (index, button) in rest.indexed) ...[
               if (index > 0) const SizedBox(height: AppSpacing.sm),

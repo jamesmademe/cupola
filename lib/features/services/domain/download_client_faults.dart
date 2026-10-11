@@ -105,8 +105,10 @@ InFlightReading? transmissionInFlight(
   if (torrent.errorKind == TransmissionErrorKind.localError) {
     return InFlightReading.fault(InFlightFault.failed, reason: torrent.warning);
   }
+  // Unfinished: bytes still to come, or a magnet stopped before its
+  // metadata, which knows no size yet and so has none left either.
   if (torrent.status == TransmissionStatus.stopped &&
-      torrent.leftUntilDone > 0) {
+      (torrent.leftUntilDone > 0 || torrent.percentDone < 1)) {
     return const InFlightReading.held();
   }
   if (!torrent.status.isIncoming) return null;

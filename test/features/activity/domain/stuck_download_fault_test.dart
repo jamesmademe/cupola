@@ -128,6 +128,28 @@ void main() {
   });
 
   group('the ways out', () {
+    test('a torrent added to qBittorrent by hand asks for peers again; one '
+        "in Transmission opens its client, the app's only way in", () {
+      // qBittorrent 5, live: a magnet nobody shares, no arr behind it.
+      final byHand = _stuck(
+        service: ServiceKey.qbittorrent,
+        id: '0123456789abcdef0123456789abcdef01234567',
+        downloadId: null,
+      );
+      expect(canLookForPeers(byHand), isTrue);
+      expect(stuckActionsFor(byHand).primary, StuckAction.lookForPeers);
+      expect(stuckActionsFor(byHand).secondary, [StuckAction.keepWaiting]);
+
+      final transmission = _stuck(
+        service: ServiceKey.transmission,
+        client: ServiceKey.transmission,
+        clientLabel: 'Transmission',
+        id: '89abcdef0123456789abcdef0123456789abcdef',
+        downloadId: null,
+      );
+      expect(stuckActionsFor(transmission).primary, StuckAction.openClient);
+    });
+
     test('nobody has the file: another download first, then Remove and '
         'Keep waiting', () {
       final actions = stuckActionsFor(_stuck());

@@ -718,7 +718,8 @@ class _WatchingNowSection extends ConsumerWidget {
 }
 
 /// Downloads: what is moving and what is stuck, as their queues order them,
-/// the stuck ones last. On All at most [limit], with the way to the rest.
+/// the stuck ones after, then on Downloads those stopped on purpose. On All
+/// at most [limit], with the way to the rest.
 class _DownloadsSection extends ConsumerWidget {
   const _DownloadsSection({this.limit});
 
@@ -755,7 +756,14 @@ class _DownloadsSection extends ConsumerWidget {
       for (final item in queue.items)
         if (isDownloadFault(item.fault)) item,
     ];
-    if (moving.isEmpty && stuck.isEmpty) {
+    // Stopped on purpose: the backlog, not what is happening, so All leaves
+    // them out and Downloads lists them last, in the neutral. Without them a
+    // download stopped from its page had nowhere to be resumed from.
+    final stopped = [
+      for (final item in queue.items)
+        if (item.fault == null && item.held) item,
+    ];
+    if (moving.isEmpty && stuck.isEmpty && (limit != null || stopped.isEmpty)) {
       // On All a quiet queue is the header's to say; Downloads says it in
       // its own place.
       if (limit != null) return const SizedBox.shrink();
@@ -763,12 +771,14 @@ class _DownloadsSection extends ConsumerWidget {
     }
     final cap = limit;
     final rows = cap == null
-        ? [...moving, ...stuck]
+        ? [...moving, ...stuck, ...stopped]
         : downloadRowsOf(moving, stuck, limit: cap);
     final requests = ref.watch(downloadAskersProvider);
-    final total = moving.length + stuck.length;
+    final total = moving.length + stuck.length + stopped.length;
     final meta = [
       if (moving.isNotEmpty) '${coveredFigure(moving.length, coverage)} moving',
+      // The stopped rows say so themselves, and a third count does not fit
+      // beside the name on a phone.
       if (stuck.isNotEmpty) '${coveredFigure(stuck.length, coverage)} stuck',
     ].join(' · ');
     final now = ref.watch(stallClockProvider)();

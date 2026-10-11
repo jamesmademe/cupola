@@ -183,6 +183,8 @@ void main() {
       expect(movingValue(percent: 88, etaSeconds: 60), '88% · 1\u00A0min');
       expect(movingValue(percent: 88), '88%');
       expect(movingValue(etaSeconds: 660), '11\u00A0min');
+      // SABnzbd, live: `0:00:00` of a job nothing reaches is no estimate.
+      expect(movingValue(percent: 0, etaSeconds: 0), '0%');
       expect(movingValue(), '');
       expect(
         spokenMovingValue(percent: 88, etaSeconds: 60),

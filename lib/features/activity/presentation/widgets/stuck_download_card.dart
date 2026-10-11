@@ -8,6 +8,8 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/features/activity/data/acted_faults.dart';
+import 'package:cupola/features/activity/domain/download_page.dart'
+    show downloadClientOf;
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/domain/stuck_download_fault.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart'
@@ -236,9 +238,12 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
           item,
           service: ServiceKey.qbittorrent,
           failure: 'Could not ask the trackers again',
-          call: () => ref
-              .read(qbittorrentServiceForProvider(item.clientInstanceId))
-              .reannounce([item.downloadId!]),
+          call: () {
+            final torrent = downloadClientOf(item)!;
+            return ref
+                .read(qbittorrentServiceForProvider(torrent.instanceId))
+                .reannounce([torrent.id]);
+          },
         );
     }
   }

@@ -8,6 +8,8 @@ import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';
+import 'package:cupola/features/activity/domain/download_page.dart'
+    show downloadClientOf;
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart'
     show ServiceQueueItem;
@@ -45,10 +47,10 @@ bool hasArrRecord(ServiceQueueItem item) =>
     _arrs.contains(item.service) && (int.tryParse(item.id) ?? 0) > 0;
 
 /// Whether qBittorrent can be asked for peers again for [item]: a torrent of
-/// a qBittorrent connection, known by its hash.
+/// a qBittorrent connection, known by its hash, an \*arr's or one added by
+/// hand.
 bool canLookForPeers(ServiceQueueItem item) =>
-    item.clientService == ServiceKey.qbittorrent &&
-    (item.downloadId?.isNotEmpty ?? false);
+    downloadClientOf(item)?.client == ServiceKey.qbittorrent;
 
 /// The ways out of [item], first the one the trackers point to
 /// ([stuckRemedyFor]) where it can be taken.

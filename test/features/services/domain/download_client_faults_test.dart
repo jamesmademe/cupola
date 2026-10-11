@@ -21,10 +21,12 @@ TransmissionTorrent _torrent({
   bool isStalled = false,
   int activityDate = 0,
   int addedDate = 0,
+  double? percentDone,
 }) => TransmissionTorrent.fromJson({
   'hashString': 'abc',
   'name': 'Night.Shift.S02E04.1080p.WEB',
   'status': status,
+  'percentDone': ?percentDone,
   'error': error,
   'errorString': errorString,
   'isStalled': isStalled,
@@ -75,7 +77,10 @@ void main() {
     test('a seeding or a finished stopped torrent is not in flight', () {
       for (final status in [6, 5, 0]) {
         expect(
-          transmissionInFlight(_torrent(status: status), now: _now),
+          transmissionInFlight(
+            _torrent(status: status, percentDone: 1),
+            now: _now,
+          ),
           isNull,
           reason: 'status $status',
         );
@@ -94,6 +99,37 @@ void main() {
           now: _now,
         ),
         const InFlightReading.held(),
+      );
+    });
+
+    test('a magnet stopped before its metadata is held, though it knows no '
+        'size; a finished one stopped is not in flight', () {
+      // Transmission 4, live: a stopped magnet says 0 left and 0 done.
+      expect(
+        transmissionInFlight(
+          TransmissionTorrent.fromJson({
+            'hashString': '89abcdef0123456789abcdef0123456789abcdef',
+            'name': 'Cupola Test Transmission',
+            'status': 0,
+            'leftUntilDone': 0,
+            'percentDone': 0.0,
+          }),
+          now: _now,
+        ),
+        const InFlightReading.held(),
+      );
+      expect(
+        transmissionInFlight(
+          TransmissionTorrent.fromJson({
+            'hashString': 'abc',
+            'name': 'Night.Shift.S02E04.1080p.WEB',
+            'status': 0,
+            'leftUntilDone': 0,
+            'percentDone': 1.0,
+          }),
+          now: _now,
+        ),
+        isNull,
       );
     });
 

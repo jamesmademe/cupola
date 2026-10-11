@@ -180,7 +180,9 @@ class DownloadReadout extends StatelessWidget {
       word,
       if (pace != null) _spokenPace(pace!),
     ].join(', ');
-    final traced = trace.length >= 2 && watched != null;
+    // Its room is kept from the first reading on: drawn only at the second,
+    // it pushed Open and Stop down under a finger already on its way.
+    final traced = trace.isNotEmpty && watched != null;
 
     Widget traceBox({required double width, required double height}) =>
         ExcludeSemantics(
@@ -304,6 +306,12 @@ class _RateTracePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // The track from the first reading; the line once there are two.
+    canvas.drawLine(
+      Offset(0, size.height - 0.5),
+      Offset(size.width, size.height - 0.5),
+      Paint()..color = track,
+    );
     if (trace.length < 2) return;
     final start = trace.first.at;
     final span = math.max(1, trace.last.at.difference(start).inMilliseconds);
@@ -325,11 +333,6 @@ class _RateTracePainter extends CustomPainter {
       ..lineTo(points.first.dx, size.height)
       ..close();
     canvas
-      ..drawLine(
-        Offset(0, size.height - 0.5),
-        Offset(size.width, size.height - 0.5),
-        Paint()..color = track,
-      )
       ..drawPath(
         wash,
         Paint()
