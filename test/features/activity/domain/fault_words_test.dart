@@ -85,16 +85,6 @@ void main() {
     );
     expect(indexer.headline, 'NZBgeek is failing');
     expect(indexer.explanation, 'Prowlarr has stopped searching it for now.');
-    expect(
-      faultWordsOf(
-        _decision(
-          DecisionKind.stoppedStack,
-          service: ServiceKey.dockge,
-          title: 'immich',
-        ),
-      ).headline,
-      'immich stopped',
-    );
   });
 
   test('a headline in the service\'s own words loses its full stop', () {
@@ -113,9 +103,9 @@ void main() {
   test('the other kinds keep the control the Home row has', () {
     expect(
       faultActionLabel(
-        _decision(DecisionKind.stoppedStack, service: ServiceKey.dockge),
+        _decision(DecisionKind.failingIndexer, service: ServiceKey.prowlarr),
       ),
-      'Start',
+      'Test',
     );
     expect(
       faultActionLabel(

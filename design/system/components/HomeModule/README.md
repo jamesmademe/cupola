@@ -68,7 +68,7 @@ answering` already answers) or before anything answered (no space is held for it
 - A service that did not answer leads, the glyph red: `Radarr did not answer at 20:53`, and the line is its Retry
   (`Retry both` for two). Its faults cannot be seen while it is silent.
 - Otherwise the largest group of equal faults leads, the glyph amber: `18 downloads need a manual import`; a single
-  fault is a sentence about it (`Big Buck Bunny is stuck`, `The media stack stopped`, `The certificate for
+  fault is a sentence about it (`Big Buck Bunny is stuck`, `The media indexer is failing`, `The certificate for
   nas.home.arpa expires in 6 days`). The line is Review, which opens the place that fault is fixed today.
 - `+2` when more things need the person. A request waiting for approval is not a fault: it is never in Needs you.
 - `fillQuiet` under a `hair` edge, `AppRadius.button`, at least 52pt tall. At a large reading size the count and the

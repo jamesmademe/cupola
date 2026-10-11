@@ -98,13 +98,13 @@ void main() {
     await _answer(tester);
 
     expect(find.byType(ActivityNeedsYouPage), findsOneWidget);
-    expect(find.text('4 faults'), findsOneWidget);
+    expect(find.text('3 faults'), findsOneWidget);
     expect(find.text('3 requests'), findsOneWidget);
     expect(
       find.textContaining(RegExp(r'^All \d+ services answered at 20:53$')),
       findsOneWidget,
     );
-    expect(find.byType(FaultCard), findsNWidgets(4));
+    expect(find.byType(FaultCard), findsNWidgets(3));
     // The pool's evidence, whole, and TrueNAS's own words already open.
     expect(find.text('Pool tank · Healthy · 72%'), findsOneWidget);
     expect(find.text('Disk sdd · 8 errors'), findsOneWidget);
@@ -152,7 +152,7 @@ void main() {
         of: find.byWidgetPredicate(
           (widget) => widget is ActivitySection && widget.title == 'Needs you',
         ),
-        matching: find.text('4 faults · 3 requests'),
+        matching: find.text('3 faults · 3 requests'),
       ),
     );
     expect(router.state.uri.path, ServiceRoutes.activityNeedsYou);

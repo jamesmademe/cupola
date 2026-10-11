@@ -49,7 +49,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///    fanning out only the five the preview draws and printing the sum as a
 ///    total would be a figure counted inside a capped sample and then stated as
 ///    a census. Neither is worth a number.
-///  * **`exited · 3 h ago` and `exit code 137 · out of memory`.** Nothing in
+///  * **`stopped · 3 h ago` and `exit code 137 · out of memory`.** Nothing in
 ///    this protocol is dated, and nothing carries a container exit code. See
 ///    `dockge_overview_provider.dart` for the long form.
 ///  * **The terminal card.** `DockgeClient` streams `terminalWrite` only after
@@ -161,29 +161,16 @@ class _NeedsAttentionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(dockgeOverviewAttentionProvider);
-    // The **census**, not the length of the list below it. `dockgeAttentionRows`
-    // caps the exited rows at `dockgeAttentionLimit`, so a server with nine
-    // stopped stacks would print "4" over four rows and report the other five
-    // nowhere. The census counts over the whole push, so the header is where
-    // the remainder gets reported.
-    final census = ref.watch(dockgeOverviewCensusProvider).asData?.value;
-
     return ServiceOverviewSection(
       service: ServiceKey.dockge,
       title: 'Needs attention',
-      // **The faults, not everything that is down.** `exited + inactive +
-      // unknown` would print "9" on a server with one crashed stack and eight
-      // templates that were never started — the five-arm rule broken in the
-      // figure, over rows that got it right, and the number a user would read
-      // as nine things on fire. The backlog is not silenced by that: it states
-      // its own size in words, in the neutral row that is about it.
-      //
-      // `—` while the push is in flight or after it failed. A `0` printed over
-      // an unanswered question is a claim nobody made — and the claim it makes
-      // ("everything is up") is the one the user would act on.
-      subtitle: census == null ? '—' : '${census.exited}',
-      // Every row here is a stack, and every stack lives on the Stacks tab, so
-      // the destination is honest for all of them.
+      // **No figure.** Dockge reports no fault: a stopped stack is backlog,
+      // like an inactive one, and each group states its own size in words in
+      // the neutral row that is about it. A header count over them would be the
+      // five-arm rule broken in the figure, and a `0` over an unanswered push
+      // would claim that everything is up.
+      // Every row here is about stacks, and every stack lives on the Stacks tab,
+      // so the destination is honest for all of them.
       destination: ServiceTab.stacks,
       child: AsyncValueWidget<List<DockgeAttentionItem>>(
         value: items,
@@ -302,8 +289,8 @@ class _StacksSection extends ConsumerWidget {
   /// What the readout rail cannot say — and nothing it already has.
   ///
   /// `_dockgeKpis` fills the `ServiceKpiPeek` two regions above this one with
-  /// Stacks / Running / Exited / Inactive, off this same push. A subtitle
-  /// reading `12 stacks · 9 running · 2 exited · 1 inactive` would be those
+  /// Stacks / Running / Stopped / Inactive, off this same push. A subtitle
+  /// reading `12 stacks · 9 running · 2 stopped · 1 inactive` would be those
   /// four figures again, one region below the rail that already spells them, at
   /// bodySmall and wrapping to three lines beside the `Stacks →` link at 375pt.
   ///

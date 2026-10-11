@@ -20,7 +20,7 @@
 /// `serviceStatusList` — one socket round trip *per stack* — and even that
 /// answers a docker status string, not a structured exit code.
 ///
-/// So the fault row says what happened and stops. A window the server cannot
+/// So the rows say what happened and stop. A window the server cannot
 /// sustain is a window that lies, and an invented "3 h ago" beside a stack that
 /// went down yesterday is worse than no clause at all.
 ///
@@ -50,10 +50,6 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
-/// Fault rows Needs attention draws before the count in its header is the only
-/// place the rest are reported.
-const int dockgeAttentionLimit = 4;
-
 /// Rows in the Stacks preview.
 const int dockgeStackPreviewLimit = 5;
 
@@ -78,7 +74,7 @@ class DockgeStackCensus {
   const DockgeStackCensus({
     required this.total,
     required this.running,
-    required this.exited,
+    required this.stopped,
     required this.inactive,
     required this.unknown,
   });
@@ -89,8 +85,10 @@ class DockgeStackCensus {
 
   final int running;
 
-  /// Dockge's `EXITED`: the containers were up and are not any more.
-  final int exited;
+  /// Dockge's `EXITED`, read as **stopped**. Dockge does not say whether the
+  /// stack was brought down on purpose or crashed, so it is a plain count of
+  /// backlog and never a fault.
+  final int stopped;
 
   /// `CREATED_FILE` and `CREATED_STACK` folded together, because Dockge itself
   /// prints one word for the pair ([DockgeStackStatus.label] is `Inactive` for
@@ -103,20 +101,20 @@ class DockgeStackCensus {
   /// not, and folding the second into the first would print the fact.
   final int unknown;
 
-  // There is deliberately no `notRunning` roll-up here.
+  // There is deliberately no `notRunning` roll-up here, and no fault count.
   //
-  // It existed to fill the Needs attention header, and `exited + inactive +
-  // unknown` is a fault count with the backlog folded into it: a tidy server
-  // with one crashed stack and eight never-started templates printed "9" over
-  // rows that are eight-ninths neutral — the five-arm rule broken in the
-  // figure after the rows had got it right. That header counts [exited]; the
-  // backlog states its own size inside its own aggregate row.
+  // A roll-up of `stopped + inactive + unknown` would fold the backlog into one
+  // figure: a tidy server with one stopped stack and eight never-started
+  // templates printed "9" over rows that are eight-ninths neutral, the
+  // five-arm rule broken in the figure after the rows had got it right. Every
+  // state here is backlog, so the Needs attention header states no figure at
+  // all: each group states its own size inside its own neutral row.
 }
 
 /// Counts the states. Total-safe: `stackList` is a full push, not a page.
 DockgeStackCensus dockgeStackCensus(List<DockgeStack> stacks) {
   var running = 0;
-  var exited = 0;
+  var stopped = 0;
   var inactive = 0;
   var unknown = 0;
   for (final stack in stacks) {
@@ -124,7 +122,7 @@ DockgeStackCensus dockgeStackCensus(List<DockgeStack> stacks) {
       case DockgeStackStatus.running:
         running++;
       case DockgeStackStatus.exited:
-        exited++;
+        stopped++;
       case DockgeStackStatus.createdFile || DockgeStackStatus.createdStack:
         inactive++;
       case DockgeStackStatus.unknown:
@@ -134,7 +132,7 @@ DockgeStackCensus dockgeStackCensus(List<DockgeStack> stacks) {
   return DockgeStackCensus(
     total: stacks.length,
     running: running,
-    exited: exited,
+    stopped: stopped,
     inactive: inactive,
     unknown: unknown,
   );
@@ -146,9 +144,8 @@ DockgeStackCensus dockgeStackCensus(List<DockgeStack> stacks) {
 ///
 /// The tone is carried rather than derived from a kind enum, because the one
 /// authority on what a Dockge state *means* is already written:
-/// [DockgeStackStatus.tone], whose own doc explains why `exited` is amber and
-/// `inactive` is not. A second table here would be a second place to get it
-/// wrong.
+/// [DockgeStackStatus.tone], whose own doc explains why a stopped stack is
+/// neutral. A second table here would be a second place to get it wrong.
 @immutable
 class DockgeAttentionItem {
   const DockgeAttentionItem({
@@ -162,8 +159,8 @@ class DockgeAttentionItem {
   final StatusTone tone;
   final IconData icon;
 
-  /// The state and its subject: `Exited · bazarr`. For an aggregate row it is
-  /// the whole claim: `3 stacks are inactive`.
+  /// The state and how many stacks it covers: `3 stacks are stopped`. Every
+  /// row here is an aggregate, so the headline is the whole claim.
   final String headline;
 
   /// Whatever the push carried about it — tags, or the names behind an
@@ -183,38 +180,32 @@ class DockgeAttentionItem {
       joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
 }
 
-/// Everything on the selected agent that is not running, faults first.
+/// Everything on the selected agent that is not running, one row per state.
 ///
-/// One row per **exited** stack (capped at [limit]), then one aggregate row for
-/// the inactive ones and one for the unknown ones. The split is the five-arm
-/// tone rule doing its job:
+/// Every state here is **backlog**, and none is a fault:
 ///
-///  * an exited stack is a **fault** — it was up and it is not, and Dockge
-///    cannot tell us whether that was a crash or a `compose down` five minutes
-///    ago. Amber is the honest reading of a state that *may* be damage;
-///  * an inactive stack is **backlog** — nothing stopped and nothing failed.
-///    Painting it amber is the single commonest way this rule breaks, and it is
-///    how a tidy server with eight templates ends up looking like a fire;
-///  * an unknown stack is neither, and it is aggregated rather than flagged.
+///  * a stopped stack (Dockge's `EXITED`) is a stack somebody brought down, or
+///    one that crashed, and Dockge cannot tell which. Its stack list carries no
+///    exit code and no date, so the row says what Dockge says and no more;
+///  * an inactive stack was never started, or was brought down. Nothing failed;
+///  * an unknown stack is aggregated rather than flagged, because Dockge did
+///    not say what it is.
 ///
-/// The exited rows are capped and the aggregates are not: an aggregate already
-/// *is* its count, so it can state the whole population in one line, while the
-/// capped fault rows leave their remainder to the section header — which prints
-/// [DockgeStackCensus.exited], the fault count over the whole push. The header
-/// counts the same thing the capped rows are drawn from, and nothing else: the
-/// backlog is already counted, in words, in the row that is about it.
-List<DockgeAttentionItem> dockgeAttentionRows(
-  List<DockgeStack> stacks, {
-  int limit = dockgeAttentionLimit,
-}) {
-  final exited = <DockgeStack>[];
+/// Each state is one aggregate row that states its own count and spells out up
+/// to [dockgeAggregateNamesLimit] names. An aggregate already *is* its count, so
+/// nothing is capped and nothing is left for a header to report. Painting
+/// stopped amber was the defect this replaces: it promised a fault Dockge does
+/// not know about, and it put a deliberate `compose down` in the same colour as
+/// a crash.
+List<DockgeAttentionItem> dockgeAttentionRows(List<DockgeStack> stacks) {
+  final stopped = <String>[];
   final inactive = <String>[];
   final unknown = <String>[];
 
   for (final stack in stacks) {
     switch (stack.status) {
       case DockgeStackStatus.exited:
-        exited.add(stack);
+        stopped.add(stack.name);
       case DockgeStackStatus.createdFile || DockgeStackStatus.createdStack:
         inactive.add(stack.name);
       case DockgeStackStatus.unknown:
@@ -224,20 +215,24 @@ List<DockgeAttentionItem> dockgeAttentionRows(
     }
   }
 
-  exited.sort(_byName);
+  stopped.sort(_caseInsensitive);
   inactive.sort(_caseInsensitive);
   unknown.sort(_caseInsensitive);
 
   return List.unmodifiable([
-    for (final stack in exited.take(limit))
+    if (stopped.isNotEmpty)
       DockgeAttentionItem(
-        tone: stack.status.tone,
+        tone: StatusTone.neutral,
         icon: Icons.stop_circle_outlined,
-        // Dockge's own word for the state, so the row, the Stacks tab and the
-        // server's web UI all say the same thing about the same stack.
-        headline: '${DockgeStackStatus.exited.label} · ${stack.name}',
-        detail: _stackQualifiers(stack),
-        stackName: stack.name,
+        headline: stopped.length == 1
+            ? '1 stack is stopped'
+            : '${stopped.length} stacks are stopped',
+        // Dockge's own reading of the state, and the honest limit of it: it
+        // does not say whether the stop was intended.
+        detail: joinDisplayParts([
+          _namesLabel(stopped),
+          'Dockge does not say why',
+        ]),
       ),
     if (inactive.isNotEmpty)
       DockgeAttentionItem(

@@ -455,7 +455,7 @@ void main() {
                 count: 18,
                 service: ServiceKey.sonarr,
               ),
-              _fault(DecisionKind.stoppedStack, 'media'),
+              _fault(DecisionKind.failingIndexer, 'media'),
             ],
           ),
           onTap: () {},
@@ -481,7 +481,7 @@ void main() {
             decisions: [
               _fault(DecisionKind.importBlocked, 'x', count: 18),
               _fault(DecisionKind.stalledDownload, 'Big Buck Bunny'),
-              _fault(DecisionKind.stoppedStack, 'media'),
+              _fault(DecisionKind.failingIndexer, 'media'),
             ],
           ),
           onTap: () {},
@@ -770,7 +770,7 @@ void main() {
               needs: _needs(
                 decisions: [
                   _fault(DecisionKind.importBlocked, 'x', count: 18),
-                  _fault(DecisionKind.stoppedStack, 'media'),
+                  _fault(DecisionKind.failingIndexer, 'media'),
                 ],
               ),
               onTap: () {},

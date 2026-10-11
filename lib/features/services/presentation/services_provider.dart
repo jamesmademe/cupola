@@ -44,8 +44,6 @@ import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
-import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
-import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
@@ -3208,12 +3206,6 @@ final dashboardDecisionSourceProvider =
             ServiceKey.prowlarr,
             (source) => _failingIndexerDecisions(ref, source),
           );
-        case DecisionSource.stacks:
-          return _decisionsOnEveryConnection(
-            ref,
-            ServiceKey.dockge,
-            (source) => _stoppedStackDecisions(ref, source),
-          );
         case DecisionSource.certificates:
           return _decisionsOnEveryConnection(
             ref,
@@ -3743,47 +3735,6 @@ DashboardDecision _connectionFaultDecision(
       gateway: failure.gateway,
     ),
   );
-}
-
-Future<List<DashboardDecision>> _stoppedStackDecisions(
-  Ref ref,
-  _MergeConnection source,
-) async {
-  // The lens reads the live list the Dockge pages read, through the agent
-  // they are looking at. Another connection is read once, through the hub of
-  // its own login, which is where its Start goes too.
-  final stacks = source.isLens
-      ? await ref.watch(dockgeStackListProvider.future)
-      : await ref
-            .watch(dockgeServiceForProvider(source.instanceId))
-            .fetchStacks();
-  return [
-    for (final stack in stacks)
-      // `exited` only. A stack that is `inactive` was never started and a stack
-      // the user stopped on purpose is not a fault — decision 15's "stopped on
-      // purpose is neutral". An *exited* container is one that was running and
-      // is not any more.
-      if (stack.status == DockgeStackStatus.exited)
-        DashboardDecision(
-          kind: DecisionKind.stoppedStack,
-          id: 'dockge-${source.instanceId}-${stack.endpoint}-${stack.name}',
-          service: ServiceKey.dockge,
-          title: stack.name,
-          detail: joinDisplayParts([
-            'Stack stopped',
-            serviceWithConnection(ServiceKey.dockge, source.name, joiner: ' '),
-          ]),
-          instanceId: source.instanceId,
-          connectionName: source.name,
-          actionInstanceId: source.instanceId,
-          // Dockge dates nothing: its stack list carries a status and a name and
-          // no timestamp at all. Undated sorts last inside its kind rather than
-          // inheriting "just now", which would put every stopped stack above
-          // every dated fault.
-          occurredAt: null,
-          route: ServiceRoutes.dockgeStack(stack.name),
-        ),
-  ];
 }
 
 Future<List<DashboardDecision>> _expiringCertificateDecisions(

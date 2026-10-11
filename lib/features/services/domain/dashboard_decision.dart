@@ -4,7 +4,7 @@
 ///
 /// The screen used to carry a Requests region — one kind, one service, its own
 /// header, its own empty state — and nothing at all for the other five. So a
-/// stalled torrent, a stopped stack and an expiring certificate had no place to
+/// stalled torrent, a failing indexer and an expiring certificate had no place to
 /// be *asked about*: each was a number on a card somewhere, and the user had to
 /// know to go looking. A region per kind would have made six regions that are
 /// empty most of the time, which is six headings to scroll past to learn that
@@ -14,9 +14,9 @@
 /// come sorted by which service happened to raise it. So it is one list, mixed
 /// kinds, ranked by urgency:
 ///
-///  * **faults before backlog.** A stalled download, a failing indexer, a
-///    stopped stack, an expiring certificate and a failed import are things that
-///    were meant to be working and are not. A pending request is somebody
+///  * **faults before backlog.** A stalled download, a failing indexer, an
+///    expiring certificate and a failed import are things that were meant to be
+///    working and are not. A pending request is somebody
 ///    politely waiting — it is *backlog*, the same category as 34 missing films,
 ///    and the tone rule files backlog under neutral. It still belongs in this
 ///    region (it needs a decision, which is the whole criterion) and it belongs
@@ -53,9 +53,6 @@ enum DecisionSource {
 
   /// Prowlarr's failing indexers.
   indexers([ServiceKey.prowlarr]),
-
-  /// Dockge's stacks that exited.
-  stacks([ServiceKey.dockge]),
 
   /// Nginx Proxy Manager's certificates close to expiry.
   certificates([ServiceKey.nginxProxyManager]),
@@ -168,9 +165,6 @@ enum DecisionKind {
   /// An indexer Prowlarr has marked as failing. Action: test it.
   failingIndexer,
 
-  /// A Dockge stack that is not running. Action: start it.
-  stoppedStack,
-
   /// A certificate about to expire. Action: renew it.
   expiringCertificate,
 
@@ -194,7 +188,6 @@ extension DecisionKindRank on DecisionKind {
   /// under the lens before it opens one, as a stall does for its client.
   bool get opensUnderLens => switch (this) {
     DecisionKind.failingIndexer ||
-    DecisionKind.stoppedStack ||
     DecisionKind.expiringCertificate ||
     DecisionKind.storageAlert => true,
     DecisionKind.stalledDownload ||
@@ -256,9 +249,9 @@ class DashboardDecision {
   /// re-separates it for the ear.
   final String detail;
 
-  /// When it started being a problem. Null when the source has no timestamp —
-  /// Dockge does not date a stopped stack — which sorts it last inside its kind
-  /// rather than pretending it just happened.
+  /// When it started being a problem. Null when the source has no timestamp,
+  /// which sorts it last inside its kind rather than pretending it just
+  /// happened.
   final DateTime? occurredAt;
 
   /// Where the row body leads. The row body links to the item; the trailing
@@ -364,7 +357,6 @@ bool _groups(DecisionKind kind) => switch (kind) {
   DecisionKind.connectionFault ||
   DecisionKind.serviceHealth ||
   DecisionKind.failingIndexer ||
-  DecisionKind.stoppedStack ||
   DecisionKind.expiringCertificate ||
   DecisionKind.pendingRequest => false,
 };
@@ -475,7 +467,6 @@ String _groupTitle(DecisionKind kind, int count) => switch (kind) {
   DecisionKind.connectionFault => '$count connections with a fault',
   DecisionKind.serviceHealth => '$count failing health checks',
   DecisionKind.failingIndexer => '$count failing indexers',
-  DecisionKind.stoppedStack => '$count stopped stacks',
   DecisionKind.expiringCertificate => '$count expiring certificates',
   DecisionKind.pendingRequest => '$count requests waiting for approval',
 };
@@ -499,7 +490,7 @@ int decisionItemCount(List<DashboardDecision> decisions) =>
 /// Faults before backlog, oldest first inside a kind.
 ///
 /// Stable by construction: the sort is decorated with the source index, because
-/// `List.sort` is not stable and several undated stopped stacks would otherwise
+/// `List.sort` is not stable and several undated items would otherwise
 /// come back in a different order on each build — which reads on screen as rows
 /// shuffling for no reason.
 List<DashboardDecision> rankDecisions(
@@ -579,7 +570,6 @@ String _kindNoun(DecisionKind kind) => switch (kind) {
   DecisionKind.connectionFault => 'connections',
   DecisionKind.serviceHealth => 'health checks',
   DecisionKind.failingIndexer => 'faults',
-  DecisionKind.stoppedStack => 'stacks',
   DecisionKind.expiringCertificate => 'certs',
   DecisionKind.pendingRequest => 'requests',
 };
@@ -610,7 +600,6 @@ String decisionActionLabel(
   DecisionKind.connectionFault => remedy ?? 'Retry',
   DecisionKind.serviceHealth => 'Open in ${target?.title ?? 'the service'}',
   DecisionKind.failingIndexer => 'Test',
-  DecisionKind.stoppedStack => 'Start',
   // `Renew` opens the Certificates tab, where renewal sits beside its
   // confirmation: the call reaches Let's Encrypt, and a renewal fired from
   // a row on Home is one mis-tap from spending the account's rate limits.
@@ -637,7 +626,6 @@ String decisionUnavailableToast(DecisionKind kind, ServiceKey required) {
     DecisionKind.connectionFault => 'fix this connection',
     DecisionKind.serviceHealth => 'open this check',
     DecisionKind.failingIndexer => 'test this indexer',
-    DecisionKind.stoppedStack => 'start this stack',
     DecisionKind.expiringCertificate => 'renew this certificate',
     DecisionKind.pendingRequest => 'answer this request',
   };

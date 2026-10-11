@@ -90,20 +90,38 @@ void main() {
     },
   );
 
-  testWidgets('an exited stack is a fault and speaks one sentence', (
+  testWidgets('a stopped stack is backlog: one neutral row, never amber', (
     tester,
   ) async {
     await _pump(
       tester,
       stacks: [
         _stack('media'),
-        _stack('bazarr', status: DockgeStackStatus.exited, tags: ['subs']),
+        _stack('bazarr', status: DockgeStackStatus.exited),
       ],
     );
 
-    // One node for the whole row, with the layout's dot read as a pause — not
-    // three fragments a screen reader walks separately.
-    expect(find.semantics.byLabel('Exited, bazarr, subs'), findsOneWidget);
+    final colorScheme = AppTheme.darkTheme().colorScheme;
+    final neutral = statusToneColor(
+      colorScheme,
+      StatusTone.neutral,
+      surface: colorScheme.surfaceContainerLow,
+    );
+    final amber = statusToneColor(
+      colorScheme,
+      StatusTone.warning,
+      surface: colorScheme.surfaceContainerLow,
+    );
+
+    // Dockge does not say whether the stop was intended, so the row says that
+    // and no more, and it is never a fault.
+    final row = tester.widget<ServiceOverviewRow>(
+      find.widgetWithText(ServiceOverviewRow, '1 stack is stopped'),
+    );
+    expect(row.titleColor, neutral);
+    expect(row.titleColor, isNot(amber));
+    expect(find.textContaining('Dockge does not say why'), findsOneWidget);
+    expect(find.textContaining('Exited'), findsNothing);
   });
 
   testWidgets('an inactive stack is backlog: counted, never painted amber', (
@@ -134,19 +152,18 @@ void main() {
       find.widgetWithText(ServiceOverviewRow, '1 stack is inactive'),
     );
     // The commonest way the five-arm rule breaks: a stack the user brought down
-    // wearing the same colour as one that died.
+    // wearing the same colour as one that died. Nothing here is amber now.
     expect(backlog.titleColor, neutral);
     expect(backlog.titleColor, isNot(amber));
 
-    final fault = tester.widget<ServiceOverviewRow>(
-      find.widgetWithText(ServiceOverviewRow, 'Exited · bazarr'),
+    final stopped = tester.widget<ServiceOverviewRow>(
+      find.widgetWithText(ServiceOverviewRow, '1 stack is stopped'),
     );
-    expect(fault.titleColor, amber);
+    expect(stopped.titleColor, neutral);
   });
 
-  testWidgets('the attention header counts every fault, not the rows it drew', (
-    tester,
-  ) async {
+  testWidgets('the attention header carries no figure, and each group counts '
+      'its own stacks', (tester) async {
     await _pump(
       tester,
       stacks: [
@@ -157,17 +174,18 @@ void main() {
       ],
     );
 
-    // Six faults, four rows drawn for them. The header is the only place the
-    // remainder is reported, so it counts over the whole push — not the length
-    // of the sample below it.
+    // Nothing here is a fault, so a header figure would be a count of backlog
+    // presented as one. Each group states its own size, in words, and the
+    // stopped group names the whole six: nothing is capped out of sight.
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Needs attention'),
     );
-    expect(header.subtitle, '6');
-    expect(find.textContaining('Exited · '), findsNWidgets(4));
+    expect(header.subtitle, isNull);
+    expect(find.text('6 stacks are stopped'), findsOneWidget);
+    expect(find.text('1 stack is inactive'), findsOneWidget);
   });
 
-  testWidgets('the attention header counts the faults, never the backlog', (
+  testWidgets('the attention header never sums the backlog into a figure', (
     tester,
   ) async {
     await _pump(
@@ -179,25 +197,30 @@ void main() {
       ],
     );
 
-    // One crashed stack and eight templates nobody ever started. "9" here
+    // One stopped stack and eight templates nobody ever started. "9" here
     // would be the five-arm rule broken in the figure, over rows that got it
     // right: a tidy server reading as nine things on fire.
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Needs attention'),
     );
-    expect(header.subtitle, '1');
-    // And the backlog is not silenced by that — it states its own size, in
+    expect(header.subtitle, isNull);
+    // The backlog is not silenced by that: each state states its own size, in
     // words, in the neutral row that is about it.
     expect(find.text('8 stacks are inactive'), findsOneWidget);
+    expect(find.text('1 stack is stopped'), findsOneWidget);
   });
 
   testWidgets('a push that never arrived reads — and never 0', (tester) async {
     await _pump(tester, failStacks: true);
 
     // A "0" over an unanswered question claims every stack is up, which is the
-    // reading the user would act on.
+    // reading the user would act on. The attention header therefore prints no
+    // figure at all while the push is out.
     expect(find.text('0'), findsNothing);
-    expect(find.text('—'), findsWidgets);
+    final header = tester.widget<SectionHeader>(
+      find.widgetWithText(SectionHeader, 'Needs attention'),
+    );
+    expect(header.subtitle, isNull);
   });
 
   testWidgets('a section whose source failed does not take the page with it', (
@@ -276,7 +299,7 @@ void main() {
     );
 
     // `_dockgeKpis` fills the rail two regions above with Stacks / Running /
-    // Exited / Inactive off this same push. A subtitle spelling them again is
+    // Stopped / Inactive off this same push. A subtitle spelling them again is
     // the same four figures twice in one screenful, wrapping to three lines
     // beside the "Stacks →" link — so on a single-instance Dockge with
     // nothing truncated the header has nothing to add and says nothing.

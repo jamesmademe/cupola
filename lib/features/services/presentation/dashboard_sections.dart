@@ -24,7 +24,6 @@ import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
-import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
@@ -397,28 +396,6 @@ Future<void> runDecision(
         ref,
         indexer,
         instanceId: decision.instanceId,
-      );
-    case DecisionKind.stoppedStack:
-      // The lens's stack through the lensed client, which reaches the agent
-      // the list was read through; another connection's through its own.
-      final lens = ref.read(activeInstanceProvider(ServiceKey.dockge))?.id;
-      final elsewhere =
-          decision.instanceId.isNotEmpty && decision.instanceId != lens;
-      await runDockgeStackAction(
-        context,
-        ref,
-        (client) => client.startStack(decision.title),
-        '${decision.title} started',
-        'Could not start ${decision.title}',
-        // The lens's stacks are the live list, so dropping it is enough;
-        // another connection's are read once, by the source itself.
-        invalidate: [
-          dockgeStackListProvider,
-          if (elsewhere) dashboardDecisionSourceProvider(DecisionSource.stacks),
-        ],
-        client: elsewhere
-            ? ref.read(dockgeClientForProvider(decision.instanceId))
-            : null,
       );
     case DecisionKind.storageAlert:
       // TrueNAS's dashboard, where its alerts are, on the TrueNAS that

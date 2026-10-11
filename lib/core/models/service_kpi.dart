@@ -29,8 +29,8 @@ class ServiceKpi {
   ///
   ///  * [StatusTone.neutral] — backlog. 34 films are missing. Worth surfacing,
   ///    not worth colouring; this is the normal resting state of an \*arr.
-  ///  * [StatusTone.warning] — a fault. An indexer is failing, a stack exited,
-  ///    a pool is at 80%.
+  ///  * [StatusTone.warning] — a fault. An indexer is failing, a pool is at 80%.
+  ///    A stopped stack is backlog, not a fault: Dockge cannot say why it stopped.
   ///  * [StatusTone.info] — activity. Bytes are moving, someone is watching.
   ///
   /// It used to be a raw `Color?`, which conflated *noteworthy* with *amber*:

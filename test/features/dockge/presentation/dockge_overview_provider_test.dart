@@ -26,7 +26,7 @@ void main() {
 
       expect(census.total, 6);
       expect(census.running, 2);
-      expect(census.exited, 1);
+      expect(census.stopped, 1);
       // `CREATED_FILE` and `CREATED_STACK` are one reading: Dockge prints
       // "Inactive" for both, and the difference is not one the user acts on.
       expect(census.inactive, 2);
@@ -41,33 +41,60 @@ void main() {
       // function at all — the section prints an em dash instead.
       final census = dockgeStackCensus(const []);
       expect(census.total, 0);
-      expect(census.exited, 0);
+      expect(census.stopped, 0);
     });
   });
 
   group('needs attention', () {
-    test('an exited stack is a fault, and it is amber', () {
+    test('a stopped stack is backlog: one neutral aggregate, never amber', () {
       final rows = dockgeAttentionRows([
         _stack('media'),
         _stack('bazarr', status: DockgeStackStatus.exited),
       ]);
 
       expect(rows, hasLength(1));
-      expect(rows.single.headline, 'Exited · bazarr');
-      expect(rows.single.tone, StatusTone.warning);
-      expect(rows.single.stackName, 'bazarr');
+      expect(rows.single.tone, StatusTone.neutral);
+      expect(rows.single.headline, '1 stack is stopped');
+      // Dockge does not say whether the stop was intended, so the row says so.
+      expect(rows.single.detail, 'bazarr · Dockge does not say why');
+      // An aggregate names no single stack to open.
+      expect(rows.single.stackName, isNull);
     });
 
-    test('a fault row states no age, because nothing here is dated', () {
+    test('a stopped row states no age, because nothing here is dated', () {
       final rows = dockgeAttentionRows([
         _stack('bazarr', status: DockgeStackStatus.exited),
       ]);
 
-      // The board draws "exited · 3 h ago · exit code 137 · out of memory".
-      // None of it has a source in `stackList`, so the row carries the tags it
-      // was given and nothing else. An invented window is worse than none.
-      expect(rows.single.detail, isEmpty);
-      expect(rows.single.spoken, 'Exited, bazarr');
+      // Nothing in `stackList` carries a time or an exit code, so the row
+      // prints neither. An invented window is worse than none.
+      expect(rows.single.detail, isNot(contains('ago')));
+      expect(rows.single.detail, isNot(contains('exit code')));
+    });
+
+    test('a stopped group names its stacks and counts the rest', () {
+      final rows = dockgeAttentionRows([
+        for (final name in ['Zulu', 'alpha', 'bravo', 'charlie'])
+          _stack(name, status: DockgeStackStatus.exited),
+      ]);
+
+      // Sorted case-insensitively, and past three names the count replaces the
+      // rest rather than a dotted list that simply stops.
+      expect(rows.single.headline, '4 stacks are stopped');
+      expect(
+        rows.single.detail,
+        'alpha, bravo, charlie and 1 more · Dockge does not say why',
+      );
+    });
+
+    test('nine stopped stacks are one row, nothing capped out of sight', () {
+      final rows = dockgeAttentionRows([
+        for (var i = 0; i < 9; i++)
+          _stack('stack-$i', status: DockgeStackStatus.exited),
+      ]);
+
+      expect(rows, hasLength(1));
+      expect(rows.single.headline, '9 stacks are stopped');
     });
 
     test('an inactive stack is backlog, and it is neutral', () {
@@ -105,43 +132,21 @@ void main() {
       expect(rows.single.detail, 'ghost · Dockge did not say');
     });
 
-    test(
-      'faults come before backlog, and running stacks appear in neither',
-      () {
-        final rows = dockgeAttentionRows([
-          _stack('archive', status: DockgeStackStatus.createdFile),
-          _stack('media'),
-          _stack('bazarr', status: DockgeStackStatus.exited),
-          _stack('ghost', status: DockgeStackStatus.unknown),
-        ]);
-
-        expect(rows.map((row) => row.headline), [
-          'Exited · bazarr',
-          '1 stack is inactive',
-          '1 stack reports no state',
-        ]);
-      },
-    );
-
-    test('fault rows are capped, and the cap is why the header counts', () {
+    test('stopped, inactive and unknown come in that order, and running stacks '
+        'appear in none', () {
       final rows = dockgeAttentionRows([
-        for (var i = 0; i < 9; i++)
-          _stack('stack-$i', status: DockgeStackStatus.exited),
-      ], limit: 4);
-
-      // Four rows out of nine faults. Nothing here reports the other five —
-      // the section header does, from the census, which is the whole reason it
-      // does not print this list's length.
-      expect(rows, hasLength(4));
-    });
-
-    test('exited rows sort by name, case-insensitively', () {
-      final rows = dockgeAttentionRows([
-        _stack('Zulu', status: DockgeStackStatus.exited),
-        _stack('alpha', status: DockgeStackStatus.exited),
+        _stack('archive', status: DockgeStackStatus.createdFile),
+        _stack('media'),
+        _stack('bazarr', status: DockgeStackStatus.exited),
+        _stack('ghost', status: DockgeStackStatus.unknown),
       ]);
 
-      expect(rows.map((row) => row.stackName), ['alpha', 'Zulu']);
+      expect(rows.map((row) => row.headline), [
+        '1 stack is stopped',
+        '1 stack is inactive',
+        '1 stack reports no state',
+      ]);
+      expect(rows.every((row) => row.tone == StatusTone.neutral), isTrue);
     });
 
     test('an aggregate names three stacks and counts the rest', () {

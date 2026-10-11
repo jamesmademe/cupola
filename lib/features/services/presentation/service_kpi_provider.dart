@@ -1163,10 +1163,10 @@ List<ServiceKpi> _dockgeKpisFrom(List<DockgeStack> stacks) {
   final running = stacks
       .where((s) => s.status == DockgeStackStatus.running)
       .length;
-  final exited = stacks
+  final stopped = stacks
       .where((s) => s.status == DockgeStackStatus.exited)
       .length;
-  final inactive = stacks.length - running - exited;
+  final inactive = stacks.length - running - stopped;
   return [
     ServiceKpi(
       label: 'Stacks',
@@ -1178,11 +1178,12 @@ List<ServiceKpi> _dockgeKpisFrom(List<DockgeStack> stacks) {
       value: '$running',
       icon: Icons.play_circle_rounded,
     ),
+    // Backlog, not a fault: Dockge does not say whether a stop was intended,
+    // so a stopped count is a plain count with no tone.
     ServiceKpi(
-      label: 'Exited',
-      value: '$exited',
+      label: 'Stopped',
+      value: '$stopped',
       icon: Icons.stop_circle_rounded,
-      tone: _faultIf(exited > 0),
     ),
     ServiceKpi(
       label: 'Inactive',

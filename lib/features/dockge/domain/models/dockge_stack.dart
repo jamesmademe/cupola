@@ -13,7 +13,7 @@ enum DockgeStackStatus {
   createdFile(1, 'Inactive'),
   createdStack(2, 'Inactive'),
   running(3, 'Running'),
-  exited(4, 'Exited');
+  exited(4, 'Stopped');
 
   const DockgeStackStatus(this.code, this.label);
 
@@ -31,20 +31,22 @@ enum DockgeStackStatus {
 
   /// How this state reads, resolved to a colour by the presentation layer.
   ///
-  /// It used to be a `Color` built from four raw hexes — none of them a palette
-  /// token, one of them an unregistered green sitting beside `AppColors.success`
-  /// — which is the only reason this domain file imported `material.dart`. Two
-  /// of the four were also wrong about what they were describing:
+  /// It used to be a `Color` built from four raw hexes, one of them an
+  /// unregistered green beside `AppColors.success`, which is the only reason
+  /// this domain file imported `material.dart`. Two of the four were wrong
+  /// about what they described:
   ///
   ///  * **exited** was red. Red on this canvas means a connection that did not
-  ///    answer, and Dockge answered: it told us the stack is down. That is a
-  ///    fault, and a fault is amber.
-  ///  * **inactive** was amber. A stack that was never started is not a fault —
-  ///    nothing stopped, nothing failed. A container stopped on purpose is
-  ///    neutral, and so is one that has not been started yet.
+  ///    answer, and Dockge answered. It was then amber, as a fault, and that
+  ///    promised more than Dockge knows. Its stack list carries no exit code
+  ///    and no date, so a stack stopped on purpose (`compose down`) and one
+  ///    that crashed read the same. The tone rule puts a deliberately paused
+  ///    container in NEUTRAL, so an exited stack is neutral and says `Stopped`.
+  ///  * **inactive** was amber. A stack that was never started is not a fault:
+  ///    nothing stopped, nothing failed. It is neutral, like `exited`.
   StatusTone get tone => switch (this) {
     DockgeStackStatus.running => StatusTone.success,
-    DockgeStackStatus.exited => StatusTone.warning,
+    DockgeStackStatus.exited ||
     DockgeStackStatus.createdFile ||
     DockgeStackStatus.createdStack ||
     DockgeStackStatus.unknown => StatusTone.neutral,

@@ -13,11 +13,12 @@ void main() {
       expect(DockgeStackStatus.createdStack.tone, StatusTone.neutral);
     });
 
-    test('an exited stack is amber, not red', () {
-      // Red on this canvas means the connection did not answer. Dockge answered
-      // — it told us the stack is down — so this is a fault, and a fault is
-      // amber.
-      expect(DockgeStackStatus.exited.tone, StatusTone.warning);
+    test('a stopped stack is neutral and reads Stopped, never amber', () {
+      // Dockge says only "exited": no exit code, no date. A stack brought down
+      // on purpose reads the same as one that crashed, so it is backlog, not a
+      // fault. The word is Dockge's "exited", softened to what it means here.
+      expect(DockgeStackStatus.exited.tone, StatusTone.neutral);
+      expect(DockgeStackStatus.exited.label, 'Stopped');
     });
 
     test('running is the only green', () {

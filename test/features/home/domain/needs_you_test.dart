@@ -162,8 +162,8 @@ void main() {
         'The NZBgeek indexer is failing',
       );
       expect(
-        line(decision(DecisionKind.stoppedStack, 'media')),
-        'The media stack stopped',
+        line(decision(DecisionKind.failingIndexer, 'media')),
+        'The media indexer is failing',
       );
       // Titles that are already sentences, and the arr's own words with its
       // name before them.
@@ -250,7 +250,7 @@ void main() {
       decisions: [
         decision(DecisionKind.importBlocked, 'x', count: 18),
         decision(DecisionKind.stalledDownload, 'Big Buck Bunny'),
-        decision(DecisionKind.stoppedStack, 'media'),
+        decision(DecisionKind.failingIndexer, 'media'),
       ],
       now: now,
     )!;
@@ -261,10 +261,10 @@ void main() {
 
     final one = needsYouOf(
       silent: const [],
-      decisions: [decision(DecisionKind.stoppedStack, 'media')],
+      decisions: [decision(DecisionKind.failingIndexer, 'media')],
       now: now,
     )!;
-    expect(one.spoken, 'The media stack stopped. Review');
+    expect(one.spoken, 'The media indexer is failing. Review');
 
     final floor = needsYouOf(
       silent: const [],

@@ -110,9 +110,9 @@ void main() {
 
     test('an undated item sorts last inside its kind, never first', () {
       final ranked = rankDecisions([
-        _decision(DecisionKind.stoppedStack, 'undated', at: null),
+        _decision(DecisionKind.expiringCertificate, 'undated', at: null),
         _decision(
-          DecisionKind.stoppedStack,
+          DecisionKind.expiringCertificate,
           'dated',
           at: DateTime.utc(2024, 6),
         ),
@@ -125,8 +125,8 @@ void main() {
 
     test('two undated items keep their source order', () {
       final ranked = rankDecisions([
-        _decision(DecisionKind.stoppedStack, 'first', at: null),
-        _decision(DecisionKind.stoppedStack, 'second', at: null),
+        _decision(DecisionKind.expiringCertificate, 'first', at: null),
+        _decision(DecisionKind.expiringCertificate, 'second', at: null),
       ]);
 
       // `List.sort` is not stable; rows that shuffle on every rebuild read as a
@@ -273,10 +273,10 @@ void main() {
       expect(grouped.every((decision) => decision.count == 1), isTrue);
     });
 
-    test('only a jump folds: Start, Test and Approve act on one item', () {
+    test('only a jump folds: Test and Approve act on one item', () {
       final grouped = groupDecisions([
-        _decision(DecisionKind.stoppedStack, 'media', at: null),
-        _decision(DecisionKind.stoppedStack, 'vpn', at: null),
+        _decision(DecisionKind.failingIndexer, 'media', at: null),
+        _decision(DecisionKind.failingIndexer, 'vpn', at: null),
         _decision(DecisionKind.pendingRequest, 'Dune', at: null),
         _decision(DecisionKind.pendingRequest, 'Alien', at: null),
       ]);

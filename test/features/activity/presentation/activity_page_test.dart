@@ -215,7 +215,7 @@ void main() {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.all);
 
       expect(_sections(tester), [
-        'Needs you · 4 faults · 3 requests',
+        'Needs you · 3 faults · 3 requests',
         "Everyone's requests · 5 total",
         'Watching now · Jellyfin',
         'Downloads · 4 moving · 1 stuck',
@@ -302,8 +302,8 @@ void main() {
       final requests = decisions
           .where((d) => d.kind == DecisionKind.pendingRequest)
           .length;
-      expect((faults, requests), (4, 3));
-      expect(find.text('4 faults · 3 requests'), findsOneWidget);
+      expect((faults, requests), (3, 3));
+      expect(find.text('3 faults · 3 requests'), findsOneWidget);
       expect(find.text('3 requests wait for your approval'), findsOneWidget);
       // Every fault is a card with its way out, every request a row with
       // Approve and Decline.
@@ -323,7 +323,7 @@ void main() {
         Profiles.p1.without(ServiceKey.seerr),
         ActivityTab.all,
       );
-      expect(find.text('4 faults'), findsOneWidget);
+      expect(find.text('3 faults'), findsOneWidget);
       expect(find.textContaining('request'), findsNothing);
       await harness.unmount(tester);
     });
@@ -1430,7 +1430,7 @@ void main() {
       expect(find.textContaining('did not answer'), findsNothing);
       expect(
         _sections(tester).firstWhere((line) => line.startsWith('Needs you')),
-        'Needs you · 4 faults · 3 requests',
+        'Needs you · 3 faults · 3 requests',
       );
       // And the note under the title is the amber one, not the red.
       final note = find.ancestor(

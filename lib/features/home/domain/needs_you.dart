@@ -156,7 +156,6 @@ String needsYouLine(
       DecisionKind.connectionFault => '$count connections have a fault',
       DecisionKind.serviceHealth => '$count health checks are failing',
       DecisionKind.failingIndexer => '$count indexers are failing',
-      DecisionKind.stoppedStack => '$count stacks stopped',
       DecisionKind.expiringCertificate => '$count certificates are expiring',
       DecisionKind.pendingRequest => '$count requests wait for approval',
     };
@@ -174,7 +173,6 @@ String needsYouLine(
     // and Lidarr: No indexer is watching for new releases`.
     DecisionKind.serviceHealth => '${decision.detail}: $title',
     DecisionKind.failingIndexer => 'The $title indexer is failing',
-    DecisionKind.stoppedStack => 'The $title stack stopped',
     DecisionKind.expiringCertificate => _certificateLine(
       title,
       decision.occurredAt,

@@ -98,14 +98,15 @@ void main() {
       // milliseconds; the rows used to be held back for Dockge's eight.
       expect(_inRows(find.text('Big Buck Bunny')), findsOne);
       expect(_inRows(find.text('18 need a manual import')), findsOne);
-      // Dockge's stopped stack is not there yet, and nothing pretends it is.
+      // Dockge has not answered, and a stopped stack raises nothing either way.
       expect(_inRows(find.text('immich')), findsNothing);
 
       // Nothing animates while Dockge is out, so time has to be turned on
       // purpose rather than settled.
       await _advance(tester, const Duration(seconds: 7));
       await harness.settle(tester);
-      expect(_inRows(find.text('immich')), findsOne);
+      // Dockge answered, and its stopped stack still raises nothing.
+      expect(_inRows(find.text('immich')), findsNothing);
 
       await harness.unmount(tester);
       // Every request to the slow host waits its eight seconds, the ones its
@@ -127,8 +128,8 @@ void main() {
       await _advance(tester, const Duration(seconds: 3));
 
       // The blocked imports lead; the stall and TrueNAS's disk alert are the
-      // two things more: Dockge's stopped stack is not counted until Dockge
-      // has said so.
+      // two things more. Dockge has not said anything yet, and a stopped stack
+      // would not be one of them.
       expect(
         _inNeedsYou(find.text('18 downloads need a manual import')),
         findsOne,
@@ -138,17 +139,34 @@ void main() {
       await _advance(tester, const Duration(seconds: 7));
       await harness.settle(tester);
       // Dockge's own probe gave up before its list came: it is the silence
-      // that leads now, and the stack it stopped is counted with the rest.
+      // that leads now. The stack it stopped raises nothing, so the rest is one
+      // fewer than before.
       expect(
         _inNeedsYou(find.textContaining(RegExp(r'^Dockge did not answer at '))),
         findsOne,
       );
-      expect(_inNeedsYou(find.text('+4')), findsOne);
+      expect(_inNeedsYou(find.text('+3')), findsOne);
 
       await harness.unmount(tester);
       await tester.pump(const Duration(seconds: 9));
     },
   );
+
+  testWidgets('P1: a stopped Dockge stack raises nothing, so Needs you counts '
+      'the other sources only', (tester) async {
+    final harness = await _pumpHome(tester, Profiles.p1);
+
+    // `immich` is stopped on P1. A stop is not a fault, so the two things
+    // more are the stall and TrueNAS's disk alert, and nothing names immich.
+    expect(
+      _inNeedsYou(find.text('18 downloads need a manual import')),
+      findsOne,
+    );
+    expect(_inNeedsYou(find.text('+2')), findsOne);
+    expect(_inNeedsYou(find.textContaining('immich')), findsNothing);
+
+    await harness.unmount(tester);
+  });
 
   testWidgets('P3, every source slow: a skeleton in Requests, and no gap where '
       'Needs you will be', (tester) async {

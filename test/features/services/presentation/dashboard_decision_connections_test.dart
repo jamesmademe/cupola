@@ -3,7 +3,7 @@
 /// on the one its row came off.
 ///
 /// The three were read through the lens alone, because Test, Start and Renew
-/// called the lens: with two Prowlarr, two Dockge or two Nginx Proxy Manager,
+/// called the lens: with two Prowlarr or two Nginx Proxy Manager,
 /// the second one's faults never reached Home. Each connection is now its own
 /// source, every row says which one it is on once there are two, and its
 /// control reaches that server. The rows are mounted on their own: the Home
@@ -208,33 +208,6 @@ void main() {
 
       await harness.unmount(tester);
     });
-  });
-
-  testWidgets('two Dockge: Start on the tower\'s stack starts it on the '
-      'tower', (tester) async {
-    final (harness, _) = await _pumpRows(
-      tester,
-      _two(WorldConnections.dockge, WorldConnections.dockgeTower),
-    );
-    // `immich` exited on each, each named.
-    expect(_detail('Stack stopped · Dockge 1'), findsOne);
-    expect(_detail('Stack stopped · Dockge Tower'), findsOne);
-
-    await tester.tap(
-      _control('dockge-${WorldIds.dockgeTower}--immich', 'Start'),
-    );
-    await harness.settle(tester);
-
-    expect(
-      harness.network.rpcCalls,
-      contains((WorldIds.dockgeTower, 'agent:startStack')),
-    );
-    expect(
-      harness.network.rpcCalls,
-      isNot(contains((WorldIds.dockge, 'agent:startStack'))),
-    );
-
-    await harness.unmount(tester);
   });
 
   testWidgets('two Nginx Proxy Manager: Renew on the second one\'s '

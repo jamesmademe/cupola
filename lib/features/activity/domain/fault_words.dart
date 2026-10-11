@@ -55,12 +55,6 @@ FaultWords faultWordsOf(DashboardDecision decision) {
       source: source,
       why: null,
     ),
-    DecisionKind.stoppedStack => (
-      headline: '${decision.title} stopped',
-      explanation: null,
-      source: source,
-      why: null,
-    ),
     // TrueNAS's own sentence behind Why?, when the headline is the app's.
     DecisionKind.storageAlert => (
       headline: _withoutStop(decision.title),
