@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/percent_format.dart';
-import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
@@ -13,6 +11,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
+import 'package:cupola/features/stream/presentation/play_with.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
 
 /// One item on a media server, at any depth of the tree.
@@ -229,7 +228,7 @@ class _HandoffButton extends ConsumerWidget {
         : 'Open in ${service.title}';
 
     return FilledButton.icon(
-      onPressed: () => _open(context, baseUrl, machineId),
+      onPressed: () => _open(context, ref, baseUrl, machineId),
       icon: Icon(
         resuming ? Icons.play_arrow_rounded : Icons.open_in_new_rounded,
       ),
@@ -237,25 +236,26 @@ class _HandoffButton extends ConsumerWidget {
     );
   }
 
+  /// Opens the item on this connection: in the app the viewer chooses, on a
+  /// phone, for Jellyfin (`playWith`); in the browser otherwise.
   Future<void> _open(
     BuildContext context,
+    WidgetRef ref,
     String baseUrl,
     String? machineId,
-  ) async {
-    final target = _webUrl(baseUrl, machineId);
-    if (target == null) return;
-
-    final launched = await launchUrl(
-      target,
-      mode: LaunchMode.externalApplication,
+  ) {
+    final server =
+        ref.read(activeInstanceProvider(service)) ??
+        ref.read(currentSettingsProvider).primaryOf(service);
+    if (server == null) return Future.value();
+    return playWith(
+      context,
+      ref,
+      server: server,
+      itemId: item.id,
+      title: item.title,
+      webUrl: _webUrl(baseUrl, machineId),
     );
-    if (!launched && context.mounted) {
-      SnackBarHelper.error(
-        context,
-        'Could not open ${service.title}',
-        detail: target.toString(),
-      );
-    }
   }
 
   /// The server's own web client, deep-linked to this item: see

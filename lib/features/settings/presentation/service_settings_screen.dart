@@ -27,6 +27,8 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dar
 import 'package:cupola/features/release_search/presentation/widgets/search_headroom_card.dart';
 import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
+import 'package:cupola/features/settings/data/stream_player_provider.dart';
+import 'package:cupola/features/stream/presentation/play_with.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -825,6 +827,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             if (service.needsViewerSelection && isConfigured) ...[
               const SizedBox(height: AppSpacing.xxl),
               JellyfinViewerPicker(instanceId: _target.id),
+            ],
+            // Phones only: the app a Jellyfin title plays in, or asked each time.
+            if (service == ServiceKey.jellyfin && playsOnPhone()) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              _buildPlayWithRow(),
             ],
             // How the operator adds a title nobody holds: Seerr's connection
             // only, and the operator's own (the requester adds nothing).
@@ -1635,6 +1642,19 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     await ref.read(settingsProvider.notifier).updateSettings(updated);
     if (!mounted) return;
     SnackBarHelper.info(context, 'Certificate forgotten');
+  }
+
+  /// Where a Jellyfin title plays on a phone: the app the viewer chose, or
+  /// `Ask every time`. Chosen in a sheet, saved on this device.
+  Widget _buildPlayWithRow() {
+    final chosen = ref.watch(streamPlayerChoiceProvider);
+    return SettingsCard.grouped(
+      leading: const Icon(Icons.play_circle_outline_rounded),
+      title: 'Play with',
+      subtitle: chosen?.label ?? 'Ask every time',
+      semanticHint: 'chooses the app a Jellyfin title plays in',
+      onTap: () => chooseStreamPlayer(context, ref),
+    );
   }
 
   /// The operator's choice of how a title nobody holds is added: through

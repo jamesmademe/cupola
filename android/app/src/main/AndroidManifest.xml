@@ -72,5 +72,16 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- The Jellyfin apps Cupola can hand an item to (`streamAppLauncher`):
+             asked with canLaunchUrl before the viewer is offered them. Swiftfin
+             is iOS only and needs no entry here. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="streamyfin"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="fladder"/>
+        </intent>
     </queries>
 </manifest>

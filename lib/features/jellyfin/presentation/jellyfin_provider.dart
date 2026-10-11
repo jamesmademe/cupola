@@ -149,6 +149,13 @@ final jellyfinViewersProvider = FutureProvider<List<StreamViewer>>((ref) async {
   return ref.watch(jellyfinServerProvider).getViewers();
 }, retry: noProviderRetry);
 
+/// The server's own id, per connection: what a Jellyfin app needs to open an
+/// item on it. Null while the server does not say.
+final jellyfinServerIdProvider = FutureProvider.autoDispose
+    .family<String?, String>((ref, instanceId) async {
+      return ref.watch(jellyfinClientForProvider(instanceId)).publicServerId();
+    }, retry: noProviderRetry);
+
 /// The same list, from one named connection.
 ///
 /// What the settings picker reads: it is filling in a viewer for the connection

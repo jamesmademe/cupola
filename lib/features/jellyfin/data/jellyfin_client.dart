@@ -213,6 +213,19 @@ class JellyfinClient implements StreamServerClient {
     }
   }
 
+  /// The server's own id, read from the anonymous endpoint: what a Jellyfin app
+  /// needs to open an item on it. Null when the server does not say.
+  Future<String?> publicServerId() async {
+    try {
+      final response = await _api.get('/System/Info/Public');
+      final data = response.data;
+      if (data is! Map) return null;
+      return JellyfinPublicSystemInfo.fromJson(data.cast<String, dynamic>()).id;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// The Dashboard's probe: proves the credential, and names the version.
   ///
   /// [probeVersion] reads the anonymous endpoint, so a Jellyfin with a wrong

@@ -45,6 +45,7 @@ import 'package:cupola/features/release_search/presentation/release_search_entry
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
+import 'package:cupola/features/stream/presentation/play_with.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -144,16 +145,15 @@ class _MediaPageState extends ConsumerState<MediaPage> {
   MediaKey get mediaKey => widget.mediaKey;
   String? get focus => widget.focus;
 
-  /// Plays [lead] in its server's own client, at the item.
-  Future<void> _play(MediaLeadPlay lead, String serverName) =>
-      _playOn(lead.server, (lead.episode ?? lead.item).id, serverName);
+  /// Plays [lead] at its item, in the app the viewer chooses for it.
+  Future<void> _play(MediaLeadPlay lead) {
+    final item = lead.episode ?? lead.item;
+    return _playOn(lead.server, item.id, item.title);
+  }
 
-  /// Opens the item [itemId] in [server]'s own client.
-  Future<void> _playOn(
-    ServiceInstance server,
-    String itemId,
-    String serverName,
-  ) async {
+  /// Opens the item [itemId] on [server]: its own app when the viewer has
+  /// several to choose from (`playWith`), its web client otherwise.
+  Future<void> _playOn(ServiceInstance server, String itemId, String title) {
     final machineId = server.service == ServiceKey.plex
         ? ref
               .read(plexCapabilitiesForProvider(server.id))
@@ -166,12 +166,14 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       itemId: itemId,
       plexMachineId: machineId,
     );
-    final opened =
-        target != null &&
-        await launchUrl(target, mode: LaunchMode.externalApplication);
-    if (!opened && mounted) {
-      SnackBarHelper.error(context, 'Could not open $serverName');
-    }
+    return playWith(
+      context,
+      ref,
+      server: server,
+      itemId: itemId,
+      title: title,
+      webUrl: target,
+    );
   }
 
   /// The Seerr "More like this" is read through: the first one set up, while
@@ -811,10 +813,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             _LeadBar(
               lead: lead,
               light: light,
-              onPlay: (lead) => _play(
-                lead,
-                settings.connectionTitle(lead.server.id, lead.server.service),
-              ),
+              onPlay: _play,
               onTrailer: identity?.videos.isNotEmpty ?? false
                   ? () => DiscoverVideosButton.show(context, identity!.videos)
                   : null,
@@ -1295,7 +1294,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             light: light,
             onPlay: (item) {
               final on = server;
-              if (on != null) _playOn(on.connection, item.id, on.name);
+              if (on != null) _playOn(on.connection, item.id, item.title);
             },
             onChanged: () {
               if (!mounted) return;

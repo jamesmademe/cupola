@@ -4,13 +4,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
     show calendarClockProvider;
@@ -28,6 +26,7 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
+import 'package:cupola/features/stream/presentation/play_with.dart';
 
 /// Featured: up to three slides, what somebody was watching, the newest
 /// arrival and what comes out today, moving on by themselves; the room takes
@@ -117,6 +116,7 @@ class HomeFeaturedModule extends ConsumerWidget {
             service: row.service,
             instanceId: row.instanceId,
             itemId: row.item.id,
+            title: row.item.title,
           ),
           icon: Icons.play_arrow_rounded,
         ),
@@ -128,6 +128,7 @@ class HomeFeaturedModule extends ConsumerWidget {
             service: play.server.service,
             instanceId: play.server.id,
             itemId: play.item.id,
+            title: play.item.title,
           ),
           icon: Icons.play_arrow_rounded,
         ),
@@ -163,9 +164,9 @@ Future<void> _play(
   required ServiceKey service,
   required String instanceId,
   required String itemId,
+  required String title,
 }) async {
-  final settings = ref.read(currentSettingsProvider);
-  final server = settings.instanceById(instanceId);
+  final server = ref.read(currentSettingsProvider).instanceById(instanceId);
   if (server == null) return;
   String? machineId;
   if (service == ServiceKey.plex) {
@@ -177,19 +178,18 @@ Future<void> _play(
       machineId = null;
     }
   }
-  final target = streamItemWebUrl(
-    service: service,
-    baseUrl: server.url,
+  if (!context.mounted) return;
+  await playWith(
+    context,
+    ref,
+    server: server,
     itemId: itemId,
-    plexMachineId: machineId,
+    title: title,
+    webUrl: streamItemWebUrl(
+      service: service,
+      baseUrl: server.url,
+      itemId: itemId,
+      plexMachineId: machineId,
+    ),
   );
-  final opened =
-      target != null &&
-      await launchUrl(target, mode: LaunchMode.externalApplication);
-  if (!opened && context.mounted) {
-    SnackBarHelper.error(
-      context,
-      'Could not open ${settings.connectionTitle(instanceId, service)}',
-    );
-  }
 }
