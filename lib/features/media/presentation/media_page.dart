@@ -363,6 +363,8 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       title:
           'Request ${identity?.title ?? (mediaKey.isMovie ? 'movie' : 'series')}',
       subtitle: identity?.metaLine,
+      // Closed as its sibling the add sheet is.
+      showClose: true,
       builder: (_) => RequestBottomSheet(
         mediaId: tmdbId,
         mediaType: mediaKey.isMovie ? 'movie' : 'tv',

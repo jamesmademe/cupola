@@ -237,6 +237,14 @@ const _monoUses = <({String file, int uses, String prints})>[
         'service returns it',
   ),
   (
+    file:
+        'lib/features/discover/presentation/widgets/request_bottom_sheet.dart',
+    uses: 1,
+    prints:
+        'the root folder a request lands under: a path, exactly as Seerr '
+        'returns it',
+  ),
+  (
     file: 'lib/core/widgets/file_info_section.dart',
     uses: 2,
     prints:

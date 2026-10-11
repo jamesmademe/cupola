@@ -7,6 +7,7 @@ import 'package:cupola/core/capability/role_gate_copy.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
@@ -138,10 +139,17 @@ class QualityProfileOption {
 class RootFolderOption {
   final String path;
 
-  const RootFolderOption({required this.path});
+  /// The bytes free under [path], as the arr told Seerr; null when it did
+  /// not say.
+  final int? freeSpace;
+
+  const RootFolderOption({required this.path, this.freeSpace});
 
   factory RootFolderOption.fromJson(Map<String, dynamic> json) {
-    return RootFolderOption(path: json['path'] as String? ?? '');
+    return RootFolderOption(
+      path: json['path'] as String? ?? '',
+      freeSpace: intOrNull(json['freeSpace']),
+    );
   }
 }
 
@@ -204,6 +212,15 @@ class RequestFormState {
     final reason = errorReason;
     return reason != null && failureDidNotAnswer(reason);
   }
+
+  /// The quality profile chosen, when one is.
+  QualityProfileOption? get selectedProfile =>
+      profiles.where((profile) => profile.id == selectedProfileId).firstOrNull;
+
+  /// The root folder chosen, when one is.
+  RootFolderOption? get selectedFolder => rootFolders
+      .where((folder) => folder.path == selectedRootFolder)
+      .firstOrNull;
 
   /// The server the request will be sent to, when one is chosen.
   SeerrServer? get selectedServer {

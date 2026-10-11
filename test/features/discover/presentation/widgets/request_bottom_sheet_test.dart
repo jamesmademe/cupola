@@ -5,12 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
+import 'package:cupola/features/media/presentation/media_parts.dart';
 
 import '../../../../test_helpers/settings_scope.dart';
 import '../../../../test_helpers/fake_services.dart' as shared;
@@ -65,7 +69,7 @@ void main() {
       );
     });
 
-    testWidgets('renders quality profile dropdown and submit button', (
+    testWidgets('renders the quality profile row and the submit button', (
       tester,
     ) async {
       await _pumpSheetDirect(tester, service: _movieService());
@@ -76,7 +80,7 @@ void main() {
       expect(find.text('Submit request'), findsOneWidget);
     });
 
-    testWidgets('hides server dropdown when only one server exists', (
+    testWidgets('hides the server pills when only one server exists', (
       tester,
     ) async {
       await _pumpSheetDirect(tester, service: _movieService());
@@ -86,7 +90,7 @@ void main() {
       expect(find.text('Quality profile'), findsOneWidget);
     });
 
-    testWidgets('shows server dropdown when multiple servers exist', (
+    testWidgets('shows the server pills when multiple servers exist', (
       tester,
     ) async {
       await _pumpSheetDirect(
@@ -98,7 +102,7 @@ void main() {
       expect(find.text('Server'), findsOneWidget);
     });
 
-    testWidgets('shows root folder dropdown when root folders are available', (
+    testWidgets('shows the root folder row when root folders are available', (
       tester,
     ) async {
       await _pumpSheetDirect(tester, service: _movieService());
@@ -127,6 +131,84 @@ void main() {
       expect(requestCompleteCount, 1);
       expect(find.text('LauncherPage'), findsOneWidget);
     });
+
+    testWidgets(
+      "the operator's sheet speaks the add sheet's grammar: the server as "
+      'pills, where the title lands as rows that open the value sheet',
+      (tester) async {
+        final service = _FakeSeerr(
+          radarrServers: const [
+            {'id': 1, 'name': 'Main'},
+            {'id': 2, 'name': 'UHD', 'is4k': true},
+          ],
+          radarrProfilesByServer: const {
+            1: {
+              'profiles': [
+                {'id': 5, 'name': 'HD-1080p'},
+                {'id': 6, 'name': 'Any'},
+              ],
+              'rootFolders': [
+                {'path': '/movies', 'freeSpace': 12400000000000},
+                {'path': '/archive'},
+              ],
+            },
+            2: {
+              'profiles': [
+                {'id': 8, 'name': 'Ultra-HD'},
+              ],
+              'rootFolders': [
+                {'path': '/movies-4k'},
+              ],
+            },
+          },
+        );
+        await _pumpSheetDirect(tester, service: service);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DropdownButtonFormField<int>), findsNothing);
+        expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+        expect(find.byType(SelectionPills<SeerrServer>), findsOneWidget);
+        expect(find.byType(MediaValueRow), findsNWidgets(2));
+        expect(find.text('HD-1080p'), findsOneWidget);
+        expect(find.text('/movies'), findsOneWidget);
+        expect(
+          find.text('${formatBytes(12400000000000)} free'),
+          findsOneWidget,
+        );
+
+        // The 4K server, named as such, brings its own profile and folder.
+        await tester.tap(find.text('UHD · 4K'));
+        await tester.pumpAndSettle();
+        expect(find.text('Ultra-HD'), findsOneWidget);
+        expect(find.text('/movies-4k'), findsOneWidget);
+        await tester.tap(find.text('Main'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Quality profile'));
+        await tester.pumpAndSettle();
+        expect(find.text('Currently HD-1080p'), findsOneWidget);
+        await tester.tap(find.text('Any'));
+        await tester.pumpAndSettle();
+        expect(find.text('Any'), findsOneWidget);
+
+        await tester.tap(find.text('Root folder'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('/archive'));
+        await tester.pumpAndSettle();
+        // A folder Seerr gave no free space for says none.
+        expect(find.textContaining(' free'), findsNothing);
+
+        await tester.tap(find.text('Submit request'));
+        await tester.pumpAndSettle();
+
+        expect(service.lastCreateRequestCall, containsPair('serverId', 1));
+        expect(service.lastCreateRequestCall, containsPair('profileId', 6));
+        expect(
+          service.lastCreateRequestCall,
+          containsPair('rootFolder', '/archive'),
+        );
+      },
+    );
 
     testWidgets('shows a snackbar when submit fails', (tester) async {
       await _pumpSheetDirect(

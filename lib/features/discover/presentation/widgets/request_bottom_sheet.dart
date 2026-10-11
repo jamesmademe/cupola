@@ -9,16 +9,19 @@ import 'package:cupola/core/capability/role_gate_copy.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
+import 'package:cupola/core/widgets/media_value_sheet.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/domain/seerr_quota.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/request_form_provider.dart';
+import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -26,12 +29,13 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Two sheets, as the gate of the lens's Seerr says. The operator whose
 /// connection may choose picks the server, the quality profile and the
-/// folder, as he always has. Everybody else (the requester, and an operator's
-/// account on somebody else's Seerr) sends the title alone: its quality,
-/// standard or 4K where the account and the server both take 4K, its seasons
-/// where the server takes them one by one, under a line that says who
-/// approves it and how much of the quota is left. The server applies its own
-/// server, profile and folder, and no name of the operator's servers is read.
+/// folder, in the add sheet's rows. Everybody else (the requester, and an
+/// operator's account on somebody else's Seerr) sends the title alone: its
+/// quality, standard or 4K where the account and the server both take 4K,
+/// its seasons where the server takes them one by one, under a line that says
+/// who approves it and how much of the quota is left. The server applies its
+/// own server, profile and folder, and no name of the operator's servers is
+/// read.
 class RequestBottomSheet extends ConsumerWidget {
   final int mediaId;
   final String mediaType;
@@ -63,8 +67,8 @@ class RequestBottomSheet extends ConsumerWidget {
     final args = (mediaId: mediaId, mediaType: mediaType, copies: copies);
     final state = ref.watch(requestFormProvider(args));
     final notifier = ref.read(requestFormProvider(args).notifier);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final room = CupolaRoom.of(context);
     final gate = ref.watch(roleGateProvider(''));
     final kind = mediaType == 'movie'
         ? SeerrMediaKind.movie
@@ -183,75 +187,70 @@ class RequestBottomSheet extends ConsumerWidget {
             ),
           ),
         ] else ...[
+          // The operator's sheet, in the add sheet's grammar: the server as
+          // pills when there is a choice, then where the title lands as rows
+          // that open the value sheet.
           if (state.servers.length > 1) ...[
-            Text('Server', style: theme.textTheme.labelLarge),
-            const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<int>(
-              key: ValueKey('request_server_${state.selectedServerId}'),
-              isExpanded: true,
-              initialValue: state.selectedServerId,
-              items: state.servers
-                  .map(
-                    (server) => DropdownMenuItem(
-                      value: server.id,
-                      child: Text(server.choiceLabel),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  notifier.selectServer(value);
-                }
-              },
+            Text(
+              'Server',
+              style: AppType.meta.copyWith(color: room.inkSecondary),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.sm),
+            SelectionPills<SeerrServer>.wrap(
+              values: state.servers,
+              selected: state.selectedServer ?? state.servers.first,
+              labelBuilder: (server) => server.choiceLabel,
+              onSelected: (server) => notifier.selectServer(server.id),
+            ),
+            const SizedBox(height: AppSpacing.sm),
           ],
-          Text('Quality profile', style: theme.textTheme.labelLarge),
-          const SizedBox(height: AppSpacing.sm),
-          DropdownButtonFormField<int>(
-            key: ValueKey('request_profile_${state.selectedProfileId}'),
-            isExpanded: true,
-            initialValue: state.selectedProfileId,
-            items: state.profiles
-                .map(
-                  (profile) => DropdownMenuItem(
-                    value: profile.id,
-                    child: Text(profile.name),
+          MediaGroup(
+            children: [
+              MediaValueRow(
+                label: 'Quality profile',
+                value: Text(
+                  state.selectedProfile?.name ?? '',
+                  textAlign: TextAlign.end,
+                  style: AppType.meta.copyWith(color: room.inkSecondary),
+                ),
+                onTap: state.profiles.length > 1
+                    ? () => _pickProfile(context, state, notifier)
+                    : null,
+              ),
+              if (state.rootFolders.isNotEmpty)
+                MediaValueRow(
+                  label: 'Root folder',
+                  value: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        state.selectedRootFolder ?? '',
+                        textAlign: TextAlign.end,
+                        style: AppType.mono.copyWith(color: room.inkSecondary),
+                      ),
+                      if (state.selectedFolder?.freeSpace case final free?)
+                        Text(
+                          '${formatBytes(free)} free',
+                          style: AppType.caption.copyWith(
+                            color: room.inkTertiary,
+                          ),
+                        ),
+                    ],
                   ),
-                )
-                .toList(),
-            onChanged: (value) {
-              if (value != null) {
-                notifier.selectProfile(value);
-              }
-            },
+                  onTap: state.rootFolders.length > 1
+                      ? () => _pickFolder(context, state, notifier)
+                      : null,
+                ),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          if (state.rootFolders.isNotEmpty) ...[
-            Text('Root folder', style: theme.textTheme.labelLarge),
-            const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<String>(
-              key: ValueKey('request_root_${state.selectedRootFolder}'),
-              // A long path ellipsizes in the field rather than overflowing it.
-              isExpanded: true,
-              initialValue: state.selectedRootFolder,
-              items: state.rootFolders
-                  .map(
-                    (folder) => DropdownMenuItem(
-                      value: folder.path,
-                      child: Text(folder.path),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  notifier.selectRootFolder(value);
-                }
-              },
-            ),
-            const SizedBox(height: AppSpacing.xl),
-          ],
-          ..._seasonChoices(context, state, notifier, picks: picksSeasons),
+          ..._seasonChoices(
+            context,
+            state,
+            notifier,
+            picks: picksSeasons,
+            labelStyle: AppType.meta.copyWith(color: room.inkSecondary),
+          ),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
@@ -282,6 +281,44 @@ class RequestBottomSheet extends ConsumerWidget {
         const SizedBox(height: AppSpacing.lg),
       ],
     );
+  }
+
+  /// The quality profile, picked in the value sheet the add sheet opens.
+  Future<void> _pickProfile(
+    BuildContext context,
+    RequestFormState state,
+    RequestFormNotifier notifier,
+  ) async {
+    final picked = await showMediaValueSheet<int>(
+      context,
+      title: 'Quality profile',
+      value: state.selectedProfileId,
+      currentLabel: state.selectedProfile?.name ?? '',
+      options: [
+        for (final profile in state.profiles)
+          MediaDetailValueOption(value: profile.id, label: profile.name),
+      ],
+    );
+    if (picked != null) notifier.selectProfile(picked.value);
+  }
+
+  /// The root folder, picked the same way.
+  Future<void> _pickFolder(
+    BuildContext context,
+    RequestFormState state,
+    RequestFormNotifier notifier,
+  ) async {
+    final picked = await showMediaValueSheet<String>(
+      context,
+      title: 'Root folder',
+      value: state.selectedRootFolder,
+      currentLabel: state.selectedRootFolder ?? '',
+      options: [
+        for (final folder in state.rootFolders)
+          MediaDetailValueOption(value: folder.path, label: folder.path),
+      ],
+    );
+    if (picked != null) notifier.selectRootFolder(picked.value);
   }
 
   /// The sheet that sends the title alone: no server, no profile, no
@@ -359,9 +396,13 @@ class RequestBottomSheet extends ConsumerWidget {
     RequestFormState state,
     RequestFormNotifier notifier, {
     required bool picks,
+    TextStyle? labelStyle,
   }) => [
     if (state.seasons.isNotEmpty) ...[
-      Text('Seasons', style: Theme.of(context).textTheme.labelLarge),
+      Text(
+        'Seasons',
+        style: labelStyle ?? Theme.of(context).textTheme.labelLarge,
+      ),
       const SizedBox(height: AppSpacing.sm),
       if (picks)
         Wrap(

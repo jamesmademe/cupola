@@ -209,6 +209,8 @@ class CatalogTitleRow extends ConsumerWidget {
         if (media.year.isNotEmpty) media.year,
         _isMovie ? 'Movie' : 'Series',
       ].join(' · '),
+      // Closed as its sibling the add sheet is.
+      showClose: true,
       builder: (_) => RequestBottomSheet(
         mediaId: media.id,
         mediaType: _isMovie ? 'movie' : 'tv',
