@@ -230,8 +230,11 @@ void main() {
         find.textContaining('1 of 1 answering · 1 signed out · 15 not set up'),
         findsOne,
       );
-      expect(find.text('Seerr signed out · 5 not set up'), findsOne);
-      expect(find.text('1 of 1 clean · 1 not set up'), findsOne);
+      // A band's line is drawn a part at a time, each with its dot.
+      expect(find.text('Seerr signed out ·'), findsOne);
+      expect(find.text('5 not set up'), findsOne);
+      expect(find.text('1 of 1 clean ·'), findsOne);
+      expect(find.text('1 not set up'), findsOne);
       expect(find.text('Signed out'), findsOne);
       expect(find.textContaining('fault'), findsNothing);
       expect(find.textContaining('needs a look'), findsNothing);
@@ -253,7 +256,12 @@ void main() {
         find.textContaining('11 of 11 answering · 6 not set up'),
         findsOne,
       );
-      expect(find.text('5 of 5 clean · 1 not set up'), findsOne);
+      // Radarr and Sonarr carry the world's faults (a stall, an import),
+      // which Needs you holds; Seerr is among the clean.
+      expect(find.text('3 of 5 clean ·'), findsOne);
+      expect(find.text('Radarr needs a look ·'), findsOne);
+      expect(find.text('Sonarr needs a look ·'), findsOne);
+      expect(find.text('1 not set up'), findsWidgets);
       expect(find.textContaining('with a fault'), findsNothing);
       expect(find.textContaining('Seerr needs a look'), findsNothing);
 

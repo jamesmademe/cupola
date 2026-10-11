@@ -89,6 +89,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -360,12 +361,16 @@ class _DomainBand extends ConsumerWidget {
   ///
   /// *Clean* is the honest word and it is not "online": a service that answers
   /// while its indexers fail is up and not clean, and a header that counted it
-  /// as fine would contradict the amber figure on the card two rows below.
+  /// as fine would contradict the amber figure on the card two rows below, or
+  /// the fault Needs you holds on it ([faultedServices]).
   ///
   /// Watching these providers here costs no extra fetch — every cell in the band
   /// already watches the same ones.
   String? _health(WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
+    final faulted = faultedServices(
+      ref.watch(dashboardDecisionsProvider).decisions,
+    );
     var configured = 0;
     var clean = 0;
     var notSetUp = 0;
@@ -408,8 +413,11 @@ class _DomainBand extends ConsumerWidget {
         continue;
       }
       // A refusal or a fault: it answered, so it is not "did not answer", and
-      // it is not clean either. The cell below names which fault.
-      if (reachability == ServiceReachability.fault || folded.faulted > 0) {
+      // it is not clean either. The cell below, or Needs you, names which
+      // fault.
+      if (reachability == ServiceReachability.fault ||
+          folded.faulted > 0 ||
+          faulted.contains(service)) {
         qualifiers.add('${service.title} needs a look');
         continue;
       }
@@ -461,7 +469,8 @@ class _DomainBand extends ConsumerWidget {
     return serviceDomainHealthLine(
       clean: clean,
       total: configured,
-      qualifiers: [...qualifiers, if (notSetUp > 0) '$notSetUp not set up'],
+      qualifiers: qualifiers,
+      notSetUp: notSetUp,
     );
   }
 
@@ -474,6 +483,7 @@ class _DomainBand extends ConsumerWidget {
     final dim =
         theme.extension<CupolaThemeColors>()?.dimText ??
         colorScheme.onSurfaceVariant;
+    final parts = health?.split(' · ') ?? const <String>[];
 
     return Padding(
       // Generous above, tight below: the gap that separates this header from the
@@ -502,12 +512,19 @@ class _DomainBand extends ConsumerWidget {
           const SizedBox(width: AppSpacing.sm),
           if (health != null)
             Expanded(
-              child: Text(
-                health,
-                textAlign: TextAlign.end,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(color: dim),
+              // A part at a time, its dot with it: on a phone three faults
+              // ran past one line, and the last fell under an ellipsis or
+              // broke inside itself (`Sonarr needs a` | `look`).
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: AppSpacing.xs,
+                children: [
+                  for (final (index, part) in parts.indexed)
+                    Text(
+                      index < parts.length - 1 ? '$part ·' : part,
+                      style: theme.textTheme.bodySmall?.copyWith(color: dim),
+                    ),
+                ],
               ),
             )
           else

@@ -643,3 +643,17 @@ String decisionUnavailableToast(DecisionKind kind, ServiceKey required) {
   };
   return '${Lexicon.setUp(required.title)} to $what.';
 }
+
+/// The services the faults among [decisions] stand on: each fault's own, and
+/// each \*arr a health check is folded across ([DashboardDecision.members]).
+///
+/// Stack health lights them amber and the Stack's bands do not count them
+/// clean, so neither says a service is fine while Needs you holds a fault on
+/// it.
+Set<ServiceKey> faultedServices(Iterable<DashboardDecision> decisions) => {
+  for (final decision in decisions)
+    if (decision.isFault) ...[
+      decision.service,
+      for (final member in decision.members) member.service,
+    ],
+};

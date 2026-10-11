@@ -154,12 +154,7 @@ StackLights stackLightsOf({
   required List<DashboardDecision> faults,
 }) {
   // A health check folded across \*arrs is amber on each of them.
-  final withFaults = {
-    for (final fault in faults) ...[
-      fault.service,
-      for (final member in fault.members) member.service,
-    ],
-  };
+  final withFaults = faultedServices(faults);
   final rows = [
     for (final entry in services)
       (

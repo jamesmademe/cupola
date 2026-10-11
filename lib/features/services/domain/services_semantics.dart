@@ -104,11 +104,14 @@ String servicesStackHeaderValue({
 /// — so retiring the fold would have deleted the one place a band said anything
 /// about itself. `clean` counts the services in the band that are answering and
 /// have nothing flagged; the qualifiers name the ones that do, at most two,
-/// because a band header is not a list.
+/// because a band header is not a list. [notSetUp] is said after them, never
+/// folded into their `1 other`: a service not set up is not one that needs a
+/// look.
 String serviceDomainHealthLine({
   required int clean,
   required int total,
   List<String> qualifiers = const [],
+  int notSetUp = 0,
   int maxNamed = 2,
 }) {
   final named = qualifiers.where((q) => q.trim().isNotEmpty).toList();
@@ -120,7 +123,11 @@ String serviceDomainHealthLine({
               ? '1 other'
               : '${named.length - maxNamed} others',
         ];
-  return ['$clean of $total clean', ...shown].join(' · ');
+  return [
+    '$clean of $total clean',
+    ...shown,
+    if (notSetUp > 0) '$notSetUp not set up',
+  ].join(' · ');
 }
 
 /// What one decision row announces after its title.
