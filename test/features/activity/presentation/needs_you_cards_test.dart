@@ -82,6 +82,21 @@ void main() {
     expect(find.textContaining('drops this one'), findsOneWidget);
     expect(find.text('Remove'), findsOneWidget);
     expect(find.text('Keep waiting'), findsOneWidget);
+    // The time is in the explanation, the route alone under the release.
+    expect(
+      find.descendant(
+        of: _stuckCard,
+        matching: find.text('Radarr 1 → qBittorrent'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: _stuckCard,
+        matching: find.textContaining('Nothing for '),
+      ),
+      findsNothing,
+    );
 
     await harness.unmount(tester);
   });

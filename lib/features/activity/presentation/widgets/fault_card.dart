@@ -25,8 +25,9 @@ typedef FaultCardRunning = ({String text, double? progress});
 /// A headline that is a sentence (`Big Buck Bunny is stuck at 47%`) by an
 /// amber warning glyph, what it means, the service that raised it, and,
 /// behind Why?, the service's own words. A download shows its proof: the
-/// release in mono, how long nothing has arrived and which way its bytes
-/// travel, and how far it got in amber.
+/// release in mono, which way its bytes travel, and how far it got in amber.
+/// The explanation says how long nothing has arrived (a row's proof says it
+/// instead, since a row has no explanation).
 ///
 /// Then the remedy: [primary] is the one amber fill (a fault's remedy is),
 /// [primarySubtitle] says under it what it will do, and the quieter ways out

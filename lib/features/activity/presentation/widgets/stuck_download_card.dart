@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/features/activity/data/acted_faults.dart';
+import 'package:cupola/features/activity/domain/activity_download.dart';
 import 'package:cupola/features/activity/domain/stuck_download_fault.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart'
     show ActivitySlab;
@@ -120,11 +121,14 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard>
     final words = (
       headline: stuckHeadline(item),
       explanation: stuckExplanation(item, now: now),
-      source: '${arrName(item)} · ${clientName(item)}',
       release: release == item.title ? null : release,
-      proof: stuckProof(item, now: now),
       progress: item.progress,
     );
+    // The explanation already says how long nothing has arrived, so a card's
+    // proof is its route alone. The row has no explanation and keeps the time.
+    final proof = widget._row
+        ? stuckProof(item, now: now)
+        : downloadRoute(item);
     final subtitle = stuckActionSubtitle(actions.primary, item);
     final quiet = [
       for (final action in actions.secondary)
@@ -154,10 +158,9 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard>
           : FaultCardForm.card,
       headline: words.headline,
       explanation: words.explanation,
-      source: widget.whole ? words.source : null,
       art: art,
       release: words.release,
-      proof: words.proof,
+      proof: proof,
       progress: words.progress,
       primary: primary,
       primarySubtitle: subtitle,

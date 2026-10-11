@@ -119,6 +119,27 @@ void main() {
     await _close(tester, harness, container);
   });
 
+  testWidgets('P1: a stuck card says how long nothing arrived once, in its '
+      'explanation, and its route once, in its proof', (tester) async {
+    final (harness, router, container) = await _app(tester, Profiles.p1);
+    router.go(ServiceRoutes.activityNeedsYou);
+    await _answer(tester);
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            (widget.data ?? '').startsWith('Nothing has arrived for '),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Radarr 1 → qBittorrent'), findsOneWidget);
+    expect(find.text('Radarr 1 · qBittorrent'), findsNothing);
+    expect(find.textContaining('Nothing for '), findsNothing);
+
+    await _close(tester, harness, container);
+  });
+
   testWidgets('the heading of Needs you on All opens the page, and Back '
       'returns to All', (tester) async {
     final (harness, router, container) = await _app(tester, Profiles.p1);

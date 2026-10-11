@@ -41,7 +41,7 @@ FaultCard _stuck({bool divided = false}) => FaultCard(
       'file any more.',
   art: _poster,
   release: 'Big.Buck.Bunny.2008.1080p.BluRay',
-  proof: 'Nothing for 3\u00A0h · Radarr → qBittorrent',
+  proof: 'Radarr → qBittorrent',
   progress: 0.47,
   primary: const _Fill('Try another download'),
   primarySubtitle:
