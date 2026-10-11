@@ -16,6 +16,7 @@ import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/decision_rows.dart';
@@ -375,6 +376,20 @@ void main() {
       expect(_inDownloads(find.text('Failed')), findsNWidgets(2));
       expect(_inDownloads(find.text('Try another download')), findsNWidgets(2));
       expect(_inDownloads(find.text('Open in qBittorrent')), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P1 on the Stack: the Downloads band names qBittorrent as '
+        'needing a look, not clean, for its stuck torrent', (tester) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p1,
+        child: const StackScreen(),
+        surfaceSize: const Size(430, 2400),
+      );
+
+      expect(find.textContaining('qBittorrent needs a look'), findsOneWidget);
 
       await harness.unmount(tester);
     });

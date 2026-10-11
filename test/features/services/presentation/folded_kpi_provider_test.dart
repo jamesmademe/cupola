@@ -4,6 +4,8 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
@@ -256,6 +258,31 @@ void main() {
 
       expect(kpis, isNotNull);
       expect(kpis!.firstWhere((kpi) => kpi.label == 'Active').value, '1');
+    });
+
+    test('a stuck or failed torrent is counted on the card and flagged, by '
+        'the rule Needs you uses', () async {
+      final container = _container(
+        instances: const [_qbLens, _qbOther],
+        qbittorrentService: _Torrents([
+          Torrent.fromJson({'state': 'downloading', 'dlspeed': 128}),
+          Torrent.fromJson({'state': 'stalledDL'}),
+          Torrent.fromJson({'state': 'error'}),
+        ]),
+      );
+
+      final kpis = await container.read(
+        serviceKpiForProvider((
+          service: ServiceKey.qbittorrent,
+          instanceId: _qbOther.id,
+        )).future,
+      );
+
+      final stuck = kpis!.firstWhere(
+        (kpi) => kpi.label == StateWord.stuck.label,
+      );
+      expect(stuck.value, '2');
+      expect(stuck.tone, StatusTone.warning);
     });
   });
 }

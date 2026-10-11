@@ -42,6 +42,7 @@ import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/kpi_aggregate.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -957,20 +958,32 @@ List<ServiceKpi> _lidarrKpisFrom(List<LidarrArtist>? artists, {String? note}) {
 }
 
 Future<List<ServiceKpi>> _qbittorrentKpis(Ref ref) async {
-  return _qbittorrentKpisFrom(await ref.watch(allTorrentsProvider.future));
+  final now = ref.read(stallClockProvider)();
+  return _qbittorrentKpisFrom(
+    await ref.watch(allTorrentsProvider.future),
+    now: now,
+  );
 }
 
 Future<List<ServiceKpi>> _qbittorrentKpisFor(Ref ref, String instanceId) async {
+  final now = ref.read(stallClockProvider)();
   final torrents = await ref
       .watch(qbittorrentServiceForProvider(instanceId))
       .getTorrents(sort: 'added_on', reverse: true);
-  return _qbittorrentKpisFrom(torrents);
+  return _qbittorrentKpisFrom(torrents, now: now);
 }
 
-List<ServiceKpi> _qbittorrentKpisFrom(List<Torrent> torrents) {
+/// qBittorrent's rail. Its last figure counts the stuck torrents, by the one
+/// rule a stuck download is judged by ([qbittorrentInFlight]: stalled or
+/// failed), so the card is flagged when Needs you shows one.
+List<ServiceKpi> _qbittorrentKpisFrom(
+  List<Torrent> torrents, {
+  required DateTime now,
+}) {
   var active = 0;
   var downloading = 0;
   var seeding = 0;
+  var stuck = 0;
   var dl = 0;
   var up = 0;
   for (final t in torrents) {
@@ -981,6 +994,7 @@ List<ServiceKpi> _qbittorrentKpisFrom(List<Torrent> torrents) {
       downloading++;
     }
     if (state == TorrentState.seeding) seeding++;
+    if (qbittorrentInFlight(t, now: now)?.fault != null) stuck++;
     dl += t.dlSpeed;
     up += t.upSpeed;
   }
@@ -1006,6 +1020,12 @@ List<ServiceKpi> _qbittorrentKpisFrom(List<Torrent> torrents) {
       label: 'Downloading',
       value: '$downloading',
       icon: Icons.download_rounded,
+    ),
+    ServiceKpi(
+      label: StateWord.stuck.label,
+      value: '$stuck',
+      icon: Icons.report_gmailerrorred_rounded,
+      tone: _faultIf(stuck > 0),
     ),
   ];
 }
