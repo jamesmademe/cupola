@@ -97,6 +97,11 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
   /// A write in flight: Stop, Resume or Remove.
   bool _busy = false;
 
+  /// The last pace line drawn while the download moved. It keeps the pace's
+  /// room once a Stop takes the line away, or shortens it, so the page does
+  /// not move under a finger.
+  String? _keptPace;
+
   @override
   void initState() {
     super.initState();
@@ -229,6 +234,10 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
       null => null,
     };
     final fault = _faultHead(item);
+    final pace = downloadPaceLine(item, now: now, held: _held);
+    // A stopped line never replaces the moving one: Resume brings the moving
+    // line back, and it must find the room it had.
+    if (pace != null && stand != DownloadStand.stopped) _keptPace = pace;
     return [
       DownloadHero(
         title: item.queueTitle?.name ?? item.title,
@@ -246,7 +255,8 @@ class _DownloadPageState extends ConsumerState<DownloadPage> {
         stand: stand,
         percent: downloadPercent(item),
         progress: item.progress,
-        pace: downloadPaceLine(item, now: now, held: _held),
+        pace: pace,
+        keptPace: _keptPace,
         steps: downloadStepsOf(item, player: player, now: now, held: _held),
         trace: _trace,
         watched: _trace.isEmpty ? null : now.difference(_openedAt),

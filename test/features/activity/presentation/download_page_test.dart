@@ -6,7 +6,9 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,16 +22,39 @@ import 'package:cupola/features/activity/presentation/widgets/activity_download_
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart'
     show DownloadRow;
 import 'package:cupola/features/media/presentation/media_split.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
 /// Friday 9 October 2026, 20:53: the evening the world is drawn in.
 final _now = DateTime(2026, 10, 9, 20, 53);
 
+/// Sprite Fright moving at 4.2 MB/s with 11 minutes left, and no total size:
+/// the client gave what has arrived and nothing more. Stopped, its line
+/// reads what arrived; with [doneBytes] unknown too, nothing.
+ServiceQueueItem _unsized({int? doneBytes = 1331439862}) => ServiceQueueItem(
+  service: ServiceKey.radarr,
+  id: '1',
+  title: 'Sprite Fright',
+  progress: 0.62,
+  clientLabel: 'qBittorrent',
+  doneBytes: doneBytes,
+  etaSeconds: 660,
+  downloadId: WorldDownloads.spriteFright.id,
+  clientService: ServiceKey.qbittorrent,
+  instanceId: WorldIds.radarr,
+  clientInstanceId: WorldIds.qbittorrent,
+  mediaId: 3,
+  rateBytesPerSecond: 4404019,
+  tmdbId: 811631,
+);
+
 Future<(ProfileHarness, GoRouter, ProviderContainer)> _app(
   WidgetTester tester, {
   Size size = const Size(390, 2400),
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -46,6 +71,7 @@ Future<(ProfileHarness, GoRouter, ProviderContainer)> _app(
         (ref) =>
             () => _now,
       ),
+      ...overrides,
     ],
   );
   harness.network.followFakeTime(tester.binding);
@@ -62,6 +88,19 @@ Future<(ProfileHarness, GoRouter, ProviderContainer)> _app(
   );
   await _answer(tester);
   return (harness, router, container);
+}
+
+/// The bundled faces, loaded as the app loads them: a line wraps where it
+/// does on a phone, and the test font's glyphs are too wide for that.
+Future<void> _loadFaces(WidgetTester tester) async {
+  for (final (family, asset) in [
+    ('Onest', 'assets/fonts/Onest.ttf'),
+    ('Geist Mono', 'assets/fonts/GeistMono.ttf'),
+    ('Bricolage Grotesque', 'assets/fonts/BricolageGrotesque.ttf'),
+  ]) {
+    final loader = FontLoader(family)..addFont(rootBundle.load(asset));
+    await tester.runAsync(loader.load);
+  }
 }
 
 Future<void> _answer(WidgetTester tester) async {
@@ -172,6 +211,63 @@ void main() {
 
     await _close(tester, harness, container);
   });
+
+  // At 1.3 the page is taller than a phone's window above the bar, so that
+  // window is taller: nothing scrolls, and the two tops are read in place.
+  for (final (label, doneBytes, scale, height) in [
+    ('what has arrived is known', 1331439862, 1.0, 844.0),
+    ('nothing is known of its bytes', null, 1.0, 844.0),
+    ('what has arrived is known, at a 1.3 text scale', 1331439862, 1.3, 1000.0),
+  ]) {
+    testWidgets('Stop and Resume leave the Stop button where it was, the pace '
+        'line drawn or not, when $label', (tester) async {
+      await _loadFaces(tester);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final queue = (
+        items: [_unsized(doneBytes: doneBytes)],
+        coverage: SourceCoverage.none,
+      );
+      final (harness, router, container) = await _app(
+        tester,
+        size: Size(390, height),
+        overrides: [servicesQueueProvider.overrideWith((ref) async => queue)],
+      );
+      router.go(
+        ServiceRoutes.activityDownload(
+          instanceId: WorldIds.radarr,
+          key: WorldDownloads.spriteFright.id,
+        ),
+      );
+      await _answer(tester);
+      expect(
+        _onPage(
+          find.text('4.2\u00A0MB/s · 11\u00A0min left · ready around 21:04'),
+        ),
+        findsOneWidget,
+      );
+
+      final stop = _onPage(find.widgetWithText(OutlinedButton, 'Stop'));
+      final stopTop = tester.getRect(stop).top;
+      await tester.tap(stop);
+      await _answer(tester);
+      expect(
+        _onPage(find.text('1.2\u00A0GB arrived')),
+        doneBytes == null ? findsNothing : findsOneWidget,
+      );
+      final resume = _onPage(find.widgetWithText(OutlinedButton, 'Resume'));
+      expect(resume, findsOneWidget);
+      expect(tester.getRect(resume).top, closeTo(stopTop, 0.5));
+
+      await tester.tap(resume);
+      await _answer(tester);
+      final again = _onPage(find.widgetWithText(OutlinedButton, 'Stop'));
+      expect(again, findsOneWidget);
+      expect(tester.getRect(again).top, closeTo(stopTop, 0.5));
+
+      await _close(tester, harness, container);
+    });
+  }
 
   testWidgets('Remove asks first, goes through Radarr\'s queue, and the page '
       'closes', (tester) async {

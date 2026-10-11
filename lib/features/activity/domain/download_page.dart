@@ -124,7 +124,8 @@ String? arrivedOfTotal(ServiceQueueItem item) {
 
 /// The line under the figure: `4.2 MB/s · 11 min left · ready around 21:10`
 /// while it moves; `Starts in about 6 min` in line; `1.1 GB of 2 GB arrived`
-/// when stopped; `Nothing for 3 h` when stuck. Null when nothing is known.
+/// when stopped (`1.1 GB arrived` when the total is not known); `Nothing for
+/// 3 h` when stuck. Null when nothing is known.
 String? downloadPaceLine(
   ServiceQueueItem item, {
   required DateTime now,
@@ -152,16 +153,25 @@ String? downloadPaceLine(
           ? 'Waits its turn in ${clientName(item)}'
           : 'Starts in about ${formatTimeSpan(Duration(seconds: starts))}';
     case DownloadStand.stopped:
-      return switch (arrivedOfTotal(item)) {
-        final arrived? => '$arrived arrived',
-        null => null,
-      };
+      return _arrivedLine(item);
     case DownloadStand.stuck:
       final words = nothingForWords(item.stalledSince, now: now);
       return words == null ? null : capitalizeFirst(words);
     case DownloadStand.failed || DownloadStand.needsImport:
       return null;
   }
+}
+
+/// What a stopped download says of its bytes: `1.1 GB of 2 GB arrived` when
+/// the total is known too, `1.1 GB arrived` when it is not. Null when nothing
+/// has arrived, or the client did not say how much.
+String? _arrivedLine(ServiceQueueItem item) {
+  final done = item.doneBytes;
+  if (done == null || done <= 0) return null;
+  return switch (arrivedOfTotal(item)) {
+    final arrived? => '$arrived arrived',
+    null => '${formatBytes(done)} arrived',
+  };
 }
 
 /// The line under the title: `2021 · out on digital today · Anna asked for
@@ -269,7 +279,9 @@ List<DownloadStep> downloadStepsOf(
     ),
     DownloadStand.stopped => (
       name: 'Downloading',
-      detail: '$client · stopped$at',
+      // No figure: the readout above says `62% Stopped`, and the longer
+      // detail wrapped and moved the page under the finger that stopped it.
+      detail: '$client · stopped',
       state: DownloadStepState.stopped,
     ),
     DownloadStand.stuck => (

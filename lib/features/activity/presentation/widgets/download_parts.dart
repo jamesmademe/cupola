@@ -109,6 +109,7 @@ class DownloadReadout extends StatelessWidget {
     required this.percent,
     required this.progress,
     required this.pace,
+    this.keptPace,
     required this.steps,
     this.trace = const [],
     this.watched,
@@ -124,6 +125,11 @@ class DownloadReadout extends StatelessWidget {
 
   /// `4.2 MB/s · 11 min left · ready around 21:10`.
   final String? pace;
+
+  /// The pace line the page drew while the download moved. Its room is kept
+  /// whatever [pace] says now: a line gone, or a shorter stopped one, keeps
+  /// the height it had, so a Stop does not move Open and Stop.
+  final String? keptPace;
 
   final List<DownloadStep> steps;
 
@@ -169,11 +175,20 @@ class DownloadReadout extends StatelessWidget {
               Flexible(child: wordText),
             ],
           );
-    final paceText = pace == null
-        ? null
-        : Text(
-            pace!,
-            style: AppType.meta.tabular.copyWith(color: room.inkSecondary),
+    final paceStyle = AppType.meta.tabular.copyWith(color: room.inkSecondary);
+    final paceText = pace == null ? null : Text(pace!, style: paceStyle);
+    // The room of the pace: the line drawn now, over an invisible copy of the
+    // kept one when that differs (a stopped line can be shorter than the
+    // moving one), so the slot stays as tall as the line it has been. A
+    // moving page's own line is its room; a page that never drew a pace line
+    // has none.
+    final paceArea = keptPace == null || keptPace == pace
+        ? paceText
+        : Stack(
+            children: [
+              Opacity(opacity: 0, child: Text(keptPace!, style: paceStyle)),
+              ?paceText,
+            ],
           );
     final spoken = [
       if (percent != null) spokenPercents(percent!),
@@ -223,9 +238,9 @@ class DownloadReadout extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     figure,
-                    if (paceText != null) ...[
+                    if (paceArea != null) ...[
                       const SizedBox(height: AppSpacing.xxs),
-                      paceText,
+                      paceArea,
                     ],
                   ],
                 ),
@@ -448,6 +463,14 @@ class _StepTile extends StatelessWidget {
       DownloadStepState.later => 'to come',
       DownloadStepState.fault => null,
     };
+    final detail = Text(
+      step.detail,
+      style: AppType.meta.copyWith(
+        color: step.state == DownloadStepState.fault
+            ? tone(StatusTone.warning)
+            : room.inkSecondary,
+      ),
+    );
     return Semantics(
       container: true,
       label: [step.name, step.detail, ?spokenState].join(', '),
@@ -476,14 +499,7 @@ class _StepTile extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.xxs),
-              Text(
-                step.detail,
-                style: AppType.meta.copyWith(
-                  color: step.state == DownloadStepState.fault
-                      ? tone(StatusTone.warning)
-                      : room.inkSecondary,
-                ),
-              ),
+              detail,
             ],
           ),
         ),

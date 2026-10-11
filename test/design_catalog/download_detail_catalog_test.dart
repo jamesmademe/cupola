@@ -47,6 +47,7 @@ ServiceQueueItem _sprite({
   InFlightFault? fault,
   bool held = false,
   bool queued = false,
+  int? totalBytes = 2147483648,
 }) => ServiceQueueItem(
   service: ServiceKey.radarr,
   id: '1',
@@ -54,7 +55,7 @@ ServiceQueueItem _sprite({
   progress: fault == null ? 0.62 : 0.47,
   clientLabel: 'qBittorrent',
   doneBytes: 1331439862,
-  totalBytes: 2147483648,
+  totalBytes: totalBytes,
   etaSeconds: 660,
   fault: fault,
   stalledSince: _now.subtract(const Duration(hours: 3)),
@@ -118,16 +119,24 @@ final _anna = SeerrRequest.fromJson({
   'requestedBy': {'id': 2, 'displayName': 'Anna'},
 });
 
-DownloadReadout _readout(ServiceQueueItem item, {bool traced = false}) =>
-    DownloadReadout(
-      stand: downloadStandOf(item),
-      percent: downloadPercent(item),
-      progress: item.progress,
-      pace: downloadPaceLine(item, now: _now),
-      steps: downloadStepsOf(item, player: ServiceKey.jellyfin, now: _now),
-      trace: traced ? _trace : const [],
-      watched: traced ? const Duration(minutes: 4) : null,
-    );
+/// The moving line of Sprite Fright, kept by the page once a Stop takes it
+/// away: the room a stopped page keeps.
+final _movingPace = downloadPaceLine(_sprite(), now: _now);
+
+DownloadReadout _readout(
+  ServiceQueueItem item, {
+  bool traced = false,
+  String? keptPace,
+}) => DownloadReadout(
+  stand: downloadStandOf(item),
+  percent: downloadPercent(item),
+  progress: item.progress,
+  pace: downloadPaceLine(item, now: _now),
+  keptPace: keptPace,
+  steps: downloadStepsOf(item, player: ServiceKey.jellyfin, now: _now),
+  trace: traced ? _trace : const [],
+  watched: traced ? const Duration(minutes: 4) : null,
+);
 
 final _facts = downloadFactsOf(
   _sprite(),
@@ -234,8 +243,18 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'DownloadReadout() · stopped on purpose: neutral, what has arrived',
-        (_) => _readout(_sprite(held: true)),
+        'DownloadReadout() · stopped on purpose: neutral, what has arrived, '
+        'the moving line\'s room kept',
+        (_) => _readout(_sprite(held: true), keptPace: _movingPace),
+        width: 390,
+      ),
+      CatalogScene(
+        'DownloadReadout() · stopped with no total known: what has arrived '
+        'alone',
+        (_) => _readout(
+          _sprite(held: true, totalBytes: null),
+          keptPace: _movingPace,
+        ),
         width: 390,
       ),
       CatalogScene(

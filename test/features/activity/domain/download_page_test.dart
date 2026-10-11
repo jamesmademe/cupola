@@ -25,14 +25,16 @@ ServiceQueueItem _sprite({
   ServiceKey? clientService = ServiceKey.qbittorrent,
   String? downloadId = _hash,
   QueueTitle? title,
+  int? doneBytes = 1331439862,
+  int? totalBytes = 2147483648,
 }) => ServiceQueueItem(
   service: ServiceKey.radarr,
   id: '1',
   title: 'Sprite Fright',
   progress: 0.62,
   clientLabel: 'qBittorrent',
-  doneBytes: 1331439862,
-  totalBytes: 2147483648,
+  doneBytes: doneBytes,
+  totalBytes: totalBytes,
   etaSeconds: eta,
   fault: fault,
   stalledSince: _now.subtract(const Duration(hours: 3)),
@@ -175,6 +177,36 @@ void main() {
       );
       expect(
         downloadPaceLine(_sprite(fault: InFlightFault.failed), now: _now),
+        isNull,
+      );
+    });
+
+    test('stopped, the line says what has arrived, of the total when it is '
+        'known', () {
+      expect(
+        downloadPaceLine(_sprite(held: true), now: _now),
+        '1.2 of 2.0\u00A0GB arrived',
+      );
+      expect(
+        downloadPaceLine(_sprite(held: true, totalBytes: null), now: _now),
+        '1.2\u00A0GB arrived',
+      );
+      expect(
+        downloadPaceLine(_sprite(held: true, doneBytes: 0), now: _now),
+        isNull,
+      );
+      expect(
+        downloadPaceLine(
+          _sprite(held: true, doneBytes: 0, totalBytes: null),
+          now: _now,
+        ),
+        isNull,
+      );
+      expect(
+        downloadPaceLine(
+          _sprite(held: true, doneBytes: null, totalBytes: null),
+          now: _now,
+        ),
         isNull,
       );
     });
