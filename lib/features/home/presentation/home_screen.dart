@@ -24,6 +24,7 @@ import 'package:cupola/features/discover/presentation/widgets/discover_carousel.
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart'
     show mediaStreamCopyProvider;
+import 'package:cupola/features/activity/data/acted_faults.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/resume.dart';
@@ -345,8 +346,10 @@ void _invalidateHome(WidgetRef ref) {
     retryRequesterHome(ref);
     return;
   }
-  // The rows answered since the last read give way to Seerr's list.
+  // The rows answered since the last read give way to Seerr's list, and the
+  // notes of the downloads acted on to the queue's.
   ref.read(answeredRequestsProvider.notifier).clear();
+  ref.read(actedFaultsProvider.notifier).clear();
   ref.invalidate(pendingRequestsForProvider);
   for (final source in homeSessionsSources) {
     ref.invalidate(source);

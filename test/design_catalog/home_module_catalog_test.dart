@@ -496,8 +496,8 @@ void main() {
       ),
       CatalogScene(
         'Downloads · what moves, how far and how long; the stuck one in '
-        'amber with Try another download and More; what waits its turn is '
-        'counted after it (`1 queued`) and has no row',
+        'amber with the remedy Needs you chooses and More; what waits its '
+        'turn is counted after it (`1 queued`) and has no row',
         (_) => const HomeDownloadsModule(),
         width: 390,
         overrides: [

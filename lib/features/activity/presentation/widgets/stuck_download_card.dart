@@ -1,33 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/api/base_arr_service.dart' show ArrActivityMixin;
-import 'package:cupola/core/utils/snack_bar_helper.dart';
-import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/features/activity/data/acted_faults.dart';
-import 'package:cupola/features/activity/domain/download_page.dart'
-    show downloadClientOf;
-import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/domain/stuck_download_fault.dart';
-import 'package:cupola/features/activity/presentation/activity_provider.dart'
-    show connectionArrServiceProvider;
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart'
     show ActivitySlab;
 import 'package:cupola/features/activity/presentation/widgets/fault_card.dart';
-import 'package:cupola/features/home/data/home_live.dart';
+import 'package:cupola/features/activity/presentation/widgets/stuck_action_taker.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
-import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
-import 'package:cupola/features/services/domain/dashboard_decision.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart'
-    show bringUnderLens;
 import 'package:cupola/features/services/presentation/kept_waiting_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
-import 'package:cupola/features/settings/domain/connection_presentation.dart'
-    show writeFailureReason;
-import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A stuck download's card in Needs you: its proof, and its ways out.
 ///
@@ -74,8 +57,10 @@ class StuckDownloadCard extends ConsumerStatefulWidget {
   ConsumerState<StuckDownloadCard> createState() => _StuckDownloadCardState();
 }
 
-class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
-  StuckAction? _busy;
+class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard>
+    with StuckActionTaker {
+  @override
+  String get stuckDownloadKey => widget.downloadKey;
 
   @override
   Widget build(BuildContext context) {
@@ -97,13 +82,13 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
         : (
             text: acted.note,
             onUndo: acted.action == StuckAction.keepWaiting
-                ? () => _undoKeep(item)
+                ? () => undoKeepWaiting(item)
                 : null,
           );
 
     FaultCardAction secondary(StuckAction action) => (
       label: stuckActionLabel(action, item),
-      onPressed: () => _take(action, item),
+      onPressed: () => takeStuckAction(action, item),
       semanticLabel: '${stuckActionLabel(action, item)}, ${item.sentenceTitle}',
     );
 
@@ -111,9 +96,11 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
     final primary = SizedBox(
       width: double.infinity,
       child: FilledButton(
-        onPressed: _busy != null ? null : () => _take(actions.primary, item),
+        onPressed: takingAction != null
+            ? null
+            : () => takeStuckAction(actions.primary, item),
         style: remedyFillStyle(context),
-        child: _busy == actions.primary
+        child: takingAction == actions.primary
             ? const SizedBox.square(
                 dimension: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
@@ -141,7 +128,7 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
     final subtitle = stuckActionSubtitle(actions.primary, item);
     final quiet = [
       for (final action in actions.secondary)
-        if (_busy == null) secondary(action),
+        if (takingAction == null) secondary(action),
     ];
 
     if (widget._remedy) {
@@ -179,128 +166,4 @@ class _StuckDownloadCardState extends ConsumerState<StuckDownloadCard> {
       divided: widget.divided,
     );
   }
-
-  Future<void> _take(StuckAction action, ServiceQueueItem item) async {
-    switch (action) {
-      case StuckAction.openClient:
-        final target = item.clientService ?? item.service;
-        await bringUnderLens(
-          ref,
-          target,
-          item.clientService == null ? item.instanceId : item.clientInstanceId,
-        );
-        if (!mounted) return;
-        context.go(ServiceRoutes.forService(target));
-        return;
-      case StuckAction.keepWaiting:
-        final now = ref.read(stallClockProvider)();
-        final kept = ref
-            .read(keptWaitingProvider.notifier)
-            .keep(item, now: now);
-        _acted(item, action, keptWaitingNote(kept.until, now: now));
-        return;
-      case StuckAction.remove:
-        final ask = removeConfirmation(item);
-        final answer = await showAppConfirmDialog(
-          context: context,
-          title: ask.title,
-          message: ask.message,
-          confirmLabel: ask.confirm,
-          icon: Icons.delete_outline_rounded,
-        );
-        if (!answer.confirmed || !mounted) return;
-        await _write(
-          action,
-          item,
-          service: item.service,
-          failure: "Could not remove ${item.sentenceTitle}'s download",
-          call: () => _arr(item).removeFromQueue(
-            int.parse(item.id),
-            removeFromClient: true,
-            blocklist: false,
-          ),
-        );
-      case StuckAction.tryAnotherDownload:
-        await _write(
-          action,
-          item,
-          service: item.service,
-          failure: 'Could not try another download',
-          call: () => _arr(item).removeFromQueue(
-            int.parse(item.id),
-            removeFromClient: true,
-            blocklist: true,
-          ),
-        );
-      case StuckAction.lookForPeers:
-        await _write(
-          action,
-          item,
-          service: ServiceKey.qbittorrent,
-          failure: 'Could not ask the trackers again',
-          call: () {
-            final torrent = downloadClientOf(item)!;
-            return ref
-                .read(qbittorrentServiceForProvider(torrent.instanceId))
-                .reannounce([torrent.id]);
-          },
-        );
-    }
-  }
-
-  ArrActivityMixin _arr(ServiceQueueItem item) => ref.read(
-    connectionArrServiceProvider((_typeOf(item.service), item.instanceId)),
-  );
-
-  /// The call, its failure said with its cause, and the note once it is done.
-  Future<void> _write(
-    StuckAction action,
-    ServiceQueueItem item, {
-    required ServiceKey service,
-    required String failure,
-    required Future<void> Function() call,
-  }) async {
-    setState(() => _busy = action);
-    try {
-      await call();
-    } catch (error) {
-      if (mounted) {
-        setState(() => _busy = null);
-        SnackBarHelper.error(
-          context,
-          '$failure. ${writeFailureReason(service, error)}',
-          cause: error,
-        );
-      }
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _busy = null);
-    _acted(item, action, stuckActionNote(action, item));
-  }
-
-  void _acted(ServiceQueueItem item, StuckAction action, String note) {
-    ref
-        .read(actedFaultsProvider.notifier)
-        .act(widget.downloadKey, item: item, action: action, note: note);
-    // The queue again, now that it changed: the fault goes, or stays and says
-    // what it is. Keep waiting changes no queue, only what counts as a fault.
-    if (action != StuckAction.keepWaiting) {
-      for (final source in homeDownloadsSources) {
-        ref.invalidate(source);
-      }
-    }
-    ref.invalidate(dashboardDecisionSourceProvider(DecisionSource.queue));
-  }
-
-  void _undoKeep(ServiceQueueItem item) {
-    ref.read(keptWaitingProvider.notifier).release(item);
-    ref.read(actedFaultsProvider.notifier).forget(widget.downloadKey);
-  }
 }
-
-ServiceType _typeOf(ServiceKey service) => switch (service) {
-  ServiceKey.sonarr => ServiceType.series,
-  ServiceKey.lidarr => ServiceType.music,
-  _ => ServiceType.movies,
-};

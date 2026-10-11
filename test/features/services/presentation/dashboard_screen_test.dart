@@ -837,10 +837,10 @@ void main() {
       expect(find.text('92% · 3\u00A0min'), findsOneWidget);
       // What stopped is a row too, saying where, and in amber: a fault. A
       // transfer no arr asked for has nothing to search again, so its
-      // remedy is its client.
+      // remedy is Needs you's: qBittorrent asks the trackers again.
       expect(find.text('The Zone of Interest'), findsOneWidget);
       expect(find.text('Stuck at 40%'), findsOneWidget);
-      expect(find.text('Open in qBittorrent'), findsOneWidget);
+      expect(find.text('Look for peers again'), findsOneWidget);
       final context = tester.element(find.text('Stuck at 40%'));
       expect(
         tester.widget<Text>(find.text('Stuck at 40%')).style?.color,

@@ -322,7 +322,7 @@ class _FaultCardState extends State<FaultCard> {
     );
 
     final controls = note != null
-        ? _Note(note: note)
+        ? FaultNoteLine(note: note)
         : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -338,27 +338,31 @@ class _FaultCardState extends State<FaultCard> {
                   style: AppType.meta.copyWith(color: room.inkSecondary),
                 ),
               ],
-              if (card.secondary.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    for (final (index, action) in card.secondary.indexed) ...[
-                      if (index > 0) const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: action.onPressed,
-                          child: Text(
-                            action.label,
-                            semanticsLabel: action.semanticLabel,
-                            maxLines: 2,
-                            textAlign: TextAlign.center,
+              // Two a row: a health check failing on four \*arrs has three
+              // other ways out, and a third beside them kept a word a line.
+              for (var start = 0; start < card.secondary.length; start += 2)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      for (final (index, action)
+                          in card.secondary.skip(start).take(2).indexed) ...[
+                        if (index > 0) const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: action.onPressed,
+                            child: Text(
+                              action.label,
+                              semanticsLabel: action.semanticLabel,
+                              maxLines: 2,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ],
             ],
           );
 
@@ -473,7 +477,7 @@ class _FaultRow extends StatelessWidget {
                 words,
                 if (note != null) ...[
                   const SizedBox(height: AppSpacing.xs),
-                  _Note(note: note),
+                  FaultNoteLine(note: note),
                 ] else if (running != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   _Running(running: running),
@@ -565,8 +569,10 @@ class _MoreWaysOut extends StatelessWidget {
   }
 }
 
-class _Note extends StatelessWidget {
-  const _Note({required this.note});
+/// What a fault says once a way out was taken, with Undo where it can be
+/// taken back: on its card, and on the Home's row of the same download.
+class FaultNoteLine extends StatelessWidget {
+  const FaultNoteLine({super.key, required this.note});
 
   final FaultCardNote note;
 

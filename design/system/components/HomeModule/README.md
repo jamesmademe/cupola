@@ -103,8 +103,12 @@ under it, a hairline between rows. A 4pt bar (`HomeRowBar`) says how far somethi
 - **Downloads**: four rows at most, no sizes. A moving download says `88% · 1 min` beside its title in blue
   (downloading is information), its release under it in mono (a machine string, exactly as named), a blue bar. A
   stalled or failed one is chosen first and drawn last, its value amber (`Stuck at 47%`, `Failed`), its bar amber, and
-  under it `Try another download` in the amber fill with a 44pt More (`Open in qBittorrent`, `Remove`); a torrent no
-  arr asked for offers `Open in qBittorrent` alone. The line under the name counts `3 moving · 1 stuck · 1 queued` and
+  under it the remedy Needs you chooses for it, taken the same way (`stuckActionsFor`, `StuckActionTaker`): `Try another
+  download` in the amber fill with a 44pt More (`Remove`, `Keep waiting`), `Look for peers again` where qBittorrent can
+  ask (somebody sharing it has the whole file, or no arr asked for it), `Open in Transmission` where only its client is
+  known. Once one was taken, the note Needs you's card says (`Dropped · Radarr is looking for another download`, Keep
+  waiting's with Undo) stays in its place until the Home is read again; a stall kept waiting offers no remedy until its
+  day is up. The line under the name counts `3 moving · 1 stuck · 1 queued` and
   the clients' speed (`1 queued` alone when that is all there is): a download waiting its turn at its client is queued,
   not moving, and has no row here. The speed is `—` while a client that is set up did not answer; with no client, `Speeds come from your download client`
   under the rows. A blocked import is not a download: the footnote names it once (`18 need a manual import · in Needs

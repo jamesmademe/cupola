@@ -89,8 +89,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('what moves, then the stuck one in amber with Try another '
-      'download and More', (tester) async {
+  testWidgets('what moves, then the stuck one in amber with the ways out '
+      'Needs you offers', (tester) async {
     await pump(
       tester,
       _inFlight(
@@ -125,8 +125,9 @@ void main() {
     expect(find.text('Try another download'), findsOne);
     await tester.tap(find.byTooltip('More for Big Buck Bunny'));
     await tester.pumpAndSettle();
-    expect(find.text('Open in qBittorrent'), findsOne);
     expect(find.text('Remove'), findsOne);
+    expect(find.text('Keep waiting'), findsOne);
+    expect(find.text('Open in qBittorrent'), findsNothing);
   });
 
   testWidgets('what waits its turn is counted after what is stuck, and is no '
@@ -156,20 +157,24 @@ void main() {
     expect(find.text('Sintel'), findsNothing);
   });
 
-  testWidgets('Try another download asks before it blocklists', (tester) async {
+  testWidgets('a failed download offers another, and Remove behind More', (
+    tester,
+  ) async {
     await pump(
       tester,
       _inFlight(faults: [_item('Big Buck Bunny', fault: InFlightFault.failed)]),
     );
     expect(find.text('Failed'), findsOne);
-    await tester.tap(find.text('Try another download'));
+    expect(find.text('Try another download'), findsOne);
+    await tester.tap(find.byTooltip('More for Big Buck Bunny'));
     await tester.pumpAndSettle();
-    expect(find.text('Try another download?'), findsOne);
+    expect(find.text('Remove'), findsOne);
+    // Waiting does not move a failed download again.
+    expect(find.text('Keep waiting'), findsNothing);
   });
 
-  testWidgets('a torrent no arr asked for offers its client alone', (
-    tester,
-  ) async {
+  testWidgets('a torrent no arr asked for: qBittorrent asks for peers again, '
+      'another client opens', (tester) async {
     await pump(
       tester,
       _inFlight(
@@ -181,10 +186,21 @@ void main() {
             fault: InFlightFault.stalled,
             client: ServiceKey.qbittorrent,
           ),
+          ServiceQueueItem(
+            service: ServiceKey.transmission,
+            id: 'def',
+            title: 'debian-13.iso',
+            progress: 0.2,
+            clientLabel: 'Transmission',
+            fault: InFlightFault.stalled,
+            clientService: ServiceKey.transmission,
+          ),
         ],
       ),
+      configured: const [ServiceKey.qbittorrent, ServiceKey.transmission],
     );
-    expect(find.text('Open in qBittorrent'), findsOne);
+    expect(find.text('Look for peers again'), findsOne);
+    expect(find.text('Open in Transmission'), findsOne);
     expect(find.text('Try another download'), findsNothing);
   });
 

@@ -14,9 +14,11 @@ import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
-import 'package:cupola/features/home/data/home_live.dart';
+import 'package:cupola/features/activity/data/acted_faults.dart';
+import 'package:cupola/features/activity/domain/stuck_download_fault.dart';
+import 'package:cupola/features/activity/presentation/widgets/fault_card.dart'
+    show FaultNoteLine;
+import 'package:cupola/features/activity/presentation/widgets/stuck_action_taker.dart';
 import 'package:cupola/features/home/domain/downloads.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
@@ -26,7 +28,7 @@ import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart';
+import 'package:cupola/features/services/presentation/kept_waiting_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -90,7 +92,18 @@ class HomeDownloadsModule extends ConsumerWidget {
       for (final item in data.faults)
         if (isDownloadFault(item.fault)) item,
     ];
-    final rows = downloadRowsOf(data.preview, stuck);
+    // A download acted on leaves the queue as it is read again; its row stays
+    // with its note until the Home is read again, as its card does in Needs
+    // you.
+    final present = {
+      for (final item in [...data.preview, ...stuck]) keptWaitingKey(item),
+    };
+    final acted = [
+      for (final MapEntry(:key, :value)
+          in ref.watch(actedFaultsProvider).entries)
+        if (!present.contains(key)) value.item,
+    ];
+    final rows = downloadRowsOf(data.preview, [...stuck, ...acted]);
     final clientSetUp = _clients.any(settings.isServiceConfigured);
     final subtitle = downloadsSubtitle(
       moving: data.movingCount,
@@ -173,6 +186,19 @@ class DownloadRow extends ConsumerWidget {
     final room = CupolaRoom.of(context);
     final fault = item.fault;
     final stuck = isDownloadFault(fault);
+    // The remedy Needs you offers, or the note once one was taken there or
+    // here; a stall kept waiting offers none until its day is up.
+    final acted = ref.watch(
+      actedFaultsProvider.select((acted) => acted[keptWaitingKey(item)]),
+    );
+    final kept =
+        fault == InFlightFault.stalled &&
+        isKeptWaiting(
+          item,
+          ref.watch(keptWaitingProvider),
+          ref.watch(stallClockProvider)(),
+        );
+    final remedy = acted != null || (stuck && !kept);
     final tone = statusToneColor(
       scheme,
       stuck ? StatusTone.warning : StatusTone.info,
@@ -286,7 +312,7 @@ class DownloadRow extends ConsumerWidget {
                 ),
               ),
             ),
-            if (stuck)
+            if (remedy)
               Padding(
                 padding: const EdgeInsets.only(
                   top: AppSpacing.sm,
@@ -301,135 +327,89 @@ class DownloadRow extends ConsumerWidget {
   }
 }
 
-/// What a stuck download offers: another download of the same title, and
-/// More with its client and Remove; or its client alone, for a transfer no
-/// arr asked for, where there is nothing to search again.
-class _StuckRemedy extends ConsumerWidget {
+/// What a stuck download offers, as Needs you offers it ([stuckActionsFor]):
+/// the one amber fill, the quieter ways out behind ⋯, and once one was taken
+/// the note its card says, with Undo for Keep waiting.
+class _StuckRemedy extends ConsumerStatefulWidget {
   const _StuckRemedy({required this.item});
 
   final ServiceQueueItem item;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final type = _serviceTypeOf(item.service);
-    final recordId = int.tryParse(item.id);
-    final client = item.clientService;
-    // The client as the row names it, with its connection when there are
-    // two.
-    final clientTitle = client == null ? null : item.clientLabel;
-    // The client moving the bytes, or the service the row came from when
-    // nothing joined it to one.
-    final target = client ?? item.service;
-    final targetInstance = client == null
-        ? item.instanceId
-        : item.clientInstanceId;
+  ConsumerState<_StuckRemedy> createState() => _StuckRemedyState();
+}
 
-    Future<void> openTarget() async {
-      await bringUnderLens(ref, target, targetInstance);
-      if (!context.mounted) return;
-      context.go(ServiceRoutes.forService(target));
-    }
+class _StuckRemedyState extends ConsumerState<_StuckRemedy>
+    with StuckActionTaker {
+  @override
+  String get stuckDownloadKey => keptWaitingKey(widget.item);
 
-    if (type == null || recordId == null || recordId <= 0) {
-      return Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: FilledButton(
-          onPressed: openTarget,
-          style: remedyFillStyle(context),
-          child: Text(
-            'Open in ${clientTitle ?? target.title}',
-            semanticsLabel:
-                'Open ${item.title} in ${clientTitle ?? target.title}',
-          ),
+  @override
+  Widget build(BuildContext context) {
+    final acted = ref.watch(
+      actedFaultsProvider.select((acted) => acted[stuckDownloadKey]),
+    );
+    final item = acted?.item ?? widget.item;
+    if (acted != null) {
+      return FaultNoteLine(
+        note: (
+          text: acted.note,
+          onUndo: acted.action == StuckAction.keepWaiting
+              ? () => undoKeepWaiting(item)
+              : null,
         ),
       );
     }
-
-    Future<void> another() async {
-      await ActivityActions.blocklistAndRetry(
-        context,
-        ref,
-        serviceType: type,
-        instanceId: item.instanceId,
-        recordId: recordId,
-        title: item.title,
-      );
-      _refresh(ref);
-    }
-
-    Future<void> remove() async {
-      await ActivityActions.removeFromQueue(
-        context,
-        ref,
-        serviceType: type,
-        instanceId: item.instanceId,
-        recordId: recordId,
-        title: item.title,
-      );
-      _refresh(ref);
-    }
-
+    final actions = stuckActionsFor(item);
+    final label = stuckActionLabel(actions.primary, item);
+    final busy = takingAction != null;
     final room = CupolaRoom.of(context);
     return Row(
       children: [
         Expanded(
           child: FilledButton(
-            onPressed: another,
+            onPressed: busy
+                ? null
+                : () => takeStuckAction(actions.primary, item),
             style: remedyFillStyle(context),
-            child: Text(
-              'Try another download',
-              semanticsLabel: 'Try another download of ${item.title}',
-            ),
+            child: takingAction == actions.primary
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(label, semanticsLabel: '$label, ${item.sentenceTitle}'),
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        PopupMenuButton<_More>(
-          tooltip: 'More for ${item.title}',
-          onSelected: (choice) => switch (choice) {
-            _More.client => openTarget(),
-            _More.remove => remove(),
-          },
-          itemBuilder: (context) => [
-            if (clientTitle != null)
-              PopupMenuItem(
-                value: _More.client,
-                child: Text('Open in $clientTitle'),
+        if (actions.secondary.isNotEmpty) ...[
+          const SizedBox(width: AppSpacing.sm),
+          PopupMenuButton<StuckAction>(
+            enabled: !busy,
+            tooltip: 'More for ${item.sentenceTitle}',
+            onSelected: (action) => takeStuckAction(action, item),
+            itemBuilder: (context) => [
+              for (final action in actions.secondary)
+                PopupMenuItem(
+                  value: action,
+                  child: Text(stuckActionLabel(action, item)),
+                ),
+            ],
+            child: SizedBox.square(
+              dimension: 44,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: room.fillControl,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: room.edge),
+                ),
+                child: Icon(Icons.more_horiz_rounded, color: room.ink),
               ),
-            const PopupMenuItem(value: _More.remove, child: Text('Remove')),
-          ],
-          child: SizedBox.square(
-            dimension: 44,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: room.fillControl,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: room.edge),
-              ),
-              child: Icon(Icons.more_horiz_rounded, color: room.ink),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
-
-  /// The queue again, now that it changed: the row goes or says what it is.
-  static void _refresh(WidgetRef ref) {
-    for (final source in homeDownloadsSources) {
-      ref.invalidate(source);
-    }
-  }
 }
-
-enum _More { client, remove }
-
-/// The queue writes speak in Activity's types: the three arrs it knows.
-ServiceType? _serviceTypeOf(ServiceKey service) => switch (service) {
-  ServiceKey.radarr => ServiceType.movies,
-  ServiceKey.sonarr => ServiceType.series,
-  ServiceKey.lidarr => ServiceType.music,
-  _ => null,
-};
 
 /// Nothing moving: a calm line, and when the last download finished.
 class _NothingDownloading extends ConsumerWidget {
