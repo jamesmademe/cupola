@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:cupola/features/settings/data/settings_service.dart';
 
 class FakeSecureSettingsStore implements SecureSettingsStore {
@@ -26,8 +27,16 @@ class FakeSecureSettingsStore implements SecureSettingsStore {
     _storage.clear();
   }
 
+  /// Keys whose [read] throws, as a Keychain that will not hand one entry
+  /// over does; [unreadableAll] makes every read throw.
+  final Set<String> unreadable = {};
+  bool unreadableAll = false;
+
   @override
   Future<String?> read({required String key}) async {
+    if (unreadableAll || unreadable.contains(key)) {
+      throw PlatformException(code: '-25308', message: 'Interaction refused.');
+    }
     return _storage[key];
   }
 

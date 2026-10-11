@@ -57,6 +57,19 @@ void main() {
         width: 320,
       ),
       CatalogScene(
+        'UnreadSecretState · a saved key the Keychain would not hand over: '
+        'amber, what happened on this device, Paste the key again into its '
+        'form, never Set up Radarr',
+        (_) => UnreadSecretState(
+          instance: const ServiceInstance(
+            id: 'radarr',
+            service: ServiceKey.radarr,
+            url: 'http://nas.home.arpa:7878',
+          ).withUnreadSecret(UnreadSecret.credential),
+        ),
+        width: 320,
+      ),
+      CatalogScene(
         'Text at 200% · forService(radarr) and the signed-out Seerr form, '
         'at twice the reading size',
         (_) => Column(

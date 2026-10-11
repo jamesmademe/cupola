@@ -17,6 +17,8 @@ Two constructors:
 
 A screen checks `isServiceConfigured` **before** reaching its providers and draws this instead, so a missing config never becomes a failing provider that retries. Not configured is a normal condition, not a fault: no error tone, and no dimming beyond this screen. Distinct from ServiceOfflineState (configured, not answering).
 
+**A connection whose secret this device would not hand over is set up too** (`ServiceInstance.unreadSecret`: secure storage refused that read when the settings were loaded). It is not used, so nothing is sent with a secret missing, and before the signed-out check, for any service, the placeholder draws `UnreadSecretState`: the page anatomy of `AppErrorState`, amber, a 32px `key_off`, *Cupola could not read Radarr's saved key* (*password* for a sign-in, *token* for Plex, *access* for a gateway's secret), *The Keychain didn't hand it over.* (the platform's store by name: `secureStoreName`), and the refused key's remedy in the amber fill, *Paste the key again* (*Sign in again*, *Paste the token again*, *Add access again*), opening that connection's form. The same words, from `ServiceFailureReason.secretUnread`, are its Stack cell, its fault in Needs you and its form's header (*Saved key unreadable*); its band reads *Radarr needs a look*. Saving the settings leaves the unread secret where it is until a new one is pasted.
+
 ## States in the catalog
 
 Each sheet is drawn in the dark and the light room.

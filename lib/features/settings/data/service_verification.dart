@@ -24,6 +24,8 @@ import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/unread_secret.dart'
+    show secureStoreName;
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
@@ -755,6 +757,8 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
 /// is exactly how a permission the user has not granted looks from the socket.
 bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  // Nothing was sent: the secret never left the device's storage.
+  ServiceFailureReason.secretUnread ||
   ServiceFailureReason.sessionEnded ||
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.notFound ||
@@ -822,6 +826,8 @@ Future<ServiceDiagnosis> diagnoseThroughLocalNetworkGate(
 /// trip to learn nothing.
 bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  // Nothing was sent: the secret never left the device's storage.
+  ServiceFailureReason.secretUnread ||
   ServiceFailureReason.sessionEnded ||
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.notFound ||
@@ -922,6 +928,9 @@ String connectionFailureMessage(
     case ServiceFailureReason.sessionEnded:
       return 'This account was signed out of ${service.title}. Sign in again '
           'to keep asking for movies and series.';
+    case ServiceFailureReason.secretUnread:
+      return "${secureStoreName()} didn't hand over the saved "
+          '${service.credentialLabel}. Paste it again.';
     case ServiceFailureReason.csrfRefused:
       return '${service.title} refused the security token it had just handed '
           'out. Nothing changed. Retry in a moment.';

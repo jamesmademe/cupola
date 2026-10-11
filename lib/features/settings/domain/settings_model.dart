@@ -429,9 +429,26 @@ class SettingsModel {
   /// The question a `Set up X` door asks, where [isServiceConfigured] is the
   /// one a provider asks: a signed-out Seerr is not set up enough to talk to,
   /// and it is not a service nobody set up either.
-  bool hasServiceConnection(ServiceKey service) => instancesOf(
-    service,
-  ).any((instance) => instance.isConfigured || instance.isSignedOut);
+  bool hasServiceConnection(ServiceKey service) => instancesOf(service).any(
+    (instance) =>
+        instance.isConfigured ||
+        instance.isSignedOut ||
+        instance.unreadSecret != null,
+  );
+
+  /// The connection of [service] a screen stands on whose secret could not be
+  /// read, or null: [lensId]'s when it names one of [service]'s, otherwise,
+  /// when none of [service] is configured, the first such one. Such a screen
+  /// says so, with the way to paste it again, never `Set up Radarr`.
+  ServiceInstance? unreadConnectionOf(ServiceKey service, {String? lensId}) {
+    final instances = instancesOf(service);
+    final lens = instances.where((i) => i.id == lensId).firstOrNull;
+    if (lens != null) return lens.unreadSecret != null ? lens : null;
+    if (instances.any((instance) => instance.isConfigured)) return null;
+    return instances
+        .where((instance) => instance.unreadSecret != null)
+        .firstOrNull;
+  }
 
   /// The signed-out Seerr account a screen of [service] stands on in place
   /// of a configured connection, or null.

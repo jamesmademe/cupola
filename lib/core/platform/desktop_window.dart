@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
@@ -64,7 +65,8 @@ abstract final class DesktopWindow {
   /// Whether the app draws the window buttons itself.
   static bool get drawsOwnButtons => style != WindowChromeStyle.macos;
 
-  /// Prepares the frameless window. Safe to await on any platform.
+  /// Prepares the frameless window, and leaves it hidden: [showWhenDrawn]
+  /// shows it. Safe to await on any platform.
   ///
   /// Deliberately does **not** set a size. On macOS the native runner owns the
   /// frame through `setFrameAutosaveName`, so a size here would throw away the
@@ -90,8 +92,30 @@ abstract final class DesktopWindow {
           windowButtonVisibility: false,
         );
       }
+    });
+  }
+
+  /// Shows the window once the frame now scheduled has been drawn.
+  ///
+  /// The macOS runner creates the window hidden (`hiddenWindowAtLaunch`), so
+  /// nobody sees it before Flutter has drawn into it: shown any earlier, it was
+  /// a black rectangle for as long as the start took, and for good when the
+  /// start threw. Windows' runner already waits for the first frame on its
+  /// own; GNOME's shows the window at creation, so there this only focuses it.
+  ///
+  /// A second pass covers a frame that never comes: a window that stayed
+  /// hidden would be an app with no window at all, which is worse than a
+  /// black one. Showing twice is harmless.
+  static void showWhenDrawn() {
+    if (!isSupported) return;
+    Future<void> show() async {
       await windowManager.show();
       await windowManager.focus();
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => show());
+    Future<void>.delayed(const Duration(seconds: 2), () async {
+      if (!await windowManager.isVisible()) await show();
     });
   }
 }

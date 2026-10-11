@@ -124,6 +124,8 @@ class TransmissionAddReport {
         ServiceFailureReason.tls ||
         ServiceFailureReason.localNetworkBlocked ||
         ServiceFailureReason.unauthorized ||
+        // The password never left the device's storage.
+        ServiceFailureReason.secretUnread ||
         // Seerr's own two: never Transmission's, refused before anything
         // reached the daemon if they ever were.
         ServiceFailureReason.sessionEnded ||

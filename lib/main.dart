@@ -21,40 +21,84 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/shell/domain/startup_failure.dart';
 import 'package:cupola/features/shell/presentation/settings_back_claim.dart';
+import 'package:cupola/features/shell/presentation/startup_failure_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Before anything that can take time: the window is created hidden and shown
-  // by this call, so every await between the two would be a stretch of black
-  // rectangle on the user's screen. Inert on iOS and Android.
+  // Prepares the frameless window, still hidden: it is shown once something
+  // is drawn in it (see [_start]), so no await below can leave a black
+  // rectangle on the screen. Inert on iOS and Android.
   await DesktopWindow.ensureReady();
   _registerBundledFontLicense();
-  final prefs = await SharedPreferences.getInstance();
-  final secureSettingsStore = createSecureSettingsStore();
-  final settingsService = SettingsService(prefs, secureSettingsStore);
+  await _start();
+}
 
-  // Unconditional, including for a user who has background search switched
-  // off — it is also what purges the records the last session left behind. See
-  // its own doc.
-  await configureBackgroundSearch();
+/// Reads what the app needs, then draws it, or draws why it could not.
+///
+/// Every read before `runApp` is inside [attemptStartup]: one that throws or
+/// never answers is a page that says so, with Retry, instead of a window (or a
+/// launch screen) that stays as it is for good. Retry runs this again from the
+/// top, and `runApp` replaces whichever app is drawn.
+Future<void> _start() async {
+  final outcome = await attemptStartup((reach) async {
+    reach(StartupStep.preferences);
+    final prefs = await SharedPreferences.getInstance();
+    final secureSettingsStore = createSecureSettingsStore();
+    final settingsService = SettingsService(prefs, secureSettingsStore);
 
-  await settingsService.migrateFromPlaintext();
-  final initialSettings = await _loadInitialSettings(settingsService);
-  final onboardingCompleted = await settingsService.loadOnboardingComplete();
+    // Unconditional, including for a user who has background search switched
+    // off — it is also what purges the records the last session left behind.
+    // See its own doc.
+    await configureBackgroundSearch();
 
-  runApp(
-    ProviderScope(
-      overrides: _buildProviderOverrides(
-        prefs: prefs,
-        secureSettingsStore: secureSettingsStore,
-        initialSettings: initialSettings,
-        activeInstances: settingsService.loadActiveInstances(),
-        onboardingCompleted: onboardingCompleted,
+    reach(StartupStep.connections);
+    await settingsService.migrateFromPlaintext();
+    final initialSettings = await _loadInitialSettings(settingsService);
+    final onboardingCompleted = await settingsService.loadOnboardingComplete();
+
+    return _buildProviderOverrides(
+      prefs: prefs,
+      secureSettingsStore: secureSettingsStore,
+      initialSettings: initialSettings,
+      activeInstances: settingsService.loadActiveInstances(),
+      onboardingCompleted: onboardingCompleted,
+    );
+  });
+
+  switch (outcome) {
+    case StartupReady(value: final overrides):
+      runApp(ProviderScope(overrides: overrides, child: const CupolaApp()));
+    case StartupFailed(:final failure):
+      runApp(
+        StartupFailureApp(
+          failure: failure,
+          onRetry: _start,
+          onForgetKeys: _forgetKeysAndStart,
+        ),
+      );
+  }
+  DesktopWindow.showWhenDrawn();
+}
+
+/// Empties secure storage, keeping every address and preference, then
+/// starts again; a store that will not even be emptied is said on the same
+/// page, as its own failure.
+Future<void> _forgetKeysAndStart() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await SettingsService(prefs, createSecureSettingsStore()).forgetSecrets();
+  } catch (error) {
+    runApp(
+      StartupFailureApp(
+        failure: StartupFailure(step: StartupStep.forgettingKeys, error: error),
+        onRetry: _start,
       ),
-      child: const CupolaApp(),
-    ),
-  );
+    );
+    return;
+  }
+  await _start();
 }
 
 /// The bundled font families and the SIL OFL 1.1 each one ships under.

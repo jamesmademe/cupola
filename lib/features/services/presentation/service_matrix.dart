@@ -386,7 +386,13 @@ class _DomainBand extends ConsumerWidget {
       // own header counts it, neither among the services that answered nor
       // among those to set up.
       if (!settings.isServiceConfigured(service)) {
-        qualifiers.add('${service.title} signed out');
+        // A secret this device would not hand over is a fault Needs you
+        // holds, named as one; a Seerr account that signed out is not.
+        qualifiers.add(
+          settings.unreadConnectionOf(service) != null
+              ? '${service.title} needs a look'
+              : '${service.title} signed out',
+        );
         continue;
       }
       configured++;

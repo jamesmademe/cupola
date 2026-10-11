@@ -6,10 +6,15 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/unread_secret.dart';
 
 /// Shown where a service has no address or credentials stored yet.
 ///
@@ -65,25 +70,74 @@ class NotConfiguredPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final key = _resolved;
-    // A Seerr account whose session ended is set up, and signed out: it reads
-    // so, blue, with the way back into its own form, never `Set up Seerr`.
-    // Only inside a ProviderScope, which the app always has: a bare test of
-    // this widget has no settings to read.
-    if (key == ServiceKey.seerr && _scoped(context)) {
+    // A connection whose secret secure storage would not hand over is set
+    // up, and unusable until it is pasted again: it says so, amber, with the
+    // way into its own form, never `Set up Radarr`.
+    if (key != null && _scoped(context)) {
       return Consumer(
         builder: (context, ref, _) {
-          const seerr = ServiceKey.seerr;
-          final signedOut = _signedOutSeerr(ref);
-          if (signedOut == null) return _notSetUp(context, seerr);
-          return AppErrorState(
-            service: seerr,
-            instanceId: signedOut.id,
-            error: const ClassifiedFailure(ServiceFailureReason.sessionEnded),
-          );
+          final unread = _unreadConnection(ref, key);
+          if (unread != null) {
+            return UnreadSecretState(
+              instance: unread,
+              connectionName: _connectionName(ref, unread),
+            );
+          }
+          return _signedOutOrNotSetUp(context, ref, key);
         },
       );
     }
     return _notSetUp(context, key);
+  }
+
+  Widget _signedOutOrNotSetUp(
+    BuildContext context,
+    WidgetRef ref,
+    ServiceKey key,
+  ) {
+    // A Seerr account whose session ended is set up, and signed out: it reads
+    // so, blue, with the way back into its own form, never `Set up Seerr`.
+    // Only inside a ProviderScope, which the app always has: a bare test of
+    // this widget has no settings to read.
+    if (key == ServiceKey.seerr) {
+      const seerr = ServiceKey.seerr;
+      final signedOut = _signedOutSeerr(ref);
+      if (signedOut == null) return _notSetUp(context, seerr);
+      return AppErrorState(
+        service: seerr,
+        instanceId: signedOut.id,
+        error: const ClassifiedFailure(ServiceFailureReason.sessionEnded),
+      );
+    }
+    return _notSetUp(context, key);
+  }
+
+  /// The connection of [service] this screen stands on whose secret could
+  /// not be read, or null; null too in a scope with no settings in it.
+  static ServiceInstance? _unreadConnection(WidgetRef ref, ServiceKey service) {
+    try {
+      final lensId = ref.watch(activeInstanceProvider(service))?.id;
+      return ref.watch(
+        currentSettingsProvider.select(
+          (settings) => settings.unreadConnectionOf(service, lensId: lensId),
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The connection's own name where the service has more than one.
+  static String? _connectionName(WidgetRef ref, ServiceInstance instance) {
+    try {
+      return ref.watch(
+        currentSettingsProvider.select(
+          (settings) => settings.connectionName(instance.id),
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   static bool _scoped(BuildContext context) {
@@ -130,6 +184,65 @@ class NotConfiguredPlaceholder extends StatelessWidget {
         ),
         icon: const Icon(Icons.add_link_rounded, size: 18),
         label: Text(key == null ? 'Open Settings' : Lexicon.setUp(key.title)),
+      ),
+    );
+  }
+}
+
+/// A screen standing on a connection whose secret could not be read: what
+/// happened on this device, and the way to paste it again.
+///
+/// The anatomy of [AppErrorState]'s page form, amber: the secret is a fault
+/// of this device's storage, not of the service, and nothing was sent.
+class UnreadSecretState extends StatelessWidget {
+  const UnreadSecretState({
+    super.key,
+    required this.instance,
+    this.connectionName,
+  });
+
+  final ServiceInstance instance;
+  final String? connectionName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final words = UnreadSecretWords.of(
+      instance,
+      connectionName: connectionName,
+    );
+    final amber = statusToneColor(theme.colorScheme, StatusTone.warning);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.key_off_rounded, size: 32, color: amber),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              words.headline,
+              style: theme.textTheme.titleMedium!
+                  .weight(FontWeight.w600)
+                  .copyWith(color: amber),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              words.sentence,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: CupolaThemeColors.of(context).dimText,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            FilledButton(
+              onPressed: () => context.go(words.route),
+              style: remedyFillStyle(context),
+              child: Text(words.remedy),
+            ),
+          ],
+        ),
       ),
     );
   }

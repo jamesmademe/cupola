@@ -40,6 +40,7 @@ cards live in [`../motion/`](../motion/).
 | Status | [CapabilityBanner](CapabilityBanner/README.md) | `lib/core/widgets/capability_banner.dart`, `lib/core/capability/capability_copy.dart` |
 | Status | [ConnectionBadge](ConnectionBadge/README.md) | `lib/core/widgets/connection_badge.dart` |
 | Status | [NotConfiguredPlaceholder](NotConfiguredPlaceholder/README.md) | `lib/core/widgets/not_configured_placeholder.dart` |
+| Status | [StartupFailurePage](StartupFailurePage/README.md) | `lib/features/shell/presentation/startup_failure_page.dart`, `lib/features/shell/domain/startup_failure.dart` |
 | Status | [ServiceOfflineState](ServiceOfflineState/README.md) | `lib/core/widgets/service_offline_state.dart` |
 | Status | [StatusBadge](StatusBadge/README.md) | `lib/core/widgets/status_badge.dart` |
 | Readouts | [ServiceKpiPeek](ServiceKpiPeek/README.md) | `lib/core/widgets/service_kpi_peek.dart`, `lib/features/services/presentation/service_kpi_provider.dart` |

@@ -70,6 +70,7 @@ import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/domain/unread_secret.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
@@ -347,6 +348,15 @@ Future<ServiceSummary> _loadServiceSummary(
         service,
         host: host,
         error: const SeerrSessionEnded(),
+      );
+    }
+    // Nor is a secret this device would not hand over: nothing was asked,
+    // and it says what happened here, amber, never `did not answer`.
+    if (instance.unreadSecret != null) {
+      return ServiceSummary.failed(
+        service,
+        host: host,
+        error: const ClassifiedFailure(ServiceFailureReason.secretUnread),
       );
     }
     return _offlineSummary(service, host: host);
@@ -3633,6 +3643,11 @@ Future<List<DashboardDecision>> _healthDecisions(
 List<DashboardDecision> _connectionFaultDecisions(Ref ref) {
   final settings = ref.watch(currentSettingsProvider);
   return [
+    // A secret this device would not hand over: no probe goes out for that
+    // connection, so its fault is read off the settings, not off an answer.
+    for (final instance in settings.instances)
+      if (instance.unreadSecret != null)
+        unreadSecretDecision(instance, settings.connectionName(instance.id)),
     for (final service in ServiceKey.values)
       for (final id in ref.watch(serviceInstanceIdsProvider(service)))
         if (_answeredWithFault(
@@ -3672,6 +3687,25 @@ ClassifiedFailure? _answeredWithFault(AsyncValue<ServiceSummary> summary) {
     default:
       return null;
   }
+}
+
+/// The fault of a connection whose secret could not be read, in its own
+/// words ([UnreadSecretWords]) and with the remedy to its form.
+DashboardDecision unreadSecretDecision(ServiceInstance instance, String? name) {
+  final words = UnreadSecretWords.of(instance, connectionName: name);
+  return DashboardDecision(
+    kind: DecisionKind.connectionFault,
+    id: 'connection-${instance.id}',
+    service: instance.service,
+    title: words.headline,
+    detail: words.sentence,
+    occurredAt: null,
+    route: words.route,
+    instanceId: instance.id,
+    connectionName: name,
+    actionInstanceId: instance.id,
+    remedy: words.remedy,
+  );
 }
 
 DashboardDecision _connectionFaultDecision(

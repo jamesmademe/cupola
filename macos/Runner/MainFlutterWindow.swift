@@ -1,8 +1,16 @@
 import Cocoa
 import FlutterMacOS
 import Network
+import window_manager
 
 class MainFlutterWindow: NSWindow {
+  // Hidden until Flutter has drawn into it: `DesktopWindow.showWhenDrawn`
+  // shows it. Shown at launch, it was black for as long as the start took.
+  override public func order(_ place: NSWindow.OrderingMode, relativeTo otherWin: Int) {
+    super.order(place, relativeTo: otherWin)
+    hiddenWindowAtLaunch()
+  }
+
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
     self.contentViewController = flutterViewController

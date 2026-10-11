@@ -304,7 +304,8 @@ String? transportWarningFor(ServiceKey service, String rawUrl) {
 /// The glyph beside a failure's words. Its colour is the failure's tone.
 IconData failureIcon(ServiceFailureReason reason) => switch (reason) {
   ServiceFailureReason.unreachable => Icons.cloud_off_rounded,
-  ServiceFailureReason.unauthorized => Icons.key_off_rounded,
+  ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.secretUnread => Icons.key_off_rounded,
   // The account's own door, not a broken key: blue, the person's step.
   ServiceFailureReason.sessionEnded => Icons.logout_rounded,
   ServiceFailureReason.csrfRefused => Icons.remove_moderator_rounded,

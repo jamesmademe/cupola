@@ -90,6 +90,17 @@ class ServiceInstance {
   /// everything but the session is kept, so signing in again is one step.
   final SeerrAccountSignIn? account;
 
+  /// The secret of this connection that secure storage would not hand over
+  /// when the settings were read, or null when every one of them came back.
+  ///
+  /// Read, never saved: it is what this run found. While it is set the
+  /// connection is not [isConfigured], so nothing is sent with a secret
+  /// missing (a qBittorrent counts an empty password among the five tries its
+  /// ban allows), and saving the settings leaves that secret where it is
+  /// rather than writing the empty value back over it. Setting a new value of
+  /// it, in [copyWith], clears it.
+  final UnreadSecret? unreadSecret;
+
   const ServiceInstance({
     required this.id,
     required this.service,
@@ -100,6 +111,7 @@ class ServiceInstance {
     this.viewerId = '',
     this.access = const NoAccess(),
     this.account,
+    this.unreadSecret,
   }) : assert(
          account == null || service == ServiceKey.seerr,
          'only a Seerr connection signs in with an account',
@@ -208,6 +220,7 @@ class ServiceInstance {
   /// its address and its login and reads as not set up until it signs in
   /// again.
   bool get isConfigured {
+    if (unreadSecret != null) return false;
     if (!service.usesApiKey) return url.isNotEmpty;
     final account = this.account;
     if (account != null) return url.isNotEmpty && account.isSignedIn;
@@ -251,8 +264,33 @@ class ServiceInstance {
       viewerId: viewerId ?? this.viewerId,
       access: access ?? this.access,
       account: clearAccount ? null : account ?? this.account,
+      // Only a new value of the secret that could not be read replaces it.
+      // An edit that carries the empty one along (the address changed, the
+      // key field untouched) keeps the mark, and with it the stored secret,
+      // which a keychain that was only locked hands over next time.
+      unreadSecret: switch (unreadSecret) {
+        UnreadSecret.credential when credential?.isNotEmpty ?? false => null,
+        UnreadSecret.access when access != null && access != this.access =>
+          null,
+        final kept => kept,
+      },
     );
   }
+
+  /// A copy marked with the secret secure storage would not hand over; see
+  /// [unreadSecret].
+  ServiceInstance withUnreadSecret(UnreadSecret secret) => ServiceInstance(
+    id: id,
+    service: service,
+    label: label,
+    url: url,
+    credential: credential,
+    username: username,
+    viewerId: viewerId,
+    access: access,
+    account: account,
+    unreadSecret: secret,
+  );
 
   @override
   bool operator ==(Object other) {
@@ -265,7 +303,8 @@ class ServiceInstance {
         other.username == username &&
         other.viewerId == viewerId &&
         other.access == access &&
-        other.account == account;
+        other.account == account &&
+        other.unreadSecret == unreadSecret;
   }
 
   @override
@@ -279,6 +318,7 @@ class ServiceInstance {
     viewerId,
     access,
     account,
+    unreadSecret,
   );
 
   /// The kind of access only, never its values; an account by its kind and
@@ -287,5 +327,16 @@ class ServiceInstance {
   String toString() =>
       'ServiceInstance($id, ${service.name}, label: "$label", url: "$url", '
       'access: ${access.kind.name}'
-      '${account == null ? '' : ', account: $account'})';
+      '${account == null ? '' : ', account: $account'}'
+      '${unreadSecret == null ? '' : ', unread: ${unreadSecret!.name}'})';
+}
+
+/// Which of a connection's secrets secure storage would not hand over.
+enum UnreadSecret {
+  /// The API key, password or token: the connection's own credential.
+  credential,
+
+  /// What a gateway in front of the service asks for: a Cloudflare service
+  /// token, a proxy password, a custom header's value.
+  access,
 }

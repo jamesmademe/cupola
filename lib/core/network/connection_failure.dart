@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/misc.dart' show ProviderException;
 
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/features/settings/domain/unread_secret.dart'
+    show secureStoreName;
 import 'package:cupola/core/status/media_status.dart';
 
 /// Why a connection attempt failed.
@@ -52,6 +54,12 @@ enum ServiceFailureReason {
   /// do is the person's own, signing in again. Never [unauthorized] either,
   /// whose remedy is a key nobody pasted.
   sessionEnded,
+
+  /// This device would not hand over the connection's saved secret: secure
+  /// storage refused the read when the settings were loaded. Nothing was
+  /// sent, so nothing answered or refused; amber, because there is one thing
+  /// to do, and it is the refused key's: paste it again.
+  secretUnread,
 
   /// Seerr's CSRF protection refused a write twice: once without a token,
   /// and again with the token the server had just handed out. A fault of the
@@ -623,6 +631,11 @@ StatusTone failureTone(ServiceFailureReason reason) {
   return StatusTone.warning;
 }
 
+/// The secret a [ServiceFailureReason.secretUnread] names: the service's own
+/// word, with a sign-in's half that is secret.
+String _secretNoun(String credential) =>
+    credential == kRefusedSignIn ? 'password' : credential;
+
 /// What a refusal names as the thing refused, when nothing more specific is
 /// known.
 ///
@@ -655,6 +668,8 @@ String failureLabel(
   ServiceFailureReason.unreachable => StateWord.didNotAnswer.label,
   ServiceFailureReason.unauthorized => 'Refused the $credential',
   ServiceFailureReason.sessionEnded => StateWord.signedOut.label,
+  ServiceFailureReason.secretUnread =>
+    'Saved ${_secretNoun(credential)} unreadable',
   ServiceFailureReason.csrfRefused => 'Security token refused',
   ServiceFailureReason.timeout => 'Timed out',
   ServiceFailureReason.tls => 'Certificate not trusted',
@@ -698,6 +713,8 @@ String failureHeadline(
   ServiceFailureReason.unauthorized =>
     '$subject answered but refused the $credential',
   ServiceFailureReason.sessionEnded => 'Signed out of $subject',
+  ServiceFailureReason.secretUnread =>
+    "Cupola could not read $subject's saved ${_secretNoun(credential)}",
   ServiceFailureReason.csrfRefused =>
     "$subject refused the request's security token",
   ServiceFailureReason.timeout =>
@@ -743,7 +760,7 @@ String? failureRemedy(
   String credential = kRefusedCredential,
   AccessGatewayAnswer? gateway,
 }) => switch (reason) {
-  ServiceFailureReason.unauthorized =>
+  ServiceFailureReason.unauthorized || ServiceFailureReason.secretUnread =>
     credential == kRefusedSignIn
         ? Lexicon.signInAgain
         : 'Paste the $credential again',
@@ -789,6 +806,7 @@ bool failureRetryHelps(
   ServiceFailureReason.unauthorized => credential == kRefusedSignIn,
   ServiceFailureReason.insecureTransport ||
   ServiceFailureReason.accessGateway ||
+  ServiceFailureReason.secretUnread ||
   ServiceFailureReason.sessionEnded => false,
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.unreachable ||
@@ -931,6 +949,8 @@ String connectionFailureSentence(
                 'them in Settings.',
     ServiceFailureReason.sessionEnded =>
       'Sign in again to keep asking for movies and series.',
+    ServiceFailureReason.secretUnread =>
+      "${secureStoreName()} didn't hand it over.",
     ServiceFailureReason.csrfRefused => 'Nothing changed. Retry in a moment.',
     ServiceFailureReason.notFound =>
       'Something answered, but the API is not at this address.',

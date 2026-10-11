@@ -696,6 +696,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // A Seerr account whose session ended keeps its connection: it can be
     // signed in again, or removed.
     final isSignedOut = saved?.isSignedOut ?? false;
+    // A secret this device would not hand over keeps its connection too: it
+    // is pasted again here, or the connection removed.
+    final unreadSecret = saved?.unreadSecret;
     ref.listen(
       currentSettingsProvider.select(
         (s) => s.instanceById(_target.id)?.account?.session ?? '',
@@ -732,6 +735,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               context,
               isConfigured: isConfigured,
               isSignedOut: isSignedOut,
+              unreadSecret: unreadSecret,
             ),
             // Setup guidance is registry data, alongside the default port and
             // the credential breadcrumb this screen already reads from there.
@@ -820,7 +824,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             ],
             const SizedBox(height: AppSpacing.xxl),
             _buildConnectionsSection(context, settings),
-            if (isConfigured || isSignedOut) ...[
+            if (isConfigured || isSignedOut || unreadSecret != null) ...[
               const SizedBox(height: AppSpacing.lg),
               _buildRemoveRow(context),
             ],
@@ -838,6 +842,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     BuildContext context, {
     required bool isConfigured,
     bool isSignedOut = false,
+    UnreadSecret? unreadSecret,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -891,6 +896,23 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                   )
                 else if (isConfigured)
                   _SavedConnectionStatus(instanceId: _target.id)
+                else if (unreadSecret != null)
+                  // What happened on this device, amber: the field below is
+                  // where it is pasted again.
+                  _HeaderStatus(
+                    icon: Icons.key_off_rounded,
+                    label: unreadSecret == UnreadSecret.access
+                        ? 'Saved access unreadable'
+                        : failureLabel(
+                            ServiceFailureReason.secretUnread,
+                            credential: refusedCredentialOf(service),
+                          ),
+                    color: statusToneColor(
+                      colorScheme,
+                      StatusTone.warning,
+                      surface: colorScheme.surfaceContainer,
+                    ),
+                  )
                 else if (isSignedOut)
                   _HeaderStatus(
                     icon: Icons.logout_rounded,

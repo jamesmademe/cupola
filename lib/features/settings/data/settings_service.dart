@@ -65,10 +65,30 @@ class FlutterSecureSettingsStore implements SecureSettingsStore {
   }
 }
 
+/// Secure storage refused every read of a load: not one secret came back.
+///
+/// One unreadable secret marks its connection ([ServiceInstance.unreadSecret])
+/// and the app starts without it; when none can be read the store itself is
+/// down, and the start stops on a page that says so. [cause] is the first
+/// read's own error, for its words behind Why?.
+class SecureStorageUnavailable implements Exception {
+  const SecureStorageUnavailable(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'SecureStorageUnavailable($cause)';
+}
+
 class SettingsService {
   static const _kRegion = 'region';
   static const _kThemeMode = 'theme_mode';
   static const _kOnboardingComplete = 'onboarding_complete';
+
+  /// The connections whose secrets [forgetSecrets] dropped, until each one's
+  /// is pasted again: they load marked [UnreadSecret.credential], so each asks
+  /// for its key rather than reading as never set up.
+  static const _kForgottenSecrets = 'forgotten_secrets';
 
   /// Secure-storage key for the whole origin→fingerprint trust map (ADR-6).
   /// One entry, JSON-encoded, rather than one key per service — the map is
@@ -373,10 +393,15 @@ class SettingsService {
     await _prefs.remove(_kRegion);
     await _prefs.remove(_kThemeMode);
     await _prefs.remove(_kOnboardingComplete);
+    await _prefs.remove(_kForgottenSecrets);
     await _prefs.remove('hidden_tabs');
   }
 
   Future<SettingsModel> loadSettings() async {
+    _unreadKeys.clear();
+    _secretReads = 0;
+    _secretFailures = 0;
+    _firstReadError = null;
     final serviceSettings = await _loadServiceSettings();
     // The passwords come out of the same generic credential slot every other
     // service's key does — see [_loadServiceSettings]. The usernames need their
@@ -432,14 +457,70 @@ class SettingsService {
     // Each connection's access and Seerr account, from the keys its id
     // derives: one pass for the primaries and the extras alike, since neither
     // path above knows of them.
+    final instances = [
+      for (final instance in ordered)
+        await _withAccount(
+          instance.copyWith(access: await _loadAccess(instance)),
+        ),
+    ];
+
+    if (_firstReadError case final error?
+        when _secretFailures == _secretReads) {
+      throw SecureStorageUnavailable(error);
+    }
+
     return model.copyWith(
       instances: List.unmodifiable([
-        for (final instance in ordered)
-          await _withAccount(
-            instance.copyWith(access: await _loadAccess(instance)),
-          ),
+        for (final instance in instances) _markUnread(instance),
       ]),
     );
+  }
+
+  /// Drops every secret in secure storage and keeps everything else:
+  /// addresses, usernames, Home, the preferences. The way on when secure
+  /// storage hands nothing over and asking again cannot help (a key store
+  /// lost to a system update); each connection then asks for its secret
+  /// again ([_kForgottenSecrets]).
+  ///
+  /// Throws what secure storage throws: a store that will not even be
+  /// emptied is one Cupola cannot keep secrets in.
+  Future<void> forgetSecrets() async {
+    final ids = {
+      for (final entry in _readRoster()) entry.id,
+      for (final service in ServiceKey.values)
+        if (_loadString(_serviceStorageKeys[service]!.url).isNotEmpty)
+          ServiceInstance.primaryIdFor(service),
+    };
+    await _prefs.setStringList(_kForgottenSecrets, ids.toList()..sort());
+    await _secureStore.deleteAll();
+  }
+
+  Set<String> _forgottenSecrets() =>
+      (_prefs.getStringList(_kForgottenSecrets) ?? const []).toSet();
+
+  /// [instance], marked with the secret this load could not read.
+  ServiceInstance _markUnread(ServiceInstance instance) {
+    // A sign-in service with no username ran without one (behind a proxy
+    // that does the signing in), so it had no password to lose.
+    if (instance.credential.isEmpty &&
+        (instance.service.usesApiKey || instance.username.isNotEmpty) &&
+        instance.account == null &&
+        _forgottenSecrets().contains(instance.id)) {
+      return instance.withUnreadSecret(UnreadSecret.credential);
+    }
+    if (_unreadKeys.isEmpty) return instance;
+    final legacy = instance.isPrimarySlot
+        ? _serviceStorageKeys[instance.service]!.legacySecureApiKey
+        : null;
+    if (_unreadKeys.contains(instance.credentialStorageKey) ||
+        (legacy != null && _unreadKeys.contains(legacy))) {
+      return instance.withUnreadSecret(UnreadSecret.credential);
+    }
+    final accessPrefix = 'secure_${instance.id}_access';
+    if (_unreadKeys.any((key) => key.startsWith(accessPrefix))) {
+      return instance.withUnreadSecret(UnreadSecret.access);
+    }
+    return instance;
   }
 
   /// The roster as stored, or empty when there is none to read.
@@ -833,14 +914,36 @@ class SettingsService {
   Future<void> _saveInstances(SettingsModel settings) async {
     for (final instance in settings.instances) {
       await _prefs.setString(instance.urlStorageKey, instance.url);
-      await _saveApiKey(instance.credentialStorageKey, instance.credential);
+      // A secret this run could not read is left where it is: written back,
+      // the empty value it loaded as would delete it.
+      if (instance.unreadSecret != UnreadSecret.credential) {
+        await _saveApiKey(instance.credentialStorageKey, instance.credential);
+      }
       await _writeOrRemove(instance.usernameStorageKey, instance.username);
       await _writeOrRemove(instance.viewerIdStorageKey, instance.viewerId);
-      await _saveAccess(instance);
+      if (instance.unreadSecret != UnreadSecret.access) {
+        await _saveAccess(instance);
+      }
       await _saveAccount(instance);
     }
 
     final live = {for (final instance in settings.instances) instance.id};
+
+    // A forgotten secret pasted again, or its connection gone: off the list.
+    final forgotten = _forgottenSecrets();
+    if (forgotten.isNotEmpty) {
+      final still = {
+        for (final instance in settings.instances)
+          if (forgotten.contains(instance.id) &&
+              instance.unreadSecret == UnreadSecret.credential)
+            instance.id,
+      };
+      if (still.isEmpty) {
+        await _prefs.remove(_kForgottenSecrets);
+      } else if (still.length != forgotten.length) {
+        await _prefs.setStringList(_kForgottenSecrets, still.toList()..sort());
+      }
+    }
 
     // Everything the previous roster knew about and this one does not. Without
     // this pass a removed connection's API key stays in the keychain for the
@@ -1121,8 +1224,26 @@ class SettingsService {
     await _prefs.setString(key, value);
   }
 
+  /// The keys secure storage would not hand over during the current load,
+  /// out of [_secretReads] asked; see [loadSettings].
+  final Set<String> _unreadKeys = {};
+  int _secretReads = 0;
+  int _secretFailures = 0;
+  Object? _firstReadError;
+
+  /// A secret, or `''` when there is none, or when secure storage would not
+  /// hand it over: that key is recorded in [_unreadKeys] rather than thrown,
+  /// so one unreadable entry costs its connection and not the whole start.
   Future<String> _loadApiKey(String key) async {
-    return await _secureStore.read(key: key) ?? '';
+    _secretReads++;
+    try {
+      return await _secureStore.read(key: key) ?? '';
+    } catch (error) {
+      _unreadKeys.add(key);
+      _secretFailures++;
+      _firstReadError ??= error;
+      return '';
+    }
   }
 
   Future<void> _saveApiKey(String key, String value) async {
