@@ -45,9 +45,9 @@ void main() {
     });
   });
 
-  group('needs attention', () {
+  group('not running', () {
     test('a stopped stack is backlog: one neutral aggregate, never amber', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         _stack('media'),
         _stack('bazarr', status: DockgeStackStatus.exited),
       ]);
@@ -57,12 +57,10 @@ void main() {
       expect(rows.single.headline, '1 stack is stopped');
       // Dockge does not say whether the stop was intended, so the row says so.
       expect(rows.single.detail, 'bazarr · Dockge does not say why');
-      // An aggregate names no single stack to open.
-      expect(rows.single.stackName, isNull);
     });
 
     test('a stopped row states no age, because nothing here is dated', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         _stack('bazarr', status: DockgeStackStatus.exited),
       ]);
 
@@ -73,7 +71,7 @@ void main() {
     });
 
     test('a stopped group names its stacks and counts the rest', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         for (final name in ['Zulu', 'alpha', 'bravo', 'charlie'])
           _stack(name, status: DockgeStackStatus.exited),
       ]);
@@ -88,7 +86,7 @@ void main() {
     });
 
     test('nine stopped stacks are one row, nothing capped out of sight', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         for (var i = 0; i < 9; i++)
           _stack('stack-$i', status: DockgeStackStatus.exited),
       ]);
@@ -98,7 +96,7 @@ void main() {
     });
 
     test('an inactive stack is backlog, and it is neutral', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         _stack('archive', status: DockgeStackStatus.createdFile),
         _stack('templates', status: DockgeStackStatus.createdStack),
       ]);
@@ -110,12 +108,10 @@ void main() {
         rows.single.detail,
         'archive, templates · brought down, or never started',
       );
-      // No single subject, so nothing to open.
-      expect(rows.single.stackName, isNull);
     });
 
     test('one inactive stack says so in the singular', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         _stack('archive', status: DockgeStackStatus.createdStack),
       ]);
 
@@ -123,7 +119,7 @@ void main() {
     });
 
     test('an unknown stack is aggregated, never flagged', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         _stack('ghost', status: DockgeStackStatus.unknown),
       ]);
 
@@ -134,7 +130,7 @@ void main() {
 
     test('stopped, inactive and unknown come in that order, and running stacks '
         'appear in none', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         _stack('archive', status: DockgeStackStatus.createdFile),
         _stack('media'),
         _stack('bazarr', status: DockgeStackStatus.exited),
@@ -150,7 +146,7 @@ void main() {
     });
 
     test('an aggregate names three stacks and counts the rest', () {
-      final rows = dockgeAttentionRows([
+      final rows = dockgeIdleGroups([
         for (final name in ['a', 'b', 'c', 'd', 'e'])
           _stack(name, status: DockgeStackStatus.createdFile),
       ]);

@@ -19,23 +19,30 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
-  testWidgets('draws the regions in the order the narrow board draws them', (
-    tester,
-  ) async {
-    await _pump(tester);
+  testWidgets('draws the stacks and no Needs attention: Dockge reports no '
+      'fault', (tester) async {
+    await _pump(
+      tester,
+      stacks: [
+        _stack('media'),
+        _stack('bazarr', status: DockgeStackStatus.exited),
+      ],
+    );
 
     // Identity and the readouts come before any section, and only this tab
     // carries them.
     expect(find.byType(ServiceKpiPeek), findsOneWidget);
 
-    // What needs a decision, then the inventory. Agents is absent because this
-    // Dockge has one instance.
+    // A stopped stack may have been brought down on purpose, and the push
+    // says nothing more: a region for faults would hold none. Agents is
+    // absent because this Dockge has one instance.
     expect(
       tester
           .widgetList<SectionHeader>(find.byType(SectionHeader))
           .map((header) => header.title),
-      ['Needs attention', 'Stacks'],
+      ['Stacks'],
     );
+    expect(find.text('Needs attention'), findsNothing);
   });
 
   testWidgets('nothing the protocol cannot answer is drawn', (tester) async {
@@ -62,7 +69,7 @@ void main() {
       tester
           .widgetList<SectionHeader>(find.byType(SectionHeader))
           .map((header) => header.semanticHint),
-      ['opens the Dockge Stacks tab', 'opens the Dockge Stacks tab'],
+      ['opens the Dockge Stacks tab'],
     );
   });
 
@@ -162,8 +169,8 @@ void main() {
     expect(stopped.titleColor, neutral);
   });
 
-  testWidgets('the attention header carries no figure, and each group counts '
-      'its own stacks', (tester) async {
+  testWidgets('the stacks that are not running sit under the running ones, '
+      'each group counting its own', (tester) async {
     await _pump(
       tester,
       stacks: [
@@ -174,18 +181,17 @@ void main() {
       ],
     );
 
-    // Nothing here is a fault, so a header figure would be a count of backlog
-    // presented as one. Each group states its own size, in words, and the
-    // stopped group names the whole six: nothing is capped out of sight.
-    final header = tester.widget<SectionHeader>(
-      find.widgetWithText(SectionHeader, 'Needs attention'),
-    );
-    expect(header.subtitle, isNull);
+    // Each group states its own size, in words, and the stopped group counts
+    // the whole six: nothing is capped out of sight.
     expect(find.text('6 stacks are stopped'), findsOneWidget);
     expect(find.text('1 stack is inactive'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('media')).dy,
+      lessThan(tester.getTopLeft(find.text('6 stacks are stopped')).dy),
+    );
   });
 
-  testWidgets('the attention header never sums the backlog into a figure', (
+  testWidgets('the stacks header never sums the backlog into a figure', (
     tester,
   ) async {
     await _pump(
@@ -201,24 +207,26 @@ void main() {
     // would be the five-arm rule broken in the figure, over rows that got it
     // right: a tidy server reading as nine things on fire.
     final header = tester.widget<SectionHeader>(
-      find.widgetWithText(SectionHeader, 'Needs attention'),
+      find.widgetWithText(SectionHeader, 'Stacks'),
     );
     expect(header.subtitle, isNull);
     // The backlog is not silenced by that: each state states its own size, in
-    // words, in the neutral row that is about it.
+    // words, in the neutral row that is about it, and a server whose stacks
+    // are all down is not an empty one.
     expect(find.text('8 stacks are inactive'), findsOneWidget);
     expect(find.text('1 stack is stopped'), findsOneWidget);
+    expect(find.byType(ServiceOverviewEmpty), findsNothing);
   });
 
   testWidgets('a push that never arrived reads — and never 0', (tester) async {
     await _pump(tester, failStacks: true);
 
     // A "0" over an unanswered question claims every stack is up, which is the
-    // reading the user would act on. The attention header therefore prints no
+    // reading the user would act on. The stacks header therefore prints no
     // figure at all while the push is out.
     expect(find.text('0'), findsNothing);
     final header = tester.widget<SectionHeader>(
-      find.widgetWithText(SectionHeader, 'Needs attention'),
+      find.widgetWithText(SectionHeader, 'Stacks'),
     );
     expect(header.subtitle, isNull);
   });
@@ -228,10 +236,11 @@ void main() {
   ) async {
     await _pump(tester, failStacks: true);
 
-    // Both stack regions fail together — they fold the same push — but each
-    // says so in its own slot, and both headings survive.
-    expect(find.byType(SectionHeader), findsNWidgets(2));
-    expect(find.byType(AppErrorState), findsNWidgets(2));
+    // The stacks region says so in its own slot, under its heading, and the
+    // identity and the readouts above it are still drawn.
+    expect(find.byType(SectionHeader), findsOneWidget);
+    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(ServiceKpiPeek), findsOneWidget);
   });
 
   testWidgets('a stack row is the way into its log and its controls', (

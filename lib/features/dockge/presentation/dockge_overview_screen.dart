@@ -18,10 +18,15 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The first tab of Dockge's service home.
 ///
 /// Overview alone carries the identity block and the readouts — Stacks is a
-/// view of one kind of record and Terminal is a console — and then three
-/// regions: what is not running, what is, and which instances this login can
-/// reach. The two stack regions end in a link named exactly like the tab they
-/// jump to.
+/// view of one kind of record and Terminal is a console — and then two
+/// regions: the stacks, running ones by name and the rest summed by state, and
+/// which instances this login can reach. The stacks region ends in a link
+/// named exactly like the tab it jumps to.
+///
+/// There is no Needs attention region. That region holds faults, and Dockge
+/// reports none: a stopped stack may have been brought down on purpose, and
+/// the push says nothing more. A Dockge that does not answer is the stacks
+/// region's own error.
 ///
 /// **It draws neither the app bar nor the tab bar.** `ServiceHomeScreen` owns
 /// the first — including the agent lens, which is an app-bar control and not a
@@ -111,7 +116,7 @@ class _OverviewBody extends ConsumerWidget {
       onRefresh: () async {
         ref.invalidate(serviceSummaryProvider(ServiceKey.dockge));
         ref.invalidate(serviceKpiProvider(ServiceKey.dockge));
-        // The two pushes every region is folded from. The four derived
+        // The two pushes every region is folded from. The three derived
         // providers are invalidated too rather than left to recompute: they are
         // `autoDispose`, so a region the user has scrolled past may already
         // have been collected, and invalidating the source alone would leave it
@@ -119,13 +124,12 @@ class _OverviewBody extends ConsumerWidget {
         ref.invalidate(dockgeStackListProvider);
         ref.invalidate(dockgeAgentsProvider);
         ref.invalidate(dockgeOverviewCensusProvider);
-        ref.invalidate(dockgeOverviewAttentionProvider);
-        ref.invalidate(dockgeOverviewRunningProvider);
+        ref.invalidate(dockgeOverviewStacksProvider);
         ref.invalidate(dockgeOverviewAgentsProvider);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
       // One scroll view for the whole page: the regions are one column of
-      // reading, not three independently scrolling panes.
+      // reading, not independently scrolling panes.
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
@@ -138,12 +142,6 @@ class _OverviewBody extends ConsumerWidget {
             kpis: ref.watch(serviceKpiProvider(ServiceKey.dockge)),
             accent: ServiceKey.dockge.accent,
           ),
-          // The mobile board's order, which is the one that decides: what needs
-          // a decision, then the inventory. The desktop board leads with the
-          // stack grid because it has room to draw all twelve rows and the
-          // fault is visible inside them; at phone width it is not, so the
-          // narrow board promotes it and this page follows the narrow board.
-          const _NeedsAttentionSection(),
           const _StacksSection(),
           const _AgentsSection(),
         ],
@@ -152,100 +150,15 @@ class _OverviewBody extends ConsumerWidget {
   }
 }
 
-// ─── 1. Needs attention ─────────────────────────────────────────────────────
+// ─── 1. Stacks ──────────────────────────────────────────────────────────────
 
-/// What is not running, before what is.
-class _NeedsAttentionSection extends ConsumerWidget {
-  const _NeedsAttentionSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(dockgeOverviewAttentionProvider);
-    return ServiceOverviewSection(
-      service: ServiceKey.dockge,
-      title: 'Needs attention',
-      // **No figure.** Dockge reports no fault: a stopped stack is backlog,
-      // like an inactive one, and each group states its own size in words in
-      // the neutral row that is about it. A header count over them would be the
-      // five-arm rule broken in the figure, and a `0` over an unanswered push
-      // would claim that everything is up.
-      // Every row here is about stacks, and every stack lives on the Stacks tab,
-      // so the destination is honest for all of them.
-      destination: ServiceTab.stacks,
-      child: AsyncValueWidget<List<DockgeAttentionItem>>(
-        value: items,
-        serviceName: 'Dockge',
-        loadingLabel: 'Loading what needs attention',
-        // The **source**, not the fold. Invalidating this fold alone would
-        // rebuild it against the `AsyncError` the stream is still holding and
-        // hand back the same failure without a round trip — and the stream,
-        // watched by the other two folds as well, is never disposed and so
-        // never re-subscribes on its own. Invalidating it is what reconnects;
-        // the folds follow it down.
-        onRetry: () {
-          ref.invalidate(dockgeStackListProvider);
-          ref.invalidate(dockgeOverviewAttentionProvider);
-        },
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (data) => data.isEmpty,
-        // A resting state wears no alarm chrome: nothing is wrong, and saying
-        // so is not an error state.
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.check_circle_outline_rounded,
-          label: 'Every stack is up',
-        ),
-        data: (data) => Column(
-          children: [for (final item in data) _AttentionRow(item: item)],
-        ),
-      ),
-    );
-  }
-}
-
-class _AttentionRow extends StatelessWidget {
-  const _AttentionRow({required this.item});
-
-  final DockgeAttentionItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // Through the tone rule, never a raw `AppColors.warning`: the walk resolves
-    // amber against the surface this row actually lands on, which on the light
-    // theme is a different hue from the one the dark artboards draw. And the
-    // aggregate rows are **neutral** — a stack the user brought down is
-    // backlog, and painting it the same amber as one that died is exactly the
-    // failure the five-arm rule exists to prevent.
-    final tone = statusToneColor(
-      colorScheme,
-      item.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-    final name = item.stackName;
-
-    final row = ServiceOverviewRow(
-      spoken: item.spoken,
-      leading: Icon(item.icon, size: 18, color: tone),
-      title: item.headline,
-      titleColor: tone,
-      detail: item.detail,
-    );
-
-    // An aggregate row is about several stacks at once, so there is no single
-    // one to open and it stays inert rather than guessing.
-    return name == null ? row : _StackLink(stackName: name, child: row);
-  }
-}
-
-// ─── 2. Stacks ──────────────────────────────────────────────────────────────
-
-/// What is up right now.
+/// What is up, by name, and the rest by state under it.
 class _StacksSection extends ConsumerWidget {
   const _StacksSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rows = ref.watch(dockgeOverviewRunningProvider);
+    final preview = ref.watch(dockgeOverviewStacksProvider);
     final census = ref.watch(dockgeOverviewCensusProvider).asData?.value;
 
     return ServiceOverviewSection(
@@ -254,34 +167,37 @@ class _StacksSection extends ConsumerWidget {
       subtitle: _subtitle(
         ref,
         census: census,
-        shown: rows.asData?.value.length,
+        shown: preview.asData?.value.running.length,
       ),
       destination: ServiceTab.stacks,
-      child: AsyncValueWidget<List<DockgeStackRow>>(
-        value: rows,
+      child: AsyncValueWidget<DockgeStacksPreview>(
+        value: preview,
         serviceName: 'Dockge',
         loadingLabel: 'Loading the stacks',
-        // The source, for the reason spelled out on Needs attention's Retry.
+        // The **source**, not the fold. Invalidating this fold alone would
+        // rebuild it against the `AsyncError` the stream is still holding and
+        // hand back the same failure without a round trip — and the stream,
+        // watched by the census as well, is never disposed and so never
+        // re-subscribes on its own. Invalidating it is what reconnects; the
+        // folds follow it down.
         onRetry: () {
           ref.invalidate(dockgeStackListProvider);
-          ref.invalidate(dockgeOverviewRunningProvider);
+          ref.invalidate(dockgeOverviewStacksProvider);
         },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
-        isEmpty: (data) => data.isEmpty,
-        // Two different absences, and they need opposite responses: a server
-        // with no stacks at all has nothing to run, while a server whose twelve
-        // stacks are all down has plenty — and the section above is already
-        // saying so.
-        emptyBuilder: ServiceOverviewEmpty(
-          icon: census != null && census.total == 0
-              ? Icons.layers_clear_rounded
-              : Icons.pause_circle_outline_rounded,
-          label: census != null && census.total == 0
-              ? 'No stacks here yet'
-              : 'Nothing running',
+        // Empty only on a server with no stacks at all: one whose stacks are
+        // all down still draws their rows.
+        isEmpty: (data) => data.running.isEmpty && data.idle.isEmpty,
+        emptyBuilder: const ServiceOverviewEmpty(
+          icon: Icons.layers_clear_rounded,
+          label: 'No stacks here yet',
         ),
-        data: (data) =>
-            Column(children: [for (final row in data) _StackRow(row: row)]),
+        data: (data) => Column(
+          children: [
+            for (final row in data.running) _StackRow(row: row),
+            for (final group in data.idle) _IdleRow(group: group),
+          ],
+        ),
       ),
     );
   }
@@ -371,7 +287,38 @@ class _StackRow extends StatelessWidget {
   }
 }
 
-// ─── 3. Agents ──────────────────────────────────────────────────────────────
+/// The stacks in one state that is not running, summed: neutral, because
+/// Dockge does not say whether a stop was meant.
+class _IdleRow extends StatelessWidget {
+  const _IdleRow({required this.group});
+
+  final DockgeIdleGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Through the tone rule, never a colour constant. Every group is neutral:
+    // a stack somebody brought down is backlog, and painting it the amber of
+    // one that died is the failure the five-arm rule exists to prevent.
+    final tone = statusToneColor(
+      colorScheme,
+      group.tone,
+      surface: colorScheme.surfaceContainerLow,
+    );
+
+    // About several stacks at once, so there is no single one to open: the
+    // row stays inert, and the section's link leads to the Stacks tab.
+    return ServiceOverviewRow(
+      spoken: group.spoken,
+      leading: Icon(group.icon, size: 18, color: tone),
+      title: group.headline,
+      titleColor: tone,
+      detail: group.detail,
+    );
+  }
+}
+
+// ─── 2. Agents ──────────────────────────────────────────────────────────────
 
 /// Which instances this login can reach.
 ///

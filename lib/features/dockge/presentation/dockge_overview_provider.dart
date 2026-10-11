@@ -67,8 +67,7 @@ const int dockgeAggregateNamesLimit = 3;
 
 /// How the selected agent's stacks are distributed across Dockge's states.
 ///
-/// Folded once and read by two sections, so the header of Needs attention and
-/// the header of Stacks can never disagree about the same server.
+/// Folded once, for the Stacks header and its empty state.
 @immutable
 class DockgeStackCensus {
   const DockgeStackCensus({
@@ -107,8 +106,8 @@ class DockgeStackCensus {
   // figure: a tidy server with one stopped stack and eight never-started
   // templates printed "9" over rows that are eight-ninths neutral, the
   // five-arm rule broken in the figure after the rows had got it right. Every
-  // state here is backlog, so the Needs attention header states no figure at
-  // all: each group states its own size inside its own neutral row.
+  // state here is backlog, so no header states a figure for it: each group
+  // states its own size inside its own neutral row.
 }
 
 /// Counts the states. Total-safe: `stackList` is a full push, not a page.
@@ -138,22 +137,22 @@ DockgeStackCensus dockgeStackCensus(List<DockgeStack> stacks) {
   );
 }
 
-// ─── Needs attention ────────────────────────────────────────────────────────
+// ─── Not running ────────────────────────────────────────────────────────────
 
-/// One row of Needs attention: what state a stack is in, and the evidence.
+/// One row under the running stacks: a state the others are in, how many,
+/// and the evidence.
 ///
 /// The tone is carried rather than derived from a kind enum, because the one
 /// authority on what a Dockge state *means* is already written:
 /// [DockgeStackStatus.tone], whose own doc explains why a stopped stack is
 /// neutral. A second table here would be a second place to get it wrong.
 @immutable
-class DockgeAttentionItem {
-  const DockgeAttentionItem({
+class DockgeIdleGroup {
+  const DockgeIdleGroup({
     required this.tone,
     required this.icon,
     required this.headline,
     required this.detail,
-    this.stackName,
   });
 
   final StatusTone tone;
@@ -168,11 +167,6 @@ class DockgeAttentionItem {
   /// doc on why there is no timestamp and no exit code to print here.
   final String detail;
 
-  /// The stack this row is about, when it is about exactly one. Null on an
-  /// aggregate row, which is what makes it un-tappable: there is no single
-  /// stack to open.
-  final String? stackName;
-
   /// The row as one sentence, with the layout's `·` turned back into commas —
   /// `·` is decoration, and a screen reader either names it or drops it
   /// depending on the user's punctuation setting.
@@ -180,9 +174,11 @@ class DockgeAttentionItem {
       joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
 }
 
-/// Everything on the selected agent that is not running, one row per state.
+/// Everything on the selected agent that is not running, one row per state,
+/// drawn under the running stacks.
 ///
-/// Every state here is **backlog**, and none is a fault:
+/// Every state here is **backlog**, and none is a fault, which is why the page
+/// has no Needs attention section: Dockge reports nothing that could fill it.
 ///
 ///  * a stopped stack (Dockge's `EXITED`) is a stack somebody brought down, or
 ///    one that crashed, and Dockge cannot tell which. Its stack list carries no
@@ -197,7 +193,7 @@ class DockgeAttentionItem {
 /// stopped amber was the defect this replaces: it promised a fault Dockge does
 /// not know about, and it put a deliberate `compose down` in the same colour as
 /// a crash.
-List<DockgeAttentionItem> dockgeAttentionRows(List<DockgeStack> stacks) {
+List<DockgeIdleGroup> dockgeIdleGroups(List<DockgeStack> stacks) {
   final stopped = <String>[];
   final inactive = <String>[];
   final unknown = <String>[];
@@ -221,7 +217,7 @@ List<DockgeAttentionItem> dockgeAttentionRows(List<DockgeStack> stacks) {
 
   return List.unmodifiable([
     if (stopped.isNotEmpty)
-      DockgeAttentionItem(
+      DockgeIdleGroup(
         tone: StatusTone.neutral,
         icon: Icons.stop_circle_outlined,
         headline: stopped.length == 1
@@ -235,7 +231,7 @@ List<DockgeAttentionItem> dockgeAttentionRows(List<DockgeStack> stacks) {
         ]),
       ),
     if (inactive.isNotEmpty)
-      DockgeAttentionItem(
+      DockgeIdleGroup(
         tone: StatusTone.neutral,
         icon: Icons.pause_circle_outline_rounded,
         headline: inactive.length == 1
@@ -249,7 +245,7 @@ List<DockgeAttentionItem> dockgeAttentionRows(List<DockgeStack> stacks) {
         ]),
       ),
     if (unknown.isNotEmpty)
-      DockgeAttentionItem(
+      DockgeIdleGroup(
         tone: StatusTone.neutral,
         icon: Icons.help_outline_rounded,
         headline: unknown.length == 1
@@ -284,14 +280,11 @@ class DockgeStackRow {
 
 /// What is up right now, by name.
 ///
-/// **Only the running stacks**, and nothing that appears in Needs attention
-/// above. The reasoning is qBittorrent's, which met the same problem: a preview
-/// draws five rows out of a list that can hold fifty, so a fault the preview
-/// can push off the bottom is a fault the page failed to report. Promoting the
-/// faults into their own region above fixes that — and then repeating them here
-/// would spend the preview's five slots re-delivering news the user has already
-/// read. The section header carries the full census, so nothing is hidden by
-/// the split; it is reported once, in the region that is about it.
+/// **Only the running stacks**: the others are summed by state in
+/// [dockgeIdleGroups], under them. A preview draws five rows out of a list
+/// that can hold fifty, so a stopped stack listed by name among the running
+/// could be pushed off the bottom; its group row cannot, and it names the
+/// stacks it counts.
 List<DockgeStackRow> dockgeRunningRows(
   List<DockgeStack> stacks, {
   int limit = dockgeStackPreviewLimit,
@@ -391,7 +384,7 @@ List<DockgeAgentRow> dockgeAgentRows(
 
 // ─── Providers ──────────────────────────────────────────────────────────────
 
-/// All four carry `retry: noProviderRetry`, and the reasoning is the framework's
+/// All three carry `retry: noProviderRetry`, and the reasoning is the framework's
 /// default, not the sources'.
 ///
 /// Omitting `retry:` is not "no retry": `ProviderContainer.defaultRetry` re-runs
@@ -400,38 +393,41 @@ List<DockgeAgentRow> dockgeAgentRows(
 /// `FutureProvider` whose whole body is `await ref.watch(<stream>.future)`, so a
 /// stream sitting on an `AsyncError` makes the fold *throw*, and the default
 /// policy then re-reads that same held error ten times, synchronously, with no
-/// round trip in between that could change the answer. Three providers deep,
-/// that is thirty pointless rebuilds and a pending timer any widget test
+/// round trip in between that could change the answer. Two providers deep,
+/// that is twenty pointless rebuilds and a pending timer any widget test
 /// reaching this page inherits.
 ///
 /// The sources do carry the recovery, and it is not a backoff: a live socket
 /// reconnects on its own, and the section's Retry invalidates
 /// [dockgeStackListProvider] itself rather than the fold — invalidating a fold
 /// only re-reads the error the stream is still holding, and the stream, being
-/// watched by the other two folds, is never disposed and so never re-subscribes
+/// watched by the other fold, is never disposed and so never re-subscribes
 /// on its own. See `dockge_overview_screen.dart`.
 ///
 /// The screen still checks `isServiceConfigured` before any of this is watched,
 /// because *that* condition no waiting changes.
 
-/// The census, folded once for both headers.
+/// The census, folded once for the Stacks header.
 final dockgeOverviewCensusProvider =
     FutureProvider.autoDispose<DockgeStackCensus>((ref) async {
       return dockgeStackCensus(await ref.watch(dockgeStackListProvider.future));
     }, retry: noProviderRetry);
 
-/// Everything that is not running, faults first.
-final dockgeOverviewAttentionProvider =
-    FutureProvider.autoDispose<List<DockgeAttentionItem>>((ref) async {
-      return dockgeAttentionRows(
-        await ref.watch(dockgeStackListProvider.future),
-      );
-    }, retry: noProviderRetry);
+/// What the Stacks section draws: the running stacks by name, then the rest
+/// summed by state.
+typedef DockgeStacksPreview = ({
+  List<DockgeStackRow> running,
+  List<DockgeIdleGroup> idle,
+});
 
-/// What is up, by name.
-final dockgeOverviewRunningProvider =
-    FutureProvider.autoDispose<List<DockgeStackRow>>((ref) async {
-      return dockgeRunningRows(await ref.watch(dockgeStackListProvider.future));
+/// The running stacks, then the others by state.
+final dockgeOverviewStacksProvider =
+    FutureProvider.autoDispose<DockgeStacksPreview>((ref) async {
+      final stacks = await ref.watch(dockgeStackListProvider.future);
+      return (
+        running: dockgeRunningRows(stacks),
+        idle: dockgeIdleGroups(stacks),
+      );
     }, retry: noProviderRetry);
 
 /// The instances, with the selected one marked.
