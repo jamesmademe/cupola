@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -281,6 +283,22 @@ void main() {
     expect(at.path, ServiceRoutes.activityDownloadPath);
     expect(at.queryParameters['i'], WorldIds.sonarr);
     expect(at.queryParameters['id'], isNotEmpty);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a requester never sees the downloads of a title: the queue is '
+      'the operator\'s', (tester) async {
+    final harness = await _pump(
+      tester,
+      Profiles.p1,
+      WorldTitles.cosmosLaundromat,
+      key: MediaKey.tv(WorldTitles.cosmosLaundromat.tmdbId),
+      overrides: [audienceProvider.overrideWithValue(Audience.requester)],
+    );
+
+    expect(find.byType(DownloadRow), findsNothing);
+    expect(find.textContaining('more in Activity'), findsNothing);
 
     await harness.unmount(tester);
   });

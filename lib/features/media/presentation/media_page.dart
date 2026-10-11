@@ -645,8 +645,12 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     // not answered, and nothing once it failed. The copy panel that leads
     // already speaks for its own download, so that one is not listed twice:
     // its panel opens it instead.
-    final queueRead = ref.watch(servicesQueueProvider);
-    final queued = queueRead.hasError
+    // The queue is the operator's: a requester reads none of the arrs, so it is
+    // not even asked.
+    final queueRead = audience == Audience.operator
+        ? ref.watch(servicesQueueProvider)
+        : null;
+    final queued = queueRead == null || queueRead.hasError
         ? const <ServiceQueueItem>[]
         : queueRead.value?.items ?? const <ServiceQueueItem>[];
     final panelCopy = lead is MediaLeadCopy
