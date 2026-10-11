@@ -18,9 +18,9 @@ One native app for your entire self-hosted media stack, and the box it runs on.<
 
 <br/>
 
-<img src="screenshots/services.png" width="240" alt="Services dashboard" />
-<img src="screenshots/seerr_media_detail.png" width="240" alt="Media detail" />
-<img src="screenshots/qbit.png" width="240" alt="Torrent queue" />
+<img src="screenshots/home.png" width="240" alt="Home: what is new on your server, what is coming up, and what needs you" />
+<img src="screenshots/trending.png" width="240" alt="Discover: what is trending this week" />
+<img src="screenshots/title.png" width="240" alt="A movie's page, with its ratings and the button that adds it to Radarr" />
 
 </div>
 
@@ -43,8 +43,12 @@ does.
 - **Built for home-lab reality.** Self-signed certificates, services behind a
   reverse proxy, boxes that are asleep or unreachable: all normal daily states,
   handled as such instead of as errors.
-- **One experience everywhere.** The same design language on iOS, Android and
-  macOS, adapted to each platform's ergonomics rather than reskinned per OS.
+- **It tells you what needs you.** A stuck download, a disk with errors, an
+  indexer that stopped watching for releases: Cupola says what happened in plain
+  words, once, and puts the way out on the same card.
+- **One experience everywhere.** Designed for the phone first, then the tablet and
+  the desktop window. The same design language on every platform, adapted to each
+  one's ergonomics rather than reskinned per OS.
 
 ## Contents
 
@@ -68,40 +72,31 @@ does.
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="screenshots/services.png" alt="Services" /><br/><sub><b>Services</b> · the whole stack at a glance</sub></td>
-    <td align="center" width="33%"><img src="screenshots/sonarr.png" alt="Sonarr" /><br/><sub><b>Sonarr</b> · per-service dashboard</sub></td>
-    <td align="center" width="33%"><img src="screenshots/activity.png" alt="Activity" /><br/><sub><b>Activity</b> · queue, history, blocklist</sub></td>
+    <td align="center" width="33%"><img src="screenshots/home.png" alt="Home" /><br/><sub><b>Home</b> · what is new, what is next, what needs you</sub></td>
+    <td align="center" width="33%"><img src="screenshots/discover.png" alt="Discover" /><br/><sub><b>Discover</b> · calendar, trending, every way in</sub></td>
+    <td align="center" width="33%"><img src="screenshots/title.png" alt="A movie's page" /><br/><sub><b>A title</b> · one page to decide and act</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/radarr_media_detail.png" alt="Media detail" /><br/><sub><b>Detail</b> · cinematic collapsing hero</sub></td>
-    <td align="center"><img src="screenshots/search.png" alt="Search" /><br/><sub><b>Search</b> · one query, every library</sub></td>
-    <td align="center"><img src="screenshots/settings.png" alt="Settings" /><br/><sub><b>Settings</b> · connections and theme</sub></td>
+    <td align="center"><img src="screenshots/activity.png" alt="Activity" /><br/><sub><b>Activity</b> · what went wrong, and the way out</sub></td>
+    <td align="center"><img src="screenshots/stack.png" alt="Stack" /><br/><sub><b>Stack</b> · every service at a glance</sub></td>
+    <td align="center"><img src="screenshots/sonarr.png" alt="Sonarr" /><br/><sub><b>Sonarr</b> · each service's own room</sub></td>
   </tr>
 </table>
 
 <details>
-<summary><b>More screenshots</b>: dark theme, Seerr, manual import, history</summary>
+<summary><b>More screenshots</b>: light theme, trending</summary>
 <br/>
 <table>
   <tr>
-    <td align="center" width="33%"><img src="screenshots/services_dark.png" alt="Services, dark" /><br/><sub>Services · dark</sub></td>
-    <td align="center" width="33%"><img src="screenshots/sonarr_dark.png" alt="Sonarr, dark" /><br/><sub>Sonarr · dark</sub></td>
-    <td align="center" width="33%"><img src="screenshots/search_dark.png" alt="Search, dark" /><br/><sub>Search · dark</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="screenshots/services_list.png" alt="Services list" /><br/><sub>Services · list layout</sub></td>
-    <td align="center"><img src="screenshots/seerr.png" alt="Seerr" /><br/><sub>Seerr · discover</sub></td>
-    <td align="center"><img src="screenshots/seerr_media_detail.png" alt="Seerr detail" /><br/><sub>Seerr · media detail</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="screenshots/history.png" alt="History" /><br/><sub>Activity · history</sub></td>
-    <td align="center"><img src="screenshots/manual_import.png" alt="Manual import" /><br/><sub>Manual import</sub></td>
-    <td align="center"><img src="screenshots/manual_import_dark.png" alt="Manual import, dark" /><br/><sub>Manual import · dark</sub></td>
+    <td align="center" width="33%"><img src="screenshots/home_light.png" alt="Home, light" /><br/><sub>Home · light</sub></td>
+    <td align="center" width="33%"><img src="screenshots/discover_light.png" alt="Discover, light" /><br/><sub>Discover · light</sub></td>
+    <td align="center" width="33%"><img src="screenshots/trending.png" alt="Trending" /><br/><sub>Discover · trending this week</sub></td>
   </tr>
 </table>
 </details>
 
 Light and dark are both first-class themes. Neither is an inverted afterthought.
+Every screenshot is the app running against real services, not a mock-up.
 
 ---
 
@@ -111,50 +106,51 @@ Configure only what you run: an unconfigured service simply stays out of the way
 
 Two columns are worth reading before you judge an integration:
 
-- **Control.** How far Cupola goes today: full read *and* write, or read-only for now.
+- **Control.** How far Cupola goes today: full read *and* write, or mostly reading.
 - **Tested.** Whether the integration has been exercised against a **real, running
   instance**, not just against fixtures. Every service has unit tests; that is a
   different claim. This column is deliberately conservative:
-  **✅ verified** end to end · **◐ partial**, where the main screens work but some
-  areas are unexercised · **○ untested**, written to the official API but never run
-  against a live instance. If you run one of the ones we could not test, a report
-  either way is the single most useful thing you can send us.
+  **✅ verified** end to end · **◐ partial**, where the screens have read a real
+  instance (or a faithful stand-in) but its actions have not been run against one ·
+  **○ untested**, written to the official API but never run against a live
+  instance. If you run one of the ones we could not test, a report either way is
+  the single most useful thing you can send us.
 
 ### Media
 
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
-| **Seerr** (Overseerr / Jellyseerr) | Discover trending movies and TV, unified search, rich detail pages, send requests, manage existing media | API key | Read + write | ✅ |
-| **Radarr** | Full movie library, status badges, auto and interactive search, monitoring, quality profiles, manual import, delete | API key | Read + write | ✅ |
+| **Seerr** (Overseerr / Jellyseerr) | Powers Discover: trending, calendar, genres, networks, studios, people, collections. Send, approve and decline requests, resolve issues, keep a watchlist. Household members sign in with their own account | API key, or a member's own sign-in (email, Jellyfin or Plex) | Read + write | ✅ |
+| **Radarr** | Full movie library, calendar, queue, wanted and history; auto and interactive search, monitoring, quality profiles, manual import, delete | API key | Read + write | ✅ |
 | **Sonarr** | Everything Radarr does, plus seasons and episodes with per-season / per-episode search | API key | Read + write | ✅ |
-| **Lidarr** | Everything Radarr does, plus per-artist album lists | API key | Read + write | ✅ |
-| **Bazarr** | Subtitle library, wanted episodes and movies, history, badge counters | API key | Read-only | ○ |
-| **Readarr** | Author overview, library KPIs, recent activity | API key | Read-only | ○ |
+| **Lidarr** | Everything Radarr does, plus an artist's page with every album and where it stands | API key | Read + write | ✅ |
+| **Bazarr** | Subtitle library, wanted episodes and movies, history, providers (and resetting their throttles) | API key | Mostly read | ◐ |
+| **Readarr** | Author pages with every book and where it stands; search, monitor, add and delete | API key | Read + write | ◐ |
 
 ### Downloads
 
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
 | **qBittorrent** | Live queue with filters, sorting and search; per-torrent Info / Files / Trackers / Actions; pause, resume, force-start, recheck, reannounce, speed limits, categories, tags, delete | User + password | Read + write | ✅ |
-| **Transmission** | Live queue and seeding view with the controls that act on both | User + password | Read + write | ○ |
+| **Transmission** | Live queue, labels and session settings; start, stop, verify, reannounce, reorder, add, delete, speed limits | User + password | Read + write | ✅ |
 | **Prowlarr** | Indexer overview and usage stats; add, edit, test, delete and bulk-manage indexers; push to connected apps; tags and app profiles | API key | Read + write | ✅ |
-| **SABnzbd** | Live queue and recent history | API key | Read-only | ◐ |
-| **NZBGet** | Live queue and recent history | User + password | Read-only | ○ |
+| **SABnzbd** | Live queue, history and servers; pause and resume one job or everything, add by URL, delete | API key | Read + write | ✅ |
+| **NZBGet** | Live queue, history, feeds and messages; pause and resume, add, delete | User + password | Read + write | ✅ |
 
 ### Stream
 
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
-| **Jellyfin** | Who is watching right now, transcode reasons, resume points, library browsing and item detail; stop a session | API key + user | Read + stop | ✅ |
-| **Plex** | The same session-first board, driven by Plex's own semantics; stop a session with a reason | Token | Read + stop | ○ |
+| **Jellyfin** | Who is watching right now, transcode reasons, resume points, libraries, users, devices and tasks; pause, stop or message a session | API key + viewer, or a user's own sign-in | Read + sessions | ✅ |
+| **Plex** | The same session-first board, driven by Plex's own semantics: libraries, on deck, devices, playlists; stop a session with a reason | Token | Read + stop | ○ |
 
 ### Infrastructure
 
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
-| **TrueNAS** | Full console: dashboard, pools and disks, datasets and snapshots, SMB/NFS shares, apps, virtualization, replication and periodic tasks, reporting, users and groups | API key | Read + write | ◐ |
+| **TrueNAS** | Full console: dashboard, pools and disks, datasets and snapshots, SMB/NFS shares, apps, virtualization, replication and periodic tasks, reporting, users and groups; a disk with errors offers the scrub that repairs it | API key | Read + write | ◐ |
 | **Dockge** | Compose stacks with live terminal output: start, stop, restart, update, down, and edit or deploy the compose file itself | User + password | Read + write | ✅ |
-| **Unraid** | Array status, disks, Docker containers | API key | Read-only | ○ |
+| **Unraid** | Array status, disks, shares, Docker containers, VMs and notifications; start and stop VMs, archive notifications | API key | Read + VMs | ○ |
 | **Nginx Proxy Manager** | What the box is fronting, what is broken, which certificates are about to lapse; enable/disable hosts, retarget a forward, renew a certificate | Email + password | Read + write | ◐ |
 
 ---
@@ -162,61 +158,71 @@ Two columns are worth reading before you judge an integration:
 ## Features
 
 <details open>
-<summary><b>Find something to watch</b></summary>
+<summary><b>Home: the evening at a glance</b></summary>
 <br/>
 
-Open the app, scroll the carousels, tap a poster. One page tells you the ratings, where
-it streams in your country, who is in it, what else belongs to the collection, and
-plays the trailer.
-
-Then act from that same page: add it to your library, send a request, pick a specific
-release yourself, or clear out something you no longer want. No hop to a second app.
+What arrived on your server, what airs or comes out next, what you were halfway
+through, and what needs you, on one page. Home is made of modules: keep the ones you
+want, in the order you want, and leave the rest out.
 
 </details>
 
 <details>
-<summary><b>Your library in your pocket</b></summary>
+<summary><b>Discover: find something to watch</b></summary>
 <br/>
 
-Every film, series and album you own, each with a glance-and-know badge: on disk,
-monitored, still downloading. Pull to refresh, type to filter.
+Trending this week, a calendar of what is coming, and every way in: genres, networks,
+studios, people, decades, moods and languages, plus the collections you have only
+part of. Type once and Seerr, Radarr, Sonarr, Jellyfin and Plex answer side by side,
+so "do I already have this?" is one search instead of five browser tabs.
 
-- Grab something new automatically, or open the release list and choose it yourself
+Tap a poster and one page tells you the ratings, who is in it, where it stands on
+your server, and plays the trailer. Then act from that same page: add it to your
+library, send a request, pick a specific release yourself, or clear out something you
+no longer want.
+
+</details>
+
+<details>
+<summary><b>Activity: what went wrong, and the way out</b></summary>
+<br/>
+
+*Needs you* gathers what the stack cannot fix by itself: a download stuck for days,
+imports waiting for a decision, a container that stopped, a disk reporting errors, an
+indexer that stopped watching for new releases. Each one says what happened in the
+app's own words, once, with the service's raw message one tap away, and leads with
+the remedy its cause names: try another download, look for peers again, review the
+import, start the container, scrub the pool.
+
+Downloads from all four clients sit in one list, moving first and stuck next, with
+stop and resume on every row. Requests and history are a tab away.
+
+</details>
+
+<details>
+<summary><b>Stack: every service in its own room</b></summary>
+<br/>
+
+The Stack shows the whole lab in bands (media, downloads, streaming, the box itself)
+and says which services are clean and which need a look. Each service opens on its
+own Overview, with its own tabs: Radarr's library, calendar, queue and wanted list;
+qBittorrent's queue with filters, sorting, categories, tags and speed limits;
+TrueNAS's full console.
+
+- Grab something automatically, or open the release list and choose it yourself
 - Flip monitoring, change quality profile, import files that landed in the wrong place
 - Delete properly, with a clear say over the files and over whether it can come back
 
 </details>
 
 <details>
-<summary><b>Downloads you can steer</b></summary>
+<summary><b>For the whole household</b></summary>
 <br/>
 
-The queue as it happens: speeds, ETAs and progress bars that move while you watch them.
-
-- One filter row for state, category, tag, tracker and free text
-- Sort by whatever matters right now: size, progress, ETA, speed, how long it has sat there
-- Pause, resume, force, recheck, cap the speed, retag, delete. Real actions, not links
-  back out to a web UI
-
-</details>
-
-<details>
-<summary><b>Activity: the control room</b></summary>
-<br/>
-
-What the stack has been up to, and what it has quietly failed to do. Queue, history and
-blocklist in one place, next to everything still missing or waiting for a better copy.
-Sonarr's wanted list is grouped the way you actually think about it, series then season
-then episode, with a search button on every row.
-
-</details>
-
-<details>
-<summary><b>One search for everything</b></summary>
-<br/>
-
-Type once, and Seerr, Radarr, Sonarr, Lidarr and Bazarr all answer side by side.
-"Do I already have this?" becomes one action instead of five browser tabs.
+Not everyone at home runs the stack. A household member signs in to Seerr with their
+own account (email, Jellyfin or Plex) and gets a simpler Cupola: Home, Discover and
+their requests, with no operator controls and none of the plumbing. Whatever the
+server would refuse their account is never offered as a button.
 
 </details>
 
@@ -226,13 +232,16 @@ Type once, and Seerr, Radarr, Sonarr, Lidarr and Bazarr all answer side by side.
 
 Cupola is a native app rather than a web UI in a shell, and it is meant to feel like one.
 
-- Posters that expand into a cinematic header and carry across screens as you navigate
-- Light and dark, both designed rather than inverted, each service keeping its own
-  accent color, with your system accent picked up where the platform offers one
-- A navigation bar you choose: the services you actually use get the tabs
+- An interface in ink and paper, where colour means something: green is done, amber is
+  a fault, red is unreachable, blue is waiting. Colour that means nothing is left out
+- Light and dark, both designed rather than inverted
 - Empty, broken and not-yet-configured screens that say something useful, in one voice
 - Reading at a large system font size? Everything grows with it. Nothing clips
+- VoiceOver and TalkBack: each row speaks one sentence instead of a pile of fragments
 - Buttons sized and spaced for thumbs, not for a mouse pointer
+- Designed for the phone first. On a tablet a title opens beside the list it came
+  from; on the desktop the window gets a navigation rail, a command palette and an
+  inspector
 
 </details>
 
@@ -243,13 +252,13 @@ Cupola is a native app rather than a web UI in a shell, and it is meant to feel 
 Interactive search is slow because your indexers are slow. Tap *Keep searching*, put the
 phone away, and the answer is waiting in Activity when you come back.
 
-On a phone that means the operating system runs the request for you — and to do that it
+On a phone that means the operating system runs the request for you, and to do that it
 writes the request down, API key included, until the search ends. Every app that works in
 the background pays this; no clever coding avoids it. So it ships **off**, and turning it
 on in **Settings → Background search** tells you the same thing in the same words. What
 Cupola does is keep the window narrow: a task expires after 11 minutes, finished records
 are cleared at every launch and the moment you switch the feature off, and on Android none
-of it is in a backup. On iOS one copy can ride along in a device backup — encrypt the
+of it is in a backup. On iOS one copy can ride along in a device backup: encrypt the
 backup, or use iCloud with Advanced Data Protection, and it is covered.
 
 On desktop the question never arises. Nothing suspends the app, so a search just keeps
@@ -271,7 +280,8 @@ running while Cupola is open.
 | **Android** | Supported | `.apk` |
 | **macOS** | Supported | `.dmg` |
 | **iOS** | Supported (sideload) | unsigned `.ipa` |
-| Linux / Windows / Web | Scaffolding only | build from source |
+| Windows / Linux | Builds, untested | build from source, on that system |
+| Web | Not a goal | none |
 
 <details>
 <summary><b>Android</b></summary>
@@ -308,11 +318,12 @@ a free Apple ID, **1 year** with a paid Apple Developer account.
 </details>
 
 <details>
-<summary><b>Linux, Windows, Web</b></summary>
+<summary><b>Windows, Linux</b></summary>
 <br/>
 
-The project scaffolding exists and the app builds, but we do not test or support these
-targets. Contributions that harden them are welcome.
+Both have a real runner with the desktop window, and `scripts/release.sh windows` or
+`linux` builds them, but only on that operating system, and we have not run either
+yet. If you do, a report either way helps. There is no web client, by design.
 
 </details>
 
@@ -327,8 +338,17 @@ base URL plus whatever it authenticates with (see the
 
 A few notes worth knowing up front:
 
+- **A guided first run.** On first launch Cupola walks you through the services you
+  run, one at a time, and skips the rest.
 - **Everything is optional.** Configure one service or all seventeen. Unconfigured
   services render a clear placeholder instead of an error, and never block a screen.
+- **More than one of each.** Two Radarrs (say, one for 4K) are two connections; the
+  app shows them together and lets you look at one at a time.
+- **Behind a gateway.** A connection can carry what a gateway in front of the service
+  asks for: a Cloudflare Access service token, a proxy password, or custom headers.
+  Cupola recognises a gateway's sign-in page instead of reading it as an empty answer.
+- **Household members** sign in to Seerr with their own account instead of the API
+  key, and get the household version of the app (see [Features](#features)).
 - **Test before you save.** Each connection can be verified in place, with a
   specific reason when it fails (wrong key, wrong host, TLS refused) rather than a
   generic failure.
@@ -354,7 +374,7 @@ data to go.
 - **One third party, for pictures only.** Poster, backdrop and cast artwork is
   fetched straight from TMDB's CDN (`image.tmdb.org`), because that is where your
   Seerr's metadata points. Those requests carry no credential and no identifier of
-  yours — but they are requests to a host that is not yours, and TMDB sees the IP
+  yours, but they are requests to a host that is not yours, and TMDB sees the IP
   they come from. Everything else, metadata included, comes from your own
   instances.
 - **Secrets stay on the device.** API keys, tokens and passwords go into
@@ -371,7 +391,7 @@ data to go.
   pin.
 - **Background search is opt-in.** Letting a search survive leaving the app means
   handing the request, API key and all, to the operating system for the length of the
-  task — so it is off until you turn it on, and the trade-off is written next to the
+  task, so it is off until you turn it on, and the trade-off is written next to the
   switch.
 
 The whole trust layer is one reviewable file: [`lib/core/network/cert_trust.dart`](lib/core/network/cert_trust.dart).
@@ -407,7 +427,8 @@ and deterministic by design: no network, no live instance. An opt-in end-to-end 
 runs against real services in Docker:
 
 ```bash
-docker compose -f docker-compose.e2e.yml up -d && flutter test --tags e2e
+docker compose -f docker-compose.e2e.yml up -d --wait
+flutter test --tags e2e --run-skipped
 ```
 
 ---
@@ -431,7 +452,7 @@ lib/
 
 | Concern | Choice |
 | --- | --- |
-| UI | Flutter + Material 3, bundled Bricolage Grotesque, Onest and Geist Mono, `DynamicColorBuilder` |
+| UI | Flutter + Material 3, a fixed palette and design tokens, bundled Bricolage Grotesque, Onest and Geist Mono |
 | State | Riverpod 3: `FutureProvider` for loads, `NotifierProvider` for persisted state |
 | Navigation | go_router; every detail route resolves from path params alone, so any screen is addressable by path (no URL scheme is registered yet, so nothing outside the app can open one) |
 | HTTP | Dio, shared `ApiClient` with `X-Api-Key` for the *arr family |
@@ -450,9 +471,10 @@ Two conventions worth calling out, because they shape most of the code:
 
 The service registry every layer reads from is
 [`lib/features/settings/domain/service_key.dart`](lib/features/settings/domain/service_key.dart);
-design tokens live in [`lib/core/theme.dart`](lib/core/theme.dart) and routing in
-[`lib/core/router.dart`](lib/core/router.dart). Conventions and PR expectations are
-written up in [CONTRIBUTING.md](CONTRIBUTING.md).
+the theme in [`lib/core/theme.dart`](lib/core/theme.dart) and routing in
+[`lib/core/router.dart`](lib/core/router.dart). The design system (tokens, the brand
+book and a rendered card for every widget) starts at [`design/README.md`](design/README.md).
+Conventions and PR expectations are written up in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -460,21 +482,21 @@ written up in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 We develop Cupola actively and run it on our own stacks every day. Everything on this
 page is implemented and running rather than planned. The badge at the top points at the
-latest published release, which trails `main` between tags — 1.0.0 is the first release
+latest published release, which trails `main` between tags. 1.0.0 is the first release
 of the Cupola line, and everything before it was published as Seekarr.
 
-- **17 services integrated.** **8 we have verified against real instances**, 3
-  partially, 6 written to the official API but not yet exercised live; 5 are read-only
-  for now. The [tables above](#supported-services) say which is which, per service.
-- **~240 test files** covering models, services, providers and widgets, offline by
-  default, with an opt-in Docker-backed end-to-end tier
-- **Known gap: screen readers.** Dynamic Type and contrast are handled; VoiceOver and
-  TalkBack coverage is real work in progress and we are closing it screen by screen.
-  New UI ships labeled.
+- **17 services integrated.** **11 we have verified against real instances**, 4
+  partially, 2 written to the official API but not yet exercised live. The
+  [tables above](#supported-services) say which is which, per service.
+- **About 730 test files** covering models, services, providers and widgets, offline
+  by default, with an opt-in Docker-backed end-to-end tier against real services
+- **Accessibility is part of the definition of done.** Dynamic Type, contrast, touch
+  targets and screen-reader labels are held by tests. If something reads badly with
+  VoiceOver or TalkBack, that is a bug: please report it.
 - **Explicit non-goals**, so nobody files them as bugs: no server or cloud component,
   no web client, no account layer, and no localization. English-only is a decision we
-  made, not a gap. Tablets keep working but are not a design target. CI does build for
-  web, but only as a compile check — the result is not a product and is not published.
+  made, not a gap. CI does build for web, but only as a compile check: the result is
+  not a product and is not published.
 
 ---
 
@@ -498,7 +520,7 @@ Setup notes, conventions and PR expectations: [**CONTRIBUTING.md**](CONTRIBUTING
 <br/>
 No. It talks straight to your instances over LAN, VPN or a reverse proxy. There is
 no Cupola backend, so there is nothing to sign up for and nothing reporting back to
-us. The only request that leaves your network is artwork from TMDB's image CDN —
+us. The only request that leaves your network is artwork from TMDB's image CDN:
 see [Security & privacy](#security--privacy).
 </details>
 
@@ -537,7 +559,8 @@ bug worth fixing).
 <details>
 <summary><b>Can I run it on Linux or Windows?</b></summary>
 <br/>
-You can build it, and it may well work, but we do not test or support either target.
+You can build it on that system, and it should work: both have the same desktop window
+as macOS. We have not run either yet, so a report is welcome.
 </details>
 
 <details>
@@ -576,9 +599,9 @@ Cupola was previously distributed under the MIT License. That license still cove
 copies obtained before the change, and its original notice is preserved in
 [LICENSE-MIT](LICENSE-MIT); see [NOTICE](NOTICE) for details.
 
-The bundled typefaces — [Bricolage Grotesque](https://github.com/ateliertriay/bricolage),
+The bundled typefaces, [Bricolage Grotesque](https://github.com/ateliertriay/bricolage),
 [Onest](https://github.com/googlefonts/onest) and
-[Geist Mono](https://github.com/vercel/geist-font) — are licensed separately
+[Geist Mono](https://github.com/vercel/geist-font), are licensed separately
 under the SIL Open Font License 1.1; each license text ships alongside its font
 in [assets/fonts/](assets/fonts/).
 
