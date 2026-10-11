@@ -94,6 +94,54 @@ const _nzbgetBroken = WorldDownload(
   size: _gb,
 );
 
+/// The one torrent qBittorrent lists: a magnet in [state] for three hours,
+/// with nothing received and no file list yet, as its in-flight item.
+Future<ServiceQueueItem> _magnetWaiting(String state) async {
+  final now = DateTime(2026, 10, 9, 20, 53);
+  final harness = await ProfileHarness.start(
+    Profiles.p1,
+    now: now,
+    overrides: [
+      stallClockProvider.overrideWith(
+        (ref) =>
+            () => now,
+      ),
+    ],
+  );
+  const hash = 'c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00';
+  final since =
+      now.subtract(const Duration(hours: 3)).millisecondsSinceEpoch ~/ 1000;
+  harness.network.on(
+    WorldIds.qbittorrent,
+    'GET',
+    '/api/v2/torrents/info',
+    (request) => NetworkReply.json([
+      {
+        'hash': hash,
+        'name': 'Sintel.Magnet',
+        'state': state,
+        'progress': 0,
+        'size': 0,
+        'total_size': 0,
+        'dlspeed': 0,
+        'upspeed': 0,
+        'eta': 8640000,
+        'category': '',
+        'tags': '',
+        'added_on': since,
+        'last_activity': since,
+        'num_complete': 0,
+        'num_seeds': 0,
+        'num_leechs': 0,
+        'tracker': '',
+      },
+    ]),
+  );
+  final container = harness.container(retry: (_, _) => null);
+  final inFlight = await container.read(servicesInFlightProvider.future);
+  return inFlight.faults.singleWhere((item) => item.id == hash);
+}
+
 Future<ProviderContainer> _start(ConfigProfile profile) async {
   final harness = await ProfileHarness.start(profile);
   return harness.container(retry: (_, _) => null);
@@ -286,6 +334,22 @@ void main() {
         inFlight.preview.map((item) => item.id),
         isNot(contains(_qbMissing.id)),
       );
+    });
+
+    test('a magnet still fetching its file list is a stall that says so, '
+        'not that nobody has the file', () async {
+      final magnet = await _magnetWaiting('metaDL');
+      expect(magnet.service, ServiceKey.qbittorrent);
+      expect(magnet.fault, InFlightFault.stalled);
+      expect(magnet.awaitingMetadata, isTrue);
+      expect(magnet.swarmSeeds, 0);
+    });
+
+    test('a magnet started by hand (forcedMetaDL) waits for its file list '
+        'the same way', () async {
+      final magnet = await _magnetWaiting('forcedMetaDL');
+      expect(magnet.fault, InFlightFault.stalled);
+      expect(magnet.awaitingMetadata, isTrue);
     });
 
     testWidgets('P1 on Home: the two broken torrents are rows of Downloads, '

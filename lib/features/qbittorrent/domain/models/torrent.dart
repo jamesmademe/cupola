@@ -52,7 +52,7 @@ enum TorrentState {
   static TorrentState fromString(String? state) {
     return switch (state) {
       'downloading' || 'forcedDL' => TorrentState.downloading,
-      'metaDL' => TorrentState.metaDownloading,
+      'metaDL' || 'forcedMetaDL' => TorrentState.metaDownloading,
       'uploading' || 'forcedUP' => TorrentState.seeding,
       'stalledUP' => TorrentState.seeding,
       'stalledDL' => TorrentState.stalled,

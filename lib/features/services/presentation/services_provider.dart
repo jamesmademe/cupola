@@ -40,6 +40,7 @@ import 'package:cupola/features/series/domain/sonarr_queue_snapshots.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -1456,6 +1457,7 @@ class ServiceQueueItem {
     this.fault,
     this.stalledSince,
     this.swarmSeeds,
+    this.awaitingMetadata = false,
     this.warning,
     this.clientRateBytesPerSecond,
     this.route,
@@ -1530,6 +1532,12 @@ class ServiceQueueItem {
   /// is reachable, so asking the trackers again can help, or nobody has it,
   /// and only another download can ([stuckRemedyFor]).
   final int? swarmSeeds;
+
+  /// Whether the client is still fetching a torrent's file list (qBittorrent's
+  /// `metaDL`, a magnet not yet resolved). Nobody has sent even that yet, so
+  /// [swarmSeeds] says nothing about this row: its stall is worded as such
+  /// ([stuckExplanation]). False on every other row.
+  final bool awaitingMetadata;
 
   /// The source's own message about this row, when there is one.
   final String? warning;
@@ -1629,6 +1637,7 @@ class ServiceQueueItem {
     fault: fault,
     stalledSince: stalledSince,
     swarmSeeds: swarmSeeds,
+    awaitingMetadata: awaitingMetadata,
     warning: warning,
     clientRateBytesPerSecond: clientRateBytesPerSecond,
     route: route,
@@ -2281,6 +2290,7 @@ ServiceQueueItem _joinedQueueItem(
     fault: fault,
     stalledSince: faultFromClient ? client.stalledSince : arr.stalledSince,
     swarmSeeds: client.swarmSeeds,
+    awaitingMetadata: client.awaitingMetadata,
     // A stall the client overruled takes the \*arr's message with it; one the
     // client confirms keeps it, the more telling of the two.
     warning: arrStallOverruled && fault != InFlightFault.stalled
@@ -2381,6 +2391,7 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
                 added: torrent.addedOn,
               ),
         swarmSeeds: torrent.swarmSeeds < 0 ? null : torrent.swarmSeeds,
+        awaitingMetadata: torrent.parsedState == TorrentState.metaDownloading,
         detail: joinDisplayParts([
           formatSpeed(torrent.dlSpeed),
           countedNoun(torrent.seeders, 'seed', 'seeds'),

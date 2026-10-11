@@ -123,8 +123,11 @@ String? idleWords(DateTime? since, {required DateTime now}) {
 /// `Nothing has arrived for 3 hours, and nobody sharing it has the whole file
 /// any more.` when qBittorrent counts no one with it; `…, though somebody
 /// sharing it has the whole file.` when it counts some; the time alone when
-/// no client counts. A failed download says why, in its client's words when
-/// it gave them.
+/// no client counts. A magnet still fetching its file list
+/// ([ServiceQueueItem.awaitingMetadata]) says, whatever the count, that
+/// nothing has come, not even the list of its files: nobody has sent that, so
+/// the count of whole copies says nothing. A failed download says why, in its
+/// client's words when it gave them.
 String stuckExplanation(ServiceQueueItem item, {required DateTime now}) {
   if (item.fault == InFlightFault.failed) {
     final reason = item.warning;
@@ -133,6 +136,11 @@ String stuckExplanation(ServiceQueueItem item, {required DateTime now}) {
         ' gave up on it.';
   }
   final idle = idleWords(item.stalledSince, now: now);
+  if (item.awaitingMetadata) {
+    return idle == null
+        ? 'Nothing is arriving, not even the list of its files.'
+        : 'Nothing has arrived for $idle, not even the list of its files.';
+  }
   final head = idle == null
       ? 'Nothing is arriving'
       : 'Nothing has arrived for $idle';

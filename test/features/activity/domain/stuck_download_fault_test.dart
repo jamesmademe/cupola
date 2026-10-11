@@ -27,6 +27,7 @@ ServiceQueueItem _stuck({
   int? doneBytes,
   String? warning,
   String? connectionName,
+  bool awaitingMetadata = false,
 }) => ServiceQueueItem(
   service: service,
   id: id,
@@ -41,6 +42,7 @@ ServiceQueueItem _stuck({
   doneBytes: doneBytes,
   warning: warning,
   connectionName: connectionName,
+  awaitingMetadata: awaitingMetadata,
 );
 
 void main() {
@@ -102,6 +104,34 @@ void main() {
       expect(
         stuckExplanation(_stuck(idle: null, swarmSeeds: null), now: _now),
         'Nothing is arriving.',
+      );
+    });
+
+    test('a magnet still fetching its file list has not got that far: '
+        'the count of whole copies says nothing about it', () {
+      expect(
+        stuckExplanation(
+          _stuck(awaitingMetadata: true, swarmSeeds: 0),
+          now: _now,
+        ),
+        'Nothing has arrived for 3 hours, not even the list of its files.',
+      );
+      expect(
+        stuckExplanation(
+          _stuck(awaitingMetadata: true, swarmSeeds: 2),
+          now: _now,
+        ),
+        'Nothing has arrived for 3 hours, not even the list of its files.',
+      );
+    });
+
+    test('an undated magnet still fetching its file list says so', () {
+      expect(
+        stuckExplanation(
+          _stuck(awaitingMetadata: true, idle: null, swarmSeeds: null),
+          now: _now,
+        ),
+        'Nothing is arriving, not even the list of its files.',
       );
     });
 

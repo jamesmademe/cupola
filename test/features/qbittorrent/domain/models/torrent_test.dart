@@ -30,6 +30,10 @@ void main() {
 
     test('parses meta, error and unknown states', () {
       expect(TorrentState.fromString('metaDL'), TorrentState.metaDownloading);
+      expect(
+        TorrentState.fromString('forcedMetaDL'),
+        TorrentState.metaDownloading,
+      );
       expect(TorrentState.fromString('error'), TorrentState.error);
       expect(TorrentState.fromString('missingFiles'), TorrentState.error);
       expect(TorrentState.fromString(null), TorrentState.unknown);
