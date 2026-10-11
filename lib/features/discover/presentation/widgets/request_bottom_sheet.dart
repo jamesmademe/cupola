@@ -44,6 +44,10 @@ class RequestBottomSheet extends ConsumerWidget {
   final SeerrRequestCopies copies;
   final VoidCallback onRequestComplete;
 
+  /// The other way to add the title, offered quietly at the foot: the arr
+  /// it can be added to straight away. Null when there is none.
+  final ({String label, VoidCallback onTap})? alternative;
+
   const RequestBottomSheet({
     super.key,
     required this.mediaId,
@@ -51,6 +55,7 @@ class RequestBottomSheet extends ConsumerWidget {
     this.copies = SeerrRequestCopies.both,
     required this.onRequestComplete,
     this.title,
+    this.alternative,
   });
 
   @override
@@ -183,6 +188,7 @@ class RequestBottomSheet extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<int>(
               key: ValueKey('request_server_${state.selectedServerId}'),
+              isExpanded: true,
               initialValue: state.selectedServerId,
               items: state.servers
                   .map(
@@ -204,6 +210,7 @@ class RequestBottomSheet extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<int>(
             key: ValueKey('request_profile_${state.selectedProfileId}'),
+            isExpanded: true,
             initialValue: state.selectedProfileId,
             items: state.profiles
                 .map(
@@ -225,6 +232,8 @@ class RequestBottomSheet extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String>(
               key: ValueKey('request_root_${state.selectedRootFolder}'),
+              // A long path ellipsizes in the field rather than overflowing it.
+              isExpanded: true,
               initialValue: state.selectedRootFolder,
               items: state.rootFolders
                   .map(
@@ -255,6 +264,18 @@ class RequestBottomSheet extends ConsumerWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Text('Submit request'),
+            ),
+          ),
+        ],
+        if (alternative case final other?) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Center(
+            child: TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                other.onTap();
+              },
+              child: Text(other.label),
             ),
           ),
         ],

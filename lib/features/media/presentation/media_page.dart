@@ -52,12 +52,15 @@ import 'package:cupola/features/media/domain/media_collection.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/seerr_request_words.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
+import 'package:cupola/features/discover/presentation/widgets/catalog_title_row.dart'
+    show seerrSendsToProvider;
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/media/domain/media_row_view.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
@@ -77,6 +80,7 @@ import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/media/presentation/media_manage_parts.dart';
 import 'package:cupola/features/media/presentation/media_manage_summaries.dart';
@@ -226,6 +230,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     MediaIdentity? identity,
     TitleLight? light, {
     List<MediaRow>? retry,
+    _Request? requestInstead,
   }) async {
     final tmdbId = mediaKey.tmdbId;
     // Sonarr knows a series by TVDB's id; TMDB's stands in without it.
@@ -250,6 +255,13 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       title: identity?.title ?? '',
       year: identity?.year,
       light: light,
+      alternative: requestInstead == null
+          ? null
+          : (
+              label: 'Request through Seerr instead',
+              onTap: () =>
+                  _request(requestInstead, identity, rows, light: light),
+            ),
     );
     if (added == null || !mounted) return;
     SnackBarHelper.success(context, 'Added to ${name(added)}');
@@ -335,8 +347,10 @@ class _MediaPageState extends ConsumerState<MediaPage> {
   void _request(
     _Request request,
     MediaIdentity? identity,
-    List<MediaRow> rows,
-  ) {
+    List<MediaRow> rows, {
+    TitleLight? light,
+    ServiceKey? addInstead,
+  }) {
     final tmdbId = mediaKey.tmdbId;
     if (tmdbId == null) return;
     AppBottomSheet.show<void>(
@@ -349,6 +363,13 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         mediaType: mediaKey.isMovie ? 'movie' : 'tv',
         copies: request.gate.copies,
         title: identity?.title,
+        alternative: addInstead == null
+            ? null
+            : (
+                label: 'Add to ${addInstead.title} instead',
+                onTap: () =>
+                    _add(MediaLeadAdd(addInstead), rows, identity, light),
+              ),
         onRequestComplete: () {
           if (!mounted) return;
           SnackBarHelper.success(context, 'Request submitted');
@@ -525,7 +546,50 @@ class _MediaPageState extends ConsumerState<MediaPage> {
             ServiceKey.sonarr,
           }.contains(row.service),
     );
-    final lead = resolveMediaLead(rows, audience: audience, focus: focus);
+    // The operator's choice of how a title nobody holds is added, and whether
+    // the Seerr that answered may take the request for it now. Read for the
+    // operator only, and only once a Seerr has answered: until then the lead
+    // has nothing to wait on that Seerr could change.
+    final addsVia = audience == Audience.operator
+        ? ref.watch(operatorAddsViaProvider)
+        : OperatorAddsVia.seerr;
+    final seerrRows = rows
+        .whereType<MediaConnectionRow<MediaSeerrRecord>>()
+        .toList(growable: false);
+    final askable =
+        audience == Audience.operator &&
+        seerrRows.any((row) => row.reading is MediaReadingAnswered);
+    final seerrKind = mediaKey.isMovie
+        ? SeerrMediaKind.movie
+        : SeerrMediaKind.tv;
+    final seerrArr = mediaKey.isMovie ? ServiceKey.radarr : ServiceKey.sonarr;
+    final sendsTo = askable ? ref.watch(seerrSendsToProvider(seerrArr)) : null;
+    final mayAsk = {
+      for (final row in seerrRows)
+        row.connection.id:
+            ref
+                    .watch(roleGateProvider(row.connection.id))
+                    .requestAction(seerrKind)
+                is Live,
+    };
+    bool? Function(ServiceInstance seerr)? seerrMayRequest;
+    if (askable) {
+      seerrMayRequest = (seerr) {
+        if (!(mayAsk[seerr.id] ?? false)) return false;
+        return switch (sendsTo) {
+          AsyncData(value: final sends) => sends,
+          AsyncError() => false,
+          _ => null,
+        };
+      };
+    }
+    final lead = resolveMediaLead(
+      rows,
+      audience: audience,
+      focus: focus,
+      addsVia: addsVia,
+      seerrMayRequest: seerrMayRequest,
+    );
     // The requester reads the players' rows only, and none that says how to
     // set one up.
     final shown = [
@@ -574,6 +638,11 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           ),
     ];
     final request = lead is MediaLeadRequest ? _requestOf(lead, rows) : null;
+    // The request the add sheet may offer instead, read here, where the page
+    // watches Seerr.
+    final addRequest = lead is MediaLeadAdd && lead.alternative != null
+        ? _requestOf(MediaLeadRequest(lead.alternative!), rows)
+        : null;
     // A series: its seasons and episodes, and the next one to air.
     final seasons = mediaKey.isMovie
         ? const <MediaSeason>[]
@@ -737,12 +806,21 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               request: request,
               onRequest: request == null
                   ? null
-                  : () => _request(request, identity, rows),
+                  : () => _request(
+                      request,
+                      identity,
+                      rows,
+                      light: light,
+                      addInstead: lead is MediaLeadRequest
+                          ? lead.alternative
+                          : null,
+                    ),
               onWatch: request?.watch == null
                   ? null
                   : () => _watch(request!.watch!.url),
               onWatchAt: _watch,
-              onAdd: (lead) => _add(lead, rows, identity, light),
+              onAdd: (lead) =>
+                  _add(lead, rows, identity, light, requestInstead: addRequest),
               hasTrailer: identity?.videos.isNotEmpty ?? false,
               showManage: manage.isNotEmpty,
               primary: decisionLeads

@@ -11,6 +11,8 @@ import 'package:cupola/features/discover/domain/models/person_detail.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_title_row.dart';
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
+import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -91,6 +93,17 @@ Future<ProfileHarness> _person(
   ],
   surfaceSize: const Size(430, 1600),
 );
+
+/// The operator's choice of how a title nobody holds is added, fixed for a
+/// test: the plus on a row is the same choice the media page's lead reads.
+class _AddsVia extends OperatorAddsViaNotifier {
+  _AddsVia(this.via);
+
+  final OperatorAddsVia via;
+
+  @override
+  OperatorAddsVia build() => via;
+}
 
 void main() {
   group('PersonPage', () {
@@ -186,10 +199,17 @@ void main() {
       await harness.unmount(tester);
     });
 
-    testWidgets('P1: the plus to each arr, never on a title the server has', (
-      tester,
-    ) async {
-      final harness = await _person(tester, Profiles.p1);
+    testWidgets('P1, straight to the arr: the plus adds to each arr, never on '
+        'a title the server has', (tester) async {
+      final harness = await _person(
+        tester,
+        Profiles.p1,
+        overrides: [
+          operatorAddsViaProvider.overrideWith(
+            () => _AddsVia(OperatorAddsVia.arr),
+          ),
+        ],
+      );
 
       expect(find.text('1 of 3 on your server'), findsOneWidget);
       // Newest first.
@@ -211,6 +231,45 @@ void main() {
         findsNothing,
       );
       expect(find.text('Request'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P1, through Seerr by default: the plus asks Seerr for each '
+        'title, and never adds to the arr', (tester) async {
+      final harness = await _person(tester, Profiles.p1);
+
+      expect(
+        find.bySemanticsLabel(RegExp(r'^Request Dynamo Dream')),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp(r'^Request Project London')),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel(RegExp(r'^Add ')), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P1, through Seerr, but Seerr has no Radarr to send a movie '
+        'to: the plus adds it to Radarr', (tester) async {
+      final harness = await _person(
+        tester,
+        Profiles.p1,
+        overrides: [
+          seerrSendsToProvider.overrideWith((ref, arr) async => false),
+        ],
+      );
+
+      expect(
+        find.bySemanticsLabel(RegExp(r'^Add Project London to Radarr')),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp(r'^Request Project London')),
+        findsNothing,
+      );
 
       await harness.unmount(tester);
     });

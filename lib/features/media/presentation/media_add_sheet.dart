@@ -40,6 +40,7 @@ Future<ServiceInstance?> showMediaAddSheet(
   int? tvdbId,
   String? year,
   TitleLight? light,
+  ({String label, VoidCallback onTap})? alternative,
 }) {
   assert(connections.isNotEmpty, 'nothing to add to');
   return AppBottomSheet.show<ServiceInstance>(
@@ -56,6 +57,7 @@ Future<ServiceInstance?> showMediaAddSheet(
       connections: connections,
       name: name,
       light: light,
+      alternative: alternative,
     ),
   );
 }
@@ -70,6 +72,7 @@ class MediaAddSheet extends ConsumerStatefulWidget {
     required this.connections,
     required this.name,
     this.light,
+    this.alternative,
   }) : assert(
          arr == ServiceKey.radarr ? tmdbId != null : (tmdbId ?? tvdbId) != null,
          'nothing to look the title up by',
@@ -84,6 +87,10 @@ class MediaAddSheet extends ConsumerStatefulWidget {
   final List<ServiceInstance> connections;
   final String Function(ServiceInstance connection) name;
   final TitleLight? light;
+
+  /// The other way to add the title, offered quietly under the button: the
+  /// request through Seerr. Null when there is none.
+  final ({String label, VoidCallback onTap})? alternative;
 
   @override
   ConsumerState<MediaAddSheet> createState() => _MediaAddSheetState();
@@ -370,6 +377,18 @@ class _MediaAddSheetState extends ConsumerState<MediaAddSheet> {
             ],
           ),
         ),
+        if (widget.alternative case final alternative?) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Center(
+            child: TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                alternative.onTap();
+              },
+              child: Text(alternative.label),
+            ),
+          ),
+        ],
       ],
     );
   }

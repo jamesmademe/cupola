@@ -13,6 +13,7 @@ import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/domain/media_lead.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -184,6 +185,142 @@ void main() {
     });
   });
 
+  group('the operator adds a title nobody holds', () {
+    // A Radarr that holds nothing, answered; a Seerr that answered; and the
+    // preference, which defaults to Seerr.
+    MediaRow seerrAnswered() => _seerrRow();
+    MediaRow seerrWaiting() => MediaConnectionRow<MediaSeerrRecord>(
+      _seerr,
+      const MediaReadingWaiting(),
+    );
+    MediaRow seerrFailed() =>
+        MediaConnectionRow<MediaSeerrRecord>(_seerr, _silent());
+    List<MediaRow> rows(MediaRow seerr) => [
+      _copy(_radarr, _answered(_untracked)),
+      seerr,
+    ];
+
+    test(
+      'through Seerr by default: Request leads, and Radarr is the other way',
+      () {
+        final lead = resolveMediaLead(
+          rows(seerrAnswered()),
+          audience: Audience.operator,
+          seerrMayRequest: (_) => true,
+        );
+
+        expect(lead, isA<MediaLeadRequest>());
+        expect((lead as MediaLeadRequest).seerr.id, _seerr.id);
+        expect(lead.alternative, ServiceKey.radarr);
+      },
+    );
+
+    test('straight to the arr: Add leads, and Seerr is the other way', () {
+      final lead = resolveMediaLead(
+        rows(seerrAnswered()),
+        audience: Audience.operator,
+        addsVia: OperatorAddsVia.arr,
+        seerrMayRequest: (_) => true,
+      );
+
+      expect(lead, isA<MediaLeadAdd>());
+      expect((lead as MediaLeadAdd).arr, ServiceKey.radarr);
+      expect(lead.alternative?.id, _seerr.id);
+    });
+
+    test('through Seerr, but Seerr may not request this kind: Add leads, with '
+        'no other way offered', () {
+      final lead = resolveMediaLead(
+        rows(seerrAnswered()),
+        audience: Audience.operator,
+        seerrMayRequest: (_) => false,
+      );
+
+      expect(lead, isA<MediaLeadAdd>());
+      expect((lead as MediaLeadAdd).alternative, isNull);
+    });
+
+    test('straight to the arr, and Seerr may not request: no request is '
+        'offered either', () {
+      final lead = resolveMediaLead(
+        rows(seerrAnswered()),
+        audience: Audience.operator,
+        addsVia: OperatorAddsVia.arr,
+        seerrMayRequest: (_) => false,
+      );
+
+      expect((lead as MediaLeadAdd).alternative, isNull);
+    });
+
+    test('through Seerr, and Seerr is still deciding whether it may: the lead '
+        'holds, and does not flip to Add', () {
+      final lead = resolveMediaLead(
+        rows(seerrAnswered()),
+        audience: Audience.operator,
+        seerrMayRequest: (_) => null,
+      );
+
+      expect(lead, isA<MediaLeadWaiting>());
+    });
+
+    test('through Seerr, and Seerr has not answered: the lead waits', () {
+      final lead = resolveMediaLead(
+        rows(seerrWaiting()),
+        audience: Audience.operator,
+      );
+
+      expect(lead, isA<MediaLeadWaiting>());
+    });
+
+    test('straight to the arr, and Seerr has not answered: Add leads at once, '
+        'with no other way yet', () {
+      final lead = resolveMediaLead(
+        rows(seerrWaiting()),
+        audience: Audience.operator,
+        addsVia: OperatorAddsVia.arr,
+      );
+
+      expect(lead, isA<MediaLeadAdd>());
+      expect((lead as MediaLeadAdd).alternative, isNull);
+    });
+
+    test(
+      'through Seerr, and Seerr failed: Add leads, with no request offered',
+      () {
+        final lead = resolveMediaLead(
+          rows(seerrFailed()),
+          audience: Audience.operator,
+        );
+
+        expect(lead, isA<MediaLeadAdd>());
+        expect((lead as MediaLeadAdd).alternative, isNull);
+      },
+    );
+
+    test('no Seerr set up: Add leads, with no other way', () {
+      final lead = resolveMediaLead([
+        _copy(_radarr, _answered(_untracked)),
+      ], audience: Audience.operator);
+
+      expect(lead, isA<MediaLeadAdd>());
+      expect((lead as MediaLeadAdd).alternative, isNull);
+    });
+
+    test(
+      'the requester is unchanged by the preference: Request, no other way',
+      () {
+        final lead = resolveMediaLead(
+          [seerrAnswered()],
+          audience: Audience.requester,
+          addsVia: OperatorAddsVia.arr,
+        );
+
+        expect(lead, isA<MediaLeadRequest>());
+        expect((lead as MediaLeadRequest).alternative, isNull);
+      },
+    );
+  });
+
   group('the requester', () {
     test('a verified copy plays', () {
       final lead = resolveMediaLead([
@@ -227,10 +364,35 @@ void main() {
       expect((lead as MediaLeadPlay).server.id, WorldIds.jellyfin);
     });
 
-    test('P1, Charge, which no Radarr holds: Add to Radarr', () async {
+    test('P1, Charge, which no Radarr holds: through Seerr by default, so '
+        'Request leads, with Radarr the other way', () async {
       final lead = await leadOf(Profiles.p1, WorldTitles.charge);
 
+      expect((lead as MediaLeadRequest).seerr.id, WorldIds.seerr);
+      expect(lead.alternative, ServiceKey.radarr);
+    });
+
+    test('P1, Charge, straight to the arr: Add to Radarr, with Seerr the '
+        'other way', () async {
+      final harness = await ProfileHarness.start(Profiles.p1);
+      final container = harness.container();
+      final rows = mediaRowsProvider(MediaKey.movie(WorldTitles.charge.tmdbId));
+      container.listen(rows, (_, _) {});
+      // Add leads as soon as Radarr has answered; Seerr's way comes once it has.
+      MediaLead lead = const MediaLeadWaiting();
+      for (var turn = 0; turn < 200; turn++) {
+        lead = resolveMediaLead(
+          container.read(rows),
+          audience: Audience.operator,
+          addsVia: OperatorAddsVia.arr,
+          seerrMayRequest: (_) => true,
+        );
+        if (lead is MediaLeadAdd && lead.alternative != null) break;
+        await pumpEventQueue();
+      }
+
       expect((lead as MediaLeadAdd).arr, ServiceKey.radarr);
+      expect(lead.alternative?.id, WorldIds.seerr);
     });
 
     test('P7, Tears of Steel with Jellyfin silent: no Play', () async {

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
+import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
@@ -23,6 +25,8 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/release_search/presentation/widgets/search_headroom_card.dart';
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
+import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -821,6 +825,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             if (service.needsViewerSelection && isConfigured) ...[
               const SizedBox(height: AppSpacing.xxl),
               JellyfinViewerPicker(instanceId: _target.id),
+            ],
+            // How the operator adds a title nobody holds: Seerr's connection
+            // only, and the operator's own (the requester adds nothing).
+            if (service == ServiceKey.seerr &&
+                ref.watch(audienceProvider) == Audience.operator) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              _buildAddingChoice(),
             ],
             const SizedBox(height: AppSpacing.xxl),
             _buildConnectionsSection(context, settings),
@@ -1624,6 +1635,42 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     await ref.read(settingsProvider.notifier).updateSettings(updated);
     if (!mounted) return;
     SnackBarHelper.info(context, 'Certificate forgotten');
+  }
+
+  /// The operator's choice of how a title nobody holds is added: through
+  /// Seerr, which keeps the request, or straight to Radarr or Sonarr. One
+  /// choice per device.
+  Widget _buildAddingChoice() {
+    final choice = ref.watch(operatorAddsViaProvider);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SettingsSectionLabel('Adding a title'),
+        const SizedBox(height: AppSpacing.sm),
+        SelectionPills<OperatorAddsVia>.wrap(
+          values: OperatorAddsVia.values,
+          selected: choice,
+          labelBuilder: (value) => value.label,
+          onSelected: (value) =>
+              ref.read(operatorAddsViaProvider.notifier).set(value),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          switch (choice) {
+            OperatorAddsVia.seerr =>
+              'Requests go to Seerr, which approves them or waits for you, '
+                  'then hands them to Radarr or Sonarr.',
+            OperatorAddsVia.arr =>
+              'Titles go straight to Radarr or Sonarr, with no request in '
+                  'Seerr.',
+          },
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: CupolaThemeColors.of(context).dimText,
+          ),
+        ),
+      ],
+    );
   }
 
   /// Seerr's choice between the instance's API key and an account of one's

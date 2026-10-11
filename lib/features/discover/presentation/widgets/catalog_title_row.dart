@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
@@ -17,11 +18,13 @@ import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 import 'package:cupola/features/discover/presentation/widgets/search_row.dart';
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/media/presentation/media_add_sheet.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
+import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -142,12 +145,28 @@ class CatalogTitleRow extends ConsumerWidget {
       final where = connections.length == 1
           ? name(connections.single)
           : _arr.title;
-      action = libraries.every((l) => l.ids.hasValue)
-          ? SearchRowAdd(
+      final answered = libraries.every((l) => l.ids.hasValue);
+      // Through Seerr, the plus requests the title when Seerr has a server of
+      // this arr to send it to and this account may ask; otherwise it adds to
+      // the arr. Read only where a Seerr is set up, as the lead reads it. While
+      // Seerr is still asked, the plus waits rather than flipping from Add to
+      // Request once the answer comes.
+      final seerrChoice =
+          settings.configuredInstancesOf(ServiceKey.seerr).isNotEmpty &&
+          ref.watch(operatorAddsViaProvider) == OperatorAddsVia.seerr;
+      final sendsTo = seerrChoice
+          ? ref.watch(seerrSendsToProvider(_arr))
+          : null;
+      final mayAsk =
+          ref.watch(roleGateProvider('')).requestAction(kind) is Live;
+      action = !answered || (sendsTo?.isLoading ?? false)
+          ? null
+          : sendsTo?.value == true && mayAsk
+          ? request()
+          : SearchRowAdd(
               label: 'Add ${media.title} to $where',
               onTap: () => _add(context, ref, connections, name),
-            )
-          : null;
+            );
     } else {
       action = switch (ref.watch(seerrSendsToProvider(_arr))) {
         AsyncData(value: true) => request(),

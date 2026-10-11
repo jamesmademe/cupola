@@ -17,6 +17,7 @@ import 'package:cupola/core/widgets/file_info_section.dart';
 import 'package:cupola/core/widgets/machine_name.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
@@ -26,6 +27,7 @@ import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
@@ -57,6 +59,21 @@ Future<ProfileHarness> _pump(
   }
   return harness;
 }
+
+/// The operator's choice of how a title nobody holds is added, fixed for a
+/// test. The choice is kept on the device, so a test that is not about it
+/// fixes it here instead of reading whatever a launch left behind.
+class _AddsVia extends OperatorAddsViaNotifier {
+  _AddsVia(this.via);
+
+  final OperatorAddsVia via;
+
+  @override
+  OperatorAddsVia build() => via;
+}
+
+Override _addingVia(OperatorAddsVia via) =>
+    operatorAddsViaProvider.overrideWith(() => _AddsVia(via));
 
 /// Seerr knows [title] and nobody has asked for it: no media row.
 Override _unrequested(WorldTitle title) =>
@@ -368,13 +385,17 @@ void main() {
   testWidgets('Add opens on the Radarr, its profile, folder and indexers', (
     tester,
   ) async {
-    // P1 holds no Metropolis, and here nobody has asked for it: the first
-    // Radarr leads, and the sheet says what adding it there means.
+    // P1 holds no Metropolis, and here nobody has asked for it: with the
+    // operator adding straight to Radarr, the first Radarr leads, and the
+    // sheet says what adding it there means.
     final harness = await _pump(
       tester,
       Profiles.p1,
       WorldTitles.metropolis,
-      overrides: [_unrequested(WorldTitles.metropolis)],
+      overrides: [
+        _unrequested(WorldTitles.metropolis),
+        _addingVia(OperatorAddsVia.arr),
+      ],
     );
     final lead = find.widgetWithText(FilledButton, 'Add to Radarr');
     expect(lead, findsOneWidget);
@@ -418,6 +439,61 @@ void main() {
           .where((r) => r.method == 'GET' && r.uri.path == '/api/v3/movie'),
       hasLength(2),
     );
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('through Seerr by default, Request leads on a title no Radarr '
+      'holds, and its sheet offers Add to Radarr instead', (tester) async {
+    final harness = await _pump(
+      tester,
+      Profiles.p1,
+      WorldTitles.metropolis,
+      overrides: [_unrequested(WorldTitles.metropolis)],
+    );
+    expect(find.widgetWithText(FilledButton, 'Add to Radarr'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Request'));
+    await _answer(tester);
+    expect(find.text('Request Metropolis'), findsOneWidget);
+
+    // The other way, quiet at the foot of the request sheet: it closes this
+    // sheet and opens the add sheet on Radarr.
+    await tester.tap(find.widgetWithText(TextButton, 'Add to Radarr instead'));
+    await _answer(tester);
+    expect(find.text('Request Metropolis'), findsNothing);
+    expect(find.text('Metropolis · 1927'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Add and search'), findsOneWidget);
+    // One time only: the choice on the device is still Seerr.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MediaPage)),
+    );
+    expect(container.read(operatorAddsViaProvider), OperatorAddsVia.seerr);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('straight to the arr, Add leads and its sheet offers Request '
+      'through Seerr instead', (tester) async {
+    final harness = await _pump(
+      tester,
+      Profiles.p1,
+      WorldTitles.metropolis,
+      overrides: [
+        _unrequested(WorldTitles.metropolis),
+        _addingVia(OperatorAddsVia.arr),
+      ],
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Add to Radarr'));
+    await _answer(tester);
+    expect(find.text('Metropolis · 1927'), findsOneWidget);
+
+    await tester.tap(
+      find.widgetWithText(TextButton, 'Request through Seerr instead'),
+    );
+    await _answer(tester);
+    expect(find.text('Metropolis · 1927'), findsNothing);
+    expect(find.text('Request Metropolis'), findsOneWidget);
 
     await harness.unmount(tester);
   });
@@ -1207,6 +1283,7 @@ void main() {
         WorldTitles.agent327,
         key: MediaKey.tv(WorldTitles.agent327.tmdbId),
         height: 2400,
+        overrides: [_addingVia(OperatorAddsVia.arr)],
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Add to Sonarr'));
       await _answer(tester);

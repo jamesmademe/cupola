@@ -2,6 +2,7 @@ import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/media/domain/media_rows.dart';
 import 'package:cupola/features/media/domain/media_series.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -44,18 +45,28 @@ final class MediaLeadPlay extends MediaLead {
 /// The operator's arr is set up and none of its connections holds the title:
 /// add it.
 final class MediaLeadAdd extends MediaLead {
-  const MediaLeadAdd(this.arr);
+  const MediaLeadAdd(this.arr, {this.alternative});
 
   /// Radarr for a film, Sonarr for a series.
   final ServiceKey arr;
+
+  /// The other way the add sheet may offer: the operator's Seerr, which takes
+  /// the request instead. Null when there is no Seerr to ask, or when it may
+  /// not ask for this kind.
+  final ServiceInstance? alternative;
 }
 
 /// Ask for the title through [seerr]: the requester always, and an operator
-/// whose arr is not set up in Cupola while Seerr is (F-person-add).
+/// whose arr is not set up in Cupola while Seerr is (F-person-add), or who
+/// chose to go through Seerr.
 final class MediaLeadRequest extends MediaLead {
-  const MediaLeadRequest(this.seerr);
+  const MediaLeadRequest(this.seerr, {this.alternative});
 
   final ServiceInstance seerr;
+
+  /// The other way the request sheet may offer: the arr the operator can add
+  /// the title to straight away. Null when no arr is set up for the kind.
+  final ServiceKey? alternative;
 }
 
 /// A copy that needs something leads with its own action
@@ -95,16 +106,24 @@ final class MediaLeadNone extends MediaLead {
 ///
 /// In order: a verified copy on a media server plays (rule 7: an unverified
 /// one never does); the requester asks for anything else; the operator adds a
-/// title nobody holds, requests it through Seerr when no arr is set up, or
+/// title nobody holds, or asks for it through Seerr, as [addsVia] chooses, or
 /// follows the movie copy that needs something, [focus] first (the
 /// connection the page was opened from), or opens the title through Seerr's
-/// link where Cupola has no media server; then the trailer; then nothing. A connection that
-/// did not answer is never read as one that holds nothing: no Add while an arr
-/// is silent.
+/// link where Cupola has no media server; then the trailer; then nothing. A
+/// connection that did not answer is never read as one that holds nothing: no
+/// Add while an arr is silent.
+///
+/// [seerrMayRequest] says whether a Seerr that has answered can take a request
+/// for this title's kind now: its account may ask, and it has a server to send
+/// it to. Null while that is not known yet, which holds the lead when the
+/// operator goes through Seerr, so the lead does not flip to Add and back.
+/// Absent, every answered Seerr may request.
 MediaLead resolveMediaLead(
   List<MediaRow> rows, {
   required Audience audience,
   String? focus,
+  OperatorAddsVia addsVia = OperatorAddsVia.seerr,
+  bool? Function(ServiceInstance seerr)? seerrMayRequest,
 }) {
   final streams = rows.whereType<MediaConnectionRow<MediaStreamCopy>>();
   if (streams.any((row) => row.reading is MediaReadingWaiting)) {
@@ -155,7 +174,12 @@ MediaLead resolveMediaLead(
       (row) => row.reading is MediaReadingAnswered,
     );
     if (copies.isNotEmpty && allAnswered) {
-      return MediaLeadAdd(copies.first.service);
+      return _operatorAdds(
+        copies.first.service,
+        seerrs.firstOrNull,
+        addsVia: addsVia,
+        seerrMayRequest: seerrMayRequest,
+      );
     }
     if (copies.isEmpty && seerrs.isNotEmpty) {
       return MediaLeadRequest(seerrs.first.connection);
@@ -190,6 +214,42 @@ MediaLead resolveMediaLead(
     },
   );
   return trailer ? const MediaLeadTrailer() : const MediaLeadNone();
+}
+
+/// What the operator leads with on a title no arr connection holds, once every
+/// arr has answered: the request through Seerr, or the add to [arr].
+///
+/// Through Seerr, the lead waits for a Seerr that has not answered and for the
+/// answer on whether it may request, so it does not flip to Add and back. A
+/// Seerr that failed, or that may not request this kind, leads with the add.
+/// The other way is offered only where it can be used.
+MediaLead _operatorAdds(
+  ServiceKey arr,
+  MediaConnectionRow<MediaSeerrRecord>? seerr, {
+  required OperatorAddsVia addsVia,
+  required bool? Function(ServiceInstance seerr)? seerrMayRequest,
+}) {
+  if (seerr == null) return MediaLeadAdd(arr);
+  final reading = seerr.reading;
+  if (reading is MediaReadingAnswered) {
+    final may = seerrMayRequest == null
+        ? true
+        : seerrMayRequest(seerr.connection);
+    if (addsVia == OperatorAddsVia.seerr) {
+      if (may == null) return const MediaLeadWaiting();
+      if (may) return MediaLeadRequest(seerr.connection, alternative: arr);
+    }
+    return MediaLeadAdd(
+      arr,
+      alternative: may == true ? seerr.connection : null,
+    );
+  }
+  if (reading is MediaReadingWaiting) {
+    return addsVia == OperatorAddsVia.seerr
+        ? const MediaLeadWaiting()
+        : MediaLeadAdd(arr);
+  }
+  return MediaLeadAdd(arr);
 }
 
 /// The status of the copy [row] answered with, null while it is not tracked

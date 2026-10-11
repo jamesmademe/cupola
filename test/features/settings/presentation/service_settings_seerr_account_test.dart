@@ -10,8 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/platform/browser_opener.dart';
 import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
+import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -100,6 +102,47 @@ Iterable<String> _authRoutes(ProfileHarness harness) => harness.network
     .map((r) => '${r.method} ${r.path}');
 
 void main() {
+  testWidgets('the operator chooses how a title is added, and the choice is '
+      'kept on the device', (tester) async {
+    final (harness, container, _) = await _pumpForm(tester, Profiles.p1);
+
+    expect(find.text('Adding a title'), findsOneWidget);
+    expect(find.text('Through Seerr'), findsOneWidget);
+    expect(find.text('Straight to Radarr and Sonarr'), findsOneWidget);
+    // Through Seerr at first, and the line says what that means.
+    expect(
+      find.text(
+        'Requests go to Seerr, which approves them or waits for you, then '
+        'hands them to Radarr or Sonarr.',
+      ),
+      findsOneWidget,
+    );
+    expect(container.read(operatorAddsViaProvider), OperatorAddsVia.seerr);
+
+    await _tap(tester, harness, find.text('Straight to Radarr and Sonarr'));
+    expect(container.read(operatorAddsViaProvider), OperatorAddsVia.arr);
+    expect(
+      find.text(
+        'Titles go straight to Radarr or Sonarr, with no request in Seerr.',
+      ),
+      findsOneWidget,
+    );
+    // Written to the device, so the next launch starts from it.
+    expect(
+      container.read(sharedPreferencesProvider).getString('operator_adds_via'),
+      'arr',
+    );
+  });
+
+  testWidgets('a requester is offered no choice of how a title is added', (
+    tester,
+  ) async {
+    final (_, _, _) = await _pumpForm(tester, Profiles.p2);
+
+    expect(find.text('Adding a title'), findsNothing);
+    expect(find.text('Straight to Radarr and Sonarr'), findsNothing);
+  });
+
   testWidgets('a signed-in account says who, and signs out', (tester) async {
     final (harness, container, _) = await _pumpForm(tester, Profiles.p2);
     final session = harness.network.seerrSessionOf(WorldIds.seerr);
