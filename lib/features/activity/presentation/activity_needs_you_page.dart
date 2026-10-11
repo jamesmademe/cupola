@@ -82,7 +82,9 @@ class _ActivityNeedsYouPageState extends ConsumerState<ActivityNeedsYouPage> {
         onRefresh: () => refreshActivity(ref, ActivityTab.all),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+          padding: EdgeInsets.only(
+            bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
           children: [
             _Heading(
               faults: entries.length,

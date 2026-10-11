@@ -12,6 +12,7 @@ import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -59,7 +60,7 @@ class BazarrProvidersScreen extends ConsumerWidget {
             // included: nothing on this page takes the inset off first.
             topPadding + MediaQuery.paddingOf(context).top + AppSpacing.md,
             AppSpacing.lg,
-            AppSpacing.xxl,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
             SectionHeader(

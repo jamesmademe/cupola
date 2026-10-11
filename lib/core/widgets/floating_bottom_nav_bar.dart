@@ -121,13 +121,19 @@ class FloatingNavBarMetrics {
   static double totalHeightFor(BuildContext context) =>
       barHeightFor(context) + topPadding + bottomPadding;
 
-  /// Returns the bottom padding needed for scroll views to allow content
-  /// to scroll above the floating nav bar.
+  /// The bottom padding a page's scroll view needs to end above the bar,
+  /// with [AppSpacing.lg] of air between its last row and the glass.
   ///
-  /// Includes the nav bar height, margins, and device safe area.
+  /// The shell lays every page under the bar with `Scaffold(extendBody:
+  /// true)`, and that Scaffold already hands its body the bar's height and the
+  /// home indicator in `MediaQuery.padding.bottom`: the bar is in it once, and
+  /// adding [totalHeightFor] again left every page a bar's height short of it
+  /// (74pt, measured on a phone, 11/10). A page pushed over the shell has no
+  /// bar, and the same reading gives it the home indicator alone.
+  /// `test/core/widgets/bar_clearance_sweep_test.dart` reads the pages.
   static double getScrollViewBottomPadding(BuildContext context) {
     // No bar, no clearance. A desktop window navigates from the rail and the
-    // deck, so reserving 70pt at the foot of every scroll view would leave one
+    // deck, so reserving room at the foot of every scroll view would leave one
     // dead strip along the bottom of all 73 screens — and this one helper is
     // where all of them ask, which is why the answer belongs here rather than
     // in 50 build methods.
@@ -137,9 +143,8 @@ class FloatingNavBarMetrics {
     // an unscoped `MediaQuery.of` subscribes every one of them to *any*
     // MediaQueryData change — including `viewInsets`, which animates every frame
     // the soft keyboard opens or closes. The padding aspect changes only on a
-    // real safe-area change (rotation, notch).
-    final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
-    return totalHeightFor(context) + bottomSafeArea;
+    // real safe-area change (rotation, notch) and when the bar comes or goes.
+    return MediaQuery.paddingOf(context).bottom + AppSpacing.lg;
   }
 }
 

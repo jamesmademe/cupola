@@ -305,35 +305,54 @@ void main() {
 
         for (final scale in const [1.0, 1.3, 3.0]) {
           late double padding;
-          late double barHeight;
+          // The shell's arrangement: the page laid out under the bar, which
+          // hands it its height through the Scaffold.
           await tester.pumpWidget(
             MaterialApp(
               home: MediaQuery(
-                data: MediaQueryData(textScaler: TextScaler.linear(scale)),
-                child: Builder(
-                  builder: (context) {
-                    padding = FloatingNavBarMetrics.getScrollViewBottomPadding(
-                      context,
-                    );
-                    barHeight = FloatingNavBarMetrics.barHeightFor(context);
-                    return const SizedBox.shrink();
-                  },
+                data: MediaQueryData(
+                  size: const Size(390, 844),
+                  padding: const EdgeInsets.only(bottom: 34),
+                  textScaler: TextScaler.linear(scale),
+                ),
+                child: Scaffold(
+                  extendBody: true,
+                  body: Builder(
+                    builder: (context) {
+                      padding =
+                          FloatingNavBarMetrics.getScrollViewBottomPadding(
+                            context,
+                          );
+                      return const SizedBox.expand();
+                    },
+                  ),
+                  bottomNavigationBar: FloatingBottomNavBar(
+                    selectedIndex: 0,
+                    onDestinationSelected: (_) {},
+                    destinations: const [
+                      FloatingNavDestination(
+                        icon: Icons.home_outlined,
+                        selectedIcon: Icons.home_rounded,
+                        label: 'Home',
+                      ),
+                      FloatingNavDestination(
+                        icon: Icons.search_rounded,
+                        selectedIcon: Icons.search_rounded,
+                        label: 'Discover',
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           );
 
-          // Content must always clear the bar plus its margins, otherwise the
-          // last list row hides underneath it.
-          expect(
-            padding,
-            greaterThanOrEqualTo(
-              barHeight +
-                  FloatingNavBarMetrics.topPadding +
-                  FloatingNavBarMetrics.bottomPadding,
-            ),
-            reason: 'scale $scale',
-          );
+          // Content must always clear the bar, its margins and the home
+          // indicator, or the last list row hides underneath it; and only
+          // once, or the page ends a bar's height short of it.
+          final bar = tester.getSize(find.byType(FloatingBottomNavBar)).height;
+          expect(padding, greaterThanOrEqualTo(bar), reason: 'scale $scale');
+          expect(padding, lessThan(bar + 32), reason: 'scale $scale');
         }
       });
     });

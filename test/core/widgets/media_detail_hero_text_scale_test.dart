@@ -164,8 +164,24 @@ void main() {
 
   testWidgets('loading skeleton clears the floating nav bar', (tester) async {
     usePhoneViewport(tester);
+    // What the shell's Scaffold hands a page under the bar: the bar's
+    // height and the home indicator, in the padding.
+    const underTheBar = 108.0;
     await tester.pumpWidget(
-      _wrap(const MediaDetailLoadingView(), textScale: 1),
+      _wrap(
+        Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              padding: const EdgeInsets.only(
+                top: _kTopPadding,
+                bottom: underTheBar,
+              ),
+            ),
+            child: const MediaDetailLoadingView(),
+          ),
+        ),
+        textScale: 1,
+      ),
     );
     await tester.pump();
 
@@ -179,8 +195,7 @@ void main() {
         .resolve(TextDirection.ltr);
 
     // The bar floats over the skeleton exactly as it floats over the loaded
-    // page: 60pt of bar plus its own insets, never a bare AppSpacing constant.
-    expect(padding.bottom, greaterThan(padding.top));
-    expect(padding.bottom, greaterThan(60));
+    // page: clear of it, never a bare AppSpacing constant.
+    expect(padding.bottom, greaterThanOrEqualTo(underTheBar));
   });
 }
