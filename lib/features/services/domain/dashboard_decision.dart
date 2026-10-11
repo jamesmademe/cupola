@@ -233,6 +233,7 @@ class DashboardDecision {
     this.remedy,
     this.downloadKeys = const [],
     this.subject,
+    this.members = const [],
   });
 
   final DecisionKind kind;
@@ -327,8 +328,17 @@ class DashboardDecision {
   final List<String> downloadKeys;
 
   /// What the fault is about inside its service, where a remedy needs it:
-  /// the disk a TrueNAS alert names (`sdd`), whose pool a scrub repairs.
+  /// the disk a TrueNAS alert names (`sdd`), whose pool a scrub repairs; the
+  /// check an \*arr's health names (`IndexerRssCheck`), which its words and
+  /// its folding go by.
   final String? subject;
+
+  /// The faults folded into this one, each on its own connection: the same
+  /// health check failing on Radarr, Sonarr and Lidarr is one fault, and
+  /// each member's control opens its own \*arr. Empty for a fault that
+  /// stands alone, and for a group [groupDecisions] folded, whose control is
+  /// the same for every member.
+  final List<DashboardDecision> members;
 
   bool get isFault => kind.isFault;
 

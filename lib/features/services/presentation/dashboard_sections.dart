@@ -293,7 +293,7 @@ class DecisionControl extends ConsumerWidget {
         resource: NpmResource.certificates.key,
         hint: npmCapabilityHint,
         blockedMessage: npmBlockedMessage(NpmResource.certificates),
-        onTap: () => _runDecision(context, ref, decision),
+        onTap: () => runDecision(context, ref, decision),
         builder: (context, onPressed, annotate) => _DecisionActionButton(
           label: label,
           onPressed: onPressed,
@@ -306,7 +306,7 @@ class DecisionControl extends ConsumerWidget {
     if (required == null) {
       return _DecisionActionButton(
         label: label,
-        onPressed: () => _runDecision(context, ref, decision),
+        onPressed: () => runDecision(context, ref, decision),
         fill: _fill,
       );
     }
@@ -319,7 +319,7 @@ class DecisionControl extends ConsumerWidget {
     return CrossServiceAction.builder(
       target: required,
       blockedMessage: decisionUnavailableToast(decision.kind, required),
-      onTap: () => _runDecision(context, ref, decision),
+      onTap: () => runDecision(context, ref, decision),
       builder: (context, onPressed, annotate) => _DecisionActionButton(
         label: label,
         onPressed: onPressed,
@@ -341,7 +341,7 @@ class DecisionControl extends ConsumerWidget {
 /// the Certificates tab, which owns renewal and its confirmation: the call
 /// reaches Let's Encrypt, and a renewal fired from a row on Home is one
 /// mis-tap from spending the account's rate limits.
-Future<void> _runDecision(
+Future<void> runDecision(
   BuildContext context,
   WidgetRef ref,
   DashboardDecision decision,

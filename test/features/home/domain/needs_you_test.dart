@@ -187,9 +187,16 @@ void main() {
       );
       expect(
         line(
-          decision(DecisionKind.serviceHealth, 'Missing root folder: /movies'),
+          DashboardDecision(
+            kind: DecisionKind.serviceHealth,
+            id: 'health',
+            service: ServiceKey.radarr,
+            title: 'No indexer is watching for new releases',
+            detail: 'Radarr, Sonarr and Lidarr',
+            occurredAt: null,
+          ),
         ),
-        'Radarr: Missing root folder: /movies',
+        'Radarr, Sonarr and Lidarr: No indexer is watching for new releases',
       );
     });
 

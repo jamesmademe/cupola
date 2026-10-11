@@ -27,8 +27,8 @@ void main() {
     expect(alerts.single.instanceId, WorldIds.truenas);
   });
 
-  test('an arr\'s health check at the error level, in its words; a warning '
-      'is not a fault', () async {
+  test('an arr\'s health check at the error level, in the app\'s words with '
+      'its own kept; a warning is not a fault', () async {
     final harness = await ProfileHarness.start(Profiles.p1);
     harness.network.on(
       WorldIds.radarr,
@@ -49,8 +49,37 @@ void main() {
     );
     final checks = await source(harness, DecisionSource.health);
     expect(checks.single.kind, DecisionKind.serviceHealth);
-    expect(checks.single.title, 'Missing root folder: /movies');
+    expect(checks.single.title, 'A library folder is missing');
+    expect(checks.single.reason, 'Missing root folder: /movies');
     expect(checks.single.service, ServiceKey.radarr);
+  });
+
+  test('the same check failing on three arrs is one fault', () async {
+    final harness = await ProfileHarness.start(Profiles.p1);
+    for (final (id, path, arr) in [
+      (WorldIds.radarr, '/api/v3/health', 'Radarr'),
+      (WorldIds.sonarr, '/api/v3/health', 'Sonarr'),
+      (WorldIds.lidarr, '/api/v1/health', 'Lidarr'),
+    ]) {
+      harness.network.on(
+        id,
+        'GET',
+        path,
+        (_) => NetworkReply.json([
+          {
+            'source': 'IndexerRssCheck',
+            'type': 'error',
+            'message':
+                'No indexers available with RSS sync enabled, $arr will not '
+                'grab new releases automatically',
+          },
+        ]),
+      );
+    }
+    final checks = await source(harness, DecisionSource.health);
+    expect(checks.single.title, 'No indexer is watching for new releases');
+    expect(checks.single.members, hasLength(3));
+    expect(checks.single.detail, endsWith(' and Lidarr'));
   });
 
   test('a connection that refused its key is a fault with the remedy its '

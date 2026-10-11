@@ -162,6 +162,12 @@ void main() {
         width: 390,
       ),
       CatalogScene(
+        'A health check failing on four arrs · one card in the app\'s words, '
+        'the arrs named, the first on the fill and the other three two a row',
+        (_) => ActivitySlab(children: [_health()]),
+        width: 390,
+      ),
+      CatalogScene(
         'Text at 200% · every line wraps, the buttons keep their target',
         (_) => ActivitySlab(children: [_stuck()]),
         width: 390,
@@ -194,6 +200,26 @@ void main() {
         platform: CatalogPlatform.desktop,
         textScale: catalogTextScale,
       ),
+    ],
+  );
+}
+
+/// The same health check on four \*arrs, as `DecisionFaultCard` builds it.
+FaultCard _health() {
+  return FaultCard(
+    headline: 'No indexer is watching for new releases',
+    explanation:
+        "New releases aren't grabbed on their own until an indexer has RSS "
+        'sync on.',
+    source: 'Radarr, Radarr 4K, Sonarr and Lidarr',
+    why:
+        'No indexers available with RSS sync enabled, Radarr will not grab '
+        'new releases automatically',
+    art: HomeRowArt.large(posterUrl: '', icon: ServiceKey.radarr.icon),
+    primary: const _Fill('Open in Radarr'),
+    secondary: [
+      for (final arr in ['Radarr 4K', 'Sonarr', 'Lidarr'])
+        (label: 'Open in $arr', onPressed: () {}, semanticLabel: null),
     ],
   );
 }

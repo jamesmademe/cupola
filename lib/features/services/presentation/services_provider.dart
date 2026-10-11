@@ -50,6 +50,7 @@ import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/services/presentation/kept_waiting_provider.dart';
+import 'package:cupola/features/services/domain/arr_health.dart';
 import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
@@ -3241,7 +3242,10 @@ final dashboardDecisionSourceProvider =
               ),
           ]);
           return (
-            decisions: [for (final read in reads) ...read.decisions],
+            // The same check failing on several \*arrs is one fault.
+            decisions: foldArrHealth([
+              for (final read in reads) ...read.decisions,
+            ]),
             coverage: SourceCoverage.merge([
               for (final read in reads) read.coverage,
             ]),
@@ -3573,9 +3577,10 @@ Future<List<DashboardDecision>> _storageAlertDecisions(
   ];
 }
 
-/// An \*arr's health checks at the error level, in its own words. A warning
-/// or a notice (an update out, an indexer slow to answer) is news for its own
-/// page, not a fault.
+/// An \*arr's health checks at the error level, in the app's words where it
+/// knows the check (`arr_health.dart`) and in the \*arr's own otherwise; its
+/// own stay behind Why?. A warning or a notice (an update out, an indexer slow
+/// to answer) is news for its own page, not a fault.
 Future<List<DashboardDecision>> _healthDecisions(
   Ref ref,
   _MergeConnection source,
@@ -3586,6 +3591,7 @@ Future<List<DashboardDecision>> _healthDecisions(
     _ => ref.watch(lidarrServiceForProvider(source.instanceId)),
   };
   final checks = await arr.getHealth();
+  final name = serviceWithConnection(source.service, source.name, joiner: ' ');
   return [
     for (final check in checks)
       if (check.isError && check.message.isNotEmpty)
@@ -3595,12 +3601,10 @@ Future<List<DashboardDecision>> _healthDecisions(
               'health-${source.service.routeParam}-${source.instanceId}-'
               '${check.source}-${check.message.hashCode}',
           service: source.service,
-          title: check.message,
-          detail: serviceWithConnection(
-            source.service,
-            source.name,
-            joiner: ' ',
-          ),
+          title: arrHealthWords(check.source)?.headline ?? check.message,
+          detail: name,
+          reason: check.message,
+          subject: check.source,
           // The \*arr does not date a check.
           occurredAt: null,
           route: ServiceRoutes.forService(source.service),

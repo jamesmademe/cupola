@@ -170,7 +170,9 @@ String needsYouLine(
     // Each of these titles is already a sentence: TrueNAS's alert in plain
     // words, the fault's headline, the \*arr's own check.
     DecisionKind.storageAlert || DecisionKind.connectionFault => title,
-    DecisionKind.serviceHealth => '${decision.service.title}: $title',
+    // Every \*arr the check fails on, with its connection: `Radarr, Sonarr
+    // and Lidarr: No indexer is watching for new releases`.
+    DecisionKind.serviceHealth => '${decision.detail}: $title',
     DecisionKind.failingIndexer => 'The $title indexer is failing',
     DecisionKind.stoppedStack => 'The $title stack stopped',
     DecisionKind.expiringCertificate => _certificateLine(

@@ -6,6 +6,7 @@ library;
 
 import 'package:cupola/features/activity/domain/stuck_download_fault.dart'
     show sentence;
+import 'package:cupola/features/services/domain/arr_health.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart'
@@ -69,12 +70,15 @@ FaultWords faultWordsOf(DashboardDecision decision) {
           ? null
           : sentence(why),
     ),
-    DecisionKind.connectionFault || DecisionKind.serviceHealth => (
+    DecisionKind.connectionFault => (
       headline: _withoutStop(decision.title),
       explanation: null,
       source: source,
       why: null,
     ),
+    // The app's words where it knows the check, and every \*arr it fails
+    // on under them; the \*arrs' own behind Why?.
+    DecisionKind.serviceHealth => _healthWords(decision),
     // The hostname, and its expiry with the service under it.
     DecisionKind.expiringCertificate ||
     DecisionKind.stalledDownload ||
@@ -100,8 +104,28 @@ String faultActionLabel(DashboardDecision decision) {
       decision.actionTarget.supportsManualImport) {
     return decision.count > 1 ? 'Review ${decision.count}' : 'Review';
   }
+  // Which \*arr, once the check fails on more than one.
+  if (decision.kind == DecisionKind.serviceHealth) {
+    return openHealthCheckLabel(decision.members.firstOrNull ?? decision);
+  }
   return label;
 }
+
+FaultWords _healthWords(DashboardDecision decision) {
+  final words = arrHealthWords(decision.subject ?? '');
+  final why = decision.reason?.trim();
+  return (
+    headline: _withoutStop(words?.headline ?? decision.title),
+    explanation: words?.explanation,
+    source: decision.detail,
+    why: words == null || why == null || why.isEmpty ? null : why,
+  );
+}
+
+/// The amber fill's label on a health check's card, and its other \*arrs'
+/// quieter ways out: `Open in Radarr 4K`.
+String openHealthCheckLabel(DashboardDecision decision) =>
+    'Open in ${decision.detail}';
 
 /// A headline is set large and ends without a full stop, as a title does.
 String _withoutStop(String text) {

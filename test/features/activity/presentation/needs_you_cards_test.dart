@@ -291,4 +291,59 @@ void main() {
     // downloads is read again here too.
     expect(homeDownloadsSources, contains(servicesQueueProvider));
   });
+
+  testWidgets('a health check failing on three arrs is one card in the app\'s '
+      'words, the first arr on the fill and the others behind', (tester) async {
+    final harness = await _pump(
+      tester,
+      script: (harness) {
+        for (final (id, path, arr) in [
+          (WorldIds.radarr, '/api/v3/health', 'Radarr'),
+          (WorldIds.sonarr, '/api/v3/health', 'Sonarr'),
+          (WorldIds.lidarr, '/api/v1/health', 'Lidarr'),
+        ]) {
+          harness.network.on(
+            id,
+            'GET',
+            path,
+            (_) => NetworkReply.json([
+              {
+                'source': 'IndexerRssCheck',
+                'type': 'error',
+                'message':
+                    'No indexers available with RSS sync enabled, $arr will '
+                    'not grab new releases automatically',
+              },
+            ]),
+          );
+        }
+      },
+    );
+
+    expect(
+      find.text('No indexer is watching for new releases'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        "New releases aren't grabbed on their own until an indexer has RSS "
+        'sync on.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining(RegExp(r'Sonarr and Lidarr$')), findsOneWidget);
+    // Their own words once, behind Why?: none of them is the headline.
+    expect(find.textContaining('No indexers available'), findsNothing);
+    expect(
+      find.ancestor(
+        of: find.textContaining(RegExp(r'^Open in Radarr')),
+        matching: find.byType(FilledButton),
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining(RegExp(r'^Open in Sonarr')), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^Open in Lidarr')), findsOneWidget);
+
+    await harness.unmount(tester);
+  });
 }

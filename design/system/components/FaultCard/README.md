@@ -1,6 +1,6 @@
 # FaultCard
 
-One fault in Needs you, with its way out on the card: a headline that is a sentence by an amber warning glyph, what it means, which service raised it, the service's own words behind Why?, the proof a download carries, and the remedy. `StuckDownloadCard` builds one for each stuck download, with its four ways out; `StorageAlertCard` one for a TrueNAS alert about a disk, with its pool's evidence and Scrub; `DecisionFaultCard` one for every other kind of fault, with the control the Home's row has.
+One fault in Needs you, with its way out on the card: a headline that is a sentence by an amber warning glyph, what it means, which service raised it, the service's own words behind Why?, the proof a download carries, and the remedy. `StuckDownloadCard` builds one for each stuck download, with its four ways out; `StorageAlertCard` one for a TrueNAS alert about a disk, with its pool's evidence and Scrub; `DecisionFaultCard` one for every other kind of fault, with the control the Home's row has. A health check failing on several \*arrs is one card (`foldArrHealth`): the app's words for the check (`arr_health.dart`), the \*arrs named once on the source line, their own messages behind Why?, the first \*arr on the fill and each other one a quieter way out (`Open in Sonarr`).
 
 Rendered from `lib/features/activity/presentation/widgets/fault_card.dart` (`FaultCard`, `FaultCard.whole`, `FaultCard.row`; and `RequestsWaitRow` from `needs_you_cards.dart`) by `test/design_catalog/fault_card_catalog_test.dart`. The words come from `lib/features/activity/domain/stuck_download_fault.dart` and `lib/features/activity/domain/fault_words.dart`, never from the widget.
 
@@ -15,7 +15,7 @@ Needs you on Activity's All, one card per fault inside the section's slab, divid
 - Explanation: `AppType.body` in `inkSecondary`. Source: `AppType.meta` in `inkTertiary` (`Sonarr`, `TrueNAS · pool tank`); a stuck download has none on All, its proof already names its route.
 - Why?: a 44pt text button in `inkSecondary` with a chevron; open, the service's words in `AppType.meta`.
 - Proof, for a download: the release in `AppType.mono` on one line that fades, then `Nothing for 3 h · Radarr → qBittorrent` in `AppType.meta`, then a 4pt bar in amber on `fillTrack` at how far it got. On the page, `evidence` adds a line per fact (`Pool tank · Healthy · 72%`).
-- Remedy: the one amber fill, full width (`remedyFillStyle`), what it does under it in `AppType.meta` (`Radarr drops this one (1.1 GB so far), won't pick it again, and looks for another.`), then at most two quieter ways out as `OutlinedButton`s side by side, each taking half.
+- Remedy: the one amber fill, full width (`remedyFillStyle`), what it does under it in `AppType.meta` (`Radarr drops this one (1.1 GB so far), won't pick it again, and looks for another.`), then the quieter ways out as `OutlinedButton`s two a row, each taking half; a last one alone takes the row.
 - Work the remedy started and that still runs (`running`) takes the fill's place, in blue since it is information and not a fault: `Scrubbing tank · 2% · about 9 h left` in `AppType.label`, a 4pt bar under it, the quieter ways out still beside it. The card reads it again every minute while it runs.
 - Once a way out was taken, the controls give way to a note in `AppType.label` (`Dropped · Radarr is looking for another download`), with `Undo` where it can be taken back (Keep waiting). The note stays where the card was until Activity is read again.
 
@@ -44,6 +44,7 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 - A group of blocked imports with its cause behind Why? and one way out.
 - Two cards after a way out: a note alone, and one with Undo.
 - A scrub that runs, in place of the fill, with Open alert beside it.
+- A health check failing on four \*arrs: one card, the \*arrs on the source line, the other three two a row.
 - `FaultCard.whole`: a storage alert with its evidence and Why? open.
 - Text at 200%.
 - The desktop: a stuck download in the page well.

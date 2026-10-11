@@ -75,6 +75,39 @@ void main() {
       expect(lights.silent, isEmpty);
     });
 
+    test('a health check folded across arrs is one fault, amber on each', () {
+      final lights = stackLightsOf(
+        services: [
+          for (final service in [
+            ServiceKey.radarr,
+            ServiceKey.sonarr,
+            ServiceKey.lidarr,
+          ])
+            (service: service, probes: [StackProbe.answered]),
+        ],
+        faults: [
+          DashboardDecision(
+            kind: DecisionKind.serviceHealth,
+            id: 'health-group',
+            service: ServiceKey.radarr,
+            title: 'No indexer is watching for new releases',
+            detail: 'Radarr, Sonarr and Lidarr',
+            occurredAt: null,
+            members: [
+              for (final service in [
+                ServiceKey.radarr,
+                ServiceKey.sonarr,
+                ServiceKey.lidarr,
+              ])
+                _fault(service, DecisionKind.serviceHealth),
+            ],
+          ),
+        ],
+      );
+      expect(lights.line, '3 of 3 answering · 1 fault');
+      expect(lights.faultLine, 'Faults: Radarr, Sonarr, Lidarr');
+    });
+
     test('a service that did not answer is out of the count, and named', () {
       final lights = stackLightsOf(
         services: [
