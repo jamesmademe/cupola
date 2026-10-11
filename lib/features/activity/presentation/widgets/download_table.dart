@@ -42,6 +42,10 @@ final _downloadSortProvider =
       _DownloadSortNotifier.new,
     );
 
+/// A row's key: its service, its connection and its id in the queue.
+String _rowKey(ServiceQueueItem item) =>
+    '${item.service}-${item.instanceId}-${item.id}';
+
 /// The Progress column: the figure, and the bar under it.
 const double _progressWidth = 150;
 const double _speedWidth = 84;
@@ -101,6 +105,12 @@ class _DownloadTableState extends ConsumerState<DownloadTable> {
   /// The rows whose Stop or Resume is on its way.
   final Set<String> _busy = {};
 
+  /// The row keys in the order they were drawn when a Stop or a Resume was
+  /// taken here. It stands while the pointer stays on the table, so the row
+  /// under the pointer keeps its place when the queue would move it; a sort
+  /// click or the pointer leaving the table ends it. Null when none stands.
+  List<String>? _heldOrder;
+
   @override
   Widget build(BuildContext context) {
     final compact = AppBreakpoints.isCompactDesktop(context);
@@ -108,42 +118,73 @@ class _DownloadTableState extends ConsumerState<DownloadTable> {
     // they join the line under the title, as in a compact window.
     final narrow = compact || MediaQuery.textScalerOf(context).scale(10) >= 13;
     final sort = widget._queued ? null : ref.watch(_downloadSortProvider);
-    final rows = sortDownloads(widget.items, sort);
+    final rows = _drawnOrder(sortDownloads(widget.items, sort));
     final selection = ref.watch(selectedDownloadProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (!widget._queued)
-          _Header(
-            compact: narrow,
-            sort: sort,
-            onSort: ref.read(_downloadSortProvider.notifier).sortBy,
-          ),
-        for (final (index, item) in rows.indexed)
-          _Row(
-            key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
-            item: item,
-            now: widget.now,
-            request: requestFor(item, widget.requests),
-            compact: narrow,
-            choosing: !compact,
-            queued: widget._queued,
-            divided: index > 0 || !widget._queued,
-            selected: !compact && isSelectedDownload(selection, item),
-            busy: _busy.contains(downloadPageKey(item)),
-            onClick: () => _click(item, compact: compact),
-            onFocused: () {
-              if (!compact) _choose(item);
-            },
-            onOpen: () => context.openDownload(item),
-            onLetGo: () => ref.read(selectedDownloadProvider.notifier).clear(),
-            onStop: canStopDownload(item) ? () => _stop(item) : null,
-            onRemove: hasArrRecord(item) && item.fault == null
-                ? () => _remove(item)
-                : null,
-          ),
-      ],
+    return MouseRegion(
+      onExit: (_) => _releaseOrder(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!widget._queued)
+            _Header(
+              compact: narrow,
+              sort: sort,
+              onSort: (column) {
+                _releaseOrder();
+                ref.read(_downloadSortProvider.notifier).sortBy(column);
+              },
+            ),
+          for (final (index, item) in rows.indexed)
+            _Row(
+              key: ValueKey(_rowKey(item)),
+              item: item,
+              now: widget.now,
+              request: requestFor(item, widget.requests),
+              compact: narrow,
+              choosing: !compact,
+              queued: widget._queued,
+              divided: index > 0 || !widget._queued,
+              selected: !compact && isSelectedDownload(selection, item),
+              busy: _busy.contains(downloadPageKey(item)),
+              onClick: () => _click(item, compact: compact),
+              onFocused: () {
+                if (!compact) _choose(item);
+              },
+              onOpen: () => context.openDownload(item),
+              onLetGo: () =>
+                  ref.read(selectedDownloadProvider.notifier).clear(),
+              onStop: canStopDownload(item) ? () => _stop(item) : null,
+              onRemove: hasArrRecord(item) && item.fault == null
+                  ? () => _remove(item)
+                  : null,
+            ),
+        ],
+      ),
     );
+  }
+
+  /// [sorted] in the order the table draws it: as it is, unless an order is
+  /// held. Held rows keep their places; a new row goes after them in its own
+  /// order; a row that left is dropped.
+  List<ServiceQueueItem> _drawnOrder(List<ServiceQueueItem> sorted) {
+    final held = _heldOrder;
+    if (held == null) return sorted;
+    final pending = {for (final item in sorted) _rowKey(item): item};
+    return [for (final key in held) ?pending.remove(key), ...pending.values];
+  }
+
+  /// Holds the order drawn now, for a Stop or a Resume taken on this table.
+  void _holdOrder() {
+    final sort = ref.read(_downloadSortProvider);
+    _heldOrder = [
+      for (final item in _drawnOrder(sortDownloads(widget.items, sort)))
+        _rowKey(item),
+    ];
+  }
+
+  void _releaseOrder() {
+    if (_heldOrder == null) return;
+    setState(() => _heldOrder = null);
   }
 
   /// A click: in a full window, chooses [item] for the inspector, and on the
@@ -175,7 +216,10 @@ class _DownloadTableState extends ConsumerState<DownloadTable> {
 
   Future<void> _stop(ServiceQueueItem item) async {
     final key = downloadPageKey(item);
-    setState(() => _busy.add(key));
+    setState(() {
+      _busy.add(key);
+      if (!widget._queued) _holdOrder();
+    });
     await stopDownload(context, ref, item, stop: !item.held);
     if (mounted) setState(() => _busy.remove(key));
   }

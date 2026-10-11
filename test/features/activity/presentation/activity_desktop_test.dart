@@ -4,9 +4,11 @@
 /// the page at once; and Needs you a line a fault, its remedy beside it.
 library;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,7 +18,9 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/activity/data/selected_download.dart';
 import 'package:cupola/features/activity/presentation/download_page.dart';
 import 'package:cupola/features/activity/presentation/widgets/download_table.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -30,6 +34,7 @@ Future<(ProfileHarness, GoRouter, ProviderContainer)> _app(
   WidgetTester tester, {
   Size size = const Size(1440, 900),
   String to = ServiceRoutes.activityDownloads,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -46,6 +51,7 @@ Future<(ProfileHarness, GoRouter, ProviderContainer)> _app(
         (ref) =>
             () => _now,
       ),
+      ...overrides,
     ],
   );
   harness.network.followFakeTime(tester.binding);
@@ -111,6 +117,71 @@ const _moving = [
   'Elephants Dream',
   'Cosmos Laundromat · S2 E5',
 ];
+
+/// The table's rows as the queue reads them first: three moving, and Cosmos
+/// S2 E5 stopped at the foot. Once resumed, the queue puts it first.
+const _stoppedTitle = 'Cosmos Laundromat · S2 E5';
+const _drawn = [
+  'Sprite Fright',
+  'Elephants Dream',
+  'Cosmos Laundromat · S2 E4',
+  _stoppedTitle,
+];
+
+ServiceQueueItem _download(
+  String title,
+  String id, {
+  required String hash,
+  bool held = false,
+}) => ServiceQueueItem(
+  service: ServiceKey.radarr,
+  id: id,
+  title: title,
+  progress: 0.5,
+  clientLabel: 'qBittorrent',
+  etaSeconds: 600,
+  rateBytesPerSecond: 4404019,
+  downloadId: hash,
+  clientService: ServiceKey.qbittorrent,
+  instanceId: WorldIds.radarr,
+  clientInstanceId: WorldIds.qbittorrent,
+  held: held,
+);
+
+List<ServiceQueueItem> _queue({required bool resumed}) {
+  final cosmos5 = _download(
+    _stoppedTitle,
+    '4',
+    hash: WorldDownloads.cosmosS02E05.id,
+    held: !resumed,
+  );
+  return [
+    if (resumed) cosmos5,
+    _download('Sprite Fright', '1', hash: WorldDownloads.spriteFright.id),
+    _download(
+      'Elephants Dream',
+      '2',
+      hash: 'b2e0c3d4e5f60718293a4b5c6d7e8f9012345790',
+    ),
+    _download(
+      'Cosmos Laundromat · S2 E4',
+      '3',
+      hash: WorldDownloads.cosmosS02E04.id,
+    ),
+    if (!resumed) cosmos5,
+  ];
+}
+
+/// The ⋯ of the row [title].
+Finder _moreOf(String title) => find.descendant(
+  of: find.ancestor(
+    of: _inTable(find.text(title)).first,
+    matching: find.byWidgetPredicate(
+      (widget) => widget.runtimeType.toString() == '_Row',
+    ),
+  ),
+  matching: find.byTooltip('More'),
+);
 
 void main() {
   testWidgets(
@@ -356,5 +427,97 @@ void main() {
       await _close(tester, harness, container);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+  testWidgets(
+    'a Resume keeps its row where the pointer found it while the pointer '
+    "stays on the table; the queue's order comes back once it leaves",
+    (tester) async {
+      var incoming = _queue(resumed: false);
+      final (harness, _, container) = await _app(
+        tester,
+        overrides: [
+          servicesQueueProvider.overrideWith(
+            (ref) async => (items: incoming, coverage: SourceCoverage.none),
+          ),
+        ],
+      );
+      expect(_order(tester, _drawn), _drawn);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(
+        tester.getCenter(_inTable(find.text(_stoppedTitle)).first),
+      );
+      await tester.pump();
+
+      // The queue now lists it first, as moving.
+      incoming = _queue(resumed: true);
+      await _tap(tester, _moreOf(_stoppedTitle));
+      await _tap(tester, find.text('Resume'));
+      expect(
+        harness.network
+            .requestsTo(WorldIds.qbittorrent)
+            .where(
+              (r) => r.method == 'POST' && r.path.endsWith('/torrents/start'),
+            ),
+        hasLength(1),
+      );
+      expect(_order(tester, _drawn), _drawn);
+
+      await mouse.moveTo(
+        tester.getTopLeft(find.byType(DownloadTable).first).translate(40, -4),
+      );
+      await tester.pump();
+      expect(_order(tester, _drawn), [
+        _stoppedTitle,
+        'Sprite Fright',
+        'Elephants Dream',
+        'Cosmos Laundromat · S2 E4',
+      ]);
+
+      await _close(tester, harness, container);
+    },
+    variant: _macOS,
+  );
+
+  testWidgets(
+    'a sort click lets a held order go: the sorted table is drawn',
+    (tester) async {
+      var incoming = _queue(resumed: false);
+      final (harness, _, container) = await _app(
+        tester,
+        overrides: [
+          servicesQueueProvider.overrideWith(
+            (ref) async => (items: incoming, coverage: SourceCoverage.none),
+          ),
+        ],
+      );
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(
+        tester.getCenter(_inTable(find.text(_stoppedTitle)).first),
+      );
+      await tester.pump();
+
+      incoming = _queue(resumed: true);
+      await _tap(tester, _moreOf(_stoppedTitle));
+      await _tap(tester, find.text('Resume'));
+      expect(_order(tester, _drawn), _drawn);
+
+      await _tap(tester, _inTable(find.text('Title')));
+      expect(_order(tester, _drawn), [
+        'Cosmos Laundromat · S2 E4',
+        _stoppedTitle,
+        'Elephants Dream',
+        'Sprite Fright',
+      ]);
+
+      await _close(tester, harness, container);
+    },
+    variant: _macOS,
   );
 }
