@@ -57,3 +57,43 @@ GlobalKey<NavigatorState> serviceBranchNavigatorKeyFor(
   ServiceKey service,
   ServiceTab tab,
 ) => _serviceBranchNavigatorKeys[service]![tab]!;
+
+/// The page on top of each tab's stack, watched for the shell: a tab tapped
+/// again at its root scrolls that page back to its top (`ShellScreen`).
+///
+/// Indexed by [NavTab.index], like [shellBranchNavigatorKeys], and handed to
+/// each branch with its key.
+final List<BranchTopRoute> shellBranchTopRoutes =
+    List<BranchTopRoute>.unmodifiable([
+      for (final _ in NavTab.values) BranchTopRoute(),
+    ]);
+
+/// The watcher of a branch's top page, by tab.
+BranchTopRoute branchTopRouteFor(NavTab tab) => shellBranchTopRoutes[tab.index];
+
+/// Follows the page on top of one navigator.
+class BranchTopRoute extends NavigatorObserver {
+  Route<dynamic>? _top;
+
+  /// The page on top, null before the branch has built one.
+  Route<dynamic>? get top => _top;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      _top = route;
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route == _top) _top = previousRoute;
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route == _top) _top = previousRoute;
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    if (oldRoute == _top) _top = newRoute;
+  }
+}

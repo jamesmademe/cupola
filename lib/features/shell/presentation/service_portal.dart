@@ -346,6 +346,8 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
       curve: Curves.easeOutCubic,
     );
     await Future<void>.delayed(const Duration(milliseconds: 140));
+    // The shell went away during the beat (a sign-out, the app closed).
+    if (_disposed) return;
     if (_engaged || _closing) return; // a real finger arrived mid-demo
     _runBarAnim(PortalPhysics.barSpringBack, Curves.elasticOut);
     _springTo(0, 0);
@@ -464,7 +466,10 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
     _barAnimTick = null;
   }
 
+  var _disposed = false;
+
   void dispose() {
+    _disposed = true;
     portal.removeListener(_onPortalTick);
     _blend.removeListener(_onBlendTick);
     portal.dispose();

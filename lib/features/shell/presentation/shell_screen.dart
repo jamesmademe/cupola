@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/features/media/presentation/media_split.dart';
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
@@ -457,6 +458,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
         return;
       }
 
+      // At the root and scrolled down: back to the top first, as a tap on
+      // the status bar does. Only a page already at its top reads again.
+      if (_scrollToTop(tab)) return;
+
       final section = _refreshSectionFor(tab);
       if (section != null) {
         ref.triggerNavigationRefresh(section);
@@ -474,6 +479,39 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // feedback. `goBranch`, not `go`: it restores the branch's own stack, which
     // is the entire point of the four navigators.
     widget.navigationShell.goBranch(index);
+  }
+
+  /// Scrolls the page on top of [tab] back to its top, and says whether it
+  /// had scrolled away from it.
+  ///
+  /// The page's list is its route's primary scroll view: every vertical list
+  /// on a phone adopts the route's `PrimaryScrollController` unless it brings
+  /// a controller of its own, which is how the status bar's tap finds it too.
+  /// So no page listens for the tap, and none can forget to.
+  bool _scrollToTop(NavTab tab) {
+    final route = branchTopRouteFor(tab).top;
+    final page = route is ModalRoute ? route.subtreeContext : null;
+    if (page == null || !page.mounted) return false;
+    final controller = PrimaryScrollController.maybeOf(page);
+    if (controller == null || !controller.hasClients) return false;
+    final away = [
+      for (final position in controller.positions)
+        if (position.pixels > position.minScrollExtent) position,
+    ];
+    if (away.isEmpty) return false;
+    final still = MediaQuery.disableAnimationsOf(page);
+    for (final position in away) {
+      if (still) {
+        position.jumpTo(position.minScrollExtent);
+      } else {
+        position.animateTo(
+          position.minScrollExtent,
+          duration: AppAnimation.durationMd,
+          curve: AppAnimation.standardCurve,
+        );
+      }
+    }
+    return true;
   }
 
   /// The screen reader's way into the Portal: an action on the Stack tab.

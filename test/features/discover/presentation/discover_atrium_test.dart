@@ -4,11 +4,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/domain/discover_index.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
@@ -162,8 +166,8 @@ void main() {
       expect(find.text('Coming soon'), findsNothing);
     });
 
-    testWidgets('a door opens its index in place, and the way back is the '
-        'lobby', (tester) async {
+    testWidgets('a door opens its index on a page of its own, and back is '
+        'the lobby', (tester) async {
       await _pumpAtrium(tester);
       await tester.pumpAndSettle();
 
@@ -174,8 +178,9 @@ void main() {
       expect(find.text('Netflix'), findsOneWidget);
       expect(find.text('Coming soon'), findsNothing);
 
-      // The row switches to another index without going back.
-      await tester.tap(find.text('Decades').first);
+      // The row switches to another index on the same page, and the title
+      // follows.
+      await tester.tap(find.text('Decades').last);
       await tester.pumpAndSettle();
       expect(
         find.text('Movies and series by the decade they came out'),
@@ -183,33 +188,55 @@ void main() {
       );
       expect(find.text('1990s'), findsOneWidget);
 
-      await tester.tap(find.bySemanticsLabel('Back to Discover'));
+      await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('Coming soon'), findsOneWidget);
+    });
+
+    testWidgets('the row keeps its order and brings the open index into view', (
+      tester,
+    ) async {
+      await _pumpAtrium(tester, size: const Size(390, 844));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Languages'));
+      await tester.pumpAndSettle();
+
+      // Trending still heads the row, scrolled off to bring Languages in.
+      final pills = [
+        for (final index in DiscoverIndex.values)
+          find.descendant(
+            of: find.byType(SelectionPills<DiscoverIndex>),
+            matching: find.text(index.label),
+          ),
+      ];
+      final lefts = [for (final pill in pills) tester.getTopLeft(pill).dx];
+      expect(lefts, orderedEquals([...lefts]..sort()));
+      final languages = tester.getRect(pills.last);
+      expect(languages.left, greaterThanOrEqualTo(0));
+      expect(languages.right, lessThanOrEqualTo(390));
     });
 
     testWidgets('the system back closes an index before it leaves the tab', (
       tester,
     ) async {
-      final container = await _pumpAtrium(tester);
+      await _pumpAtrium(tester);
       await tester.pumpAndSettle();
-      container.read(discoverIndexProvider.notifier).open(DiscoverIndex.moods);
+      await tester.tap(find.text('Moods'));
       await tester.pumpAndSettle();
       expect(find.text('Time travel'), findsOneWidget);
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 
-      expect(container.read(discoverIndexProvider), isNull);
       expect(find.text('Coming soon'), findsOneWidget);
     });
 
     testWidgets('the genres of either half, each a way into its page', (
       tester,
     ) async {
-      final container = await _pumpAtrium(tester);
+      await _pumpAtrium(tester);
       await tester.pumpAndSettle();
-      container.read(discoverIndexProvider.notifier).open(DiscoverIndex.genres);
+      await tester.tap(find.bySemanticsLabel(RegExp('^Genres')).first);
       await tester.pumpAndSettle();
 
       expect(find.bySemanticsLabel('Animation'), findsOneWidget);
@@ -345,14 +372,33 @@ Future<ProviderContainer> _pumpAtrium(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp(
+      child: MaterialApp.router(
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
             context,
           ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: const Scaffold(body: DiscoverAtrium()),
+        routerConfig: GoRouter(
+          initialLocation: ServiceRoutes.discover,
+          routes: [
+            GoRoute(
+              path: ServiceRoutes.discover,
+              builder: (context, state) =>
+                  const Scaffold(body: DiscoverAtrium()),
+              routes: [
+                GoRoute(
+                  path: 'browse/:index',
+                  builder: (context, state) => DiscoverIndexPage(
+                    index: DiscoverIndex.values.byName(
+                      state.pathParameters['index']!,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     ),
   );

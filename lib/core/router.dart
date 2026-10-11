@@ -46,6 +46,9 @@ import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/domain/discover_index.dart';
+import 'package:cupola/features/discover/presentation/discover_atrium.dart'
+    show DiscoverIndexPage;
 import 'package:cupola/features/discover/presentation/calendar_page.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
@@ -2924,6 +2927,19 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
     pageBuilder: (context, state) => _tabPage(state, const DiscoverPage()),
     routes: [
       _page('calendar', (state) => const CalendarPage()),
+      _page(
+        'browse/:index',
+        (state) => DiscoverIndexPage(
+          index: DiscoverIndex.values.byName(state.pathParameters['index']!),
+        ),
+        // An index this version does not have is the lobby.
+        redirect: (context, state) =>
+            DiscoverIndex.values.asNameMap().containsKey(
+              state.pathParameters['index'],
+            )
+            ? null
+            : ServiceRoutes.discover,
+      ),
       _catalogPage('all/:kind', CatalogBase.all),
       _catalogPage('trending', CatalogBase.trending),
       _catalogPage('upcoming/:kind', CatalogBase.upcoming),
@@ -3161,6 +3177,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           for (final tab in NavTab.values)
             StatefulShellBranch(
               navigatorKey: branchNavigatorKeyFor(tab),
+              observers: [branchTopRouteFor(tab)],
               routes: [
                 _branchRootFor(tab),
                 if (tab == NavTab.activity) ..._activityViews,

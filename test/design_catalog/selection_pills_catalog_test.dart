@@ -45,22 +45,26 @@ void main() {
         width: 280,
       ),
       CatalogScene(
-        'SelectionPills<int>(leading:) · a way back at the head of the row, '
-        'never one of the values; then the lone SelectionPill of a '
-        'catalogue page: a choice with its chevron, a toggle off and on',
+        'SelectionPills<int> · the chosen pill past the edge is brought into '
+        'view, the order kept; then the lone SelectionPill of a catalogue '
+        'page: a choice with its chevron, a toggle off and on',
         (_) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SelectionPills<int>(
-              values: const [0, 1, 2],
-              selected: 0,
-              labelBuilder: (i) => const ['Networks', 'Trending', 'Genres'][i],
+              values: const [0, 1, 2, 3, 4, 5, 6, 7],
+              selected: 6,
+              labelBuilder: (i) => const [
+                'Trending',
+                'Genres',
+                'Networks',
+                'Studios',
+                'People',
+                'Decades',
+                'Moods',
+                'Languages',
+              ][i],
               onSelected: (_) {},
-              leading: SelectionPill(
-                label: 'Discover',
-                selected: false,
-                onTap: () {},
-              ),
             ),
             Padding(
               padding: SelectionPills.gutter,

@@ -2,26 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
-import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/media_grid.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/features/discover/domain/catalog_curation.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/domain/discover_index.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
@@ -40,37 +42,6 @@ import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-
-/// The atrium's indexes, each a door of the lobby or a link under it.
-enum DiscoverIndex {
-  trending('Trending'),
-  genres('Genres'),
-  networks('Networks'),
-  studios('Studios'),
-  people('People'),
-  decades('Decades'),
-  moods('Moods'),
-  languages('Languages');
-
-  const DiscoverIndex(this.label);
-  final String label;
-}
-
-/// The index the atrium has open; null is the lobby. A provider rather than
-/// the page's own state so a second tap on the tab can close it.
-final discoverIndexProvider =
-    NotifierProvider<DiscoverIndexNotifier, DiscoverIndex?>(
-      DiscoverIndexNotifier.new,
-    );
-
-class DiscoverIndexNotifier extends Notifier<DiscoverIndex?> {
-  @override
-  DiscoverIndex? build() => null;
-
-  void open(DiscoverIndex index) => state = index;
-
-  void close() => state = null;
-}
 
 /// Seerr's catalogue at rest: what the Discover tab shows before anything is
 /// typed into its field. The tab decides whether Seerr is there to ask; this
@@ -110,34 +81,8 @@ class DiscoverAtrium extends ConsumerStatefulWidget {
 }
 
 class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
-  final _scroll = ScrollController();
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    // A door opened from halfway down the lobby opens its index at the top.
-    ref.listen(discoverIndexProvider, (previous, next) {
-      if (previous != next && _scroll.hasClients) _scroll.jumpTo(0);
-    });
-    // The tab tapped again is the top of the lobby.
-    ref.listen(navigationRefreshProvider(NavigationSection.discover), (_, _) {
-      if (!_scroll.hasClients) return;
-      if (MediaQuery.disableAnimationsOf(context)) {
-        _scroll.jumpTo(0);
-      } else {
-        _scroll.animateTo(
-          0,
-          duration: AppAnimation.durationMd,
-          curve: AppAnimation.standardCurve,
-        );
-      }
-    });
-    final open = ref.watch(discoverIndexProvider);
     final trending = ref.watch(atriumTrendingProvider);
     final failed = trending.hasError && !trending.isLoading;
 
@@ -148,7 +93,7 @@ class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
         const DiscoverCalendarBand(),
         _SeerrSilent(error: trending.error!),
       ];
-    } else if (open == null) {
+    } else {
       children = [
         const DiscoverCalendarBand(),
         const _Doors(),
@@ -167,9 +112,8 @@ class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
           sectionId: 'trending',
           items: trending,
           onRetry: () => ref.invalidate(atriumTrendingProvider),
-          onSeeAll: () => ref
-              .read(discoverIndexProvider.notifier)
-              .open(DiscoverIndex.trending),
+          onSeeAll: () =>
+              context.push(ServiceRoutes.discoverIndex(DiscoverIndex.trending)),
         ),
         DiscoverCarousel(
           title: 'Coming soon',
@@ -183,27 +127,19 @@ class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
           ),
         ),
       ];
-    } else {
-      children = [_IndexRail(open: open), _IndexBody(index: open)];
     }
 
-    return PopScope(
-      // Back from an index is the lobby, not the tab before this one.
-      canPop: open == null,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) ref.read(discoverIndexProvider.notifier).close();
-      },
-      child: RefreshIndicator(
-        onRefresh: () async => DiscoverAtrium.invalidate(ref),
-        child: ListView(
-          controller: _scroll,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(
-            top: AppSpacing.sm,
-            bottom: AppSpacing.xl + widget.bottomPadding,
-          ),
-          children: children,
+    // The route's primary list: the tab tapped again brings it back to the
+    // top (`ShellScreen`).
+    return RefreshIndicator(
+      onRefresh: () async => DiscoverAtrium.invalidate(ref),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          top: AppSpacing.sm,
+          bottom: widget.bottomPadding,
         ),
+        children: children,
       ),
     );
   }
@@ -385,7 +321,7 @@ class _Doors extends ConsumerWidget {
     MediaPreview? at(List<MediaPreview> list, int i) =>
         i < list.length ? list[i] : null;
     void open(DiscoverIndex index) =>
-        ref.read(discoverIndexProvider.notifier).open(index);
+        context.push(ServiceRoutes.discoverIndex(index));
 
     // Three to a row on a phone, all six on one row once the window is wide
     // enough (`_doorColumns`).
@@ -493,7 +429,7 @@ class _QuietLinks extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     Widget link(DiscoverIndex index) => _QuietLink(
       label: index.label,
-      onTap: () => ref.read(discoverIndexProvider.notifier).open(index),
+      onTap: () => context.push(ServiceRoutes.discoverIndex(index)),
     );
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -540,75 +476,57 @@ class _QuietLink extends StatelessWidget {
   }
 }
 
-/// The row over an open index: the way back, then the indexes, the open one
-/// first so it is never scrolled off the edge.
-class _IndexRail extends ConsumerWidget {
-  const _IndexRail({required this.open});
+/// An index of the atrium, on a page of its own: opened from a door of the
+/// lobby with the platform's push, and closed with its back and its swipe.
+///
+/// The row of pills switches between the indexes in place, in a fixed order:
+/// the open one is lit and brought into view, never moved to the head of the
+/// row (a pill that jumped to the front read as the row reshuffling, 11/10).
+/// The page's title follows the pill.
+class DiscoverIndexPage extends ConsumerStatefulWidget {
+  const DiscoverIndexPage({super.key, required this.index});
 
-  final DiscoverIndex open;
+  /// The index the page opens on.
+  final DiscoverIndex index;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(discoverIndexProvider.notifier);
-    return SelectionPills<DiscoverIndex>(
-      // A new index starts the row at its head, where the open one is.
-      key: ValueKey(open),
-      values: [open, ...DiscoverIndex.values.where((index) => index != open)],
-      selected: open,
-      labelBuilder: (index) => index.label,
-      onSelected: notifier.open,
-      leading: _BackPill(onTap: notifier.close),
-    );
-  }
+  ConsumerState<DiscoverIndexPage> createState() => _DiscoverIndexPageState();
 }
 
-/// `‹ Discover`: the lobby again.
-class _BackPill extends StatelessWidget {
-  const _BackPill({required this.onTap});
+class _DiscoverIndexPageState extends ConsumerState<DiscoverIndexPage> {
+  late DiscoverIndex _open = widget.index;
 
-  final VoidCallback onTap;
+  void _switch(DiscoverIndex index) {
+    if (index == _open) return;
+    setState(() => _open = index);
+    // A new index starts at its top.
+    final list = PrimaryScrollController.maybeOf(context);
+    if (list != null && list.hasClients) list.jumpTo(0);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return PressableScale(
-      onTap: onTap,
-      semanticLabel: 'Back to Discover',
-      excludeChildSemantics: true,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Center(
-          heightFactor: 1,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 36),
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.sm,
-              AppSpacing.sm,
-              AppSpacing.lg,
-              AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainer,
-              borderRadius: AppRadius.borderRadiusPill,
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.chevron_left_rounded,
-                  size: 18,
-                  color: colorScheme.onSurface,
-                ),
-                Text(
-                  'Discover',
-                  style: Theme.of(context).textTheme.labelMedium!
-                      .weight(FontWeight.w600)
-                      .copyWith(color: colorScheme.onSurface),
-                ),
-              ],
-            ),
+    return AmbientScaffold(
+      contentWellWidth: AppBreakpoints.contentWell,
+      appBar: GlassAppBar(title: Text(_open.label)),
+      body: RefreshIndicator(
+        onRefresh: () async => DiscoverAtrium.invalidate(ref),
+        child: ListView(
+          primary: true,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(
+            top: AppSpacing.sm,
+            bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
+          children: [
+            SelectionPills<DiscoverIndex>(
+              values: DiscoverIndex.values,
+              selected: _open,
+              labelBuilder: (index) => index.label,
+              onSelected: _switch,
+            ),
+            _IndexBody(index: _open),
+          ],
         ),
       ),
     );

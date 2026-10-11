@@ -91,15 +91,13 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
       context,
     );
 
-    // The tab again: a clean field, the keyboard put away and the atrium's
-    // lobby, whatever index was open.
+    // The tab again, at the top: a clean field and the keyboard put away.
     ref.listen<int>(navigationRefreshProvider(NavigationSection.discover), (
       previous,
       next,
     ) {
       ref.read(globalSearchQueryProvider.notifier).state = '';
       ref.read(globalSearchFieldVersionProvider.notifier).state++;
-      ref.read(discoverIndexProvider.notifier).close();
       _focus.unfocus();
     });
 

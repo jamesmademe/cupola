@@ -21,6 +21,7 @@ import 'package:cupola/features/discover/domain/models/collection_detail.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/discover/domain/discover_index.dart';
 import 'package:cupola/features/discover/presentation/discover_atrium.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
@@ -104,11 +105,7 @@ void main() {
       tester,
     ) async {
       Future<int> firstRow(Size size) async {
-        final container = await _atrium(tester, size);
-        container
-            .read(discoverIndexProvider.notifier)
-            .open(DiscoverIndex.moods);
-        await tester.pumpAndSettle();
+        await _atrium(tester, size, index: DiscoverIndex.moods);
         return _firstRow(tester);
       }
 
@@ -119,9 +116,7 @@ void main() {
 
     testWidgets('the people read at a page of one column\'s measure, under '
         'the line that says who they are', (tester) async {
-      final container = await _atrium(tester, _tablet);
-      container.read(discoverIndexProvider.notifier).open(DiscoverIndex.people);
-      await tester.pumpAndSettle();
+      await _atrium(tester, _tablet, index: DiscoverIndex.people);
 
       final row = tester.getRect(find.byType(SearchRow));
       expect(row.width, lessThanOrEqualTo(AppBreakpoints.readingWell));
@@ -329,7 +324,12 @@ Future<void> _onMac(Future<void> Function() body) async {
   }
 }
 
-Future<ProviderContainer> _atrium(WidgetTester tester, Size size) async {
+/// The atrium at [size], or the page of [index] when one is named.
+Future<ProviderContainer> _atrium(
+  WidgetTester tester,
+  Size size, {
+  DiscoverIndex? index,
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -367,7 +367,9 @@ Future<ProviderContainer> _atrium(WidgetTester tester, Size size) async {
       container: container,
       child: MaterialApp(
         theme: AppTheme.darkTheme(),
-        home: const Scaffold(body: DiscoverAtrium()),
+        home: index == null
+            ? const Scaffold(body: DiscoverAtrium())
+            : DiscoverIndexPage(index: index),
       ),
     ),
   );

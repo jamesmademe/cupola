@@ -1,4 +1,5 @@
 import 'package:cupola/features/discover/domain/catalog_query.dart';
+import 'package:cupola/features/discover/domain/discover_index.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
@@ -585,6 +586,10 @@ class ServiceRoutes {
   /// The calendar of everything the household's arrs date in the next
   /// thirty days, which the atrium's band opens.
   static const discoverCalendar = '$discover/calendar';
+
+  /// An index of the atrium, on its own page (`DiscoverIndexPage`).
+  static String discoverIndex(DiscoverIndex index) =>
+      '$discover/browse/${index.name}';
 
   /// ## The one page a title has
   ///

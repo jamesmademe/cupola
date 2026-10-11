@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -65,7 +67,6 @@ class SelectionPills<T> extends StatelessWidget {
     required this.labelBuilder,
     required this.onSelected,
     this.padding = gutter,
-    this.leading,
   }) : _wraps = false;
 
   /// The pills on as many lines as they need, with no row to scroll.
@@ -82,15 +83,9 @@ class SelectionPills<T> extends StatelessWidget {
     required this.labelBuilder,
     required this.onSelected,
   }) : padding = _wrapPadding,
-       leading = null,
        _wraps = true;
 
   final bool _wraps;
-
-  /// A control that rides at the head of the scrolling row, before the
-  /// pills: the way back out of the choice (the atrium's `Discover` in front
-  /// of its indexes). Not one of the values, so never selected.
-  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -122,24 +117,89 @@ class SelectionPills<T> extends StatelessWidget {
       padding: padding,
       child: Row(
         children: [
-          if (leading case final leading?)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.sm),
-              child: leading,
-            ),
           for (final value in values)
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.sm),
-              child: SelectionPill(
-                label: labelBuilder(value),
+              child: _InView(
                 selected: value == selected,
-                onTap: () => onSelected(value),
+                child: SelectionPill(
+                  label: labelBuilder(value),
+                  selected: value == selected,
+                  onTap: () => onSelected(value),
+                ),
               ),
             ),
         ],
       ),
     );
   }
+}
+
+/// Keeps the chosen pill of a scrolling row in view, with the least scroll
+/// that shows it whole: at once when the row first draws with it past the
+/// edge, with the row's motion when it is chosen.
+///
+/// The row's order never changes for it. The atrium once moved the open index
+/// to the head of its row so it could not sit off the edge, and a row that
+/// reshuffled under the finger read as a different row (11/10).
+class _InView extends StatefulWidget {
+  const _InView({required this.selected, required this.child});
+
+  final bool selected;
+  final Widget child;
+
+  @override
+  State<_InView> createState() => _InViewState();
+}
+
+class _InViewState extends State<_InView> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selected) _revealAfterLayout(animate: false);
+  }
+
+  @override
+  void didUpdateWidget(_InView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selected && !oldWidget.selected) {
+      _revealAfterLayout(animate: true);
+    }
+  }
+
+  void _revealAfterLayout({required bool animate}) =>
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(animate));
+
+  void _reveal(bool animate) {
+    if (!mounted) return;
+    final pill = context.findRenderObject();
+    final position = Scrollable.maybeOf(context)?.position;
+    if (pill == null || position == null || !position.hasContentDimensions) {
+      return;
+    }
+    final viewport = RenderAbstractViewport.maybeOf(pill);
+    if (viewport == null) return;
+    // The offsets that put the pill at the row's end and at its start: any
+    // offset between the two shows it whole.
+    final atEnd = viewport.getOffsetToReveal(pill, 1).offset;
+    final atStart = viewport.getOffsetToReveal(pill, 0).offset;
+    final target = position.pixels
+        .clamp(atEnd, atStart)
+        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    if (target == position.pixels) return;
+    if (animate && !MediaQuery.disableAnimationsOf(context)) {
+      position.animateTo(
+        target,
+        duration: AppAnimation.durationMd,
+        curve: AppAnimation.standardCurve,
+      );
+    } else {
+      position.jumpTo(target);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// One pill of the row, on its own: a toggle (`Under 100 min`) or a pill

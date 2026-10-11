@@ -21,6 +21,7 @@ import 'package:cupola/features/discover/presentation/person_page.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/discover/domain/discover_index.dart';
 import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -84,7 +85,11 @@ List<MediaKey> _shown(WidgetTester tester) => tester
     .toList();
 
 /// The pane's back control, by what it says: Close or Back.
-Finder _paneControl(String label) => find.bySemanticsLabel(label);
+Finder _paneControl(String label) => find.descendant(
+  // The pane's: the list beside it keeps a back plate of its own.
+  of: find.byType(MediaPane),
+  matching: find.bySemanticsLabel(label),
+);
 
 /// Taps the pane's back control. By its glyph: its words merge into the
 /// first row of the page, which is wider than the plate.
@@ -126,7 +131,7 @@ Future<void> _openPersonFromPeople(
 ) async {
   router.go(ServiceRoutes.discover);
   await _answer(tester);
-  container.read(discoverIndexProvider.notifier).open(DiscoverIndex.people);
+  router.push(ServiceRoutes.discoverIndex(DiscoverIndex.people));
   await _answer(tester);
   await tester.tap(find.text(SeerrFake.personName));
   await _answer(tester);
@@ -410,13 +415,13 @@ void main() {
     );
     expect(
       tester.getRect(find.byType(PersonPage)).left,
-      greaterThan(tester.getRect(find.byType(DiscoverAtrium)).right - 1),
+      greaterThan(tester.getRect(find.byType(DiscoverIndexPage)).right - 1),
     );
     // The row the pane shows says so, to the eye and to a screen reader.
     final row = find
         .ancestor(
           of: find.descendant(
-            of: find.byType(DiscoverAtrium),
+            of: find.byType(DiscoverIndexPage),
             matching: find.text(SeerrFake.personName),
           ),
           matching: find.byType(PressableScale),
@@ -425,7 +430,10 @@ void main() {
     expect(tester.getSemantics(row), containsSemantics(isSelected: true));
 
     await _tapShelfControl(tester, 'Close');
-    expect(router.state.uri.path, ServiceRoutes.discover);
+    expect(
+      router.state.uri.path,
+      ServiceRoutes.discoverIndex(DiscoverIndex.people),
+    );
     expect(find.byType(PersonPage), findsNothing);
     expect(SidePaneSlots.instance.debugCount, 0);
     expect(tester.getSemantics(row), containsSemantics(isSelected: false));
@@ -531,12 +539,15 @@ void main() {
 
     expect(router.state.uri.path, _person);
     expect(_page<PersonPage>(), findsOneWidget);
-    expect(find.byType(DiscoverAtrium).hitTestable(), findsNothing);
+    expect(find.byType(DiscoverIndexPage).hitTestable(), findsNothing);
     expect(SidePaneSlots.instance.debugCount, 0);
 
     router.pop();
     await _answer(tester);
-    expect(router.state.uri.path, ServiceRoutes.discover);
+    expect(
+      router.state.uri.path,
+      ServiceRoutes.discoverIndex(DiscoverIndex.people),
+    );
     expect(find.byType(PersonPage), findsNothing);
 
     await _close(tester, harness, container);
