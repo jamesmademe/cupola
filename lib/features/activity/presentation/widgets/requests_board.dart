@@ -94,8 +94,15 @@ class HouseholdRequests {
 
   bool get isEmpty => waiting.isEmpty && rest.isEmpty;
 
-  /// `48 total`, `48+ total`.
-  String get totalLabel => '$total${floor ? '+' : ''} total';
+  /// The figure of the section under the waiting ones: `47 total`, Seerr's
+  /// count less the requests waiting above, which the section does not list.
+  /// Never fewer than the rows it lists. `47+ total` where the count is a
+  /// floor.
+  String get totalLabel {
+    final less = total - waiting.length;
+    final listed = less < rest.length ? rest.length : less;
+    return '$listed${floor ? '+' : ''} total';
+  }
 }
 
 /// Folds [reads] at [now]. [gateOf] says, for a connection, whether its

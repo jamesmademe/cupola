@@ -49,8 +49,8 @@ RoleGate _key(String _) => const RoleGate(audience: Audience.operator);
 void main() {
   group('householdRequestsOf', () {
     test('the waiting ones are decisions, the longest waiting first; the '
-        'rest in the '
-        'requester page\'s order; the total is Seerr\'s', () {
+        'rest in the requester page\'s order; the figure counts what the '
+        'section lists, and Seerr\'s count stays whole', () {
       final requests = householdRequestsOf(
         [
           _read(
@@ -75,9 +75,34 @@ void main() {
         unorderedEquals(['seerr-a-1', 'seerr-a-3']),
       );
       expect([for (final r in requests.rest) r.mine.request.id], [2]);
-      expect(requests.totalLabel, '3 total');
+      expect(requests.total, 3);
+      expect(requests.totalLabel, '1 total');
       expect(requests.whole, isTrue);
       expect(requests.rest.single.connection, isNull);
+    });
+
+    test('one request waiting above and one other read as two requests: '
+        'the section says 1 total, the one it lists', () {
+      final requests = householdRequestsOf(
+        [
+          _read(
+            'a',
+            AsyncData(
+              SeerrRequestList([
+                _request(1, status: 1, media: 2),
+                _request(2, media: 3),
+              ], total: 2),
+            ),
+          ),
+        ],
+        now: _now,
+        gateOf: _key,
+        named: false,
+      );
+
+      expect(requests.waiting, hasLength(1));
+      expect(requests.rest, hasLength(1));
+      expect(requests.totalLabel, '1 total');
     });
 
     test('a page that did not arrive leaves Seerr\'s count the total, and '

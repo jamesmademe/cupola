@@ -216,7 +216,7 @@ void main() {
 
       expect(_sections(tester), [
         'Needs you · 4 faults · 3 requests',
-        "Everyone's requests · 8 total",
+        "Everyone's requests · 5 total",
         'Watching now · Jellyfin',
         'Downloads · 4 moving · 1 stuck',
         'Up next · 1 queued',
@@ -337,7 +337,8 @@ void main() {
       );
       final total = container.read(requestsProvider).requireValue.length;
       expect(total, 8);
-      expect(find.text('$total total'), findsOneWidget);
+      // Seerr's eight less the three waiting above the section.
+      expect(find.text('${total - 3} total'), findsOneWidget);
       // Three rows, newest first: what arrived and what moves. (Coffee Run
       // is also under Finished today, hence the section.)
       for (final title in ['Coffee Run', 'Sintel', 'Sprite Fright']) {
@@ -783,9 +784,8 @@ void main() {
 
   group('Requests', () {
     testWidgets('P1: the three that wait for you, answered where they are, '
-        'then everyone\'s, by Seerr\'s count, in the page\'s own scroll', (
-      tester,
-    ) async {
+        'then everyone\'s, counted by what the section lists, in the page\'s '
+        'own scroll', (tester) async {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.requests);
 
       expect(find.byType(RequestsBoard), findsOneWidget);
@@ -794,8 +794,8 @@ void main() {
         expect(find.byTooltip('Approve $title'), findsOneWidget, reason: title);
       }
       expect(_titles(tester), ["Everyone's requests"]);
-      // Seerr's own count of every request, the three that wait among them.
-      expect(_inSection("Everyone's requests", find.text('8 total')), findsOne);
+      // Seerr's eight less the three that wait above: what the section lists.
+      expect(_inSection("Everyone's requests", find.text('5 total')), findsOne);
       for (final title in [
         'Sprite Fright',
         'Coffee Run',
@@ -905,8 +905,9 @@ void main() {
       // The same world behind both: each request twice, once on each.
       expect(find.byTooltip('Approve Charge'), findsNWidgets(2));
       expect(find.text('6 requests wait for your approval'), findsOneWidget);
+      // Sixteen by Seerr's count, six of them waiting above the section.
       expect(
-        _inSection("Everyone's requests", find.text('16 total')),
+        _inSection("Everyone's requests", find.text('10 total')),
         findsOne,
       );
       expect(
