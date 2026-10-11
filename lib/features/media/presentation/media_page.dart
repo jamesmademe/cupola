@@ -80,6 +80,7 @@ import 'package:cupola/features/media/domain/media_facts.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/media/presentation/media_identity.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
+import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
@@ -2124,8 +2125,6 @@ class _ScoresLine extends StatelessWidget {
   }
 }
 
-/// The one action that leads, and the three beside it: Trailer, Watchlist,
-/// Manage.
 /// The queue's downloads of the title: those the arrs hold it under, on one
 /// of the page's connections (a Radarr movie or a Sonarr series of [rows]),
 /// in the queue's own order.
@@ -2150,9 +2149,12 @@ List<ServiceQueueItem> _titleDownloads(
   }
   return [
     for (final item in queue)
-      if (item.mediaId case final id?
-          when held.contains((item.service, item.instanceId, id)))
-        item,
+      // A finished download the arr will not import is no download any more,
+      // as on the Home: the copy's row says so, with Review the imports.
+      if (item.fault != InFlightFault.needsImport)
+        if (item.mediaId case final id?
+            when held.contains((item.service, item.instanceId, id)))
+          item,
   ];
 }
 
@@ -2191,6 +2193,8 @@ class _TitleDownloads extends StatelessWidget {
   }
 }
 
+/// The one action that leads, and the three beside it: Trailer, Watchlist,
+/// Manage.
 class _LeadBar extends StatelessWidget {
   const _LeadBar({
     required this.lead,

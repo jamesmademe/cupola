@@ -29,6 +29,7 @@ import 'package:cupola/features/media/presentation/media_series_sections.dart';
 import 'package:cupola/features/media/presentation/media_sources_provider.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
+import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -275,6 +276,13 @@ void main() {
 
     final rows = find.byType(DownloadRow);
     expect(rows, findsWidgets);
+    // Its finished episodes Sonarr will not import are no downloads any more,
+    // as on the Home: the copy's row names them, with Review the imports.
+    expect(
+      tester.widgetList<DownloadRow>(rows).map((row) => row.item.fault),
+      isNot(contains(InFlightFault.needsImport)),
+    );
+    expect(find.textContaining('need import'), findsOneWidget);
     await tester.ensureVisible(rows.first);
     await tester.tap(rows.first);
     await _answer(tester);
