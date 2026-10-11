@@ -31,7 +31,7 @@ The single import of a title, its room or the ⋯ menu stays the wizard (Locate 
 - **Title** (in the glass bar): `Review 18 imports`, one import per file.
   - Under it, in `AppType.body` `inkSecondary`, the arr's cause in a sentence: `The file names don't match the series name, so Sonarr won't guess.`
 - **Why?**: an outlined button with a chevron. Open, a quiet box (`fillQuiet`, slab radius, hairline) shows:
-  - `What Sonarr says`, then each distinct message of the queue in `AppType.mono`, word for word;
+  - `What Sonarr says`, then each distinct message of the queue, then of each file listed, in `AppType.mono`, word for word. The sentence above takes the first cause the app recognises among them; `One or more episodes expected in this release were not imported` is only the sum of its files' and names the cause only when nothing else does;
   - `In plain words: …` in `AppType.meta`.
 - **The jump**: `PageTabs` with `Clear 12` and `Need you 6`, the second count in amber. It shows only when both parts have files.
   - A tap scrolls to the part.
@@ -52,7 +52,9 @@ The single import of a title, its room or the ⋯ menu stays the wizard (Locate 
 - **The bar**, on the slab with a hairline above:
   - on the left, `6 left for later` (or `12 clear · 1 picked by you`); on the right, `Imports can't be undone` in `inkTertiary`;
   - the import itself in the amber fill, the fault's remedy: `Import 12 clear matches`, `Import 13 selected`, or `Select something to import`, disabled.
-- **Under the parts**: what stays out (`2 other files stay where they are.`, samples and files the arr does not import) and a download that would not list its files.
+- **Under the parts**: what stays out (`2 other files stay where they are.`, samples, files the arr does not import and files it already took from this download) and a download that would not list its files.
+- **A season pack's unnamed file**: Sonarr maps a file whose name names no episode to every episode of the season (`Single episode file contains all episodes in seasons`). The Review reads no episode into it and asks `Which episode?`, never `Add it anyway`, which would import one file as the whole season. `Unknown Series` asks `Which series?`.
+- **Nothing left to import**: when the arr still lists the download and every file in it went in already (Sonarr keeps a season pack queued until each episode it expected arrives), the page says so, `Sonarr took what this download had and waits for files that aren't in it. Removing it keeps what went in.`, with `Remove download` in the amber fill and Needs you's neutral question before it.
 - **While reading**: `Reading the files of each download…` above skeleton rows.
 
 ## After the import
@@ -92,6 +94,7 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 - A clear group with one file left out.
 - Three Need you rows: one open on its choice, one waiting, one placed.
 - The bar, in its two counts.
+- Nothing left to import, with Remove download.
 - The report running, done (whole), and failed.
 - Text at 200%: a row open.
 - The desktop: a clear group and the bar in the page well.

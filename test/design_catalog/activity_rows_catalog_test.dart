@@ -41,6 +41,7 @@ ServiceQueueItem _download(
   InFlightFault? fault,
   DateTime? stalledSince,
   bool queued = false,
+  bool held = false,
   int? startsIn,
   int? tmdbId,
 }) => ServiceQueueItem(
@@ -56,6 +57,7 @@ ServiceQueueItem _download(
   fault: fault,
   stalledSince: stalledSince,
   queued: queued,
+  held: held,
   startsInSeconds: startsIn,
   tmdbId: tmdbId,
   posterUrl: CatalogArt.poster,
@@ -86,6 +88,16 @@ final _elephants = _download(
   client: ServiceKey.sabnzbd,
   clientLabel: 'SABnzbd',
   connectionName: '4K',
+);
+
+/// Stopped on purpose, from its page.
+final _stopped = _download(
+  'Cosmos Laundromat · S2 E5',
+  'Cosmos.Laundromat.S02E05.1080p.WEB',
+  id: '9',
+  progress: 0.62,
+  service: ServiceKey.sonarr,
+  held: true,
 );
 
 final _stuck = _download(
@@ -232,6 +244,12 @@ void main() {
         'ActivityDownloadRow() · stuck: Stuck at 47% in amber, and the '
         'proof, nothing for 3 h, where the speed would be',
         (_) => _slab([ActivityDownloadRow(item: _stuck, now: _now)]),
+        width: 390,
+      ),
+      CatalogScene(
+        'ActivityDownloadRow() · stopped on purpose, on Downloads after the '
+        'rest: Stopped at 62% in the neutral, no speed',
+        (_) => _slab([ActivityDownloadRow(item: _stopped, now: _now)]),
         width: 390,
       ),
       CatalogScene(

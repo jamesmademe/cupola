@@ -105,6 +105,20 @@ void main() {
         overrides: blockedImportOverrides(FakeBlockedImportService()),
       ),
       CatalogScene(
+        'BlockedImportReviewPage() · nothing left to import: Sonarr took what '
+        'the pack had and keeps it queued for the rest; Remove download',
+        (_) => const BlockedImportReviewPage(
+          service: ServiceKey.sonarr,
+          instanceId: blockedImportConnection,
+        ),
+        width: 390,
+        height: 844,
+        overrides: blockedImportOverrides(
+          spentPackService(),
+          queue: spentPackQueue(),
+        ),
+      ),
+      CatalogScene(
         "BlockedImportWhy() · open: what Sonarr says, word for word, and the "
         'same in plain words',
         (_) => BlockedImportWhy(

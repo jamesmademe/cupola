@@ -10,8 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/import/presentation/blocked_import_review_page.dart';
-import 'package:cupola/features/services/domain/in_flight.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/blocked_import_world.dart';
@@ -19,40 +17,10 @@ import '../../../test_helpers/blocked_import_world.dart';
 void main() {
   testWidgets('every file of the download went in already: nothing left to '
       'import, why it stays, and Remove download', (tester) async {
-    final fake = FakeBlockedImportService();
-    fake.files
-      ..clear()
-      ..['pack'] = [
-        {
-          ...cosmosTapeFile(1),
-          'downloadId': 'pack',
-          'rejections': const [
-            {
-              'type': 'permanent',
-              'reason': 'Episode file already imported at 10/11/2026 09:11:21',
-            },
-          ],
-        },
-      ];
     final container = ProviderContainer(
       overrides: blockedImportOverrides(
-        fake,
-        queue: const [
-          ServiceQueueItem(
-            service: ServiceKey.sonarr,
-            id: 'q-pack',
-            title: 'Cosmos Laundromat · 8 episodes',
-            progress: 1,
-            clientLabel: 'qBittorrent',
-            fault: InFlightFault.needsImport,
-            warning:
-                'One or more episodes expected in this release were not '
-                'imported or missing from the release',
-            downloadId: 'pack',
-            instanceId: blockedImportConnection,
-            mediaId: 7,
-          ),
-        ],
+        spentPackService(),
+        queue: spentPackQueue(),
       ),
     );
     addTearDown(container.dispose);

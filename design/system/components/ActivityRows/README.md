@@ -21,6 +21,7 @@ The remedy of a stuck download is in Needs you, once: the row only shows where i
 - Title: `AppType.row` in the ink: one line on a download (three at a large reading size), two on a history record.
 - Machine line: the release a download is, or the file an import became, in `AppType.mono` in `inkSecondary`, one line that fades rather than ellipsising. Only when it is not the title again. It is a machine's spelling and keeps the mono face.
 - **Download, moving**: the route (`Radarr → qBittorrent`, `Radarr 4K → SABnzbd` on a second connection of the arr, the client alone for a transfer no arr asked for) in `AppType.meta` in `inkSecondary`, and at the end of the same line the value in the info tone (`88% · 1 min`, weight 600, tabular). Under it a 4pt bar in the same tone over the track fill; under the bar, at its end, the speed (`12.1 MB/s`) in `meta`.
+- **Download, stopped on purpose** (Downloads only, after the moving and the stuck ones; All leaves it out): `Stopped at 62%` in the neutral at the end of the route line, the bar in the neutral, no speed. Its Resume is on its page. Without the row a download stopped from its page had nowhere left to be resumed from.
 - **Download, stuck**: the value is `Stuck at 47%` in amber (the warning tone), the bar amber, and where the speed would be, the proof: `nothing for 3 h` (minutes under an hour, then hours, then days from the second day). A client that dates nothing claims nothing: no proof line.
 - **Download, queued**: no bar and no figure. A dot and `Queued · starts in about 6 min` in blue (just `Queued` when the client estimates nothing, or the time has come), then the route.
 - **Whose request**: when Seerr holds a request for the title, a last line in `meta` in `inkSecondary`: `Anna's request · ready around 21:10` (`tomorrow 09:00` past midnight, the weekday later in the week; just `Anna's request` with no estimate or while it waits its turn). A request that was declined or failed asked for nothing that is coming, and a title with no id matches none.
@@ -56,7 +57,7 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 
 - A moving download with its request; two moving rows with a second connection named and a hairline between them.
 - A row selected beside the open pane on a tablet, on the room's strong fill.
-- A stuck download with its proof; a queued download in Up next with its request; a transfer no arr asked for.
+- A stuck download with its proof; a queued download in Up next with its request; a transfer no arr asked for; a download stopped on purpose.
 - A history record: an import with its file and its connection, then a second; a download that failed with its reason.
 - Text at 200%: a moving row and a stuck one; Up next and the client's own row; an import with its file and a failure with its reason.
 - The desktop: downloads and an import on one slab in the page well.

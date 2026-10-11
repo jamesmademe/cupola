@@ -6,7 +6,7 @@ Rendered from `lib/features/activity/presentation/widgets/download_table.dart` (
 
 ## Where it is drawn
 
-On Activity's All and Downloads, in a desktop window (the desktop shell, from 720): `Downloads` as a `DownloadTable` inside its slab, `Up next` as a `DownloadTable.queued`. A touch build, at any width, keeps the rows ([ActivityRows](../ActivityRows/README.md)). The page stands in the content well (1140) on the desktop, not the reading well: the table wants the width.
+On Activity's All and Downloads (Downloads also lists the downloads stopped on purpose, last, `Stopped at 62%` with Resume under the pointer), in a desktop window (the desktop shell, from 720): `Downloads` as a `DownloadTable` inside its slab, `Up next` as a `DownloadTable.queued`. A touch build, at any width, keeps the rows ([ActivityRows](../ActivityRows/README.md)). The page stands in the content well (1140) on the desktop, not the reading well: the table wants the width.
 
 ## Anatomy
 

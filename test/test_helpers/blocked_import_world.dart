@@ -256,3 +256,39 @@ List<Override> blockedImportOverrides(
   )).overrideWith((ref) => fake),
   manualImportServiceProvider(ServiceKey.sonarr).overrideWith((ref) => fake),
 ];
+
+/// A season pack the arr still lists after every file in it went in: Sonarr
+/// keeps it queued until each episode it expected arrives (live, Sonarr 4).
+List<ServiceQueueItem> spentPackQueue() => const [
+  ServiceQueueItem(
+    service: ServiceKey.sonarr,
+    id: 'q-pack',
+    title: 'Cosmos Laundromat · 8 episodes',
+    subject: 'Cosmos Laundromat S1 E1–E8',
+    progress: 1,
+    clientLabel: 'qBittorrent',
+    fault: InFlightFault.needsImport,
+    warning:
+        'One or more episodes expected in this release were not imported or '
+        'missing from the release',
+    downloadId: 'pack',
+    instanceId: blockedImportConnection,
+    mediaId: 7,
+  ),
+];
+
+/// The pack's one file, which the arr took already.
+FakeBlockedImportService spentPackService() => FakeBlockedImportService()
+  ..files.clear()
+  ..files['pack'] = [
+    {
+      ...cosmosTapeFile(1),
+      'downloadId': 'pack',
+      'rejections': const [
+        {
+          'type': 'permanent',
+          'reason': 'Episode file already imported at 10/11/2026 09:11:21',
+        },
+      ],
+    },
+  ];
