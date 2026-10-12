@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/read_clock.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -76,10 +77,18 @@ final transmissionClientForProvider =
     });
 
 /// Every torrent the daemon knows about.
+///
+/// Noted as read (`ReadClock`) right after the answer lands, for the connection
+/// this build resolved, so a page that keeps this list under a fault band can
+/// say how old it is.
 final transmissionTorrentsProvider = FutureProvider<List<TransmissionTorrent>>((
   ref,
 ) async {
-  return ref.watch(transmissionClientProvider).torrents();
+  final client = ref.watch(transmissionClientProvider);
+  final noteRead = ref.queueReadNoter(ServiceKey.transmission);
+  final torrents = await client.torrents();
+  noteRead();
+  return torrents;
 }, retry: noProviderRetry);
 
 /// Aggregate counters: speeds and torrent counts.

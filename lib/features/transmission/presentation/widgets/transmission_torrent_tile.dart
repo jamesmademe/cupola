@@ -26,9 +26,15 @@ class TransmissionTorrentTile extends StatelessWidget {
     super.key,
     required this.torrent,
     this.actions,
+    this.sampleAge,
   });
 
   final TransmissionTorrent torrent;
+
+  /// How old this row's figures are, when the page is showing the last list it
+  /// read under a fault band; null when they are current. The plate trades its
+  /// second line for it (see [DownloadQueueTile.sampleAge]).
+  final Duration? sampleAge;
 
   /// The row's trailing ⋯.
   ///
@@ -81,6 +87,7 @@ class TransmissionTorrentTile extends StatelessWidget {
           ),
       ],
       actions: actions,
+      sampleAge: sampleAge,
       // No tap and no long-press on purpose: this dashboard has no torrent
       // detail page to open and no multi-select, and a row that highlights and
       // goes nowhere is worse than one that does not invite the press. The

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -87,6 +88,13 @@ class _TransmissionDashboard extends ConsumerWidget {
       );
     }
     final torrentsAsync = lastReadUnderBand(watched, banded: failed != null);
+    // How old the rows are, only while they are the last list read under the
+    // band: their figures stopped moving when the daemon stopped answering.
+    final sampleAge = ref.watchQueueReadAge(
+      context,
+      ServiceKey.transmission,
+      underBand: failed != null,
+    );
 
     // Split once, through the same `when` the rows draw with, so a header never
     // counts a list its section is not showing: while the list loads or after
@@ -141,6 +149,7 @@ class _TransmissionDashboard extends ConsumerWidget {
             torrentsAsync: torrentsAsync,
             rows: incoming,
             emptyLabel: 'Nothing is downloading',
+            sampleAge: sampleAge,
           ),
           SliverList.list(
             children: [
@@ -158,6 +167,7 @@ class _TransmissionDashboard extends ConsumerWidget {
             torrentsAsync: torrentsAsync,
             rows: resting,
             emptyLabel: 'Nothing is seeding',
+            sampleAge: sampleAge,
           ),
           SliverToBoxAdapter(
             child: SizedBox(
@@ -193,6 +203,7 @@ Widget _torrentRows(
   required AsyncValue<List<TransmissionTorrent>> torrentsAsync,
   required List<TransmissionTorrent>? rows,
   required String emptyLabel,
+  required Duration? sampleAge,
 }) {
   return torrentsAsync.when(
     data: (_) {
@@ -214,6 +225,7 @@ Widget _torrentRows(
           final torrent = visible[index];
           return TransmissionTorrentTile(
             torrent: torrent,
+            sampleAge: sampleAge,
             // The menu is built here rather than inside the tile: it
             // dispatches through this screen's `ref`, and a plate that
             // reached for a provider would stop being a plate.

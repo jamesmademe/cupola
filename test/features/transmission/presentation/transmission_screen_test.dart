@@ -3,17 +3,22 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/core/status/read_age.dart';
+import 'package:cupola/core/status/read_clock.dart';
+import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 import 'package:cupola/features/transmission/presentation/transmission_actions.dart';
@@ -47,16 +52,17 @@ TransmissionTorrent _torrent(int id, {required int status}) {
   });
 }
 
-List<Override> _ambient() => [
+List<Override> _ambient({Override? summary}) => [
   currentSettingsProvider.overrideWith((ref) => _configured),
-  serviceSummaryProvider.overrideWith(
-    (ref, service) async => ServiceSummary(
-      service: service,
-      status: ServiceSummaryStatus.online,
-      host: 'transmission.test',
-      version: '4.0.6',
-    ),
-  ),
+  summary ??
+      serviceSummaryProvider.overrideWith(
+        (ref, service) async => ServiceSummary(
+          service: service,
+          status: ServiceSummaryStatus.online,
+          host: 'transmission.test',
+          version: '4.0.6',
+        ),
+      ),
   serviceKpiProvider.overrideWith((ref, service) async => const <ServiceKpi>[]),
   transmissionSessionProvider.overrideWith(
     (ref) async => TransmissionSession.fromJson(const {
@@ -66,15 +72,35 @@ List<Override> _ambient() => [
   ),
 ];
 
-Future<void> _pump(WidgetTester tester, List<Override> overrides) async {
+Future<void> _pump(
+  WidgetTester tester,
+  List<Override> overrides, {
+  Override? summary,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       retry: (_, _) => null,
-      overrides: [..._ambient(), ...overrides],
+      overrides: [
+        ..._ambient(summary: summary),
+        ...overrides,
+      ],
       child: const MaterialApp(home: TransmissionScreen()),
     ),
   );
   await tester.pumpAndSettle();
+}
+
+/// A daemon that answers `torrent-get` with a fixed list.
+class _ListingTransmission implements TransmissionClient {
+  _ListingTransmission(this.list);
+
+  final List<TransmissionTorrent> list;
+
+  @override
+  Future<List<TransmissionTorrent>> torrents({List<String>? ids}) async => list;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 String? _subtitleOf(WidgetTester tester, String title) {
@@ -165,6 +191,120 @@ void main() {
     await tester.pumpAndSettle();
     expect(_subtitleOf(tester, 'Transferring'), '1 torrent');
     expect(_subtitleOf(tester, 'Seeding and idle'), '0 torrents');
+  });
+
+  // A daemon that stops answering leaves its last list under a band. The rows
+  // used to go on printing what is left to download as if it were counting
+  // down; they say how old the read is instead.
+  group('a list read before the daemon stopped answering', () {
+    final readAt = DateTime(2026, 10, 12, 9);
+    final key = queueReadKey(
+      ServiceKey.transmission,
+      _configured.primaryOf(ServiceKey.transmission)!.id,
+    );
+    // The same text as `remainingLabel`: 512 MB of the first torrent left.
+    const remaining = '512\u00A0MB';
+    final probeDown = StateProvider<bool>((ref) => false);
+    late DateTime now;
+
+    Future<ProviderContainer> pumpDownloading(WidgetTester tester) async {
+      now = readAt;
+      final clock = ReadClock(now: () => now);
+      final client = _ListingTransmission([_torrent(1, status: 4)]);
+      await _pump(
+        tester,
+        [
+          readClockProvider.overrideWithValue(clock),
+          transmissionClientProvider.overrideWithValue(client),
+        ],
+        summary: serviceSummaryProvider.overrideWith((ref, service) async {
+          final down = ref.watch(probeDown);
+          return ServiceSummary(
+            service: service,
+            status: down
+                ? ServiceSummaryStatus.offline
+                : ServiceSummaryStatus.online,
+            host: 'transmission.test',
+            version: down ? null : '4.0.6',
+          );
+        }),
+      );
+      return ProviderScope.containerOf(
+        tester.element(find.byType(TransmissionScreen)),
+      );
+    }
+
+    testWidgets('says how old it is where the figures stopped counting', (
+      tester,
+    ) async {
+      final container = await pumpDownloading(tester);
+
+      // Healthy: the row prints what is left, says nothing of its age, and the
+      // page has no clock running.
+      expect(find.text(remaining), findsOneWidget);
+      expect(find.textContaining('as of'), findsNothing);
+      expect(container.exists(minuteNowProvider), isFalse);
+      expect(
+        container.read(readClockProvider).at(key),
+        readAt,
+        reason: 'the list was noted when it came back',
+      );
+
+      // The probe fails with the list retained: the band goes up and the row
+      // trades its remainder for the age of what it last read.
+      now = readAt.add(const Duration(minutes: 6));
+      container.read(probeDown.notifier).state = true;
+      await tester.pumpAndSettle();
+      expect(find.byType(FaultBand), findsOneWidget);
+      expect(find.text('Download 1'), findsOneWidget);
+      expect(find.text(remaining), findsNothing);
+      expect(find.text('as of 6\u00A0min ago'), findsOneWidget);
+
+      // And the age moves with the minutes.
+      now = now.add(const Duration(minutes: 1));
+      await tester.pump(const Duration(minutes: 1));
+      expect(find.text('as of 7\u00A0min ago'), findsOneWidget);
+
+      // Back: the remainder returns, the age goes, and so does the clock.
+      container.read(probeDown.notifier).state = false;
+      await tester.pumpAndSettle();
+      expect(find.byType(FaultBand), findsNothing);
+      expect(find.text(remaining), findsOneWidget);
+      expect(find.textContaining('as of'), findsNothing);
+      // The disposal the dropped watch scheduled runs a frame later.
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(container.exists(minuteNowProvider), isFalse);
+    });
+
+    testWidgets('says nothing of the age of a read nobody recorded', (
+      tester,
+    ) async {
+      // A list that did not come through the provider that notes it (a
+      // test override, say) has no age to claim: the row stays as it was.
+      now = readAt;
+      await _pump(
+        tester,
+        [
+          readClockProvider.overrideWithValue(ReadClock(now: () => now)),
+          transmissionTorrentsProvider.overrideWith(
+            (ref) async => [_torrent(1, status: 4)],
+          ),
+        ],
+        summary: serviceSummaryProvider.overrideWith(
+          (ref, service) async => ServiceSummary(
+            service: service,
+            status: ServiceSummaryStatus.offline,
+            host: 'transmission.test',
+            version: null,
+          ),
+        ),
+      );
+
+      expect(find.byType(FaultBand), findsOneWidget);
+      expect(find.text(remaining), findsOneWidget);
+      expect(find.textContaining('as of'), findsNothing);
+    });
   });
 
   // The add flow ignored whether the add had worked and printed "Torrent
