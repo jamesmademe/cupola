@@ -77,6 +77,24 @@ void main() {
         );
         handle.dispose();
       });
+
+      testWidgets('is announced when it appears', (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pump(
+          tester,
+          theme,
+          const FaultNote.fault(message: 'Seerr refused the request'),
+        );
+
+        expect(
+          tester.getSemantics(find.byType(FaultNote)),
+          matchesSemantics(
+            label: 'Seerr refused the request',
+            isLiveRegion: true,
+          ),
+        );
+        handle.dispose();
+      });
     });
   }
 }

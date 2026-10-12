@@ -43,28 +43,35 @@ class FaultNote extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Decorative: the sentence beside it says what happened.
-        ExcludeSemantics(
-          child: Icon(
-            _icon,
-            size: 16,
-            color: statusToneColor(colorScheme, _tone, surface: surface),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Flexible(
-          child: Text(
-            message,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+    // Announced when it appears. The note lands where a submit or a load
+    // failed, and none of its hosts says so on its own: without this, a
+    // screen reader heard the button settle and nothing else.
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Decorative: the sentence beside it says what happened.
+          ExcludeSemantics(
+            child: Icon(
+              _icon,
+              size: 16,
+              color: statusToneColor(colorScheme, _tone, surface: surface),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

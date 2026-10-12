@@ -22,7 +22,7 @@ Rendered from `lib/core/widgets/fault_note.dart` by `test/design_catalog/fault_n
 
 ## Semantics
 
-The glyph is excluded; the sentence is read as plain text. There is no live region; the host control that failed (a submit button, a tier) owns the announcement.
+The glyph is excluded; the sentence is read as plain text, in a live region, so it is announced when it appears. None of its hosts (a request sheet, a purchase, a Home module, a Discover row) announces the failure on its own.
 
 ## States in the catalog
 
