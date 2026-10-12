@@ -211,8 +211,11 @@ final _sabnzbdInvalidateAfterAction = <ProviderOrFamily>[
 void _invalidateAll(WidgetRef ref) {
   ref.invalidate(sabnzbdQueueProvider);
   ref.invalidate(sabnzbdHistoryProvider);
-  ref.invalidate(serviceKpiProvider(ServiceKey.sabnzbd));
-  ref.invalidate(serviceSummaryProvider(ServiceKey.sabnzbd));
+  // The probe too, not only the wrapper around it: `serviceSummaryProvider`
+  // delegates to a probe that stays cached, so a Retry that dropped only the
+  // wrapper redrew the band from the answer it already had and never asked
+  // the server again.
+  invalidateServiceReadout(ref, ServiceKey.sabnzbd);
 }
 
 class _SabnzbdActionsBar extends ConsumerWidget {

@@ -203,6 +203,77 @@ void main() {
       });
     });
 
+    group('${page.name}, Retry', () {
+      /// What the person taps: the page's own Retry, on the leaf or the band.
+      Future<void> retry(WidgetTester tester, ProfileHarness harness) async {
+        await tester.ensureVisible(find.text('Retry').first);
+        await tester.tap(find.text('Retry').first);
+        await harness.settle(tester);
+      }
+
+      testWidgets('asks the server again, and a server that answers ends '
+          'the leaf', (tester) async {
+        final (harness, _) = await open(
+          tester,
+          page,
+          behaviour: ConnectionBehaviour.didNotAnswer,
+        );
+        await minutesPass(tester, 6);
+        expect(find.byType(ServiceOfflineState), findsOneWidget);
+
+        harness.network.behave(page.id, ConnectionBehaviour.answers);
+        await retry(tester, harness);
+
+        // Neither the leaf nor, once the page has something to keep, a band
+        // over it: the probe was asked again and said the server is back.
+        expect(find.byType(ServiceOfflineState), findsNothing);
+        expect(find.byType(FaultBand), findsNothing);
+        expect(find.textContaining('has not answered for'), findsNothing);
+
+        await harness.unmount(tester);
+      });
+
+      testWidgets('that fails again is the same silence, not a new one', (
+        tester,
+      ) async {
+        final (harness, _) = await open(
+          tester,
+          page,
+          behaviour: ConnectionBehaviour.didNotAnswer,
+        );
+        await minutesPass(tester, 6);
+
+        await retry(tester, harness);
+
+        expect(
+          find.textContaining('It has not answered for 6 minutes.'),
+          findsOneWidget,
+        );
+
+        await harness.unmount(tester);
+      });
+
+      testWidgets('asks the server again over what was read, and a server '
+          'that answers ends the band', (tester) async {
+        final (harness, container) = await open(
+          tester,
+          page,
+          behaviour: ConnectionBehaviour.answers,
+        );
+        harness.network.behave(page.id, ConnectionBehaviour.didNotAnswer);
+        await askAgain(tester, harness, container, page);
+        await minutesPass(tester, 6);
+        expect(find.byType(FaultBand), findsOneWidget);
+
+        harness.network.behave(page.id, ConnectionBehaviour.answers);
+        await retry(tester, harness);
+
+        expect(find.byType(FaultBand), findsNothing);
+
+        await harness.unmount(tester);
+      });
+    });
+
     group('${page.name}, over what it read before it went quiet', () {
       /// The page has read what it reads while the service answered; then
       /// the service goes quiet and the probe says so.

@@ -59,8 +59,11 @@ void _invalidateAll(WidgetRef ref) {
   ref.invalidate(transmissionTorrentsProvider);
   ref.invalidate(transmissionStatsProvider);
   ref.invalidate(transmissionSessionProvider);
-  ref.invalidate(serviceKpiProvider(ServiceKey.transmission));
-  ref.invalidate(serviceSummaryProvider(ServiceKey.transmission));
+  // The probe too, not only the wrapper around it: `serviceSummaryProvider`
+  // delegates to a probe that stays cached, so a Retry that dropped only the
+  // wrapper redrew the band from the answer it already had and never asked
+  // the server again.
+  invalidateServiceReadout(ref, ServiceKey.transmission);
 }
 
 class _TransmissionDashboard extends ConsumerWidget {

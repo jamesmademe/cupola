@@ -202,8 +202,11 @@ void _invalidateAll(WidgetRef ref) {
   ref.invalidate(nzbgetStatusProvider);
   ref.invalidate(nzbgetQueueProvider);
   ref.invalidate(nzbgetHistoryProvider);
-  ref.invalidate(serviceKpiProvider(ServiceKey.nzbget));
-  ref.invalidate(serviceSummaryProvider(ServiceKey.nzbget));
+  // The probe too, not only the wrapper around it: `serviceSummaryProvider`
+  // delegates to a probe that stays cached, so a Retry that dropped only the
+  // wrapper redrew the band from the answer it already had and never asked
+  // the server again.
+  invalidateServiceReadout(ref, ServiceKey.nzbget);
 }
 
 class _NzbgetActionsBar extends ConsumerWidget {

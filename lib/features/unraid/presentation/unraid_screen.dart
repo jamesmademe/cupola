@@ -338,8 +338,11 @@ void _invalidate(WidgetRef ref, UnraidSection section) {
       ref.invalidate(unraidSharesProvider);
       recheck();
   }
-  ref.invalidate(serviceKpiProvider(ServiceKey.unraid));
-  ref.invalidate(serviceSummaryProvider(ServiceKey.unraid));
+  // The probe too, not only the wrapper around it: `serviceSummaryProvider`
+  // delegates to a probe that stays cached, so a Retry that dropped only the
+  // wrapper redrew the band from the answer it already had and never asked
+  // the server again.
+  invalidateServiceReadout(ref, ServiceKey.unraid);
 }
 
 class _VmList extends ConsumerWidget {
