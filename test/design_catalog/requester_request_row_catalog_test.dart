@@ -1,6 +1,8 @@
 @Tags(['catalog'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -8,13 +10,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/last_known/last_known_store.dart';
+import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
+import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart'
+    show seerrNumberingProvider;
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/my_requests_last_known.dart';
+import 'package:cupola/features/home/data/last_known/requester_shelves_last_known.dart';
+import 'package:cupola/features/home/domain/home_module.dart';
+import 'package:cupola/features/home/presentation/home_screen.dart';
+import 'package:cupola/features/home/presentation/widgets/home_as_of_line.dart';
 import 'package:cupola/features/home/presentation/widgets/ready_to_watch_module.dart';
 import 'package:cupola/features/home/presentation/widgets/your_requests_module.dart';
 import 'package:cupola/features/requests/domain/my_requests.dart';
@@ -147,6 +160,34 @@ List<Override> _her(List<SeerrRequest> requests) => [
   requestsProvider.overrideWith((ref) async => requests),
   calendarClockProvider.overrideWithValue(() => _now),
   _gate,
+];
+
+/// Her Seerr, as the Home's last drawings are valid for it.
+final _herSettings = settingsWithServices(const [ServiceKey.seerr]);
+
+/// A store that holds what her Home drew 47 minutes ago: [drawn] under the
+/// key of [slot], valid for her connection.
+LastKnownStore _drawnBefore<T>(HomeLastKnownSlot<T> slot, T drawn) =>
+    LastKnownStore.memory()..write(
+      homeLastKnownKey(Audience.requester.name, slot),
+      validity: homeLastKnownValidity(_herSettings, slot.services),
+      schema: slot.schema,
+      data: slot.encode(drawn),
+      takenAt: _now.subtract(const Duration(minutes: 47)),
+    );
+
+List<MediaPreview> _posters(Map<String, String?> titles) => [
+  for (final (index, MapEntry(key: title, value: day))
+      in titles.entries.indexed)
+    MediaPreview(
+      id: 700 + index,
+      title: title,
+      mediaType: index.isEven ? 'movie' : 'tv',
+      posterPath: CatalogArt.tmdbPoster,
+      releaseDate: day,
+      voteAverage: day == null ? 7.4 - index / 10 : null,
+      voteCount: day == null ? 1200 : null,
+    ),
 ];
 
 /// The rows on a slab, as the Home's module and her page set them.
@@ -320,6 +361,99 @@ void main() {
         width: 390,
         overrides: [
           ..._her([_tears]),
+        ],
+      ),
+      CatalogScene(
+        'Last known · her Home at a cold start: Ready to watch and Your '
+        'requests as last drawn, a download on its way with no figure, under '
+        'the Home\'s one line',
+        (_) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            HomeAsOfLine(),
+            HomeReadyToWatchModule(),
+            HomeYourRequestsModule(),
+          ],
+        ),
+        width: 390,
+        overrides: [
+          audienceProvider.overrideWithValue(Audience.requester),
+          calendarClockProvider.overrideWithValue(() => _now),
+          _gate,
+          lastKnownStoreProvider.overrideWithValue(
+            _drawnBefore(myRequestsLastKnown, _anna),
+          ),
+          requestsProvider.overrideWith(
+            (ref) => Completer<List<SeerrRequest>>().future,
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Last known · her two shelves as last drawn, Coming soon cut again to '
+        'what is not out yet',
+        (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const HomeAsOfLine(),
+            homeModuleView(HomeModule.trending),
+            homeModuleView(HomeModule.comingSoon),
+          ],
+        ),
+        width: 390,
+        overrides: [
+          audienceProvider.overrideWithValue(Audience.requester),
+          calendarClockProvider.overrideWithValue(() => _now),
+          seerrNumberingProvider.overrideWith((ref) async => null),
+          lastKnownStoreProvider.overrideWithValue(
+            _drawnBefore(
+              trendingLastKnown,
+              _posters({'Sintel': null, 'Spring': null, 'Coffee Run': null}),
+            )..write(
+              homeLastKnownKey(Audience.requester.name, comingSoonLastKnown),
+              validity: homeLastKnownValidity(
+                _herSettings,
+                comingSoonLastKnown.services,
+              ),
+              schema: comingSoonLastKnown.schema,
+              data: comingSoonLastKnown.encode(
+                _posters({
+                  // Out on Wednesday: not coming any more.
+                  'Charge': '2026-10-07',
+                  'Hero': '2026-10-14',
+                  'Glass Half': '2026-10-21',
+                  'Agent 327': '2026-11-02',
+                }),
+              ),
+              takenAt: _now.subtract(const Duration(minutes: 47)),
+            ),
+          ),
+          atriumTrendingProvider.overrideWith(
+            (ref) => Completer<List<MediaPreview>>().future,
+          ),
+          comingSoonProvider.overrideWith(
+            (ref) => Completer<List<MediaPreview>>().future,
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Last known · her Home when her Seerr did not answer: what was last '
+        'drawn stays at full ink, and the line stops checking',
+        (_) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [HomeAsOfLine(), HomeYourRequestsModule()],
+        ),
+        width: 390,
+        overrides: [
+          audienceProvider.overrideWithValue(Audience.requester),
+          calendarClockProvider.overrideWithValue(() => _now),
+          _gate,
+          lastKnownStoreProvider.overrideWithValue(
+            _drawnBefore(myRequestsLastKnown, _anna),
+          ),
+          requestsProvider.overrideWith(
+            (ref) async =>
+                throw const ClassifiedFailure(ServiceFailureReason.unreachable),
+          ),
         ],
       ),
       CatalogScene(

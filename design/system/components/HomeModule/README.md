@@ -182,7 +182,10 @@ lives a tab away. Each sits after Now playing.
   target, to its page. Read again every 60 s while the Home is seen. Without TrueNAS or Unraid it asks for TrueNAS.
 - **Discover shelf**: no slab. Seerr's `Trending this week` as Discover draws it (`DiscoverCarousel`, its posters
   [CatalogPoster](../CatalogPoster/README.md)), the library's state on every poster, its heading the way into
-  Discover. Never a count. Without Seerr it asks for Seerr: `Set up Seerr to discover movies and series`.
+  Discover. Never a count. Without Seerr it asks for Seerr: `Set up Seerr to discover movies and series`. A shelf that
+  has its posters keeps them when it is asked again and when that read fails (`DiscoverCarousel`: no skeleton, no
+  line in their place); only a shelf with nothing known says `Seerr did not answer, so this row is missing.` and
+  Retry.
 
 ## The requester's Home
 

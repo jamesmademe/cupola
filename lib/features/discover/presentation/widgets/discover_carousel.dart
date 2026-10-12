@@ -23,6 +23,15 @@ import 'package:cupola/features/settings/domain/service_not_configured.dart';
 /// dark Seerr quietly took its rails off the page and the page looked like a
 /// short catalogue. It now keeps its header and says what happened, in the
 /// classified words, with Retry: "Seerr did not answer" only when nothing did.
+///
+/// **A row that has its posters keeps them.** Asked again (a lens that moved,
+/// a connection that changed), it does not drop back to its skeleton, and when
+/// that read fails it does not swap them for a line: what it had is what the
+/// person last saw, and a page that wants the failure said says it once for
+/// all its rows (the requester's Home above everything, the atrium from its
+/// Trending canary). A row with no posters and a failed read says it itself,
+/// as above. A Home's last drawing of a shelf is handed in as the posters it
+/// has (`homeShelfOf`), and is kept the same way.
 class DiscoverCarousel extends StatelessWidget {
   final String title;
 
@@ -74,8 +83,11 @@ class DiscoverCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // While loading, show a header + skeleton rail so layout doesn't jump.
+    // While loading, show a header + skeleton rail so layout doesn't jump;
+    // once there are posters, a reload or a failed read leaves them be.
     return items.when(
+      skipLoadingOnReload: true,
+      skipError: true,
       loading: () => _shell(
         child: AppSkeleton.posterRow(height: _posterHeight, inset: inset),
       ),

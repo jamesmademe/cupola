@@ -31,7 +31,8 @@ fault.
 | `Removed from the server` · `Blocked` | neutral | `You can ask for it again.` · the owner's block |
 
 A series downloads as one: its episodes' bytes together, the last of them to end. A list read before the server went
-quiet keeps its rows and claims no figure: a download reads `On its way`, no bar, no time.
+quiet keeps its rows and claims no figure: a download reads `On its way`, no bar, no time. So does a cold start's last
+drawing of them, until her Seerr answers.
 
 ## Parts
 
@@ -72,7 +73,9 @@ approval by the server's owner, then ready to watch.`); `Cancel request` says wh
 
 Each sheet is drawn in the dark and the light room: the Home's rows (downloading, on its way, waiting, declined); the
 page's rows with Watch; the card that waits; the rows of a server gone quiet; her page, empty and with the server
-silent; Ready to watch with a second arrival; Your requests, and with nothing on its way; text at 200%.
+silent; Ready to watch with a second arrival; Your requests, and with nothing on its way; her Home at a cold start as last
+drawn (Ready to watch and Your requests, a download on its way with no figure; her two shelves, Coming soon cut again),
+and over a server that did not answer; text at 200%.
 
 ## Do / don't
 
