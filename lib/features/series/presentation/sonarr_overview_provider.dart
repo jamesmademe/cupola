@@ -717,20 +717,6 @@ final sonarrHistoryTodayProvider =
       return sonarrHistoryToday(records, now: DateTime.now());
     });
 
-// ─── Labels ─────────────────────────────────────────────────────────────────
-
-/// `21:00`, in the reader's own timezone.
-///
-/// Twenty-four hour, like the board draws it, and unconditionally: the app has
-/// no locale layer to ask, so a 12-hour form would be a guess wearing the
-/// authority of a formatted time.
-String sonarrClockLabel(DateTime date) {
-  final local = date.toLocal();
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
-}
-
 // ─── Shared parsing ─────────────────────────────────────────────────────────
 
 /// Parses an \*arr ISO timestamp into local time, or null when it is absent or

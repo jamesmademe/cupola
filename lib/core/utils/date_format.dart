@@ -181,6 +181,10 @@ String formatDayLabel(DateTime date, DateTime now) {
 
 /// A time of day as the brand book writes one: 24 h, `20:41`, on this
 /// device's clock.
+///
+/// Zero-padded, so a column of them stays a column, and 24 h unconditionally:
+/// the app has no locale layer to ask, so a 12 h form would be a guess wearing
+/// the authority of a formatted time.
 String formatClockTime(DateTime time) {
   final local = time.toLocal();
   return '${local.hour.toString().padLeft(2, '0')}:'

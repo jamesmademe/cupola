@@ -403,13 +403,6 @@ void main() {
     });
   });
 
-  group('labels', () {
-    test('the clock is zero-padded and twenty-four hour', () {
-      expect(sonarrClockLabel(DateTime(2026, 9, 2, 9, 5)), '09:05');
-      expect(sonarrClockLabel(DateTime(2026, 9, 2, 21)), '21:00');
-    });
-  });
-
   group('Needs attention, assembled', () {
     test('faults come before the backlog', () async {
       final container = _container(

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/date_format.dart' show formatClockTime;
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
@@ -473,7 +474,5 @@ String _timeValue(String? isoValue) {
   if (isoValue == null || isoValue.isEmpty) return 'Not yet';
   final parsed = DateTime.tryParse(isoValue)?.toLocal();
   if (parsed == null) return isoValue;
-  final hour = parsed.hour.toString().padLeft(2, '0');
-  final minute = parsed.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
+  return formatClockTime(parsed);
 }

@@ -164,6 +164,7 @@ void main() {
     test('is 24 h and zero-padded, so a column stays a column', () {
       expect(formatClockTime(DateTime(2026, 9, 2, 9, 5)), '09:05');
       expect(formatClockTime(DateTime(2026, 9, 2, 20, 41)), '20:41');
+      expect(formatClockTime(DateTime(2026, 9, 2, 21)), '21:00');
       expect(formatClockTime(DateTime(2026, 9, 2)), '00:00');
       expect(formatClockTime(DateTime(2026, 9, 2, 23, 59)), '23:59');
     });

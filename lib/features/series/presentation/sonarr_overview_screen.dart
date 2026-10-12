@@ -251,7 +251,7 @@ class _AiringRow extends StatelessWidget {
     // worth a line. Neutral ink either way: an unmonitored series is a choice
     // somebody made, not a fault.
     final qualifier = joinDisplayParts([
-      sonarrClockLabel(entry.airsAt),
+      formatClockTime(entry.airsAt),
       series.monitored ? 'monitored' : 'unmonitored',
     ]);
 
