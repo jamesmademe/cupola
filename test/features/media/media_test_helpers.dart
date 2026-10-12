@@ -14,8 +14,9 @@ Future<({List<MediaRow> rows, ProviderContainer container})> settledRows(
   ConfigProfile profile,
   WorldTitle title, {
   MediaKey? key,
+  DateTime? now,
 }) async {
-  final harness = await ProfileHarness.start(profile);
+  final harness = await ProfileHarness.start(profile, now: now);
   final container = harness.container();
   key ??= title.isSeries
       ? MediaKey.tv(title.tmdbId)

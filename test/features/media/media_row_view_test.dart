@@ -14,7 +14,12 @@ Future<List<String>> _words(
   WorldTitle title, {
   DateTime? now,
 }) async {
-  final read = await settledRows(profile, title);
+  // The world is pinned too: its requests are dated from its clock.
+  final read = await settledRows(
+    profile,
+    title,
+    now: DateTime(2026, 10, 12, 12),
+  );
   final settings = read.container.read(currentSettingsProvider);
   return [
     for (final row in read.rows)

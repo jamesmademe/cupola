@@ -169,6 +169,7 @@ void main() {
             lastKnownStoreProvider.overrideWithValue(store),
             calendarClockProvider.overrideWithValue(() => clock),
             stallClockProvider.overrideWithValue(() => clock),
+            arrivalsClockProvider.overrideWithValue(() => clock),
             servicesInFlightProvider.overrideWith((ref) => queue()),
             servicesArrHistoryProvider.overrideWith(
               (ref) => (history ?? () async => _noHistory())(),
@@ -395,6 +396,7 @@ void main() {
             lastKnownStoreProvider.overrideWithValue(store),
             calendarClockProvider.overrideWithValue(() => _now),
             stallClockProvider.overrideWithValue(() => _now),
+            arrivalsClockProvider.overrideWithValue(() => _now),
             servicesInFlightProvider.overrideWith((ref) => queue()),
             servicesArrHistoryProvider.overrideWith(
               (ref) => (history ?? () async => _noHistory())(),

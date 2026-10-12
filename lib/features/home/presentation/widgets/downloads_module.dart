@@ -606,7 +606,10 @@ class _NothingDownloading extends ConsumerWidget {
     final last = _lastImportedAt(
       ref.watch(servicesArrHistoryProvider).value?.entries,
     );
-    final line = lastFinishedLine(last, now: DateTime.now());
+    final line = lastFinishedLine(
+      last,
+      now: ref.watch(arrivalsClockProvider)(),
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
       child: Column(
