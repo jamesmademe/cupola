@@ -16,6 +16,8 @@ import 'package:cupola/core/utils/arr_activity_display.dart';
 
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 
+import 'package:cupola/core/utils/date_format.dart';
+
 import 'package:cupola/core/utils/image_utils.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
@@ -242,7 +244,7 @@ class _AiringRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final day = sonarrDayLabel(entry.airsAt, DateTime.now());
+    final day = formatDayLabel(entry.airsAt, DateTime.now());
     final series = entry.series;
     // Monitored is the fact that decides whether Sonarr will actually do
     // anything when the episode drops, which is the whole reason the row is

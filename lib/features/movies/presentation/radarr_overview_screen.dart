@@ -14,6 +14,8 @@ import 'package:cupola/core/theme.dart';
 
 import 'package:cupola/core/utils/arr_activity_display.dart';
 
+import 'package:cupola/core/utils/date_format.dart';
+
 import 'package:cupola/core/utils/image_utils.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
@@ -224,7 +226,7 @@ class _ComingUpRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final day = _dayLabel(release.date, DateTime.now());
+    final day = formatDayLabel(release.date, DateTime.now());
     final movie = release.movie;
     // Monitored is the fact that decides whether Radarr will actually do
     // anything on that date, which is the whole reason the row is worth a line.
@@ -546,28 +548,4 @@ class _HistoryRow extends StatelessWidget {
       detail: entry.detail,
     );
   }
-}
-
-const List<String> _weekdayNames = [
-  'Mon',
-  'Tue',
-  'Wed',
-  'Thu',
-  'Fri',
-  'Sat',
-  'Sun',
-];
-
-/// `Today`, `Tomorrow`, then `Wed 3`.
-///
-/// English weekday names are hard-coded for the same reason the month names in
-/// `string_utils.dart` are: English-only is a decision here, not debt, and there
-/// is no `intl` dependency to reach for.
-String _dayLabel(DateTime date, DateTime now) {
-  final today = DateTime(now.year, now.month, now.day);
-  final day = DateTime(date.year, date.month, date.day);
-  final difference = day.difference(today).inDays;
-  if (difference == 0) return 'Today';
-  if (difference == 1) return 'Tomorrow';
-  return '${_weekdayNames[day.weekday - 1]} ${day.day}';
 }

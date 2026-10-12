@@ -157,6 +157,21 @@ final List<String> _shortMonthNames = _shortened(_monthNames);
 List<String> _shortened(List<String> names) =>
     List.unmodifiable([for (final name in names) name.substring(0, 3)]);
 
+/// `Today`, `Tomorrow`, then the weekday and the day of the month, `Wed 3`:
+/// the day a thing airs or comes out, in a list of what the next days hold.
+///
+/// A windowing rule, so it takes an explicit [now]: which day a timestamp
+/// belongs to is a calendar day on the device, and the one boundary worth a
+/// test is that 23:59 today and 00:01 tomorrow are different words.
+String formatDayLabel(DateTime date, DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(date.year, date.month, date.day);
+  final difference = day.difference(today).inDays;
+  if (difference == 0) return 'Today';
+  if (difference == 1) return 'Tomorrow';
+  return '${shortWeekdayName(day)} ${day.day}';
+}
+
 /// A time of day as the brand book writes one: 24 h, `20:41`, on this
 /// device's clock.
 String formatClockTime(DateTime time) {

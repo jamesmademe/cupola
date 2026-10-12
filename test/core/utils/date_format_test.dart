@@ -240,4 +240,19 @@ void main() {
       );
     });
   });
+
+  group('formatDayLabel', () {
+    final now = DateTime(2026, 9, 2, 14, 30);
+
+    test('Today and Tomorrow are a calendar day apart, not 24 hours', () {
+      expect(formatDayLabel(DateTime(2026, 9, 2, 23, 59), now), 'Today');
+      expect(formatDayLabel(DateTime(2026, 9, 3, 0, 1), now), 'Tomorrow');
+      expect(formatDayLabel(DateTime(2026, 9, 4, 3), now), 'Fri 4');
+    });
+
+    test('names the weekday and the day of the month beyond tomorrow', () {
+      expect(formatDayLabel(DateTime(2026, 9, 7, 21), now), 'Mon 7');
+      expect(formatDayLabel(DateTime(2026, 10, 1, 21), now), 'Thu 1');
+    });
+  });
 }

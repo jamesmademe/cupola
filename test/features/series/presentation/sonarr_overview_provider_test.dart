@@ -404,12 +404,6 @@ void main() {
   });
 
   group('labels', () {
-    test('Today and Tomorrow are a calendar day apart, not 24 hours', () {
-      expect(sonarrDayLabel(DateTime(2026, 9, 2, 23, 59), now), 'Today');
-      expect(sonarrDayLabel(DateTime(2026, 9, 3, 0, 1), now), 'Tomorrow');
-      expect(sonarrDayLabel(DateTime(2026, 9, 4, 3), now), 'Fri 4');
-    });
-
     test('the clock is zero-padded and twenty-four hour', () {
       expect(sonarrClockLabel(DateTime(2026, 9, 2, 9, 5)), '09:05');
       expect(sonarrClockLabel(DateTime(2026, 9, 2, 21)), '21:00');

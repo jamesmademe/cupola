@@ -720,35 +720,6 @@ final sonarrHistoryTodayProvider =
 
 // ─── Labels ─────────────────────────────────────────────────────────────────
 
-const List<String> _weekdayNames = [
-  'Mon',
-  'Tue',
-  'Wed',
-  'Thu',
-  'Fri',
-  'Sat',
-  'Sun',
-];
-
-/// `Today`, `Tomorrow`, then `Wed 3`.
-///
-/// Top-level and public where Radarr keeps its twin private inside the screen:
-/// it is a windowing rule like the others: which day a timestamp belongs to,
-/// relative to an explicit `now`, and the one boundary worth a test is that
-/// 23:59 today and 00:01 tomorrow are different words.
-///
-/// English weekday names are hard-coded for the same reason the month names in
-/// `string_utils.dart` are: English-only is a decision here, not debt, and
-/// there is no `intl` dependency to reach for.
-String sonarrDayLabel(DateTime date, DateTime now) {
-  final today = DateTime(now.year, now.month, now.day);
-  final day = DateTime(date.year, date.month, date.day);
-  final difference = day.difference(today).inDays;
-  if (difference == 0) return 'Today';
-  if (difference == 1) return 'Tomorrow';
-  return '${_weekdayNames[day.weekday - 1]} ${day.day}';
-}
-
 /// `21:00`, in the reader's own timezone.
 ///
 /// Twenty-four hour, like the board draws it, and unconditionally: the app has
