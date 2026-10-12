@@ -96,6 +96,18 @@ IconData streamLibraryGlyph(StreamLibraryKind kind) => switch (kind) {
   StreamLibraryKind.other => Icons.folder_outlined,
 };
 
+/// The glyph one item wears on its plate when it has no artwork, in the same
+/// vocabulary as [streamLibraryGlyph]: a season has no poster of a film.
+IconData streamItemGlyph(StreamItemKind kind) => switch (kind) {
+  StreamItemKind.movie => Icons.movie_outlined,
+  StreamItemKind.series ||
+  StreamItemKind.season ||
+  StreamItemKind.episode => Icons.tv_outlined,
+  StreamItemKind.album => Icons.album_outlined,
+  StreamItemKind.track => Icons.music_note_outlined,
+  StreamItemKind.other => Icons.folder_outlined,
+};
+
 /// What one Libraries peek row is about.
 ///
 /// Two states, and the tones are the point of the enum. A scan in progress is

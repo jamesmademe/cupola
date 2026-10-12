@@ -59,6 +59,7 @@ class SeriesScreen extends ConsumerWidget {
       navigationSection: NavigationSection.stack,
       serviceName: 'Sonarr',
       service: ServiceKey.sonarr,
+      posterFallbackIcon: Icons.tv_outlined,
       accentColor: ServiceKey.sonarr.accent,
       heroTagPrefix: 'series',
       searchHeroTagPrefix: 'series_search',

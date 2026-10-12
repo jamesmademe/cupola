@@ -33,6 +33,11 @@ class ContentCard extends StatelessWidget {
   /// whose title the pane shows wears a ring.
   final String? paneTag;
 
+  /// The glyph on the plate when there is no artwork: what kind of thing the
+  /// tile stands for. The film's clapper by default; a series, an album or a
+  /// person passes its own, or it reads as a movie that lost its poster.
+  final IconData fallbackIcon;
+
   const ContentCard({
     super.key,
     required this.imageUrl,
@@ -40,6 +45,7 @@ class ContentCard extends StatelessWidget {
     this.badge,
     this.onTap,
     this.paneTag,
+    this.fallbackIcon = Icons.movie_outlined,
   });
 
   /// Reach of the badge's shadow radial, as a fraction of the card's shorter
@@ -148,11 +154,7 @@ class ContentCard extends StatelessWidget {
   Widget _buildPlaceholder() {
     return Container(
       color: AppColors.plateSurface,
-      child: const Icon(
-        Icons.movie_outlined,
-        color: AppColors.plateDimInk,
-        size: 32,
-      ),
+      child: Icon(fallbackIcon, color: AppColors.plateDimInk, size: 32),
     );
   }
 

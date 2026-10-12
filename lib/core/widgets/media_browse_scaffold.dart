@@ -307,6 +307,10 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   /// What a tile is drawn as: see [MediaBrowseTileShape].
   final MediaBrowseTileShape tileShape;
 
+  /// The glyph on a poster tile with no artwork: the film's clapper unless the
+  /// library holds something else (a series passes the television).
+  final IconData posterFallbackIcon;
+
   /// The ids the service reported under `wanted/cutoff`, or null when this
   /// screen has no cutoff source.
   ///
@@ -347,6 +351,7 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
     this.sorts = const [],
     this.cutoffUnmetIds,
     this.tileShape = MediaBrowseTileShape.poster,
+    this.posterFallbackIcon = Icons.movie_outlined,
   });
 
   @override
@@ -865,6 +870,7 @@ class _MediaBrowseScaffoldState<T>
     return _BrowsePosterTile(
       width: tileWidth,
       shape: widget.tileShape,
+      fallbackIcon: widget.posterFallbackIcon,
       title: widget.titleExtractor(item),
       subtitle: widget.subtitleExtractor(item),
       imageSource: ImageUtils.extractPosterUrl(
@@ -1232,6 +1238,7 @@ class _BrowsePosterTile extends StatelessWidget {
   final double width;
 
   final MediaBrowseTileShape shape;
+  final IconData fallbackIcon;
 
   final String title;
   final String subtitle;
@@ -1243,6 +1250,7 @@ class _BrowsePosterTile extends StatelessWidget {
   const _BrowsePosterTile({
     required this.width,
     required this.shape,
+    required this.fallbackIcon,
     required this.title,
     required this.subtitle,
     required this.imageSource,
@@ -1287,6 +1295,7 @@ class _BrowsePosterTile extends StatelessWidget {
                 imageUrl: imageSource.url,
                 httpHeaders: imageSource.headers,
                 paneTag: heroTag,
+                fallbackIcon: fallbackIcon,
               ),
             ),
           ),

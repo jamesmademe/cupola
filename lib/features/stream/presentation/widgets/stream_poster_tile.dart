@@ -12,6 +12,7 @@ import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 
 /// One poster in a Stream library grid.
 ///
@@ -80,6 +81,7 @@ class StreamPosterTile extends ConsumerWidget {
                 imageUrl: poster?.url,
                 httpHeaders: poster?.headers,
                 paneTag: heroTag,
+                fallbackIcon: streamItemGlyph(item.kind),
                 badge: unplayed != null && unplayed > 0
                     ? _UnplayedBadge(count: unplayed)
                     : null,
