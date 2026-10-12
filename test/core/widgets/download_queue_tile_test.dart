@@ -66,6 +66,7 @@ void main() {
             percentage: 20,
             accent: Colors.teal,
             actions: DownloadQueueActionsMenu(
+              subject: 'Big.Buck.Bunny.2008.1080p',
               paused: true,
               onCommand: received.add,
             ),
@@ -206,7 +207,11 @@ void main() {
             progress: 0.2,
             percentage: 20,
             accent: Colors.teal,
-            actions: DownloadQueueActionsMenu(paused: false, onCommand: (_) {}),
+            actions: DownloadQueueActionsMenu(
+              paused: false,
+              subject: 'Big.Buck.Bunny.2008.1080p',
+              onCommand: (_) {},
+            ),
           ),
         ),
       );

@@ -756,7 +756,7 @@ class _ProxyHostMenu extends ConsumerWidget {
 
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert_rounded, size: 18),
-      tooltip: 'Host actions',
+      tooltip: 'Actions for ${host.primaryDomain}',
       onSelected: (value) {
         switch (value) {
           case 'enable':

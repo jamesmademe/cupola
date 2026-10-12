@@ -69,7 +69,7 @@ class TorrentSelectionBar extends ConsumerWidget {
                   action: (service) =>
                       service.setForceStart(selectedHashes.toList(), true),
                   successMessage: 'Force started',
-                  failureMessage: 'Failed',
+                  failureMessage: 'Could not force resume the torrents',
                   invalidate: [torrentsProvider, allTorrentsProvider],
                 ),
               ),

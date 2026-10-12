@@ -85,6 +85,12 @@ Future<bool> appLifecycleAction(
     }
   }
 
+  const verbs = {
+    AppAction.start: 'start',
+    AppAction.stop: 'stop',
+    AppAction.upgrade: 'upgrade',
+    AppAction.delete: 'delete',
+  };
   const messages = {
     AppAction.start: 'Starting',
     AppAction.stop: 'Stopping',
@@ -97,7 +103,7 @@ Future<bool> appLifecycleAction(
     ref,
     action: call,
     successMessage: '${messages[action]} ${app.title}',
-    failureMessage: 'Action failed',
+    failureMessage: 'Could not ${verbs[action]} ${app.title}',
     invalidate: [truenasAppsProvider, truenasAppProvider(app.name)],
   );
 }

@@ -159,7 +159,9 @@ class _ServiceTile extends ConsumerWidget {
               successMessage: value
                   ? 'Started ${item.name}'
                   : 'Stopped ${item.name}',
-              failureMessage: 'Action failed',
+              failureMessage: value
+                  ? 'Could not start ${item.name}'
+                  : 'Could not stop ${item.name}',
               invalidate: [truenasServicesProvider],
             ),
           ),

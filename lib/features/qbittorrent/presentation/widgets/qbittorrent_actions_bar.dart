@@ -68,7 +68,7 @@ class QbittorrentOverflowMenu extends ConsumerWidget {
           ref,
           action: (service) => service.pauseTorrents(const ['all']),
           successMessage: 'All torrents stopped',
-          failureMessage: 'Failed',
+          failureMessage: 'Could not stop all torrents',
           invalidate: [torrentsProvider, allTorrentsProvider],
         );
       case _QbOverflowAction.resumeAll:
@@ -77,7 +77,7 @@ class QbittorrentOverflowMenu extends ConsumerWidget {
           ref,
           action: (service) => service.resumeTorrents(const ['all']),
           successMessage: 'All torrents resumed',
-          failureMessage: 'Failed',
+          failureMessage: 'Could not resume all torrents',
           invalidate: [torrentsProvider, allTorrentsProvider],
         );
       case _QbOverflowAction.toggleAltSpeed:
@@ -86,7 +86,7 @@ class QbittorrentOverflowMenu extends ConsumerWidget {
           ref,
           action: (service) => service.toggleAlternativeSpeedLimits(),
           successMessage: 'Alternative speed limits toggled',
-          failureMessage: 'Failed',
+          failureMessage: 'Could not switch the speed limits',
           invalidate: [transferInfoProvider],
         );
     }

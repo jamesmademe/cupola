@@ -460,7 +460,9 @@ class VirtLifecycleButton extends ConsumerWidget {
                 ? api.restart(instance.id)
                 : api.stop(instance.id),
             successMessage: value == 'restart' ? 'Restarting' : 'Stopping',
-            failureMessage: 'Action failed',
+            failureMessage: value == 'restart'
+                ? 'Could not restart ${instance.name}'
+                : 'Could not stop ${instance.name}',
           ).then((_) => invalidate());
         },
         // Never `enabled: false`: a disabled item drops off the screen

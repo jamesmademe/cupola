@@ -231,7 +231,11 @@ void main() {
             progress: 0.65,
             percentage: 65,
             accent: ServiceKey.sabnzbd.accent,
-            actions: DownloadQueueActionsMenu(paused: false, onCommand: (_) {}),
+            actions: DownloadQueueActionsMenu(
+              paused: false,
+              subject: 'Big.Buck.Bunny.2008.1080p',
+              onCommand: (_) {},
+            ),
           ),
           DownloadQueueTile(
             title: 'Sherlock.Jr.1924.720p.BluRay.x264-GROUP',
@@ -239,7 +243,11 @@ void main() {
             progress: 0.18,
             percentage: 18,
             accent: ServiceKey.nzbget.accent,
-            actions: DownloadQueueActionsMenu(paused: true, onCommand: (_) {}),
+            actions: DownloadQueueActionsMenu(
+              paused: true,
+              subject: 'Big.Buck.Bunny.2008.1080p',
+              onCommand: (_) {},
+            ),
           ),
           DownloadQueueTile(
             title: 'The.Cabinet.of.Dr.Caligari.1920.1080p.BluRay.x264-GROUP',
@@ -247,7 +255,11 @@ void main() {
             progress: null,
             percentage: null,
             accent: ServiceKey.nzbget.accent,
-            actions: DownloadQueueActionsMenu(paused: false, onCommand: (_) {}),
+            actions: DownloadQueueActionsMenu(
+              paused: false,
+              subject: 'Big.Buck.Bunny.2008.1080p',
+              onCommand: (_) {},
+            ),
           ),
         ]),
         width: 390,
@@ -336,7 +348,11 @@ void main() {
             progress: 0.65,
             percentage: 65,
             accent: ServiceKey.sabnzbd.accent,
-            actions: DownloadQueueActionsMenu(paused: false, onCommand: (_) {}),
+            actions: DownloadQueueActionsMenu(
+              paused: false,
+              subject: 'Big.Buck.Bunny.2008.1080p',
+              onCommand: (_) {},
+            ),
           ),
           DownloadQueueTile(
             title:

@@ -368,7 +368,7 @@ class _TorrentMenu extends ConsumerWidget {
     final ids = [torrent.rpcId];
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert_rounded, size: 18),
-      tooltip: 'Torrent actions',
+      tooltip: 'Actions for ${torrent.name}',
       onSelected: (value) {
         switch (value) {
           case 'start':

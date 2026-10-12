@@ -385,7 +385,14 @@ void main() {
         screen: const NpmScreen.proxyHosts(showAppBar: false),
         account: _viewOnly,
       );
-      await tester.tap(find.byTooltip('Host actions').first);
+      await tester.tap(
+        find
+            .byWidgetPredicate(
+              (w) =>
+                  w is Tooltip && (w.message ?? '').startsWith('Actions for '),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
 
       final item = find.ancestor(
@@ -482,7 +489,14 @@ void main() {
         account: hostsOnly,
       );
       expect(find.byType(CapabilityBanner), findsNothing);
-      await tester.tap(find.byTooltip('Host actions').first);
+      await tester.tap(
+        find
+            .byWidgetPredicate(
+              (w) =>
+                  w is Tooltip && (w.message ?? '').startsWith('Actions for '),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
       expect(tester.getSemantics(find.text('Disable…')).hint, isEmpty);
     });

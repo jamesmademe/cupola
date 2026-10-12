@@ -334,6 +334,7 @@ class _QueueTile extends ConsumerWidget {
       accent: ServiceKey.nzbget.accent,
       actions: DownloadQueueActionsMenu(
         paused: _paused,
+        subject: group.name,
         onCommand: (command) => _run(context, ref, command),
       ),
     );

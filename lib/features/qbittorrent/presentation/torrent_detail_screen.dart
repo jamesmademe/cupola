@@ -732,7 +732,7 @@ class _ActionsTab extends ConsumerWidget {
             ref,
             action: (service) => service.setForceStart([torrent.hash], true),
             successMessage: 'Force started',
-            failureMessage: 'Failed',
+            failureMessage: 'Could not force resume the torrent',
             invalidate: [torrentsProvider, allTorrentsProvider],
           ),
           icon: const Icon(Icons.flash_on_rounded, size: 18),

@@ -507,18 +507,22 @@ class DownloadQueueActionsMenu extends StatelessWidget {
     super.key,
     required this.paused,
     required this.onCommand,
-    this.tooltip = 'Job actions',
+    required this.subject,
   });
 
   final bool paused;
   final ValueChanged<DownloadQueueCommand> onCommand;
-  final String tooltip;
+
+  /// The job's name, for the button's tooltip and spoken label: every row's
+  /// ⋯ saying "Job actions" left a screen reader with a list of identical
+  /// buttons.
+  final String subject;
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<DownloadQueueCommand>(
       icon: const Icon(Icons.more_vert_rounded, size: 18),
-      tooltip: tooltip,
+      tooltip: 'Actions for $subject',
       onSelected: onCommand,
       itemBuilder: (context) => [
         if (paused)

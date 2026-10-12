@@ -276,7 +276,11 @@ void main() {
     await tester.pumpAndSettle();
 
     Future<void> openDelete() async {
-      await tester.tap(find.byTooltip('Job actions'));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is Tooltip && (w.message ?? '').startsWith('Actions for '),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Delete job'));
       await tester.pumpAndSettle();
