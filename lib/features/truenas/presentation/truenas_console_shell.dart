@@ -340,7 +340,7 @@ class _AreaRowState extends State<_AreaRow> {
             onTap: () => GoRouter.of(context).go(widget.section.route),
             child: Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md - 1,
+                horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
               margin: const EdgeInsets.only(bottom: 2),
@@ -362,7 +362,7 @@ class _AreaRowState extends State<_AreaRow> {
                         ? colorScheme.onSurface
                         : colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: AppSpacing.md - 1),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

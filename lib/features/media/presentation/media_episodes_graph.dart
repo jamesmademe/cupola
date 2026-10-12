@@ -445,7 +445,11 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
                 step++
               )
                 Padding(
-                  padding: const EdgeInsets.only(right: 3),
+                  // Between the swatches only, so both ends of the strip sit
+                  // a whole step from their words.
+                  padding: EdgeInsets.only(
+                    right: step < MediaEpisodesGraph.steps.length ? 3 : 0,
+                  ),
                   child: SizedBox(
                     width: 22,
                     height: 12,
@@ -457,7 +461,7 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
                     ),
                   ),
                 ),
-              const SizedBox(width: AppSpacing.sm - 3),
+              const SizedBox(width: AppSpacing.sm),
               Text('${MediaEpisodesGraph.steps.last}+', style: secondary),
             ],
           ),

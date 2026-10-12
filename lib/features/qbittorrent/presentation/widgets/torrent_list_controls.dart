@@ -53,7 +53,7 @@ class TorrentFilterChipsRow extends ConsumerWidget {
       child: Row(
         children: [
           for (var i = 0; i < kTorrentStatusFilters.length; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.sm - 2),
+            if (i > 0) const SizedBox(width: AppSpacing.s),
             _FilterChip(
               label: torrentFilterLabel(kTorrentStatusFilters[i]),
               active: kTorrentStatusFilters[i] == selectedFilter,
@@ -222,8 +222,8 @@ class TorrentSortRow extends ConsumerWidget {
                       borderRadius: AppRadius.borderRadiusMd,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md - 2,
-                          vertical: AppSpacing.xs + 1,
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.xs,
                         ),
                         decoration: BoxDecoration(
                           color: sort == currentSort
@@ -303,8 +303,8 @@ class _FilterChip extends StatelessWidget {
           borderRadius: AppRadius.borderRadiusFull,
           child: Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md + 1,
-              vertical: AppSpacing.xs + 1,
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
             ),
             decoration: BoxDecoration(
               color: active
@@ -357,8 +357,8 @@ class _FilterPill extends StatelessWidget {
     if (options.isEmpty) {
       return Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md - 2,
-          vertical: AppSpacing.xs + 1,
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
         ),
         child: Text(
           label,
@@ -406,8 +406,8 @@ class _FilterPill extends StatelessWidget {
           borderRadius: AppRadius.borderRadiusMd,
           child: Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md - 2,
-              vertical: AppSpacing.xs + 1,
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
             ),
             decoration: BoxDecoration(
               color: active

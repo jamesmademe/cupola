@@ -612,7 +612,7 @@ class _NavBarLayoutMetrics {
           (gap * (count - 1));
     }
 
-    final regularGap = AppSpacing.sm - 2;
+    final regularGap = AppSpacing.s;
     final regularWidth = widthForGap(regularGap);
     if (regularWidth >= _compactBreakpoint) {
       return regularWidth;
@@ -631,9 +631,7 @@ class _NavBarLayoutMetrics {
   }) {
     final count = destinations.length;
     final gap = count > 1
-        ? (availableWidth < _compactBreakpoint
-              ? AppSpacing.xs
-              : AppSpacing.sm - 2)
+        ? (availableWidth < _compactBreakpoint ? AppSpacing.xs : AppSpacing.s)
         : 0.0;
     final totalGapWidth = gap * (count - 1);
     final itemAreaWidth = (availableWidth - totalGapWidth)

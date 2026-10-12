@@ -252,9 +252,7 @@ class _SectionRowState extends State<_SectionRow> {
             child: Container(
               height: 46,
               margin: const EdgeInsets.only(bottom: 2),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md - 1,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               decoration: BoxDecoration(
                 // The room's strong fill, the selected pill of the tab bar and
                 // the rail: monochrome, so the selected row says "here" and
@@ -276,7 +274,7 @@ class _SectionRowState extends State<_SectionRow> {
                         ? colorScheme.onSurface
                         : colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: AppSpacing.md - 1),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
                       widget.section.label,

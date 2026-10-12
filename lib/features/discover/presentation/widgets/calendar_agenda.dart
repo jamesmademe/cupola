@@ -287,7 +287,7 @@ class CalendarRow extends StatelessWidget {
         child: Padding(
           // The Home's slab has its own margin; the row does not add one.
           padding: EdgeInsets.symmetric(
-            horizontal: _home ? 0 : AppSpacing.md + 2,
+            horizontal: _home ? 0 : AppSpacing.lg,
             vertical: AppSpacing.md,
           ),
           child: body,

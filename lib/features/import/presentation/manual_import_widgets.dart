@@ -216,7 +216,7 @@ class ImportStationBar extends StatelessWidget {
                     curve: AppAnimation.emphasizedCurve,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
-                      vertical: AppSpacing.xs + 2,
+                      vertical: AppSpacing.s,
                     ),
                     decoration: BoxDecoration(
                       color: index == activeIndex

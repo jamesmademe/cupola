@@ -173,7 +173,7 @@ class _Day extends StatelessWidget {
               Container(
                 padding: isToday
                     ? const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xs + 1,
+                        horizontal: AppSpacing.xs,
                         vertical: 1,
                       )
                     : EdgeInsets.zero,
@@ -293,7 +293,7 @@ class _Thing extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xs + 2,
+          AppSpacing.s,
           AppSpacing.xs,
           AppSpacing.xs,
           AppSpacing.xs,

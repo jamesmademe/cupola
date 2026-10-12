@@ -149,7 +149,7 @@ class _FacetChip extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
-                    vertical: AppSpacing.xs + 2,
+                    vertical: AppSpacing.s,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
