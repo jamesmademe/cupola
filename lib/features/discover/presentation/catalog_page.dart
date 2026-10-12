@@ -140,7 +140,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     if (!watchSeerrConfigured(ref)) {
       return Scaffold(
         backgroundColor: room.ground,
-        appBar: AppBar(title: Text(_title(ref))),
+        appBar: GlassAppBar(title: Text(_title(ref))),
         body: NotConfiguredPlaceholder.forService(ServiceKey.seerr),
       );
     }
