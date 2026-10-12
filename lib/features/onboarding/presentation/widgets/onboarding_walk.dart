@@ -914,11 +914,13 @@ class _CertificateCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final rotated = probe.rotated;
     // The card's own ground: the rotation's wash over the page, or the plain
-    // container. Every red ink inside it is measured against this.
+    // container. Every red ink inside it, the border included, is measured
+    // against this: the tone's fill byte for the wash, its walked colour for
+    // anything drawn on it, never the scheme's raw `error`.
     final ground = rotated
         ? Color.alphaBlend(
-            scheme.errorContainer.withValues(alpha: 0.35),
-            scheme.surface,
+            statusToneFill(scheme, StatusTone.error).withValues(alpha: 0.12),
+            scheme.surfaceContainer,
           )
         : scheme.surfaceContainer;
     final alarm = statusToneColor(scheme, StatusTone.error, surface: ground);
@@ -927,13 +929,9 @@ class _CertificateCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: rotated
-            ? scheme.errorContainer.withValues(alpha: 0.35)
-            : scheme.surfaceContainer,
+        color: ground,
         borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(
-          color: rotated ? scheme.error : scheme.outlineVariant,
-        ),
+        border: Border.all(color: rotated ? alarm : scheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
