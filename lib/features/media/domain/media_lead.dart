@@ -111,7 +111,8 @@ final class MediaLeadNone extends MediaLead {
 /// connection the page was opened from), or opens the title through Seerr's
 /// link where Cupola has no media server; then the trailer; then nothing. A
 /// connection that did not answer is never read as one that holds nothing: no
-/// Add while an arr is silent.
+/// Add while an arr is silent, though a Seerr that answered can still be
+/// asked.
 ///
 /// [seerrMayRequest] says whether a Seerr that has answered can take a request
 /// for this title's kind now: its account may ask, and it has a server to send
@@ -183,6 +184,19 @@ MediaLead resolveMediaLead(
     }
     if (copies.isEmpty && seerrs.isNotEmpty) {
       return MediaLeadRequest(seerrs.first.connection);
+    }
+    // An arr that did not answer may hold the title, so nothing is added to
+    // it; but a Seerr that answered speaks for its own copy, and asking it
+    // stays open whichever way the operator adds (Matt, 12/10).
+    if (copies.isNotEmpty && !allAnswered) {
+      if (seerrs.firstOrNull case final seerr?
+          when seerr.reading is MediaReadingAnswered) {
+        final may = seerrMayRequest == null
+            ? true
+            : seerrMayRequest(seerr.connection);
+        if (may == null) return const MediaLeadWaiting();
+        if (may) return MediaLeadRequest(seerr.connection);
+      }
     }
   } else {
     // A series' copy never leads: its rows say what is downloading and

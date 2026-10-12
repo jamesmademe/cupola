@@ -156,6 +156,32 @@ void main() {
       expect(lead, isA<MediaLeadNone>());
     });
 
+    test('a silent Radarr, and a Seerr that answered and may request: the '
+        'request leads, with no Add beside it', () {
+      final lead = resolveMediaLead(
+        [_copy(_radarr, _silent()), _seerrRow()],
+        audience: Audience.operator,
+        addsVia: OperatorAddsVia.arr,
+        seerrMayRequest: (_) => true,
+      );
+
+      expect(lead, isA<MediaLeadRequest>());
+      expect((lead as MediaLeadRequest).alternative, isNull);
+    });
+
+    test(
+      'a silent Radarr, and a Seerr that may not request: nothing leads',
+      () {
+        final lead = resolveMediaLead(
+          [_copy(_radarr, _silent()), _seerrRow()],
+          audience: Audience.operator,
+          seerrMayRequest: (_) => false,
+        );
+
+        expect(lead, isA<MediaLeadNone>());
+      },
+    );
+
     test('no Radarr set up, Seerr is: the operator requests through it', () {
       final lead = resolveMediaLead([
         _seerrRow(),
