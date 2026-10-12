@@ -202,6 +202,71 @@ void main() {
       expect(find.text('No'), findsOneWidget);
     });
 
+    testWidgets('a release date prints the day it states and no clock', (
+      tester,
+    ) async {
+      await _pumpDetailSheet(
+        tester,
+        showSheet: (context) => DetailSheets.showWantedDetail(context, {
+          'title': 'Release Name',
+          'artist': {'artistName': 'Artist Name'},
+          'releaseDate': '2024-05-01T00:00:00Z',
+        }, ServiceType.music),
+      );
+
+      expect(find.text('Release date'), findsOneWidget);
+      expect(find.text('2024-05-01'), findsOneWidget);
+    });
+
+    testWidgets('a movie\'s release date prints the day it states too', (
+      tester,
+    ) async {
+      await _pumpDetailSheet(
+        tester,
+        showSheet: (context) => DetailSheets.showWantedDetail(context, {
+          'title': 'Cool Movie',
+          'status': 'released',
+          'inCinemas': '2026-04-05T00:00:00Z',
+        }, ServiceType.movies),
+      );
+
+      expect(find.text('Release date'), findsOneWidget);
+      expect(find.text('2026-04-05'), findsOneWidget);
+    });
+
+    testWidgets('the History sheet dates an instant on the device\'s day', (
+      tester,
+    ) async {
+      // A moment just after local midnight: in UTC it is still the day before
+      // in any zone ahead of Greenwich.
+      final iso = DateTime(2026, 9, 30, 0, 30).toUtc().toIso8601String();
+      await _pumpDetailSheet(
+        tester,
+        showSheet: (context) => DetailSheets.showHistoryDetail(context, {
+          'sourceTitle': 'Release.Name',
+          'eventType': 'downloadImported',
+          'date': iso,
+        }),
+      );
+
+      expect(find.text('2026-09-30'), findsOneWidget);
+    });
+
+    testWidgets('the Blocklist sheet dates the same instant on the same day', (
+      tester,
+    ) async {
+      final iso = DateTime(2026, 9, 30, 0, 30).toUtc().toIso8601String();
+      await _pumpDetailSheet(
+        tester,
+        showSheet: (context) => DetailSheets.showBlocklistDetail(context, {
+          'sourceTitle': 'Bad.Release',
+          'date': iso,
+        }),
+      );
+
+      expect(find.text('2026-09-30 00:30'), findsOneWidget);
+    });
+
     testWidgets('showWantedDetail renders music-specific fields', (
       tester,
     ) async {

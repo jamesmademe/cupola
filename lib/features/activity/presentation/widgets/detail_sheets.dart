@@ -275,7 +275,7 @@ List<_DetailField> _buildWantedFields(
       _detailField('Year', item['year']),
       _detailField(
         'Release date',
-        formatActivityDateTime(
+        formatStatedDate(
           stringOrNull(
             item['airDateUtc'] ?? item['digitalRelease'] ?? item['inCinemas'],
           ),
@@ -294,7 +294,7 @@ List<_DetailField> _buildWantedFields(
       _detailField('Album', asActivityMap(item['album'])?['title']),
       _detailField(
         'Release date',
-        formatActivityDateTime(stringOrNull(item['releaseDate'])),
+        formatStatedDate(stringOrNull(item['releaseDate'])),
       ),
       _detailField('Monitored', item['monitored']),
     ]),

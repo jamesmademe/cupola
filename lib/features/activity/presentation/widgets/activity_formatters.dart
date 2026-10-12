@@ -93,7 +93,25 @@ String formatActivityTimeOnly(String? isoDate) {
   return parsed == null ? isoDate : formatClockTime(parsed);
 }
 
+/// `2026-09-30`: the day an *instant* fell on, on this device's calendar. For a
+/// record that happened at a moment (a History event's `date`), so it names the
+/// same day as its clock time ([formatActivityDateTime]), its relative age and
+/// the day heading it sits under. `—` when there is none, the string itself
+/// when it cannot be read.
+///
+/// A date that has no time of day (a release date) is not an instant and
+/// takes no shift: that is [formatStatedDate].
 String formatDateOnly(String? isoDate) {
+  if (isoDate == null || isoDate.trim().isEmpty) return '—';
+  final parsed = DateTime.tryParse(isoDate);
+  return parsed == null ? isoDate : formatIsoDay(parsed.toLocal());
+}
+
+/// `2024-05-01`: a date with no time of day, as it states itself. For a release
+/// date, which a service sends as `2024-05-01` or as midnight UTC meaning "this
+/// day": the day is the one written, in every zone, and no clock is printed
+/// because the field has none. `—` when there is none.
+String formatStatedDate(String? isoDate) {
   if (isoDate == null || isoDate.trim().isEmpty) return '—';
   return formatIsoDate(isoDate);
 }

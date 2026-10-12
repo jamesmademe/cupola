@@ -130,6 +130,29 @@ void main() {
       expect(formatDateOnly(''), '—');
     });
 
+    test('formatDateOnly reads the device\'s day of an instant', () {
+      // Built from local times, so the instant lands on the other side of
+      // midnight in UTC in any zone with an offset: the day stays the local one.
+      for (final local in [
+        DateTime(2026, 9, 30, 0, 30),
+        DateTime(2026, 9, 30, 23, 30),
+      ]) {
+        final iso = local.toUtc().toIso8601String();
+        expect(formatDateOnly(iso), '2026-09-30', reason: iso);
+        // The same day its clock time is printed on.
+        expect(formatActivityDateTime(iso), startsWith('2026-09-30'));
+      }
+    });
+
+    test('formatStatedDate keeps the day a date with no time states', () {
+      expect(formatStatedDate('2024-05-01'), '2024-05-01');
+      expect(formatStatedDate('2024-05-01T00:00:00Z'), '2024-05-01');
+      expect(formatStatedDate('2024-05-01T23:59:59Z'), '2024-05-01');
+      expect(formatStatedDate(null), '—');
+      expect(formatStatedDate('  '), '—');
+      expect(formatStatedDate('soon'), 'soon');
+    });
+
     test('formatRelativeActivityDate counts back from the injected clock', () {
       final now = DateTime(2026, 10, 9, 20, 30);
       final stamp = DateTime(2026, 10, 9, 18, 30).toIso8601String();
