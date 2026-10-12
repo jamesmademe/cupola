@@ -509,6 +509,20 @@ void main() {
       expect(items.single.ratioLabel, 'ratio 2.60');
     });
 
+    test('an infinite ratio is a ratio, never the unknown dash', () {
+      // `-2`, `TR_RATIO_INF`: sent and never received, a torrent added over
+      // data already on disk.
+      final items = transmissionFinishedToday([
+        _torrent(
+          id: 1,
+          uploadRatio: -2,
+          doneDate: _epochSeconds(DateTime(2026, 9, 16, 12)),
+        ),
+      ], now: now);
+
+      expect(items.single.ratioLabel, 'ratio ∞');
+    });
+
     test('the row speaks as one sentence, with the dots turned into commas', () {
       final item = transmissionFinishedToday([
         _torrent(

@@ -149,7 +149,9 @@ class TransmissionTorrent {
   /// formatting this directly.
   final int eta;
 
-  /// Ratio, or `-1` when not available. Read [ratioLabel].
+  /// Ratio, or `-1` when not available and `-2` when it is infinite (bytes
+  /// sent, none received: a torrent added over data already on disk). Read
+  /// [ratioLabel].
   final double uploadRatio;
 
   final int uploadedEver;
@@ -197,8 +199,13 @@ class TransmissionTorrent {
 
   String get etaLabel => eta < 0 ? 'Unknown' : formatDuration(eta);
 
-  String get ratioLabel =>
-      uploadRatio < 0 ? '—' : uploadRatio.toStringAsFixed(2);
+  /// `∞` for Transmission's infinite ratio (`TR_RATIO_INF`, `-2`), the em
+  /// dash of an unknown figure for `-1` (`TR_RATIO_NA`).
+  String get ratioLabel => switch (uploadRatio) {
+    -2.0 => '∞',
+    < 0 => '—',
+    final ratio => ratio.toStringAsFixed(2),
+  };
 
   /// The short phrase shown under the name: the torrent's own status, or the
   /// reason it is not progressing when there is one.

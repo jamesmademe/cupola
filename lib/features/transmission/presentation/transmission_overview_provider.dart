@@ -462,9 +462,9 @@ List<TransmissionFinishedItem> transmissionFinishedToday(
           // otherwise.
           (torrent.warning ?? torrent.status.label).toLowerCase(),
         ]),
-        // `-1` is Transmission's "no ratio" sentinel and `ratioLabel` already
-        // renders it as an em dash.
-        ratioLabel: torrent.uploadRatio < 0
+        // `-1` is Transmission's "no ratio" sentinel, an em dash alone; `-2`,
+        // the infinite one, is a ratio like any other.
+        ratioLabel: torrent.uploadRatio < 0 && torrent.uploadRatio != -2
             ? '—'
             : 'ratio ${torrent.ratioLabel}',
         // The app's one reading of Transmission's eight states, shared with the

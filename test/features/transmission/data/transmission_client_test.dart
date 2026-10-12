@@ -619,6 +619,19 @@ void main() {
   });
 
   group('model parsing', () {
+    test('an infinite ratio reads as one, the unknown one as a dash', () {
+      TransmissionTorrent ratio(double value) => TransmissionTorrent.fromJson({
+        'id': 7,
+        'name': 'Arrival',
+        'status': 6,
+        'uploadRatio': value,
+      });
+
+      expect(ratio(-2).ratioLabel, '∞');
+      expect(ratio(-1).ratioLabel, '—');
+      expect(ratio(1.234).ratioLabel, '1.23');
+    });
+
     test('reads the sentinels Transmission actually uses', () {
       final torrent = TransmissionTorrent.fromJson(const {
         'id': 7,
