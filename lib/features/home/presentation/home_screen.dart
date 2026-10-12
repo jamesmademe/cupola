@@ -38,6 +38,7 @@ import 'package:cupola/features/home/presentation/widgets/continue_watching_modu
 import 'package:cupola/features/home/presentation/widgets/discover_shelf_module.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/widgets/featured_module.dart';
+import 'package:cupola/features/home/presentation/widgets/home_as_of_line.dart';
 import 'package:cupola/features/home/presentation/widgets/home_header.dart';
 import 'package:cupola/features/home/presentation/widgets/home_well.dart';
 import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart';
@@ -139,6 +140,7 @@ class HomeScreen extends ConsumerWidget {
                                         : null,
                                   ),
                                 ),
+                                column(const HomeAsOfLine()),
                                 if (requester)
                                   column(const _RequesterFailureLine()),
                                 for (final module in layout.shown)

@@ -12,6 +12,8 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/arrived_last_known.dart';
 import 'package:cupola/features/home/domain/arrived.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
@@ -45,16 +47,18 @@ class HomeArrivedModule extends ConsumerWidget {
         .toList(growable: false);
     if (libraries.isEmpty) return const SizedBox.shrink();
 
-    final read = ref.watch(servicesArrivalsProvider);
+    // The live answer, or until it comes the last drawing (a cold start).
+    final read = ref.watchOrLastKnown(
+      servicesArrivalsProvider,
+      arrivedLastKnown,
+    );
+    final live = read.live;
     final history = read.value;
     if (history == null) {
-      if (read.hasError) {
+      if (live.hasError) {
         return HomeModuleFrame.silent(
           title: _title,
-          coverage: SourceCoverage.merge([
-            for (final service in libraries)
-              SourceCoverage.failure(service, read.error),
-          ]),
+          coverage: _silentOf(libraries, live.error),
           onRetry: () => ref.invalidate(servicesArrivalsProvider),
         );
       }
@@ -79,7 +83,22 @@ class HomeArrivedModule extends ConsumerWidget {
       history.entries,
       since: ref.watch(arrivalsSinceProvider),
     );
+    final known = read.asOf;
     if (cards.isEmpty) {
+      // A last drawing whose week has gone by says nothing: loading, as if
+      // there were none.
+      if (known != null) {
+        return live.hasError
+            ? HomeModuleFrame.silent(
+                title: _title,
+                coverage: _silentOf(libraries, live.error),
+                onRetry: () => ref.invalidate(servicesArrivalsProvider),
+              )
+            : const HomeModuleFrame.loading(
+                title: _title,
+                skeleton: _ArrivedSkeleton(),
+              );
+      }
       // Nothing to say only when every library said so.
       if (coverage.failed.isEmpty) return const SizedBox.shrink();
       return HomeModuleFrame.silent(
@@ -93,29 +112,58 @@ class HomeArrivedModule extends ConsumerWidget {
     final note = coverage.failed.isEmpty
         ? null
         : coverageFailureSentence(coverage);
+    final rail = _ArrivedRail(
+      cards: cards.take(arrivedCardLimit).toList(growable: false),
+      now: now,
+    );
 
-    return HomeModuleFrame(
-      title: _title,
-      subtitle: subtitle,
-      semanticLabel: joinSpokenParts([
-        _title,
-        spokenFromDotted(subtitle),
-        ?note,
-      ]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (note != null) HomeCoverageNote(note: note, coverage: coverage),
-          const SizedBox(height: AppSpacing.xs),
-          _ArrivedRail(
-            cards: cards.take(arrivedCardLimit).toList(growable: false),
-            now: now,
+    // The last drawing whose live read failed: the cards it knew, at full
+    // ink, over the failure in its own words.
+    if (known != null && live.hasError) {
+      return LastKnownMark(
+        asOf: known,
+        checking: false,
+        child: HomeModuleFrame.silent(
+          title: _title,
+          coverage: _silentOf(libraries, live.error),
+          onRetry: () => ref.invalidate(servicesArrivalsProvider),
+          child: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: rail,
           ),
-          const SizedBox(height: AppSpacing.sm),
-        ],
+        ),
+      );
+    }
+
+    return LastKnownMark(
+      asOf: known,
+      checking: true,
+      child: HomeModuleFrame(
+        title: _title,
+        subtitle: subtitle,
+        semanticLabel: joinSpokenParts([
+          _title,
+          spokenFromDotted(subtitle),
+          ?note,
+        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (note != null) HomeCoverageNote(note: note, coverage: coverage),
+            const SizedBox(height: AppSpacing.xs),
+            rail,
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ),
       ),
     );
   }
+
+  /// Every library silent, for the one read that failed whole.
+  static SourceCoverage _silentOf(List<ServiceKey> libraries, Object? error) =>
+      SourceCoverage.merge([
+        for (final service in libraries) SourceCoverage.failure(service, error),
+      ]);
 }
 
 /// `2 h ago`, `Yesterday`, `Sunday`: when a card arrived, as a line starts.

@@ -51,12 +51,25 @@ column.
   when every source answered: a source that did not answer is not an empty one.
 - **Its sources did not answer** (`HomeModuleFrame.silent`): the module keeps its place and says which service and why
   through the classification (`coverageFailureSentence`), as a `FaultBand.section` (red, a source did not answer) or
-  `FaultBand.partial` (amber, it answered with a fault), with Retry. What was last known may sit above it, dimmed.
+  `FaultBand.partial` (amber, it answered with a fault), with Retry. What was last known may sit above it, at full ink (a cold start's last drawing, see *Last known* below): nothing is dimmed for being unreachable.
 - **Its service is not set up** (`HomeModuleFrame.needsService`): no slab yet, a dashed `edge` outline in its place,
   the service's mark in a 36pt tile, its headline (`Set up TrueNAS to see your storage`) over what it would show, and
   `Set up TrueNAS` as a quiet pill at the end, the whole outline one target. At a large reading size the pill goes under
   the words. Only for a module the person switched on in Edit Home; a module on by default whose service is missing is
   not drawn, and Set up next names the service once.
+
+## Last known
+
+At a cold start a module that keeps a last drawing draws it at once instead of its skeleton, through
+`watchOrLastKnown` (`lib/features/home/data/home_last_known.dart`), and the Home says it once, under the header:
+`As of 20:53 · checking now` (`HomeAsOfLine`; `As of yesterday 20:53`, `As of Wednesday 20:53`, then `As of Tue 29 Sep`),
+`As of 20:53` alone once only failures are left, gone when the last module is live; the line folds away rather than
+vanishing. The drawing is at full ink, with its own figures: times are made again against the moment of drawing (a
+card the week left behind is gone), and a figure that runs (progress, time left, speed) is not drawn as if it still
+ran. A module whose live read fails keeps the drawing over its failure (`HomeModuleFrame.silent` with a child). What
+is kept, where, and for which connections is `LastKnownStore`'s (`lib/core/last_known/last_known_store.dart`): no
+credential, no response body, dropped when the server, the person or the viewer changes. Needs you, the header's health
+and Now playing never draw from it.
 
 The slab is `slab`, `AppRadius.slab`, a `hair` edge, padding `gutter` × `slabY`, `md` between modules.
 
@@ -190,7 +203,7 @@ Each sheet is drawn in the dark and the light room: the frame ready, loading, si
 you led by a group, by one fault and by a silent service; Set up next over Radarr, Sonarr and Seerr; Downloads moving
 with one stuck and one queued, with qBittorrent silent, and with nothing moving; Requests with one row answered; Now playing with two
 playbacks; Continue watching with two titles and asking who you are; Coming up over three days, and with Lidarr silent
-and nothing by Friday; Arrived over a week, and with Radarr 4K silent; Stack health with three faults, with Radarr
+and nothing by Friday; Arrived over a week, with Radarr 4K silent, and as last drawn at a cold start under the Home's line; Stack health with three faults, with Radarr
 silent, and checking; Storage with a disk in trouble, and with TrueNAS silent; Storage and Discover shelf asking for
 their services; the Edit Home row; text at 200% with Downloads, with Stack health, Storage and Discover shelf asking for
 Seerr, and with Continue watching, Coming up and Arrived. The requester's Ready to watch and Your requests are drawn on

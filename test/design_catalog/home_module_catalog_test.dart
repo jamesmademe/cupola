@@ -1,9 +1,13 @@
 @Tags(['catalog'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/last_known/last_known_store.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/core/theme.dart';
@@ -17,6 +21,9 @@ import 'package:cupola/features/home/presentation/widgets/discover_shelf_module.
 import 'package:cupola/features/home/presentation/widgets/stack_health_module.dart';
 import 'package:cupola/features/home/presentation/widgets/storage_module.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/arrived_last_known.dart';
+import 'package:cupola/features/home/presentation/widgets/home_as_of_line.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/needs_you.dart';
 import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
@@ -752,6 +759,38 @@ void main() {
                 ),
               ]),
             ),
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Last known · a cold start: Arrived as it was last drawn, under the '
+        'Home\'s one line, while its live read is asked for',
+        (_) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [HomeAsOfLine(), HomeArrivedModule()],
+        ),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          arrivalsClockProvider.overrideWithValue(() => _now),
+          calendarClockProvider.overrideWithValue(() => _now),
+          lastKnownStoreProvider.overrideWithValue(
+            LastKnownStore.memory()..write(
+              homeLastKnownKey(Audience.operator.name, arrivedLastKnown),
+              validity: homeLastKnownValidity(
+                _clientSettings,
+                arrivedLastKnown.services,
+              ),
+              schema: arrivedLastKnown.schema,
+              data: arrivedLastKnown.encode((
+                entries: _week,
+                coverage: SourceCoverage.answeredBy(ServiceKey.radarr),
+              )),
+              takenAt: _now.subtract(const Duration(minutes: 47)),
+            ),
+          ),
+          servicesArrivalsProvider.overrideWith(
+            (ref) => Completer<ArrHistory>().future,
           ),
         ],
       ),

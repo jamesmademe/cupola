@@ -24,7 +24,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///    next one moves up: a Home has no empty boxes;
 ///  * **its sources did not answer** ([HomeModuleFrame.silent]): the module
 ///    keeps its place and says which service and why, in the classified
-///    words, with Retry;
+///    words, with Retry, under its last known rows when it has them;
 ///  * **its service is not set up** ([HomeModuleFrame.needsService]): a dashed
 ///    outline that names the service and stays a target. Only a module the person
 ///    switched on in Edit Home gets it; a module that is on by default and
@@ -66,8 +66,10 @@ class HomeModuleFrame extends StatelessWidget {
        headline = null;
 
   /// A module whose every source failed: the fault in the words of its cause,
-  /// and Retry. [child] is what was last known, drawn dimmed above the fault
-  /// where the module has it.
+  /// and Retry. [child] is what was last known (the Home's last drawing at a
+  /// cold start, `HomeLastKnownWatch`), drawn above the fault at full ink:
+  /// nothing is dimmed for being unreachable, the line under it says what it
+  /// is (the brand book's fourth rule).
   const HomeModuleFrame.silent({
     super.key,
     required this.title,
@@ -152,7 +154,7 @@ class HomeModuleFrame extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _heading(context),
-          if (child case final known?) Opacity(opacity: 0.5, child: known),
+          ?child,
           const SizedBox(height: AppSpacing.xs),
           _fault(),
           const SizedBox(height: AppSpacing.sm),
