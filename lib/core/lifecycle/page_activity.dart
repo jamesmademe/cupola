@@ -88,8 +88,8 @@ class PageActivity {
 /// gate; the gate pushes.
 ///
 /// The defaults are deliberately permissive: no scope found means live, so a
-/// screen under test in isolation, or hosted outside the shell (`/activity/:type`,
-/// `/import/*`, `/onboarding`), behaves exactly as it does today.
+/// screen under test in isolation, or hosted outside the shell (`/import/*`,
+/// `/onboarding`), behaves exactly as it does today.
 PageActivity watchPageActivity(BuildContext context, WidgetRef ref) =>
     PageActivity(
       branchActive: BranchActivityScope.isActiveOf(context),

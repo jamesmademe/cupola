@@ -410,12 +410,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
         // null while the affordance stayed. They now go where requests are
         // actually managed instead of promising a detail that does not exist.
         //
-        // `push`, emphatically not `go`. `/activity/:type` is a root-navigator
-        // route *outside* the ShellRoute, so it carries no bottom nav bar of its
-        // own, and `go` replaces the stack rather than pushing onto it, so
-        // `Navigator.canPop()` was false and the app bar had no back entry to
-        // imply a leading button from. The result was a dead end: no nav bar, no
-        // back, nothing but the requests list. `push` keeps the return path.
+        // Request rows open Activity's Requests view for the row's connection
+        // (`ServiceRoutes.activityRequestsOf`), pushed rather than gone to, so
+        // the way back stays.
         onTap: switch (item.kind) {
           GlobalActivityKind.request => () => context.push(
             _requestsLocation(item.instanceId),

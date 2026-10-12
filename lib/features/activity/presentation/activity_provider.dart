@@ -925,9 +925,9 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
       );
     }
 
-    // Reported, so the footer offers the retry it already knows how to draw.
-    // Nothing ever set this, which left `_LoadMoreFooter`'s failure branch
-    // unreachable code.
+    // Reported, so a page that offers "load more" can offer a retry for the
+    // pages that failed. No widget reads it yet: the feed only feeds today's
+    // count, and nothing calls `loadMore`.
     state = PagedArrFeedState(
       feed: _buildFeed(cursors),
       cursors: cursors,
