@@ -124,6 +124,10 @@ Color _paneSurface(ColorScheme colorScheme) =>
 
 /// 44pt, matching the window strip above it, so the two read as one bar.
 ///
+/// Its buttons keep the theme's standard density, 40pt in the 44pt bar:
+/// `VisualDensity.compact` took them to 32, under the pointer floor every
+/// other desktop control keeps.
+///
 /// Over a chosen download it reads `Selected download`: its first button
 /// opens the download's page, its second goes back to the queue.
 class _InspectorHeader extends ConsumerWidget {
@@ -181,7 +185,6 @@ class _InspectorHeader extends ConsumerWidget {
               ),
               icon: const Icon(Icons.open_in_full_rounded, size: 15),
               iconSize: 15,
-              visualDensity: VisualDensity.compact,
               tooltip: "Open the download's page",
             ),
             IconButton(
@@ -189,7 +192,6 @@ class _InspectorHeader extends ConsumerWidget {
                   ref.read(selectedDownloadProvider.notifier).clear(),
               icon: const Icon(Icons.close_rounded, size: 16),
               iconSize: 16,
-              visualDensity: VisualDensity.compact,
               tooltip: 'Back to the queue',
             ),
           ] else ...[
@@ -198,7 +200,6 @@ class _InspectorHeader extends ConsumerWidget {
                   GoRouter.of(context).go(NavTab.activity.routePath),
               icon: const Icon(Icons.open_in_full_rounded, size: 15),
               iconSize: 15,
-              visualDensity: VisualDensity.compact,
               tooltip: 'Open the full Activity screen',
             ),
             IconButton(
@@ -206,7 +207,6 @@ class _InspectorHeader extends ConsumerWidget {
                   ref.read(inspectorStateProvider.notifier).setOpen(false),
               icon: const Icon(Icons.close_rounded, size: 16),
               iconSize: 16,
-              visualDensity: VisualDensity.compact,
               tooltip: 'Close inspector  ${ShellShortcuts.inspector}',
             ),
           ],
