@@ -10,7 +10,7 @@ import 'package:cupola/features/home/data/home_last_known.dart';
 
 /// The Home's one line about a cold start: `As of 20:53 · checking now` under
 /// the header while any module draws its last known state, gone once the last
-/// of them is live (P-t1-words).
+/// of them is live.
 ///
 /// One line for the page rather than a mark on each module: the modules turn
 /// live within a second or two of each other, and a mark on each would be six

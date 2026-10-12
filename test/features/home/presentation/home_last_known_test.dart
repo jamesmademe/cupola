@@ -44,7 +44,7 @@ ArrHistory _history(List<ArrHistoryEntry> entries) =>
     (entries: entries, coverage: SourceCoverage.answeredBy(ServiceKey.radarr));
 
 /// The Home at a cold start: the last drawing, said for what it is, until the
-/// live answer comes (T1, P-t1-words).
+/// live answer comes.
 void main() {
   group('a cold start', () {
     late LastKnownStore store;

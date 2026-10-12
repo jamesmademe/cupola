@@ -102,7 +102,7 @@ List<FeaturedSlide> _evening() => [
 ];
 
 /// Featured at a cold start: the slides the person last saw, with their Play,
-/// until the live slides come (T1).
+/// until the live slides come.
 void main() {
   late LastKnownStore store;
   setUp(() => store = LastKnownStore.memory());

@@ -8,9 +8,9 @@
 /// ([HomeLastKnownWatch.watchOrLastKnown]).
 ///
 /// What stays out, on purpose: Needs you and the header's health (a fault of
-/// yesterday is a false alarm today, P-t1-no-faults) and Now playing (live by
-/// nature). Activity and Discover keep nothing: they read the providers the
-/// Home already made live by the time they are a tap away.
+/// yesterday is a false alarm today) and Now playing (live by nature).
+/// Activity and Discover keep nothing: they read the providers the Home
+/// already made live by the time they are a tap away.
 library;
 
 import 'package:flutter/scheduler.dart';

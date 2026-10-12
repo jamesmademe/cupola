@@ -13,7 +13,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 const _kept = 24;
 
 /// The imports only, newest first and capped: the failures in the same read
-/// are Needs you's, which never draws from a last drawing (P-t1-no-faults).
+/// are Needs you's, which never draws from a last drawing.
 /// The week is cut again when it is drawn (`arrivedOf` with that day's
 /// `since`), so a card that turned eight days old in between is gone.
 ///
