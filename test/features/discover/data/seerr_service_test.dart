@@ -699,10 +699,12 @@ void main() {
           unorderedEquals(['Tears of Steel', 'Dynamo Dream', 'Prelude']),
         );
         expect(directed.onServer(), 1);
-        MediaAvailability statusOf(String title) => credits.crew
-            .firstWhere((credit) => credit.media.title == title)
-            .status
-            .availability;
+        MediaAvailability statusOf(String title) => seerrMediaStatus(
+          credits.crew
+              .firstWhere((credit) => credit.media.title == title)
+              .media
+              .mediaInfo,
+        ).availability;
         expect(statusOf('Tears of Steel'), MediaAvailability.available);
         expect(statusOf('Dynamo Dream'), MediaAvailability.notTracked);
         expect(statusOf('Prelude'), MediaAvailability.missing);

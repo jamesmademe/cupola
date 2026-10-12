@@ -403,31 +403,6 @@ class JellyfinClient implements StreamServerClient {
     );
   }
 
-  /// [cancelToken] is an addition to the interface, not part of it: an override
-  /// may widen its signature with optional parameters, and the project's rule is
-  /// that list fetches are cancellable. A page scrolled past mid-flight is a real
-  /// case here: the browse is paged, Riverpod disposes the provider for a page
-  /// that leaves the viewport, and the in-flight request should go with it.
-  @override
-  Future<List<StreamItem>> getLibraryItems({
-    required String libraryId,
-    required StreamLibraryLens lens,
-    String? viewerId,
-    int startIndex = 0,
-    int limit = 50,
-    CancelToken? cancelToken,
-  }) async {
-    final page = await getLibraryPage(
-      libraryId: libraryId,
-      lens: lens,
-      viewerId: viewerId,
-      startIndex: startIndex,
-      limit: limit,
-      cancelToken: cancelToken,
-    );
-    return page.items;
-  }
-
   @override
   Future<StreamLibraryPage> getLibraryPage({
     required String libraryId,

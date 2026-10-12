@@ -138,7 +138,7 @@ abstract interface class StreamServerClient {
     CancelToken? cancelToken,
   });
 
-  /// One page of a library under one lens.
+  /// One page of a library under one lens, with the paging envelope kept.
   ///
   /// [viewerId] is required by Jellyfin for every per-viewer lens and ignored by
   /// Plex, which has only the token's own perspective.
@@ -148,27 +148,16 @@ abstract interface class StreamServerClient {
   /// off here, every provider that wanted cancellation had to depend on the
   /// concrete `JellyfinClient` or `PlexClient`, which forfeits the one thing
   /// this interface exists for.
-  Future<List<StreamItem>> getLibraryItems({
-    required String libraryId,
-    required StreamLibraryLens lens,
-    String? viewerId,
-    int startIndex = 0,
-    int limit = 50,
-    CancelToken? cancelToken,
-  });
-
-  /// [getLibraryItems] with the paging envelope kept.
   ///
-  /// **What a paged browse must call.** [getLibraryItems] throws the rows away
-  /// from around the rows: it cannot say whether an empty result means the
-  /// library is empty, the request failed, or this particular page happened to
-  /// be filtered down to nothing, and each of those needs a different thing on
-  /// screen. See [StreamLibraryPage] for the two false claims that came out of
-  /// collapsing them.
+  /// The only way to a library's rows. A plain list of them, which the
+  /// interface once offered beside this, could not say whether an empty result
+  /// meant the library is empty, the request failed, or this particular page
+  /// happened to be filtered down to nothing, and each of those needs a
+  /// different thing on screen. See [StreamLibraryPage] for the two false
+  /// claims that came out of collapsing them.
   ///
-  /// Never throws. A failure is [StreamPageOutcome.failed], for the same reason
-  /// [getLibraryItems] degrades to `[]`: the caller decides whether this is a
-  /// retry affordance or a quiet gap.
+  /// Never throws. A failure is [StreamPageOutcome.failed]: the caller decides
+  /// whether this is a retry affordance or a quiet gap.
   Future<StreamLibraryPage> getLibraryPage({
     required String libraryId,
     required StreamLibraryLens lens,

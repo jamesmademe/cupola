@@ -69,21 +69,6 @@ class _ScriptedServer implements StreamServerClient {
   }
 
   @override
-  Future<List<StreamItem>> getLibraryItems({
-    required String libraryId,
-    required StreamLibraryLens lens,
-    String? viewerId,
-    int startIndex = 0,
-    int limit = 50,
-    CancelToken? cancelToken,
-  }) async => (await getLibraryPage(
-    libraryId: libraryId,
-    lens: lens,
-    startIndex: startIndex,
-    limit: limit,
-  )).items;
-
-  @override
   StreamImageSource? imageFor(String posterPath, {int? width}) => null;
 
   @override

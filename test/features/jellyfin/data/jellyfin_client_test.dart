@@ -1482,3 +1482,24 @@ void main() {
     });
   });
 }
+
+/// The rows of one page, for the tests about the request a lens sends and
+/// the rows it maps; what an empty or failed page says is
+/// [StreamLibraryPage]'s, tested on [JellyfinClient.getLibraryPage].
+extension on JellyfinClient {
+  Future<List<StreamItem>> getLibraryItems({
+    required String libraryId,
+    required StreamLibraryLens lens,
+    String? viewerId,
+    int startIndex = 0,
+    int limit = 50,
+    CancelToken? cancelToken,
+  }) async => (await getLibraryPage(
+    libraryId: libraryId,
+    lens: lens,
+    viewerId: viewerId,
+    startIndex: startIndex,
+    limit: limit,
+    cancelToken: cancelToken,
+  )).items;
+}

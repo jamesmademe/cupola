@@ -1036,16 +1036,12 @@ class SeerrService {
   /// Seerr answers with a 404, so every Person page drew an empty filmography.
   Future<PersonCombinedCredits> getPersonCredits(int personId) async {
     try {
-      final numberingRead = numbering();
       final response = await _client.get(
         '/api/v1/person/$personId/combined_credits',
       );
       final data = response.data;
       if (data is! Map) return PersonCombinedCredits.empty;
-      return PersonCombinedCredits.fromJson(
-        data.cast<String, dynamic>(),
-        numbering: await numberingRead,
-      );
+      return PersonCombinedCredits.fromJson(data.cast<String, dynamic>());
     } catch (error) {
       if (_isNotFound(error)) return PersonCombinedCredits.empty;
       rethrow;

@@ -702,25 +702,6 @@ class PlexClient implements StreamServerClient {
   /// to hold their token, and tokens are obtainable only from plex.tv. See
   /// [getViewers].
   @override
-  Future<List<StreamItem>> getLibraryItems({
-    required String libraryId,
-    required StreamLibraryLens lens,
-    String? viewerId,
-    int startIndex = 0,
-    int limit = kPlexLibraryPageSize,
-    CancelToken? cancelToken,
-  }) async {
-    final page = await getLibraryItemsPage(
-      libraryId: libraryId,
-      lens: lens,
-      startIndex: startIndex,
-      limit: limit,
-      cancelToken: cancelToken,
-    );
-    return page?.items ?? const [];
-  }
-
-  @override
   Future<StreamLibraryPage> getLibraryPage({
     required String libraryId,
     required StreamLibraryLens lens,
@@ -750,7 +731,7 @@ class PlexClient implements StreamServerClient {
     );
   }
 
-  /// [getLibraryItems] with the paging envelope kept, or **null** when the
+  /// One page of a library with Plex's paging envelope, or **null** when the
   /// request failed.
   ///
   /// The extra return value is not decoration. Plex's guidance is that a
@@ -762,8 +743,7 @@ class PlexClient implements StreamServerClient {
   ///
   /// Null rather than `PlexPage.empty()` on failure, because an empty page and
   /// a failed request are the two things a browse must never conflate: see
-  /// [StreamLibraryPage]. [getLibraryItems] still flattens both to `[]`, which
-  /// is the read-path convention for every caller that only wants rows.
+  /// [StreamLibraryPage].
   Future<PlexPage<StreamItem>?> getLibraryItemsPage({
     required String libraryId,
     required StreamLibraryLens lens,

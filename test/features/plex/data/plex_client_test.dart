@@ -11,6 +11,7 @@ import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/domain/models/plex_transcode_session.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
@@ -1641,8 +1642,7 @@ void main() {
       expect(await client.getLibraryItemCount('1'), isNull);
 
       // Null, not an empty page: an empty page is a claim about the library
-      // and this is a claim about the request. `getLibraryItems` still
-      // flattens both to `[]` for the callers that only want rows.
+      // and this is a claim about the request.
       expect(
         await client.getLibraryItemsPage(
           libraryId: '1',
@@ -1651,11 +1651,11 @@ void main() {
         isNull,
       );
       expect(
-        await client.getLibraryItems(
+        (await client.getLibraryPage(
           libraryId: '1',
           lens: StreamLibraryLens.all,
-        ),
-        isEmpty,
+        )).outcome,
+        StreamPageOutcome.failed,
       );
 
       // Mutating actions report, so the UI can say what happened.
@@ -1907,4 +1907,23 @@ class _GuidAdapter implements HttpClientAdapter {
       },
     );
   }
+}
+
+/// The rows of one page, for the tests about the request a lens sends and
+/// the rows it maps; what an empty or failed page says is
+/// [StreamLibraryPage]'s, tested on [PlexClient.getLibraryPage].
+extension on PlexClient {
+  Future<List<StreamItem>> getLibraryItems({
+    required String libraryId,
+    required StreamLibraryLens lens,
+    String? viewerId,
+    int startIndex = 0,
+    int limit = kPlexLibraryPageSize,
+  }) async => (await getLibraryPage(
+    libraryId: libraryId,
+    lens: lens,
+    viewerId: viewerId,
+    startIndex: startIndex,
+    limit: limit,
+  )).items;
 }

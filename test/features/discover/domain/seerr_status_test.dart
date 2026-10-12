@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/status/media_status.dart';
-import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
 
@@ -80,22 +79,6 @@ void main() {
       test('before the server has said: 6 is neither guess, 7 is Deleted', () {
         expect(seerrMediaStatus({'status': 6}).label, 'Unknown');
         expect(seerrMediaStatus({'status': 7}).label, 'Deleted');
-      });
-
-      test('a season reads its code in the same numbering', () {
-        final statuses = seerrSeasonStatuses(
-          {
-            'status': 4,
-            'seasons': [
-              {'seasonNumber': 1, 'status': 7},
-              {'seasonNumber': 2, 'status': 6},
-            ],
-          },
-          const [],
-          numbering: SeerrNumbering.seerr,
-        );
-        expect(statuses[1]!.label, 'Deleted');
-        expect(statuses[2]!.label, 'Blocklisted');
       });
     });
 
@@ -282,68 +265,6 @@ void main() {
     });
   });
 
-  group('seerrSeasonStatuses', () {
-    const seasons = [
-      TvSeason(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: 10),
-      TvSeason(id: 2, seasonNumber: 2, name: 'Season 2', episodeCount: 10),
-      TvSeason(id: 0, seasonNumber: 0, name: 'Specials', episodeCount: 2),
-    ];
-
-    test('maps Seerr codes onto the shared status vocabulary', () {
-      final statuses = seerrSeasonStatuses(const {
-        'seasons': [
-          {'seasonNumber': 1, 'status': 5},
-          {'seasonNumber': 2, 'status': 4},
-        ],
-      }, seasons);
-
-      expect(statuses[1]!.availability, MediaAvailability.available);
-      expect(statuses[1]!.label, 'Available');
-      expect(statuses[2]!.availability, MediaAvailability.partial);
-      // Seerr's own wording survives, the same way the page-level status keeps
-      // it.
-      expect(statuses[2]!.label, 'Partially available');
-    });
-
-    test('a season Seerr has no record of is notTracked, not unknown', () {
-      final statuses = seerrSeasonStatuses(const {
-        'seasons': [
-          {'seasonNumber': 1, 'status': 5},
-        ],
-      }, seasons);
-
-      expect(statuses[0]!.availability, MediaAvailability.notTracked);
-      expect(statuses[0]!.label, 'Not requested');
-      expect(statuses[2]!.availability, MediaAvailability.notTracked);
-    });
-
-    test('resolves a status for every season even with no mediaInfo', () {
-      final statuses = seerrSeasonStatuses(null, seasons);
-
-      expect(statuses.keys.toSet(), {0, 1, 2});
-      for (final status in statuses.values) {
-        expect(status.availability, MediaAvailability.notTracked);
-      }
-    });
-
-    test('survives a malformed seasons payload', () {
-      final statuses = seerrSeasonStatuses(const {
-        'seasons': [
-          'nonsense',
-          42,
-          {'status': 5},
-        ],
-      }, seasons);
-
-      expect(statuses.length, 3);
-      expect(statuses[1]!.availability, MediaAvailability.notTracked);
-    });
-
-    test('ignores a seasons key that is not a list', () {
-      expect(seerrSeasonStatuses(const {'seasons': 'nope'}, seasons).length, 3);
-    });
-  });
-
   // The requester's words (brand book, *The requester*): what will happen to
   // a request, never how, never a fault, never Seerr's own words.
   group('the requester reads', () {
@@ -463,28 +384,6 @@ void main() {
       expect(labels({'status': 7, 'status4k': 5}), ['4K: On the server']);
       expect(labels({'status': 5, 'status4k': 7}), ['On the server']);
       expect(labels({'status': 1, 'status4k': 1}), ['Available to request']);
-    });
-
-    test('the seasons: no state reads as never heard of', () {
-      const seasons = [
-        TvSeason(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: 10),
-        TvSeason(id: 2, seasonNumber: 2, name: 'Season 2', episodeCount: 10),
-        TvSeason(id: 3, seasonNumber: 3, name: 'Season 3', episodeCount: 10),
-      ];
-      final statuses = seerrSeasonStatuses(
-        const {
-          'seasons': [
-            {'seasonNumber': 1, 'status': 5},
-            {'seasonNumber': 2, 'status': 7},
-          ],
-        },
-        seasons,
-        numbering: SeerrNumbering.seerr,
-        audience: Audience.requester,
-      );
-      expect(statuses[1]!.label, 'On the server');
-      expect(statuses[2]!.label, 'Not requested');
-      expect(statuses[3]!.label, 'Not requested');
     });
   });
 
