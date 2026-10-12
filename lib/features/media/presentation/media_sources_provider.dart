@@ -66,14 +66,18 @@ final mediaRadarrCopyProvider = FutureProvider.autoDispose
         throw ArgumentError.value(source.key, 'key', 'not a movie');
       }
       final radarr = ref.watch(radarrServiceForProvider(source.connectionId));
+      // Subscribed before the first await, like everything this build reads:
+      // a ref used after one may belong to a build disposed meanwhile. The
+      // queue is the connection's, shared and kept, and never fails.
+      final queue = ref.watch(
+        radarrQueueSnapshotForProvider(source.connectionId).future,
+      );
       final movie = await radarr.getMovieByTmdbId(tmdbId);
-      final queue = movie == null
-          ? ArrQueueSnapshot.empty
-          : await ref.watch(
-              radarrQueueSnapshotForProvider(source.connectionId).future,
-            );
       return MediaAnswer(
-        MediaRadarrCopy(movie: movie, queue: queue),
+        MediaRadarrCopy(
+          movie: movie,
+          queue: movie == null ? ArrQueueSnapshot.empty : await queue,
+        ),
         DateTime.now(),
       );
     }, retry: noProviderRetry);
@@ -132,6 +136,10 @@ final mediaSonarrCopyProvider = FutureProvider.autoDispose
         throw ArgumentError.value(source.key, 'key', 'not a series');
       }
       final sonarr = ref.watch(sonarrServiceForProvider(source.connectionId));
+      // Subscribed before the first await, as the Radarr copy does.
+      final queuesRead = ref.watch(
+        sonarrQueueSnapshotsForProvider(source.connectionId).future,
+      );
       final tvdbId = await ref.watch(mediaTvdbIdProvider(source.key).future);
       final series = tvdbId == null
           ? null
@@ -143,9 +151,7 @@ final mediaSonarrCopyProvider = FutureProvider.autoDispose
         );
       }
       final episodes = await sonarr.getEpisodes(series.id);
-      final queues = await ref.watch(
-        sonarrQueueSnapshotsForProvider(source.connectionId).future,
-      );
+      final queues = await queuesRead;
       return MediaAnswer(
         MediaSonarrCopy(
           series: series,
@@ -293,6 +299,39 @@ bool _sameCopy({
       bazarrYear == year;
 }
 
+/// What Bazarr checks an arr's copy against: its id, and its path, or its
+/// title and year.
+typedef _ArrCopyFacts = ({int id, String? path, String title, int year});
+
+/// The arr copy at [source], as the facts Bazarr is checked against; null when
+/// that arr holds no copy. Its one `watch` runs before its first await.
+Future<_ArrCopyFacts?> _arrCopyFacts(Ref ref, MediaSource source) async {
+  if (source.key.isMovie) {
+    final movie = (await ref.watch(
+      mediaRadarrCopyProvider(source).future,
+    )).value.movie;
+    return movie == null
+        ? null
+        : (
+            id: movie.id,
+            path: movie.path,
+            title: movie.title,
+            year: movie.year,
+          );
+  }
+  final series = (await ref.watch(
+    mediaSonarrCopyProvider(source).future,
+  )).value.series;
+  return series == null
+      ? null
+      : (
+          id: series.id,
+          path: series.path,
+          title: series.title,
+          year: series.year,
+        );
+}
+
 /// What the Bazarr [MediaSource.connectionId] holds of the title: the one arr
 /// copy it follows, checked against that copy's path, or its title and year.
 ///
@@ -304,35 +343,25 @@ final mediaBazarrCopyProvider = FutureProvider.autoDispose
     .family<MediaAnswer<MediaBazarrCopy?>, MediaSource>((ref, source) async {
       final bazarr = ref.watch(bazarrServiceForProvider(source.connectionId));
       final key = source.key;
-      for (final arr in _configured(ref, _arrOf(key))) {
-        final arrSource = (key: key, connectionId: arr.id);
+      // Every arr's copy is subscribed before the first await (a ref used
+      // after one may belong to a build disposed meanwhile). The page's rows
+      // read the same copies, so this asks nothing more of the arrs. One that
+      // fails is awaited below or never: `ignore` keeps it from being an
+      // uncaught error when an earlier copy already matched.
+      final arrCopies = [
+        for (final arr in _configured(ref, _arrOf(key)))
+          (
+            arr: arr,
+            copy: _arrCopyFacts(ref, (key: key, connectionId: arr.id))
+              ..ignore(),
+          ),
+      ];
+      for (final (:arr, copy: copyRead) in arrCopies) {
         // The arr's copy, or nothing to ask Bazarr about. The arr's failure is
         // on its own row and skips the copy here; Bazarr's own fails this one.
-        final ({int id, String? path, String title, int year})? copy;
+        final _ArrCopyFacts? copy;
         try {
-          copy = key.isMovie
-              ? switch ((await ref.watch(
-                  mediaRadarrCopyProvider(arrSource).future,
-                )).value.movie) {
-                  final movie? => (
-                    id: movie.id,
-                    path: movie.path,
-                    title: movie.title,
-                    year: movie.year,
-                  ),
-                  null => null,
-                }
-              : switch ((await ref.watch(
-                  mediaSonarrCopyProvider(arrSource).future,
-                )).value.series) {
-                  final series? => (
-                    id: series.id,
-                    path: series.path,
-                    title: series.title,
-                    year: series.year,
-                  ),
-                  null => null,
-                };
+          copy = await copyRead;
         } catch (_) {
           continue;
         }
