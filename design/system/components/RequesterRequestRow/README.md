@@ -60,7 +60,7 @@ title it keeps the phone's 440.
 `Requests` in `screen`, then `● 1 ready to watch · ● 3 on the way` (green, blue; a part with nothing in it is left
 out). Each request that waits on its card, newest first; then one slab of the rest, what moves first: downloading, on
 its way, ready to watch, the answers, what has long been on the server. Empty: `Requests you make will appear here.`
-and `Discover`. A server that does not answer: one line with its time and `Retry` (`BriefFailureLine`), and the list as
+and `Discover`. A server that does not answer: one line with its time (when the app saw it stop answering) and `Retry` (`BriefFailureLine`), and the list as
 it last was. Read again on a pull, on a second tap of the tab, and on coming back after a minute.
 
 ## Semantics

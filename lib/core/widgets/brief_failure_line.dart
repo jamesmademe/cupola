@@ -6,10 +6,13 @@ import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/status/silence_clock.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -53,20 +56,33 @@ class FaultVoiceSwitch extends StatelessWidget {
   }
 }
 
-/// A failure as the requester reads it: one line with its time, and `Retry`
-/// where the same request can still succeed.
+/// A failure as the requester reads it: one line, with its time when the
+/// server stopped answering at a time the app saw, and `Retry` where the same
+/// request can still succeed.
 ///
 /// She never reads a service's name (Jellyfin and Plex excepted, the players
 /// she watches with), a refused key, a certificate or a status code: whatever
 /// the cause, the server cannot be reached, `Can't reach the server since
 /// 20:41`, red only when nothing answered and amber otherwise, as the tone
-/// rule says. The time is when this line first appeared, so a Retry that fails
-/// again keeps it. A session that ended is the one cause she can act on, and
-/// says so: `You were signed out` with `Sign in again`.
+/// rule says.
+///
+/// ## Where the time comes from
+///
+/// From the [SilenceClock]: the first time the connection's probe did not
+/// answer, so a Retry that fails again keeps it and a server that answered
+/// since has none. When nothing recorded a silence (a cold start into a silent
+/// server, a failure that is a fault and so an answer, a read whose probe has
+/// not come back) the line says `Can't reach the server` and no time, never
+/// the moment the line happened to appear. The line watches the probe of the
+/// connection it is about, so the time arrives when the probe lands, whichever
+/// of the two came back first.
+///
+/// A session that ended is the one cause she can act on, and says so: `You
+/// were signed out` with `Sign in again`.
 ///
 /// Two shapes: [BriefFailureLine.line] where a section's content would be,
 /// [BriefFailureLine.page] where a page's would.
-class BriefFailureLine extends StatefulWidget {
+class BriefFailureLine extends ConsumerWidget {
   const BriefFailureLine.line({
     super.key,
     required this.error,
@@ -100,10 +116,10 @@ class BriefFailureLine extends StatefulWidget {
   final bool _page;
 
   /// The line itself: the requester's words for [reason], with [since] as the
-  /// time the server stopped answering.
+  /// time the server stopped answering, or without a time when there is none.
   static ({String headline, String? sentence}) wordsFor(
     ServiceFailureReason reason, {
-    required DateTime since,
+    DateTime? since,
     ServiceKey? service,
   }) {
     if (reason == ServiceFailureReason.sessionEnded) {
@@ -117,27 +133,45 @@ class BriefFailureLine extends StatefulWidget {
       _ => 'the server',
     };
     return (
-      headline: Lexicon.cantReachSince(subject, formatClockTime(since)),
+      headline: since == null
+          ? Lexicon.cantReach(subject)
+          : Lexicon.cantReachSince(subject, formatClockTime(since)),
       sentence: null,
     );
   }
 
-  @override
-  State<BriefFailureLine> createState() => _BriefFailureLineState();
-}
+  /// When the connection this failure is about first stopped answering, or
+  /// null when nobody recorded it: no service to name, a failure that is an
+  /// answer, or no silence noted.
+  ///
+  /// The connection is the one named, else the lens, resolved the way the
+  /// probe's provider is keyed. Watches that probe, so the line is built again
+  /// when it lands (it notes the silence before it returns).
+  DateTime? _silentSince(WidgetRef ref, ServiceFailureReason reason) {
+    final service = this.service;
+    if (service == null || !failureDidNotAnswer(reason)) return null;
+    // A scope with no settings in it (a test or a sheet that overrides
+    // something else) has no connection to name, and so no time: the line is
+    // still said, as [FaultVoiceSwitch] still picks a voice there.
+    try {
+      final id = effectiveInstanceId(ref, service, instanceId);
+      if (id.isEmpty) return null;
+      ref.watch(instanceSummaryProvider((service: service, instanceId: id)));
+      return ref.read(silenceClockProvider).since(silenceKey(service, id));
+    } catch (_) {
+      return null;
+    }
+  }
 
-class _BriefFailureLineState extends State<BriefFailureLine> {
-  late final DateTime _since = DateTime.now();
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final reason = classifyConnectionFailure(widget.error);
-    final words = BriefFailureLine.wordsFor(
+    final reason = classifyConnectionFailure(error);
+    final words = wordsFor(
       reason,
-      since: _since,
-      service: widget.service,
+      since: _silentSince(ref, reason),
+      service: service,
     );
     final ended = reason == ServiceFailureReason.sessionEnded;
     final tone = statusToneColor(
@@ -148,7 +182,7 @@ class _BriefFailureLineState extends State<BriefFailureLine> {
     final verbs = _verbs(context, reason, ended: ended);
     final spoken = [words.headline, ?words.sentence].join('. ');
 
-    if (widget._page) {
+    if (_page) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
@@ -243,9 +277,9 @@ class _BriefFailureLineState extends State<BriefFailureLine> {
   }) {
     if (ended) {
       final remedy = FailureRemedy.forReason(
-        widget.service ?? ServiceKey.seerr,
+        service ?? ServiceKey.seerr,
         ServiceFailureReason.sessionEnded,
-        instanceId: widget.instanceId,
+        instanceId: instanceId,
       );
       if (remedy == null) return const [];
       return [
@@ -256,7 +290,7 @@ class _BriefFailureLineState extends State<BriefFailureLine> {
         ),
       ];
     }
-    final retry = widget.onRetry;
+    final retry = onRetry;
     if (retry == null || !failureRetryHelps(reason)) return const [];
     return failureLineVerbs(
       context,

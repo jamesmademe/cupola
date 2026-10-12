@@ -4,16 +4,22 @@ library;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/silence_clock.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../test_helpers/settings_scope.dart';
 import 'catalog.dart';
 
 const _access = AccessGatewayAnswer(
@@ -220,8 +226,20 @@ void main() {
       ),
       CatalogScene(
         "AppErrorState, in the requester's app · Seerr did not answer: one "
-        'line with its time, no service named and no cause, and Retry as '
-        'a ghost in ink',
+        'line with the time it first did not, no service named and no cause, '
+        'and Retry as a ghost in ink',
+        (_) => AppErrorState(
+          service: ServiceKey.seerr,
+          error: const SocketException('Connection refused'),
+          onRetry: () {},
+        ),
+        overrides: _requesterSilentSince(DateTime(2026, 10, 12, 20, 41)),
+        width: 320,
+      ),
+      CatalogScene(
+        "AppErrorState, in the requester's app · Seerr did not answer and "
+        'nothing recorded since when (a cold start): the same line with no '
+        'time',
         (_) => AppErrorState(
           service: ServiceKey.seerr,
           error: const SocketException('Connection refused'),
@@ -342,3 +360,26 @@ void main() {
 
 /// The app as a household member's: every failure in the brief voice.
 final _requester = [audienceProvider.overrideWithValue(Audience.requester)];
+
+/// The requester's app, with a Seerr connection whose probe first did not
+/// answer at [at]: the line says since when.
+List<Override> _requesterSilentSince(DateTime at) {
+  final settings = settingsWithServices(const [ServiceKey.seerr]);
+  final id = settings.primaryOf(ServiceKey.seerr)!.id;
+  return [
+    ..._requester,
+    currentSettingsProvider.overrideWith((ref) => settings),
+    silenceClockProvider.overrideWithValue(
+      SilenceClock()..noteSilent(silenceKey(ServiceKey.seerr, id), at),
+    ),
+    // The probe is not the scene's to run: it answers as if it had.
+    instanceSummaryProvider.overrideWith(
+      (ref, key) async => ServiceSummary(
+        service: key.service,
+        status: ServiceSummaryStatus.offline,
+        host: 'seerr.example.com',
+        version: null,
+      ),
+    ),
+  ];
+}

@@ -212,7 +212,7 @@ Everything comes from her own Seerr session; no fault, no service named but her 
   draw the posters they last drew until the answer comes: each with what Seerr held of it, never a download's ring
   (a title on its way reads `On its way`), and Coming soon cut again to the titles not out yet.
 - **The server**: one line above everything when any of her reads did not come back, `Can't reach the server since
-  20:41` and `Retry`, or `You were signed out` and `Sign in again`; the modules under it keep what they last knew and
+  20:41` (the time the server first did not answer, none when the app did not see it stop) and `Retry`, or `You were signed out` and `Sign in again`; the modules under it keep what they last knew and
   draw no failure of their own.
 
 ## Set up next and Edit Home

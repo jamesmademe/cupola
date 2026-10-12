@@ -28,7 +28,7 @@ None of them is drawn for a read whose own client was closed under it (`isClosed
 
 ## In the requester's app
 
-A household member never reads the classification (`RoleGate.faultVoice`): inside a provider scope whose audience is the requester (`audienceProvider`), both widgets draw `BriefFailureLine` (`lib/core/widgets/brief_failure_line.dart`, through `FaultVoiceSwitch`) instead, `.page` for `AppErrorState` and `.line` for `InlineErrorRetry`. Whatever the cause, one line with the time it first appeared: *Can't reach the server since 20:41* (*Jellyfin* or *Plex* in place of *the server*, the players they watch with; no other service is ever named), the glyph in the cause's tone as above (red only when nothing answered), and *Retry* only where the same request can still succeed, in the amber fill for a fault and a ghost in ink beside silence. No form's remedy: the fix is not theirs to make. A session that ended is the one cause they can act on: *You were signed out* · *Sign in again to keep asking for movies and series.*, blue, with *Sign in again* in the ink fill into their account's form. Outside a provider scope (a bare widget test) both draw the operator's state.
+A household member never reads the classification (`RoleGate.faultVoice`): inside a provider scope whose audience is the requester (`audienceProvider`), both widgets draw `BriefFailureLine` (`lib/core/widgets/brief_failure_line.dart`, through `FaultVoiceSwitch`) instead, `.page` for `AppErrorState` and `.line` for `InlineErrorRetry`. Whatever the cause, one line with the time the server first did not answer, as the probe recorded it (`SilenceClock`, ended by any answer, in memory only), and none when nothing recorded one (a cold start into a silent server, a failure that is an answer): *Can't reach the server since 20:41*, *Can't reach the server* (*Jellyfin* or *Plex* in place of *the server*, the players they watch with; no other service is ever named), the glyph in the cause's tone as above (red only when nothing answered), and *Retry* only where the same request can still succeed, in the amber fill for a fault and a ghost in ink beside silence. No form's remedy: the fix is not theirs to make. A session that ended is the one cause they can act on: *You were signed out* · *Sign in again to keep asking for movies and series.*, blue, with *Sign in again* in the ink fill into their account's form. Outside a provider scope (a bare widget test) both draw the operator's state.
 
 ## The consumer provides
 
@@ -40,7 +40,7 @@ Each sheet is drawn in the dark and the light room.
 
 - `AppErrorState`: nothing answered (red, ghost Retry), a closed client, a 401 and a 404 (amber, the remedy as the one amber fill), a qBittorrent refusal, Cloudflare Access, a signed-out Seerr account (blue), and the compact form.
 - `InlineErrorRetry`: red, amber with the remedy, blue with Sign in again, a certificate with both verbs.
-- The requester's app: Seerr did not answer, their session ended, a rail answered with a 5xx.
+- The requester's app: Seerr did not answer with the time it first did not and with none (a cold start), their session ended, a rail answered with a 5xx.
 - Text at 200%: nothing answered, a 401, a signed-out account, the compact form, a certificate row and a row with Retry alone, under its sentence.
 
 ## Do / don't

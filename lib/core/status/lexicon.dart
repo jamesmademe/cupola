@@ -205,6 +205,11 @@ abstract final class Lexicon {
   static String cantReachSince(String subject, String time) =>
       "Can't reach $subject since $time";
 
+  /// The same line when nobody recorded since when the server stopped
+  /// answering: a cold start into a silent server, or a failure that is not
+  /// silence. A time nobody measured is not printed.
+  static String cantReach(String subject) => "Can't reach $subject";
+
   /// What [youWereSignedOut] asks of the requester.
   static const signInToKeepAsking =
       'Sign in again to keep asking for movies and series.';

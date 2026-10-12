@@ -19,7 +19,7 @@ The slab is `slab` under a wash of the next release's light (`titleLightProvider
 - Something today: `Today · …`; else the next day this week: `Tomorrow · …`, `Thu · …`.
 - Nothing this week while the month has something: `Nothing this week · Wed 21 Oct · Night Shift`.
 - Nothing in the thirty days: `Nothing of yours in the next 30 days`, and `See what’s coming out` under it in the primary: the band still opens the calendar, whose last shelf is what is coming out.
-- A calendar that did not arrive is one more line under it, a glyph in the tone of its cause and its words: `Lidarr did not answer at 20:53` for the operator, `Can't reach the server since 20:41` for the requester. Retry lives on the page: the band is one target and holds no second one. With no rows and a calendar that did not arrive, the band says only that.
+- A calendar that did not arrive is one more line under it, a glyph in the tone of its cause and its words: `Lidarr did not answer at 20:53` for the operator, `Can't reach the server since 20:41` for the requester (the time her server first did not answer, `Can't reach the server` when the app did not see it stop). Retry lives on the page: the band is one target and holds no second one. With no rows and a calendar that did not arrive, the band says only that.
 
 ## Whose calendar
 

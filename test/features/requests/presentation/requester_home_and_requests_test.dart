@@ -120,10 +120,9 @@ void main() {
       );
       await harness.settle(tester);
 
-      expect(
-        find.textContaining(RegExp(r"^Can't reach the server since")),
-        findsOne,
-      );
+      // The server answered, with an error: that is an answer and no silence,
+      // so the line says what it can and no time.
+      expect(find.text("Can't reach the server."), findsOne);
       Finder inRows(Finder finder) => find.descendant(
         of: find.byType(RequesterRequestRow),
         matching: finder,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
@@ -29,7 +30,9 @@ class DiscoverCalendarBand extends ConsumerWidget {
     if (value == null) {
       if (calendar.error case final error?) {
         // Only the requester's calendar fails whole: her Seerr is its one
-        // source, and she reads its silence in her own words.
+        // source, and she reads its silence in her own words, with the time
+        // the probe recorded and no time when it recorded none.
+        final reason = classifyConnectionFailure(error);
         return CalendarBand(
           events: const [],
           window: CalendarWindow.from(now),
@@ -38,8 +41,10 @@ class DiscoverCalendarBand extends ConsumerWidget {
           silent: [
             (
               words: BriefFailureLine.wordsFor(
-                classifyConnectionFailure(error),
-                since: now,
+                reason,
+                since: failureDidNotAnswer(reason)
+                    ? ref.silentSince(ServiceKey.seerr)
+                    : null,
               ).headline,
               error: error,
             ),
@@ -61,7 +66,17 @@ class DiscoverCalendarBand extends ConsumerWidget {
       silent: [
         for (final silence in value.silent)
           (
-            words: _silentWords(silence, value.readAt, requester: requester),
+            words: _silentWords(
+              silence,
+              value.readAt,
+              requester: requester,
+              since: requester
+                  ? ref.silentSince(
+                      silence.service,
+                      instanceId: silence.connectionId,
+                    )
+                  : null,
+            ),
             error: silence.error,
           ),
       ],
@@ -69,17 +84,20 @@ class DiscoverCalendarBand extends ConsumerWidget {
     );
   }
 
-  /// `Lidarr did not answer at 20:53`, or the requester's line.
+  /// `Lidarr did not answer at 20:53`, or the requester's line: with the time
+  /// the connection [since] stopped answering when it is silence and
+  /// something recorded it, and no time otherwise.
   static String _silentWords(
     CalendarSilence silence,
     DateTime at, {
     required bool requester,
+    DateTime? since,
   }) {
     final reason = classifyConnectionFailure(silence.error);
     if (requester) {
       return BriefFailureLine.wordsFor(
         reason,
-        since: at,
+        since: failureDidNotAnswer(reason) ? since : null,
         service: ServiceKey.seerr,
       ).headline;
     }
