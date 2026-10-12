@@ -348,25 +348,29 @@ void main() {
     });
 
     test('history loads a window and reports hasMore on a full page', () async {
-      final container = createContainer(
-        radarrService: _PagedHistoryRadarrService(
-          records: [
-            for (var i = 0; i < 50; i++)
-              {
-                'sourceTitle': 'Release $i',
-                'eventType': 'grabbed',
-                'date': '2026-04-02T11:18:00Z',
-              },
-          ],
-        ),
+      final radarr = _PagedHistoryRadarrService(
+        records: [
+          for (var i = 0; i < 50; i++)
+            {
+              'sourceTitle': 'Release $i',
+              'eventType': 'grabbed',
+              'date': '2026-04-02T11:18:00Z',
+            },
+        ],
       );
+      final container = createContainer(radarrService: radarr);
 
       final notifier = container.read(globalHistoryFeedProvider.notifier);
       await notifier.loading;
 
       final state = container.read(globalHistoryFeedProvider);
       expect(state.feed!.items, hasLength(50));
-      expect(state.hasMore, isTrue);
+      expect(state.cursors.values.any((cursor) => cursor.hasMore), isTrue);
+      // One request per connection, for the first 50: the window the count of
+      // Finished today is read inside, and the reason it can be a floor.
+      expect(radarr.historyCalls, 1);
+      expect(radarr.lastPage, 1);
+      expect(radarr.lastPageSize, 50);
     });
 
     // The whole point of moving onto the page primitives. `history` serves a
@@ -389,9 +393,9 @@ void main() {
       expect(radarr.items, hasLength(50));
       expect(radarr.total, 340);
       // And the total, once the server has given one, is what decides whether
-      // there is more, so a list ending exactly on a page boundary no longer
-      // costs an empty round trip to discover it.
-      expect(state.hasMore, isTrue);
+      // there is more, so a list ending exactly on a page boundary is not
+      // mistaken for a longer one.
+      expect(state.cursors.values.any((cursor) => cursor.hasMore), isTrue);
       final radarrCursor = state.cursors.entries
           .firstWhere((entry) => entry.key.$2 == ServiceType.movies)
           .value;
@@ -431,93 +435,6 @@ void main() {
         expect(radarr.total, isNull);
       },
     );
-
-    test('history load more appends the next page and finishes', () async {
-      final radarr = _PagedHistoryRadarrService(
-        records: [
-          for (var i = 0; i < 60; i++)
-            {
-              'sourceTitle': 'Release $i',
-              'eventType': 'grabbed',
-              'date': '2026-04-02T11:18:00Z',
-            },
-        ],
-      );
-      final container = createContainer(radarrService: radarr);
-
-      final notifier = container.read(globalHistoryFeedProvider.notifier);
-      await notifier.loading;
-      expect(container.read(globalHistoryFeedProvider).hasMore, isTrue);
-
-      await notifier.loadMore();
-
-      final state = container.read(globalHistoryFeedProvider);
-      expect(state.feed!.items, hasLength(60));
-      expect(state.hasMore, isFalse);
-      // Every record once, and every record: the rule the overlap exists to
-      // protect. Length alone cannot tell "50 + 10 fresh" from "60 rows of
-      // which 10 are printed twice and 10 were never asked for".
-      expect(
-        state.feed!.items.map((item) => item.title).toSet(),
-        hasLength(60),
-      );
-      // The first page asked for the initial 50-wide window; the load-more page
-      // asks for the 200-wide one. It asks for **page 1** of that wider window,
-      // not page 2: `page: 2, pageSize: 200` would start at record 201 and
-      // leave records 51-200 unrequested for ever. The bucket therefore
-      // re-fetches the first 50 and drops them itself (`PagedCursor.requestAt`
-      // returns that skip), which costs one overlapping window once and is the
-      // only arrangement that leaves no hole.
-      expect(radarr.historyCalls, 2);
-      expect(radarr.lastPage, 1);
-      expect(radarr.lastPageSize, 200);
-    });
-
-    test('a failed load-more page stays retryable and says so', () async {
-      // The page that never arrived used to be read as the page that proved the
-      // list had ended: `lastPageFull` was derived from the missing result,
-      // came out false, and took `hasMore` with it, so one unreachable
-      // connection closed its own half of the feed for good, looking exactly
-      // like a list that had run out. `loadMoreFailed` was never set by
-      // anything either, which left the footer's retry unreachable code.
-      final radarr = _FlakySecondPageRadarrService(
-        records: [
-          for (var i = 0; i < 60; i++)
-            {
-              'sourceTitle': 'Release $i',
-              'eventType': 'grabbed',
-              'date': '2026-04-02T11:18:00Z',
-            },
-        ],
-      );
-      final container = createContainer(radarrService: radarr);
-
-      final notifier = container.read(globalHistoryFeedProvider.notifier);
-      await notifier.loading;
-      expect(container.read(globalHistoryFeedProvider).hasMore, isTrue);
-
-      await notifier.loadMore();
-
-      final state = container.read(globalHistoryFeedProvider);
-      expect(state.loadMoreFailed, isTrue, reason: 'the footer offers a retry');
-      expect(
-        state.hasMore,
-        isTrue,
-        reason:
-            'a page that did not arrive says nothing about whether one is '
-            'there',
-      );
-      expect(state.feed!.items, hasLength(50), reason: 'page one still stands');
-
-      // And the retry actually reaches the server again rather than being a
-      // button over an exhausted cursor.
-      radarr.failNext = false;
-      await notifier.loadMore();
-
-      final recovered = container.read(globalHistoryFeedProvider);
-      expect(recovered.loadMoreFailed, isFalse);
-      expect(recovered.feed!.items, hasLength(60));
-    });
 
     test('a failed first page is reported, not swallowed', () async {
       final container = createContainer(
@@ -825,15 +742,9 @@ class _ThrowingQueueLidarrService extends FakeLidarrService {
 /// The window a real \*arr serves for `page`/`pageSize`: an **absolute** slice
 /// at `(page - 1) * pageSize`, and short or empty once the set runs out.
 ///
-/// Positional on purpose, because the thing under test is positional. The
-/// bucket asks for a window and then drops the leading records it already holds
-/// (`PagedCursor.requestAt` returns a page *and a skip*, since the first window
-/// is 50 wide and every later one is 200). A fake that serves "whatever comes
-/// next" instead of "the records at this position" answers a question nobody
-/// asked: it silently pre-applies the skip, the bucket applies it again, and a
-/// page of 10 fresh records is skipped down to nothing. That is exactly how
-/// this file's two load-more tests broke, not because the paging was wrong,
-/// but because the double had never modelled paging at all.
+/// Positional on purpose: the first window the bucket asks for is `page: 1,
+/// pageSize: 50`, and a fake that serves "whatever comes next" instead of "the
+/// records at this position" would answer a question nobody asked.
 List<dynamic> _serverWindow(List<dynamic> records, int page, int pageSize) {
   final start = (page - 1) * pageSize;
   if (start >= records.length) return const [];
@@ -868,31 +779,6 @@ class _PagedHistoryRadarrService extends FakeRadarrService {
     historyCalls++;
     lastPage = page;
     lastPageSize = pageSize;
-    return _serverWindow(records, page, pageSize);
-  }
-}
-
-/// Pages like [_PagedHistoryRadarrService], but throws on every call after the
-/// first for as long as [failNext] is set: the connection that dies mid-scroll
-/// and then comes back.
-class _FlakySecondPageRadarrService extends FakeRadarrService {
-  _FlakySecondPageRadarrService({required this.records});
-
-  final List<dynamic> records;
-  bool failNext = true;
-  bool _servedFirst = false;
-
-  @override
-  Future<List<dynamic>> getHistory({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    if (!_servedFirst) {
-      _servedFirst = true;
-      return _serverWindow(records, page, pageSize);
-    }
-    if (failNext) throw Exception('Radarr went away mid-scroll');
     return _serverWindow(records, page, pageSize);
   }
 }

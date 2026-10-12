@@ -393,9 +393,8 @@ typedef ActivityConnection = ({
 /// by every field, and that one also carries `label`, a rendering detail
 /// derived from settings, which flips from empty to a name the moment a second
 /// connection of the same service is configured. Keyed on the whole record, a
-/// cursor stored before that change can never be looked up after it, and the
-/// bucket's Load more quietly stops answering. The connection travels
-/// alongside, in [PagedArrFeedNotifier._connections].
+/// cursor stored before that change can never be looked up after it. The
+/// connection travels alongside, in [PagedArrFeedNotifier._connections].
 typedef ActivityPageKey = (GlobalActivityKind, ServiceType, String);
 
 ActivityPageKey _pageKey(GlobalActivityKind kind, ActivityConnection c) =>
@@ -578,12 +577,13 @@ final globalBlocklistItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   );
 });
 
-/// History, paged: the first window loads, "load more" fetches the rest.
+/// History, first window only: the newest 50 records of every connection.
 ///
 /// History is the one bucket whose full contents can be thousands of rows with
 /// embedded series/episode data: several megabytes and a dozen requests if
-/// fetched up front. The official web UI pages it, and so does this: a window
-/// of 50 per service, then explicit "load more" pages.
+/// fetched up front. What reads it is [finishedTodayProvider], which needs
+/// today's records and a way to know whether the window reaches past today
+/// (the cursors), not the whole set.
 final globalHistoryFeedProvider =
     NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
       () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.history]),
@@ -710,36 +710,14 @@ FinishedToday finishedTodayOf(
 /// three requests it always did, just with pages big enough to matter.
 const _pagedInitialPageSize = 50;
 
-/// Page size for every "load more" page after the first.
-///
-/// 200 is the server's own cap for the queue and sits well inside every
-/// endpoint's tolerance, which makes a huge list close in one or two taps
-/// instead of a dozen.
-const _pagedMorePageSize = 200;
-
-/// What one "load more" round brought back for one pair.
-///
-/// Three numbers rather than the item list alone, because after the overlap
-/// [PagedCursor.requestAt] introduces, the list's length answers none of the
-/// questions the next cursor needs: [received] is how far the offset advanced
-/// (records past the skip), and [pageWasFull] is whether the *server* filled the
-/// window: the fallback signal for a server that sends no total.
-typedef _PageDelta = ({
-  List<GlobalActivityItem> items,
-  int received,
-  bool pageWasFull,
-});
-
 /// One (kind, connection) pair's progress through a paged bucket.
 class PagedCursor {
-  /// How many records of the set this pair has walked past: the **offset**,
-  /// not the number of rows on screen.
+  /// How many records of the set this pair has walked past, not the number of
+  /// rows on screen.
   ///
-  /// Counted in records the server sent rather than in items we managed to map,
-  /// because this is the number the next request's position is derived from:
+  /// Counted in records the server sent rather than in items we managed to map:
   /// the two differ only for a record shaped like nothing this app understands,
-  /// and on that day the offset still has to be right or every later page lands
-  /// somewhere else in the list.
+  /// and [hasMore] compares this number with the size of the set.
   final int fetched;
 
   final bool lastPageFull;
@@ -759,32 +737,12 @@ class PagedCursor {
     this.error,
   });
 
-  /// Where the next request has to start, in the only terms the \*arr APIs
-  /// accept: a 1-based page over a window of [pageSize], plus however many
-  /// records of that window this pair already holds and must drop.
+  /// Whether the window leaves records behind it: what makes a count taken
+  /// inside it a floor (`50+`) and not the whole.
   ///
-  /// Derived, and no longer a stored `nextPage` incremented once per load:
-  /// that is correct only while every page is the same size, and these are not.
-  /// The first page asks for 50 and every page after it asks for 200, so
-  /// `page: 2, pageSize: 200` requested records 201-400 and **records 51-200
-  /// were never asked for at all**: the list skipped 150 rows in silence. Once
-  /// the envelope's total started deciding [hasMore] the same gap turned the
-  /// footer into a control that could not be satisfied: `fetched` stalled
-  /// short of `total` while every further page came back empty, so "load more"
-  /// stayed lit and each press spent a request on nothing.
-  ///
-  /// The cost of doing it this way is one overlap, once: the first wide page
-  /// re-downloads the 50 records the narrow page already brought. Cheaper than
-  /// a second page size, and far cheaper than a hole in the list.
-  ({int page, int skip}) requestAt(int pageSize) =>
-      (page: fetched ~/ pageSize + 1, skip: fetched % pageSize);
-
-  /// Whether another page might exist.
-  ///
-  /// [total] answers this outright when the server sent one: the list is
-  /// exhausted once we hold as many rows as it says there are, so the extra
-  /// empty round-trip a list ending exactly on a page boundary used to cost is
-  /// gone, and so is the footer spinner that came with it.
+  /// [total] answers this outright when the server sent one: the set is
+  /// exhausted once we hold as many records as it says there are, so a list
+  /// that ends exactly on a page boundary is not mistaken for a longer one.
   ///
   /// The heuristic survives underneath for the servers that send no total: an
   /// older build, a proxy that rewrote the body. There "full last page" is the
@@ -802,47 +760,36 @@ class PagedCursor {
 class PagedArrFeedState {
   final ActivityFeed? feed;
   final bool refreshing;
-  final bool loadingMore;
-  final bool loadMoreFailed;
   final Map<ActivityPageKey, PagedCursor> cursors;
 
   const PagedArrFeedState({
     this.feed,
     this.refreshing = false,
-    this.loadingMore = false,
-    this.loadMoreFailed = false,
     this.cursors = const {},
   });
 
   PagedArrFeedState copyWith({
     ActivityFeed? feed,
     bool? refreshing,
-    bool? loadingMore,
-    bool? loadMoreFailed,
     Map<ActivityPageKey, PagedCursor>? cursors,
   }) {
     return PagedArrFeedState(
       feed: feed ?? this.feed,
       refreshing: refreshing ?? this.refreshing,
-      loadingMore: loadingMore ?? this.loadingMore,
-      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
       cursors: cursors ?? this.cursors,
     );
   }
-
-  bool get hasMore => cursors.values.any((c) => c.hasMore);
 }
 
-/// Loads a bucket's records a window at a time, the way the official web UI
-/// pages its History and Wanted tables. The blocklist is not paged here: it is
-/// small, and `globalBlocklistItemsProvider` reads it whole in one walk.
+/// Loads the first window of a bucket's records, one request per connection and
+/// kind, in parallel. The blocklist is not paged here: it is small, and
+/// `globalBlocklistItemsProvider` reads it whole in one walk.
 ///
 /// `build` watches [activityRefreshVersionProvider] so the one pull-to-refresh
 /// mechanism reloads every bucket that is alive, paged or not; the previous
 /// feed stays on screen (with the hairline "refreshing" bar) until the first
-/// pages come back. [loadMore] then fetches the next page of every pair that
-/// has one, in parallel, and re-merges; the merged feed is re-sorted whole, so
-/// the severity-first order stays an order, not a per-page concatenation.
+/// pages come back. The merged feed is sorted whole, so the severity-first
+/// order stays an order, not a per-connection concatenation.
 class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   PagedArrFeedNotifier({required this.kinds});
 
@@ -860,8 +807,8 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   /// The most recent first-page load, so tests can await it.
   Future<void> _loading = Future.value();
 
-  /// Guards the first-page loads against each other and against [loadMore]:
-  /// whoever bumps the generation last owns `_items` and `state`.
+  /// Guards the first-page loads against each other: whoever bumps the
+  /// generation last owns `_items` and `state`.
   int _generation = 0;
 
   /// The first-page load, awaitable for tests.
@@ -873,66 +820,6 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
     final previous = stateOrNull;
     _loading = _reload();
     return previous?.copyWith(refreshing: true) ?? const PagedArrFeedState();
-  }
-
-  /// Fetches the next page of every pair that still has one, in parallel, and
-  /// merges the result into the window.
-  Future<void> loadMore() async {
-    final current = state;
-    if (current.feed == null || current.loadingMore || !current.hasMore) return;
-
-    final generation = _generation;
-    state = current.copyWith(loadingMore: true, loadMoreFailed: false);
-
-    final pairs = [
-      for (final entry in current.cursors.entries)
-        if (entry.value.hasMore) entry.key,
-    ];
-    final fetched = <ActivityPageKey, _PageDelta>{};
-    final failed = <ActivityPageKey>{};
-    await Future.wait([
-      for (final pair in pairs) _loadNextPage(pair, fetched, failed),
-    ]);
-
-    if (generation != _generation) return;
-
-    for (final entry in fetched.entries) {
-      _items.putIfAbsent(entry.key, () => []).addAll(entry.value.items);
-    }
-
-    final cursors = <ActivityPageKey, PagedCursor>{};
-    for (final entry in current.cursors.entries) {
-      final pair = entry.key;
-      final cursor = entry.value;
-      final extra = fetched[pair];
-      final didFail = failed.contains(pair);
-      cursors[pair] = PagedCursor(
-        fetched: cursor.fetched + (extra?.received ?? 0),
-        // A page that never arrived says nothing about whether one exists, so
-        // the pair keeps the answer it already had and stays retryable. Derived
-        // from the missing page instead, `lastPageFull` came out false, `hasMore`
-        // went false with it, and one unreachable connection ended its own half
-        // of the list for good, looking on screen exactly like a list that
-        // had run out.
-        lastPageFull: didFail
-            ? cursor.lastPageFull
-            : (extra?.pageWasFull ?? false),
-        // The size of the set does not change because we fetched another window
-        // of it, and a page that never arrived cannot revise it either.
-        total: cursor.total,
-        configured: cursor.configured,
-        error: cursor.error,
-      );
-    }
-
-    // Reported, so a page that offers "load more" can offer a retry for the
-    // pages that failed. No widget reads it yet: the feed only feeds today's
-    // count, and nothing calls `loadMore`.
-    state = PagedArrFeedState(
-      feed: _buildFeed(cursors),
-      cursors: cursors,
-      loadMoreFailed: failed.isNotEmpty,
-    );
   }
 
   Future<void> _reload() async {
@@ -952,10 +839,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
 
     if (generation != _generation) return;
 
-    for (final entry in loaded.entries) {
-      // Growable copy: `loadMore` appends to these lists.
-      _items[entry.key] = [...entry.value];
-    }
+    _items.addAll(loaded);
 
     state = PagedArrFeedState(feed: _buildFeed(cursors), cursors: cursors);
   }
@@ -1001,50 +885,6 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
         configured: true,
         error: error,
       );
-    }
-  }
-
-  Future<void> _loadNextPage(
-    ActivityPageKey pair,
-    Map<ActivityPageKey, _PageDelta> fetched,
-    Set<ActivityPageKey> failed,
-  ) async {
-    final (kind, serviceType, instanceId) = pair;
-    final cursor = state.cursors[pair];
-    final connection = _connections[pair];
-    if (cursor == null || !cursor.hasMore || connection == null) return;
-
-    try {
-      final arrService = ref.read(
-        connectionArrServiceProvider((serviceType, instanceId)),
-      );
-      final request = cursor.requestAt(_pagedMorePageSize);
-      final page = await _loadPage(
-        arrService,
-        kind,
-        page: request.page,
-        pageSize: _pagedMorePageSize,
-      );
-      // The leading slice is the overlap [PagedCursor.requestAt] documents:
-      // records this pair already shows. Appending it would print each of them
-      // twice, which is the one way this fix could be worse than the gap it
-      // closes.
-      final fresh = page.records.skip(request.skip).toList(growable: false);
-      fetched[pair] = (
-        items: fresh
-            .whereType<Map>()
-            .map((item) => _arrItem(kind, connection, stringKeyMap(item)))
-            .toList(growable: false),
-        received: fresh.length,
-        // The window the *server* filled, not the part of it that was new:
-        // measured after the skip, a full page would read short and end the
-        // list one page early on every server that sends no total.
-        pageWasFull: page.records.length == _pagedMorePageSize,
-      );
-    } catch (_) {
-      // Recorded so [loadMore] can leave this pair's `hasMore` alone and light
-      // the footer's retry. Swallowed silently, the pair looked exhausted.
-      failed.add(pair);
     }
   }
 
