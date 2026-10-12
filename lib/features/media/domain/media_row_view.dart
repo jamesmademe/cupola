@@ -708,8 +708,13 @@ MediaRowView? _answeredView(
             ? (record.mediaInfo == null ? 'Nobody has asked for it' : '')
             : [
                 if (request.who.isNotEmpty) request.who,
+                // A row about a request says its day as the request rows
+                // elsewhere do: hours, then yesterday, a weekday, a date.
                 if (request.when.isNotEmpty)
-                  formatShortDate(request.when, now: now),
+                  switch (DateTime.tryParse(request.when)) {
+                    final at? => formatDayWords(at, now: now),
+                    null => request.when,
+                  },
               ].join(' · '),
         state: status.label,
         tone: status.tone,

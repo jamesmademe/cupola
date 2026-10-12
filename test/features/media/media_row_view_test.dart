@@ -9,7 +9,11 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import '../../test_helpers/profiles/profiles.dart';
 import 'media_test_helpers.dart';
 
-Future<List<String>> _words(ConfigProfile profile, WorldTitle title) async {
+Future<List<String>> _words(
+  ConfigProfile profile,
+  WorldTitle title, {
+  DateTime? now,
+}) async {
   final read = await settledRows(profile, title);
   final settings = read.container.read(currentSettingsProvider);
   return [
@@ -18,7 +22,7 @@ Future<List<String>> _words(ConfigProfile profile, WorldTitle title) async {
             row,
             title: (connection) =>
                 settings.connectionTitle(connection.id, connection.service),
-            now: DateTime(2026, 10, 3),
+            now: now ?? DateTime(2026, 10, 3),
           )
           case final view?)
         view.spoken,
@@ -53,5 +57,17 @@ void main() {
   test('P7: Jellyfin did not answer, and offers Retry', () async {
     final words = await _words(Profiles.p7, WorldTitles.tearsOfSteel);
     expect(words.first, 'Jellyfin. Did not answer. Retry');
+  });
+  test("Seerr's row says the request's day as a request row does", () async {
+    // Past a week, the date; the day after, yesterday: the voice of every
+    // other row about a request, not a date even for one asked an hour ago.
+    final words = await _words(Profiles.p1, WorldTitles.tearsOfSteel);
+    expect(words.last, startsWith('Seerr. Anna · Sat 12 Sep.'));
+    final nextDay = await _words(
+      Profiles.p1,
+      WorldTitles.tearsOfSteel,
+      now: DateTime(2026, 9, 13, 18),
+    );
+    expect(nextDay.last, startsWith('Seerr. Anna · yesterday.'));
   });
 }
