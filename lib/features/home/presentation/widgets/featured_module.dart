@@ -12,7 +12,11 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
     show calendarClockProvider;
+import 'package:cupola/features/services/presentation/services_provider.dart'
+    show arrivalsSinceProvider;
 import 'package:cupola/features/home/data/featured.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/featured_last_known.dart';
 import 'package:cupola/features/home/domain/featured.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/arrived_module.dart'
@@ -44,8 +48,20 @@ class HomeFeaturedModule extends ConsumerWidget {
     if (!HomeModule.featured.services.any(settings.isServiceConfigured)) {
       return const SizedBox.shrink();
     }
-    final read = ref.watch(featuredProvider);
-    final slides = read.value;
+    // The live slides, or until they come the last drawing's (a cold start),
+    // cut to what is still true now.
+    final read = ref.watchOrLastKnown(featuredProvider, featuredLastKnown);
+    final live = read.live;
+    final known = read.asOf;
+    final now = ref.watch(calendarClockProvider)();
+    final slides = switch (read.value) {
+      final drawn? when known != null => featuredAsDrawn(
+        drawn,
+        now: now,
+        since: ref.watch(arrivalsSinceProvider),
+      ),
+      final value => value,
+    };
     Widget placed(Widget child) => Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -56,32 +72,41 @@ class HomeFeaturedModule extends ConsumerWidget {
       child: child,
     );
     if (slides == null) {
-      return read.hasError
+      return live.hasError
           ? const SizedBox.shrink()
           : placed(const FeaturedSkeleton());
     }
-    if (slides.isEmpty) return const SizedBox.shrink();
+    if (slides.isEmpty) {
+      // A drawing with nothing left to show waits for the live answer, as if
+      // there were none; Featured never says a failure of its own.
+      return known != null && !live.hasError
+          ? placed(const FeaturedSkeleton())
+          : const SizedBox.shrink();
+    }
 
     final view = ref.watch(featuredViewProvider);
-    final now = ref.watch(calendarClockProvider)();
     final views = ref.read(featuredViewProvider.notifier);
-    return placed(
-      FeaturedPager(
-        pages: [
-          for (final slide in slides)
-            _pageOf(
-              context,
-              ref,
-              slide,
-              now: now,
-              light: ref.watch(featuredLightProvider(slide.art.url)),
-            ),
-        ],
-        initialIndex: view.index,
-        onShown: views.show,
-        onArtDrawn: views.drawn,
-        live: watchPageActivity(context, ref).isLive,
-        advances: ref.watch(featuredAdvancesProvider),
+    return LastKnownMark(
+      asOf: known,
+      checking: !live.hasError,
+      child: placed(
+        FeaturedPager(
+          pages: [
+            for (final slide in slides)
+              _pageOf(
+                context,
+                ref,
+                slide,
+                now: now,
+                light: ref.watch(featuredLightProvider(slide.art.url)),
+              ),
+          ],
+          initialIndex: view.index,
+          onShown: views.show,
+          onArtDrawn: views.drawn,
+          live: watchPageActivity(context, ref).isLive,
+          advances: ref.watch(featuredAdvancesProvider),
+        ),
       ),
     );
   }
@@ -125,8 +150,8 @@ class HomeFeaturedModule extends ConsumerWidget {
           () => _play(
             context,
             ref,
-            service: play.server.service,
-            instanceId: play.server.id,
+            service: play.service,
+            instanceId: play.instanceId,
             itemId: play.item.id,
             title: play.item.title,
           ),

@@ -74,6 +74,12 @@ address goes unnamed until the live answer comes. A module whose live read fails
 credential, no response body, dropped when the server, the person or the viewer changes. Needs you, the header's health
 and Now playing never draw from it.
 
+Featured draws its last slides with their two ways forward, `Play` included (what a media server held when it was
+read; the server answers if it no longer does), and the room is lit by the slide in front from the first frame. A slide
+of today is gone once today is another day, an arrival once the week has left it behind, and a download of today says no
+figure (`Out on digital today · downloading`). Continue watching steps aside for the title a drawing leads with, as it
+does for a live one.
+
 Coming up draws differently from Arrived in one respect: a thing in the download queue is drawn as the state it was in
 (`Out today · downloading`), with no percentage and no time it would finish, and its tone drained to neutral (the stale
 queue row's rule: the state stays, the figure and the colour go); a thing whose day or time has come since the read

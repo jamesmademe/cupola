@@ -15,7 +15,6 @@ import 'package:cupola/features/services/presentation/dashboard_sections.dart'
     show askedAgo;
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart'
     show serviceWithConnection;
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -23,9 +22,18 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 /// How many slides Featured holds.
 const featuredSlideLimit = 3;
 
+/// The width a slide's artwork is asked for: the phone's slab on a dense
+/// screen, and a tablet's well.
+const featuredArtWidth = 1280;
+
 /// What a media server would open for a title: the item, on the connection
-/// that holds it.
-typedef FeaturedPlay = ({ServiceInstance server, StreamItem item});
+/// that holds it (by its service and id, which is all a Play needs, and all a
+/// last drawing can keep).
+typedef FeaturedPlay = ({
+  ServiceKey service,
+  String instanceId,
+  StreamItem item,
+});
 
 /// One slide: a title, its wide artwork and what it is doing here.
 sealed class FeaturedSlide {

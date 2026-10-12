@@ -153,7 +153,11 @@ void main() {
         FeaturedArrival(
           _spring,
           art: _art,
-          play: (server: _jellyfin, item: _item('jf-spring', 'Spring')),
+          play: (
+            service: _jellyfin.service,
+            instanceId: _jellyfin.id,
+            item: _item('jf-spring', 'Spring'),
+          ),
         ),
         FeaturedToday(_spriteFright, art: _art),
       ],

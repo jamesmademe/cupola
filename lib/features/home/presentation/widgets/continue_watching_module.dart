@@ -11,6 +11,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/featured_last_known.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/last_known/continue_watching_last_known.dart';
 import 'package:cupola/features/home/data/resume.dart';
@@ -179,7 +180,13 @@ bool _featuredLeadsWith(WidgetRef ref, ResumeRow row) {
   if (!ref.watch(homeLayoutProvider).shown.contains(HomeModule.featured)) {
     return false;
   }
-  final first = ref.watch(featuredProvider).value?.firstOrNull;
+  // Featured's drawn slides at a cold start, so a title it leads with is not
+  // drawn here first and then taken away when its live slides come.
+  final slides =
+      ref.watch(featuredProvider).value ??
+      ref.watch(homeLastKnownProvider(featuredLastKnown))?.value
+          as List<FeaturedSlide>?;
+  final first = slides?.firstOrNull;
   return first is FeaturedResume &&
       first.row.instanceId == row.instanceId &&
       first.row.item.id == row.item.id;

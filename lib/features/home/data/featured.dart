@@ -11,7 +11,9 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
+import 'package:cupola/features/home/data/last_known/featured_last_known.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/featured.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
@@ -29,10 +31,6 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
-
-/// The width a slide's artwork is asked for: the phone's slab on a dense
-/// screen, and a tablet's well.
-const _artWidth = 1280;
 
 /// Featured's slides: the first title in progress, the newest movie or
 /// series that arrived, and a movie or an episode dated today, as their
@@ -111,7 +109,7 @@ ImageSource? _resumeArt(Ref ref, ResumeRow row) {
   final server = row.service == ServiceKey.jellyfin
       ? ref.watch(jellyfinClientForProvider(row.instanceId))
       : ref.watch(plexClientForProvider(row.instanceId));
-  return server.imageFor(path, width: _artWidth);
+  return server.imageFor(path, width: featuredArtWidth);
 }
 
 /// The first media server that holds [entry], and what its Play opens: the
@@ -147,7 +145,11 @@ Future<FeaturedPlay?> _playOf(Ref ref, ArrHistoryEntry entry) async {
     final StreamItem opens = key.isMovie
         ? item
         : mediaNextEpisode(copy.episodes ?? const []) ?? item;
-    return (server: servers[index], item: opens);
+    return (
+      service: servers[index].service,
+      instanceId: servers[index].id,
+      item: opens,
+    );
   }
   return null;
 }
@@ -204,7 +206,12 @@ final featuredRoomLightProvider = Provider.autoDispose<Color?>((ref) {
     return ref.watch(featuredLightProvider(url))?.light;
   }
   if (!shown.contains(HomeModule.featured)) return null;
-  final slides = ref.watch(featuredProvider).value;
+  // The drawn slides at a cold start, so the room is lit by the slide in
+  // front from the first frame and does not change when the live ones come.
+  final slides =
+      ref.watch(featuredProvider).value ??
+      ref.watch(homeLastKnownProvider(featuredLastKnown))?.value
+          as List<FeaturedSlide>?;
   if (slides == null || slides.isEmpty) return null;
   final index = ref.watch(featuredViewProvider.select((view) => view.index));
   final url = slides[index.clamp(0, slides.length - 1)].art.url;

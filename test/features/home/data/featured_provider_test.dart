@@ -172,7 +172,7 @@ void main() {
     final resume = slides[0] as FeaturedResume;
     expect(resume.art.url, contains('/Items/e1/Images/Backdrop/0'));
     final arrival = slides[1] as FeaturedArrival;
-    expect(arrival.play?.server.service, ServiceKey.jellyfin);
+    expect(arrival.play?.service, ServiceKey.jellyfin);
     expect(arrival.play?.item.id, 'jf-spring');
     expect((slides[2] as FeaturedToday).downloading, isTrue);
   });
