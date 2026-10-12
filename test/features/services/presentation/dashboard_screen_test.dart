@@ -75,7 +75,8 @@ void main() {
 
     // Read off the list rather than off the screen: the modules below the fold
     // are built lazily, so a y-coordinate comparison would be testing the
-    // viewport height. The day, then what needs me, what is featured, what is
+    // viewport height. The day and, under it, the line a cold start's last
+    // drawing says itself in, then what needs me, what is featured, what is
     // in progress, what is coming up, what arrived, what is moving, what waits
     // for an answer and who is watching, and the Home's own two rows at its
     // foot: Set up next and the way to Edit Home. Featured, Now playing and
@@ -83,6 +84,7 @@ void main() {
     // by drawing nothing, not by leaving the list.
     expect(_regionsOnPage(tester), [
       'HomeHeader',
+      'HomeAsOfLine',
       'NeedsYouBanner',
       'HomeFeaturedModule',
       'HomeContinueWatchingModule',
