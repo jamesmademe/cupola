@@ -193,7 +193,9 @@ Everything comes from her own Seerr session; no fault, no service named but her 
   18:40` above the title, `You asked for it on Sunday · TMDB 7.1` under it, `Watch on Jellyfin` (Seerr's link to it in
   the player its server is set up with, `Watch on Plex`, `Watch` when Seerr does not say) and `Details`. The room takes
   the title's light. A second arrival is one line under it, `Also ready · Sintel` · `On the server since Wednesday`.
-  Nothing arrived: the module is absent and Your requests leads.
+  Nothing arrived: the module is absent and Your requests leads. At a cold start it draws what it last drew (see
+  *Last known*): the same title, so the room keeps its light, and Watch where it was; an arrival the week has left
+  behind is cut again, and a drawing with nothing left is the skeleton until her Seerr answers.
 - **Your requests** (`HomeYourRequestsModule`): `Your requests`, `3 on the way`, up to three
   [RequesterRequestRow](../RequesterRequestRow/README.md)s, what moves first, then what waits, then a no of the last
   seven days; `All your requests` to her tab. Nothing on its way: `Nothing on its way` · `Find something to ask for in

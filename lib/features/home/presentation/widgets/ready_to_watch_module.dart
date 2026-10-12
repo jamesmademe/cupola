@@ -16,10 +16,11 @@ import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
     show calendarClockProvider;
 import 'package:cupola/features/home/data/featured.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/my_requests_last_known.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/featured_pager.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
-import 'package:cupola/features/requests/data/my_requests_provider.dart';
 import 'package:cupola/features/requests/domain/my_requests.dart';
 import 'package:cupola/features/requests/presentation/my_request_actions.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -31,13 +32,17 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 /// Your requests leads.
 ///
 /// Never a failure of its own: the Home's one line says the server did not
-/// answer.
+/// answer. At a cold start it draws what it last drew, until the answer comes
+/// (`watchMyRequestsOrLastKnown`): the same title, so the room keeps its light,
+/// and Watch where it was, since the server answers for a link that no longer
+/// opens. A week that has gone by since is cut again, and a drawing with
+/// nothing left to draw is the skeleton, never an absent module.
 class HomeReadyToWatchModule extends ConsumerWidget {
   const HomeReadyToWatchModule({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final read = ref.watch(myRequestsProvider);
+    final (:read, :asOf) = ref.watchMyRequestsOrLastKnown();
     final mine = read.requests;
     Widget placed(Widget child) => Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -54,7 +59,14 @@ class HomeReadyToWatchModule extends ConsumerWidget {
           : placed(const FeaturedSkeleton());
     }
     final ready = mine.ready;
-    if (ready.isEmpty) return const SizedBox.shrink();
+    if (ready.isEmpty) {
+      // A drawing whose week has gone by says nothing: the skeleton, as if
+      // there were none, and nothing under a failure the page already says.
+      if (asOf != null && read.error == null) {
+        return placed(const FeaturedSkeleton());
+      }
+      return const SizedBox.shrink();
+    }
 
     final now = ref.watch(calendarClockProvider)();
     final lead = ready.first;
@@ -91,26 +103,30 @@ class HomeReadyToWatchModule extends ConsumerWidget {
       second: watchAt == null ? null : FeaturedAction('Details', details),
     );
     final also = ready.length > 1 ? ready[1] : null;
-    return placed(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FeaturedPager(
-            pages: [page],
-            label: HomeModule.readyToWatch.label,
-            onArtDrawn: ref.read(featuredViewProvider.notifier).drawn,
-            live: watchPageActivity(context, ref).isLive,
-            advances: false,
-          ),
-          if (also != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            _AlsoReady(
-              mine: also,
-              now: now,
-              onTap: () => openMyRequest(context, also),
+    return LastKnownMark(
+      asOf: asOf,
+      checking: read.error == null,
+      child: placed(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            FeaturedPager(
+              pages: [page],
+              label: HomeModule.readyToWatch.label,
+              onArtDrawn: ref.read(featuredViewProvider.notifier).drawn,
+              live: watchPageActivity(context, ref).isLive,
+              advances: false,
             ),
+            if (also != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              _AlsoReady(
+                mine: also,
+                now: now,
+                onTap: () => openMyRequest(context, also),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

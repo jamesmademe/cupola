@@ -14,10 +14,10 @@ import 'package:cupola/features/discover/presentation/library_calendar_provider.
 import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/last_known/featured_last_known.dart';
+import 'package:cupola/features/home/data/last_known/my_requests_last_known.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/featured.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
-import 'package:cupola/features/requests/data/my_requests_provider.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -200,7 +200,9 @@ final featuredRoomLightProvider = Provider.autoDispose<Color?>((ref) {
   final shown = ref.watch(homeLayoutProvider).shown;
   if (ref.watch(shellAudienceProvider) == Audience.requester) {
     if (!shown.contains(HomeModule.readyToWatch)) return null;
-    final lead = ref.watch(myRequestsProvider).requests?.ready.firstOrNull;
+    // The title Ready to watch draws: her answer's, or until it comes the
+    // one it drew last, so the room keeps its light.
+    final lead = ref.watch(readyLeadProvider);
     if (lead == null) return null;
     final url = lead.art.url;
     return ref.watch(featuredLightProvider(url))?.light;
