@@ -31,7 +31,9 @@ class ListRowsShimmer extends StatelessWidget {
         count,
         (_) => Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: ShimmerPlaceholder(height: rowHeight),
+          // The card's radius, as the rows it stands in for: a square plate
+          // under a rounded row reads as a different thing arriving.
+          child: ShimmerPlaceholder.card(height: rowHeight),
         ),
       ),
     ),
