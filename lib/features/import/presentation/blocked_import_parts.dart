@@ -579,7 +579,7 @@ class _BlockedImportNeedYouRowState
         !ready || (widget.kind == NeedYouKind.refused && !widget.selected);
     final title = manualImportGroupTitle(service, item);
     final code = manualImportIdentityFor(service, item).code;
-    final where = [if (title != 'Unmatched') title, ?code].join(' ');
+    final where = [if (title != 'Unmatched') title, ?code].join(' · ');
     final reason = item.rejections.isEmpty
         ? null
         : item.rejections.first.reason;

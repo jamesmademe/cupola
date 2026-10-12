@@ -43,7 +43,7 @@ The single import of a title, its room or the ⋯ menu stays the wizard (Locate 
   - `Clear all` or `Select all` as an outlined button;
   - a row per file: the mark, the code (`S1 E1`; a movie's quality) in `AppType.row`, and the file's name in `AppType.mono`, elided in the middle.
 - **Need you**: `6 need you`, then a sentence on what each row asks for. One slab of rows.
-  - Closed, a row shows the dashed amber mark, the file's name in mono, and what it waits for in amber `AppType.meta` w600 (`Which episode?`). Once placed, it reads `Added · Cosmos Laundromat S1 E3` in `inkSecondary`.
+  - Closed, a row shows the dashed amber mark, the file's name in mono, and what it waits for in amber `AppType.meta` w600 (`Which episode?`). Once placed, it reads `Added · Cosmos Laundromat · S1 E3` in `inkSecondary`.
   - Open, a row shows the choice its kind needs (`NeedYouKind`):
     - **episode**: the series it was grabbed for with `Change` (the match sheet), the seasons (four or fewer share the row; the specials last; with several, the one every other file of the series in this Review is on, when they agree; otherwise none until one is picked), an `E3` stepper started on the number in the name or, when the name has none, on the episode after the last one placed in the season, and the quality from the file name. Under them, the ink fill: `Pick a season to add it` until a season is chosen, then `Add to the import`. A season without that episode says so in amber; an episode another file of the Review is already on says which, in `inkSecondary` (`S1 E3 is already on` and the file in mono), since a better copy is a choice.
     - **identity**: the arr's words, then `Pick the series` (the match sheet).

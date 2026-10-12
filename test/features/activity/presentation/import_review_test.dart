@@ -157,7 +157,7 @@ void main() {
     expect(find.text('E4'), findsOneWidget);
     await _tap(tester, find.text('Add to the import'));
 
-    expect(find.text('Added · Cosmos Laundromat S2 E4'), findsOneWidget);
+    expect(find.text('Added · Cosmos Laundromat · S2 E4'), findsOneWidget);
     expect(find.text('Which episode?'), findsNWidgets(5));
     expect(find.text('12 clear · 1 picked by you'), findsOneWidget);
     expect(find.text('Import 13 selected'), findsOneWidget);

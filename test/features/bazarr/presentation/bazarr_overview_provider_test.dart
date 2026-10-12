@@ -17,7 +17,7 @@ void main() {
               sonarrSeriesId: 3,
             ),
           ),
-          'Severance S2 E4',
+          'Severance · S2 E4',
           reason: written,
         );
       }
@@ -32,7 +32,7 @@ void main() {
             sonarrSeriesId: 3,
           ),
         ),
-        'Severance Special 1',
+        'Severance · Special 1',
       );
     });
 
