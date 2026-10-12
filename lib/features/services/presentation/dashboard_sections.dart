@@ -672,9 +672,7 @@ class _RequestRow extends ConsumerWidget {
 /// weekday within the week, then the date.
 String askedAgo(DateTime at, {required DateTime now}) {
   final local = at.toLocal();
-  final today = DateTime(now.year, now.month, now.day);
-  final day = DateTime(local.year, local.month, local.day);
-  final daysAgo = today.difference(day).inDays;
+  final daysAgo = calendarDaysBetween(local, now);
   if (daysAgo <= 0 || now.difference(local) < const Duration(hours: 12)) {
     return formatSampleAge(local, now: now);
   }

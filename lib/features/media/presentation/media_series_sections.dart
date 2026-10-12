@@ -446,8 +446,7 @@ class _EpisodeRow extends StatelessWidget {
 /// `Tomorrow`, `Fri` within the week, else `9 Oct`.
 String mediaAiringDay(MediaNextAiring next, DateTime now) {
   final at = next.timed ? next.at.toLocal() : next.at;
-  final today = DateTime(now.year, now.month, now.day);
-  final days = DateTime(at.year, at.month, at.day).difference(today).inDays;
+  final days = calendarDaysBetween(now, at);
   if (days <= 0) return 'Today';
   if (days == 1) return 'Tomorrow';
   // `Fri` within the week, `9 Oct` beyond it (`9 Oct 2027` in another year).

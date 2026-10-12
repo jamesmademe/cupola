@@ -91,9 +91,7 @@ const String nothingMoving = 'Nothing moving';
 String? lastDownloadFinished(DateTime? at, {required DateTime now}) {
   if (at == null) return null;
   final local = at.toLocal();
-  final today = DateTime(now.year, now.month, now.day);
-  final day = DateTime(local.year, local.month, local.day);
-  final when = switch (today.difference(day).inDays) {
+  final when = switch (calendarDaysBetween(local, now)) {
     0 => formatClockTime(local),
     1 => 'yesterday ${formatClockTime(local)}',
     > 1 && < 7 => '${weekdayName(local)} ${formatClockTime(local)}',

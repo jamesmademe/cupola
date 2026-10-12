@@ -349,4 +349,58 @@ void main() {
       );
     });
   });
+
+  group('calendarDaysBetween', () {
+    test('counts the days on the calendar, never the hours between them', () {
+      // Twenty minutes apart and a day apart on the calendar.
+      expect(
+        calendarDaysBetween(
+          DateTime.utc(2026, 10, 24, 23, 50),
+          DateTime.utc(2026, 10, 25, 0, 10),
+        ),
+        1,
+      );
+      // A 23 h gap (the night the clocks go forward) is still one day...
+      expect(
+        calendarDaysBetween(
+          DateTime.utc(2026, 3, 29, 0, 30),
+          DateTime.utc(2026, 3, 30, 0, 10),
+        ),
+        1,
+      );
+      // ...and 47 h across two midnights is two.
+      expect(
+        calendarDaysBetween(
+          DateTime.utc(2026, 3, 28, 1),
+          DateTime.utc(2026, 3, 30, 0),
+        ),
+        2,
+      );
+    });
+
+    test('is zero within a day and negative backwards', () {
+      expect(
+        calendarDaysBetween(
+          DateTime(2026, 9, 2, 0, 1),
+          DateTime(2026, 9, 2, 23, 59),
+        ),
+        0,
+      );
+      expect(
+        calendarDaysBetween(DateTime(2026, 9, 3, 8), DateTime(2026, 9, 2, 20)),
+        -1,
+      );
+    });
+
+    test('crosses a month and a year', () {
+      expect(
+        calendarDaysBetween(DateTime(2026, 12, 31), DateTime(2027, 1, 1)),
+        1,
+      );
+      expect(
+        calendarDaysBetween(DateTime(2026, 2, 27), DateTime(2026, 3, 1)),
+        2,
+      );
+    });
+  });
 }

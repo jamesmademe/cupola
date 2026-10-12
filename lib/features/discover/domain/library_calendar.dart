@@ -879,7 +879,7 @@ List<AgendaEntry> calendarAgenda(
     (days[event.day] ??= []).add(event);
   }
   for (final MapEntry(key: day, value: rows) in days.entries) {
-    if (_daysBetween(previous, day) - 1 >= calendarQuietRun) {
+    if (calendarDaysBetween(previous, day) - 1 >= calendarQuietRun) {
       entries.add(AgendaGap(day));
     }
     entries.add(AgendaDay(day, rows));
@@ -889,18 +889,11 @@ List<AgendaEntry> calendarAgenda(
   return entries;
 }
 
-/// Whole calendar days from [a] to [b], across a clock change.
-int _daysBetween(DateTime a, DateTime b) => DateTime.utc(
-  b.year,
-  b.month,
-  b.day,
-).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
-
 /// The day [day] is in the strip and the agenda: `Today`, `Tomorrow`,
 /// `Thu`.
 String calendarDayName(DateTime day, DateTime now) {
   final today = DateTime(now.year, now.month, now.day);
-  return switch (_daysBetween(today, day)) {
+  return switch (calendarDaysBetween(today, day)) {
     0 => 'Today',
     1 => 'Tomorrow',
     _ => shortWeekdayName(day),
@@ -911,7 +904,7 @@ String calendarDayName(DateTime day, DateTime now) {
 /// `Tomorrow`, which say no weekday; `1 Oct` beside `Thu`, which does.
 String calendarDayDate(DateTime day, DateTime now) {
   final today = DateTime(now.year, now.month, now.day);
-  final gap = _daysBetween(today, day);
+  final gap = calendarDaysBetween(today, day);
   return gap == 0 || gap == 1
       ? calendarShortDate(day)
       : formatDayMonthNoYear(day);
@@ -924,7 +917,7 @@ String calendarShortDate(DateTime day) => formatWeekdayDayMonth(day);
 /// October`.
 String spokenDay(DateTime day, DateTime now) {
   final today = DateTime(now.year, now.month, now.day);
-  return switch (_daysBetween(today, day)) {
+  return switch (calendarDaysBetween(today, day)) {
     0 => 'Today',
     1 => 'Tomorrow',
     _ => '${weekdayName(day)} ${day.day} ${monthName(day)}',

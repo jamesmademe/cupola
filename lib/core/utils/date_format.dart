@@ -171,13 +171,31 @@ List<String> _shortened(List<String> names) =>
 /// belongs to is a calendar day on the device, and the one boundary worth a
 /// test is that 23:59 today and 00:01 tomorrow are different words.
 String formatDayLabel(DateTime date, DateTime now) {
-  final today = DateTime(now.year, now.month, now.day);
-  final day = DateTime(date.year, date.month, date.day);
-  final difference = day.difference(today).inDays;
+  final difference = calendarDaysBetween(now, date);
   if (difference == 0) return 'Today';
   if (difference == 1) return 'Tomorrow';
-  return '${shortWeekdayName(day)} ${day.day}';
+  return '${shortWeekdayName(date)} ${date.day}';
 }
+
+/// Whole calendar days from [from] to [to]: `1` from any time on Monday to any
+/// time on Tuesday, `0` within a day, negative when [to] is the earlier day.
+///
+/// Counts the days on the calendar, not the hours between two instants. On the
+/// night the clocks go forward a day is 23 h long, so two local midnights a day
+/// apart are 23 h apart and `Duration.inDays` calls it `0`: tomorrow reads
+/// `Today`, and a week of such days reads six. Comparing the two dates as UTC
+/// days removes the clock change from the sum.
+///
+/// The components of both values as they stand, so a caller that means the
+/// device's day passes values already on the device's clock (`toLocal()`). For
+/// a span that is *elapsed* time (a certificate's days left, how long a
+/// download has idled) the difference of the instants is the right measure and
+/// this is the wrong one.
+int calendarDaysBetween(DateTime from, DateTime to) => DateTime.utc(
+  to.year,
+  to.month,
+  to.day,
+).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
 
 /// A time of day as the brand book writes one: 24 h, `20:41`, on this
 /// device's clock.

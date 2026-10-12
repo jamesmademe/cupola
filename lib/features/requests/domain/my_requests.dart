@@ -370,7 +370,7 @@ MyRequests myRequestsOf(
 /// The day [at] fell on, as a sentence says it: `today`, `yesterday`, `on
 /// Sunday` within the week, then `on 12 Sep`.
 String dayWords(DateTime at, {required DateTime now}) {
-  final days = _daysBetween(at, now);
+  final days = calendarDaysBetween(at, now);
   if (days <= 0) return 'today';
   if (days == 1) return 'yesterday';
   if (days < 7) return 'on ${weekdayName(at)}';
@@ -387,7 +387,7 @@ String askedWords(DateTime at, {required DateTime now}) =>
 /// Since when it is on the server, after `Since`: `18:40` today, then
 /// `yesterday`, `Sunday`, `12 Sep`.
 String sinceWords(DateTime at, {required DateTime now}) {
-  final days = _daysBetween(at, now);
+  final days = calendarDaysBetween(at, now);
   if (days <= 0) return formatClockTime(at);
   if (days == 1) return 'yesterday';
   if (days < 7) return weekdayName(at);
@@ -397,15 +397,8 @@ String sinceWords(DateTime at, {required DateTime now}) {
 /// When a download should end, after `Ready around`: `21:10` today,
 /// `tomorrow 09:10`, then the weekday.
 String aroundWords(DateTime at, {required DateTime now}) {
-  final days = _daysBetween(now, at);
+  final days = calendarDaysBetween(now, at);
   if (days <= 0) return formatClockTime(at);
   if (days == 1) return 'tomorrow ${formatClockTime(at)}';
   return weekdayName(at);
-}
-
-/// Calendar days from [from] to [to] on this device's clock.
-int _daysBetween(DateTime from, DateTime to) {
-  final a = DateTime(from.year, from.month, from.day);
-  final b = DateTime(to.year, to.month, to.day);
-  return b.difference(a).inDays;
 }

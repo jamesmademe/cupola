@@ -72,7 +72,7 @@ List<ActivityDay> activityDaysOf(
 
 /// A day of History by name: `Today`, `Yesterday`, then `Tue 6 Oct`.
 String activityDayLabel(DateTime day, {required DateTime now}) {
-  final days = _dayOf(now).difference(_dayOf(day)).inDays;
+  final days = calendarDaysBetween(day, now);
   if (days <= 0) return 'Today';
   if (days == 1) return 'Yesterday';
   return formatShortDate(_dayOf(day).toIso8601String(), now: now);

@@ -126,10 +126,7 @@ String spokenMovingValue({int? percent, int? etaSeconds}) => [
 String? lastFinishedLine(DateTime? at, {required DateTime now}) {
   if (at == null) return null;
   final local = at.toLocal();
-  final today = DateTime(now.year, now.month, now.day);
-  final day = DateTime(local.year, local.month, local.day);
-  final daysAgo = today.difference(day).inDays;
-  final when = switch (daysAgo) {
+  final when = switch (calendarDaysBetween(local, now)) {
     0 => 'at ${formatClockTime(local)}',
     1 => 'yesterday at ${formatClockTime(local)}',
     > 1 && < 7 => 'on ${weekdayName(local)}',
