@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 
 void main() {
@@ -198,6 +199,13 @@ void main() {
       expect(formatted, matches(RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$')));
       // Date components should always be correct regardless of TZ.
       expect(formatted.startsWith('2026-06-15'), isTrue);
+    });
+
+    test('is the app stamp: the local day and the local 24 h clock', () {
+      final local = DateTime(2026, 6, 5, 9, 7);
+      final epoch = local.millisecondsSinceEpoch ~/ 1000;
+      expect(formatEpochDate(epoch), '2026-06-05 09:07');
+      expect(formatEpochDate(epoch), formatDateTimeStamp(local));
     });
   });
 

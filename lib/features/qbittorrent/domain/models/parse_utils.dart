@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 
 int parseInt(dynamic v) {
@@ -87,12 +88,12 @@ String formatLimit(int bytesPerSecond) {
 /// Local-time `YYYY-MM-DD HH:MM` rendering of a Unix epoch in seconds.
 ///
 /// Returns `'—'` for `seconds <= 0` (covers both 0 = "never" and qB's -1
-/// sentinels). No `intl` dependency: pads with `padLeft` instead.
+/// sentinels). The stamp itself is the app's one, [formatDateTimeStamp].
 String formatEpochDate(int seconds) {
   if (seconds <= 0) return '—';
-  final dt = DateTime.fromMillisecondsSinceEpoch(seconds * 1000).toLocal();
-  String two(int x) => x.toString().padLeft(2, '0');
-  return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
+  return formatDateTimeStamp(
+    DateTime.fromMillisecondsSinceEpoch(seconds * 1000),
+  );
 }
 
 /// Same rendering as [formatDuration] but reserved for "relative time"
