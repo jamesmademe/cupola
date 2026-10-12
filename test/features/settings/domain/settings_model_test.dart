@@ -377,29 +377,9 @@ void main() {
       expect(ServiceKey.bazarr.itemLabel, 'subtitles');
     });
 
-    test('includes Bazarr in global search but not manual import flows', () {
-      expect(ServiceKey.bazarr.isSearchable, isTrue);
+    test('keeps Bazarr out of manual import flows', () {
       expect(ServiceKey.bazarr.supportsManualImport, isFalse);
       expect(ServiceKey.bazarr.usesApiKey, isTrue);
-      expect(
-        ServiceKey.values.where((s) => s.isSearchable),
-        containsAll([
-          ServiceKey.seerr,
-          ServiceKey.radarr,
-          ServiceKey.sonarr,
-          ServiceKey.lidarr,
-          ServiceKey.bazarr,
-        ]),
-        reason: 'Bazarr joins Seerr/*arr as a searchable service',
-      );
-      expect(
-        ServiceKey.values.where((s) => s.isSearchable),
-        isNot(contains(ServiceKey.qbittorrent)),
-      );
-      expect(
-        ServiceKey.values.where((s) => s.isSearchable),
-        isNot(contains(ServiceKey.truenas)),
-      );
     });
 
     test('extracts host labels with ports for service cards', () {

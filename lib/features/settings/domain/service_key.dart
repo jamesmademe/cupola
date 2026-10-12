@@ -659,26 +659,6 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.nzbget => null,
   };
 
-  /// Whether the global search tab fans out to this service.
-  ///
-  /// **Jellyfin and Plex are deliberately excluded, and this is a design
-  /// decision rather than an omission.** Adding them would make the same film
-  /// return in up to six sections: Radarr and Sonarr "search" is `movie/lookup`
-  /// and `series/lookup`, a TMDB/TVDB lookup, not a library search, so "Dune"
-  /// already produces four groups, in `Future.wait` declaration order with no
-  /// relevance ranking, and `_SearchSection` renders every group including the
-  /// empty ones. A Stream match is worth strictly more as a *decoration* on the
-  /// Radarr/Sonarr/Seerr row that is already there ("On Jellyfin · 34 min in"),
-  /// joined on `tmdbId`, which is the same move `arrMediaExtrasSlots` already
-  /// makes for Seerr data inside an arr screen.
-  bool get isSearchable {
-    return this == ServiceKey.seerr ||
-        this == ServiceKey.radarr ||
-        this == ServiceKey.sonarr ||
-        this == ServiceKey.lidarr ||
-        this == ServiceKey.bazarr;
-  }
-
   bool get supportsManualImport {
     return this == ServiceKey.radarr ||
         this == ServiceKey.sonarr ||

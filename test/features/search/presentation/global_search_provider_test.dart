@@ -36,6 +36,22 @@ import '../../../test_helpers/model_builders.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
+  test(
+    'global search asks exactly Seerr, Radarr, Sonarr, Jellyfin and Plex',
+    () {
+      expect(
+        globalSearchServices,
+        unorderedEquals([
+          ServiceKey.seerr,
+          ServiceKey.radarr,
+          ServiceKey.sonarr,
+          ServiceKey.jellyfin,
+          ServiceKey.plex,
+        ]),
+      );
+    },
+  );
+
   test('returns no lanes for an empty query', () async {
     final container = _container();
     addTearDown(container.dispose);
