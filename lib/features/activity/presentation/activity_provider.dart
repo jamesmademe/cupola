@@ -344,6 +344,7 @@ class GlobalActivityItem {
         clientFault: client.fault,
         clientReason: client.warning,
         clientProgress: client.progress,
+        clientMeasuresIdle: client.measuresIdle,
       ),
       figures: figures,
       instanceId: instanceId,

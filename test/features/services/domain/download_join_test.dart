@@ -121,6 +121,50 @@ void main() {
       );
     });
 
+    test('the arr\'s stall waits on a client that dates its last byte: '
+        'moving for 30 minutes, then stuck by the client\'s clock', () {
+      const stalled = MediaStatusInfo(
+        pipeline: MediaPipeline.stalled,
+        progress: 0.4,
+        hasWarning: true,
+      );
+      final moving = queueStatusWithClient(
+        stalled,
+        arrFault: InFlightFault.stalled,
+        clientFault: null,
+        clientProgress: 0.41,
+        clientMeasuresIdle: true,
+      );
+      expect(moving.pipeline, MediaPipeline.downloading);
+      expect(moving.tone, isNot(StatusTone.warning));
+      expect(moving.progress, 0.41);
+
+      final stuck = queueStatusWithClient(
+        stalled,
+        arrFault: InFlightFault.stalled,
+        clientFault: InFlightFault.stalled,
+        clientMeasuresIdle: true,
+      );
+      expect(stuck.pipeline, MediaPipeline.stalled);
+      expect(stuck.tone, StatusTone.warning);
+    });
+
+    test('a client that cannot date its last byte leaves the arr\'s stall '
+        'standing', () {
+      const stalled = MediaStatusInfo(
+        pipeline: MediaPipeline.stalled,
+        hasWarning: true,
+      );
+      expect(
+        queueStatusWithClient(
+          stalled,
+          arrFault: InFlightFault.stalled,
+          clientFault: null,
+        ),
+        same(stalled),
+      );
+    });
+
     test('a healthy client lends its progress and nothing else', () {
       final status = queueStatusWithClient(
         downloading,

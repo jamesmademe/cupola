@@ -83,13 +83,31 @@ DownloadJoin<A, C> joinDownloads<A, C>({
 /// minute's delay and can still be calling a stalled or broken transfer
 /// "downloading". Either way a fault is amber. Otherwise the record keeps its
 /// own status, with the client's [clientProgress], which is fresher.
+///
+/// Except a stall, where the client dates its last byte ([clientMeasuresIdle]):
+/// the arr's "stalled" is the client's instant flag read a minute late, and
+/// `Stuck` waits for 30 minutes with nothing arriving, which only the client's
+/// clock can tell. Home's join follows the same rule.
 MediaStatusInfo queueStatusWithClient(
   MediaStatusInfo arr, {
   required InFlightFault? arrFault,
   required InFlightFault? clientFault,
   String? clientReason,
   double? clientProgress,
+  bool clientMeasuresIdle = false,
 }) {
+  if (arrFault == InFlightFault.stalled && clientMeasuresIdle) {
+    if (clientFault == null) {
+      // Moving by the client's clock: the record's progress, not a fault.
+      return MediaStatusInfo(
+        availability: arr.availability,
+        pipeline: MediaPipeline.downloading,
+        progress: clientProgress ?? arr.progress,
+        unmonitored: arr.unmonitored,
+      );
+    }
+    arrFault = null;
+  }
   if (arrFault == null && clientFault != null) {
     return MediaStatusInfo(
       availability: arr.availability,
