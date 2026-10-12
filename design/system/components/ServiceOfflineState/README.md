@@ -29,6 +29,8 @@ Used by the library walls (`MediaBrowseScaffold(service:)`), Readarr's author li
 
 `serviceName` and `onRetry`; optionally `since` (the age of the first failure, formatted as minutes or hours) and `onOpenSettings`.
 
+**Today** no caller passes `since`: nothing in the app records when a service first went quiet, so every leaf drops the span. The catalog's 40-minute scene draws what the leaf will say once something does.
+
 ## Semantics
 
 The column speaks one sentence (*SABnzbd did not answer. It has not answered for 40 minutes. …*); glyph, title and body are excluded under it, and the buttons remain separate controls.
