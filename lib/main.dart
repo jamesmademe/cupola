@@ -1,9 +1,15 @@
+import 'dart:io' show File;
+
 import 'package:flutter/foundation.dart'
     show LicenseEntryWithLineBreaks, LicenseRegistry;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart'
+    show getApplicationCacheDirectory;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:cupola/core/last_known/last_known_store.dart';
 
 import 'package:cupola/core/network/connection_access_registry.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
@@ -42,6 +48,9 @@ void main() async {
 /// launch screen) that stays as it is for good. Retry runs this again from the
 /// top, and `runApp` replaces whichever app is drawn.
 Future<void> _start() async {
+  // Read beside the settings, never before them: the Home's last drawing
+  // is what makes the first frame useful, and it must not make it late.
+  final lastKnown = _openLastKnown();
   final outcome = await attemptStartup((reach) async {
     reach(StartupStep.preferences);
     final prefs = await SharedPreferences.getInstance();
@@ -64,6 +73,7 @@ Future<void> _start() async {
       initialSettings: initialSettings,
       activeInstances: settingsService.loadActiveInstances(),
       onboardingCompleted: onboardingCompleted,
+      lastKnown: await lastKnown,
     );
   });
 
@@ -81,6 +91,31 @@ Future<void> _start() async {
   }
   DesktopWindow.showWhenDrawn();
 }
+
+/// The Home's last drawings (`LastKnownStore`), from the system's cache
+/// folder; an empty store when there is none, when the folder cannot be read,
+/// or when reading it takes longer than a start can spare.
+///
+/// Written once a burst of answers has passed, and when the app leaves the
+/// screen, which may be the last chance this run gets.
+Future<LastKnownStore> _openLastKnown() async {
+  try {
+    final folder = await getApplicationCacheDirectory();
+    final store = await LastKnownStore.open(
+      File('${folder.path}/last_known.json'),
+    ).timeout(const Duration(milliseconds: 400));
+    _lastKnownListener?.dispose();
+    _lastKnownListener = AppLifecycleListener(
+      onHide: store.flush,
+      onDetach: store.flush,
+    );
+    return store;
+  } catch (_) {
+    return LastKnownStore.memory();
+  }
+}
+
+AppLifecycleListener? _lastKnownListener;
 
 /// Empties secure storage, keeping every address and preference, then
 /// starts again; a store that will not even be emptied is said on the same
@@ -146,9 +181,11 @@ _buildProviderOverrides({
   required SettingsModel initialSettings,
   required Map<ServiceKey, String> activeInstances,
   required bool onboardingCompleted,
+  required LastKnownStore lastKnown,
 }) {
   return [
     sharedPreferencesProvider.overrideWithValue(prefs),
+    lastKnownStoreProvider.overrideWithValue(lastKnown),
     secureSettingsStoreProvider.overrideWithValue(secureSettingsStore),
     // A refused qBittorrent sign-in outlives the run, so a relaunch does not
     // spend another of the five attempts its ban allows.

@@ -58,6 +58,11 @@ dependencies:
   # the title light: Celebi quantising and HCT, as the brand book derives the
   # room's light from a title's artwork.
   material_color_utilities: ^0.11.1
+  # Promoted from a transitive dependency of `flutter_cache_manager`, at the
+  # version already resolved, for the Home's last known state: the system's
+  # cache folder, where a file that may be purged and is never backed up
+  # belongs (`lib/core/last_known/last_known_store.dart`).
+  path_provider: ^2.1.5
   infinite_scroll_pagination: ^5.1.1
   url_launcher: ^6.3.2
   in_app_purchase: ^3.2.3
