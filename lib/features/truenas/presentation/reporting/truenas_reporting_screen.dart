@@ -25,11 +25,10 @@ const _graphNames = ['cpu', 'memory', 'interface'];
 /// Chart series, not statuses.
 ///
 /// These are the same constants the tone vocabulary uses, which is a real
-/// collision: a green line on a CPU graph means "series 4", not "healthy",
-/// but a categorical chart palette is its own axis and inventing one here would
-/// diverge from whatever the dataviz pass settles on for the whole app. Left as
-/// found, deliberately, and never read through `statusToneColor`: nothing on
-/// this screen has a state.
+/// collision: a green line on a CPU graph means "series 4", not "healthy".
+/// A version in the room's inks alone was drawn and turned down (Matt, 12/10):
+/// the colours stay, as a categorical palette, and are never read through
+/// `statusToneColor`, since nothing on this screen has a state.
 const _seriesPalette = [
   AppColors.truenas,
   AppColors.info,
