@@ -81,6 +81,31 @@ String downloadsSubtitle({
   ].join(' · ');
 }
 
+/// The line under the module's name when the module is a last drawing:
+/// `3 moving · 1 queued`, as it counted then.
+///
+/// No speed (a rate is not drawn from a drawing) and no `stuck` (a fault is
+/// judged by the live read; a download that was stuck is a row, not a count).
+/// Counts only for a read that was [whole]: over a queue that did not answer,
+/// or stopped short, they are not stated. With rows to draw and nothing
+/// counted there is no line at all, rather than `Nothing moving` over a row;
+/// `Nothing moving` is only for a whole read with nothing in it.
+String? downloadsKnownSubtitle({
+  required int moving,
+  required int queued,
+  required bool whole,
+  required bool hasRows,
+}) {
+  if (!whole) return null;
+  if (moving == 0 && queued == 0) return hasRows ? null : 'Nothing moving';
+  return downloadsSubtitle(
+    moving: moving,
+    stuck: 0,
+    queued: queued,
+    clientSetUp: false,
+  );
+}
+
 /// [downloadsSubtitle] as a screen reader should say it: the dash as an
 /// unknown speed, each part on its own pause, a floor as `at least`.
 String spokenDownloadsSubtitle(String subtitle) => subtitle

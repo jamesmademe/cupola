@@ -19,6 +19,8 @@ import 'package:cupola/features/activity/domain/stuck_download_fault.dart';
 import 'package:cupola/features/activity/presentation/widgets/fault_card.dart'
     show FaultNoteLine;
 import 'package:cupola/features/activity/presentation/widgets/stuck_action_taker.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/downloads_last_known.dart';
 import 'package:cupola/features/home/domain/downloads.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
@@ -62,18 +64,31 @@ class HomeDownloadsModule extends ConsumerWidget {
     }
 
     final inFlight = ref.watch(servicesInFlightProvider);
+    // The live answer, kept as the last drawing; until it comes, that
+    // drawing (a cold start).
+    final read = ref.watchOrLastKnown(
+      servicesInFlightProvider.select(downloadsDrawingRead),
+      downloadsLastKnown,
+    );
     // The last answer stands while the next one is read: the poll must not
     // put the skeleton back every thirty seconds.
     final data = inFlight.value;
     if (data == null) {
+      if (read.value case final drawing? when read.asOf != null) {
+        final known = _known(
+          context,
+          ref,
+          settings: settings,
+          live: inFlight,
+          drawing: drawing,
+          asOf: read.asOf!,
+        );
+        if (known != null) return known;
+      }
       if (inFlight.hasError) {
         return HomeModuleFrame.silent(
           title: _title,
-          coverage: SourceCoverage.merge([
-            for (final service in HomeModule.downloads.services)
-              if (settings.isServiceConfigured(service))
-                SourceCoverage.failure(service, inFlight.error),
-          ]),
+          coverage: _silentOf(settings, inFlight.error),
           onRetry: () => ref.invalidate(servicesQueueProvider),
         );
       }
@@ -125,48 +140,148 @@ class HomeDownloadsModule extends ConsumerWidget {
     );
     final room = CupolaRoom.of(context);
 
-    return HomeModuleFrame(
-      title: _title,
-      subtitle: subtitle,
-      semanticLabel: joinSpokenParts([
-        _title,
-        spokenDownloadsSubtitle(subtitle),
-        if (note != null) spokenFromDotted(note),
-      ]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (note != null) HomeCoverageNote(note: note, coverage: coverage),
-          // Nothing is downloading only where every queue answered; over a
-          // silent one the note above says what is not known.
-          if (rows.isEmpty && coverage.isWhole) const _NothingDownloading(),
-          if (rows.isNotEmpty)
-            for (final (index, item) in rows.indexed)
-              DownloadRow(
-                // With the connection: two Radarr both number their queues
-                // from one.
-                key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
-                item: item,
-                divided: index > 0,
+    return LastKnownMark(
+      asOf: null,
+      checking: true,
+      child: HomeModuleFrame(
+        title: _title,
+        subtitle: subtitle,
+        semanticLabel: joinSpokenParts([
+          _title,
+          spokenDownloadsSubtitle(subtitle),
+          if (note != null) spokenFromDotted(note),
+        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (note != null) HomeCoverageNote(note: note, coverage: coverage),
+            // Nothing is downloading only where every queue answered; over a
+            // silent one the note above says what is not known.
+            if (rows.isEmpty && coverage.isWhole) const _NothingDownloading(),
+            if (rows.isNotEmpty)
+              for (final (index, item) in rows.indexed)
+                DownloadRow(
+                  // With the connection: two Radarr both number their queues
+                  // from one.
+                  key: ValueKey(
+                    '${item.service}-${item.instanceId}-${item.id}',
+                  ),
+                  item: item,
+                  divided: index > 0,
+                ),
+            if (rows.isNotEmpty && !clientSetUp) const _SpeedsComeFromAClient(),
+            if (footnote != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  footnote,
+                  semanticsLabel: spokenFaultFootnote(footnote),
+                  style: AppType.meta.copyWith(color: room.inkSecondary),
+                ),
               ),
-          if (rows.isNotEmpty && !clientSetUp) const _SpeedsComeFromAClient(),
-          if (footnote != null)
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.xs),
-              child: Text(
-                footnote,
-                semanticsLabel: spokenFaultFootnote(footnote),
-                style: AppType.meta.copyWith(color: room.inkSecondary),
-              ),
+            HomeModuleLink(
+              label: rows.isEmpty ? 'Activity' : 'See all in Activity',
+              onTap: () => context.go(ServiceRoutes.activity),
             ),
-          HomeModuleLink(
-            label: rows.isEmpty ? 'Activity' : 'See all in Activity',
-            onTap: () => context.go(ServiceRoutes.activity),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  /// Downloads as it was last drawn, until the live answer comes, or over
+  /// the failure of the live read.
+  ///
+  /// What it draws and what it leaves out are `downloads_last_known.dart`'s:
+  /// the rows as they were with their bar where it stopped and drained to a
+  /// neutral, no time left and no speed, no stuck row and no remedy (a row
+  /// that was stuck is a plain row until the live read says it is stuck), no
+  /// footnote of blocked imports. Null when nothing is left to draw.
+  Widget? _known(
+    BuildContext context,
+    WidgetRef ref, {
+    required SettingsModel settings,
+    required AsyncValue<ServicesInFlight> live,
+    required DownloadsDrawing drawing,
+    required DateTime asOf,
+  }) {
+    final rows = drawing.rows.take(downloadsRowLimit).toList(growable: false);
+    if (rows.isEmpty) {
+      // `Nothing is downloading` was true of that read and of no later one:
+      // an import that finished after it says something was downloading since,
+      // and the claim is not drawn.
+      final last = _lastImportedAt(
+        ref.watch(servicesArrHistoryProvider).value?.entries,
+      );
+      if (last != null && last.isAfter(asOf)) return null;
+    }
+    final subtitle = downloadsKnownSubtitle(
+      moving: drawing.moving,
+      queued: drawing.queued,
+      whole: drawing.whole,
+      hasRows: rows.isNotEmpty,
+    );
+    final clientSetUp = _clients.any(settings.isServiceConfigured);
+    final list = [
+      if (rows.isEmpty) const _NothingDownloading(),
+      for (final (index, item) in rows.indexed)
+        DownloadRow.known(
+          key: ValueKey('${item.service}-${item.instanceId}-${item.id}'),
+          item: item,
+          divided: index > 0,
+        ),
+    ];
+
+    // The live read failed: the rows it knew, at full ink, over the failure
+    // in its own words, and the line says it is as of then.
+    if (live.hasError) {
+      return LastKnownMark(
+        asOf: asOf,
+        checking: false,
+        child: HomeModuleFrame.silent(
+          title: _title,
+          coverage: _silentOf(settings, live.error),
+          onRetry: () => ref.invalidate(servicesQueueProvider),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: list,
+          ),
+        ),
+      );
+    }
+
+    return LastKnownMark(
+      asOf: asOf,
+      checking: true,
+      child: HomeModuleFrame(
+        title: _title,
+        subtitle: subtitle,
+        semanticLabel: joinSpokenParts([
+          _title,
+          if (subtitle != null) spokenDownloadsSubtitle(subtitle),
+        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...list,
+            if (rows.isNotEmpty && !clientSetUp) const _SpeedsComeFromAClient(),
+            HomeModuleLink(
+              label: rows.isEmpty ? 'Activity' : 'See all in Activity',
+              onTap: () => context.go(ServiceRoutes.activity),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Every download queue silent, for the one read that failed whole.
+  static SourceCoverage _silentOf(SettingsModel settings, Object? error) =>
+      SourceCoverage.merge([
+        for (final service in HomeModule.downloads.services)
+          if (settings.isServiceConfigured(service))
+            SourceCoverage.failure(service, error),
+      ]);
 }
 
 /// One download: its art, its title and how far it got, the release under
@@ -179,7 +294,20 @@ class DownloadRow extends ConsumerWidget {
     required this.item,
     this.divided = false,
     this.onOpen,
-  });
+  }) : known = false;
+
+  /// A row of a last drawing: the download as it was when it was last seen
+  /// going. How far it got stays, the bar where it stopped and drained to a
+  /// neutral (`DownloadQueueTile.sampleAge` does the same to a stale bar);
+  /// the time left is not said, and the row never says it is stuck, turns
+  /// amber or offers a remedy, whatever its item carries: a fault is the live
+  /// read's. A tap still opens the download's page.
+  const DownloadRow.known({
+    super.key,
+    required this.item,
+    this.divided = false,
+    this.onOpen,
+  }) : known = true;
 
   final ServiceQueueItem item;
 
@@ -189,18 +317,25 @@ class DownloadRow extends ConsumerWidget {
   /// What a tap does. Null: the download's page in Activity.
   final VoidCallback? onOpen;
 
+  /// Whether this row is a last drawing ([DownloadRow.known]).
+  final bool known;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final room = CupolaRoom.of(context);
-    final fault = item.fault;
+    // A drawing judges no fault: the row is what it was doing.
+    final fault = known ? null : item.fault;
     final stuck = isDownloadFault(fault);
     // The remedy Needs you offers, or the note once one was taken there or
     // here; a stall kept waiting offers none until its day is up.
-    final acted = ref.watch(
-      actedFaultsProvider.select((acted) => acted[keptWaitingKey(item)]),
-    );
+    final acted = known
+        ? null
+        : ref.watch(
+            actedFaultsProvider.select((acted) => acted[keptWaitingKey(item)]),
+          );
     final kept =
+        !known &&
         fault == InFlightFault.stalled &&
         isKeptWaiting(
           item,
@@ -208,20 +343,26 @@ class DownloadRow extends ConsumerWidget {
           ref.watch(stallClockProvider)(),
         );
     final remedy = acted != null || (stuck && !kept);
-    final tone = statusToneColor(
-      scheme,
-      stuck ? StatusTone.warning : StatusTone.info,
-      surface: room.slab,
-    );
+    // A bar that stopped is the ink of a figure that does not move; the blue
+    // is what makes a bar read as moving.
+    final tone = known
+        ? room.inkSecondary
+        : statusToneColor(
+            scheme,
+            stuck ? StatusTone.warning : StatusTone.info,
+            surface: room.slab,
+          );
     final percent = item.progress == null
         ? null
         : wholePercent(item.progress! * 100);
+    // A drawing says how far it got and never how long is left.
+    final etaSeconds = known ? null : item.etaSeconds;
     final value = stuck
         ? stuckValue(fault!, percent: percent)
-        : movingValue(percent: percent, etaSeconds: item.etaSeconds);
+        : movingValue(percent: percent, etaSeconds: etaSeconds);
     final spokenValue = stuck
         ? spokenPercents(value)
-        : spokenMovingValue(percent: percent, etaSeconds: item.etaSeconds);
+        : spokenMovingValue(percent: percent, etaSeconds: etaSeconds);
     // Which Radarr, once there are two: the glyph says Radarr, and only the
     // words can say which. A client's own row is named by its client.
     final title =
@@ -423,6 +564,18 @@ class _StuckRemedyState extends ConsumerState<_StuckRemedy>
   }
 }
 
+/// When the latest of [entries] was imported, or null when none was: the last
+/// download to finish.
+DateTime? _lastImportedAt(Iterable<ArrHistoryEntry>? entries) {
+  DateTime? last;
+  for (final entry in entries ?? const <ArrHistoryEntry>[]) {
+    if (entry.outcome != ArrImportOutcome.imported) continue;
+    final at = entry.at;
+    if (at != null && (last == null || at.isAfter(last))) last = at;
+  }
+  return last;
+}
+
 /// Nothing moving: a calm line, and when the last download finished.
 class _NothingDownloading extends ConsumerWidget {
   const _NothingDownloading();
@@ -430,14 +583,9 @@ class _NothingDownloading extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final room = CupolaRoom.of(context);
-    DateTime? last;
-    for (final entry
-        in ref.watch(servicesArrHistoryProvider).value?.entries ??
-            const <ArrHistoryEntry>[]) {
-      if (entry.outcome != ArrImportOutcome.imported) continue;
-      final at = entry.at;
-      if (at != null && (last == null || at.isAfter(last))) last = at;
-    }
+    final last = _lastImportedAt(
+      ref.watch(servicesArrHistoryProvider).value?.entries,
+    );
     final line = lastFinishedLine(last, now: DateTime.now());
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),

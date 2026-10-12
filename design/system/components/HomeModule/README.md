@@ -79,6 +79,14 @@ Coming up draws differently from Arrived in one respect: a thing in the download
 queue row's rule: the state stays, the figure and the colour go); a thing whose day or time has come since the read
 reads `aired` or `out today`, not `not aired`.
 
+Downloads draws differently from Arrived, because it is where a drawing could lie most: each row keeps how far it got,
+and its bar stays where it stopped, drained to a neutral with the figure in the secondary ink (the stale queue row's
+rule, `DownloadQueueTile.sampleAge`); the time left and the speed are not drawn; no row is stuck, amber or offers a
+remedy (a download that was stuck is a plain row until the live read says otherwise), and the footnote of blocked imports
+is not drawn. The line under the name counts what moved and what waited (`3 moving · 1 queued`) only for a read every
+queue answered whole, and `Nothing is downloading` is drawn only for such a read with no row, and not once an import is
+known to have finished after it.
+
 The slab is `slab`, `AppRadius.slab`, a `hair` edge, padding `gutter` × `slabY`, `md` between modules.
 
 ## Needs you

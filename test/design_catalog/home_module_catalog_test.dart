@@ -24,6 +24,7 @@ import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/last_known/arrived_last_known.dart';
 import 'package:cupola/features/home/data/last_known/coming_up_last_known.dart';
+import 'package:cupola/features/home/data/last_known/downloads_last_known.dart';
 import 'package:cupola/features/home/presentation/widgets/home_as_of_line.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/needs_you.dart';
@@ -821,6 +822,37 @@ void main() {
           libraryCalendarProvider.overrideWith(
             (ref) => Completer<LibraryCalendar>().future,
           ),
+        ],
+      ),
+      CatalogScene(
+        'Last known · a cold start: Downloads as it was last drawn, how far '
+        'each got and the bar where it stopped, in a neutral; no time left, '
+        'no speed, and the row that was stuck is a plain row with no remedy',
+        (_) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [HomeAsOfLine(), HomeDownloadsModule()],
+        ),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          calendarClockProvider.overrideWithValue(() => _now),
+          stallClockProvider.overrideWithValue(() => _now),
+          lastKnownStoreProvider.overrideWithValue(
+            LastKnownStore.memory()..write(
+              homeLastKnownKey(Audience.operator.name, downloadsLastKnown),
+              validity: homeLastKnownValidity(
+                _clientSettings,
+                downloadsLastKnown.services,
+              ),
+              schema: downloadsLastKnown.schema,
+              data: downloadsLastKnown.encode(downloadsDrawingOf(_evening)),
+              takenAt: _now.subtract(const Duration(minutes: 47)),
+            ),
+          ),
+          servicesInFlightProvider.overrideWith(
+            (ref) => Completer<ServicesInFlight>().future,
+          ),
+          servicesArrHistoryProvider.overrideWith((ref) async => _noHistory),
         ],
       ),
       CatalogScene(
