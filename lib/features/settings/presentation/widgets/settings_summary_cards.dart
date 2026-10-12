@@ -416,13 +416,16 @@ class _AppearanceSummaryCard extends ConsumerWidget {
           semanticHint: 'opens the appearance picker',
           onTap: () => context.push('/settings/appearance'),
         ),
+        // Says it here because the absence of a Material You switch reads as
+        // an omission until you know it is a decision: the interface is
+        // monochrome, and its only colour is the artwork's light and the
+        // five tones. In the user's words, not the palette's.
         const _NoteRow(
           icon: Icons.colorize_rounded,
-          title: 'Both palettes are constants',
-          // Says it here because the absence of a Material You switch reads as
-          // an omission until you know it is a decision: the per-service
-          // accents have to stay recognisable on every OS.
-          subtitle: 'Cupola does not take the system accent color.',
+          title: 'Lit by what you watch',
+          subtitle:
+              'The interface stays neutral. Its color comes from the artwork '
+              'on screen, never from the system accent.',
         ),
       ],
     );
