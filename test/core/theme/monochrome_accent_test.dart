@@ -14,11 +14,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// service, so every surface that used to be tinted by a service is lit by the
 /// lamp instead, and a label asked of it resolves to the room's ink. These
 /// scans keep the brand colours from finding their way back into paint by
-/// another door: `AppColors.radarr` read straight, `brandAccent` handed to a
-/// button, and keep the retired section accents retired. They are source
-/// scans for the same reason `neutral_destructive_test.dart` is: the
-/// regression is one plausible line in a diff, and it looks fine on the screen
-/// it was written for.
+/// another door: `AppColors.radarr` read straight and `brandAccent` handed to
+/// a button. They are source scans for the same reason
+/// `neutral_destructive_test.dart` is: the regression is one plausible line in
+/// a diff, and it looks fine on the screen it was written for.
 void main() {
   final libFiles = Directory('lib')
       .listSync(recursive: true)
@@ -102,24 +101,6 @@ void main() {
           'A service is painted with ServiceKey.accent (the lamp), never its '
           'brand colour:\n${offenders.join('\n')}',
     );
-  });
-
-  test('the section accents and the legacy indigo stay retired', () {
-    final retired = RegExp(
-      r'AppColors\.nav[A-Z]\w*|DesignTokens\.colorNav[A-Z]\w*|'
-      r'DesignTokens\.colorBrandPrimary\w*',
-    );
-    final offenders = <String>[];
-    for (final file in libFiles) {
-      if (palette.contains(file.path)) continue;
-      final source = codeOf(file);
-      for (final hit in retired.allMatches(source)) {
-        offenders.add(
-          '${file.path}:${lineAt(source, hit.start)}  ${hit.group(0)}',
-        );
-      }
-    }
-    expect(offenders, isEmpty, reason: offenders.join('\n'));
   });
 
   test('no button is filled with a service accent', () {

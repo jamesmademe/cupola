@@ -17,17 +17,6 @@ abstract final class DesignTokens {
   /// Pure black: the dark room's shadow ink and the modal barrier.
   static const Color colorBaseBlack = Color(0xFF000000);
 
-  // color.brand
-  /// Legacy indigo-600. The room has no brand hue in its chrome, so no scheme
-  /// role reads it any more; kept for the call sites that still name it.
-  static const Color colorBrandPrimaryDark = Color(0xFF4F46E5);
-
-  /// Legacy indigo-400. No scheme role reads it any more.
-  static const Color colorBrandPrimaryLight = Color(0xFF818CF8);
-
-  /// Legacy indigo-300. No scheme role reads it any more.
-  static const Color colorBrandPrimaryLighter = Color(0xFFA5B4FC);
-
   // color.service
   /// Seerr Indigo (indigo-500): the Seerr accent. Identity data in the
   /// registry; The interface confines accents to the service mark and its tab.
@@ -83,21 +72,6 @@ abstract final class DesignTokens {
   /// Plex Bronze: deliberately not brand gold #E5A00D, which collides with
   /// sabnzbd.
   static const Color colorServicePlex = Color(0xFFC97A16);
-
-  // color.nav
-  /// Dashboard tab pill. The room draws the active tab monochrome; the
-  /// per-section pill goes with the nav bar's rebuild.
-  static const Color colorNavDashboard = colorServiceSeerr;
-
-  /// Section Cyan (cyan-500), the Activity tab pill. A section, not a service,
-  /// and never a status hue.
-  static const Color colorNavActivity = Color(0xFF06B6D4);
-
-  /// Section Purple (purple-500), the Search tab pill.
-  static const Color colorNavSearch = Color(0xFFA855F7);
-
-  /// Section Teal (teal-500), the Settings tab pill.
-  static const Color colorNavSettings = Color(0xFF14B8A6);
 
   // color.status
   /// GREEN, the dark room's green: available, complete, healthy. Quiet: in a

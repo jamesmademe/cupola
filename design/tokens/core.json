@@ -12,23 +12,6 @@
         "$description": "Pure black: the dark room's shadow ink and the modal barrier."
       }
     },
-    "brand": {
-      "primary-dark": {
-        "$type": "color",
-        "$value": "#4f46e5",
-        "$description": "Legacy indigo-600. The room has no brand hue in its chrome, so no scheme role reads it any more; kept for the call sites that still name it."
-      },
-      "primary-light": {
-        "$type": "color",
-        "$value": "#818cf8",
-        "$description": "Legacy indigo-400. No scheme role reads it any more."
-      },
-      "primary-lighter": {
-        "$type": "color",
-        "$value": "#a5b4fc",
-        "$description": "Legacy indigo-300. No scheme role reads it any more."
-      }
-    },
     "service": {
       "seerr": {
         "$type": "color",
@@ -114,28 +97,6 @@
         "$type": "color",
         "$value": "#c97a16",
         "$description": "Plex Bronze: deliberately not brand gold #E5A00D, which collides with sabnzbd."
-      }
-    },
-    "nav": {
-      "dashboard": {
-        "$type": "color",
-        "$value": "{color.service.seerr}",
-        "$description": "Dashboard tab pill. The room draws the active tab monochrome; the per-section pill goes with the nav bar's rebuild."
-      },
-      "activity": {
-        "$type": "color",
-        "$value": "#06b6d4",
-        "$description": "Section Cyan (cyan-500), the Activity tab pill. A section, not a service, and never a status hue."
-      },
-      "search": {
-        "$type": "color",
-        "$value": "#a855f7",
-        "$description": "Section Purple (purple-500), the Search tab pill."
-      },
-      "settings": {
-        "$type": "color",
-        "$value": "#14b8a6",
-        "$description": "Section Teal (teal-500), the Settings tab pill."
       }
     },
     "status": {

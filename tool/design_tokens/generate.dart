@@ -1419,7 +1419,7 @@ const Map<String, (String, String)> _derivedColors = {
 
 /// Second-level colour groups whose name the listing drops, so
 /// `color.service.radarr` is listed as `radarr`.
-const Set<String> _flatColorGroups = {'base', 'brand', 'service', 'status'};
+const Set<String> _flatColorGroups = {'base', 'service', 'status'};
 
 String _css(int argb, [double? alphaOverride]) {
   final alpha = alphaOverride ?? ((argb >> 24) & 0xFF) / 255;

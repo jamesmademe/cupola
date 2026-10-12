@@ -16,10 +16,8 @@ import 'package:cupola/core/utils/service_routes.dart';
 /// **No colour of their own.** The chrome is monochrome (Principle 3 of the brand book:
 /// colour is information): the selected tab is the room's strong fill under the
 /// primary ink in every section, on the phone's bar, the desktop rail and the
-/// settings list alike. The four section accents that used to tint the pill
-/// (`color.nav.*` in `design/tokens/core.json`) are retired from the interface;
-/// the tokens stay until the palette cleanup, and nothing in `lib/` may read
-/// them (`test/core/theme/monochrome_accent_test.dart`).
+/// settings list alike. The four section accents that used to tint the pill are
+/// gone, tokens included.
 enum NavTab {
   /// The first tab: what is new, what is coming, what needs you.
   home(

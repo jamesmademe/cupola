@@ -173,18 +173,6 @@ class AppColors {
   /// amber. As a label it still goes through `ServiceTheme.onTint`.
   static const Color plex = DesignTokens.colorServicePlex;
 
-  // === NAV SECTION ACCENTS (retired) ===
-  //
-  // One per canonical tab, and they used to tint the floating nav bar's
-  // selected pill. The monochrome room draws the active tab as the strong fill
-  // under the primary ink in every section, so nothing in the interface reads
-  // these any more (the guard test forbids it); they stay, with their
-  // `color.nav.*` tokens, until the palette cleanup removes both.
-  static const Color navDashboard = DesignTokens.colorNavDashboard;
-  static const Color navActivity = DesignTokens.colorNavActivity; // cyan-500
-  static const Color navSearch = DesignTokens.colorNavSearch; // purple-500
-  static const Color navSettings = DesignTokens.colorNavSettings; // teal-500
-
   // === DARK THEME SURFACES ===
   //
   // The dark room's floor and its steps: ground, slab, raised, menu.
