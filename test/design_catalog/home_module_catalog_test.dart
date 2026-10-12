@@ -23,6 +23,7 @@ import 'package:cupola/features/home/presentation/widgets/storage_module.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/last_known/arrived_last_known.dart';
+import 'package:cupola/features/home/data/last_known/coming_up_last_known.dart';
 import 'package:cupola/features/home/presentation/widgets/home_as_of_line.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/needs_you.dart';
@@ -791,6 +792,34 @@ void main() {
           ),
           servicesArrivalsProvider.overrideWith(
             (ref) => Completer<ArrHistory>().future,
+          ),
+        ],
+      ),
+      CatalogScene(
+        'Last known · a cold start: Coming up as it was last drawn, a download '
+        'as the state it was in with no figure, under the Home\'s one line',
+        (_) => const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [HomeAsOfLine(), HomeComingUpModule()],
+        ),
+        width: 390,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _clientSettings),
+          calendarClockProvider.overrideWithValue(() => _now),
+          lastKnownStoreProvider.overrideWithValue(
+            LastKnownStore.memory()..write(
+              homeLastKnownKey(Audience.operator.name, comingUpLastKnown),
+              validity: homeLastKnownValidity(
+                _clientSettings,
+                comingUpLastKnown.services,
+              ),
+              schema: comingUpLastKnown.schema,
+              data: comingUpLastKnown.encode(_calendar(CalendarWorld.events)),
+              takenAt: _now.subtract(const Duration(minutes: 47)),
+            ),
+          ),
+          libraryCalendarProvider.overrideWith(
+            (ref) => Completer<LibraryCalendar>().future,
           ),
         ],
       ),

@@ -434,6 +434,29 @@ class CalendarEvent {
     ].join(', ');
   }
 
+  /// This same event standing as [state] says.
+  CalendarEvent withState(CalendarState state) => CalendarEvent(
+    identity: identity,
+    kind: kind,
+    day: day,
+    airsAt: airsAt,
+    title: title,
+    release: release,
+    season: season,
+    episode: episode,
+    lastEpisode: lastEpisode,
+    mark: mark,
+    byline: byline,
+    poster: poster,
+    backdrop: backdrop,
+    sources: sources,
+    note: note,
+    state: state,
+    target: target,
+    region: region,
+    tmdbId: tmdbId,
+  );
+
   /// The furthest on of two connections' records of the same thing, each
   /// connection named once.
   CalendarEvent mergedWith(CalendarEvent other) => CalendarEvent(

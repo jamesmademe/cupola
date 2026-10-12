@@ -71,6 +71,11 @@ is kept, where, and for which connections is `LastKnownStore`'s (`lib/core/last_
 credential, no response body, dropped when the server, the person or the viewer changes. Needs you, the header's health
 and Now playing never draw from it.
 
+Coming up draws differently from Arrived in one respect: a thing in the download queue is drawn as the state it was in
+(`Out today · downloading`), with no percentage and no time it would finish, and its tone drained to neutral (the stale
+queue row's rule: the state stays, the figure and the colour go); a thing whose day or time has come since the read
+reads `aired` or `out today`, not `not aired`.
+
 The slab is `slab`, `AppRadius.slab`, a `hair` edge, padding `gutter` × `slabY`, `md` between modules.
 
 ## Needs you

@@ -12,6 +12,8 @@ import 'package:cupola/features/discover/presentation/calendar_page.dart'
     show openCalendarEvent;
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/calendar_agenda.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/coming_up_last_known.dart';
 import 'package:cupola/features/home/domain/coming_up.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
@@ -39,26 +41,34 @@ class HomeComingUpModule extends ConsumerWidget {
       () => context.go(ServiceRoutes.discoverCalendar),
     );
 
-    final read = ref.watch(libraryCalendarProvider);
+    // The live answer, or until it comes the last drawing (a cold start).
+    final read = ref.watchOrLastKnown(
+      libraryCalendarProvider,
+      comingUpLastKnown,
+    );
+    final live = read.live;
     final calendar = read.value;
-    if (calendar == null) {
-      if (read.hasError) {
-        return HomeModuleFrame.silent(
-          title: _title,
-          coverage: SourceCoverage.merge([
-            for (final instance in ref.watch(calendarConnectionsProvider))
-              SourceCoverage.failure(
-                instance.service,
-                read.error,
-                instanceId: instance.id,
-                name: settings.connectionName(instance.id),
-              ),
-          ]),
-          onRetry: () => _retry(ref),
-        );
-      }
-      return const HomeModuleFrame.loading(title: _title);
-    }
+    final known = read.asOf;
+
+    /// The whole read failed: every connection named, in the words of why.
+    SourceCoverage failed() => SourceCoverage.merge([
+      for (final instance in ref.watch(calendarConnectionsProvider))
+        SourceCoverage.failure(
+          instance.service,
+          live.error,
+          instanceId: instance.id,
+          name: settings.connectionName(instance.id),
+        ),
+    ]);
+    Widget unanswered() => live.hasError
+        ? HomeModuleFrame.silent(
+            title: _title,
+            coverage: failed(),
+            onRetry: () => _retry(ref),
+          )
+        : const HomeModuleFrame.loading(title: _title);
+
+    if (calendar == null) return unanswered();
 
     final silent = SourceCoverage.merge([
       for (final source in calendar.silent)
@@ -77,39 +87,74 @@ class HomeComingUpModule extends ConsumerWidget {
       );
     }
 
-    final now = calendar.readAt;
-    final rows = comingUpOf(calendar.events, now);
+    // A drawing is drawn at the time it is drawn, never at the time it was
+    // read: "Today" and "airs at 21:00" are said against now.
+    final now = known == null
+        ? calendar.readAt
+        : ref.watch(calendarClockProvider)();
+    final rows = known == null
+        ? comingUpOf(calendar.events, now)
+        : comingUpAsDrawn(calendar.events, now);
+    // A drawing with nothing left to draw once its window is cut again says
+    // nothing, not "nothing comes out": the live answer decides that.
+    if (known != null && rows.isEmpty) return unanswered();
+
     final shown = rows.take(comingUpRowLimit).toList(growable: false);
     final note = calendar.silent.isEmpty
         ? null
         : coverageFailureSentence(silent);
+    List<Widget> rowsOf() => [
+      for (final (index, event) in shown.indexed)
+        _Divided(
+          divided: index > 0,
+          child: CalendarRow.home(
+            key: ValueKey(event.identity),
+            event: event,
+            now: now,
+            onTap: () => openCalendarEvent(context, event),
+          ),
+        ),
+    ];
 
-    return HomeModuleFrame(
-      title: _title,
-      action: action,
-      semanticLabel: joinSpokenParts([
-        _title,
-        if (rows.isEmpty) comingUpCalmLine(now),
-        ?note,
-      ]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (note != null) HomeCoverageNote(note: note, coverage: silent),
-          if (shown.isEmpty)
-            _NothingComingUp(now: now)
-          else
-            for (final (index, event) in shown.indexed)
-              _Divided(
-                divided: index > 0,
-                child: CalendarRow.home(
-                  key: ValueKey(event.identity),
-                  event: event,
-                  now: now,
-                  onTap: () => openCalendarEvent(context, event),
-                ),
-              ),
-        ],
+    // The last drawing whose live read failed: the rows it knew, at full ink,
+    // over the failure in its own words.
+    if (known != null && live.hasError) {
+      return LastKnownMark(
+        asOf: known,
+        checking: false,
+        child: HomeModuleFrame.silent(
+          title: _title,
+          coverage: failed(),
+          onRetry: () => _retry(ref),
+          child: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: rowsOf(),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return LastKnownMark(
+      asOf: known,
+      checking: true,
+      child: HomeModuleFrame(
+        title: _title,
+        action: action,
+        semanticLabel: joinSpokenParts([
+          _title,
+          if (rows.isEmpty) comingUpCalmLine(now),
+          ?note,
+        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (note != null) HomeCoverageNote(note: note, coverage: silent),
+            if (shown.isEmpty) _NothingComingUp(now: now) else ...rowsOf(),
+          ],
+        ),
       ),
     );
   }

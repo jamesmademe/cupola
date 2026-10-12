@@ -26,6 +26,37 @@ List<CalendarEvent> comingUpOf(List<CalendarEvent> events, DateTime now) {
   ];
 }
 
+/// How many things a last drawing of Coming up keeps: the rows the module
+/// draws and a margin for the days that go by before it is drawn again.
+const comingUpKeptLimit = 12;
+
+/// What Coming up keeps of a read at [now]: [comingUpOf]'s window and one day
+/// more, so a drawing a day old still has its whole window, capped at
+/// [comingUpKeptLimit].
+List<CalendarEvent> comingUpKept(List<CalendarEvent> events, DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  final end = DateTime(now.year, now.month, now.day + comingUpDays + 1);
+  return [
+    for (final event in events)
+      if (!event.day.isBefore(today) && !event.day.isAfter(end)) event,
+  ].take(comingUpKeptLimit).toList(growable: false);
+}
+
+/// The things of a last drawing as they are drawn at [now], which is later
+/// than the read: the window is cut again ([comingUpOf]: a day gone by is
+/// gone), and a thing that had not come yet when it was read, and whose day
+/// or time has come since, is out with nothing said of what became of it
+/// (`aired`, `out today`): the drawing cannot know.
+List<CalendarEvent> comingUpAsDrawn(List<CalendarEvent> events, DateTime now) =>
+    [
+      for (final event in comingUpOf(events, now))
+        if (event.state.stand == CalendarStand.notYet &&
+            CalendarEvent.hasCome(event.day, event.airsAt, now))
+          event.withState(const CalendarState.out(missingKnown: false))
+        else
+          event,
+    ];
+
 /// The calm line when nothing is dated in the window: `Nothing comes out or
 /// airs by Friday`.
 String comingUpCalmLine(DateTime now) =>
