@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/status/read_age.dart';
+import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/section_header.dart';
@@ -19,6 +22,7 @@ import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/settings_scope.dart';
@@ -68,6 +72,19 @@ class _RecordingSabnzbd implements SabnzbdClient {
     limits.add(limit);
     return _queue();
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A SABnzbd that answers the queue with a fixed one.
+class _ListingSabnzbd implements SabnzbdClient {
+  _ListingSabnzbd(this.queue);
+
+  final SabnzbdQueue queue;
+
+  @override
+  Future<SabnzbdQueue> getQueue({int limit = 50}) async => queue;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -305,7 +322,12 @@ void main() {
     test('the queue provider asks SABnzbd for every job, not a page', () async {
       final client = _RecordingSabnzbd();
       final container = ProviderContainer(
-        overrides: [sabnzbdClientProvider.overrideWithValue(client)],
+        overrides: [
+          // The queue provider resolves which connection it reads for the read
+          // clock, so a container that runs it needs settings.
+          currentSettingsProvider.overrideWith((ref) => _configured),
+          sabnzbdClientProvider.overrideWithValue(client),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -469,6 +491,122 @@ void main() {
       expect(find.byType(FaultBand), findsOneWidget);
       expect(find.byType(ServiceOfflineState), findsNothing);
       expect(find.text('Job.1'), findsOneWidget);
+    });
+
+    // The rows kept under the band used to go on printing what is left as if
+    // it were counting down; they say how old the read is instead.
+    group('a queue read before the failure', () {
+      final readAt = DateTime(2026, 10, 12, 9);
+      final key = queueReadKey(
+        ServiceKey.sabnzbd,
+        _configured.primaryOf(ServiceKey.sabnzbd)!.id,
+      );
+      const eta = '12\u00A0min';
+      final probeDown = StateProvider<bool>((ref) => false);
+      late DateTime now;
+
+      Future<ProviderContainer> pumpScreen(
+        WidgetTester tester, {
+        required bool recorded,
+      }) async {
+        now = readAt;
+        final queue = _queue(slots: [_slot(mb: 4096)]);
+        await tester.pumpWidget(
+          ProviderScope(
+            retry: (_, _) => null,
+            overrides: [
+              currentSettingsProvider.overrideWith((ref) => _configured),
+              readClockProvider.overrideWithValue(ReadClock(now: () => now)),
+              // A queue that came through the provider that notes it, or one
+              // handed in whole, which nothing recorded.
+              if (recorded)
+                sabnzbdClientProvider.overrideWithValue(_ListingSabnzbd(queue))
+              else
+                sabnzbdQueueProvider.overrideWith((ref) async => queue),
+              serviceSummaryProvider.overrideWith((ref, service) async {
+                final down = ref.watch(probeDown);
+                return ServiceSummary(
+                  service: service,
+                  status: down
+                      ? ServiceSummaryStatus.offline
+                      : ServiceSummaryStatus.online,
+                  host: 'sab.local:8080',
+                  version: down ? null : '4.2.0',
+                );
+              }),
+              serviceKpiProvider.overrideWith(
+                (ref, service) async => const <ServiceKpi>[],
+              ),
+              sabnzbdHistoryProvider.overrideWith(
+                (ref) async => const <SabnzbdHistorySlot>[],
+              ),
+              sabnzbdCategoriesProvider.overrideWith(
+                (ref) async => const <String>[],
+              ),
+            ],
+            child: const MaterialApp(home: SabnzbdScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        return ProviderScope.containerOf(
+          tester.element(find.byType(SabnzbdScreen)),
+        );
+      }
+
+      testWidgets('says how old it is where the figures stopped counting', (
+        tester,
+      ) async {
+        final container = await pumpScreen(tester, recorded: true);
+
+        // Healthy: the row counts down, says nothing of its age, and the page
+        // has no clock running.
+        expect(find.textContaining(eta), findsOneWidget);
+        expect(find.textContaining('as of'), findsNothing);
+        expect(container.exists(minuteNowProvider), isFalse);
+        expect(
+          container.read(readClockProvider).at(key),
+          readAt,
+          reason: 'the queue was noted when it came back',
+        );
+
+        // The probe fails with the queue retained: the band goes up and the
+        // row trades its countdown for the age of what it last read.
+        now = readAt.add(const Duration(minutes: 6));
+        container.read(probeDown.notifier).state = true;
+        await tester.pumpAndSettle();
+        expect(find.byType(FaultBand), findsOneWidget);
+        expect(find.text('Dune.Part.Two.2024.2160p'), findsOneWidget);
+        expect(find.textContaining(eta), findsNothing);
+        expect(find.text('as of 6\u00A0min ago'), findsOneWidget);
+
+        // And the age moves with the minutes.
+        now = now.add(const Duration(minutes: 1));
+        await tester.pump(const Duration(minutes: 1));
+        expect(find.text('as of 7\u00A0min ago'), findsOneWidget);
+
+        // Back: the countdown returns, the age goes, and so does the clock.
+        container.read(probeDown.notifier).state = false;
+        await tester.pumpAndSettle();
+        expect(find.byType(FaultBand), findsNothing);
+        expect(find.textContaining(eta), findsOneWidget);
+        expect(find.textContaining('as of'), findsNothing);
+        // The disposal the dropped watch scheduled runs a frame later.
+        await tester.pump(const Duration(milliseconds: 1));
+        await tester.pump(const Duration(milliseconds: 1));
+        expect(container.exists(minuteNowProvider), isFalse);
+      });
+
+      testWidgets('says nothing of the age of a read nobody recorded', (
+        tester,
+      ) async {
+        final container = await pumpScreen(tester, recorded: false);
+        container.read(probeDown.notifier).state = true;
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FaultBand), findsOneWidget);
+        expect(find.textContaining(eta), findsOneWidget);
+        expect(find.textContaining('as of'), findsNothing);
+      });
     });
 
     testWidgets('with nothing read yet is the whole page', (tester) async {

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -74,10 +75,16 @@ SabnzbdClient _sabnzbdClient(Ref ref, {required String? instanceId}) {
 /// every job, and the Overview, the readout band and the dashboard card count
 /// from this same answer, so one request serves all of them and none can
 /// disagree with another about how deep the queue is.
+///
+/// Noted as read (`ReadClock`) right after the answer lands, for the connection
+/// this build resolved, so a page that keeps this queue under a fault band can
+/// say how old it is.
 final sabnzbdQueueProvider = FutureProvider<SabnzbdQueue>((ref) async {
-  return ref
-      .watch(sabnzbdClientProvider)
-      .getQueue(limit: SabnzbdClient.wholeQueue);
+  final client = ref.watch(sabnzbdClientProvider);
+  final noteRead = ref.queueReadNoter(ServiceKey.sabnzbd);
+  final queue = await client.getQueue(limit: SabnzbdClient.wholeQueue);
+  noteRead();
+  return queue;
 }, retry: noProviderRetry);
 
 /// Recent completed/failed downloads.

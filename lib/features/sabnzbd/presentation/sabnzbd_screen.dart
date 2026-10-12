@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -73,6 +74,13 @@ class _SabnzbdDashboard extends ConsumerWidget {
       );
     }
     final queueAsync = lastReadUnderBand(watched, banded: failed != null);
+    // How old the rows are, only while they are the last queue read under the
+    // band: their figures stopped moving when SABnzbd stopped answering.
+    final sampleAge = ref.watchQueueReadAge(
+      context,
+      ServiceKey.sabnzbd,
+      underBand: failed != null,
+    );
 
     // Through the same `when` the rows draw with, so the header never counts
     // a queue its section is not showing.
@@ -114,7 +122,7 @@ class _SabnzbdDashboard extends ConsumerWidget {
               const SizedBox(height: 2),
             ],
           ),
-          _queueRows(ref, queueAsync),
+          _queueRows(ref, queueAsync, sampleAge),
           SliverToBoxAdapter(
             child: SizedBox(
               height: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
@@ -143,7 +151,11 @@ String? sabnzbdQueueCountLabel(SabnzbdQueue? queue) {
 }
 
 /// The queue's rows, as a sliver: every slot, lazily built.
-Widget _queueRows(WidgetRef ref, AsyncValue<SabnzbdQueue> queueAsync) {
+Widget _queueRows(
+  WidgetRef ref,
+  AsyncValue<SabnzbdQueue> queueAsync,
+  Duration? sampleAge,
+) {
   return queueAsync.when(
     data: (queue) {
       if (queue.slots.isEmpty) {
@@ -159,7 +171,8 @@ Widget _queueRows(WidgetRef ref, AsyncValue<SabnzbdQueue> queueAsync) {
       }
       return SliverList.builder(
         itemCount: queue.slots.length,
-        itemBuilder: (context, index) => _QueueTile(slot: queue.slots[index]),
+        itemBuilder: (context, index) =>
+            _QueueTile(slot: queue.slots[index], sampleAge: sampleAge),
       );
     },
     loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
@@ -366,9 +379,13 @@ class _AddNzbDialogState extends ConsumerState<_AddNzbDialog> {
 }
 
 class _QueueTile extends ConsumerWidget {
-  const _QueueTile({required this.slot});
+  const _QueueTile({required this.slot, required this.sampleAge});
 
   final SabnzbdQueueSlot slot;
+
+  /// How old the slot's figures are, while the queue is shown under a fault
+  /// band; null when they are current.
+  final Duration? sampleAge;
 
   bool get _paused => slot.status.toLowerCase() == 'paused';
 
@@ -391,6 +408,7 @@ class _QueueTile extends ConsumerWidget {
       progress: slot.progress,
       percentage: slot.percentage,
       accent: ServiceKey.sabnzbd.accent,
+      sampleAge: sampleAge,
       actions: DownloadQueueActionsMenu(
         paused: _paused,
         subject: slot.filename,

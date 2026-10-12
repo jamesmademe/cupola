@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 class _DarkSabnzbd implements SabnzbdClient {
   @override
@@ -37,7 +40,15 @@ void main() {
   // band. See `noProviderRetry`.
   test('a dark SABnzbd reaches its screens on the first attempt', () async {
     final container = ProviderContainer(
-      overrides: [sabnzbdClientProvider.overrideWithValue(_DarkSabnzbd())],
+      overrides: [
+        // The queue provider resolves which connection it reads for the read
+        // clock, so a container that runs it needs settings.
+        currentSettingsProvider.overrideWith(
+          (ref) =>
+              settingsWith(sabnzbdUrl: 'http://sab.test', sabnzbdApiKey: 'key'),
+        ),
+        sabnzbdClientProvider.overrideWithValue(_DarkSabnzbd()),
+      ],
     );
     addTearDown(container.dispose);
 
