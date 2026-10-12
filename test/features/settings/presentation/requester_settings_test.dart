@@ -112,13 +112,70 @@ void main() {
   });
 
   group('her account', () {
-    testWidgets('who she is, Sign out, and Remove this server', (tester) async {
+    testWidgets('who she is, large, then Sign out and Remove this server', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
       final harness = await pump(tester, const RequesterAccountPage());
 
-      expect(find.text('Signed in as ${WorldPeople.anna}'), findsOne);
+      // Her name heads the page, the way she signs in and the server under
+      // it, and the head speaks once.
+      expect(find.text(WorldPeople.anna), findsOne);
+      expect(find.text(WorldSeerrUsers.annaLocal.email), findsOne);
       expect(find.text(where), findsOne);
+      expect(
+        find.bySemanticsLabel(
+          'Signed in as ${WorldPeople.anna}. '
+          '${WorldSeerrUsers.annaLocal.email}. $where',
+        ),
+        findsOne,
+      );
+      // Sign out is a row beside Remove this server, not a button by her name.
+      expect(find.widgetWithText(OutlinedButton, 'Sign out'), findsNothing);
       expect(find.text('Sign out'), findsOne);
       expect(find.text('Remove this server'), findsOne);
+
+      await harness.unmount(tester);
+      semantics.dispose();
+    });
+
+    for (final (profile, how) in [
+      (Profiles.p2ViaJellyfin, 'Jellyfin account'),
+      (Profiles.p2ViaPlex, 'Plex account'),
+    ]) {
+      testWidgets('through ${profile.title}, the head says $how', (
+        tester,
+      ) async {
+        final harness = await pump(
+          tester,
+          const RequesterAccountPage(),
+          profile: profile,
+        );
+
+        expect(find.text(how), findsOne);
+
+        await harness.unmount(tester);
+      });
+    }
+
+    testWidgets('Sign out asks first, then signs her out', (tester) async {
+      final harness = await pump(tester, const RequesterAccountPage());
+
+      await tester.tap(find.text('Sign out'));
+      await harness.settle(tester);
+      expect(find.text('Sign out of Jellyseerr?'), findsOne);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 5)),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      // Signed out, the page goes back to the way in.
+      expect(find.text('Sign in again'), findsOne);
+      expect(find.text(WorldPeople.anna), findsNothing);
 
       await harness.unmount(tester);
     });

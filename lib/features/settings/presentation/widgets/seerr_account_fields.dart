@@ -556,20 +556,13 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
     });
   }
 
-  Future<void> _signOut(SeerrAccountSignIn account) async {
-    final title = _title;
-    final result = await showAppConfirmDialog(
-      context: context,
-      icon: Icons.logout_rounded,
-      title: 'Sign out of $title?',
-      message: account.kind == SeerrAccountKind.plex
-          ? "You'll sign in with Plex again."
-          : "You'll need your password to sign in again.",
-      confirmLabel: Lexicon.signOut,
-    );
-    if (!result.confirmed || !mounted) return;
-    await ref.read(seerrAccountsProvider).signOut(_connection.id);
-  }
+  Future<void> _signOut(SeerrAccountSignIn account) => confirmSeerrSignOut(
+    context,
+    ref,
+    connectionId: _connection.id,
+    account: account,
+    title: _title,
+  );
 
   // === Drawing =============================================================
 
@@ -1031,4 +1024,26 @@ class _NoticeLine extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Asks before signing [account] out of the Seerr called [title], then signs
+/// it out. The form's button and the requester's account page both end here.
+Future<void> confirmSeerrSignOut(
+  BuildContext context,
+  WidgetRef ref, {
+  required String connectionId,
+  required SeerrAccountSignIn account,
+  required String title,
+}) async {
+  final result = await showAppConfirmDialog(
+    context: context,
+    icon: Icons.logout_rounded,
+    title: 'Sign out of $title?',
+    message: account.kind == SeerrAccountKind.plex
+        ? "You'll sign in with Plex again."
+        : "You'll need your password to sign in again.",
+    confirmLabel: Lexicon.signOut,
+  );
+  if (!result.confirmed || !context.mounted) return;
+  await ref.read(seerrAccountsProvider).signOut(connectionId);
 }
