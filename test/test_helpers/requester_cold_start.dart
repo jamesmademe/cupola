@@ -15,6 +15,8 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_download.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/discover/presentation/catalog_providers.dart';
+import 'package:cupola/features/discover/presentation/discover_details_provider.dart'
+    show seerrNumberingProvider;
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
     show calendarClockProvider;
@@ -149,6 +151,8 @@ class RequesterColdStart {
           lastKnownStoreProvider.overrideWithValue(store),
           calendarClockProvider.overrideWithValue(() => clock),
           featuredAdvancesProvider.overrideWithValue(false),
+          // The poster's badge reads the server's numbering, a read of its own.
+          seerrNumberingProvider.overrideWith((ref) async => null),
           homeLivePollProvider.overrideWith((ref) {}),
           homeRecoveryPollProvider.overrideWith((ref) {}),
           requestsProvider.overrideWith(

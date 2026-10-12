@@ -13,7 +13,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -28,7 +27,9 @@ import 'package:cupola/features/activity/data/acted_faults.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/resume.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
+import 'package:cupola/features/home/data/last_known/requester_shelves_last_known.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/home/data/storage.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
@@ -226,43 +227,64 @@ class _RequesterFailureLine extends ConsumerWidget {
   }
 }
 
-/// A shelf of the requester's Home: absent when its read failed and nothing
+/// Trending this week, on the requester's Home: Seerr's shelf of the week.
+///
+/// A shelf of the requester's Home is absent when its read failed and nothing
 /// was known before, since the Home's one line says the server did not
-/// answer.
-AsyncValue<List<MediaPreview>> _shelfItems(
-  AsyncValue<List<MediaPreview>> read,
-) => read.hasError && !read.hasValue ? const AsyncData(<MediaPreview>[]) : read;
-
+/// answer; it keeps the titles it has under a reload or a failure, and at a
+/// cold start draws the ones it last drew until the answer comes
+/// (`homeShelfOf`).
 class _TrendingShelf extends ConsumerWidget {
   const _TrendingShelf();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => DiscoverCarousel(
-    title: HomeModule.trending.label,
-    sectionId: 'home_trending',
-    inset: HomeWell.shelfInsetOf(context),
-    items: _shelfItems(ref.watch(atriumTrendingProvider)),
-    onSeeAll: () => context.go(ServiceRoutes.discover),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final shelf = homeShelfOf(
+      ref.watchOrLastKnown(atriumTrendingProvider, trendingLastKnown),
+    );
+    return LastKnownMark(
+      asOf: shelf.asOf,
+      checking: shelf.checking,
+      child: DiscoverCarousel(
+        title: HomeModule.trending.label,
+        sectionId: 'home_trending',
+        inset: HomeWell.shelfInsetOf(context),
+        items: shelf.items,
+        onSeeAll: () => context.go(ServiceRoutes.discover),
+      ),
+    );
+  }
 }
 
 /// What comes out soon, each poster with its day (`Fri 2 Oct`), no region
-/// and no count: not out yet is the backlog, never a fault.
+/// and no count: not out yet is the backlog, never a fault. A drawing of it
+/// is cut again to the titles not out yet (`notYetOut`).
 class _ComingSoonShelf extends ConsumerWidget {
   const _ComingSoonShelf();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => DiscoverCarousel(
-    title: HomeModule.comingSoon.label,
-    sectionId: 'home_coming_soon',
-    inset: HomeWell.shelfInsetOf(context),
-    items: _shelfItems(ref.watch(comingSoonProvider)),
-    metaOf: (item) => switch (item.releaseDate) {
-      final date? when date.isNotEmpty => formatShortDate(date),
-      _ => null,
-    },
-    onSeeAll: () => context.go(ServiceRoutes.discoverCalendar),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final today = ref.watch(calendarClockProvider)();
+    final shelf = homeShelfOf(
+      ref.watchOrLastKnown(comingSoonProvider, comingSoonLastKnown),
+      cutAgain: (drawn) => notYetOut(drawn, today: today),
+    );
+    return LastKnownMark(
+      asOf: shelf.asOf,
+      checking: shelf.checking,
+      child: DiscoverCarousel(
+        title: HomeModule.comingSoon.label,
+        sectionId: 'home_coming_soon',
+        inset: HomeWell.shelfInsetOf(context),
+        items: shelf.items,
+        metaOf: (item) => switch (item.releaseDate) {
+          final date? when date.isNotEmpty => formatShortDate(date),
+          _ => null,
+        },
+        onSeeAll: () => context.go(ServiceRoutes.discoverCalendar),
+      ),
+    );
+  }
 }
 
 /// The requester's way to her account and Settings: her initial in a disc,

@@ -204,7 +204,10 @@ Everything comes from her own Seerr session; no fault, no service named but her 
   `Being fetched`; a time is said again against the moment of drawing (`Asked 3 h ago`), a no the week has left behind
   is gone, and a drawing with nothing left to list is the skeleton, never `Nothing on its way`.
 - **Trending this week** and **Coming soon**: Seerr's shelves as Discover draws them, the heading the way into
-  Discover and into her calendar; Coming soon says each poster's day (`Fri 2 Oct`), no region and no count.
+  Discover and into her calendar; Coming soon says each poster's day (`Fri 2 Oct`), no region and no count. Both keep
+  the posters they have under a reload or a failure (the heading's line is the page's, above), and at a cold start
+  draw the posters they last drew until the answer comes: each with what Seerr held of it, never a download's ring
+  (a title on its way reads `On its way`), and Coming soon cut again to the titles not out yet.
 - **The server**: one line above everything when any of her reads did not come back, `Can't reach the server since
   20:41` and `Retry`, or `You were signed out` and `Sign in again`; the modules under it keep what they last knew and
   draw no failure of their own.
