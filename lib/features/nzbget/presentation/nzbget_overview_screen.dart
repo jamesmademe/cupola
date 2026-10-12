@@ -117,7 +117,8 @@ class _OverviewBody extends ConsumerWidget {
           // Status are the same four figures the stack matrix shows for this
           // service, and a second copy computed here would be free to drift.
           // The board's fifth and sixth tiles (Disk free, and "no limit" under
-          // Speed) are the two figures `NzbgetStatus` does not parse.
+          // Speed) are not drawn: the free space speaks through Status, which
+          // says `Disk full` when the disk stopped the queue.
           ServiceKpiPeek(
             kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
             accent: ServiceKey.nzbget.accent,

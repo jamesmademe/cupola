@@ -43,6 +43,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Stuck` | amber | Nothing has arrived for a while: `Big Buck Bunny is stuck at 47%` · `nothing for 3 h`. |
 | `Failed` | amber | It ended and cannot finish by itself. |
 | `Stopped` | neutral | Someone stopped it on purpose. Not a fault, never "stuck". |
+| `Disk full` | amber | A usenet client paused itself because the next job does not fit where it downloads. Not `Stopped`, which someone chose: Home and the client's room read it from one rule. |
 | `Blocklisted` | neutral | The operator put the title on Seerr's blocklist, so Seerr takes no request for it. A deliberate choice, not a fault. The state, never the action: `Blocklist and search` stays banned. |
 | `Missing` · `Wanted` · `Cutoff unmet` · `Not aired` · `Not out yet` | neutral | The backlog: released and not on disk, still looked for, below its profile, not yet out. |
 | `Waiting for approval` | blue | A request nobody has approved yet. |

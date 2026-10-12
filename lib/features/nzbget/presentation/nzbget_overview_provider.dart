@@ -14,10 +14,10 @@
 /// rather than duplicated, because a section that renders a lie is worse than
 /// one that is missing:
 ///
-///  * **Disk free**: NZBGet's `status` result carries `FreeDiskSpaceMB` /
-///    `FreeDiskSpaceHi` / `FreeDiskSpaceLo`, but [NzbgetStatus] parses only the
-///    rate, the remaining size and the paused flag, and `NzbgetClient` exposes
-///    no raw accessor to reach past it.
+///  * **Disk free** as a figure of its own: [NzbgetStatus] parses it
+///    (`writingDiskFreeMb`), and it is read where it changes what is true,
+///    the Status figure saying `Disk full` for a queue the disk stopped
+///    (`nzbgetQueueStoppedByDisk`), not drawn as a number beside it.
 ///  * **The speed limit** ("no limit" under the Speed tile): same call, same
 ///    gap: `DownloadLimit` is dropped by the model. The client can *set* a rate
 ///    (`rate`) and cannot read the one in force.

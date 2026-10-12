@@ -2509,18 +2509,7 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
             .getQueue(limit: SabnzbdClient.wholeQueue);
   final rate = (queue.kbPerSec * 1024).round();
   const megabyte = 1024 * 1024;
-  const gigabyte = 1024 * megabyte;
-  final free = queue.downloadDiskFreeGb;
-  final stoppedByDisk = usenetQueueStoppedByDisk(
-    paused: queue.paused,
-    timedPause: queue.isTimedPause,
-    freeBytes: free == null ? null : (free * gigabyte).round(),
-    remainingBytes: [
-      for (final slot in queue.slots)
-        if (slot.status.toLowerCase() != 'paused')
-          (slot.mbLeft * megabyte).round(),
-    ],
-  );
+  final stoppedByDisk = sabnzbdQueueStoppedByDisk(queue);
 
   // A queue somebody paused holds every job in it; one its disk stopped
   // stalls them.
@@ -2622,21 +2611,7 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
           ref.watch(nzbgetClientForProvider(source.instanceId)).status(),
         ).wait;
   const megabyte = 1024 * 1024;
-  final free = status.writingDiskFreeMb;
-  final stoppedByDisk = usenetQueueStoppedByDisk(
-    paused: status.paused,
-    timedPause: status.isDeliberateStop,
-    freeBytes: free == null ? null : free * megabyte,
-    remainingBytes: [
-      for (final group in groups)
-        if (group.status.toUpperCase() != 'PAUSED' &&
-            nzbgetIsFetching(group.status))
-          switch (group.remainingSizeMb) {
-            final int left => left * megabyte,
-            null => null,
-          },
-    ],
-  );
+  final stoppedByDisk = nzbgetQueueStoppedByDisk(status, groups);
 
   final read = [
     for (final group in groups)

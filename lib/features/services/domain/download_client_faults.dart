@@ -258,6 +258,48 @@ bool usenetQueueStoppedByDisk({
   return smallest != null && freeBytes < smallest;
 }
 
+/// [usenetQueueStoppedByDisk] over a SABnzbd queue: its download folder's
+/// free space (`diskspace1`) against the jobs it still has to fetch. One
+/// reading for Home's downloads and the room's Status figure, so the two
+/// cannot call one queue full and paused.
+bool sabnzbdQueueStoppedByDisk(SabnzbdQueue queue) {
+  const megabyte = 1024 * 1024;
+  const gigabyte = 1024 * megabyte;
+  final free = queue.downloadDiskFreeGb;
+  return usenetQueueStoppedByDisk(
+    paused: queue.paused,
+    timedPause: queue.isTimedPause,
+    freeBytes: free == null ? null : (free * gigabyte).round(),
+    remainingBytes: [
+      for (final slot in queue.slots)
+        if (slot.status.toLowerCase() != 'paused')
+          (slot.mbLeft * megabyte).round(),
+    ],
+  );
+}
+
+/// [usenetQueueStoppedByDisk] over an NZBGet queue: the free space where it
+/// writes ([NzbgetStatus.writingDiskFreeMb]) against the groups it still has
+/// to fetch. See [sabnzbdQueueStoppedByDisk].
+bool nzbgetQueueStoppedByDisk(NzbgetStatus status, List<NzbgetGroup> groups) {
+  const megabyte = 1024 * 1024;
+  final free = status.writingDiskFreeMb;
+  return usenetQueueStoppedByDisk(
+    paused: status.paused,
+    timedPause: status.isDeliberateStop,
+    freeBytes: free == null ? null : free * megabyte,
+    remainingBytes: [
+      for (final group in groups)
+        if (group.status.toUpperCase() != 'PAUSED' &&
+            nzbgetIsFetching(group.status))
+          switch (group.remainingSizeMb) {
+            final int left => left * megabyte,
+            null => null,
+          },
+    ],
+  );
+}
+
 /// What one of SABnzbd's job `labels` says about a paused job, in the house
 /// words: the reason it was held, or null for a label that marks a wait.
 ///

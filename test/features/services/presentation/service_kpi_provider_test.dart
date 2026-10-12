@@ -12,6 +12,8 @@ import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
@@ -541,5 +543,74 @@ void main() {
         expect(kpis['Queue']!.value, '3');
       },
     );
+  });
+
+  group('a usenet queue its disk stopped', () {
+    SabnzbdQueue sabnzbd({required double freeGb}) => SabnzbdQueue(
+      paused: true,
+      status: 'Paused',
+      kbPerSec: 0,
+      mbLeft: 2048,
+      mb: 4096,
+      timeLeft: '0:00:00',
+      downloadDiskFreeGb: freeGb,
+      slots: [
+        SabnzbdQueueSlot.fromJson(const {
+          'nzo_id': '1',
+          'filename': 'Big.Buck.Bunny.2008.1080p',
+          'status': 'Downloading',
+          'mbleft': '2048',
+        }),
+      ],
+    );
+
+    test('SABnzbd says Disk full, amber, where Home says it too', () async {
+      final kpis = await _kpisFor(ServiceKey.sabnzbd, [
+        sabnzbdQueueProvider.overrideWith((ref) async => sabnzbd(freeGb: 0.5)),
+      ]);
+
+      expect(kpis['Status']!.value, 'Disk full');
+      expect(kpis['Status']!.tone, StatusTone.warning);
+    });
+
+    test(
+      'a queue with room left was paused by somebody: Stopped, no tone',
+      () async {
+        final kpis = await _kpisFor(ServiceKey.sabnzbd, [
+          sabnzbdQueueProvider.overrideWith(
+            (ref) async => sabnzbd(freeGb: 100),
+          ),
+        ]);
+
+        expect(kpis['Status']!.value, 'Stopped');
+        expect(kpis['Status']!.tone, isNull);
+      },
+    );
+
+    test('NZBGet says Disk full by the space where it writes', () async {
+      final kpis = await _kpisFor(ServiceKey.nzbget, [
+        nzbgetStatusProvider.overrideWith(
+          (ref) async => NzbgetStatus.fromJson(const {
+            'DownloadPaused': true,
+            'RemainingSizeMB': 2048,
+            'FreeDiskSpaceMB': 512,
+          }),
+        ),
+        nzbgetQueueProvider.overrideWith(
+          (ref) async => [
+            NzbgetGroup.fromJson(const {
+              'NZBID': 1,
+              'NZBName': 'Big.Buck.Bunny.2008.1080p',
+              'Status': 'QUEUED',
+              'FileSizeMB': 4096,
+              'RemainingSizeMB': 2048,
+            }),
+          ],
+        ),
+      ]);
+
+      expect(kpis['Status']!.value, 'Disk full');
+      expect(kpis['Status']!.tone, StatusTone.warning);
+    });
   });
 }

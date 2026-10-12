@@ -1468,16 +1468,9 @@ List<ServiceKpi> _sabnzbdKpisFrom(
       value: queue.sizeLeftLabel,
       icon: Icons.hourglass_bottom_rounded,
     ),
-    ServiceKpi(
-      label: 'Status',
-      value: queue.paused ? StateWord.stopped.label : 'Active',
-      icon: queue.paused
-          ? Icons.pause_circle_rounded
-          : Icons.play_circle_rounded,
-      // Pausing the queue is something the user did on purpose, so it is
-      // neither a fault nor a backlog: it is the client obeying. It used to be
-      // flagged amber, which put "you pressed pause" in the same colour as
-      // "your disk is full" (decision 15).
+    _usenetStatusKpi(
+      paused: queue.paused,
+      stoppedByDisk: sabnzbdQueueStoppedByDisk(queue),
     ),
   ];
   // Lifetime total is a nice-to-have; a stats failure must not drop the whole
@@ -1535,16 +1528,39 @@ List<ServiceKpi> _nzbgetKpisFrom(
       value: status.remainingLabel,
       icon: Icons.hourglass_bottom_rounded,
     ),
-    ServiceKpi(
-      label: 'Status',
-      value: status.paused ? StateWord.stopped.label : 'Active',
-      icon: status.paused
-          ? Icons.pause_circle_rounded
-          : Icons.play_circle_rounded,
-      // Deliberate: see the SABnzbd twin above.
+    _usenetStatusKpi(
+      paused: status.paused,
+      stoppedByDisk: nzbgetQueueStoppedByDisk(status, groups),
     ),
   ];
 }
+
+/// A usenet client's Status figure: `Active`, `Stopped`, or `Disk full`.
+///
+/// Pausing the queue is something the user did on purpose, so it is neither
+/// a fault nor a backlog: it is the client obeying. It used to be flagged
+/// amber, which put "you pressed pause" in the same colour as "your disk is
+/// full" (decision 15). Both clients stop on a full disk by flipping the same
+/// switch, though, and that one is a fault: amber, in the word Home's
+/// downloads use for it, never `Stopped` beside a Home that says the disk is
+/// full.
+ServiceKpi _usenetStatusKpi({
+  required bool paused,
+  required bool stoppedByDisk,
+}) => ServiceKpi(
+  label: 'Status',
+  value: stoppedByDisk
+      ? diskFullReason
+      : paused
+      ? StateWord.stopped.label
+      : 'Active',
+  icon: stoppedByDisk
+      ? Icons.storage_rounded
+      : paused
+      ? Icons.pause_circle_rounded
+      : Icons.play_circle_rounded,
+  tone: _faultIf(stoppedByDisk),
+);
 
 /// Transmission's rail, shaped like qBittorrent's so the two torrent clients
 /// read the same way in the matrix: `Download` first, flagged while bytes are
