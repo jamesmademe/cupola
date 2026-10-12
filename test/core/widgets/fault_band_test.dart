@@ -5,6 +5,8 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Every assertion here guards a **rule**, not a rendering.
 ///
@@ -34,6 +36,35 @@ Color _verbColour(WidgetTester tester, String label) {
 }
 
 void main() {
+  group('from a failed probe', () {
+    test('silence is the red unreachable band', () {
+      final band = FaultBand.fromSummary(
+        summary: const ServiceSummary(
+          service: ServiceKey.sabnzbd,
+          status: ServiceSummaryStatus.offline,
+          host: 'nas.local',
+          version: null,
+        ),
+        onRetry: () {},
+      );
+      expect(band.tone, StatusTone.error);
+      expect(band.message, contains('SABnzbd'));
+    });
+
+    test('an answer that refused is amber, in its own words', () {
+      final band = FaultBand.fromSummary(
+        summary: ServiceSummary.failed(
+          ServiceKey.sabnzbd,
+          host: 'nas.local',
+          error: const ClassifiedFailure(ServiceFailureReason.unauthorized),
+        ),
+        onRetry: () {},
+      );
+      expect(band.tone, StatusTone.warning);
+      expect(band.message, isNot(contains('did not answer')));
+    });
+  });
+
   group('rule 1: presence is the signal', () {
     testWidgets('no band paints a fill or a border', (tester) async {
       // The band used to be a card: a tinted fill behind an error-tone stroke.

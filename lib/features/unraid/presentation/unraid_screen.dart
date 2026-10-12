@@ -166,12 +166,24 @@ class _UnraidSection extends ConsumerWidget {
       data: (summary) => summary.isOnline ? null : summary,
     );
 
-    if (failed != null) {
+    // What this section has already read, if anything. With nothing to keep
+    // the failure is the page; over a read it is a band, and the read stays
+    // under it as it was last said.
+    final AsyncValue<Object?> read = switch (section) {
+      UnraidSection.array => ref.watch(unraidArrayProvider),
+      UnraidSection.docker => ref.watch(unraidDockerProvider),
+      UnraidSection.vms => ref.watch(unraidVmsProvider),
+      UnraidSection.notifications => ref.watch(unraidNotificationsProvider),
+      UnraidSection.shares => ref.watch(unraidSharesProvider),
+    };
+    if (failed != null && !read.hasValue) {
       return ServiceOfflineState.fromSummary(
         summary: failed,
         onRetry: () => _invalidate(ref, section),
       );
     }
+    AsyncValue<T> lastSaid<T>(AsyncValue<T> value) =>
+        lastReadUnderBand(value, banded: failed != null);
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -184,46 +196,60 @@ class _UnraidSection extends ConsumerWidget {
           top: topPadding,
           bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
-        children: switch (section) {
-          UnraidSection.array => [
-            const SectionHeader(title: 'Array disks', showChevron: false),
-            const SizedBox(height: 2),
-            _DiskList(arrayAsync: ref.watch(unraidArrayProvider)),
-          ],
-          UnraidSection.docker => _dockerChildren(
-            ref.watch(unraidDockerProvider),
-          ),
-          UnraidSection.vms => [
-            CapabilityBannerSlot(
-              connectionId: capabilityConnectionId(ref, ServiceKey.unraid),
-              copy: unraidVmsCopy,
-              resources: {UnraidResource.vms.name},
+        children: [
+          if (failed != null)
+            FaultBand.fromSummary(
+              summary: failed,
+              onRetry: () => _invalidate(ref, section),
             ),
-            const SectionHeader(title: 'Virtual machines', showChevron: false),
-            const SizedBox(height: 2),
-            _VmList(vmsAsync: ref.watch(unraidVmsProvider)),
-          ],
-          UnraidSection.notifications => [
-            CapabilityBannerSlot(
-              connectionId: capabilityConnectionId(ref, ServiceKey.unraid),
-              copy: unraidNotificationsCopy,
-              resources: {UnraidResource.notifications.name},
+          ...switch (section) {
+            UnraidSection.array => [
+              const SectionHeader(title: 'Array disks', showChevron: false),
+              const SizedBox(height: 2),
+              _DiskList(arrayAsync: lastSaid(ref.watch(unraidArrayProvider))),
+            ],
+            UnraidSection.docker => _dockerChildren(
+              lastSaid(ref.watch(unraidDockerProvider)),
             ),
-            const SectionHeader(
-              title: 'Unread notifications',
-              showChevron: false,
-            ),
-            const SizedBox(height: 2),
-            _NotificationList(
-              notificationsAsync: ref.watch(unraidNotificationsProvider),
-            ),
-          ],
-          UnraidSection.shares => [
-            const SectionHeader(title: 'Shares', showChevron: false),
-            const SizedBox(height: 2),
-            _ShareList(sharesAsync: ref.watch(unraidSharesProvider)),
-          ],
-        },
+            UnraidSection.vms => [
+              CapabilityBannerSlot(
+                connectionId: capabilityConnectionId(ref, ServiceKey.unraid),
+                copy: unraidVmsCopy,
+                resources: {UnraidResource.vms.name},
+              ),
+              const SectionHeader(
+                title: 'Virtual machines',
+                showChevron: false,
+              ),
+              const SizedBox(height: 2),
+              _VmList(vmsAsync: lastSaid(ref.watch(unraidVmsProvider))),
+            ],
+            UnraidSection.notifications => [
+              CapabilityBannerSlot(
+                connectionId: capabilityConnectionId(ref, ServiceKey.unraid),
+                copy: unraidNotificationsCopy,
+                resources: {UnraidResource.notifications.name},
+              ),
+              const SectionHeader(
+                title: 'Unread notifications',
+                showChevron: false,
+              ),
+              const SizedBox(height: 2),
+              _NotificationList(
+                notificationsAsync: lastSaid(
+                  ref.watch(unraidNotificationsProvider),
+                ),
+              ),
+            ],
+            UnraidSection.shares => [
+              const SectionHeader(title: 'Shares', showChevron: false),
+              const SizedBox(height: 2),
+              _ShareList(
+                sharesAsync: lastSaid(ref.watch(unraidSharesProvider)),
+              ),
+            ],
+          },
+        ],
       ),
     );
   }

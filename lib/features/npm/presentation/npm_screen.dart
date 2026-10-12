@@ -228,12 +228,23 @@ class _NpmSection extends ConsumerWidget {
       data: (summary) => summary.isOnline ? null : summary,
     );
 
-    if (failed != null) {
+    // What this section has already read, if anything. With nothing to keep
+    // the failure is the page; over a read it is a band, and the read stays
+    // under it as it was last said.
+    final AsyncValue<Object?> read = switch (section) {
+      NpmSection.everything ||
+      NpmSection.proxyHosts => ref.watch(npmProxyHostsProvider),
+      NpmSection.certificates => ref.watch(npmCertificatesProvider),
+      NpmSection.accessLists => ref.watch(npmAccessListsProvider),
+      NpmSection.auditLog => ref.watch(npmAuditLogProvider),
+    };
+    if (failed != null && !read.hasValue) {
       return ServiceOfflineState.fromSummary(
         summary: failed,
         onRetry: () => _invalidate(ref, section),
       );
     }
+    final banded = failed != null;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -247,6 +258,11 @@ class _NpmSection extends ConsumerWidget {
         ),
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
+          if (failed != null)
+            FaultBand.fromSummary(
+              summary: failed,
+              onRetry: () => _invalidate(ref, section),
+            ),
           if (section == NpmSection.everything)
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
@@ -269,21 +285,27 @@ class _NpmSection extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
           ...switch (section) {
             NpmSection.everything => [
-              ..._hostChildren(ref),
-              ..._certificateChildren(ref),
+              ..._hostChildren(ref, banded: banded),
+              ..._certificateChildren(ref, banded: banded),
             ],
-            NpmSection.proxyHosts => _hostChildren(ref),
-            NpmSection.certificates => _certificateChildren(ref),
-            NpmSection.accessLists => _accessListChildren(ref),
-            NpmSection.auditLog => _auditChildren(ref),
+            NpmSection.proxyHosts => _hostChildren(ref, banded: banded),
+            NpmSection.certificates => _certificateChildren(
+              ref,
+              banded: banded,
+            ),
+            NpmSection.accessLists => _accessListChildren(ref, banded: banded),
+            NpmSection.auditLog => _auditChildren(ref, banded: banded),
           },
         ],
       ),
     );
   }
 
-  List<Widget> _hostChildren(WidgetRef ref) {
-    final hostsAsync = ref.watch(npmProxyHostsProvider);
+  List<Widget> _hostChildren(WidgetRef ref, {required bool banded}) {
+    final hostsAsync = lastReadUnderBand(
+      ref.watch(npmProxyHostsProvider),
+      banded: banded,
+    );
     return [
       SectionHeader(
         title: 'Proxy hosts',
@@ -306,28 +328,39 @@ class _NpmSection extends ConsumerWidget {
       ),
       const SizedBox(height: 2),
       _SimpleHostList(
-        hostsAsync: ref.watch(npmOtherHostsProvider),
+        hostsAsync: lastReadUnderBand(
+          ref.watch(npmOtherHostsProvider),
+          banded: banded,
+        ),
         limit: section == NpmSection.everything ? 10 : null,
       ),
     ];
   }
 
-  List<Widget> _certificateChildren(WidgetRef ref) => [
+  List<Widget> _certificateChildren(WidgetRef ref, {required bool banded}) => [
     const SectionHeader(title: 'Certificates', showChevron: false),
     const SizedBox(height: 2),
     _CertificateList(
-      certsAsync: ref.watch(npmCertificatesProvider),
+      certsAsync: lastReadUnderBand(
+        ref.watch(npmCertificatesProvider),
+        banded: banded,
+      ),
       limit: section == NpmSection.everything ? 8 : null,
     ),
   ];
 
-  List<Widget> _accessListChildren(WidgetRef ref) => [
+  List<Widget> _accessListChildren(WidgetRef ref, {required bool banded}) => [
     const SectionHeader(title: 'Access lists', showChevron: false),
     const SizedBox(height: 2),
-    _AccessListList(listsAsync: ref.watch(npmAccessListsProvider)),
+    _AccessListList(
+      listsAsync: lastReadUnderBand(
+        ref.watch(npmAccessListsProvider),
+        banded: banded,
+      ),
+    ),
   ];
 
-  List<Widget> _auditChildren(WidgetRef ref) {
+  List<Widget> _auditChildren(WidgetRef ref, {required bool banded}) {
     final account = ref.watch(npmAccountProvider).asData?.value;
     return [
       const SectionHeader(title: 'Audit log', showChevron: false),
@@ -338,7 +371,12 @@ class _NpmSection extends ConsumerWidget {
               'Nginx Proxy Manager exposes its audit log to administrators only.',
         )
       else
-        _AuditLogList(entriesAsync: ref.watch(npmAuditLogProvider)),
+        _AuditLogList(
+          entriesAsync: lastReadUnderBand(
+            ref.watch(npmAuditLogProvider),
+            banded: banded,
+          ),
+        ),
     ];
   }
 }

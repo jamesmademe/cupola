@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
@@ -424,6 +426,69 @@ void main() {
         ),
         findsNothing,
       );
+    });
+  });
+
+  group('a probe that fails', () {
+    List<Override> silent() => [
+      serviceSummaryProvider.overrideWith(
+        (ref, service) async => ServiceSummary(
+          service: service,
+          status: ServiceSummaryStatus.offline,
+          host: 'sab.local:8080',
+          version: null,
+        ),
+      ),
+      serviceKpiProvider.overrideWith(
+        (ref, service) async => const <ServiceKpi>[],
+      ),
+      sabnzbdHistoryProvider.overrideWith(
+        (ref) async => const <SabnzbdHistorySlot>[],
+      ),
+      sabnzbdCategoriesProvider.overrideWith((ref) async => const <String>[]),
+    ];
+
+    testWidgets('over a queue already read is a band, and the queue stays', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ...silent(),
+            sabnzbdQueueProvider.overrideWith(
+              (ref) async => _queue(slots: [_slot(filename: 'Job.1')]),
+            ),
+          ],
+          child: const MaterialApp(home: SabnzbdScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FaultBand), findsOneWidget);
+      expect(find.byType(ServiceOfflineState), findsNothing);
+      expect(find.text('Job.1'), findsOneWidget);
+    });
+
+    testWidgets('with nothing read yet is the whole page', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ...silent(),
+            sabnzbdQueueProvider.overrideWith(
+              (ref) async => throw Exception('connection refused'),
+            ),
+          ],
+          child: const MaterialApp(home: SabnzbdScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceOfflineState), findsOneWidget);
+      expect(find.byType(FaultBand), findsNothing);
     });
   });
 

@@ -8,6 +8,8 @@ import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/widgets/beside_or_below.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 
 /// One grammar for the four ways a page can be wrong, none of which is an
@@ -83,6 +85,32 @@ class FaultBand extends StatelessWidget {
        secondaryAction = onOpenSettings == null
            ? null
            : FaultBandAction('Settings', onOpenSettings);
+
+  /// Level 1 from a failed probe, over a page that still holds what the
+  /// service said before it stopped: [FaultBand.unreachable] when nothing
+  /// answered, [FaultBand.fault] with the probe's reason when something did.
+  ///
+  /// The band's counterpart of `ServiceOfflineState.fromSummary`, which is for
+  /// the cold open with nothing to keep. A client's page used to give way to
+  /// that full state on any failed probe, throwing away a queue that was on
+  /// screen a moment before.
+  factory FaultBand.fromSummary({
+    Key? key,
+    required ServiceSummary summary,
+    required VoidCallback onRetry,
+  }) {
+    final name = summary.service.title;
+    if (summary.isFault) {
+      return FaultBand.fault(
+        key: key,
+        serviceName: name,
+        reason: summary.failureReason ?? ServiceFailureReason.unknown,
+        gateway: summary.failure?.gateway,
+        onRetry: onRetry,
+      );
+    }
+    return FaultBand.unreachable(key: key, serviceName: name, onRetry: onRetry);
+  }
 
   /// Level 1, when the service **answered**: the read failed with a refusal
   /// or a fault: a refused key, a 5xx, a reply nobody can read.

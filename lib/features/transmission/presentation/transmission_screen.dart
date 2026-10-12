@@ -68,7 +68,7 @@ class _TransmissionDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final torrentsAsync = ref.watch(transmissionTorrentsProvider);
+    final watched = ref.watch(transmissionTorrentsProvider);
     final summaryAsync = ref.watch(
       serviceSummaryProvider(ServiceKey.transmission),
     );
@@ -78,12 +78,15 @@ class _TransmissionDashboard extends ConsumerWidget {
       data: (summary) => summary.isOnline ? null : summary,
     );
 
-    if (failed != null) {
+    // With nothing to keep the failure is the page. Over torrents already
+    // read it is a band, and they stay under it as they were last said.
+    if (failed != null && !watched.hasValue) {
       return ServiceOfflineState.fromSummary(
         summary: failed,
         onRetry: () => _invalidateAll(ref),
       );
     }
+    final torrentsAsync = lastReadUnderBand(watched, banded: failed != null);
 
     // Split once, through the same `when` the rows draw with, so a header never
     // counts a list its section is not showing: while the list loads or after
@@ -113,6 +116,11 @@ class _TransmissionDashboard extends ConsumerWidget {
           SliverList.list(
             children: [
               if (topPadding > 0) SizedBox(height: topPadding),
+              if (failed != null)
+                FaultBand.fromSummary(
+                  summary: failed,
+                  onRetry: () => _invalidateAll(ref),
+                ),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
                 accent: ServiceKey.transmission.accent,
@@ -132,7 +140,7 @@ class _TransmissionDashboard extends ConsumerWidget {
             ref,
             torrentsAsync: torrentsAsync,
             rows: incoming,
-            emptyLabel: 'Nothing is downloading.',
+            emptyLabel: 'Nothing is downloading',
           ),
           SliverList.list(
             children: [
@@ -149,7 +157,7 @@ class _TransmissionDashboard extends ConsumerWidget {
             ref,
             torrentsAsync: torrentsAsync,
             rows: resting,
-            emptyLabel: 'Nothing is seeding.',
+            emptyLabel: 'Nothing is seeding',
           ),
           SliverToBoxAdapter(
             child: SizedBox(
@@ -192,11 +200,11 @@ Widget _torrentRows(
       if (visible.isEmpty) {
         return SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: AppEmptyState.inline(
+              icon: Icons.download_done_rounded,
+              title: emptyLabel,
             ),
-            child: Text(emptyLabel),
           ),
         );
       }

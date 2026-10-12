@@ -53,7 +53,7 @@ class _NzbgetDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final queueAsync = ref.watch(nzbgetQueueProvider);
+    final watched = ref.watch(nzbgetQueueProvider);
     final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.nzbget));
     // A failed probe, in its own words: "did not answer" only when nothing did,
     // the refusal and its remedy when the sign-in was refused.
@@ -61,12 +61,15 @@ class _NzbgetDashboard extends ConsumerWidget {
       data: (summary) => summary.isOnline ? null : summary,
     );
 
-    if (failed != null) {
+    // With nothing to keep the failure is the page. Over a queue already read
+    // it is a band, and the queue stays under it as it was last said.
+    if (failed != null && !watched.hasValue) {
       return ServiceOfflineState.fromSummary(
         summary: failed,
         onRetry: () => _invalidateAll(ref),
       );
     }
+    final queueAsync = lastReadUnderBand(watched, banded: failed != null);
 
     // Through the same `when` the rows draw with, so the header never counts
     // a queue its section is not showing.
@@ -87,6 +90,11 @@ class _NzbgetDashboard extends ConsumerWidget {
           SliverList.list(
             children: [
               if (topPadding > 0) SizedBox(height: topPadding),
+              if (failed != null)
+                FaultBand.fromSummary(
+                  summary: failed,
+                  onRetry: () => _invalidateAll(ref),
+                ),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
                 accent: ServiceKey.nzbget.accent,
@@ -130,11 +138,11 @@ Widget _queueRows(WidgetRef ref, AsyncValue<List<NzbgetGroup>> queueAsync) {
       if (groups.isEmpty) {
         return const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: AppEmptyState.inline(
+              icon: Icons.download_done_rounded,
+              title: 'Queue is empty',
             ),
-            child: Text('Queue is empty.'),
           ),
         );
       }

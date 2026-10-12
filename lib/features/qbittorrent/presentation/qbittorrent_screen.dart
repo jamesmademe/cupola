@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
@@ -123,7 +125,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
       },
       data: (torrents) {
         if (torrents.isEmpty) {
-          return _EmptyTorrents(colorScheme: Theme.of(context).colorScheme);
+          return const _EmptyTorrents();
         }
 
         return RefreshIndicator(
@@ -175,40 +177,35 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
   }
 }
 
-class _EmptyTorrents extends StatelessWidget {
-  final ColorScheme colorScheme;
-
-  const _EmptyTorrents({required this.colorScheme});
+/// No torrent to draw: one line where the rows would start, on their edge, as
+/// every other client's empty queue reads. A filter that hides everything says
+/// so rather than claiming the client holds nothing.
+class _EmptyTorrents extends ConsumerWidget {
+  const _EmptyTorrents();
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => SingleChildScrollView(
-      // The header slivers can consume the whole compact viewport before the
-      // empty body gets a turn. Giving the body a scroll extent lets the
-      // message grow past that transient constraint instead of making its
-      // centred column overflow until the header scrolls away.
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.cloud_off_outlined,
-                size: 48,
-                color: colorScheme.onSurfaceVariant,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filtered =
+        ref.watch(torrentFilterProvider) != TorrentFilter.all ||
+        (ref.watch(torrentCategoryFilterProvider)?.isNotEmpty ?? false) ||
+        (ref.watch(torrentTagFilterProvider)?.isNotEmpty ?? false) ||
+        (ref.watch(torrentTrackerFilterProvider)?.isNotEmpty ?? false) ||
+        ref.watch(torrentSearchQueryProvider).trim().isNotEmpty;
+    // Scrollable, so the pull to refresh and the header slivers above it
+    // behave as they do over rows.
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      children: [
+        filtered
+            ? const AppEmptyState.inline(
+                icon: Icons.filter_alt_off_rounded,
+                title: 'No matching torrents',
+              )
+            : const AppEmptyState.inline(
+                icon: Icons.download_done_rounded,
+                title: 'No torrents',
               ),
-              const SizedBox(height: 12),
-              Text(
-                'No torrents',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
+      ],
+    );
+  }
 }
