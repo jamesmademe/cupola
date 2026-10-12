@@ -70,6 +70,35 @@ void main() {
       return tester.getSize(find.byType(ListView)).height;
     }
 
+    testWidgets('each person is one sentence, a button when it opens', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      usePhoneView(tester);
+      await tester.pumpWidget(
+        host(textScale: 1, child: const DiscoverCastList(cast: cast)),
+      );
+
+      expect(
+        tester.getSemantics(
+          find.bySemanticsLabel('Naomi Scott, as Princess Jasmine'),
+        ),
+        matchesSemantics(
+          label: 'Naomi Scott, as Princess Jasmine',
+          isButton: true,
+          hasTapAction: true,
+          hasEnabledState: true,
+          isEnabled: true,
+        ),
+      );
+      // No TMDB id, so nothing to open: still one sentence, never a button.
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Marwan Kenzari, as Jafar')),
+        matchesSemantics(label: 'Marwan Kenzari, as Jafar'),
+      );
+      handle.dispose();
+    });
+
     testWidgets('rail grows with the reading size and never clips', (
       tester,
     ) async {

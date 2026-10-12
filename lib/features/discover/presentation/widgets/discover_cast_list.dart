@@ -155,6 +155,13 @@ class _CastTile extends StatelessWidget {
       ),
     );
 
+    // One sentence per person. The face, the name and the role used to be
+    // three stops for a screen reader, and the tap belonged to none of them:
+    // the tile never said it was a button.
+    final spoken = member.character.isEmpty
+        ? member.name
+        : '${member.name}, as ${member.character}';
+
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
       child: tappable
@@ -164,9 +171,16 @@ class _CastTile extends StatelessWidget {
                 heroTag: heroTag,
                 posterUrl: imageUrl,
               ),
+              semanticLabel: spoken,
+              excludeChildSemantics: true,
               child: tile,
             )
-          : tile,
+          : Semantics(
+              container: true,
+              label: spoken,
+              excludeSemantics: true,
+              child: tile,
+            ),
     );
   }
 }
