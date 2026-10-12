@@ -58,7 +58,7 @@ String everyonesSummary(MyRequests requests) {
 }
 
 /// One request's state and when, as one line: `Ready to watch since 18:40`,
-/// `Downloading 62% · ready around 21:10`, `On the server since 12 Sep`,
+/// `Downloading 62% · ready around 21:10`, `On the server since Sat 12 Sep`,
 /// `Declined yesterday`.
 ///
 /// The operator's words: an answer says when it was given, never the

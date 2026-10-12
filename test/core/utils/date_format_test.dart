@@ -403,4 +403,117 @@ void main() {
       );
     });
   });
+
+  group('the day words: formatPastDay and formatPastDayOn', () {
+    // Monday 12 Oct 2026, mid-afternoon.
+    final now = DateTime(2026, 10, 12, 15);
+
+    test('are null for today and for a day ahead', () {
+      expect(formatPastDay(DateTime(2026, 10, 12, 0, 1), now: now), isNull);
+      expect(formatPastDay(DateTime(2026, 10, 12, 23, 59), now: now), isNull);
+      expect(formatPastDay(DateTime(2026, 10, 13, 9), now: now), isNull);
+      expect(formatPastDayOn(DateTime(2026, 10, 12, 9), now: now), isNull);
+    });
+
+    test('say yesterday for the day before, however near midnight', () {
+      expect(
+        formatPastDay(DateTime(2026, 10, 11, 0, 1), now: now),
+        'yesterday',
+      );
+      expect(
+        formatPastDay(DateTime(2026, 10, 11, 23, 59), now: now),
+        'yesterday',
+      );
+      expect(formatPastDayOn(DateTime(2026, 10, 11, 9), now: now), 'yesterday');
+    });
+
+    test('name the weekday within the week', () {
+      expect(formatPastDay(DateTime(2026, 10, 7, 18), now: now), 'Wednesday');
+      expect(formatPastDay(DateTime(2026, 10, 6, 18), now: now), 'Tuesday');
+      expect(
+        formatPastDayOn(DateTime(2026, 10, 7, 18), now: now),
+        'on Wednesday',
+      );
+    });
+
+    test('name the date from the seventh day, a year only in another', () {
+      expect(formatPastDay(DateTime(2026, 10, 5, 18), now: now), 'Mon 5 Oct');
+      expect(formatPastDay(DateTime(2026, 9, 29, 18), now: now), 'Tue 29 Sep');
+      expect(
+        formatPastDay(DateTime(2025, 9, 29, 18), now: now),
+        'Mon 29 Sep 2025',
+      );
+      expect(
+        formatPastDayOn(DateTime(2026, 9, 29, 18), now: now),
+        'on Tue 29 Sep',
+      );
+      expect(
+        formatPastDayOn(DateTime(2025, 9, 29, 18), now: now),
+        'on Mon 29 Sep 2025',
+      );
+    });
+
+    test('read both values on the device clock, whatever zone they carry', () {
+      final at = DateTime(2026, 10, 7, 18);
+      expect(
+        formatPastDay(at.toUtc(), now: now.toUtc()),
+        formatPastDay(at, now: now),
+      );
+      expect(
+        formatPastDayOn(at.toUtc(), now: now.toUtc()),
+        formatPastDayOn(at, now: now),
+      );
+    });
+  });
+
+  group('formatDayWords', () {
+    final now = DateTime(2026, 10, 12, 15);
+
+    test('is the hours through the day', () {
+      expect(
+        formatDayWords(DateTime(2026, 10, 12, 14, 59, 30), now: now),
+        'just now',
+      );
+      expect(
+        formatDayWords(DateTime(2026, 10, 12, 13), now: now),
+        '2\u00A0h ago',
+      );
+      expect(
+        formatDayWords(DateTime(2026, 10, 12, 1), now: now),
+        '14\u00A0h ago',
+      );
+    });
+
+    test('keeps the hours through the half day before midnight', () {
+      final morning = DateTime(2026, 10, 12, 7);
+      expect(
+        formatDayWords(DateTime(2026, 10, 11, 23), now: morning),
+        '8\u00A0h ago',
+      );
+      // And says yesterday once the evening is more than half a day back.
+      expect(formatDayWords(DateTime(2026, 10, 11, 23), now: now), 'yesterday');
+    });
+
+    test('then the day: yesterday, the weekday, the date', () {
+      expect(formatDayWords(DateTime(2026, 10, 11, 9), now: now), 'yesterday');
+      expect(formatDayWords(DateTime(2026, 10, 7, 9), now: now), 'Wednesday');
+      expect(formatDayWords(DateTime(2026, 9, 29, 9), now: now), 'Tue 29 Sep');
+      expect(
+        formatDayWords(DateTime(2025, 9, 29, 9), now: now),
+        'Mon 29 Sep 2025',
+      );
+    });
+
+    test('reads a time ahead of the clock as just now', () {
+      expect(formatDayWords(DateTime(2026, 10, 12, 18), now: now), 'just now');
+    });
+
+    test('reads the same for a clock and a value in UTC', () {
+      final at = DateTime(2026, 10, 7, 9);
+      expect(
+        formatDayWords(at.toUtc(), now: now.toUtc()),
+        formatDayWords(at, now: now),
+      );
+    });
+  });
 }

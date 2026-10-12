@@ -235,7 +235,7 @@ void main() {
       );
       expect(
         line(_request(1, media: 5, added: const Duration(days: 27))),
-        'On the server since 12 Sep',
+        'On the server since Sat 12 Sep',
       );
     });
 
@@ -256,7 +256,7 @@ void main() {
       );
       expect(
         line(_request(1, status: 3, answered: const Duration(days: 30))),
-        'Declined on 9 Sep',
+        'Declined on Wed 9 Sep',
       );
     });
 

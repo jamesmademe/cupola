@@ -12,6 +12,7 @@
 /// debt, so there is no `intl` dependency to reach for.
 library;
 
+import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 
 /// Formats an ISO-8601 date string to `YYYY-MM-DD`.
@@ -256,6 +257,53 @@ String formatRelativeDateTime(DateTime date, {DateTime? now}) {
 
   // The app's date, `Tue 29 Sep`, with the year only when it is another.
   return formatShortDay(local, now: reference);
+}
+
+/// A day that is already past, in words, counted in calendar days: `yesterday`,
+/// the weekday within the week (`Wednesday`), then the date as the app says
+/// dates (`Tue 29 Sep`, with the year only in another year). Null for today and
+/// for a day ahead, which each row says in its own words.
+///
+/// The voice of the rows about people and requests (who asked, since when it
+/// is on the server), where the day is what matters and the hours are noise. A
+/// feed or a live list that reads like a log speaks [formatRelativeDateTime]
+/// instead: `4 days ago`, counted in elapsed time. Both values are read on this
+/// device's clock.
+String? formatPastDay(DateTime at, {required DateTime now}) {
+  final local = at.toLocal();
+  final reference = now.toLocal();
+  final days = calendarDaysBetween(local, reference);
+  if (days <= 0) return null;
+  if (days == 1) return 'yesterday';
+  if (days < 7) return weekdayName(local);
+  return formatShortDay(local, now: reference);
+}
+
+/// [formatPastDay] as a clause of a sentence: `yesterday`, `on Wednesday`, `on
+/// Tue 29 Sep`. Null for today and for a day ahead.
+String? formatPastDayOn(DateTime at, {required DateTime now}) {
+  final words = formatPastDay(at, now: now);
+  if (words == null) return null;
+  return calendarDaysBetween(at.toLocal(), now.toLocal()) == 1
+      ? words
+      : 'on $words';
+}
+
+/// When a person did something, as a row says it: `2 h ago` through the day
+/// (and through the half day before it, so a request made at 23:00 does not
+/// read `yesterday` at 07:00), then [formatPastDay]: `yesterday`, `Wednesday`,
+/// `Tue 29 Sep`.
+///
+/// One voice for who asked and when it came, so the same request reads the same
+/// on the Home, in My requests and on the Seerr Overview. A time ahead of [now]
+/// (two clocks that disagree) reads `just now`.
+String formatDayWords(DateTime at, {required DateTime now}) {
+  final local = at.toLocal();
+  final past = formatPastDay(local, now: now);
+  if (past == null || now.difference(local) < const Duration(hours: 12)) {
+    return formatSampleAge(local, now: now);
+  }
+  return past;
 }
 
 /// [formatMediumDate] for a nullable field, answering null rather than echoing

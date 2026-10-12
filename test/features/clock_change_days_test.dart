@@ -91,6 +91,19 @@ void main() {
       expect(sinceWords(at, now: now), 'yesterday');
     }, skip: skipSpring);
 
+    test('the day words say yesterday for the day before', () {
+      final at = dayAfter(day, 0, hour: 8);
+      final now = dayAfter(day, 1, hour: 20);
+      expect(formatPastDay(at, now: now), 'yesterday');
+      expect(formatPastDayOn(at, now: now), 'yesterday');
+      expect(formatDayWords(at, now: now), 'yesterday');
+      // And the week still ends on the 7th day, not a day early.
+      expect(
+        formatPastDay(dayAfter(day, -6, hour: 8), now: now),
+        formatShortDay(dayAfter(day, -6, hour: 8), now: now),
+      );
+    }, skip: skipSpring);
+
     test('a download that ends tomorrow says tomorrow', () {
       expect(
         aroundWords(

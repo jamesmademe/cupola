@@ -368,14 +368,9 @@ MyRequests myRequestsOf(
 }
 
 /// The day [at] fell on, as a sentence says it: `today`, `yesterday`, `on
-/// Sunday` within the week, then `on 12 Sep`.
-String dayWords(DateTime at, {required DateTime now}) {
-  final days = calendarDaysBetween(at, now);
-  if (days <= 0) return 'today';
-  if (days == 1) return 'yesterday';
-  if (days < 7) return 'on ${weekdayName(at)}';
-  return 'on ${formatDayMonth(at, now: now)}';
-}
+/// Sunday` within the week, then `on Sat 12 Sep` ([formatPastDayOn]).
+String dayWords(DateTime at, {required DateTime now}) =>
+    formatPastDayOn(at, now: now) ?? 'today';
 
 /// When she asked, after `Asked`: `2 h ago` within the half day, then
 /// [dayWords].
@@ -385,14 +380,9 @@ String askedWords(DateTime at, {required DateTime now}) =>
     : dayWords(at, now: now);
 
 /// Since when it is on the server, after `Since`: `18:40` today, then
-/// `yesterday`, `Sunday`, `12 Sep`.
-String sinceWords(DateTime at, {required DateTime now}) {
-  final days = calendarDaysBetween(at, now);
-  if (days <= 0) return formatClockTime(at);
-  if (days == 1) return 'yesterday';
-  if (days < 7) return weekdayName(at);
-  return formatDayMonth(at, now: now);
-}
+/// `yesterday`, `Sunday`, `Sat 12 Sep` ([formatPastDay]).
+String sinceWords(DateTime at, {required DateTime now}) =>
+    formatPastDay(at, now: now) ?? formatClockTime(at);
 
 /// When a download should end, after `Ready around`: `21:10` today,
 /// `tomorrow 09:10`, then the weekday.

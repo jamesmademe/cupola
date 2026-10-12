@@ -165,7 +165,7 @@ void main() {
     test('arrived long ago: on the server, since its day', () {
       final mine = _read(_request(media: 5, added: const Duration(days: 25)));
       expect(mine.stage, MyRequestStage.onTheServer);
-      expect(mine.detail(_now), 'Since 14 Sep');
+      expect(mine.detail(_now), 'Since Mon 14 Sep');
       final days = _read(_request(media: 5, added: const Duration(days: 3)));
       expect(days.stage, MyRequestStage.readyToWatch);
       expect(days.detail(_now), 'Since Tuesday');
@@ -260,7 +260,7 @@ void main() {
         askedWords(_now.subtract(const Duration(days: 3)), now: _now),
         'on Tuesday',
       );
-      expect(askedWords(DateTime(2025, 12, 2), now: _now), 'on 2 Dec 2025');
+      expect(askedWords(DateTime(2025, 12, 2), now: _now), 'on Tue 2 Dec 2025');
     });
 
     test('ready around', () {

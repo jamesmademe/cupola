@@ -25,7 +25,7 @@ fault.
 | `On its way` | blue | `Being fetched`: queued, held, stuck or failed on the stack, or nothing Seerr can see |
 | `Finishing on the server` | blue | `Being fetched` |
 | `Ready to watch` | green | `Since 18:40`, `Since yesterday`, `Since Wednesday`: arrived in the last seven days |
-| `On the server` | green | `Since 12 Sep` |
+| `On the server` | green | `Since Sat 12 Sep` |
 | `Declined` | neutral, hollow dot | `Declined by the server's owner` |
 | `Didn't go through` | neutral | `Whoever runs the server can send it again.` |
 | `Removed from the server` · `Blocked` | neutral | `You can ask for it again.` · the owner's block |

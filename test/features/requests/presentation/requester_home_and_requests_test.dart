@@ -42,7 +42,7 @@ void main() {
       expect(find.byType(FeaturedPager), findsOne);
       expect(find.text('Ready to watch · since Wednesday'), findsOne);
       expect(find.text(WorldTitles.sintel.title), findsWidgets);
-      expect(find.textContaining('You asked for it on 30 Sep'), findsOne);
+      expect(find.textContaining('You asked for it on Wed 30 Sep'), findsOne);
       expect(find.text('Watch on Jellyfin'), findsOne);
       expect(find.text('Details'), findsOne);
       // One arrival: no second line.
@@ -175,7 +175,7 @@ void main() {
       ]);
       expect(find.text('Downloading 62%'), findsOne);
       expect(find.text('Since Wednesday'), findsOne);
-      expect(find.text('Since 14 Sep'), findsOne);
+      expect(find.text('Since Mon 14 Sep'), findsOne);
       expect(find.text('On the server'), findsOne);
       // Watch on what is on the server and has Seerr's link to it.
       expect(find.text('Watch'), findsNWidgets(2));

@@ -15,7 +15,6 @@ import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/date_format.dart';
-import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
@@ -669,17 +668,9 @@ class _RequestRow extends ConsumerWidget {
 }
 
 /// When a request was made, as its row says it: `2 h ago`, `yesterday`, the
-/// weekday within the week, then the date.
-String askedAgo(DateTime at, {required DateTime now}) {
-  final local = at.toLocal();
-  final daysAgo = calendarDaysBetween(local, now);
-  if (daysAgo <= 0 || now.difference(local) < const Duration(hours: 12)) {
-    return formatSampleAge(local, now: now);
-  }
-  if (daysAgo == 1) return 'yesterday';
-  if (daysAgo < 7) return weekdayName(local);
-  return formatShortDate(local.toIso8601String(), now: now);
-}
+/// weekday within the week, then the date (`Tue 29 Sep`): [formatDayWords].
+String askedAgo(DateTime at, {required DateTime now}) =>
+    formatDayWords(at, now: now);
 
 class _HeroContentCard extends StatelessWidget {
   final String? heroTag;
