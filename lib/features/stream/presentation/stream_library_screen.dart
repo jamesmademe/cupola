@@ -9,6 +9,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
@@ -425,16 +426,24 @@ class _LibraryGrid extends StatelessWidget {
         // A failure partway down used to truncate the grid silently: no
         // spinner, no message, no way to ask again. The rows already fetched
         // stay; this is the footer under them.
-        newPageErrorIndicatorBuilder: (context) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          child: Center(
-            child: TextButton.icon(
-              onPressed: fetchNextPage,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Could not load more · Retry'),
+        // Worded from the classification like every other section that did
+        // not load, so a refused key reads as one and offers its remedy.
+        newPageErrorIndicatorBuilder: (context) {
+          final error = state.error ?? const StreamLibraryPageFailure();
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: InlineErrorRetry(
+              message: sectionFailureMessage(
+                service,
+                error,
+                consequence: 'the rest of this library did not load',
+              ),
+              error: error,
+              service: service,
+              onRetry: fetchNextPage,
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

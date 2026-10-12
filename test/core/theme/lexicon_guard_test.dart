@@ -559,14 +559,6 @@ const _allowed = <({String file, String literal, String reason})>[
         'with the full set of trailing dots the waiting animation draws',
   ),
   (
-    file: 'lib/features/stream/presentation/stream_library_screen.dart',
-    literal: 'Could not load more · Retry',
-    reason:
-        'the footer of a grid that did load, under the rows already fetched, '
-        'naming the next page: not a screen failing whole, which is what '
-        "the classification's headline is for",
-  ),
-  (
     file: 'lib/features/prowlarr/domain/models/prowlarr_models.dart',
     literal: 'cancelled',
     reason:
