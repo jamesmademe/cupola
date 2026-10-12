@@ -88,7 +88,22 @@ class InlineErrorRetry extends StatelessWidget {
     required this.error,
     this.service,
     this.instanceId,
-  });
+  }) : _flush = false;
+
+  /// For a slot already on the page column (an Overview section's inset body,
+  /// a list padded to the column): no side margin of its own, so its glyph
+  /// lines up with the rows it stands in for instead of a step further in.
+  const InlineErrorRetry.flush({
+    super.key,
+    required this.message,
+    required this.onRetry,
+    required this.error,
+    this.service,
+    this.instanceId,
+  }) : _flush = true;
+
+  /// True for [InlineErrorRetry.flush].
+  final bool _flush;
 
   final String message;
   final VoidCallback onRetry;
@@ -168,8 +183,8 @@ class InlineErrorRetry extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
+      margin: EdgeInsets.symmetric(
+        horizontal: _flush ? 0 : AppSpacing.lg,
         vertical: AppSpacing.sm,
       ),
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),

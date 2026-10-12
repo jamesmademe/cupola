@@ -170,9 +170,10 @@ class _StacksSection extends ConsumerWidget {
         shown: preview.asData?.value.running.length,
       ),
       destination: ServiceTab.stacks,
-      child: AsyncValueWidget<DockgeStacksPreview>(
+      child: AsyncValueWidget<DockgeStacksPreview>.section(
         value: preview,
-        serviceName: 'Dockge',
+        service: ServiceKey.dockge,
+        consequence: 'its stacks are not shown',
         loadingLabel: 'Loading the stacks',
         // The **source**, not the fold. Invalidating this fold alone would
         // rebuild it against the `AsyncError` the stream is still holding and

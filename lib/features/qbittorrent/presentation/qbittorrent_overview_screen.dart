@@ -177,9 +177,10 @@ class _NeedsAttentionSection extends ConsumerWidget {
       // Every fault here is a torrent, and every torrent lives on the Queue
       // tab, so the destination is honest for all of them.
       destination: ServiceTab.queue,
-      child: AsyncValueWidget<List<QbittorrentAttentionItem>>(
+      child: AsyncValueWidget<List<QbittorrentAttentionItem>>.section(
         value: items,
-        serviceName: 'qBittorrent',
+        service: ServiceKey.qbittorrent,
+        consequence: 'what needs attention is not shown',
         loadingLabel: 'Loading what needs attention',
         onRetry: () {
           clearQbittorrentLoginRefusal(ref);
@@ -258,9 +259,10 @@ class _QueueSection extends ConsumerWidget {
                 '${counts.paused} ${StateWord.stopped.inline}',
             ]),
       destination: ServiceTab.queue,
-      child: AsyncValueWidget<List<QbittorrentTransferRow>>(
+      child: AsyncValueWidget<List<QbittorrentTransferRow>>.section(
         value: transfers,
-        serviceName: 'qBittorrent',
+        service: ServiceKey.qbittorrent,
+        consequence: 'its queue is not shown',
         loadingLabel: 'Loading the queue',
         onRetry: () {
           clearQbittorrentLoginRefusal(ref);
@@ -342,9 +344,10 @@ class _CategoriesSection extends ConsumerWidget {
       // category editor; there is no Categories tab on qBittorrent's bar and no
       // write call behind one, and a link named after a tab that does not exist
       // is a promise the app cannot keep.
-      child: AsyncValueWidget<List<QbittorrentCategoryRow>>(
+      child: AsyncValueWidget<List<QbittorrentCategoryRow>>.section(
         value: rows,
-        serviceName: 'qBittorrent',
+        service: ServiceKey.qbittorrent,
+        consequence: 'its categories are not shown',
         loadingLabel: 'Loading categories',
         onRetry: () {
           clearQbittorrentLoginRefusal(ref);
@@ -409,9 +412,10 @@ class _SessionSection extends ConsumerWidget {
       subtitle: 'since qBittorrent started',
       // No link: qBittorrent's bar is Overview, Queue and RSS. There is no
       // Session tab to send anyone to.
-      child: AsyncValueWidget<List<QbittorrentSessionFact>>(
+      child: AsyncValueWidget<List<QbittorrentSessionFact>>.section(
         value: facts,
-        serviceName: 'qBittorrent',
+        service: ServiceKey.qbittorrent,
+        consequence: 'its session figures are not shown',
         loadingLabel: 'Loading the session',
         onRetry: () {
           clearQbittorrentLoginRefusal(ref);

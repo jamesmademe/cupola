@@ -247,7 +247,11 @@ void main() {
     await _pump(tester, failTransfer: true);
 
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so its session figures are not shown."),
+      findsOneWidget,
+    );
     // …and the other three still drew their headings.
     expect(find.byType(SectionHeader), findsNWidgets(4));
   });

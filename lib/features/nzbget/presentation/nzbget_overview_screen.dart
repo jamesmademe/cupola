@@ -159,9 +159,10 @@ class _HistorySection extends ConsumerWidget {
       // two mistakes.
       subtitle: data == null ? 'today · —' : data.subtitle,
       destination: ServiceTab.history,
-      child: AsyncValueWidget<NzbgetHistorySection>(
+      child: AsyncValueWidget<NzbgetHistorySection>.section(
         value: section,
-        serviceName: 'NZBGet',
+        service: ServiceKey.nzbget,
+        consequence: "today's downloads are not shown",
         loadingLabel: "Loading today's downloads",
         onRetry: () => ref.invalidate(nzbgetHistoryProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
@@ -236,9 +237,10 @@ class _QueueSection extends ConsumerWidget {
       title: 'Queue',
       subtitle: data == null ? '—' : data.subtitle,
       destination: ServiceTab.queue,
-      child: AsyncValueWidget<NzbgetQueueSection>(
+      child: AsyncValueWidget<NzbgetQueueSection>.section(
         value: section,
-        serviceName: 'NZBGet',
+        service: ServiceKey.nzbget,
+        consequence: 'its queue is not shown',
         loadingLabel: 'Loading the queue',
         onRetry: () => ref.invalidate(nzbgetQueueProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),

@@ -99,7 +99,11 @@ void main() {
     await _pump(tester, service: _FailingHistoryReadarr());
 
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so today's history is not shown."),
+      findsOneWidget,
+    );
     // …and the other two still drew.
     expect(find.byType(SectionHeader), findsNWidgets(3));
     // Including the resting state, which is reachable now that no standing

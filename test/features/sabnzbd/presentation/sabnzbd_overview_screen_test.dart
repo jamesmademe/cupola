@@ -246,7 +246,11 @@ void main() {
     );
 
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so today's downloads are not shown."),
+      findsOneWidget,
+    );
     // …and the other one still drew.
     expect(find.byType(SectionHeader), findsNWidgets(2));
     expect(find.text('still here'), findsOneWidget);
@@ -259,7 +263,7 @@ void main() {
 
       expect(find.text('Nothing finished today'), findsOneWidget);
       expect(find.text('Nothing in the queue'), findsOneWidget);
-      expect(find.byType(AppErrorState), findsNothing);
+      expect(find.byType(InlineErrorRetry), findsNothing);
     },
   );
 

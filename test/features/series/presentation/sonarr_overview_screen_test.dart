@@ -162,11 +162,15 @@ void main() {
     expect(_subtitleOf(tester, 'Airing this week'), 'next 7 days · —');
     expect(find.text('Nothing airing this week'), findsNothing);
     expect(find.text('0 series'), findsNothing);
+    expect(
+      find.textContaining(', so what is airing this week is not shown.'),
+      findsOneWidget,
+    );
     // And the failure is a failure: the Retry this section documents is
     // reachable, which it was not while the fetch swallowed its own error.
     expect(
       find.descendant(
-        of: find.byType(AppErrorState),
+        of: find.byType(InlineErrorRetry),
         matching: find.text('Retry'),
       ),
       findsWidgets,
@@ -276,7 +280,17 @@ void main() {
     );
 
     // The two failed regions say so in their own slots…
-    expect(find.byType(AppErrorState), findsNWidgets(2));
+    expect(find.byType(InlineErrorRetry), findsNWidgets(2));
+    expect(
+      find.textContaining(
+        ", so the recently downloaded episodes are not shown.",
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(", so today's history is not shown."),
+      findsOneWidget,
+    );
     // …and the other two still drew.
     expect(find.byType(SectionHeader), findsNWidgets(4));
     expect(find.text('Severance'), findsOneWidget);

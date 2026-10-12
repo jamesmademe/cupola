@@ -131,7 +131,7 @@ void main() {
     expect(header.subtitle, '—');
     expect(find.textContaining('0 libraries'), findsNothing);
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
     // …and Now playing above it still drew.
     expect(find.text('Now playing'), findsOneWidget);
   });

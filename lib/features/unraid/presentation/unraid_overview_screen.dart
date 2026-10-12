@@ -166,9 +166,10 @@ class _ArraySection extends ConsumerWidget {
       title: 'Array',
       subtitle: headline.isEmpty ? '—' : headline,
       destination: ServiceTab.array,
-      child: AsyncValueWidget<UnraidArrayDigest>(
+      child: AsyncValueWidget<UnraidArrayDigest>.section(
         value: digest,
-        serviceName: 'Unraid',
+        service: ServiceKey.unraid,
+        consequence: 'the array is not shown',
         loadingLabel: 'Loading the array',
         onRetry: () {
           ref.invalidate(unraidOverviewArrayProvider);
@@ -252,9 +253,10 @@ class _DockerSection extends ConsumerWidget {
       // total this states is the whole population the rows are drawn from.
       subtitle: data == null ? '—' : data.headline,
       destination: ServiceTab.docker,
-      child: AsyncValueWidget<UnraidDockerDigest>(
+      child: AsyncValueWidget<UnraidDockerDigest>.section(
         value: digest,
-        serviceName: 'Unraid',
+        service: ServiceKey.unraid,
+        consequence: 'its containers are not shown',
         loadingLabel: 'Loading the containers',
         onRetry: () {
           ref.invalidate(unraidOverviewDockerProvider);
@@ -337,9 +339,10 @@ class _SystemSection extends ConsumerWidget {
       //
       // No link either. Unraid's bar is Overview, Array, Docker, VMs,
       // Notifications and Shares, and there is no System tab to send anyone to.
-      child: AsyncValueWidget<List<UnraidSystemFact>>(
+      child: AsyncValueWidget<List<UnraidSystemFact>>.section(
         value: facts,
-        serviceName: 'Unraid',
+        service: ServiceKey.unraid,
+        consequence: 'its uptime and release are not shown',
         loadingLabel: 'Loading the system',
         onRetry: () {
           ref.invalidate(unraidOverviewSystemProvider);

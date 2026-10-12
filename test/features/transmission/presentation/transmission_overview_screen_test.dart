@@ -203,7 +203,11 @@ void main() {
     await _pump(tester, failSession: true);
 
     // The Session region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so its session settings are not shown."),
+      findsOneWidget,
+    );
     // …and the other three still drew their headings and their rows.
     expect(find.byType(SectionHeader), findsNWidgets(4));
     expect(find.byType(DownloadQueueTile), findsNWidgets(3));

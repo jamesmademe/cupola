@@ -182,9 +182,10 @@ class _QueueSection extends ConsumerWidget {
               if (data.paused) StateWord.stopped.inline,
             ]),
       destination: ServiceTab.queue,
-      child: AsyncValueWidget<SabnzbdQueueSection>(
+      child: AsyncValueWidget<SabnzbdQueueSection>.section(
         value: section,
-        serviceName: 'SABnzbd',
+        service: ServiceKey.sabnzbd,
+        consequence: 'its queue is not shown',
         loadingLabel: 'Loading the queue',
         onRetry: () => ref.invalidate(sabnzbdQueueProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
@@ -276,9 +277,10 @@ class _HistoryTodaySection extends ConsumerWidget {
                 '${data.failed}${data.dayCovered ? '' : '+'} failed',
             ]),
       destination: ServiceTab.history,
-      child: AsyncValueWidget<SabnzbdHistorySection>(
+      child: AsyncValueWidget<SabnzbdHistorySection>.section(
         value: section,
-        serviceName: 'SABnzbd',
+        service: ServiceKey.sabnzbd,
+        consequence: "today's downloads are not shown",
         loadingLabel: "Loading today's downloads",
         onRetry: () => ref.invalidate(sabnzbdOverviewHistoryPageProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),

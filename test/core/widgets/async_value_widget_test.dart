@@ -11,7 +11,9 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The rule: **nothing the service already said is thrown away because it
 /// stopped answering.**
@@ -185,6 +187,63 @@ void main() {
 
     expect(find.byType(AppErrorState), findsOneWidget);
     expect(find.byType(FaultBand), findsNothing);
+  });
+
+  group('a section of a page', () {
+    Future<void> pumpSection(WidgetTester tester, AsyncValue<String> value) =>
+        tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: AsyncValueWidget<String>.section(
+                value: value,
+                service: ServiceKey.plex,
+                consequence: 'what the server says about itself is not shown',
+                onRetry: () {},
+                data: (data) => Text(data),
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('a cold failure is one line, not the page-sized leaf', (
+      tester,
+    ) async {
+      await pumpSection(
+        tester,
+        AsyncValue<String>.error(
+          const SocketException('connection refused'),
+          StackTrace.empty,
+        ),
+      );
+
+      expect(find.byType(AppErrorState), findsNothing);
+      expect(find.byType(InlineErrorRetry), findsOneWidget);
+      expect(
+        find.textContaining(
+          ', so what the server says about itself is not shown.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a failure over retained data keeps it under a band', (
+      tester,
+    ) async {
+      await pumpSection(tester, _failedOver('Plex Media Server'));
+
+      expect(find.text('Plex Media Server'), findsOneWidget);
+      expect(find.byType(FaultBand), findsOneWidget);
+      expect(find.byType(InlineErrorRetry), findsNothing);
+    });
+  });
+
+  test('lastReadUnderBand keeps the last read only under a band', () {
+    final failed = _failedOver('queue');
+    expect(lastReadUnderBand(failed, banded: true), isA<AsyncData<String>>());
+    expect(lastReadUnderBand(failed, banded: true).value, 'queue');
+    expect(lastReadUnderBand(failed, banded: false).hasError, isTrue);
+    final cold = AsyncValue<String>.error(Exception('x'), StackTrace.empty);
+    expect(lastReadUnderBand(cold, banded: true).hasError, isTrue);
   });
 
   testWidgets('"not configured" still wins over everything', (tester) async {

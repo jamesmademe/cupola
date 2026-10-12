@@ -195,9 +195,10 @@ class _NeedsAttentionSection extends ConsumerWidget {
       // No link: a refused configuration belongs to Proxy hosts and a lapsing
       // certificate to Certificates, and one destination would have to lie
       // about half the rows.
-      child: AsyncValueWidget<List<NpmAttentionItem>>(
+      child: AsyncValueWidget<List<NpmAttentionItem>>.section(
         value: items,
-        serviceName: 'Nginx Proxy Manager',
+        service: ServiceKey.nginxProxyManager,
+        consequence: 'what needs attention is not shown',
         loadingLabel: 'Loading what needs attention',
         onRetry: () {
           ref.invalidate(npmOverviewAttentionProvider);
@@ -270,9 +271,10 @@ class _ProxyHostsSection extends ConsumerWidget {
       // contradicting each other.
       subtitle: npmProxyHostsSubtitle(hosts.asData?.value, report),
       destination: ServiceTab.proxyHosts,
-      child: AsyncValueWidget<List<NpmProxyHost>>(
+      child: AsyncValueWidget<List<NpmProxyHost>>.section(
         value: hosts,
-        serviceName: 'Nginx Proxy Manager',
+        service: ServiceKey.nginxProxyManager,
+        consequence: 'the proxy hosts are not shown',
         loadingLabel: 'Loading proxy hosts',
         onRetry: () => ref.invalidate(npmProxyHostsProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
@@ -342,9 +344,10 @@ class _CertificatesSection extends ConsumerWidget {
       title: 'Certificates',
       subtitle: npmCertificatesSubtitle(certificates.asData?.value, now),
       destination: ServiceTab.certificates,
-      child: AsyncValueWidget<List<NpmCertificate>>(
+      child: AsyncValueWidget<List<NpmCertificate>>.section(
         value: certificates,
-        serviceName: 'Nginx Proxy Manager',
+        service: ServiceKey.nginxProxyManager,
+        consequence: 'the certificates are not shown',
         loadingLabel: 'Loading certificates',
         onRetry: () => ref.invalidate(npmCertificatesProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),

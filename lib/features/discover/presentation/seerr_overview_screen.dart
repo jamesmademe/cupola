@@ -150,9 +150,10 @@ class _DecisionsSection extends ConsumerWidget {
           : '$total${floor ? '+' : ''} '
                 '${total == 1 ? 'request' : 'requests'} waiting',
       destination: ServiceTab.requests,
-      child: AsyncValueWidget<SeerrOverviewSection>(
+      child: AsyncValueWidget<SeerrOverviewSection>.section(
         value: section,
-        serviceName: 'Seerr',
+        service: ServiceKey.seerr,
+        consequence: 'what needs a decision is not shown',
         loadingLabel: 'Loading what needs a decision',
         onRetry: () => ref.invalidate(requestsProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
@@ -224,9 +225,10 @@ class _ProcessingSection extends ConsumerWidget {
       title: 'Processing',
       subtitle: total == null ? '—' : '$total${floor ? '+' : ''}',
       destination: ServiceTab.requests,
-      child: AsyncValueWidget<SeerrOverviewSection>(
+      child: AsyncValueWidget<SeerrOverviewSection>.section(
         value: section,
-        serviceName: 'Seerr',
+        service: ServiceKey.seerr,
+        consequence: 'what is processing is not shown',
         loadingLabel: 'Loading what is processing',
         onRetry: () => ref.invalidate(requestsProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
@@ -289,9 +291,10 @@ class _TrendingSection extends ConsumerWidget {
       // Seerr's `/discover/trending` proxies TMDB's *weekly* list, so the label
       // and the window agree.
       subtitle: 'this week',
-      child: AsyncValueWidget<List<MediaPreview>>(
+      child: AsyncValueWidget<List<MediaPreview>>.bleedSection(
         value: trending,
-        serviceName: 'Seerr',
+        service: ServiceKey.seerr,
+        consequence: 'what is trending is not shown',
         loadingLabel: 'Loading what is trending',
         onRetry: () => ref.invalidate(discoverTrendingProvider),
         skeleton: AppSkeleton.posterRow(height: 138),

@@ -177,9 +177,10 @@ class _NeedsAttentionSection extends ConsumerWidget {
       subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: the fault rows belong to Queue and the backlog row to Wanted,
       // and a single destination would have to lie about one of them.
-      child: AsyncValueWidget<List<LidarrAttentionItem>>(
+      child: AsyncValueWidget<List<LidarrAttentionItem>>.section(
         value: items,
-        serviceName: 'Lidarr',
+        service: ServiceKey.lidarr,
+        consequence: 'what needs attention is not shown',
         loadingLabel: 'Loading what needs attention',
         onRetry: () {
           ref.invalidate(lidarrNeedsAttentionProvider);
@@ -253,9 +254,10 @@ class _RecentlyAddedSection extends ConsumerWidget {
       // is capped the same way, states no figure at all for the same reason.
       subtitle: 'artists',
       destination: ServiceTab.library,
-      child: AsyncValueWidget<List<LidarrArtist>>(
+      child: AsyncValueWidget<List<LidarrArtist>>.bleedSection(
         value: artists,
-        serviceName: 'Lidarr',
+        service: ServiceKey.lidarr,
+        consequence: 'the recently added artists are not shown',
         loadingLabel: 'Loading recently added artists',
         onRetry: () {
           ref.invalidate(lidarrOverviewArtistsProvider);
@@ -416,9 +418,10 @@ class _HistoryTodaySection extends ConsumerWidget {
       title: 'History',
       subtitle: 'today',
       destination: ServiceTab.history,
-      child: AsyncValueWidget<List<LidarrHistoryEntry>>(
+      child: AsyncValueWidget<List<LidarrHistoryEntry>>.section(
         value: entries,
-        serviceName: 'Lidarr',
+        service: ServiceKey.lidarr,
+        consequence: "today's history is not shown",
         loadingLabel: "Loading today's history",
         onRetry: () => ref.invalidate(lidarrHistoryTodayProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
@@ -487,9 +490,10 @@ class _RootFoldersSection extends ConsumerWidget {
       // No link: the board's "Manage" is a settings surface, and Lidarr's bar
       // has no tab that leads there. A link to the nearest tab would be a
       // different promise wearing the right word.
-      child: AsyncValueWidget<List<LidarrRootFolder>>(
+      child: AsyncValueWidget<List<LidarrRootFolder>>.section(
         value: folders,
-        serviceName: 'Lidarr',
+        service: ServiceKey.lidarr,
+        consequence: 'its root folders are not shown',
         loadingLabel: 'Loading root folders',
         onRetry: () => ref.invalidate(lidarrRootFoldersProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 1),

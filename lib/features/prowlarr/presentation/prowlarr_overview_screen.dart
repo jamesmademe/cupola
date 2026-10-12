@@ -133,9 +133,10 @@ class _AttentionSection extends ConsumerWidget {
       // No link: a failing indexer belongs to Indexers and a health check
       // belongs to nowhere on the bar, so one destination would lie about half
       // the rows.
-      child: AsyncValueWidget<ProwlarrOverviewSection>(
+      child: AsyncValueWidget<ProwlarrOverviewSection>.section(
         value: section,
-        serviceName: 'Prowlarr',
+        service: ServiceKey.prowlarr,
+        consequence: 'what needs attention is not shown',
         loadingLabel: 'Loading what needs attention',
         onRetry: () {
           ref.invalidate(prowlarrIndexerStatusProvider);
@@ -180,9 +181,10 @@ class _IndexersSection extends ConsumerWidget {
           ? '—'
           : '$total · by queries, last ${withUnit(prowlarrStatsWindow.inHours, 'h')}',
       destination: ServiceTab.indexers,
-      child: AsyncValueWidget<ProwlarrOverviewSection>(
+      child: AsyncValueWidget<ProwlarrOverviewSection>.section(
         value: section,
-        serviceName: 'Prowlarr',
+        service: ServiceKey.prowlarr,
+        consequence: 'the indexers are not shown',
         loadingLabel: 'Loading indexers',
         onRetry: () {
           ref.invalidate(prowlarrIndexersProvider);
@@ -216,9 +218,10 @@ class _RecentSection extends ConsumerWidget {
       service: ServiceKey.prowlarr,
       title: 'Recent',
       destination: ServiceTab.history,
-      child: AsyncValueWidget<List<ProwlarrOverviewRow>>(
+      child: AsyncValueWidget<List<ProwlarrOverviewRow>>.section(
         value: rows,
-        serviceName: 'Prowlarr',
+        service: ServiceKey.prowlarr,
+        consequence: 'recent indexer activity is not shown',
         loadingLabel: 'Loading recent indexer activity',
         onRetry: () => ref.invalidate(prowlarrRecentHistoryProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),

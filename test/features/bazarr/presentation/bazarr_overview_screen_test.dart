@@ -134,7 +134,11 @@ void main() {
     await _pump(tester, service: _FailingHistoryBazarr());
 
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so its recent subtitle activity is not shown."),
+      findsOneWidget,
+    );
     // …and the other one still drew its heading.
     expect(find.byType(SectionHeader), findsNWidgets(2));
   });
@@ -151,18 +155,18 @@ void main() {
     await _pump(tester, service: service);
 
     expect(service.wantedEpisodesCalls, 1);
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
 
-    // Tapped by its label rather than by its button type: `AppErrorState` uses
-    // `FilledButton.tonalIcon`, whose runtime type is private, and
-    // `find.byType` matches exactly.
+    // Tapped by its label rather than by its button type: the line's verbs
+    // are text buttons whose runtime types are private, and `find.byType`
+    // matches exactly.
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
 
     expect(service.wantedEpisodesCalls, 2);
     // Still failing, so the section stays in its error state rather than
     // flickering to empty.
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
   });
 
   testWidgets('nothing overflows at an accessibility reading size', (

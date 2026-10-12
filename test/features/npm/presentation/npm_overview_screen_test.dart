@@ -262,7 +262,15 @@ void main() {
 
     // The failed regions say so in their own slots: Certificates, and Needs
     // attention, which is folded from both documents…
-    expect(find.byType(AppErrorState), findsNWidgets(2));
+    expect(find.byType(InlineErrorRetry), findsNWidgets(2));
+    expect(
+      find.textContaining(", so the certificates are not shown."),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(", so what needs attention is not shown."),
+      findsOneWidget,
+    );
     // …and all three still drew their headings.
     expect(find.byType(SectionHeader), findsNWidgets(3));
     expect(find.textContaining('jellyfin.lan'), findsOneWidget);
@@ -275,7 +283,7 @@ void main() {
       find.text('Every host is serving and no certificate is due'),
       findsOneWidget,
     );
-    expect(find.byType(AppErrorState), findsNothing);
+    expect(find.byType(InlineErrorRetry), findsNothing);
   });
 
   testWidgets('nothing overflows at an accessibility reading size', (

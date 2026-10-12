@@ -241,7 +241,11 @@ void main() {
     // The stacks region says so in its own slot, under its heading, and the
     // identity and the readouts above it are still drawn.
     expect(find.byType(SectionHeader), findsOneWidget);
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so its stacks are not shown."),
+      findsOneWidget,
+    );
     expect(find.byType(ServiceKpiPeek), findsOneWidget);
   });
 

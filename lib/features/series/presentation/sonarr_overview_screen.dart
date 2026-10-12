@@ -197,9 +197,10 @@ class _AiringSection extends ConsumerWidget {
       subtitle:
           'next $sonarrAiringDays days · ${count == null ? '—' : '$count series'}',
       destination: ServiceTab.calendar,
-      child: AsyncValueWidget<SonarrAiringWeek>(
+      child: AsyncValueWidget<SonarrAiringWeek>.section(
         value: week,
-        serviceName: 'Sonarr',
+        service: ServiceKey.sonarr,
+        consequence: 'what is airing this week is not shown',
         loadingLabel: 'Loading what is airing this week',
         onRetry: () {
           ref.invalidate(sonarrAiringWeekProvider);
@@ -293,9 +294,10 @@ class _NeedsAttentionSection extends ConsumerWidget {
       // No link: every row here belongs to a different tab: a stalled download
       // to Queue, a backlog to Wanted, and a single destination would have to
       // lie about the rest.
-      child: AsyncValueWidget<List<SonarrAttentionItem>>(
+      child: AsyncValueWidget<List<SonarrAttentionItem>>.section(
         value: items,
-        serviceName: 'Sonarr',
+        service: ServiceKey.sonarr,
+        consequence: 'what needs attention is not shown',
         loadingLabel: 'Loading what needs attention',
         onRetry: () {
           ref.invalidate(sonarrNeedsAttentionProvider);
@@ -364,9 +366,10 @@ class _RecentlyDownloadedSection extends ConsumerWidget {
       // episodes that arrived.
       subtitle: 'latest imports',
       destination: ServiceTab.library,
-      child: AsyncValueWidget<List<SonarrDownloadedEpisode>>(
+      child: AsyncValueWidget<List<SonarrDownloadedEpisode>>.bleedSection(
         value: episodes,
-        serviceName: 'Sonarr',
+        service: ServiceKey.sonarr,
+        consequence: 'the recently downloaded episodes are not shown',
         loadingLabel: 'Loading recently downloaded episodes',
         onRetry: () {
           ref.invalidate(sonarrRecentlyDownloadedProvider);
@@ -521,9 +524,10 @@ class _HistoryTodaySection extends ConsumerWidget {
       title: 'History',
       subtitle: 'today',
       destination: ServiceTab.history,
-      child: AsyncValueWidget<List<SonarrHistoryEntry>>(
+      child: AsyncValueWidget<List<SonarrHistoryEntry>>.section(
         value: entries,
-        serviceName: 'Sonarr',
+        service: ServiceKey.sonarr,
+        consequence: "today's history is not shown",
         loadingLabel: "Loading today's history",
         onRetry: () {
           ref.invalidate(sonarrHistoryTodayProvider);

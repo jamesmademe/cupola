@@ -190,9 +190,10 @@ class _ComingUpSection extends ConsumerWidget {
           'next $radarrComingUpDays days · '
           '${count == null ? '—' : '$count ${count == 1 ? 'release' : 'releases'}'}',
       destination: ServiceTab.calendar,
-      child: AsyncValueWidget<List<RadarrUpcomingRelease>>(
+      child: AsyncValueWidget<List<RadarrUpcomingRelease>>.section(
         value: releases,
-        serviceName: 'Radarr',
+        service: ServiceKey.radarr,
+        consequence: 'what is coming up is not shown',
         loadingLabel: 'Loading what is coming up',
         onRetry: () {
           ref.invalidate(radarrOverviewMoviesProvider);
@@ -279,9 +280,10 @@ class _NeedsAttentionSection extends ConsumerWidget {
       subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: every row here belongs to a different tab, and a single
       // destination would have to lie about four of them.
-      child: AsyncValueWidget<List<RadarrAttentionItem>>(
+      child: AsyncValueWidget<List<RadarrAttentionItem>>.section(
         value: items,
-        serviceName: 'Radarr',
+        service: ServiceKey.radarr,
+        consequence: 'what needs attention is not shown',
         loadingLabel: 'Loading what needs attention',
         onRetry: () {
           ref.invalidate(radarrNeedsAttentionProvider);
@@ -343,9 +345,10 @@ class _RecentlyAddedSection extends ConsumerWidget {
       service: ServiceKey.radarr,
       title: 'Recently added',
       destination: ServiceTab.library,
-      child: AsyncValueWidget<List<RadarrMovie>>(
+      child: AsyncValueWidget<List<RadarrMovie>>.bleedSection(
         value: movies,
-        serviceName: 'Radarr',
+        service: ServiceKey.radarr,
+        consequence: 'the recently added movies are not shown',
         loadingLabel: 'Loading recently added movies',
         onRetry: () {
           ref.invalidate(radarrOverviewMoviesProvider);
@@ -497,9 +500,10 @@ class _HistoryTodaySection extends ConsumerWidget {
       title: 'History',
       subtitle: 'today',
       destination: ServiceTab.history,
-      child: AsyncValueWidget<List<RadarrHistoryEntry>>(
+      child: AsyncValueWidget<List<RadarrHistoryEntry>>.section(
         value: entries,
-        serviceName: 'Radarr',
+        service: ServiceKey.radarr,
+        consequence: "today's history is not shown",
         loadingLabel: "Loading today's history",
         onRetry: () => ref.invalidate(radarrHistoryTodayProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),

@@ -152,7 +152,11 @@ void main() {
 
     expect(_subtitleOf(tester, 'History'), 'today · —');
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so today's downloads are not shown."),
+      findsOneWidget,
+    );
     // …and the other one still drew its heading.
     expect(find.byType(SectionHeader), findsNWidgets(2));
   });

@@ -89,7 +89,11 @@ void main() {
     );
 
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so what needs attention is not shown."),
+      findsOneWidget,
+    );
 
     final headers = tester
         .widgetList<SectionHeader>(find.byType(SectionHeader))

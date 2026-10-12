@@ -152,9 +152,10 @@ class _TransferringSection extends ConsumerWidget {
       // filtering belongs to the Queue tab, and a pill on a five-row sample
       // either filters five rows (useless) or silently means something
       // different from the same pill one tab over (worse). The link goes there.
-      child: AsyncValueWidget<List<TransmissionTorrent>>(
+      child: AsyncValueWidget<List<TransmissionTorrent>>.bleedSection(
         value: rows,
-        serviceName: 'Transmission',
+        service: ServiceKey.transmission,
+        consequence: 'what it is transferring is not shown',
         loadingLabel: 'Loading what Transmission is transferring',
         onRetry: () => ref.invalidate(transmissionTorrentsProvider),
         skeleton: const Padding(
@@ -200,9 +201,10 @@ class _LabelsSection extends ConsumerWidget {
       title: 'Labels',
       subtitle: count == null ? '—' : '$count',
       destination: ServiceTab.labels,
-      child: AsyncValueWidget<List<TransmissionLabelTally>>(
+      child: AsyncValueWidget<List<TransmissionLabelTally>>.section(
         value: labels,
-        serviceName: 'Transmission',
+        service: ServiceKey.transmission,
+        consequence: 'its labels are not shown',
         loadingLabel: 'Loading Transmission labels',
         onRetry: () => ref.invalidate(transmissionTorrentsProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
@@ -268,9 +270,10 @@ class _SessionSection extends ConsumerWidget {
       // `transmission_overview_provider.dart` for the three rows that went with
       // it.
       destination: ServiceTab.session,
-      child: AsyncValueWidget<List<TransmissionSessionFact>>(
+      child: AsyncValueWidget<List<TransmissionSessionFact>>.section(
         value: facts,
-        serviceName: 'Transmission',
+        service: ServiceKey.transmission,
+        consequence: 'its session settings are not shown',
         loadingLabel: 'Loading Transmission session settings',
         onRetry: () {
           ref.invalidate(transmissionSessionProvider);
@@ -338,9 +341,10 @@ class _FinishedTodaySection extends ConsumerWidget {
       // of its own, only the torrents it still holds, which is exactly why this
       // region is derived from `doneDate` rather than fetched. A link naming a
       // tab that does not exist is a promise the app cannot keep.
-      child: AsyncValueWidget<List<TransmissionFinishedItem>>(
+      child: AsyncValueWidget<List<TransmissionFinishedItem>>.section(
         value: finished,
-        serviceName: 'Transmission',
+        service: ServiceKey.transmission,
+        consequence: 'what finished today is not shown',
         loadingLabel: 'Loading what finished today',
         onRetry: () => ref.invalidate(transmissionTorrentsProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),

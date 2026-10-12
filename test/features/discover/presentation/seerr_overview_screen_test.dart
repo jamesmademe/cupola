@@ -112,7 +112,11 @@ void main() {
     await _pump(tester, service: _FailingTrendingSeerr());
 
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so what is trending is not shown."),
+      findsOneWidget,
+    );
     // …and the other two still drew their headings.
     expect(find.byType(SectionHeader), findsNWidgets(3));
   });
@@ -198,7 +202,7 @@ void main() {
       'waits', (tester) async {
     await _pump(tester, service: _FailingRequestsSeerr());
 
-    expect(find.byType(AppErrorState), findsWidgets);
+    expect(find.byType(InlineErrorRetry), findsWidgets);
     expect(find.text('Nothing waiting on you'), findsNothing);
   });
 

@@ -160,9 +160,10 @@ class _NeedsAttentionSection extends ConsumerWidget {
       // No link: these rows belong to different tabs: Queue for a stalled
       // import, Wanted for the backlog, and a single destination would have to
       // lie about one of the two.
-      child: AsyncValueWidget<List<ReadarrAttentionItem>>(
+      child: AsyncValueWidget<List<ReadarrAttentionItem>>.section(
         value: items,
-        serviceName: 'Readarr',
+        service: ServiceKey.readarr,
+        consequence: 'what needs attention is not shown',
         loadingLabel: 'Loading what needs attention',
         onRetry: () {
           ref.invalidate(readarrNeedsAttentionProvider);
@@ -253,9 +254,10 @@ class _RootFolderSection extends ConsumerWidget {
       // page rather than one of its tabs, and `ServiceTab` has no settings
       // member because settings is not a tab. No link, rather than a link that
       // lands somewhere else.
-      child: AsyncValueWidget<List<ReadarrRootFolder>>(
+      child: AsyncValueWidget<List<ReadarrRootFolder>>.section(
         value: folders,
-        serviceName: 'Readarr',
+        service: ServiceKey.readarr,
+        consequence: 'its root folders are not shown',
         loadingLabel: 'Loading root folders',
         onRetry: () => ref.invalidate(readarrRootFoldersProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 1),
@@ -315,9 +317,10 @@ class _HistoryTodaySection extends ConsumerWidget {
       title: 'History',
       subtitle: 'today',
       destination: ServiceTab.history,
-      child: AsyncValueWidget<List<ReadarrHistoryEntry>>(
+      child: AsyncValueWidget<List<ReadarrHistoryEntry>>.section(
         value: entries,
-        serviceName: 'Readarr',
+        service: ServiceKey.readarr,
+        consequence: "today's history is not shown",
         loadingLabel: "Loading today's history",
         onRetry: () => ref.invalidate(readarrHistoryTodayProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),

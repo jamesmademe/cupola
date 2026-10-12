@@ -235,9 +235,10 @@ class _OnDeckSection extends ConsumerWidget {
       service: ServiceKey.plex,
       title: 'On deck',
       destination: ServiceTab.onDeck,
-      child: AsyncValueWidget<List<StreamItem>>(
+      child: AsyncValueWidget<List<StreamItem>>.bleedSection(
         value: items,
-        serviceName: 'Plex',
+        service: ServiceKey.plex,
+        consequence: 'what is on deck is not shown',
         loadingLabel: 'Loading what is on deck',
         onRetry: () => ref.invalidate(plexOnDeckProvider),
         skeleton: AppSkeleton.posterRow(height: 138),
@@ -438,9 +439,10 @@ class _LibrariesSection extends ConsumerWidget {
       subtitle:
           streamLibrariesCensus(libraries: libraries.asData?.value) ?? '—',
       destination: ServiceTab.libraries,
-      child: AsyncValueWidget<List<StreamLibrary>>(
+      child: AsyncValueWidget<List<StreamLibrary>>.section(
         value: libraries,
-        serviceName: service.title,
+        service: service,
+        consequence: 'its libraries are not shown',
         loadingLabel: 'Loading the libraries',
         onRetry: () => ref.invalidate(
           service == ServiceKey.jellyfin
@@ -525,9 +527,10 @@ class _ServerSection extends ConsumerWidget {
       // A Plex that did not answer is the failure, in its words and tone: the
       // sheet used to come back null for any failure, and this section read
       // a dark server as one that "did not describe itself".
-      child: AsyncValueWidget<PlexServerCapabilities>(
+      child: AsyncValueWidget<PlexServerCapabilities>.section(
         value: capabilities,
-        serviceName: 'Plex',
+        service: ServiceKey.plex,
+        consequence: 'what the server says about itself is not shown',
         loadingLabel: 'Loading what the server says about itself',
         onRetry: () => ref.invalidate(plexCapabilitiesProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),

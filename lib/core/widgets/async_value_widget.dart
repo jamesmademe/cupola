@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A widget that handles AsyncValue states with premium, consistent styling.
 ///
@@ -14,7 +17,8 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// - error, with a retained previous value → the data it had, at full ink,
 ///              under a [FaultBand.unreachable] (see below), also while the
 ///              provider is reloading or retrying over that error
-/// - error    → [AppErrorState] with a retry button
+/// - error    → [AppErrorState] with a retry button, or, for a
+///              [AsyncValueWidget.section], one [InlineErrorRetry] line
 ///              (the "not configured" case still routes to [NotConfiguredPlaceholder])
 /// - error from a client closed under the read ([isClosedClientFailure]) →
 ///              not an error: the retained value, or the loading state, while
@@ -71,6 +75,15 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// from it blanked the figures, for an answer that was on screen a moment
 /// before. Whatever there is stays until the new answer replaces it, as it
 /// does under a refresh.
+/// [value] as a page under a [FaultBand] draws it: over a failure that kept
+/// the last read, that read as plain data, so the rows stand at full ink under
+/// the band that already says what failed, never a second failure line or a
+/// skeleton. Unchanged when the page is not [banded], or kept nothing.
+AsyncValue<T> lastReadUnderBand<T>(
+  AsyncValue<T> value, {
+  required bool banded,
+}) => banded && value.hasValue ? AsyncData(value.requireValue) : value;
+
 class AsyncValueWidget<T> extends StatelessWidget {
   final AsyncValue<T> value;
   final Widget Function(T data) data;
@@ -104,6 +117,22 @@ class AsyncValueWidget<T> extends StatelessWidget {
   /// Defaults to `'Loading <serviceName>'`.
   final String? loadingLabel;
 
+  /// Whose read this is, for a [AsyncValueWidget.section]'s line and its
+  /// remedy. Null on the page variant, which names the service by
+  /// [serviceName] alone.
+  final ServiceKey? service;
+
+  /// What the section is without, for a [AsyncValueWidget.section]'s line:
+  /// the second half of `Plex answered with an error, so <consequence>.`
+  final String? consequence;
+
+  /// The connection the read went to, when the section knows it.
+  final String? instanceId;
+
+  /// True for [AsyncValueWidget.bleedSection]: the body runs to the window
+  /// edge, so the failure line keeps its own margin to reach the column.
+  final bool _bleeds;
+
   const AsyncValueWidget({
     super.key,
     required this.value,
@@ -115,7 +144,57 @@ class AsyncValueWidget<T> extends StatelessWidget {
     this.isEmpty,
     this.emptyBuilder,
     this.loadingLabel,
-  });
+  }) : service = null,
+       consequence = null,
+       instanceId = null,
+       _bleeds = false;
+
+  /// One region of a page whose other regions stand: a section of an
+  /// Overview, under a header that already names it.
+  ///
+  /// A cold failure is one line in the slot the rows would fill
+  /// ([InlineErrorRetry], worded by [sectionFailureMessage]), never the
+  /// page-sized [AppErrorState]: a big glyph, a headline and a centred
+  /// remedy inside a section read as the whole page failing, under a header
+  /// that is still standing. Every other state is the page variant's.
+  ///
+  /// For a body already inset to the page column (`ServiceOverviewSection`):
+  /// the line sits flush on it. A body that bleeds to the window edge is
+  /// [AsyncValueWidget.bleedSection].
+  AsyncValueWidget.section({
+    super.key,
+    required this.value,
+    required this.data,
+    required ServiceKey this.service,
+    required String this.consequence,
+    required this.onRetry,
+    this.instanceId,
+    this.skeleton,
+    this.isEmpty,
+    this.emptyBuilder,
+    this.loadingLabel,
+  }) : serviceName = service.title,
+       loadingWidget = null,
+       _bleeds = false;
+
+  /// [AsyncValueWidget.section] for a body that runs to the window edge (a
+  /// poster rail under `ServiceOverviewSection.bleed`): the failure line keeps
+  /// its own margin, so it still starts on the page column.
+  AsyncValueWidget.bleedSection({
+    super.key,
+    required this.value,
+    required this.data,
+    required ServiceKey this.service,
+    required String this.consequence,
+    required this.onRetry,
+    this.instanceId,
+    this.skeleton,
+    this.isEmpty,
+    this.emptyBuilder,
+    this.loadingLabel,
+  }) : serviceName = service.title,
+       loadingWidget = null,
+       _bleeds = true;
 
   Widget _data(T value) {
     if (isEmpty != null && isEmpty!(value) && emptyBuilder != null) {
@@ -197,6 +276,29 @@ class AsyncValueWidget<T> extends StatelessWidget {
               Flexible(child: data(lastKnown)),
             ],
           );
+        }
+
+        if (service case final section?) {
+          final message = sectionFailureMessage(
+            section,
+            e,
+            consequence: consequence!,
+          );
+          return _bleeds
+              ? InlineErrorRetry(
+                  message: message,
+                  error: e,
+                  service: section,
+                  instanceId: instanceId,
+                  onRetry: onRetry,
+                )
+              : InlineErrorRetry.flush(
+                  message: message,
+                  error: e,
+                  service: section,
+                  instanceId: instanceId,
+                  onRetry: onRetry,
+                );
         }
 
         // The same name the loading and not-configured states use, so a region

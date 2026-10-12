@@ -208,7 +208,11 @@ void main() {
     await _pump(tester, failDocker: true);
 
     // The failed region says so in its own slot…
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
+    expect(
+      find.textContaining(", so its containers are not shown."),
+      findsOneWidget,
+    );
     // …and the other two still drew their headings.
     expect(find.byType(SectionHeader), findsNWidgets(3));
   });

@@ -121,9 +121,10 @@ class _WantedSection extends ConsumerWidget {
       // Bazarr's wanted rows carry no date, so "oldest 8 days" cannot be said.
       subtitle: total == null ? '—' : '$total',
       destination: ServiceTab.wanted,
-      child: AsyncValueWidget<BazarrOverviewSection>(
+      child: AsyncValueWidget<BazarrOverviewSection>.section(
         value: section,
-        serviceName: 'Bazarr',
+        service: ServiceKey.bazarr,
+        consequence: 'its wanted subtitles are not shown',
         loadingLabel: 'Loading wanted subtitles',
         onRetry: () {
           ref.invalidate(bazarrDashboardWantedProvider);
@@ -164,9 +165,10 @@ class _HistorySection extends ConsumerWidget {
       service: ServiceKey.bazarr,
       title: 'History',
       destination: ServiceTab.history,
-      child: AsyncValueWidget<List<BazarrOverviewRow>>(
+      child: AsyncValueWidget<List<BazarrOverviewRow>>.section(
         value: rows,
-        serviceName: 'Bazarr',
+        service: ServiceKey.bazarr,
+        consequence: 'its recent subtitle activity is not shown',
         loadingLabel: 'Loading recent subtitle activity',
         onRetry: () => ref.invalidate(bazarrDashboardHistoryProvider),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
