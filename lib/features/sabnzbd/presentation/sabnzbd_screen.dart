@@ -7,6 +7,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/status/silence_age.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -406,6 +407,10 @@ class _QueueTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return DownloadQueueTile(
       title: slot.filename,
+      // The app's word for the state, never SABnzbd's raw `Paused`.
+      subtitleLead: slot.status.trim().isEmpty
+          ? null
+          : capitalizeFirst(sabnzbdStatusLabel(slot.status)),
       // `1.2 GB left of 3.4 GB`, not the bare remainder this row used to
       // print. Remaining alone reads identically at 30% and at 95%, which is
       // the one thing a queue row is looked at to tell apart, and the bare
@@ -413,7 +418,6 @@ class _QueueTile extends ConsumerWidget {
       // whole when the slot carried no total; see
       // `SabnzbdQueueSlot.sizeProgressLabel`.
       subtitle: <String>[
-        if (slot.status.isNotEmpty) slot.status,
         // SABnzbd's `0:12:00`, as every span in the app reads: `12 min`.
         ?sabnzbdEtaLabel(sabnzbdParseTimeLeft(slot.timeLeft)),
         slot.sizeProgressLabel,

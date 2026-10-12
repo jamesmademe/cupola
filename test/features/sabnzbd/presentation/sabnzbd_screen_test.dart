@@ -52,10 +52,11 @@ SabnzbdQueueSlot _slot({
   double? mb,
   String id = '1',
   String filename = 'Dune.Part.Two.2024.2160p',
+  String status = 'Downloading',
 }) => SabnzbdQueueSlot(
   nzoId: 'SABnzbd_nzo_$id',
   filename: filename,
-  status: 'Downloading',
+  status: status,
   percentage: 50,
   category: 'movies',
   timeLeft: '0:12:30',
@@ -282,6 +283,37 @@ void main() {
 
     expect(
       find.text('Downloading · 12\u00A0min · 1.0\u00A0GB left of 4.0\u00A0GB'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a job someone paused reads the app\'s word, Stopped', (
+    tester,
+  ) async {
+    // SABnzbd says `Paused`, a word the brand book bans: the app's word for a
+    // job stopped on purpose is `Stopped`, as the Overview and NZBGet say.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _configured),
+          ..._ambient(),
+          sabnzbdQueueProvider.overrideWith(
+            (ref) async => _queue(
+              slots: [_slot(mbLeft: 1024, mb: 4096, status: 'Paused')],
+            ),
+          ),
+          sabnzbdCategoriesProvider.overrideWith(
+            (ref) async => const <String>[],
+          ),
+        ],
+        child: const MaterialApp(home: SabnzbdScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Paused'), findsNothing);
+    expect(
+      find.text('Stopped · 12\u00A0min · 1.0\u00A0GB left of 4.0\u00A0GB'),
       findsOneWidget,
     );
   });
@@ -577,12 +609,13 @@ void main() {
         expect(find.byType(FaultBand), findsOneWidget);
         expect(find.text('Dune.Part.Two.2024.2160p'), findsOneWidget);
         expect(find.textContaining(eta), findsNothing);
-        expect(find.text('as of 6\u00A0min ago'), findsOneWidget);
+        // The state stays: it is still what SABnzbd last said.
+        expect(find.text('Downloading · as of 6\u00A0min ago'), findsOneWidget);
 
         // And the age moves with the minutes.
         now = now.add(const Duration(minutes: 1));
         await tester.pump(const Duration(minutes: 1));
-        expect(find.text('as of 7\u00A0min ago'), findsOneWidget);
+        expect(find.text('Downloading · as of 7\u00A0min ago'), findsOneWidget);
 
         // Back: the countdown returns, the age goes, and so does the clock.
         container.read(probeDown.notifier).state = false;

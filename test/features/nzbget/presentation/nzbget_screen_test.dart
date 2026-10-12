@@ -55,14 +55,15 @@ List<Override> _ambient({
   ),
 ];
 
-NzbgetGroup _group(int id) => NzbgetGroup.fromJson({
-  'NZBID': id,
-  'NZBName': 'Job.$id',
-  'Status': 'DOWNLOADING',
-  'Category': 'tv',
-  'FileSizeMB': 4800,
-  'RemainingSizeMB': 2400,
-});
+NzbgetGroup _group(int id, {String status = 'DOWNLOADING'}) =>
+    NzbgetGroup.fromJson({
+      'NZBID': id,
+      'NZBName': 'Job.$id',
+      'Status': status,
+      'Category': 'tv',
+      'FileSizeMB': 4800,
+      'RemainingSizeMB': 2400,
+    });
 
 const _status = NzbgetStatus(
   downloadRateBytes: 0,
@@ -215,6 +216,38 @@ void main() {
       expect(nzbgetQueueCountLabel(8), '8 jobs');
     });
 
+    testWidgets('a row says its stage in the app\'s words, never NZBGet\'s', (
+      tester,
+    ) async {
+      // NZBGet answers `DOWNLOADING`, `PAUSED`, `PP_QUEUED`: shouted, and the
+      // middle one a word the brand book bans. The row says what the Overview
+      // says, in sentence case where it heads the line.
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(
+              queue: [
+                _group(1),
+                _group(2, status: 'PAUSED'),
+                _group(3, status: 'PP_QUEUED'),
+              ],
+            ),
+            nzbgetStatusProvider.overrideWith((ref) async => _status),
+          ],
+          child: const MaterialApp(home: NzbgetScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('DOWNLOADING'), findsNothing);
+      expect(find.textContaining('PAUSED'), findsNothing);
+      expect(find.textContaining('Downloading · tv · '), findsOneWidget);
+      expect(find.textContaining('Stopped · tv · '), findsOneWidget);
+      expect(find.textContaining('Post-processing · tv · '), findsOneWidget);
+    });
+
     testWidgets('every group is a reachable row, and the header counts them', (
       tester,
     ) async {
@@ -281,7 +314,9 @@ void main() {
       ServiceKey.nzbget,
       _configured.primaryOf(ServiceKey.nzbget)!.id,
     );
-    const counting = 'DOWNLOADING';
+    // The remaining size: the figure that stops counting. The state and the
+    // category before it stay under the band.
+    const counting = '2.3\u00A0GB';
     final probeDown = StateProvider<bool>((ref) => false);
     late DateTime now;
 
@@ -355,12 +390,18 @@ void main() {
       expect(find.byType(FaultBand), findsOneWidget);
       expect(find.text('Job.1'), findsOneWidget);
       expect(find.textContaining(counting), findsNothing);
-      expect(find.text('as of 6\u00A0min ago'), findsOneWidget);
+      expect(
+        find.text('Downloading · tv · as of 6\u00A0min ago'),
+        findsOneWidget,
+      );
 
       // And the age moves with the minutes.
       now = now.add(const Duration(minutes: 1));
       await tester.pump(const Duration(minutes: 1));
-      expect(find.text('as of 7\u00A0min ago'), findsOneWidget);
+      expect(
+        find.text('Downloading · tv · as of 7\u00A0min ago'),
+        findsOneWidget,
+      );
 
       // Back: the countdown returns, the age goes, and so does the clock.
       container.read(probeDown.notifier).state = false;

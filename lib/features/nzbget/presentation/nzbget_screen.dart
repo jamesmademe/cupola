@@ -7,9 +7,11 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/status/silence_age.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_actions.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_overview_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -351,17 +353,18 @@ class _QueueTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return DownloadQueueTile(
       title: group.name,
-      subtitle: <String>[
-        if (group.status.isNotEmpty) group.status,
+      // The stage in the Overview's words (`Downloading`, `Stopped`,
+      // `Par-check`), never NZBGet's raw `PAUSED` or `PP_QUEUED`.
+      subtitleLead: <String>[
+        capitalizeFirst(nzbgetGroupStageLabel(group.status)),
         if (group.category.isNotEmpty) group.category,
-        // "progress unknown" rather than "— left": the em dash alone reads as
-        // a missing size, and what is actually missing is the whole
-        // measurement. It is also the line that contradicts the `0%` below.
-        if (group.percentage == null)
-          'progress unknown'
-        else
-          group.remainingLabel,
       ].join(' · '),
+      // "progress unknown" rather than "— left": the em dash alone reads as a
+      // missing size, and what is actually missing is the whole measurement.
+      // It is also the line that contradicts the `0%` below.
+      subtitle: group.percentage == null
+          ? 'progress unknown'
+          : group.remainingLabel,
       // Null when NZBGet reported no size or no remaining size, so the bar is
       // simply not drawn. That is the fix: the old `0` default computed a
       // full bar for a job nobody measured.

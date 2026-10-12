@@ -151,10 +151,12 @@ StatusTone sabnzbdStatusTone(String status) {
 ///
 /// Lower case because it sits in a dotted detail line beside other lower-case
 /// facts (`downloading · 15.2 GB left · movies`), and a stray `Downloading`
-/// there reads as the start of a new sentence.
+/// there reads as the start of a new sentence. SABnzbd's `Paused` is the app's
+/// `stopped`, as NZBGet's is: someone stopped the job on purpose.
 String sabnzbdStatusLabel(String status) {
-  final trimmed = status.trim();
-  return trimmed.isEmpty ? 'unknown' : trimmed.toLowerCase();
+  final word = status.trim().toLowerCase();
+  if (word.isEmpty) return 'unknown';
+  return word == 'paused' ? StateWord.stopped.inline : word;
 }
 
 // ─── The ETA ────────────────────────────────────────────────────────────────

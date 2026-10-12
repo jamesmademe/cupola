@@ -369,6 +369,39 @@ void main() {
       expect(bar.valueColor!.value, isNot(AppColors.sabnzbd));
     });
 
+    testWidgets('a Usenet row keeps its state before the age', (tester) async {
+      // The Usenet pair has no chip: its state heads the second line, and it
+      // is still what the server last said. Only the figures that count down
+      // give way to the age; the torrent rows keep their chip the same way.
+      Future<void> pumpUsenet({Duration? sampleAge}) => tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DownloadQueueTile(
+              title: 'Metropolis.1927.1080p',
+              subtitleLead: 'Downloading · movies',
+              subtitle: '12\u00A0min · 1.2\u00A0GB left',
+              progress: 0.65,
+              percentage: 65,
+              accent: AppColors.sabnzbd,
+              sampleAge: sampleAge,
+            ),
+          ),
+        ),
+      );
+
+      await pumpUsenet();
+      expect(
+        find.text('Downloading · movies · 12\u00A0min · 1.2\u00A0GB left'),
+        findsOneWidget,
+      );
+
+      await pumpUsenet(sampleAge: const Duration(minutes: 6));
+      expect(
+        find.text('Downloading · movies · as of 6\u00A0min ago'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('the age reaches the screen reader too', (tester) async {
       final handle = tester.ensureSemantics();
       await pump(tester, sampleAge: const Duration(minutes: 4));

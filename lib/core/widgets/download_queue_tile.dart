@@ -38,6 +38,7 @@ class DownloadQueueTile extends StatelessWidget {
     super.key,
     required this.title,
     required this.subtitle,
+    this.subtitleLead,
     required this.progress,
     required this.percentage,
     required this.accent,
@@ -53,8 +54,20 @@ class DownloadQueueTile extends StatelessWidget {
 
   final String title;
 
-  /// The counting-down line: status, category/ETA and remaining size.
+  /// The counting-down figures of the second line: ETA and remaining size, or
+  /// the ratio of a torrent that is done. A stale sample replaces them (see
+  /// [sampleAge]).
   final String subtitle;
+
+  /// The head of the second line that a stale sample does not falsify: the
+  /// job's state, and NZBGet's category, on the Usenet pair, which carry no
+  /// chip.
+  ///
+  /// Printed as `lead · figures`, and kept when [sampleAge] trades the figures
+  /// for the age: *Downloading · as of 6 min ago*. Without it a stale Usenet
+  /// row lost its state with its ETA, while a torrent row kept its chip. Null
+  /// on the torrent clients, whose state is the chip.
+  final String? subtitleLead;
 
   /// 0..1, for the bar, or **null** for a job with no meaningful bar to draw.
   ///
@@ -332,11 +345,14 @@ class DownloadQueueTile extends StatelessWidget {
     );
   }
 
-  /// What the second line actually prints: the counting-down figures, or the
-  /// age that replaces them once they have stopped counting.
+  /// What the second line actually prints: the lead, then the counting-down
+  /// figures or the age that replaces them once they have stopped counting.
   String get _subtitleLine {
     final age = sampleAge;
-    return age == null ? subtitle : 'as of ${formatDurationAge(age)}';
+    return [
+      ?subtitleLead,
+      age == null ? subtitle : 'as of ${formatDurationAge(age)}',
+    ].where((part) => part.isNotEmpty).join(' · ');
   }
 
   /// The row as one sentence, in the order a person would say it.

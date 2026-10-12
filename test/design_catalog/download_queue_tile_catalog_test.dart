@@ -203,21 +203,38 @@ void main() {
       ),
       CatalogScene(
         'Stale (sampleAge set) · the time left becomes the sample age and the '
-        'bar drains to neutral at its last position',
-        (_) => DownloadQueueTile(
-          title: 'Nosferatu.1922.1080p.BluRay.x264-GROUP',
-          subtitle: '9.0\u00A0GB · 12\u00A0min',
-          progress: 0.63,
-          percentage: 63,
-          accent: ServiceKey.qbittorrent.accent,
-          statusLabel: 'Downloading',
-          statusTone: StatusTone.info,
-          metrics: const [
-            DownloadQueueMetric(label: '↓ 25.0 MB/s', accented: true),
-          ],
-          sampleAge: const Duration(minutes: 6),
-          onTap: _noop,
-        ),
+        'bar drains to neutral at its last position; a Usenet row keeps its '
+        'state before the age (subtitleLead)',
+        (_) => _column([
+          DownloadQueueTile(
+            title: 'Nosferatu.1922.1080p.BluRay.x264-GROUP',
+            subtitle: '9.0\u00A0GB · 12\u00A0min',
+            progress: 0.63,
+            percentage: 63,
+            accent: ServiceKey.qbittorrent.accent,
+            statusLabel: 'Downloading',
+            statusTone: StatusTone.info,
+            metrics: const [
+              DownloadQueueMetric(label: '↓ 25.0 MB/s', accented: true),
+            ],
+            sampleAge: const Duration(minutes: 6),
+            onTap: _noop,
+          ),
+          DownloadQueueTile(
+            title: 'Metropolis.1927.1080p.BluRay.x264-GROUP',
+            subtitleLead: 'Downloading',
+            subtitle: '12\u00A0min · 1.2\u00A0GB left of 3.4\u00A0GB',
+            progress: 0.65,
+            percentage: 65,
+            accent: ServiceKey.sabnzbd.accent,
+            sampleAge: const Duration(minutes: 6),
+            actions: DownloadQueueActionsMenu(
+              paused: false,
+              subject: 'Metropolis.1927.1080p.BluRay.x264-GROUP',
+              onCommand: (_) {},
+            ),
+          ),
+        ]),
         width: 390,
       ),
       CatalogScene(
@@ -226,8 +243,8 @@ void main() {
         (_) => _column([
           DownloadQueueTile(
             title: 'Metropolis.1927.1080p.BluRay.x264-GROUP',
-            subtitle:
-                'Downloading · 12\u00A0min · 1.2\u00A0GB left of 3.4\u00A0GB',
+            subtitleLead: 'Downloading',
+            subtitle: '12\u00A0min · 1.2\u00A0GB left of 3.4\u00A0GB',
             progress: 0.65,
             percentage: 65,
             accent: ServiceKey.sabnzbd.accent,
@@ -239,7 +256,8 @@ void main() {
           ),
           DownloadQueueTile(
             title: 'Sherlock.Jr.1924.720p.BluRay.x264-GROUP',
-            subtitle: 'Paused · movies · 2.1 GB left',
+            subtitleLead: 'Stopped · movies',
+            subtitle: '2.1\u00A0GB left',
             progress: 0.18,
             percentage: 18,
             accent: ServiceKey.nzbget.accent,
@@ -251,7 +269,8 @@ void main() {
           ),
           DownloadQueueTile(
             title: 'The.Cabinet.of.Dr.Caligari.1920.1080p.BluRay.x264-GROUP',
-            subtitle: 'Queued · movies · progress unknown',
+            subtitleLead: 'Queued · movies',
+            subtitle: 'progress unknown',
             progress: null,
             percentage: null,
             accent: ServiceKey.nzbget.accent,
@@ -343,8 +362,8 @@ void main() {
           ),
           DownloadQueueTile(
             title: 'Metropolis.1927.1080p.BluRay.x264-GROUP',
-            subtitle:
-                'Downloading · 12\u00A0min · 1.2\u00A0GB left of 3.4\u00A0GB',
+            subtitleLead: 'Downloading',
+            subtitle: '12\u00A0min · 1.2\u00A0GB left of 3.4\u00A0GB',
             progress: 0.65,
             percentage: 65,
             accent: ServiceKey.sabnzbd.accent,
