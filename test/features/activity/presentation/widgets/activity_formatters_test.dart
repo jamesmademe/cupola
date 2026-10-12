@@ -153,6 +153,32 @@ void main() {
       expect(formatStatedDate('soon'), 'soon');
     });
 
+    test('formatDayWordsOf says a request\'s day in the voice of its row', () {
+      final now = DateTime(2026, 10, 9, 20, 30);
+      expect(
+        formatDayWordsOf(
+          DateTime(2026, 10, 9, 18, 30).toIso8601String(),
+          now: now,
+        ),
+        '2\u00A0h ago',
+      );
+      expect(
+        formatDayWordsOf(DateTime(2026, 10, 8, 9).toIso8601String(), now: now),
+        'yesterday',
+      );
+      expect(
+        formatDayWordsOf(DateTime(2026, 10, 5, 9).toIso8601String(), now: now),
+        'Monday',
+      );
+      expect(
+        formatDayWordsOf(DateTime(2026, 9, 29, 9).toIso8601String(), now: now),
+        'Tue 29 Sep',
+      );
+      expect(formatDayWordsOf(null, now: now), '—');
+      expect(formatDayWordsOf(' ', now: now), '—');
+      expect(formatDayWordsOf('soon', now: now), 'soon');
+    });
+
     test('formatRelativeActivityDate counts back from the injected clock', () {
       final now = DateTime(2026, 10, 9, 20, 30);
       final stamp = DateTime(2026, 10, 9, 18, 30).toIso8601String();

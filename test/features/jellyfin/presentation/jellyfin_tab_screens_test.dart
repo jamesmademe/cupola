@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/date_format.dart' show weekdayName;
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
@@ -97,6 +98,29 @@ void main() {
       find.semantics.byLabel('guest, Disabled, Last activity unavailable'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a user\'s last activity is said by its day', (tester) async {
+    final at = DateTime.now().subtract(const Duration(days: 3));
+    await _pump(
+      tester,
+      screen: const JellyfinUsersScreen(),
+      overrides: [
+        jellyfinUsersProvider.overrideWith(
+          (ref) async => [
+            JellyfinUserDto(
+              id: 'u',
+              name: 'nadia',
+              isAdministrator: false,
+              isDisabled: false,
+              lastActivityAt: at,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(find.text('Last active ${weekdayName(at)}'), findsOneWidget);
   });
 
   testWidgets('devices speak one complete inventory sentence', (tester) async {

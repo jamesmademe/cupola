@@ -71,6 +71,19 @@ String formatRelativeActivityDate(String? isoDate, {DateTime? now}) {
   }
 }
 
+/// [formatDayWords] for an ISO string out of a payload, the voice of a row about
+/// a request or a person: `—` when there is none, and the string itself when it
+/// cannot be parsed.
+String formatDayWordsOf(String? isoDate, {DateTime? now}) {
+  if (isoDate == null || isoDate.trim().isEmpty) return '—';
+
+  try {
+    return formatDayWords(DateTime.parse(isoDate), now: now ?? DateTime.now());
+  } catch (_) {
+    return isoDate;
+  }
+}
+
 String formatActivityDateTime(String? isoDate) {
   if (isoDate == null || isoDate.trim().isEmpty) return '—';
   final parsed = DateTime.tryParse(isoDate);

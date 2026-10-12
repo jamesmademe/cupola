@@ -59,7 +59,7 @@ class MediaDecisionCard extends ConsumerWidget {
     final headline = mediaDecisionHeadline(request, who: who);
     final waiting = [
       StateWord.waitingForApproval.label,
-      formatRelativeActivityDate(request.createdAt),
+      formatDayWordsOf(request.createdAt),
     ].join(' · ');
     final info = statusToneColor(
       scheme,

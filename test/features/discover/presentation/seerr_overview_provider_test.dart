@@ -6,6 +6,8 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_provider.dart';
+import 'package:cupola/features/services/presentation/dashboard_sections.dart'
+    show askedAgo;
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -103,10 +105,25 @@ void main() {
       expect(when(DateTime(2025, 12, 24, 12)), 'Wed 24 Dec 2025 · Movie');
     });
 
-    test('is still relative within the week, and dated from the seventh '
+    test('names the weekday within the week, and dates from the seventh '
         'day', () {
-      expect(when(DateTime(2026, 9, 10, 12)), '6 days ago · Movie');
+      expect(when(DateTime(2026, 9, 15, 9)), 'yesterday · Movie');
+      expect(when(DateTime(2026, 9, 10, 12)), 'Thursday · Movie');
       expect(when(DateTime(2026, 9, 9, 12)), 'Wed 9 Sep · Movie');
+    });
+
+    test('reads the same as the same request does on the Home', () {
+      for (final asked in [
+        DateTime(2026, 9, 16, 11, 30),
+        DateTime(2026, 9, 16, 1),
+        DateTime(2026, 9, 15, 23),
+        DateTime(2026, 9, 14, 9),
+        DateTime(2026, 9, 10, 12),
+        DateTime(2026, 9, 6, 12),
+        DateTime(2025, 12, 24, 12),
+      ]) {
+        expect(when(asked), '${askedAgo(asked, now: today)} · Movie');
+      }
     });
   });
 

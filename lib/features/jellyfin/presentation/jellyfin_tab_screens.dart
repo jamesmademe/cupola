@@ -211,7 +211,7 @@ class _UserRow extends StatelessWidget {
     final state = user.isDisabled ? 'Disabled' : role;
     final lastActivity = user.lastActivityAt == null
         ? 'Last activity unavailable'
-        : 'Last active ${formatRelativeDateTime(user.lastActivityAt!)}';
+        : 'Last active ${formatDayWords(user.lastActivityAt!, now: DateTime.now())}';
     // A role is not a state, and colour is information: an administrator's
     // row says so in its words, as every other row does, and carries no tone.
     const tone = StatusTone.neutral;

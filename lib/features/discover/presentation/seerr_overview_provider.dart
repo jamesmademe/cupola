@@ -19,7 +19,7 @@ import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
-import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
+import 'package:cupola/core/utils/date_format.dart' show formatDayWords;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
@@ -113,9 +113,9 @@ String seerrRequestDetail(
   final created = DateTime.tryParse(request.createdAt);
   return joinDisplayParts([
     if (namesWho) request.requestedBy?.displayName,
-    // When it was asked: `4 h ago`, `2 days ago` within the week, then the
-    // date as the app says dates, `Tue 29 Sep`.
-    created == null ? null : formatRelativeDateTime(created, now: now),
+    // When it was asked, in the words the Home and My requests use for the
+    // same request: `4 h ago`, `yesterday`, `Wednesday`, then `Tue 29 Sep`.
+    created == null ? null : formatDayWords(created, now: now),
     request.type == 'tv' ? 'TV' : 'Movie',
     (showsProfile ? request.profileName : null) ?? (request.is4k ? '4K' : null),
   ]);
