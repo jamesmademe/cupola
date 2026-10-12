@@ -3,559 +3,351 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
-import 'package:cupola/core/app_elevation.dart';
-import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
+import 'package:cupola/core/utils/sheet_utils.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/presentation/widgets/search_row.dart';
+import 'package:cupola/features/import/domain/blocked_import.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/presentation/manual_import_provider.dart';
-import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
+import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+/// Matches one file the arr could not place: which movie, which series and
+/// episode, which artist, album and track.
 Future<void> showManualImportFixSheet({
   required BuildContext context,
   required ServiceKey service,
   required ManualImportItem item,
-}) {
-  return _showFixSheet(
-    context: context,
-    service: service,
-    child: _ManualImportFixSheet(service: service, item: item),
-  );
-}
+}) => _show(context, _MatchSheet(service: service, items: [item]));
 
+/// Matches several files at once: one title for all of them, and for a
+/// series or an album, each file's own episode or track.
 Future<void> showManualImportBulkFixSheet({
   required BuildContext context,
   required ServiceKey service,
   required List<ManualImportItem> items,
-}) {
-  return _showFixSheet(
-    context: context,
-    service: service,
-    child: _ManualImportFixSheet(service: service, bulkItems: items),
-  );
-}
+}) => _show(context, _MatchSheet(service: service, items: items));
 
-Future<void> _showFixSheet({
-  required BuildContext context,
-  required ServiceKey service,
-  required Widget child,
-}) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: false,
-    barrierColor: Colors.black.withValues(alpha: isDark ? 0.55 : 0.3),
-    backgroundColor: Colors.transparent,
-    builder: (context) => FractionallySizedBox(
-      heightFactor: 0.86,
-      child: _FixSheetChrome(service: service, child: child),
-    ),
-  );
-}
-
-class _FixSheetChrome extends StatelessWidget {
-  final ServiceKey service;
-  final Widget child;
-
-  const _FixSheetChrome({required this.service, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppRadius.lg),
-        ),
-        boxShadow: AppElevation.level3(colorScheme),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          const AppSheetHandle(),
-          Expanded(child: child),
-        ],
-      ),
+/// The add sheet's chrome at a fixed height: the list under the header
+/// scrolls, and the one button stays at the foot.
+Future<void> _show(BuildContext context, Widget sheet) =>
+    SheetUtils.showCupolaModalSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => FractionallySizedBox(heightFactor: 0.86, child: sheet),
     );
-  }
-}
 
-class _ManualImportFixSheet extends ConsumerStatefulWidget {
+/// Where the sheet is: the title, then (a series, an album) the part of it.
+enum _Step { title, album, part }
+
+class _MatchSheet extends ConsumerStatefulWidget {
+  const _MatchSheet({required this.service, required this.items})
+    : assert(items.length > 0, 'nothing to match');
+
   final ServiceKey service;
-  final ManualImportItem? item;
-  final List<ManualImportItem> bulkItems;
-
-  const _ManualImportFixSheet({
-    required this.service,
-    this.item,
-    this.bulkItems = const [],
-  });
-
-  bool get isBulk => bulkItems.isNotEmpty;
+  final List<ManualImportItem> items;
 
   @override
-  ConsumerState<_ManualImportFixSheet> createState() =>
-      _ManualImportFixSheetState();
+  ConsumerState<_MatchSheet> createState() => _MatchSheetState();
 }
 
-class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
-  final _searchController = TextEditingController();
-  final _episodeAssignments = <String, ManualImportEpisode>{};
-  final _trackAssignments = <String, ManualImportTrack>{};
-  Timer? _debounce;
-  bool _libraryLoaded = false;
-  List<ManualImportLookupResult> _allResults = const [];
-  List<ManualImportLookupResult> _results = const [];
-  List<ManualImportEpisode> _episodes = const [];
-  List<ManualImportAlbum> _albums = const [];
-  List<ManualImportTrack> _tracks = const [];
+class _MatchSheetState extends ConsumerState<_MatchSheet> {
+  final _scroll = ScrollController();
+
+  /// The episode a single file starts on, brought into view when it is
+  /// below the fold.
+  final _picked = GlobalKey();
+
+  /// The library, first; a lookup adds what a query finds beyond it.
+  List<ManualImportLookupResult> _library = const [];
+  List<ManualImportLookupResult> _shown = const [];
+  String _query = '';
+  bool _searching = true;
+
+  _Step _step = _Step.title;
   ManualImportLookupResult? _match;
+
+  List<ManualImportEpisode> _episodes = const [];
+  int? _season;
+  List<ManualImportAlbum> _albums = const [];
   ManualImportAlbum? _album;
-  int? _seasonNumber;
-  int _step = 0;
-  bool _loading = false;
+  List<ManualImportTrack> _tracks = const [];
+  bool _loadingPart = false;
+
+  /// Each file's episode or track, by path.
+  final _episodeOf = <String, ManualImportEpisode>{};
+  final _trackOf = <String, ManualImportTrack>{};
+
   bool _applying = false;
+  String? _refusal;
+
+  ServiceKey get _service => widget.service;
+  bool get _bulk => widget.items.length > 1;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(_loadLibraryResults);
+    unawaited(_loadLibrary());
   }
 
   @override
   void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final service = widget.service;
-    final bulkCount = widget.bulkItems.length;
-    final title = switch (service) {
-      ServiceKey.radarr => 'Assign movie identity',
-      ServiceKey.sonarr => 'Assign episode identity',
-      ServiceKey.lidarr => 'Assign music identity',
-      _ => 'Assign identity',
-    };
-    final subtitle = widget.isBulk
-        ? 'Applying one identity to $bulkCount files'
-        : widget.item?.fileName ?? 'Unmatched file';
+  // === Reading ==============================================================
 
-    return Column(
-      children: [
-        _SheetHeader(service: service, title: title, subtitle: subtitle),
-        // Naming the files is the guard against a bulk assignment doing
-        // something the user did not intend: one identity across a mixed
-        // selection is only ever correct if they can see what is in it.
-        if (widget.isBulk) _AppliesToStrip(items: widget.bulkItems),
-        if (service != ServiceKey.radarr)
-          ImportStationBar(
-            service: service,
-            stations: _stepLabels(service),
-            activeIndex: _step,
-          ),
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: AppAnimation.durationSm,
-            child: _buildStep(context),
-          ),
-        ),
-        _SheetFooter(
-          service: service,
-          canGoBack: _step > 0,
-          canGoNext: _canGoNext,
-          canApply: _canApply,
-          applying: _applying,
-          isLastStep: _isLastStep,
-          onBack: _back,
-          onCancel: () => Navigator.of(context).pop(),
-          onNext: _next,
-          onApply: _apply,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep(BuildContext context) {
-    final service = widget.service;
-    if (service == ServiceKey.radarr || _step == 0) {
-      return _SearchStep(
-        key: ValueKey('search-${service.name}'),
-        service: service,
-        controller: _searchController,
-        results: _results,
-        selected: _match,
-        loading: _loading,
-        onChanged: _lookup,
-        onSelected: (match) async {
-          setState(() => _match = match);
-          if (service == ServiceKey.radarr) {
-            await _apply();
-          }
-        },
-      );
-    }
-
-    if (service == ServiceKey.sonarr) {
-      return _step == 1 ? _buildSeasonStep() : _buildEpisodeStep();
-    }
-
-    if (service == ServiceKey.lidarr) {
-      return _step == 1 ? _buildAlbumStep() : _buildTrackStep();
-    }
-
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildSeasonStep() {
-    final seasons =
-        _episodes
-            .map((item) => item.seasonNumber)
-            .toSet()
-            .toList(growable: false)
-          ..sort();
-    return _ChoiceList<int>(
-      key: const ValueKey('season'),
-      service: widget.service,
-      emptyMessage: 'No episodes found for this series.',
-      values: seasons,
-      selected: _seasonNumber,
-      titleFor: (item) => 'Season $item',
-      subtitleFor: (item) =>
-          '${_episodes.where((episode) => episode.seasonNumber == item).length} episodes',
-      onSelected: (item) => setState(() => _seasonNumber = item),
-    );
-  }
-
-  Widget _buildEpisodeStep() {
-    final episodes = _episodes
-        .where((item) => item.seasonNumber == _seasonNumber)
-        .toList(growable: false);
-    return widget.isBulk
-        ? _BulkMap<ManualImportEpisode>(
-            key: const ValueKey('episode-bulk'),
-            service: widget.service,
-            items: widget.bulkItems,
-            values: episodes,
-            assignments: _episodeAssignments,
-            titleFor: (item) => '${item.label} · ${item.title}',
-            onChanged: (item, episode) {
-              setState(() => _episodeAssignments[item.path] = episode);
-            },
-          )
-        : _ChoiceList<ManualImportEpisode>(
-            key: const ValueKey('episode-single'),
-            service: widget.service,
-            emptyMessage: 'No episodes found for this season.',
-            values: episodes,
-            selected: _episodeAssignments[widget.item?.path],
-            titleFor: (item) => '${item.label} · ${item.title}',
-            subtitleFor: (_) => 'Episode',
-            onSelected: (item) {
-              final path = widget.item?.path;
-              if (path != null) {
-                setState(() => _episodeAssignments[path] = item);
-              }
-            },
-          );
-  }
-
-  Widget _buildAlbumStep() {
-    return _ChoiceList<ManualImportAlbum>(
-      key: const ValueKey('album'),
-      service: widget.service,
-      emptyMessage: 'No albums found for this artist.',
-      values: _albums,
-      selected: _album,
-      titleFor: (item) => item.title,
-      subtitleFor: (item) => item.year?.toString() ?? 'Album',
-      onSelected: (item) => setState(() => _album = item),
-    );
-  }
-
-  Widget _buildTrackStep() {
-    return widget.isBulk
-        ? _BulkMap<ManualImportTrack>(
-            key: const ValueKey('track-bulk'),
-            service: widget.service,
-            items: widget.bulkItems,
-            values: _tracks,
-            assignments: _trackAssignments,
-            titleFor: (item) => item.label,
-            onChanged: (item, track) {
-              setState(() => _trackAssignments[item.path] = track);
-            },
-          )
-        : _ChoiceList<ManualImportTrack>(
-            key: const ValueKey('track-single'),
-            service: widget.service,
-            emptyMessage: 'No tracks found for this album.',
-            values: _tracks,
-            selected: _trackAssignments[widget.item?.path],
-            titleFor: (item) => item.label,
-            subtitleFor: (_) => 'Track',
-            onSelected: (item) {
-              final path = widget.item?.path;
-              if (path != null) {
-                setState(() => _trackAssignments[path] = item);
-              }
-            },
-          );
-  }
-
-  List<String> _stepLabels(ServiceKey service) {
-    return switch (service) {
-      ServiceKey.sonarr => const ['Series', 'Season', 'Episode'],
-      ServiceKey.lidarr => const ['Artist', 'Album', 'Track'],
-      ServiceKey.radarr => const ['Movie'],
-      _ => const ['Match'],
-    };
-  }
-
-  bool get _isLastStep {
-    return switch (widget.service) {
-      ServiceKey.radarr => true,
-      ServiceKey.sonarr || ServiceKey.lidarr => _step == 2,
-      _ => true,
-    };
-  }
-
-  bool get _canGoNext {
-    return switch (widget.service) {
-      ServiceKey.sonarr =>
-        (_step == 0 && _match != null) || (_step == 1 && _seasonNumber != null),
-      ServiceKey.lidarr =>
-        (_step == 0 && _match != null) || (_step == 1 && _album != null),
-      _ => false,
-    };
-  }
-
-  bool get _canApply {
-    if (_applying || _match == null) return false;
-    return switch (widget.service) {
-      ServiceKey.radarr => true,
-      ServiceKey.sonarr =>
-        widget.isBulk
-            ? widget.bulkItems.every(
-                (item) => _episodeAssignments.containsKey(item.path),
-              )
-            : _episodeAssignments.containsKey(widget.item?.path),
-      ServiceKey.lidarr =>
-        _album != null &&
-            (widget.isBulk
-                ? widget.bulkItems.every(
-                    (item) => _trackAssignments.containsKey(item.path),
-                  )
-                : _trackAssignments.containsKey(widget.item?.path)),
-      _ => false,
-    };
-  }
-
-  Future<void> _loadLibraryResults() async {
-    setState(() => _loading = true);
+  Future<void> _loadLibrary() async {
     final results = await ref
         .read(manualImportFlowProvider.notifier)
         .getLibraryMatches();
     if (!mounted) return;
     setState(() {
-      _allResults = results;
-      _results = _filterResults('');
-      _libraryLoaded = true;
-      _loading = false;
+      _library = results;
+      _shown = _filtered(results, _query);
+      _searching = false;
     });
   }
 
-  List<ManualImportLookupResult> _filterResults(String term) {
-    final query = term.trim().toLowerCase();
-    if (query.isEmpty) return _allResults.take(12).toList(growable: false);
-    return _allResults
-        .where((result) {
-          final title = result.title.toLowerCase();
-          final subtitle = result.subtitle?.toLowerCase() ?? '';
-          return title.contains(query) || subtitle.contains(query);
-        })
-        .take(12)
-        .toList(growable: false);
+  List<ManualImportLookupResult> _filtered(
+    List<ManualImportLookupResult> results,
+    String query,
+  ) {
+    final term = query.trim().toLowerCase();
+    return [
+      for (final result in results)
+        if (term.isEmpty ||
+            result.title.toLowerCase().contains(term) ||
+            (result.subtitle ?? '').toLowerCase().contains(term))
+          result,
+    ].take(12).toList(growable: false);
   }
 
-  Future<void> _loadLookupResults(
-    String term, {
-    required bool filterOnly,
-  }) async {
-    final query = term.trim();
-    if (!mounted) return;
-
-    if (query.isEmpty) {
-      if (!_libraryLoaded) {
-        await _loadLibraryResults();
-        return;
-      }
-      setState(() {
-        _results = _filterResults(query);
-        _loading = false;
-      });
-      return;
-    }
-
+  /// The library first; a query it does not answer goes to the arr's lookup.
+  Future<void> _search(String query) async {
     setState(() {
-      _loading = !filterOnly;
-      _results = _filterResults(query);
+      _query = query;
+      _shown = _filtered(_library, query);
     });
-
-    if (filterOnly && _results.isNotEmpty) {
-      return;
-    }
-
-    final results = await ref
+    if (query.trim().isEmpty || _shown.isNotEmpty) return;
+    setState(() => _searching = true);
+    final found = await ref
         .read(manualImportFlowProvider.notifier)
-        .lookup(query);
+        .lookup(query.trim());
+    if (!mounted || _query != query) return;
+    final merged = {
+      for (final result in [..._library, ...found]) result.id: result,
+    }.values.toList()..sort((a, b) => a.title.compareTo(b.title));
+    setState(() {
+      _library = merged;
+      _shown = _filtered(merged, query);
+      _searching = false;
+    });
+  }
+
+  Future<void> _pickTitle(ManualImportLookupResult match) async {
+    setState(() {
+      _match = match;
+      _refusal = null;
+    });
+    switch (_service) {
+      case ServiceKey.sonarr:
+        await _loadEpisodes(match);
+      case ServiceKey.lidarr:
+        await _loadAlbums(match);
+      default:
+        break;
+    }
+  }
+
+  Future<void> _loadEpisodes(ManualImportLookupResult series) async {
+    setState(() {
+      _step = _Step.part;
+      _loadingPart = true;
+      _episodeOf.clear();
+    });
+    final episodes = await ref
+        .read(manualImportFlowProvider.notifier)
+        .getEpisodes(seriesId: series.id);
+    if (!mounted) return;
+    final seasons = _seasonsOf(episodes);
+    final guessed = widget.items.first.seasonNumber;
+    setState(() {
+      _episodes = episodes;
+      _season = seasons.contains(guessed)
+          ? guessed
+          : seasons.where((season) => season != 0).firstOrNull ??
+                seasons.firstOrNull;
+      _loadingPart = false;
+      _guessEpisodes();
+    });
+    _revealPicked();
+  }
+
+  void _revealPicked() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    final row = _picked.currentContext;
+    if (row != null && row.mounted) {
+      // As little as it takes: the series and the seasons stay in view
+      // when the episode fits under them.
+      Scrollable.ensureVisible(
+        row,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    }
+  });
+
+  Future<void> _loadAlbums(ManualImportLookupResult artist) async {
+    setState(() {
+      _step = _Step.album;
+      _loadingPart = true;
+    });
+    final albums = await ref
+        .read(manualImportFlowProvider.notifier)
+        .getAlbums(artist.id);
     if (!mounted) return;
     setState(() {
-      _allResults = _mergeResults(_allResults, results);
-      _results = _filterResults(query);
-      _loading = false;
+      _albums = albums;
+      _loadingPart = false;
     });
   }
 
-  List<ManualImportLookupResult> _mergeResults(
-    List<ManualImportLookupResult> current,
-    List<ManualImportLookupResult> incoming,
-  ) {
-    final merged = <int, ManualImportLookupResult>{
-      for (final result in current) result.id: result,
-    };
-    for (final result in incoming) {
-      merged[result.id] = result;
-    }
-    final values = merged.values.toList(growable: false);
-    values.sort(
-      (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-    );
-    return values;
-  }
-
-  void _lookup(String term) {
-    _debounce?.cancel();
-    final normalized = term.trim();
+  Future<void> _pickAlbum(ManualImportAlbum album) async {
     setState(() {
-      _results = _filterResults(normalized);
+      _album = album;
+      _step = _Step.part;
+      _loadingPart = true;
+      _trackOf.clear();
     });
-    _debounce = Timer(
-      AppAnimation.durationSm,
-      () => _loadLookupResults(normalized, filterOnly: _allResults.isNotEmpty),
-    );
+    final tracks = await ref
+        .read(manualImportFlowProvider.notifier)
+        .getTracks(album.id);
+    if (!mounted) return;
+    setState(() {
+      _tracks = tracks;
+      _loadingPart = false;
+    });
   }
 
-  Future<void> _next() async {
-    final match = _match;
-    if (match == null) return;
+  void _back() => setState(() {
+    _refusal = null;
+    _step = switch (_step) {
+      _Step.part when _service == ServiceKey.lidarr => _Step.album,
+      _ => _Step.title,
+    };
+  });
 
-    if (widget.service == ServiceKey.sonarr && _step == 0) {
-      setState(() => _loading = true);
-      final episodes = await ref
-          .read(manualImportFlowProvider.notifier)
-          .getEpisodes(seriesId: match.id);
-      if (!mounted) return;
-      final guessedSeason = widget.item?.seasonNumber;
-      setState(() {
-        _episodes = episodes;
-        _seasonNumber =
-            guessedSeason != null &&
-                episodes.any((item) => item.seasonNumber == guessedSeason)
-            ? guessedSeason
-            : null;
-        _loading = false;
-        _step = 1;
-      });
-      return;
-    }
+  // === Episodes =============================================================
 
-    if (widget.service == ServiceKey.lidarr && _step == 0) {
-      setState(() => _loading = true);
-      final albums = await ref
-          .read(manualImportFlowProvider.notifier)
-          .getAlbums(match.id);
-      if (!mounted) return;
-      setState(() {
-        _albums = albums;
-        _loading = false;
-        _step = 1;
-      });
-      return;
-    }
-
-    if (widget.service == ServiceKey.lidarr && _step == 1) {
-      final album = _album;
-      if (album == null) return;
-      setState(() => _loading = true);
-      final tracks = await ref
-          .read(manualImportFlowProvider.notifier)
-          .getTracks(album.id);
-      if (!mounted) return;
-      setState(() {
-        _tracks = tracks;
-        _loading = false;
-        _step = 2;
-      });
-      return;
-    }
-
-    setState(() => _step++);
+  static List<int> _seasonsOf(List<ManualImportEpisode> episodes) {
+    final seasons = {
+      for (final episode in episodes) episode.seasonNumber,
+    }.toList()..sort();
+    // The specials last, as the series' own pills order them.
+    if (seasons.remove(0)) seasons.add(0);
+    return seasons;
   }
 
-  void _back() {
-    if (_step == 0) return;
-    setState(() => _step--);
-  }
+  List<ManualImportEpisode> get _seasonEpisodes => [
+    for (final episode in _episodes)
+      if (episode.seasonNumber == _season) episode,
+  ]..sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
 
-  Future<void> _apply() async {
-    final match = _match;
-    if (match == null || !_canApply) return;
-    setState(() => _applying = true);
-
-    final notifier = ref.read(manualImportFlowProvider.notifier);
-    final beforeError = ref.read(manualImportFlowProvider).error;
-    if (widget.isBulk) {
-      await notifier.applyBulkFixAssignments({
-        for (final item in widget.bulkItems) item: _assignmentFor(item, match),
-      });
-    } else {
-      final item = widget.item;
-      if (item != null) {
-        await notifier.applyFixAssignment(item, _assignmentFor(item, match));
+  /// Each file starts on the episode its name carries, when the season has
+  /// it and no other file took it.
+  void _guessEpisodes() {
+    final season = _seasonEpisodes;
+    for (final item in widget.items) {
+      final number = episodeNumberInName(item.fileName);
+      final episode = season
+          .where((each) => each.episodeNumber == number)
+          .firstOrNull;
+      if (episode != null && _chosenFor(episode, item) == null) {
+        _episodeOf[item.path] = episode;
       }
     }
-
-    final afterError = ref.read(manualImportFlowProvider).error;
-    final hasNewError = afterError != null && afterError != beforeError;
-    if (mounted && !hasNewError) {
-      setState(() => _applying = false);
-      Navigator.of(context).pop();
-      return;
-    }
-
-    if (mounted) {
-      setState(() => _applying = false);
-    }
   }
 
-  ManualImportFixAssignment _assignmentFor(
-    ManualImportItem item,
-    ManualImportLookupResult match,
-  ) {
-    final episode = _episodeAssignments[item.path];
-    final track = _trackAssignments[item.path];
+  void _pickSeason(int season) {
+    setState(() {
+      _season = season;
+      _episodeOf.clear();
+      _guessEpisodes();
+    });
+    _revealPicked();
+  }
+
+  /// [item] goes on [episode]; the files after it with no episode yet follow
+  /// it in order, one episode each, so a run of files is one choice.
+  void _pickEpisode(ManualImportItem item, ManualImportEpisode episode) {
+    setState(() {
+      _refusal = null;
+      _episodeOf[item.path] = episode;
+      if (!_bulk) return;
+      final season = _seasonEpisodes;
+      var next = season.indexOf(episode);
+      final after = widget.items.skip(widget.items.indexOf(item) + 1);
+      for (final later in after) {
+        if (_episodeOf.containsKey(later.path)) break;
+        next++;
+        if (next >= season.length) break;
+        _episodeOf[later.path] = season[next];
+      }
+    });
+  }
+
+  /// The file [episode] is already on, other than [item]: one the Review
+  /// placed, or one this sheet just did. Null when it is free.
+  String? _chosenFor(ManualImportEpisode episode, ManualImportItem item) {
+    for (final entry in _episodeOf.entries) {
+      if (entry.key != item.path && entry.value.id == episode.id) {
+        return _stemOf(entry.key);
+      }
+    }
+    final ours = {for (final each in widget.items) each.path};
+    for (final other in ref.read(manualImportFlowProvider).items) {
+      if (ours.contains(other.path)) continue;
+      if (other.episodes.any((each) => intOrNull(each['id']) == episode.id)) {
+        return fileStem(other);
+      }
+    }
+    return null;
+  }
+
+  String _stemOf(String path) => fileStem(
+    widget.items.firstWhere(
+      (item) => item.path == path,
+      orElse: () => widget.items.first,
+    ),
+  );
+
+  // === Applying =============================================================
+
+  bool get _complete {
+    final match = _match;
+    if (match == null) return false;
+    return switch (_service) {
+      ServiceKey.sonarr => widget.items.every(
+        (item) => _episodeOf.containsKey(item.path),
+      ),
+      ServiceKey.lidarr =>
+        _album != null &&
+            widget.items.every((item) => _trackOf.containsKey(item.path)),
+      _ => true,
+    };
+  }
+
+  ManualImportFixAssignment _assignmentFor(ManualImportItem item) {
+    final episode = _episodeOf[item.path];
+    final track = _trackOf[item.path];
     return ManualImportFixAssignment(
-      match: match,
+      match: _match!,
       episode: episode,
       episodes: [?episode],
       album: _album,
@@ -563,522 +355,654 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
       tracks: [?track],
     );
   }
-}
 
-class _SheetHeader extends StatelessWidget {
-  final ServiceKey service;
-  final String title;
-  final String subtitle;
+  Future<void> _apply() async {
+    if (!_complete || _applying) return;
+    setState(() {
+      _applying = true;
+      _refusal = null;
+    });
+    final notifier = ref.read(manualImportFlowProvider.notifier);
+    final before = ref.read(manualImportFlowProvider).error;
+    if (_bulk) {
+      await notifier.applyBulkFixAssignments({
+        for (final item in widget.items) item: _assignmentFor(item),
+      });
+    } else {
+      await notifier.applyFixAssignment(
+        widget.items.single,
+        _assignmentFor(widget.items.single),
+      );
+    }
+    if (!mounted) return;
+    final after = ref.read(manualImportFlowProvider).error;
+    if (after != null && after != before) {
+      setState(() {
+        _applying = false;
+        _refusal = after;
+      });
+      return;
+    }
+    Navigator.of(context).pop();
+  }
 
-  const _SheetHeader({
-    required this.service,
-    required this.title,
-    required this.subtitle,
-  });
+  // === Drawing ==============================================================
+
+  String get _title => switch ((_service, _step)) {
+    (ServiceKey.radarr, _) => 'Which movie?',
+    (ServiceKey.sonarr, _Step.title) => 'Which series?',
+    (ServiceKey.sonarr, _) => _bulk ? 'Which episodes?' : 'Which episode?',
+    (ServiceKey.lidarr, _Step.title) => 'Which artist?',
+    (ServiceKey.lidarr, _Step.album) => 'Which album?',
+    (ServiceKey.lidarr, _) => _bulk ? 'Which tracks?' : 'Which track?',
+    _ => 'Which title?',
+  };
+
+  String? get _lead => switch ((_service, _step)) {
+    (ServiceKey.radarr, _) =>
+      _match == null ? 'Pick a movie' : 'Match to ${_match!.title}',
+    (_, _Step.part) when _bulk => 'Match ${widget.items.length} files',
+    (ServiceKey.sonarr, _Step.part) => switch (_episodeOf.values.firstOrNull) {
+      final episode? => 'Match to ${episode.label}',
+      null => 'Pick an episode',
+    },
+    (ServiceKey.lidarr, _Step.part) => switch (_trackOf.values.firstOrNull) {
+      final ManualImportTrack track =>
+        'Match to track ${track.trackNumber ?? ''}'.trim(),
+      null => 'Pick a track',
+    },
+    // Picking the series or the album is the step: no button under it.
+    _ => null,
+  };
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.sm,
-      ),
-      child: Row(
+    final room = CupolaRoom.of(context);
+    final lead = _lead;
+    return AppBottomSheet(
+      title: _title,
+      showClose: true,
+      scrollController: _scroll,
+      bodyPadding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ExcludeSemantics(
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: serviceThemeFor(service).softContainer,
-                borderRadius: AppRadius.borderRadiusMd,
-              ),
-              // The mark on its 14% tile over the sheet, walked rather than
-              // raw: the amber services measured under 2:1 in light theme.
-              child: Icon(
-                service.icon,
-                color: ServiceTheme.onTint(
-                  service.accent,
-                  surface: Theme.of(context).colorScheme.surfaceContainer,
-                  tintAlpha: 0.14,
-                ),
-                size: 20,
-              ),
+          // Picking the title, the file and the field stay put over the
+          // results; past it, each row a file names its own.
+          if (_step == _Step.title) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: _Files(items: widget.items, bulk: _bulk),
             ),
-          ),
-          const SizedBox(width: AppSpacing.md),
+            SearchBarHeader(
+              hintText: switch (_service) {
+                ServiceKey.radarr => 'Search your movies',
+                ServiceKey.lidarr => 'Search your artists',
+                _ => 'Search your series',
+              },
+              debounceDuration: const Duration(milliseconds: 300),
+              onQueryChanged: _search,
+            ),
+          ],
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: ListView(
+              controller: _scroll,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
               children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
-                ),
-                // Wraps in full. Assigning an identity means reading the file
-                // name for the clues the service could not parse: the year,
-                // the date, the episode marker, so eliding it to one line
-                // hides the only evidence the decision can be made from.
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                if (_step != _Step.title && !_bulk) ...[
+                  _Files(items: widget.items, bulk: false),
+                  const SizedBox(height: AppSpacing.xs),
+                ],
+                ...switch (_step) {
+                  _Step.title => _titleStep(context),
+                  _Step.album => _albumStep(context),
+                  _Step.part => _partStep(context),
+                },
               ],
             ),
           ),
+          if (lead != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_refusal case final refusal?) ...[
+                    Text(
+                      refusal,
+                      style: AppType.meta.copyWith(
+                        color: statusToneColor(
+                          Theme.of(context).colorScheme,
+                          StatusTone.warning,
+                          surface: room.raised,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                  FilledButton(
+                    onPressed: _complete && !_applying ? _apply : null,
+                    style: mediaLeadStyle(context, null),
+                    child: _applying
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(lead),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
-}
 
-/// The files a bulk assignment will be written to.
-class _AppliesToStrip extends StatelessWidget {
-  final List<ManualImportItem> items;
-
-  const _AppliesToStrip({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    const visible = 3;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      child: AppCard.filled(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        backgroundColor: colorScheme.surfaceContainerHigh,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Full names, wrapped: this list is the guard against a bulk
-            // assignment doing something unintended, and a truncated name
-            // cannot be checked.
-            for (final item in items.take(visible))
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: Text(
-                  item.fileName,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            if (items.length > visible)
-              Text(
-                '+${items.length - visible} more',
-                style: theme.textTheme.labelSmall!
-                    .weight(FontWeight.w600)
-                    .tabular
-                    .copyWith(color: colorScheme.onSurfaceVariant),
-              ),
-          ],
+  List<Widget> _titleStep(BuildContext context) => [
+    if (_searching && _shown.isEmpty)
+      for (var i = 0; i < 4; i++)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: ShimmerPlaceholder(height: SearchRow.minHeight - 8),
+        )
+    else if (_shown.isEmpty)
+      AppEmptyState.compact(
+        icon: Icons.manage_search_rounded,
+        title: _query.trim().isEmpty
+            ? 'Nothing in your library yet'
+            : 'Nothing called "${_query.trim()}"',
+      )
+    else
+      for (final result in _shown)
+        SearchRow.title(
+          title: result.title,
+          meta: _metaOf(result),
+          poster: _posterOf(result.raw) ?? '',
+          selected: _service == ServiceKey.radarr && _match?.id == result.id,
+          onTap: () => _pickTitle(result),
         ),
-      ),
-    );
+  ];
+
+  String _metaOf(ManualImportLookupResult result) {
+    final raw = result.raw;
+    return switch (_service) {
+      ServiceKey.radarr => ['Movie', ?result.subtitle].join(' · '),
+      ServiceKey.sonarr => () {
+        final seasons = [
+          for (final season in jsonObjects(raw['seasons'], (each) => each))
+            if ((intOrNull(season['seasonNumber']) ?? 0) > 0) season,
+        ].length;
+        return [
+          'Series',
+          ?result.subtitle,
+          if (seasons > 0) seasons == 1 ? '1 season' : '$seasons seasons',
+        ].join(' · ');
+      }(),
+      _ => ['Artist', ?result.subtitle].join(' · '),
+    };
   }
-}
 
-class _SearchStep extends StatelessWidget {
-  final ServiceKey service;
-  final TextEditingController controller;
-  final List<ManualImportLookupResult> results;
-  final ManualImportLookupResult? selected;
-  final bool loading;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<ManualImportLookupResult> onSelected;
-
-  const _SearchStep({
-    super.key,
-    required this.service,
-    required this.controller,
-    required this.results,
-    required this.selected,
-    required this.loading,
-    required this.onChanged,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
+  /// The title picked, with the way back to the list.
+  Widget _chosen(BuildContext context, String label) {
+    final match = _match!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SearchBar(
-          controller: controller,
-          hintText: service.manualImportSearchHint,
-          leading: Icon(
-            Icons.search_rounded,
-            color: ServiceTheme.onTint(
-              service.accent,
-              surface: Theme.of(context).colorScheme.surfaceContainerHigh,
-              tintAlpha: 0,
-            ),
-            size: 18,
-          ),
-          trailing: [
-            if (controller.text.isNotEmpty)
-              IconButton(
-                tooltip: 'Clear search',
-                onPressed: () {
-                  controller.clear();
-                  onChanged('');
-                },
-                icon: const Icon(Icons.close_rounded, size: 16),
-              ),
-            if (loading)
-              const SizedBox.square(
-                dimension: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-          ],
-          onChanged: onChanged,
-          elevation: WidgetStateProperty.all(0),
-          backgroundColor: WidgetStateProperty.all(
-            colorScheme.surfaceContainerHighest,
-          ),
-          side: WidgetStateProperty.all(BorderSide.none),
-          shape: WidgetStateProperty.all(
-            RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
-          ),
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: WidgetStateProperty.all(
-            const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          ),
+        _Label(
+          label,
+          trailing: TextButton(onPressed: _back, child: const Text('Change')),
         ),
-        const SizedBox(height: AppSpacing.md),
-        if (!loading && results.isEmpty)
-          AppEmptyState.compact(
-            icon: Icons.manage_search_rounded,
-            title: 'No matches available',
-            message: controller.text.trim().isEmpty
-                ? 'No items were found in your library for this service.'
-                : 'Try a different query to filter the library or load more results.',
-            accentColor: service.accent,
-          ),
-        for (final result in results)
-          _ResultTile(
-            service: service,
-            title: result.title,
-            subtitle: result.subtitle,
-            selected: selected?.id == result.id,
-            onTap: () => onSelected(result),
-          ),
+        SearchRow.title(
+          title: match.title,
+          meta: _metaOf(match),
+          poster: _posterOf(match.raw) ?? '',
+          onTap: _back,
+        ),
       ],
     );
   }
-}
 
-class _ChoiceList<T> extends StatelessWidget {
-  final ServiceKey service;
-  final List<T> values;
-  final T? selected;
-  final String emptyMessage;
-  final String Function(T value) titleFor;
-  final String? Function(T value) subtitleFor;
-  final ValueChanged<T> onSelected;
+  List<Widget> _albumStep(BuildContext context) => [
+    _chosen(context, 'Artist'),
+    const _Label('Album'),
+    if (_loadingPart)
+      const ShimmerPlaceholder(height: 3 * SearchRow.minHeight)
+    else if (_albums.isEmpty)
+      const AppEmptyState.compact(
+        icon: Icons.album_outlined,
+        title: 'No albums for this artist',
+      )
+    else
+      for (final album in _albums)
+        SearchRow.title(
+          title: album.title,
+          meta: ['Album', ?album.year?.toString()].join(' · '),
+          poster: _posterOf(album.raw) ?? '',
+          onTap: () => _pickAlbum(album),
+        ),
+  ];
 
-  const _ChoiceList({
-    super.key,
-    required this.service,
-    required this.values,
-    required this.selected,
-    required this.emptyMessage,
-    required this.titleFor,
-    required this.subtitleFor,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (values.isEmpty) {
-      return AppEmptyState.compact(
-        icon: Icons.manage_search_rounded,
-        title: emptyMessage,
-        accentColor: service.accent,
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      itemCount: values.length,
-      itemBuilder: (context, index) {
-        final value = values[index];
-        return _ResultTile(
-          service: service,
-          title: titleFor(value),
-          subtitle: subtitleFor(value),
-          selected: selected == value,
-          onTap: () => onSelected(value),
-        );
-      },
-    );
-  }
-}
-
-class _BulkMap<T> extends StatelessWidget {
-  final ServiceKey service;
-  final List<ManualImportItem> items;
-  final List<T> values;
-  final Map<String, T> assignments;
-  final String Function(T value) titleFor;
-  final void Function(ManualImportItem item, T value) onChanged;
-
-  const _BulkMap({
-    super.key,
-    required this.service,
-    required this.items,
-    required this.values,
-    required this.assignments,
-    required this.titleFor,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    if (values.isEmpty) {
-      return AppEmptyState.compact(
-        icon: Icons.manage_search_rounded,
-        title: 'No assignable items found',
-        accentColor: service.accent,
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHigh,
-            borderRadius: AppRadius.borderRadiusMd,
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  List<Widget> _partStep(BuildContext context) {
+    if (_service == ServiceKey.lidarr) {
+      return [
+        _chosen(context, 'Album'),
+        if (_loadingPart)
+          const ShimmerPlaceholder(height: 4 * 56)
+        else if (_tracks.isEmpty)
+          const AppEmptyState.compact(
+            icon: Icons.music_note_outlined,
+            title: 'No tracks on this album',
+          )
+        else if (_bulk)
+          ..._eachFile(
+            label: 'Track',
+            valueOf: (item) => _trackOf[item.path]?.label,
+            onTap: (item) => _pickTrackFor(context, item),
+          )
+        else ...[
+          const _Label('Track'),
+          MediaGroup(
             children: [
-              Text(
-                item.fileName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall!.weight(FontWeight.w600),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<T>(
-                initialValue: assignments[item.path],
-                isExpanded: true,
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainer,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: AppRadius.borderRadiusSm,
-                    borderSide: BorderSide(color: colorScheme.outlineVariant),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: AppRadius.borderRadiusSm,
-                    borderSide: BorderSide(
-                      color: CupolaRoom.of(context).focus,
-                      width: 1.5,
-                    ),
+              for (final track in _tracks)
+                _PickRow(
+                  title: track.label,
+                  detail: _trackDetail(track),
+                  selected: _trackOf[widget.items.single.path]?.id == track.id,
+                  onTap: () => setState(
+                    () => _trackOf[widget.items.single.path] = track,
                   ),
                 ),
-                hint: const Text('Select match'),
-                items: values
-                    .map(
-                      (value) => DropdownMenuItem(
-                        value: value,
-                        child: Text(
-                          titleFor(value),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(growable: false),
-                onChanged: (value) {
-                  if (value != null) onChanged(item, value);
-                },
-              ),
             ],
           ),
-        );
-      },
-    );
-  }
-}
+        ],
+      ];
+    }
 
-class _ResultTile extends StatelessWidget {
-  final ServiceKey service;
-  final String title;
-  final String? subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ResultTile({
-    required this.service,
-    required this.title,
-    this.subtitle,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    // The row's own selected wash over the sheet is the ground both glyphs
-    // are measured against: the worse of its two states in either theme.
-    final rowGround = Color.alphaBlend(
-      service.accent.withValues(alpha: 0.1),
-      colorScheme.surfaceContainer,
-    );
-    final accent = ServiceTheme.onTint(
-      service.accent,
-      surface: rowGround,
-      tintAlpha: 0.14,
-    );
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: selected
-            ? service.accent.withValues(alpha: 0.1)
-            : Colors.transparent,
-        borderRadius: AppRadius.borderRadiusSm,
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        selected: selected,
-        selectedColor: colorScheme.onSurface,
-        leading: Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: serviceThemeFor(service).softContainer,
-            borderRadius: AppRadius.borderRadiusSm,
+    final seasons = _seasonsOf(_episodes);
+    final season = _season;
+    return [
+      _chosen(context, 'Series'),
+      if (_loadingPart)
+        const ShimmerPlaceholder(height: 5 * 56)
+      else if (seasons.isEmpty || season == null)
+        const AppEmptyState.compact(
+          icon: Icons.live_tv_outlined,
+          title: 'No episodes for this series',
+        )
+      else ...[
+        if (seasons.length > 1) ...[
+          const _Label('Season'),
+          SelectionPills<int>.wrap(
+            values: seasons,
+            selected: season,
+            labelBuilder: seasonChipLabel,
+            onSelected: _pickSeason,
           ),
-          child: Icon(service.icon, size: 16, color: accent),
-        ),
-        title: Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
-        ),
-        subtitle: subtitle == null
-            ? null
-            : Text(
-                subtitle!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+        ],
+        if (_bulk)
+          ..._eachFile(
+            label: 'Episodes',
+            valueOf: (item) => switch (_episodeOf[item.path]) {
+              final episode? => _episodeTitle(episode),
+              null => null,
+            },
+            onTap: (item) => _pickEpisodeFor(context, item),
+          )
+        else ...[
+          const _Label('Episode'),
+          MediaGroup(
+            children: [
+              for (final episode in _seasonEpisodes)
+                _PickRow(
+                  key: _episodeOf[widget.items.single.path]?.id == episode.id
+                      ? _picked
+                      : null,
+                  title: _episodeTitle(episode),
+                  detail: _episodeDetail(episode),
+                  chosenFor: _chosenFor(episode, widget.items.single),
+                  selected:
+                      _episodeOf[widget.items.single.path]?.id == episode.id,
+                  onTap: () => _pickEpisode(widget.items.single, episode),
                 ),
-              ),
-        trailing: selected
-            ? Icon(Icons.check_rounded, size: 18, color: accent)
-            : null,
-        onTap: onTap,
+            ],
+          ),
+        ],
+      ],
+    ];
+  }
+
+  /// One row a file, each opening the value sheet on its own episode or
+  /// track.
+  List<Widget> _eachFile({
+    required String label,
+    required String? Function(ManualImportItem item) valueOf,
+    required void Function(ManualImportItem item) onTap,
+  }) => [
+    _Label(label),
+    MediaGroup(
+      children: [
+        for (final item in widget.items)
+          _FileRow(
+            file: fileStem(item),
+            value: valueOf(item),
+            onTap: () => onTap(item),
+          ),
+      ],
+    ),
+  ];
+
+  Future<void> _pickEpisodeFor(
+    BuildContext context,
+    ManualImportItem item,
+  ) async {
+    final current = _episodeOf[item.path];
+    final picked = await showMediaValueSheet<ManualImportEpisode>(
+      context,
+      title: fileStem(item),
+      value: current,
+      currentLabel: current == null ? 'none' : _episodeTitle(current),
+      options: [
+        for (final episode in _seasonEpisodes)
+          MediaDetailValueOption(
+            value: episode,
+            label: switch (_chosenFor(episode, item)) {
+              final other? => '${_episodeTitle(episode)} (on $other)',
+              null => _episodeTitle(episode),
+            },
+          ),
+      ],
+    );
+    if (picked != null) _pickEpisode(item, picked.value);
+  }
+
+  Future<void> _pickTrackFor(
+    BuildContext context,
+    ManualImportItem item,
+  ) async {
+    final current = _trackOf[item.path];
+    final picked = await showMediaValueSheet<ManualImportTrack>(
+      context,
+      title: fileStem(item),
+      value: current,
+      currentLabel: current?.label ?? 'none',
+      options: [
+        for (final track in _tracks)
+          MediaDetailValueOption(value: track, label: track.label),
+      ],
+    );
+    if (picked != null) {
+      setState(() => _trackOf[item.path] = picked.value);
+    }
+  }
+
+  /// `E4 · The title`: the season is the pill above.
+  static String _episodeTitle(ManualImportEpisode episode) => [
+    formatEpisodeOrdinal(episode.episodeNumber),
+    if (episode.title.isNotEmpty && episode.title != 'Episode') episode.title,
+  ].join(' · ');
+
+  /// When it aired and whether the library has it: `Aired 3 Oct 2024 · On
+  /// disk`, `Aired 3 Oct 2024 · Missing`, `Airs 21 Oct`.
+  static String? _episodeDetail(ManualImportEpisode episode) {
+    final raw = episode.raw;
+    final aired = DateTime.tryParse(
+      stringOrNull(raw['airDateUtc']) ?? stringOrNull(raw['airDate']) ?? '',
+    );
+    final onDisk = raw['hasFile'] == true;
+    if (aired == null) return onDisk ? 'On disk' : null;
+    if (aired.isAfter(DateTime.now())) {
+      return 'Airs ${formatDayMonth(aired.toLocal())}';
+    }
+    return [
+      'Aired ${formatDayMonth(aired.toLocal())}',
+      onDisk ? 'On disk' : 'Missing',
+    ].join(' · ');
+  }
+
+  static String? _trackDetail(ManualImportTrack track) {
+    final raw = track.raw;
+    final seconds = (intOrNull(raw['duration']) ?? 0) ~/ 1000;
+    final words = [
+      if (seconds > 0)
+        '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}',
+      if (raw['hasFile'] == true) 'On disk',
+    ];
+    return words.isEmpty ? null : words.join(' · ');
+  }
+}
+
+/// A poster, or an album's cover, off the arr's own host.
+String? _posterOf(Map<String, dynamic> raw) {
+  final images = raw['images'];
+  if (images is! List) return null;
+  for (final type in const ['poster', 'cover']) {
+    for (final image in images) {
+      if (image is Map && image['coverType'] == type) {
+        final url = stringOrNull(image['remoteUrl']);
+        if (url != null && url.startsWith('http')) return url;
+      }
+    }
+  }
+  return remotePosterOf(images);
+}
+
+/// The file being matched, as the arr found it: the evidence the choice is
+/// made from, so never elided. Several files: the first three, then a count.
+class _Files extends StatelessWidget {
+  const _Files({required this.items, required this.bulk});
+
+  final List<ManualImportItem> items;
+  final bool bulk;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    const shown = 3;
+    final names = [for (final item in items.take(shown)) fileStem(item)];
+    return Semantics(
+      container: true,
+      label: bulk
+          ? '${items.length} files: ${names.join(', ')}'
+          : 'File: ${names.single}',
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (bulk)
+            Text(
+              '${items.length} files',
+              style: AppType.meta.copyWith(color: room.inkSecondary),
+            ),
+          for (final name in names)
+            Text(name, style: AppType.mono.copyWith(color: room.inkSecondary)),
+          if (items.length > shown)
+            Text(
+              'and ${items.length - shown} more',
+              style: AppType.meta.copyWith(color: room.inkTertiary),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _SheetFooter extends StatelessWidget {
-  final ServiceKey service;
-  final bool canGoBack;
-  final bool canGoNext;
-  final bool canApply;
-  final bool applying;
-  final bool isLastStep;
-  final VoidCallback onBack;
-  final VoidCallback onCancel;
-  final VoidCallback onNext;
-  final VoidCallback onApply;
+/// A part's name over its list, with an action at its end when there is one.
+class _Label extends StatelessWidget {
+  const _Label(this.text, {this.trailing});
 
-  const _SheetFooter({
-    required this.service,
-    required this.canGoBack,
-    required this.canGoNext,
-    required this.canApply,
-    required this.applying,
-    required this.isLastStep,
-    required this.onBack,
-    required this.onCancel,
-    required this.onNext,
-    required this.onApply,
-  });
+  final String text;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
+    final room = CupolaRoom.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        top: AppSpacing.md,
+        bottom: trailing == null ? AppSpacing.sm : 0,
       ),
       child: Row(
         children: [
-          TextButton(onPressed: onCancel, child: const Text('Cancel')),
-          const Spacer(),
-          if (canGoBack) ...[
-            OutlinedButton(onPressed: onBack, child: const Text('Back')),
-            const SizedBox(width: AppSpacing.sm),
-          ],
-          FilledButton(
-            onPressed: isLastStep
-                ? (canApply ? onApply : null)
-                : (canGoNext ? onNext : null),
-            style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-            child: applying
-                ? SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: colorScheme.onPrimary,
-                    ),
-                  )
-                : Text(isLastStep ? 'Apply' : 'Next'),
+          Expanded(
+            child: Text(
+              text,
+              style: AppType.meta.copyWith(color: room.inkSecondary),
+            ),
           ),
+          ?trailing,
         ],
+      ),
+    );
+  }
+}
+
+/// One episode or track to choose: what it is, when it aired and whether it
+/// is on disk, and the other file already on it.
+class _PickRow extends StatelessWidget {
+  const _PickRow({
+    super.key,
+    required this.title,
+    required this.detail,
+    required this.selected,
+    required this.onTap,
+    this.chosenFor,
+  });
+
+  final String title;
+  final String? detail;
+  final String? chosenFor;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final spoken = [
+      title,
+      ?detail,
+      if (chosenFor case final other?) 'chosen for $other',
+    ].join(', ');
+    return PressableScale(
+      onTap: onTap,
+      semanticLabel: spoken,
+      semanticValue: selected ? 'Selected' : null,
+      excludeChildSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                size: ActionStateGlyph.glyphSize,
+                color: selected ? room.ink : room.inkTertiary,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: selected
+                          ? AppType.row
+                                .weight(FontWeight.w600)
+                                .copyWith(color: room.ink)
+                          : AppType.row.copyWith(color: room.ink),
+                    ),
+                    if (detail case final detail?)
+                      Text(
+                        detail,
+                        style: AppType.meta.copyWith(color: room.inkTertiary),
+                      ),
+                    if (chosenFor case final other?)
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(text: 'Chosen for '),
+                            TextSpan(
+                              text: other,
+                              style: AppType.mono.copyWith(
+                                color: room.inkSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: AppType.meta.copyWith(color: room.inkSecondary),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One of several files: its name, and the episode or track it goes on, or
+/// that it has none yet.
+class _FileRow extends StatelessWidget {
+  const _FileRow({
+    required this.file,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String file;
+  final String? value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    return PressableScale(
+      onTap: onTap,
+      semanticLabel: '$file, ${value ?? 'not picked yet'}',
+      excludeChildSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(file, style: AppType.mono.copyWith(color: room.ink)),
+                    Text(
+                      value ?? 'Pick one',
+                      style: AppType.meta.copyWith(
+                        color: value == null
+                            ? room.inkTertiary
+                            : room.inkSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: room.inkTertiary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -210,10 +210,18 @@ const _monoUses = <({String file, int uses, String prints})>[
   ),
   (
     file: 'lib/features/import/presentation/blocked_import_parts.dart',
-    uses: 5,
+    uses: 6,
     prints:
-        'the files a blocked download holds, by name, and what the arr says '
-        'about them, exactly as it returns them',
+        'the files a blocked download holds, by name (also the one already on '
+        'an episode), and what the arr says about them, exactly as it returns '
+        'them',
+  ),
+  (
+    file: 'lib/features/import/presentation/manual_import_fix_sheet.dart',
+    uses: 3,
+    prints:
+        'the files being matched, by name, and the one already on an episode: '
+        'file names, exactly as the arr found them',
   ),
   (
     file: 'lib/features/home/presentation/widgets/downloads_module.dart',

@@ -424,6 +424,10 @@ class _BlockedImportNeedYouRowState
   int? _season;
   late int _episode = episodeNumberInName(widget.item.fileName) ?? 1;
 
+  /// Whether the stepper is still on its own guess: the file's name says no
+  /// episode and nobody has stepped it yet.
+  late bool _guessing = episodeNumberInName(widget.item.fileName) == null;
+
   /// Each season's episode numbers, as Sonarr lists them.
   final _numbers = <int, List<int>>{};
   bool _busy = false;
@@ -434,17 +438,70 @@ class _BlockedImportNeedYouRowState
   @override
   void initState() {
     super.initState();
-    // One season: nothing to pick.
     final seasons = _seasons;
-    if (widget.kind == NeedYouKind.episode && seasons.length == 1) {
-      _season = seasons.single;
+    if (widget.kind == NeedYouKind.episode) {
+      // One season: nothing to pick. More: the one every other file of the
+      // series in this Review sits in, when they agree; otherwise a choice.
+      _season = seasons.length == 1 ? seasons.single : _soleSeason();
+      _followPlaced();
     }
+  }
+
+  /// The season every other file of the same series in this Review is on,
+  /// or null when they are on none or on several.
+  int? _soleSeason() {
+    final seriesId = intOrNull(widget.item.series?['id']);
+    final seasons = <int>{
+      for (final other in ref.read(manualImportFlowProvider).items)
+        if (other.path != widget.item.path &&
+            intOrNull(other.series?['id']) == seriesId)
+          for (final episode in other.episodes)
+            ?intOrNull(episode['seasonNumber']),
+    };
+    return seasons.length == 1 ? seasons.single : null;
+  }
+
+  /// A run of files whose names say no episode is a run of episodes: the
+  /// guess is the one after the last this Review placed in the season.
+  void _followPlaced() {
+    final season = _season;
+    if (!_guessing || season == null) return;
+    final seriesId = intOrNull(widget.item.series?['id']);
+    var last = 0;
+    for (final other in ref.read(manualImportFlowProvider).items) {
+      if (other.path == widget.item.path) continue;
+      if (intOrNull(other.series?['id']) != seriesId) continue;
+      for (final episode in other.episodes) {
+        if (intOrNull(episode['seasonNumber']) != season) continue;
+        final number = intOrNull(episode['episodeNumber']) ?? 0;
+        if (number > last) last = number;
+      }
+    }
+    if (last > 0) _episode = last + 1;
+  }
+
+  /// The other file of this Review already on [episode] of [season], if any.
+  String? _placedOn(int season, int episode) {
+    final seriesId = intOrNull(widget.item.series?['id']);
+    for (final other in ref.read(manualImportFlowProvider).items) {
+      if (other.path == widget.item.path) continue;
+      if (intOrNull(other.series?['id']) != seriesId) continue;
+      final taken = other.episodes.any(
+        (each) =>
+            intOrNull(each['seasonNumber']) == season &&
+            intOrNull(each['episodeNumber']) == episode,
+      );
+      if (taken) return fileStem(other);
+    }
+    return null;
   }
 
   @override
   void didUpdateWidget(BlockedImportNeedYouRow oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.open && !oldWidget.open && _season != null) {
+      // Opened after a sibling was placed: follow it.
+      setState(_followPlaced);
       _load(_season!);
     }
   }
@@ -472,6 +529,7 @@ class _BlockedImportNeedYouRowState
     setState(() {
       _season = season;
       _error = null;
+      _followPlaced();
     });
     _load(season);
   }
@@ -482,6 +540,7 @@ class _BlockedImportNeedYouRowState
     final high = numbers == null || numbers.isEmpty ? 999 : numbers.last;
     setState(() {
       _episode = (_episode + delta).clamp(low, high);
+      _guessing = false;
       _error = null;
     });
   }
@@ -670,6 +729,7 @@ class _BlockedImportNeedYouRowState
     final numbers = season == null ? null : _numbers[season];
     final missing =
         numbers != null && numbers.isNotEmpty && !numbers.contains(_episode);
+    final placedOn = season == null ? null : _placedOn(season, _episode);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -754,6 +814,26 @@ class _BlockedImportNeedYouRowState
             season == null ? 'Pick a season to add it' : 'Add to the import',
           ),
         ),
+        // In the secondary ink, not amber: a better copy of an episode
+        // already placed is a choice the user may mean. Said, so it is one.
+        if (placedOn != null && _error == null && !missing) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text:
+                      '${formatEpisodeCode(season!, _episode)} is already on ',
+                ),
+                TextSpan(
+                  text: placedOn,
+                  style: AppType.mono.copyWith(color: room.inkSecondary),
+                ),
+              ],
+            ),
+            style: AppType.meta.copyWith(color: room.inkSecondary),
+          ),
+        ],
         if (_error ?? (missing ? _missingWords(season!) : null)
             case final error?) ...[
           const SizedBox(height: AppSpacing.xs),
