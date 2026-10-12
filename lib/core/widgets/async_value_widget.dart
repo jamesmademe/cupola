@@ -85,6 +85,17 @@ AsyncValue<T> lastReadUnderBand<T>(
   required bool banded,
 }) => banded && value.hasValue ? AsyncData(value.requireValue) : value;
 
+/// Whether [AsyncValueWidget] draws [value] as its last read under a band: a
+/// failure that kept the previous answer.
+///
+/// For a page whose rows are built inside the widget's data builder and so
+/// cannot see the branch the widget took: it asks the same question here, to
+/// tell its rows they are stale (`ReadAgeWatch.watchQueueReadAge`). Mirrors the
+/// error branch of [AsyncValueWidget.build], including its leaving a read whose
+/// client was closed under it out of the band.
+bool showsLastReadUnderBand(AsyncValue<Object?> value) =>
+    value.hasError && value.hasValue && !isClosedClientFailure(value.error);
+
 class AsyncValueWidget<T> extends StatelessWidget {
   final AsyncValue<T> value;
   final Widget Function(T data) data;

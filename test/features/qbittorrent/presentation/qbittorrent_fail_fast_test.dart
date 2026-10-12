@@ -11,6 +11,8 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/lifecycle/poll_clock.dart';
 import 'package:cupola/core/lifecycle/poll_probe.dart';
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/status/read_age.dart';
+import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
@@ -73,6 +75,7 @@ class _Qb implements HttpClientAdapter {
               'state': 'downloading',
               'progress': 0.5,
               'size': 1024,
+              'eta': 420,
             },
           ])
         : jsonEncode(<String, dynamic>{});
@@ -122,12 +125,14 @@ class _ListPage extends ConsumerWidget {
 void main() {
   late _Qb qb;
   late PollClock clock;
+  late ReadClock readClock;
   late DateTime now;
 
   setUp(() {
     qb = _Qb();
     now = DateTime(2026, 9, 29, 12);
     clock = PollClock()..now = () => now;
+    readClock = ReadClock(now: () => now);
     PollProbe.instance.reset();
   });
 
@@ -149,6 +154,7 @@ void main() {
       ProviderScope(
         overrides: [
           pollClockProvider.overrideWithValue(clock),
+          readClockProvider.overrideWithValue(readClock),
           currentSettingsProvider.overrideWith(
             (ref) => settingsWith(qbittorrentUrl: 'http://qb.test'),
           ),
@@ -194,6 +200,11 @@ void main() {
     test('sources and derived providers alike', () async {
       final container = ProviderContainer(
         overrides: [
+          // The list providers resolve which connection they read for the
+          // read clock, so a container that runs them needs settings.
+          currentSettingsProvider.overrideWith(
+            (ref) => settingsWith(qbittorrentUrl: 'http://qb.test'),
+          ),
           qbittorrentServiceProvider.overrideWithValue(_DarkService()),
         ],
       );
@@ -267,6 +278,46 @@ void main() {
       await tick(tester);
       expect(find.byType(FaultBand), findsNothing);
       expect(find.text('Ubuntu.ISO'), findsOneWidget);
+    });
+
+    testWidgets('a list read before the failure says how old it is', (
+      tester,
+    ) async {
+      await pump(tester, const QbittorrentScreen());
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(QbittorrentScreen)),
+      );
+
+      // Healthy: the row counts down, says nothing of its age, and the page
+      // has no clock running.
+      expect(find.textContaining('7\u00A0min'), findsOneWidget);
+      expect(find.textContaining('as of'), findsNothing);
+      expect(container.exists(minuteNowProvider), isFalse);
+
+      // Down: the same row keeps its list, and trades the ETA, which no longer
+      // counts down, for the age of what it last read.
+      qb.down = true;
+      await tick(tester);
+      expect(find.byType(FaultBand), findsOneWidget);
+      expect(find.text('Ubuntu.ISO'), findsOneWidget);
+      expect(find.textContaining('7\u00A0min'), findsNothing);
+      expect(find.text('as of just now'), findsOneWidget);
+
+      // And the age moves with the minutes, not with the three-second poll.
+      now = now.add(const Duration(minutes: 6));
+      await tester.pump(const Duration(minutes: 1));
+      await flush(tester);
+      expect(find.text('as of 6\u00A0min ago'), findsOneWidget);
+
+      // Back: the ETA returns, the age goes, and so does the clock.
+      qb.down = false;
+      await tick(tester);
+      expect(find.byType(FaultBand), findsNothing);
+      expect(find.textContaining('7\u00A0min'), findsOneWidget);
+      expect(find.textContaining('as of'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(container.exists(minuteNowProvider), isFalse);
     });
 
     testWidgets('a request still in flight is not thrown away by the poll', (

@@ -24,6 +24,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 class TorrentTile extends StatelessWidget {
   final Torrent torrent;
   final bool selected;
+
+  /// How old this row's figures are, when the page is showing the last list it
+  /// read under a fault band; null when they are current. The plate trades the
+  /// ETA for it (see [DownloadQueueTile.sampleAge]).
+  final Duration? sampleAge;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -41,6 +46,7 @@ class TorrentTile extends StatelessWidget {
     super.key,
     required this.torrent,
     this.selected = false,
+    this.sampleAge,
     this.onTap,
     this.onLongPress,
     this.actions,
@@ -88,6 +94,7 @@ class TorrentTile extends StatelessWidget {
           ),
       ],
       selected: selected,
+      sampleAge: sampleAge,
       onTap: onTap,
       onLongPress: onLongPress,
       actions: actions,

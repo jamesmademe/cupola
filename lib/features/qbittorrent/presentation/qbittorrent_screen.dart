@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
+import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
@@ -61,6 +62,13 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
     ref.watchWhileLive(context, torrentPollingProvider);
     final torrentsAsync = ref.watch(torrentsProvider);
     final selectedHashes = ref.watch(selectedTorrentHashesProvider);
+    // How old the rows are, only while they are the last list read under a
+    // fault band: their ETAs are the one figure that is certainly false then.
+    final sampleAge = ref.watchQueueReadAge(
+      context,
+      ServiceKey.qbittorrent,
+      underBand: showsLastReadUnderBand(torrentsAsync),
+    );
 
     return AmbientScaffold(
       accent: ServiceKey.qbittorrent.accent,
@@ -97,7 +105,12 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
                 const SliverToBoxAdapter(child: TorrentFilterPillsRow()),
                 const SliverToBoxAdapter(child: TorrentSortRow()),
               ],
-              body: _buildTorrentList(context, torrentsAsync, selectedHashes),
+              body: _buildTorrentList(
+                context,
+                torrentsAsync,
+                selectedHashes,
+                sampleAge,
+              ),
             ),
           ),
           TorrentSelectionBar(
@@ -113,6 +126,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
     BuildContext context,
     AsyncValue<List<Torrent>> torrentsAsync,
     Set<String> selectedHashes,
+    Duration? sampleAge,
   ) {
     return AsyncValueWidget<List<Torrent>>(
       value: torrentsAsync,
@@ -147,6 +161,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
               return TorrentTile(
                 torrent: torrent,
                 selected: selectedHashes.contains(torrent.hash),
+                sampleAge: sampleAge,
                 onTap: () {
                   if (selectedHashes.isNotEmpty) {
                     _toggleSelection(ref, torrent.hash);

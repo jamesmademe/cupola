@@ -247,6 +247,66 @@ void main() {
     expect(lastReadUnderBand(cold, banded: true).hasError, isTrue);
   });
 
+  group('showsLastReadUnderBand says what the widget draws', () {
+    Future<Object> closedClientError() async {
+      final dio = Dio()..close();
+      try {
+        await dio.get<dynamic>('http://nas.home.arpa:7878/api/v3/movie');
+      } catch (error) {
+        return error;
+      }
+      fail('a closed client sent the request');
+    }
+
+    Future<void> expectAgrees(
+      WidgetTester tester,
+      AsyncValue<String> value, {
+      required bool band,
+    }) async {
+      await _pump(tester, value);
+      expect(find.byType(FaultBand), band ? findsOneWidget : findsNothing);
+      expect(showsLastReadUnderBand(value), band);
+    }
+
+    testWidgets('a failure over a read is a band', (tester) async {
+      await expectAgrees(tester, _failedOver('queue'), band: true);
+    });
+
+    testWidgets('a read that is current is not', (tester) async {
+      await expectAgrees(
+        tester,
+        const AsyncValue<String>.data('queue'),
+        band: false,
+      );
+    });
+
+    testWidgets('a failure with nothing read is not', (tester) async {
+      await expectAgrees(
+        tester,
+        AsyncValue<String>.error(Exception('x'), StackTrace.empty),
+        band: false,
+      );
+    });
+
+    testWidgets('a first load is not', (tester) async {
+      await expectAgrees(
+        tester,
+        const AsyncValue<String>.loading(),
+        band: false,
+      );
+    });
+
+    testWidgets('a client closed under the read is not', (tester) async {
+      final error = await closedClientError();
+
+      await expectAgrees(
+        tester,
+        _failedOver('queue', error: error),
+        band: false,
+      );
+    });
+  });
+
   testWidgets('"not configured" still wins over everything', (tester) async {
     // A service with no URL saved is not an outage and must never get the
     // outage band. The answer there is "go set this up".

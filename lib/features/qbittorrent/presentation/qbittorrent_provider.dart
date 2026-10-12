@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/lifecycle/gated_poll.dart'; // ignore: implementation_imports
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/read_clock.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderBase;
 
@@ -167,11 +168,22 @@ final torrentSearchQueryProvider = StateProvider<String>((ref) => '');
 /// once; the poll, or the user's Retry, is the retry. The providers derived
 /// from this one carry the flag too, or the derivation would quietly
 /// reintroduce the retry the source refused.
+///
+/// **Where the list is noted as read** (`ReadClock`): here, right after the
+/// answer lands, for the connection this build resolved. The page's rows come
+/// from [torrentsProvider], which reuses this answer whenever the filter is
+/// `all`, so this is the read a retained list is as old as.
 final allTorrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
   final sort = ref.watch(torrentSortProvider);
   final reverse = ref.watch(torrentSortReverseProvider);
-  return service.getTorrents(sort: sort.apiValue, reverse: reverse);
+  final noteRead = ref.queueReadNoter(ServiceKey.qbittorrent);
+  final torrents = await service.getTorrents(
+    sort: sort.apiValue,
+    reverse: reverse,
+  );
+  noteRead();
+  return torrents;
 }, retry: noProviderRetry);
 
 final availableCategoriesProvider = Provider<List<String>>((ref) {
@@ -217,6 +229,7 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
       .watch(torrentSearchQueryProvider)
       .trim()
       .toLowerCase();
+  final noteRead = ref.queueReadNoter(ServiceKey.qbittorrent);
 
   // Paused is deliberately absent: it is folded client-side below, because
   // neither spelling of it survives every qBittorrent in the wild. `paused` is
@@ -241,13 +254,22 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   // separately here would download and parse the identical body twice on
   // every 3s poll tick. Sub-filters and the search query are applied
   // client-side below, so they do not need their own request.
-  var torrents = apiFilter == 'all'
-      ? await ref.watch(allTorrentsProvider.future)
-      : await service.getTorrents(
-          filter: apiFilter,
-          sort: sort.apiValue,
-          reverse: reverse,
-        );
+  //
+  // Noted as read only when this provider made the request itself. An answer
+  // taken from [allTorrentsProvider] was noted there, when it landed: deriving
+  // a new filter from it later is not a read, and must not make an old list
+  // look fresh.
+  List<Torrent> torrents;
+  if (apiFilter == 'all') {
+    torrents = await ref.watch(allTorrentsProvider.future);
+  } else {
+    torrents = await service.getTorrents(
+      filter: apiFilter,
+      sort: sort.apiValue,
+      reverse: reverse,
+    );
+    noteRead();
+  }
 
   if (filter == TorrentFilter.queued) {
     torrents = torrents.where((t) => t.parsedState.isQueued).toList();
