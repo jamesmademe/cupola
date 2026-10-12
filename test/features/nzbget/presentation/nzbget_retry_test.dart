@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 /// A server that is down. `noSuchMethod` stands in for the rest of the client:
 /// this is about how a failure travels, not about what the client can do.
@@ -41,7 +44,14 @@ void main() {
   // on its own. This test is about the server that answers nothing.)
   test('a dark NZBGet reaches its screens on the first attempt', () async {
     final container = ProviderContainer(
-      overrides: [nzbgetClientProvider.overrideWithValue(_DarkNzbget())],
+      overrides: [
+        // The queue provider resolves which connection it reads for the read
+        // clock, so a container that runs it needs settings.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWith(nzbgetUrl: 'http://nzbget.test'),
+        ),
+        nzbgetClientProvider.overrideWithValue(_DarkNzbget()),
+      ],
     );
     addTearDown(container.dispose);
 

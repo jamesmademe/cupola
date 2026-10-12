@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_actions.dart';
@@ -70,6 +71,13 @@ class _NzbgetDashboard extends ConsumerWidget {
       );
     }
     final queueAsync = lastReadUnderBand(watched, banded: failed != null);
+    // How old the rows are, only while they are the last queue read under the
+    // band: their figures stopped moving when NZBGet stopped answering.
+    final sampleAge = ref.watchQueueReadAge(
+      context,
+      ServiceKey.nzbget,
+      underBand: failed != null,
+    );
 
     // Through the same `when` the rows draw with, so the header never counts
     // a queue its section is not showing.
@@ -110,7 +118,7 @@ class _NzbgetDashboard extends ConsumerWidget {
               const SizedBox(height: 2),
             ],
           ),
-          _queueRows(ref, queueAsync),
+          _queueRows(ref, queueAsync, sampleAge),
           SliverToBoxAdapter(
             child: SizedBox(
               height: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
@@ -132,7 +140,11 @@ String? nzbgetQueueCountLabel(int? count) {
 }
 
 /// The queue's rows, as a sliver: every group, lazily built.
-Widget _queueRows(WidgetRef ref, AsyncValue<List<NzbgetGroup>> queueAsync) {
+Widget _queueRows(
+  WidgetRef ref,
+  AsyncValue<List<NzbgetGroup>> queueAsync,
+  Duration? sampleAge,
+) {
   return queueAsync.when(
     data: (groups) {
       if (groups.isEmpty) {
@@ -148,7 +160,8 @@ Widget _queueRows(WidgetRef ref, AsyncValue<List<NzbgetGroup>> queueAsync) {
       }
       return SliverList.builder(
         itemCount: groups.length,
-        itemBuilder: (context, index) => _QueueTile(group: groups[index]),
+        itemBuilder: (context, index) =>
+            _QueueTile(group: groups[index], sampleAge: sampleAge),
       );
     },
     loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
@@ -311,9 +324,13 @@ class _AddNzbDialogState extends State<_AddNzbDialog> {
 }
 
 class _QueueTile extends ConsumerWidget {
-  const _QueueTile({required this.group});
+  const _QueueTile({required this.group, required this.sampleAge});
 
   final NzbgetGroup group;
+
+  /// How old the group's figures are, while the queue is shown under a fault
+  /// band; null when they are current.
+  final Duration? sampleAge;
 
   bool get _paused => group.status.toUpperCase().contains('PAUSED');
 
@@ -340,6 +357,7 @@ class _QueueTile extends ConsumerWidget {
       // could not compute. The shared plate renders the latter as an em dash.
       percentage: group.percentage,
       accent: ServiceKey.nzbget.accent,
+      sampleAge: sampleAge,
       actions: DownloadQueueActionsMenu(
         paused: _paused,
         subject: group.name,

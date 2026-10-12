@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -78,8 +79,16 @@ final nzbgetStatusProvider = FutureProvider<NzbgetStatus>((ref) async {
 }, retry: noProviderRetry);
 
 /// The active download queue.
+///
+/// Noted as read (`ReadClock`) right after the answer lands, for the connection
+/// this build resolved, so a page that keeps this queue under a fault band can
+/// say how old it is.
 final nzbgetQueueProvider = FutureProvider<List<NzbgetGroup>>((ref) async {
-  return ref.watch(nzbgetClientProvider).listGroups();
+  final client = ref.watch(nzbgetClientProvider);
+  final noteRead = ref.queueReadNoter(ServiceKey.nzbget);
+  final groups = await client.listGroups();
+  noteRead();
+  return groups;
 }, retry: noProviderRetry);
 
 /// Recent completed/failed downloads.
