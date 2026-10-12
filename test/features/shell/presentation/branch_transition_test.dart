@@ -190,6 +190,30 @@ void main() {
       expect(taps, 0);
     });
 
+    testWidgets('a put-away branch gives up its focus', (tester) async {
+      final field = FocusNode();
+      addTearDown(field.dispose);
+      await tester.pumpWidget(
+        _Harness(
+          children: [
+            Focus(focusNode: field, child: const Text('branch 0')),
+            const Text('branch 1'),
+          ],
+        ),
+      );
+      field.requestFocus();
+      await tester.pump();
+      expect(field.hasFocus, isTrue);
+
+      tester.state<_HarnessState>(find.byType(_Harness)).switchTo(1);
+      await tester.pumpAndSettle();
+
+      expect(field.hasFocus, isFalse);
+      field.requestFocus();
+      await tester.pump();
+      expect(field.hasFocus, isFalse);
+    });
+
     testWidgets('the incoming branch is painted on top, in both directions', (
       tester,
     ) async {

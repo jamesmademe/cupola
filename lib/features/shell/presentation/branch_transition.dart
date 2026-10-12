@@ -192,35 +192,42 @@ class _BranchLayer extends StatelessWidget {
           branchIndex: branchIndex,
           child: ExcludeSemantics(
             excluding: !isCurrent,
-            child: IgnorePointer(
-              ignoring: !isCurrent,
-              // The incoming branch fades in OVER the outgoing one, which keeps
-              // its full opacity underneath and therefore needs no opacity
-              // layer at all.
-              //
-              // Cross-fading the two instead, each in its own FadeTransition,
-              // was measured on device at 18ms of average raster per switch
-              // against 10ms for a hard cut: two full-screen `saveLayer`s per
-              // frame, which is the same bill the Zoom transition was dropped
-              // for. One layer buys the move for about a millisecond.
-              //
-              // The rise is a transform inside that one layer, so it is free:
-              // a bare opacity ramp on a whole screen reads as a dissolve, and
-              // what a tab switch wants to say is that something arrived.
-              // Small on purpose, 4% over 200ms, because the destination must
-              // not appear to zoom.
-              child: opacity == null
-                  ? RepaintBoundary(child: child)
-                  : FadeTransition(
-                      opacity: opacity!,
-                      child: ScaleTransition(
-                        scale: Tween<double>(
-                          begin: 0.96,
-                          end: 1,
-                        ).animate(opacity!),
-                        child: RepaintBoundary(child: child),
+            // Focus is the third way into a branch, after the pointer and the
+            // screen reader: `Offstage` stops neither a field that already had
+            // focus (its keyboard stayed up over the next tab) nor Tab on a
+            // desktop walking into a page nobody can see.
+            child: ExcludeFocus(
+              excluding: !isCurrent,
+              child: IgnorePointer(
+                ignoring: !isCurrent,
+                // The incoming branch fades in OVER the outgoing one, which keeps
+                // its full opacity underneath and therefore needs no opacity
+                // layer at all.
+                //
+                // Cross-fading the two instead, each in its own FadeTransition,
+                // was measured on device at 18ms of average raster per switch
+                // against 10ms for a hard cut: two full-screen `saveLayer`s per
+                // frame, which is the same bill the Zoom transition was dropped
+                // for. One layer buys the move for about a millisecond.
+                //
+                // The rise is a transform inside that one layer, so it is free:
+                // a bare opacity ramp on a whole screen reads as a dissolve, and
+                // what a tab switch wants to say is that something arrived.
+                // Small on purpose, 4% over 200ms, because the destination must
+                // not appear to zoom.
+                child: opacity == null
+                    ? RepaintBoundary(child: child)
+                    : FadeTransition(
+                        opacity: opacity!,
+                        child: ScaleTransition(
+                          scale: Tween<double>(
+                            begin: 0.96,
+                            end: 1,
+                          ).animate(opacity!),
+                          child: RepaintBoundary(child: child),
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
         ),
