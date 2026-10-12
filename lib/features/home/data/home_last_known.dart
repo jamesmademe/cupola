@@ -190,22 +190,26 @@ extension HomeLastKnownWatch on WidgetRef {
   }
 }
 
-final Expando<Object> _kept = Expando('home last known');
-
 void _keep<T>(WidgetRef ref, HomeLastKnownSlot<T> slot, T value) {
-  // One Expando per slot object: the value last written for it.
   final store = ref.read(lastKnownStoreProvider);
-  if (value is Object && identical(_kept[slot], value)) return;
+  final key = homeLastKnownKey(ref.read(shellAudienceProvider).name, slot);
+  final validity = homeLastKnownValidity(
+    ref.read(currentSettingsProvider),
+    slot.services,
+  );
+  // The same answer, rebuilt: already kept.
+  if (value is Object && store.holds(key, validity: validity, source: value)) {
+    return;
+  }
   final data = slot.encode(value);
-  if (value is Object) _kept[slot] = value;
   if (data == null) return;
-  final settings = ref.read(currentSettingsProvider);
   store.write(
-    homeLastKnownKey(ref.read(shellAudienceProvider).name, slot),
-    validity: homeLastKnownValidity(settings, slot.services),
+    key,
+    validity: validity,
     schema: slot.schema,
     data: data,
     takenAt: ref.read(calendarClockProvider)(),
+    source: value,
   );
 }
 

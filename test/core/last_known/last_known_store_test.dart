@@ -88,6 +88,30 @@ void main() {
     });
   });
 
+  group('what an entry was written from', () {
+    test('is held until another write, a mismatch or a clear', () async {
+      final source = Object();
+      final store = LastKnownStore.memory()
+        ..write(
+          's',
+          validity: 'v',
+          schema: 1,
+          data: 1,
+          takenAt: at,
+          source: source,
+        );
+      expect(store.holds('s', validity: 'v', source: source), isTrue);
+      // The same answer for other connections is not held: it was not
+      // written for them.
+      expect(store.holds('s', validity: 'w', source: source), isFalse);
+      expect(store.holds('s', validity: 'v', source: Object()), isFalse);
+
+      await store.clear();
+      // A reset forgets it too, so the same answer is written again.
+      expect(store.holds('s', validity: 'v', source: source), isFalse);
+    });
+  });
+
   group('the file', () {
     late Directory dir;
     setUp(() => dir = Directory.systemTemp.createTempSync('last_known'));

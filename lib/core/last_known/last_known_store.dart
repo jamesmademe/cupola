@@ -68,7 +68,16 @@ class LastKnownStore {
 
   final File? _file;
   final Map<String, LastKnownEntry> _entries = {};
+
+  /// The live value each entry was written from, by identity: what lets a
+  /// page that rebuilds with the same answer skip encoding it again.
+  final Map<String, Object> _sources = {};
   Timer? _pending;
+
+  /// Whether [slot] already holds what was written from [source] for
+  /// [validity]. A caller that encodes only what changed asks this first.
+  bool holds(String slot, {required String validity, required Object source}) =>
+      identical(_sources[slot], source) && _entries[slot]?.validity == validity;
 
   /// The entry for [slot], when it was written for [validity] in the same
   /// [schema]; else null, and an entry that no longer matches is forgotten.
@@ -81,6 +90,7 @@ class LastKnownStore {
     if (entry == null) return null;
     if (entry.validity != validity || entry.schema != schema) {
       _entries.remove(slot);
+      _sources.remove(slot);
       _schedule();
       return null;
     }
@@ -97,7 +107,9 @@ class LastKnownStore {
     required int schema,
     required Object? data,
     required DateTime takenAt,
+    Object? source,
   }) {
+    _sources.remove(slot);
     final String encoded;
     try {
       encoded = jsonEncode(data);
@@ -109,6 +121,7 @@ class LastKnownStore {
       if (_entries.remove(slot) != null) _schedule();
       return;
     }
+    if (source != null) _sources[slot] = source;
     _entries[slot] = LastKnownEntry(
       takenAt: takenAt,
       validity: validity,
@@ -122,6 +135,7 @@ class LastKnownStore {
   /// removed.
   Future<void> clear() {
     _entries.clear();
+    _sources.clear();
     return flush();
   }
 
