@@ -10,6 +10,9 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/home_requests.dart';
+import 'package:cupola/features/home/data/last_known/requests_last_known.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
@@ -17,7 +20,6 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -53,17 +55,19 @@ class HomeRequestsModule extends ConsumerWidget {
     )) {
       return const SizedBox.shrink();
     }
-    final read = ref.watch(
-      dashboardDecisionSourceProvider(DecisionSource.requests),
-    );
+    // The live answer, or until it comes the last drawing (a cold start).
+    final read = ref.watchOrLastKnown(homeRequestsProvider, requestsLastKnown);
+    final live = read.live;
+    final known = read.asOf;
     final answered = ref.watch(answeredRequestsProvider);
     final value = read.value;
+    SourceCoverage silentOf(Object? error) =>
+        SourceCoverage.failure(ServiceKey.seerr, error);
     if (value == null) {
-      if (read.hasError) {
-        final coverage = SourceCoverage.failure(ServiceKey.seerr, read.error);
+      if (live.hasError) {
         return HomeModuleFrame.silent(
           title: _title,
-          coverage: coverage,
+          coverage: silentOf(live.error),
           onRetry: () => retryDashboardServices(ref, const [ServiceKey.seerr]),
         );
       }
@@ -78,6 +82,18 @@ class HomeRequestsModule extends ConsumerWidget {
     ];
     final rows = [...waiting, for (final a in answered.values) ?a.decision];
     if (rows.isEmpty) {
+      // A last drawing with nothing waiting says nothing: loading, as if
+      // there were none.
+      if (known != null) {
+        return live.hasError
+            ? HomeModuleFrame.silent(
+                title: _title,
+                coverage: silentOf(live.error),
+                onRetry: () =>
+                    retryDashboardServices(ref, const [ServiceKey.seerr]),
+              )
+            : const HomeModuleFrame.loading(title: _title);
+      }
       // With one Seerr silent, its requests are unknown, not absent.
       if (coverage.failed.isNotEmpty) {
         return HomeModuleFrame.silent(
@@ -94,8 +110,9 @@ class HomeRequestsModule extends ConsumerWidget {
       compact: AppBreakpoints.isCompactDesktop(context),
     );
     final shown = rankDecisions(rows, cap: cap);
-    // Seerr's own count, never the rows: the page holds a few of them.
-    final counted = ref.watch(pendingRequestCountProvider).value;
+    // Seerr's own count, never the rows: the page holds a few of them. A
+    // drawing says the count it drew.
+    final counted = value.counted;
     final count = counted?.count ?? waiting.length;
     final subtitle = requestsSubtitle(
       count,
@@ -105,32 +122,57 @@ class HomeRequestsModule extends ConsumerWidget {
     final shownWaiting = shown
         .where((decision) => !answered.containsKey(decision.id))
         .length;
+    List<Widget> rowWidgets() => [
+      for (final (index, decision) in shown.indexed)
+        DecisionRow(
+          key: ValueKey(decision.id),
+          decision: decision,
+          divided: index > 0,
+          outcome: answered[decision.id]?.outcome,
+        ),
+      if (count > shownWaiting)
+        HomeModuleLink(
+          label: 'See all requests',
+          onTap: () => context.go(ServiceRoutes.seerrRequests),
+        ),
+    ];
 
-    return HomeModuleFrame(
-      title: _title,
-      subtitle: subtitle,
-      semanticLabel: joinSpokenParts([
-        _title,
-        spokenCountPhrase(subtitle),
-        if (note != null) spokenFromDotted(note),
-      ]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (note != null) HomeCoverageNote(note: note, coverage: coverage),
-          for (final (index, decision) in shown.indexed)
-            DecisionRow(
-              key: ValueKey(decision.id),
-              decision: decision,
-              divided: index > 0,
-              outcome: answered[decision.id]?.outcome,
-            ),
-          if (count > shownWaiting)
-            HomeModuleLink(
-              label: 'See all requests',
-              onTap: () => context.go(ServiceRoutes.seerrRequests),
-            ),
-        ],
+    // The last drawing whose live read failed: the rows it knew, with their
+    // controls, at full ink, over the failure in its own words.
+    if (known != null && live.hasError) {
+      return LastKnownMark(
+        asOf: known,
+        checking: false,
+        child: HomeModuleFrame.silent(
+          title: _title,
+          coverage: silentOf(live.error),
+          onRetry: () => retryDashboardServices(ref, const [ServiceKey.seerr]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: rowWidgets(),
+          ),
+        ),
+      );
+    }
+
+    return LastKnownMark(
+      asOf: known,
+      checking: true,
+      child: HomeModuleFrame(
+        title: _title,
+        subtitle: subtitle,
+        semanticLabel: joinSpokenParts([
+          _title,
+          spokenCountPhrase(subtitle),
+          if (note != null) spokenFromDotted(note),
+        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (note != null) HomeCoverageNote(note: note, coverage: coverage),
+            ...rowWidgets(),
+          ],
+        ),
       ),
     );
   }
