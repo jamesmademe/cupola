@@ -66,8 +66,9 @@ At a cold start a module that keeps a last drawing draws it at once instead of i
 `As of 20:53` alone once only failures are left, gone when the last module is live; the line folds away rather than
 vanishing. The drawing is at full ink, with its own figures: times are made again against the moment of drawing (a
 card the week left behind is gone), and a figure that runs (progress, time left, speed) is not drawn as if it still
-ran. A module whose live read fails keeps the drawing over its failure (`HomeModuleFrame.silent` with a child). What
-is kept, where, and for which connections is `LastKnownStore`'s (`lib/core/last_known/last_known_store.dart`): no
+ran. Continue watching is the one that draws where each title stopped, its bar and its time left, as they were: a stop is a
+fact as of then, not a figure that runs. A module whose live read fails keeps the drawing over its failure
+(`HomeModuleFrame.silent` with a child). What is kept, where, and for which connections is `LastKnownStore`'s (`lib/core/last_known/last_known_store.dart`): no
 credential, no response body, dropped when the server, the person or the viewer changes. Needs you, the header's health
 and Now playing never draw from it.
 

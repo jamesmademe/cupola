@@ -10,7 +10,9 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/features/home/data/featured.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
+import 'package:cupola/features/home/data/last_known/continue_watching_last_known.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/continue_watching.dart';
 import 'package:cupola/features/home/domain/featured.dart';
@@ -49,17 +51,24 @@ class HomeContinueWatchingModule extends ConsumerWidget {
         .toList(growable: false);
     if (services.isEmpty) return const SizedBox.shrink();
 
-    final read = ref.watch(homeResumeProvider);
+    // The live answer, or until it comes the last drawing (a cold start).
+    final read = ref.watchOrLastKnown(
+      homeResumeProvider,
+      continueWatchingLastKnown,
+    );
+    final live = read.live;
+    final known = read.asOf;
     final resume = read.value;
+    SourceCoverage silentOf(Object? error) => SourceCoverage.merge([
+      for (final service in services) SourceCoverage.failure(service, error),
+    ]);
+    void retry() => ref.invalidate(homeResumeProvider);
     if (resume == null) {
-      if (read.hasError) {
+      if (live.hasError) {
         return HomeModuleFrame.silent(
           title: _title,
-          coverage: SourceCoverage.merge([
-            for (final service in services)
-              SourceCoverage.failure(service, read.error),
-          ]),
-          onRetry: () => ref.invalidate(homeResumeProvider),
+          coverage: silentOf(live.error),
+          onRetry: retry,
         );
       }
       return const HomeModuleFrame.loading(title: _title);
@@ -82,11 +91,22 @@ class HomeContinueWatchingModule extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     if (resume.rows.isEmpty && asking == null) {
+      // A last drawing with nothing in it says nothing: loading, as if there
+      // were none.
+      if (known != null) {
+        return live.hasError
+            ? HomeModuleFrame.silent(
+                title: _title,
+                coverage: silentOf(live.error),
+                onRetry: retry,
+              )
+            : const HomeModuleFrame.loading(title: _title);
+      }
       if (coverage.failed.isEmpty) return const SizedBox.shrink();
       return HomeModuleFrame.silent(
         title: _title,
         coverage: coverage,
-        onRetry: () => ref.invalidate(homeResumeProvider),
+        onRetry: retry,
       );
     }
 
@@ -100,27 +120,55 @@ class HomeContinueWatchingModule extends ConsumerWidget {
     final note = coverage.failed.isEmpty
         ? null
         : coverageFailureSentence(coverage);
+    // The question about who you are is of the settings, not of a drawing:
+    // only the titles are dated.
+    final drawnAsOf = shown.isEmpty ? null : known;
+    List<Widget> rows() => [
+      for (final (index, row) in shown.indexed)
+        ContinueWatchingRow(
+          key: ValueKey('${row.instanceId}/${row.item.id}'),
+          row: row,
+          divided: index > 0,
+        ),
+      if (asking != null) ...[
+        if (shown.isNotEmpty) const SizedBox(height: AppSpacing.sm),
+        asking,
+      ],
+    ];
 
-    return HomeModuleFrame(
-      title: _title,
-      subtitle: servers,
-      semanticLabel: joinSpokenParts([_title, ?note]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (note != null) HomeCoverageNote(note: note, coverage: coverage),
-          for (final (index, row) in shown.indexed)
-            ContinueWatchingRow(
-              key: ValueKey('${row.instanceId}/${row.item.id}'),
-              row: row,
-              divided: index > 0,
-            ),
-          if (asking != null) ...[
-            if (shown.isNotEmpty) const SizedBox(height: AppSpacing.sm),
-            asking,
+    // The last drawing whose live read failed: the rows it knew, at full ink,
+    // over the failure in its own words.
+    if (known != null && live.hasError) {
+      return LastKnownMark(
+        asOf: drawnAsOf,
+        checking: false,
+        child: HomeModuleFrame.silent(
+          title: _title,
+          coverage: silentOf(live.error),
+          onRetry: retry,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: rows(),
+          ),
+        ),
+      );
+    }
+
+    return LastKnownMark(
+      asOf: drawnAsOf,
+      checking: true,
+      child: HomeModuleFrame(
+        title: _title,
+        subtitle: servers,
+        semanticLabel: joinSpokenParts([_title, ?note]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (note != null) HomeCoverageNote(note: note, coverage: coverage),
+            ...rows(),
+            const SizedBox(height: AppSpacing.xs),
           ],
-          const SizedBox(height: AppSpacing.xs),
-        ],
+        ),
       ),
     );
   }
