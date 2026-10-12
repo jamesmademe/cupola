@@ -82,7 +82,6 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
           ? _BazarrDetailAppBar(
               title: 'Wanted subtitles',
               backRoute: ServiceRoutes.bazarr,
-              accent: ServiceKey.bazarr.accent,
               bottom: tabBar,
             )
           : null,
@@ -456,13 +455,11 @@ class _BazarrDetailAppBar extends StatelessWidget
   const _BazarrDetailAppBar({
     required this.title,
     required this.backRoute,
-    required this.accent,
     this.bottom,
   });
 
   final String title;
   final String backRoute;
-  final Color accent;
   final PreferredSizeWidget? bottom;
 
   @override
@@ -473,8 +470,7 @@ class _BazarrDetailAppBar extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: accent.withValues(alpha: 0.12),
+    return GlassAppBar(
       leading: IconButton(
         icon: const Icon(Icons.chevron_left_rounded),
         onPressed: () => RouteUtils.popOrGo(context, backRoute),

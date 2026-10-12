@@ -127,7 +127,7 @@ class ArrTitleOpener extends ConsumerWidget {
     final movie = arr == ServiceKey.radarr;
     return Scaffold(
       backgroundColor: room.ground,
-      appBar: AppBar(backgroundColor: Colors.transparent),
+      appBar: const GlassAppBar(),
       body: switch (answer) {
         AsyncError(:final error) => AppErrorState(
           error: error,

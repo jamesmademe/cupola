@@ -10,6 +10,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
@@ -265,10 +266,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
     if (!isConfigured) {
       return Scaffold(
         appBar: widget.showAppBar
-            ? AppBar(
-                backgroundColor: ServiceKey.prowlarr.accent.withValues(
-                  alpha: 0.12,
-                ),
+            ? GlassAppBar(
                 leading: IconButton(
                   icon: const Icon(Icons.chevron_left_rounded),
                   onPressed: () =>
@@ -382,10 +380,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
 
     return Scaffold(
       appBar: widget.showAppBar
-          ? AppBar(
-              backgroundColor: ServiceKey.prowlarr.accent.withValues(
-                alpha: 0.12,
-              ),
+          ? GlassAppBar(
               leading: _selecting
                   ? cancelSelection
                   : IconButton(

@@ -92,7 +92,7 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
       data: (matches) {
         if (matches.isEmpty) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Torrent')),
+            appBar: GlassAppBar(title: const Text('Torrent')),
             body: const Center(child: Text('Torrent not found')),
           );
         }

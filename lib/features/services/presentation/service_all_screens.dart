@@ -5,6 +5,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 
@@ -81,16 +82,13 @@ class _ServiceListAppBar extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
+    return GlassAppBar(
       leading: IconButton(
         icon: const Icon(Icons.chevron_left_rounded),
         onPressed: () => RouteUtils.popOrGo(context, backRoute),
         tooltip: 'Back',
       ),
       title: Text(title),
-      titleTextStyle: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
     );
   }
 }

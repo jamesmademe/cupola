@@ -9,6 +9,7 @@ import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -32,8 +33,7 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
     final tagLabels = ref.watch(prowlarrTagLabelsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: ServiceKey.prowlarr.accent.withValues(alpha: 0.12),
+      appBar: GlassAppBar(
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Back',

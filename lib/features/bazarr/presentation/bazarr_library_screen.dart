@@ -8,6 +8,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
@@ -77,8 +78,7 @@ class BazarrLibraryScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: showAppBar
-          ? AppBar(
-              backgroundColor: ServiceKey.bazarr.accent.withValues(alpha: 0.12),
+          ? GlassAppBar(
               leading: IconButton(
                 icon: const Icon(Icons.chevron_left_rounded),
                 onPressed: () =>

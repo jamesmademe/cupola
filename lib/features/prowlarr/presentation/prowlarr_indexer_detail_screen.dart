@@ -9,6 +9,7 @@ import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -37,8 +38,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
     );
     if (!configured) {
       return Scaffold(
-        appBar: AppBar(
-          backgroundColor: ServiceKey.prowlarr.accent.withValues(alpha: 0.12),
+        appBar: GlassAppBar(
           leading: IconButton(
             icon: const Icon(Icons.chevron_left_rounded),
             onPressed: () =>
@@ -54,8 +54,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
     final indexerAsync = ref.watch(prowlarrIndexerByIdProvider(indexerId));
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: ServiceKey.prowlarr.accent.withValues(alpha: 0.12),
+      appBar: GlassAppBar(
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           onPressed: () =>
