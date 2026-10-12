@@ -29,21 +29,6 @@ String formatIsoDate(String isoDate) {
   }
 }
 
-const List<String> _shortMonthNames = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
 /// Formats an ISO-8601 date as `Jul 17, 2026`: the one date voice every media
 /// detail page speaks.
 ///
@@ -70,16 +55,6 @@ String formatMediumDate(String isoDate) {
   return '${_shortMonthNames[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
 }
 
-const List<String> _weekdayNames = [
-  'Mon',
-  'Tue',
-  'Wed',
-  'Thu',
-  'Fri',
-  'Sat',
-  'Sun',
-];
-
 /// Formats an ISO-8601 date as `Tue 29 Sep`, and as `Tue 29 Sep 2025` when it
 /// is not in [now]'s year: the brand book's date, a year only when it is
 /// another year.
@@ -99,32 +74,60 @@ String formatShortDate(String isoDate, {DateTime? now}) {
   final parsed = DateTime.tryParse(isoDate.trim());
   if (parsed == null) return isoDate;
 
-  final weekday = _weekdayNames[parsed.weekday - 1];
-  final month = _shortMonthNames[parsed.month - 1];
-  final day = '$weekday ${parsed.day} $month';
-  return parsed.year == (now ?? DateTime.now()).year
-      ? day
-      : '$day ${parsed.year}';
+  return formatShortDay(parsed, now: now);
 }
 
-/// [day] as a day and a month, `12 Sep`, with the year only when it is not
-/// [now]'s: `12 Sep 2025`. For a day that is past and named with no weekday,
-/// as `On the server since 12 Sep`.
-String formatDayMonth(DateTime day, {DateTime? now}) {
-  final words = '${day.day} ${_shortMonthNames[day.month - 1]}';
+/// [formatShortDate] for a day that is already a [DateTime]: `Tue 29 Sep`, and
+/// `Tue 29 Sep 2025` when it is not in [now]'s year.
+///
+/// The components of [day] as they stand, with no shift into the reader's
+/// timezone, so a caller that has shifted (or chosen not to) is not second
+/// guessed.
+String formatShortDay(DateTime day, {DateTime? now}) {
+  final words = formatWeekdayDayMonth(day);
   return day.year == (now ?? DateTime.now()).year
       ? words
       : '$words ${day.year}';
 }
 
+/// `Wed 21 Oct`: the weekday, the day and the month, and never a year. The
+/// piece [formatShortDay] adds its year to.
+String formatWeekdayDayMonth(DateTime day) =>
+    '${shortWeekdayName(day)} ${formatDayMonthNoYear(day)}';
+
+/// [day] as a day and a month, `12 Sep`, with the year only when it is not
+/// [now]'s: `12 Sep 2025`. For a day that is past and named with no weekday,
+/// as `On the server since 12 Sep`.
+String formatDayMonth(DateTime day, {DateTime? now}) {
+  final words = formatDayMonthNoYear(day);
+  return day.year == (now ?? DateTime.now()).year
+      ? words
+      : '$words ${day.year}';
+}
+
+/// `12 Sep`: the day and the month, and never a year. For a cell of a calendar
+/// or a window of a few weeks, where the year would only be noise.
+String formatDayMonthNoYear(DateTime day) =>
+    '${day.day} ${_shortMonthNames[day.month - 1]}';
+
 /// The weekday of [day] in full: `Thursday`. For the Home's date and for
 /// what a screen reader says of a day, where `Thu` would be read as letters.
-String weekdayName(DateTime day) => _fullWeekdayNames[day.weekday - 1];
+String weekdayName(DateTime day) => _weekdayNames[day.weekday - 1];
 
 /// The month of [day] in full: `October`.
-String monthName(DateTime day) => _fullMonthNames[day.month - 1];
+String monthName(DateTime day) => _monthNames[day.month - 1];
 
-const List<String> _fullWeekdayNames = [
+/// The weekday of [day] as the brand book abbreviates it: `Thu`.
+String shortWeekdayName(DateTime day) => shortWeekdayNames[day.weekday - 1];
+
+/// The seven weekdays, Monday first, abbreviated: `Mon` to `Sun`. For a header
+/// row that names the columns of a week; a single day asks [shortWeekdayName].
+final List<String> shortWeekdayNames = _shortened(_weekdayNames);
+
+// The one list of weekday names and the one list of month names. The short
+// forms are their first three letters, which is how the brand book writes both
+// (`Tue`, `Sep`), so there is nothing else to keep in step.
+const List<String> _weekdayNames = [
   'Monday',
   'Tuesday',
   'Wednesday',
@@ -134,7 +137,7 @@ const List<String> _fullWeekdayNames = [
   'Sunday',
 ];
 
-const List<String> _fullMonthNames = [
+const List<String> _monthNames = [
   'January',
   'February',
   'March',
@@ -148,6 +151,11 @@ const List<String> _fullMonthNames = [
   'November',
   'December',
 ];
+
+final List<String> _shortMonthNames = _shortened(_monthNames);
+
+List<String> _shortened(List<String> names) =>
+    List.unmodifiable([for (final name in names) name.substring(0, 3)]);
 
 /// A time of day as the brand book writes one: 24 h, `20:41`, on this
 /// device's clock.

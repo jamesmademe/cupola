@@ -903,7 +903,7 @@ String calendarDayName(DateTime day, DateTime now) {
   return switch (_daysBetween(today, day)) {
     0 => 'Today',
     1 => 'Tomorrow',
-    _ => _weekdays[day.weekday - 1],
+    _ => shortWeekdayName(day),
   };
 }
 
@@ -914,18 +914,11 @@ String calendarDayDate(DateTime day, DateTime now) {
   final gap = _daysBetween(today, day);
   return gap == 0 || gap == 1
       ? calendarShortDate(day)
-      : '${day.day} ${_months[day.month - 1]}';
+      : formatDayMonthNoYear(day);
 }
 
-/// `14 Oct`, and `14 Oct 2027` when it is not in [now]'s year.
-String calendarDayMonth(DateTime day, DateTime now) => [
-  '${day.day} ${_months[day.month - 1]}',
-  if (day.year != now.year) '${day.year}',
-].join(' ');
-
 /// `Wed 21 Oct`.
-String calendarShortDate(DateTime day) =>
-    '${_weekdays[day.weekday - 1]} ${day.day} ${_months[day.month - 1]}';
+String calendarShortDate(DateTime day) => formatWeekdayDayMonth(day);
 
 /// A day as a screen reader says it: `Today`, `Tomorrow`, `Friday 2
 /// October`.
@@ -1087,22 +1080,6 @@ List<CalendarEvent> calendarLaterInSeason(
         other,
   ];
 }
-
-const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const _months = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
 
 /// What the band and the page's answer say of the calendar: the next
 /// thing, and how much this week holds.

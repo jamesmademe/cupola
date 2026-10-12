@@ -616,7 +616,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   static String? _comingOut(MediaPreview item, DateTime now) {
     final day = arrCalendarDate(item.releaseDate);
     if (day == null) return null;
-    final date = calendarDayMonth(day, now);
+    final date = formatDayMonth(day, now: now);
     return item.mediaType == 'tv' ? 'From $date' : 'Out $date';
   }
 

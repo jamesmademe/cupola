@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 
@@ -40,8 +41,6 @@ class CalendarMonthGrid extends StatelessWidget {
   /// push the next week off the window.
   static const _shown = 3;
 
-  static const _names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
@@ -57,7 +56,7 @@ class CalendarMonthGrid extends StatelessWidget {
         ExcludeSemantics(
           child: Row(
             children: [
-              for (final name in _names)
+              for (final name in shortWeekdayNames)
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
@@ -146,7 +145,7 @@ class _Day extends StatelessWidget {
     final rest = events.length - shown.length;
     // The first of a month names it, `1 Oct`, never with a year: the grid
     // is thirty days long.
-    final number = day.day == 1 ? calendarDayMonth(day, day) : '${day.day}';
+    final number = day.day == 1 ? formatDayMonthNoYear(day) : '${day.day}';
 
     final cell = Container(
       constraints: const BoxConstraints(minHeight: _minHeight),

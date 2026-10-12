@@ -84,7 +84,7 @@ class CalendarRow extends StatelessWidget {
     final lead = _home
         ? (
             lead: calendarDayName(event.day, now),
-            under: calendarDayMonth(event.day, now),
+            under: formatDayMonth(event.day, now: now),
           )
         : event.lead();
     final leadWords = lead.under == null

@@ -173,4 +173,71 @@ void main() {
       expect(formatClockTime(utc), formatClockTime(utc.toLocal()));
     });
   });
+
+  group('the short names', () {
+    test('are the first three letters of the full ones, Monday first', () {
+      expect(shortWeekdayNames, [
+        'Mon',
+        'Tue',
+        'Wed',
+        'Thu',
+        'Fri',
+        'Sat',
+        'Sun',
+      ]);
+      expect(shortWeekdayName(DateTime(2026, 10, 8)), 'Thu');
+    });
+
+    test('name every month and never pad the day', () {
+      expect(
+        [
+          for (var month = 1; month <= 12; month++)
+            formatDayMonthNoYear(DateTime(2026, month, 3)),
+        ],
+        [
+          '3 Jan',
+          '3 Feb',
+          '3 Mar',
+          '3 Apr',
+          '3 May',
+          '3 Jun',
+          '3 Jul',
+          '3 Aug',
+          '3 Sep',
+          '3 Oct',
+          '3 Nov',
+          '3 Dec',
+        ],
+      );
+    });
+
+    test('never carry a year when they say they do not', () {
+      expect(formatDayMonthNoYear(DateTime(2031, 10, 14)), '14 Oct');
+      expect(formatWeekdayDayMonth(DateTime(2026, 10, 21)), 'Wed 21 Oct');
+      expect(formatWeekdayDayMonth(DateTime(2027, 10, 21)), 'Thu 21 Oct');
+    });
+  });
+
+  group('formatShortDay', () {
+    final now = DateTime(2026, 10, 2);
+
+    test('says what formatShortDate says of the same day', () {
+      expect(formatShortDay(DateTime(2026, 9, 29), now: now), 'Tue 29 Sep');
+      expect(
+        formatShortDay(DateTime(2025, 9, 29), now: now),
+        'Mon 29 Sep 2025',
+      );
+      expect(
+        formatShortDay(DateTime(2026, 9, 29), now: now),
+        formatShortDate('2026-09-29', now: now),
+      );
+    });
+
+    test('keeps the components it was given, in any zone', () {
+      expect(
+        formatShortDay(DateTime.utc(2026, 9, 29, 23, 30), now: now),
+        'Tue 29 Sep',
+      );
+    });
+  });
 }

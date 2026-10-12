@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 
@@ -56,7 +57,6 @@ class CalendarWeekStrip extends StatelessWidget {
   final bool _band;
 
   static const _letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  static const _names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   static const double _disc = 34;
 
   @override
@@ -115,7 +115,7 @@ class CalendarWeekStrip extends StatelessWidget {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              _band ? _letters[index] : _names[index],
+              _band ? _letters[index] : shortWeekdayNames[index],
               maxLines: 1,
               style: AppType.caption.copyWith(
                 color: dim ? room.inkDisabled : room.inkTertiary,
