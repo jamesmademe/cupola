@@ -11,7 +11,7 @@ import 'package:cupola/features/stream/presentation/widgets/stream_activity_sect
 
 /// Every `Set up X` goes to the same place: the service's own setup form.
 ///
-/// It used to be three places for one verb — the matrix cell and the empty
+/// It used to be three places for one verb: the matrix cell and the empty
 /// Home opened the connections list, a cross-service control's toast opened
 /// the form, and Streaming's "Set one up" opened the Dashboard. These pin the
 /// surfaces that say it to [ServiceRoutes.setUp].

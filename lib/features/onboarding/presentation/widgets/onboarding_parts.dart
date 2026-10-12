@@ -38,7 +38,7 @@ const onboardingMaxWidth = 560.0;
 /// The threshold itself now lives on [AppBreakpoints] as `landscapeAspect`,
 /// beside `touchRail` and `desktopCompact`, which is where the constant said it
 /// belonged while it sat here: it is a size class, not a fact about onboarding.
-/// This function keeps only the half that *is* about onboarding — the platform
+/// This function keeps only the half that *is* about onboarding: the platform
 /// gate in front of it.
 bool onboardingSideBySide(BuildContext context) {
   if (!AppBreakpoints.isDesktopShell(context)) return false;
@@ -49,7 +49,7 @@ bool onboardingSideBySide(BuildContext context) {
 ///
 /// 1040 rather than the well every other screen uses: the ring is 396 and the
 /// form wants its own 560, and those two plus the air between them is what this
-/// number is. It is not a reading measure — nothing here is prose.
+/// number is. It is not a reading measure; nothing here is prose.
 const onboardingDesktopMaxWidth = 1040.0;
 
 /// The ring at the size DESIGN.md protects it at.
@@ -71,7 +71,7 @@ const onboardingCompactRingDiameter = 230.0;
 /// whole flow.
 ///
 /// It has to be *published* rather than read where it is needed. A `Scaffold`
-/// with `resizeToAvoidBottomInset` — the default — hands its body a
+/// with `resizeToAvoidBottomInset` (the default) hands its body a
 /// `MediaQuery` with the bottom inset already removed (`scaffold.dart`:
 /// `removeViewInsets`), reasoning that it has consumed the keyboard by
 /// shrinking the body. So every widget inside the body is told the keyboard is
@@ -99,25 +99,25 @@ class OnboardingKeyboardScope extends InheritedWidget {
 
 /// The instrument's slot, in either of the two registers the flow gives it.
 ///
-/// The ring is the flow's landmark and it earns its size — but only while there
+/// The ring is the flow's landmark and it earns its size, but only while there
 /// is a screen to put it on. It sat above an `Expanded`, so it did not shrink to
 /// make room: with the keyboard up it squeezed the form into a ~60pt slot,
 /// clipping the address field mid-glyph and hiding the validation message that
 /// explains why the step will not advance. Sizing it from the height actually
-/// left over fixed the clipping — and on every phone traded it for a ring that
+/// left over fixed the clipping, and on every phone traded it for a ring that
 /// was simply gone, because a software keyboard leaves roughly 420pt of column
 /// and the beat's own content wants more than that on its own.
 ///
 /// So scarcity changes the instrument's *register* rather than removing it. The
 /// full register is the hero above the beat. The compact one moves it beside
-/// [label] — the step's eyebrow, which is the orientation the full subject line
-/// was carrying — into a single header row that costs about what the subject
+/// [label]: the step's eyebrow, which is the orientation the full subject line
+/// was carrying, into a single header row that costs about what the subject
 /// line alone used to. That is where the ~100pt the form needs comes from, and
 /// the ring stays on screen while the user types.
 ///
 /// It is the *same* ring in both: the row is the same shape at either end of the
-/// animation, so the element — and with it every transition the ring is holding
-/// mid-flight — survives the change. Only its size, the label's width and the
+/// animation, so the element, and with it every transition the ring is holding
+/// mid-flight, survives the change. Only its size, the label's width and the
 /// gutters interpolate. The node radii do not: they are absolute (4–6pt), which
 /// is why a 96pt ring still reads as fifteen distinct services rather than as a
 /// smudge.
@@ -128,7 +128,7 @@ class OnboardingKeyboardScope extends InheritedWidget {
 /// service and the step.
 ///
 /// Both are decided by the screen, the only place that knows the height
-/// available and what the beat below needs — see
+/// available and what the beat below needs: see
 /// `_OnboardingScreenState._fullRingDiameter` and its compact counterpart.
 class OnboardingInstrument extends StatelessWidget {
   const OnboardingInstrument({
@@ -147,7 +147,7 @@ class OnboardingInstrument extends StatelessWidget {
   final bool compact;
 
   /// The step's eyebrow, shown only in the compact register. Null on the beats
-  /// that have no subject of their own — the door, the choice and the close.
+  /// that have no subject of their own: the door, the choice and the close.
   final Widget? label;
 
   final Widget child;
@@ -156,7 +156,7 @@ class OnboardingInstrument extends StatelessWidget {
   Widget build(BuildContext context) {
     // Reduce Motion removes the animator rather than shortening it, which for
     // this slot is the difference between a ring that jumps register and one
-    // that visibly scales and cross-fades every time the keyboard opens — the
+    // that visibly scales and cross-fades every time the keyboard opens: the
     // most-repeated tween in the whole flow and the one a motion-sensitive user
     // meets on every step.
     if (MediaQuery.disableAnimationsOf(context)) {
@@ -223,7 +223,7 @@ class OnboardingInstrument extends StatelessWidget {
         child,
         // Built only while it contributes something. A zero-width, fully
         // transparent slot still occupies the tree, and this label is the same
-        // sentence [OnboardingWalkSubject] is showing in the full register —
+        // sentence [OnboardingWalkSubject] is showing in the full register,
         // so leaving it mounted put the step's eyebrow in the semantics tree
         // twice, which a screen reader reads out as two steps.
         if (label case final label? when c > 0)
@@ -234,11 +234,11 @@ class OnboardingInstrument extends StatelessWidget {
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
                 // Widens out from behind the ring rather than fading in
-                // place — the label is arriving from where it used to be.
+                // place: the label is arriving from where it used to be.
                 widthFactor: c,
                 child: Opacity(
-                  // Trails the width so the two eyebrows — this one and the
-                  // subject line's, which is collapsing on the same clock —
+                  // Trails the width so the two eyebrows, this one and the
+                  // subject line's, which is collapsing on the same clock,
                   // are never both legible at once.
                   opacity: Curves.easeIn.transform(
                     ((c - 0.4) / 0.6).clamp(0.0, 1.0),
@@ -320,14 +320,14 @@ class OnboardingCollapsible extends StatelessWidget {
 
 /// The control the keyboard itself does not offer here: a way to put it away.
 ///
-/// iOS gives a URL keyboard no return key that dismisses — the address field
+/// iOS gives a URL keyboard no return key that dismisses: the address field
 /// asks for `next` because there is a credential field after it, and `done`
 /// only appears on the last field of the form. So on the step where the user is
 /// most likely to want the screen back, there was no key to press.
 ///
 /// It shares the back row rather than taking a row of its own: a third stacked
 /// action cost ~50pt of the height the form was already short of, and the two
-/// belong together anyway — both are ways out of the field you are in.
+/// belong together anyway; both are ways out of the field you are in.
 class OnboardingKeyboardDismiss extends StatelessWidget {
   const OnboardingKeyboardDismiss({super.key});
 
@@ -349,7 +349,7 @@ class OnboardingKeyboardDismiss extends StatelessWidget {
 ///
 /// The page owns the viewport, not the content. A ring, a display headline, a
 /// paragraph and two buttons fit comfortably at the default reading size and
-/// overflow a short phone by four figures at an accessibility one — so the
+/// overflow a short phone by four figures at an accessibility one, so the
 /// scrollable is the default and the `minHeight` is what keeps the composition
 /// centred, rather than the other way round. The actions stay pinned below it,
 /// because an action you have to scroll to find is worse than a scroll.
@@ -367,7 +367,7 @@ class OnboardingBeat extends StatelessWidget {
 
   /// Where the content sits in the space the ring leaves it.
   ///
-  /// `start` for the beats that continue straight out of the instrument — a
+  /// `start` for the beats that continue straight out of the instrument: a
   /// form or a list reads as attached to it. `end` for the two that are a claim
   /// plus an action, where the copy belongs with the buttons it argues for.
   /// Centring is what both used to do, and with the ring hoisted above the pager
@@ -379,7 +379,7 @@ class OnboardingBeat extends StatelessWidget {
   ///
   /// `center` by default: with no ring above and no thumb below, the step
   /// centres on the instrument it is paired with. `start` only for the walk,
-  /// whose subject line is hoisted above the pager — centring the form under it
+  /// whose subject line is hoisted above the pager: centring the form under it
   /// would open a hole between the sentence and the field it introduces.
   final MainAxisAlignment besideRing;
 
@@ -388,8 +388,8 @@ class OnboardingBeat extends StatelessWidget {
     if (onboardingSideBySide(context)) return _besideRing(context);
     return Padding(
       // The generous top and bottom gutters are for a beat sitting against the
-      // screen edge. With the keyboard up there is no edge below — the key rows
-      // are the edge — and that spare 44pt is exactly what the pinned actions
+      // screen edge. With the keyboard up there is no edge below: the key rows
+      // are the edge, and that spare 44pt is exactly what the pinned actions
       // need in order not to overflow once the dismiss bar takes its place.
       padding: OnboardingKeyboardScope.of(context)
           ? onboardingPadding.copyWith(
@@ -411,7 +411,7 @@ class OnboardingBeat extends StatelessWidget {
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    // `end` means "sit under the ring, close to the thumb" — a
+                    // `end` means "sit under the ring, close to the thumb": a
                     // phone answer to a phone layout.
                     mainAxisAlignment: alignment,
                     children: children,
@@ -432,7 +432,7 @@ class OnboardingBeat extends StatelessWidget {
   /// The window arrangement: copy and actions as one group, centred on the ring.
   ///
   /// Pinned to the foot of the column the actions sat a hand's width below the
-  /// sentence that argues for them, with nothing in between — the right answer
+  /// sentence that argues for them, with nothing in between: the right answer
   /// on a phone, where the foot of the screen is where the thumb already is, and
   /// the wrong one in a window. Riding inside the scrollable instead is what
   /// clipped the primary action on the 720x450 board, where notes on services
@@ -531,8 +531,8 @@ class OnboardingDoor extends StatelessWidget {
     return OnboardingBeat(
       alignment: MainAxisAlignment.end,
       // Through the footer, not a hand-rolled Column. The door was the one beat
-      // that stacked its pair unconditionally — a full-width primary over a
-      // text button — so it kept a composition the other three give up as soon
+      // that stacked its pair unconditionally: a full-width primary over a
+      // text button, so it kept a composition the other three give up as soon
       // as the reading size allows a row, and it would not have inherited the
       // footer's stacking rule if that rule ever changed.
       actions: OnboardingFooter(
@@ -566,7 +566,7 @@ class OnboardingDoor extends StatelessWidget {
 ///
 /// In the headline's own ink: the room is monochrome (the brand book's principle 3), so the
 /// word is carried by the display face and its place in the line, never by a
-/// hue — a section's cyan here was decoration, and it measured 2.2:1 on paper
+/// hue. A section's cyan here was decoration, and it measured 2.2:1 on paper
 /// before it was walked.
 class _AccentedHeadline extends StatelessWidget {
   const _AccentedHeadline({
@@ -621,7 +621,7 @@ class OnboardingPick extends StatelessWidget {
       actions: OnboardingFooter(
         secondary: OutlinedButton(onPressed: onBack, child: const Text('Back')),
         // The count is the only thing on this beat that reports the choice back,
-        // and it changes on every chip tap — so it rolls. The slot is reserved
+        // and it changes on every chip tap, so it rolls. The slot is reserved
         // for the longest label the button can ever hold, which is why tapping
         // the fifteenth service moves a digit rather than the whole word.
         primary: ReelCommandButton(
@@ -693,7 +693,7 @@ class _PickChip extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     // The brand book's selected chip: the ink fill with the on-ink label, the same for every
-    // service — the chip names the service in words, and a hue per chip turned
+    // service: the chip names the service in words, and a hue per chip turned
     // the beat into a seventeen-colour legend with nothing to decode.
     final labelColor = selected ? scheme.onPrimary : scheme.onSurfaceVariant;
     // 44pt is the iOS minimum target; the label grows the box past it.
@@ -706,7 +706,7 @@ class _PickChip extends StatelessWidget {
         color: selected ? scheme.primary : scheme.outlineVariant,
       ),
     );
-    // Seventeen of these, and picking a stack means tapping most of them — so
+    // Seventeen of these, and picking a stack means tapping most of them, so
     // under Reduce Motion the animator goes entirely rather than running short:
     // this is the beat's most-repeated movement, and the chip's state is
     // already legible from its fill and its lit node.
@@ -764,7 +764,7 @@ class _PickChip extends StatelessWidget {
         // Flexible, so a long name at an accessibility reading size wraps
         // onto a second line and the chip grows taller. Unflexed, the
         // Row overflowed the wrap's available width by exactly its own
-        // padding — and eliding "qBittor…" is not an option: the name is
+        // padding; and eliding "qBittor…" is not an option: the name is
         // the only thing the chip says.
         Flexible(
           child: Text(
@@ -805,7 +805,7 @@ class OnboardingClose extends StatelessWidget {
   /// in the app that **changes while it is being read**: the close mounts and
   /// *then* `_testUntested` checks everything the user never tested by hand, so
   /// the first painted value is "0 answer." and the truth arrives a second later.
-  /// That used to be a hard swap — a headline that was briefly, visibly wrong.
+  /// That used to be a hard swap: a headline that was briefly, visibly wrong.
   /// Rolled, the close reports as it learns, which is what it was always meant
   /// to do. A rolling line cannot contain a newline, so the split is required as
   /// well as clearer.
@@ -823,7 +823,7 @@ class OnboardingClose extends StatelessWidget {
   /// Lidarr by preference, and explicitly **not** Readarr: Readarr is retired
   /// upstream, so naming it as the thing to add later is advice with a dead end.
   /// When Lidarr is itself already in the stack the example falls to the first
-  /// registry service that is not — offering to add something the user set up
+  /// registry service that is not: offering to add something the user set up
   /// two minutes ago is the same defect wearing different clothes. Null when
   /// there is genuinely nothing left, which is the one case the sentence has to
   /// drop the name rather than pick a wrong one.
@@ -973,29 +973,29 @@ class OnboardingField extends StatefulWidget {
   /// hand focus to the *next* field and only the step knows what that is.
   final FocusNode? focusNode;
 
-  /// What the return key says. Defaults to the shape of a lone field — `next`
-  /// for an address, `done` otherwise — which is only right when nothing wires
+  /// What the return key says. Defaults to the shape of a lone field: `next`
+  /// for an address, `done` otherwise, which is only right when nothing wires
   /// [onSubmitted].
   final TextInputAction? action;
 
   /// Runs on the return key. Wired explicitly rather than left to the
   /// framework's default for [TextInputAction.next], which moves focus to the
-  /// next *traversable* widget — here the reveal toggle or the port chip sitting
+  /// next *traversable* widget: here the reveal toggle or the port chip sitting
   /// inside the same field, not the field below it.
   final ValueChanged<String>? onSubmitted;
 
-  /// Where the value is to be found in the service's own UI — `Radarr →
+  /// Where the value is to be found in the service's own UI: `Radarr →
   /// Settings → General → API Key`.
   ///
   /// It sits on the **label row**, beside the label, rather than under the
   /// field, and that is the whole point of it being a separate parameter from
   /// [help]: the slot under a field belongs to what the field has to say about
   /// what was typed. Sharing one slot meant a Plex token warning erased the
-  /// path to the token, and a mistyped address erased the port hint — the two
+  /// path to the token, and a mistyped address erased the port hint: the two
   /// pieces of guidance a user needs *while* they fix it.
   final String? breadcrumb;
 
-  /// A steady line under the field — what the default port is, what happens if
+  /// A steady line under the field: what the default port is, what happens if
   /// both credentials are left blank. Not a validation result, and no longer
   /// replaced by one: a validation message renders in addition to it.
   final String? help;
@@ -1052,7 +1052,7 @@ class _OnboardingFieldState extends State<OnboardingField> {
     }
     // An untouched field is not scolded. A cleartext address outside the local
     // network is a warning rather than an error: it is a supported choice, just
-    // one worth naming — along with the routes that avoid it.
+    // one worth naming, along with the routes that avoid it.
     // A `user:password@` is accepted: the test takes it off the address and
     // puts it where the connection form does (the Access row's password, or
     // the service's own sign-in).
@@ -1226,7 +1226,7 @@ class _OnboardingFieldState extends State<OnboardingField> {
                 // Error and warning are the two tones a field can carry: red
                 // is "this cannot be sent", amber is "this will work and is
                 // worth knowing about". Through `statusToneColor` rather than
-                // the raw token, which measures 1.39:1 on paper — the note it
+                // the raw token, which measures 1.39:1 on paper. The note it
                 // paints is the one the user is meant to read before typing
                 // anything else.
                 color: statusToneColor(

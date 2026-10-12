@@ -21,10 +21,10 @@ Future<void> showManualImportAdjustSheet(
   final identity = manualImportIdentityFor(service, item);
   return AppBottomSheet.show<void>(
     context: context,
-    // Title is the matched identity — the series (or movie, or artist) plus the
+    // Title is the matched identity: the series (or movie, or artist) plus the
     // positional code. Subtitle is the raw file, nothing else. Folding the
     // episode name and the filename into one subtitle line made the sheet's two
-    // jobs — "what did this match" and "which file is this" — indistinguishable.
+    // jobs, "what did this match" and "which file is this", indistinguishable.
     title: [
       manualImportGroupTitle(service, item),
       if (identity.code != null) identity.code!,

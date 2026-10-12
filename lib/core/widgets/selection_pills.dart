@@ -16,8 +16,8 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 /// chip on the global one. Between them they had three defects worth naming,
 /// because each is a class of mistake rather than a one-off:
 ///
-/// - The chip had **no semantics node at all** — no button role, no accessible
-///   name, no selected state — while a service tile 150 lines away in the same
+/// - The chip had **no semantics node at all**: no button role, no accessible
+///   name, no selected state, while a service tile 150 lines away in the same
 ///   file did all three correctly. It also skipped [PressableScale], which is
 ///   where the press animation, the haptic, the Reduce Motion check and the
 ///   button role live together; hand-rolling a tap silently drops all four.
@@ -28,8 +28,8 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 ///   painted its overflow stripe across the control. Nothing here has a fixed
 ///   height; the pill is sized by its label, with a minimum for the touch target.
 ///
-/// The selected pill borrows the navigation bar's treatment — [AppRadius.pill],
-/// the room's strong fill, the primary ink — rather than inventing a third
+/// The selected pill borrows the navigation bar's treatment: [AppRadius.pill],
+/// the room's strong fill, the primary ink, rather than inventing a third
 /// "this one is active" language for the app. It is the same on every screen:
 /// the room is monochrome, so no service or section colours the pill. It is
 /// deliberately **not** [AppRadius.full]: full radius means metadata in this
@@ -44,7 +44,7 @@ class SelectionPills<T> extends StatelessWidget {
   ///
   /// The default puts the first pill on the screen gutter while the row itself
   /// runs edge to edge, so a scrolled pill bleeds off the screen instead of
-  /// clipping at the column — right for a host that spans the screen.
+  /// clipping at the column: right for a host that spans the screen.
   final EdgeInsetsGeometry padding;
 
   /// The screen-gutter inset, for a row that spans the screen.

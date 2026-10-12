@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 /// gave up. "502" is not actionable; "your NPM proxy host, whose read timeout you
 /// can raise" is.
 enum SearchGateway {
-  /// No intermediary identified itself — a direct LAN or Tailscale path.
+  /// No intermediary identified itself: a direct LAN or Tailscale path.
   direct,
 
   /// nginx, which Nginx Proxy Manager is built on. 60 s by default, raisable per
@@ -75,7 +75,7 @@ class SearchHeadroom {
 
   /// The likely ceiling, bracketed by evidence rather than asserted.
   ///
-  /// Returns null when the two measurements do not actually bracket anything —
+  /// Returns null when the two measurements do not actually bracket anything:
   /// a cut-off earlier than the longest success means the path is inconsistent,
   /// and naming a number from that would be worse than naming none.
   Duration? get likelyCeiling {

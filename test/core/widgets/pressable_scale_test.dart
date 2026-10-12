@@ -6,7 +6,7 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 void main() {
   testWidgets('a hint survives a control that cannot act', (tester) async {
     // The defect this guards: `hint: enabled ? semanticHint : null` dropped the
-    // hint in the one state where a hint is load-bearing — a control the user
+    // hint in the one state where a hint is load-bearing: a control the user
     // can see and cannot use. A screen reader landed on a named button with no
     // explanation of why it would not respond, while a sighted user read the
     // dimming for free. "requires qBittorrent" is exactly that sentence, and

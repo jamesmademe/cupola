@@ -7,7 +7,7 @@ import 'package:cupola/core/utils/url_utils.dart';
 /// This exists because the platforms that gate local-network traffic gate it by
 /// *destination*, not by app: iOS 14+, macOS 15+ and Android 17+ let an app talk
 /// to the internet freely and stop it at the LAN. So a failure only means "the OS
-/// is standing in the way" when the address was on the LAN to begin with —
+/// is standing in the way" when the address was on the LAN to begin with:
 /// without that check, a public Overseerr timing out would raise a Local Network
 /// prompt the user cannot make sense of, and a permission the app does not need.
 ///
@@ -17,13 +17,13 @@ import 'package:cupola/core/utils/url_utils.dart';
 /// classifier that needed a lookup would fail exactly in the case it exists for.
 
 /// How [targetIsOnLocalNetwork] resolves a name. Injectable so a test can answer
-/// without a resolver — the real one is [InternetAddress.lookup].
+/// without a resolver: the real one is [InternetAddress.lookup].
 typedef HostLookup = Future<List<InternetAddress>> Function(String host);
 
 /// Suffixes that only ever name something on the local network.
 ///
 /// `.local` is mDNS (RFC 6762). `.lan`, `.home`, `.internal` and `.localdomain`
-/// are the names home routers and Docker installs hand out — `.internal` is
+/// are the names home routers and Docker installs hand out: `.internal` is
 /// reserved for exactly this by ICANN, and none of the others are delegated, so
 /// a name under them cannot be anything but local.
 const _localSuffixes = <String>{
@@ -36,7 +36,7 @@ const _localSuffixes = <String>{
 
 /// The verdict the address alone supports: true for a host that can only be on
 /// the local network, false for one that cannot be, and **null** when only a DNS
-/// lookup can tell — the split-horizon case, where `nas.example.com` resolves to
+/// lookup can tell: the split-horizon case, where `nas.example.com` resolves to
 /// a 192.168 address at home and to nothing anywhere else.
 bool? localNetworkHostVerdict(String host) {
   final bare = host
@@ -54,7 +54,7 @@ bool? localNetworkHostVerdict(String host) {
   if (bare == 'localhost') return false;
 
   final labels = bare.split('.');
-  // A single label — `nas`, or a Compose service name — is resolved by mDNS or
+  // A single label (`nas`, or a Compose service name) is resolved by mDNS or
   // by the router's own DNS. Both are on the LAN by definition.
   if (labels.length == 1) return true;
   if (_localSuffixes.contains(labels.last)) return true;
@@ -66,7 +66,7 @@ bool? localNetworkHostVerdict(String host) {
 /// Whether [address] sits on a network the OS treats as local.
 ///
 /// Loopback is excluded because it is never gated. So is 100.64/10: that range
-/// belongs to carrier NAT and, on this app's users' devices, to Tailscale —
+/// belongs to carrier NAT and, on this app's users' devices, to Tailscale,
 /// whose traffic leaves through a tunnel interface and is not what the local
 /// network permission covers. Reporting a Tailscale address as local would
 /// blame the wrong thing for every failure on a remote connection.
@@ -78,13 +78,13 @@ bool addressIsOnLocalNetwork(InternetAddress address) {
     if (bytes[0] == 10) return true;
     if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true;
     if (bytes[0] == 192 && bytes[1] == 168) return true;
-    // 169.254/16 — link-local, what a device picks when DHCP never answered.
+    // 169.254/16: link-local, what a device picks when DHCP never answered.
     if (bytes[0] == 169 && bytes[1] == 254) return true;
     return false;
   }
 
   if (bytes.length != 16) return false;
-  // `::ffff:a.b.c.d` — an IPv4 destination wearing an IPv6 address. The gate
+  // `::ffff:a.b.c.d`, an IPv4 destination wearing an IPv6 address. The gate
   // follows the real destination, so unwrap it and judge that.
   final isV4Mapped =
       bytes.take(10).every((b) => b == 0) &&
@@ -97,7 +97,7 @@ bool addressIsOnLocalNetwork(InternetAddress address) {
   }
   // fe80::/10 link-local.
   if (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80) return true;
-  // fc00::/7 unique local addresses — IPv6's answer to 192.168.
+  // fc00::/7 unique local addresses: IPv6's answer to 192.168.
   if ((bytes[0] & 0xfe) == 0xfc) return true;
   return false;
 }

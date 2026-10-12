@@ -16,12 +16,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// identity (accent dot + name), and one trailing action.
 ///
 /// The dot + title used to be a button opening a dropdown picker of all
-/// seventeen services — the dashboard's own switcher. The Portal made it a
+/// seventeen services (the dashboard's own switcher). The Portal made it a
 /// second, worse copy of the same instrument (drag the nav bar up from
 /// anywhere, land on the real matrix), so the picker is gone and the title
 /// went back to being what it looks like: the name of the room you are in.
 /// Screen-reader users switch through the accessible path that always
-/// existed — Services tab → matrix — since the Portal's drag is gesture-only.
+/// existed (Services tab → matrix) since the Portal's drag is gesture-only.
 class ServiceHomeScreen extends StatelessWidget {
   final ServiceKey service;
   final Widget child;
@@ -29,8 +29,8 @@ class ServiceHomeScreen extends StatelessWidget {
 
   /// Whether to draw the band at all.
   ///
-  /// The band is drawn above every branch navigator, so unlike the tab bar —
-  /// which a pushed page simply covers — it cannot be hidden by the page that
+  /// The band is drawn above every branch navigator, so unlike the tab bar
+  /// (which a pushed page simply covers), it cannot be hidden by the page that
   /// wants it gone, and has to be told. A pushed detail brings its own back
   /// control, floated top left, and two chevrons in one corner is what this
   /// answers.
@@ -56,13 +56,13 @@ class ServiceHomeScreen extends StatelessWidget {
     return beside != null && isServiceTabRoot(service, beside);
   }
 
-  /// The room the band occupies measured from the very top of the screen —
+  /// The room the band occupies measured from the very top of the screen,
   /// the top inset included.
   ///
   /// **The band is the one that consumes the inset.** It is `Positioned(top: 0)`
   /// under a `SafeArea`, so on a phone with a notch or a cutout it is a status
-  /// bar taller than [kToolbarHeight]. Anything floated underneath it — the
-  /// service tab bar — has to start at this, not at [kToolbarHeight], or it is
+  /// bar taller than [kToolbarHeight]. Anything floated underneath it (the
+  /// service tab bar) has to start at this, not at [kToolbarHeight], or it is
   /// laid out an inset too high and the band is drawn straight over it. The
   /// default test surface has no inset, which is exactly why that overlap can
   /// be invisible for as long as nobody pumps one.
@@ -72,7 +72,7 @@ class ServiceHomeScreen extends StatelessWidget {
   /// Whether this service's screens are drawn under the band at all.
   ///
   /// Not in the desktop shell, for a service on the tab model. The window
-  /// chrome already names the room — its breadcrumb is the URL — and the deck
+  /// chrome already names the room (its breadcrumb is the URL), and the deck
   /// carries the fleet, so a band holding back, name and one action was the
   /// phone's app bar drawn inside a shell that had said all of it: 222pt of
   /// chrome over a 900pt window, 45% of a 720×450 one. The tab row becomes the
@@ -154,7 +154,7 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
             const SizedBox(width: 6),
             // Flexible, and the badge beside it is not: when the bar runs
             // out of room the *service name* is what gives way. Which service
-            // you are in you already know — you navigated here. Which
+            // you are in you already know: you navigated here. Which
             // connection you are reading is the part that has to stay legible,
             // and it is the shorter string anyway.
             //

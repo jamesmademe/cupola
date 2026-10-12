@@ -79,7 +79,7 @@ class FileInfoSection extends StatelessWidget {
   /// Deliberately this row and **not** an `AppEmptyState`: a centred well with a
   /// circled glyph cost far more height than the fact deserves, on a page whose
   /// hero already says `No file` and whose consequence sentence already says the
-  /// state — and it made the region jump when a file finally arrived. One
+  /// state, and it made the region jump when a file finally arrived. One
   /// footprint in both states is the whole point.
   ///
   /// The copy is a suggestion, and it names the route the promoted button does

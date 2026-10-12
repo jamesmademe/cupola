@@ -28,28 +28,28 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 /// production always wants.
 ///
 /// It exists to be overridden: `flutter_test` runs on the desktop, so without
-/// this the mobile branch — the only one that ever chooses the native transport,
-/// and therefore the only one where the choice is a security decision — could
+/// this the mobile branch, the only one that ever chooses the native transport,
+/// and therefore the only one where the choice is a security decision, could
 /// not be exercised from a test at all. See [backgroundSearchSupported] for why
 /// the host is read through `dart:io` rather than `defaultTargetPlatform`.
 final releaseSearchPlatformProvider = Provider<TargetPlatform?>((ref) => null);
 
-/// How far a search against one **connection** can travel — see
+/// How far a search against one **connection** can travel: see
 /// [ReleaseSearchReach].
 ///
-/// Both facts reach asks about — the saved URL's scheme and whether that origin
-/// is trusted only inside Cupola (ADR-6) — are read straight from settings
+/// Both facts reach asks about, the saved URL's scheme and whether that origin
+/// is trusted only inside Cupola (ADR-6), are read straight from settings
 /// rather than through `serviceDiagnosisProvider`: reach must stay correct even
 /// for an instance that has never been tested this session.
 ///
 /// **Keyed by connection, not by service, and that is a security fix rather
-/// than tidying.** It used to read `settings.urlFor(service)` — the FIRST
-/// instance — while the request itself was built and sent by the lens-aware
+/// than tidying.** It used to read `settings.urlFor(service)`: the FIRST
+/// instance, while the request itself was built and sent by the lens-aware
 /// service. So the scheme and the pin were read off one server and the API key
 /// was sent to another. With the first Radarr on https and the second on plain
 /// `http://`, reach answered `beyondTheApp` for the cleartext one and handed
 /// the search to the native background task, whose redirect following cannot be
-/// stopped — which is precisely the case this reach exists to refuse. The
+/// stopped, which is precisely the case this reach exists to refuse. The
 /// mirror image was merely broken rather than dangerous: a self-signed second
 /// instance looked untrusted-but-fine because the first one carried no pin, and
 /// every search against it failed on a certificate the app had been told to
@@ -66,7 +66,7 @@ final releaseSearchReachProvider = Provider.autoDispose
 /// a service rather than run a job: the headroom card explains what the path
 /// the user is looking at imposes, and it has no target to ask about. Kept
 /// apart rather than folded in, because the two answer genuinely different
-/// questions the moment a job outlives the lens that started it — which is the
+/// questions the moment a job outlives the lens that started it, which is the
 /// whole reason the job side is keyed on a target.
 final releaseSearchLensReachProvider =
     Provider.family<ReleaseSearchReach, ServiceKey>((ref, service) {
@@ -111,17 +111,17 @@ ReleaseSearchReach _reachOf(
 /// * a certificate trusted only inside Cupola, which the native task cannot
 ///   see at all;
 /// * a cleartext `http://` origin, where the native task's unstoppable redirect
-///   following would let anyone on the path collect the API key — the one case
+///   following would let anyone on the path collect the API key: the one case
 ///   here that is a security boundary rather than a capability gap.
 ///
 /// `autoDispose`, unlike almost everything else here: the key is a
 /// [ReleaseSearchTarget] with value equality, so without it every episode ever
-/// searched would leave a permanent entry listening to `currentSettingsProvider`
-/// — a listener list that only grows for the life of the app.
+/// searched would leave a permanent entry listening to `currentSettingsProvider`,
+/// a listener list that only grows for the life of the app.
 ///
 /// **This is where the opt-in is enforced, and it is the only place it needs to
 /// be.** Nothing else in the app constructs a `DataTask`, so a reach that is
-/// not [ReleaseSearchReach.beyondTheApp] cannot enqueue one — which is why the
+/// not [ReleaseSearchReach.beyondTheApp] cannot enqueue one, which is why the
 /// switch is a reach and not an `if` scattered over the call sites.
 final releaseSearchTransportProvider = Provider.autoDispose
     .family<ReleaseSearchTransport, ReleaseSearchTarget>((ref, target) {
@@ -143,7 +143,7 @@ final releaseSearchTransportProvider = Provider.autoDispose
         // so a cleartext instance's search runs on the arr service's own
         // `ApiClient` and it is *that* client's redirect guard which refuses to
         // replay the API key off-origin. This closure is the transport's own
-        // `run`, reached only from a test today — it mirrors the same three
+        // `run`, reached only from a test today: it mirrors the same three
         // lines so the seam cannot become the hole if a caller ever does use it.
         // `SameOriginRedirectInterceptor` needs both options set to see the 3xx.
         final dio = Dio(
@@ -188,8 +188,8 @@ String _urlOf(SettingsModel settings, ReleaseSearchTarget target) {
 ///
 /// The notice promises a picker, so a tap has to reach one: the job id travels
 /// in the payload, is handed to [pendingReleaseSearchJobProvider], and the
-/// Searching list opens that job's sheet on arrival. When the job is gone — the
-/// app was killed rather than suspended, so nothing survived in memory — the
+/// Searching list opens that job's sheet on arrival. When the job is gone (the
+/// app was killed rather than suspended, so nothing survived in memory), the
 /// route still lands on Activity, which is the honest fallback rather than a
 /// sheet for a job that no longer exists.
 final releaseSearchNotificationsProvider = Provider(
@@ -208,7 +208,7 @@ final releaseSearchNotificationsProvider = Provider(
 /// Whether the OS is currently letting Cupola post notifications.
 ///
 /// Kept as a provider rather than local state so the answer is asked once and
-/// read wherever it matters. Re-read by invalidating it — after the user
+/// read wherever it matters. Re-read by invalidating it, after the user
 /// touches the toggle, and whenever the app comes back from the background,
 /// since system settings are exactly where they may have just been.
 final notificationPermissionProvider = FutureProvider<bool?>(
@@ -220,7 +220,7 @@ final notificationPermissionProvider = FutureProvider<bool?>(
 /// Resolved from the container rather than from the launching page's `ref` on
 /// purpose: the manager keeps this callback for the whole session, a job
 /// usually outlives the page that started it, and a `WidgetRef` throws on any
-/// use once its widget unmounts — which used to leave a failing job stuck on
+/// use once its widget unmounts: which used to leave a failing job stuck on
 /// "running" forever, since the classifier could no longer even run.
 final releaseSearchReachResolverProvider = Provider<ReleaseSearchReachResolver>(
   (ref) =>
@@ -265,7 +265,7 @@ final releaseSearchRunnerProvider = Provider<ReleaseSearchRunner>((ref) {
 /// The three services, resolved for the connection the target belongs to.
 ///
 /// A stamped target names its own server, so a job queued behind another one
-/// runs where it was started even if the lens has moved on in the meantime —
+/// runs where it was started even if the lens has moved on in the meantime,
 /// which, with jobs that outlive the page, is a thing that happens rather than
 /// a thing that could. An unstamped target falls through to the lens, which is
 /// the old behaviour and what a hand-built test target still gets.
@@ -288,7 +288,7 @@ LidarrService _lidarrFor(Ref ref, ReleaseSearchTarget target) =>
 ///
 /// Carries the user's own ceiling with it: the services default to the
 /// feature's constant, and without this a timeout raised to ten minutes in
-/// Settings would still be cut at five on every foreground search — and then
+/// Settings would still be cut at five on every foreground search, and then
 /// misread as a lost connection, because the classifier is told the ceiling
 /// the user set, not the one that actually fired.
 Future<List<dynamic>> _searchViaService(
@@ -379,7 +379,7 @@ Future<List<dynamic>> _searchViaService(
 /// Takes the whole target rather than its [ServiceKey], because the service is
 /// not enough to say *where*: the grab used to resolve through the lens at the
 /// moment of the TAP, so a release found on the seedbox Radarr and tapped after
-/// the lens moved home was pushed to the wrong server — with a guid that server
+/// the lens moved home was pushed to the wrong server: with a guid that server
 /// had never heard of.
 final releaseGrabberProvider =
     Provider<Future<void> Function(ReleaseSearchTarget, String, int)>((ref) {
@@ -410,12 +410,12 @@ final releaseGrabberProvider =
 
 /// The one way into interactive release search.
 ///
-/// Every entry point in the app goes through here — the series, season, episode,
-/// movie, artist and album actions, and the Wanted dispatcher — because the rules
+/// Every entry point in the app goes through here: the series, season, episode,
+/// movie, artist and album actions, and the Wanted dispatcher, because the rules
 /// that protect the user's indexers only hold if they cannot be bypassed:
 ///
 /// * an in-flight search for this target, or one that **covers** it, is adopted
-///   rather than duplicated — and the sheet says so, because adopting silently
+///   rather than duplicated, and the sheet says so, because adopting silently
 ///   would be work the user cannot see;
 /// * a finished search whose releases are still grabbable is offered back
 ///   instead of spending another pass on the indexers.
@@ -427,7 +427,7 @@ Future<void> showReleaseSearch(
   HapticFeedback.selectionClick();
   // Stamped here and nowhere else. Every screen in the app builds its target
   // and hands it over, so this is the one place that has to ask which Radarr
-  // the user is looking at — and it has to ask BEFORE adoption and the results
+  // the user is looking at, and it has to ask BEFORE adoption and the results
   // cache are consulted, since the connection is now part of what makes two
   // targets the same target.
   //
@@ -508,7 +508,7 @@ void _recordHeadroom(Ref ref, ReleaseSearchJob job) {
 /// Builds the target for a Sonarr season or whole-series action.
 ///
 /// Sonarr's `/release` has no series-wide form, so the "whole series" button
-/// searches season 1 — that is upstream behaviour, not a shortcut here.
+/// searches season 1: that is upstream behaviour, not a shortcut here.
 ReleaseSearchTarget sonarrSeasonTarget({
   required int seriesId,
   required int? seasonNumber,

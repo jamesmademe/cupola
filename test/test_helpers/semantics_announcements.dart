@@ -4,14 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// Captures the screen-reader announcements a widget test triggers.
 ///
 /// Announcements are platform messages on `SystemChannels.accessibility`, not
-/// semantics-tree state, so no finder can see them — mocking the channel is the
+/// semantics-tree state, so no finder can see them: mocking the channel is the
 /// only way to observe one.
 ///
 /// This lives in `test_helpers/` rather than inline in each test file because it
 /// mutates **global** binding state: a missed teardown leaks the mock handler
 /// and the accessibility-features override into every later test in the file.
 /// (That is also why the repo's usual per-file `_pumpX` convention does not
-/// apply here — those differ per screen and share nothing.)
+/// apply here: those differ per screen and share nothing.)
 class SemanticsAnnouncementRecorder {
   SemanticsAnnouncementRecorder._();
 
@@ -30,7 +30,7 @@ class SemanticsAnnouncementRecorder {
   /// the app's `AnnouncementHost` live region instead, and [messages] staying
   /// empty is the proof that nothing also went out natively. Note that a
   /// hand-built `MediaQueryData(...)` defaults `supportsAnnounce` to false and
-  /// would override this — don't wrap the widget in one.
+  /// would override this, so don't wrap the widget in one.
   static SemanticsAnnouncementRecorder install(
     WidgetTester tester, {
     bool supportsAnnounce = true,

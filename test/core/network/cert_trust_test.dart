@@ -8,7 +8,7 @@ import 'package:cupola/core/utils/url_utils.dart';
 
 /// The trust *record* has been covered since ADR-6 by
 /// `test/features/settings/cert_pinning_scope_test.dart`. Nothing covered its
-/// *enforcement* — a client could accept a `certFingerprint`, store it, drop it
+/// *enforcement*: a client could accept a `certFingerprint`, store it, drop it
 /// on the floor, and every existing test still passed green.
 ///
 /// This is that missing half. `X509Certificate` is an abstract interface, so a
@@ -80,8 +80,8 @@ void main() {
     test('an empty pin trusts nothing', () {
       // The secure default: without a stored fingerprint the platform trust
       // store is the sole authority, exactly like a browser with no exception.
-      // `buildPinnedHttpClient` expresses that by installing no callback at all
-      // — which a test cannot observe, because `badCertificateCallback` is a
+      // `buildPinnedHttpClient` expresses that by installing no callback at all,
+      // which a test cannot observe, because `badCertificateCallback` is a
       // setter only. The predicate has to agree independently, so neither route
       // can drift into accepting.
       final cert = _FakeCert(const [1, 2, 3]);
@@ -115,7 +115,7 @@ void main() {
     test('a scheme-less base URL must be normalised first', () {
       // The silent failure this guards: `Uri.parse('nas.local:9091')` yields
       // `scheme: 'nas.local'` and an EMPTY host, so `pinnedHost` becomes `''`
-      // and the callback refuses every certificate — a pin the user explicitly
+      // and the callback refuses every certificate, a pin the user explicitly
       // granted, dead on arrival. Every client must pass the *normalised* URL,
       // which is why they all build it before touching this.
       final raw = Uri.parse('nas.local:9091');

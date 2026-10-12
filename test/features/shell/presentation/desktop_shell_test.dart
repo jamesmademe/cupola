@@ -54,7 +54,7 @@ void main() {
         .setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
-  testWidgets('a desktop window gets one strip, the sidebar and the page — '
+  testWidgets('a desktop window gets one strip, the sidebar and the page: '
       'no deck, no status bar', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(tester, overrides: await _world());

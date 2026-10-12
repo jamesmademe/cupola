@@ -103,7 +103,7 @@ Future<ProviderContainer> _pump(
         // The app root installs this, and the compact cell's 32pt is measured
         // against it: without it a single `bodySmall` line measures 17 instead
         // of 15 and the cell overflows by a point. A harness that omits it is
-        // not testing the app — see `ServiceMatrixMetrics.compactCellBaseHeight`.
+        // not testing the app: see `ServiceMatrixMetrics.compactCellBaseHeight`.
         builder: (context, child) => DefaultTextHeightBehavior(
           textHeightBehavior: const TextHeightBehavior(
             applyHeightToFirstAscent: false,
@@ -139,7 +139,7 @@ void main() {
       tester,
     ) async {
       // The readout key must not gain an instance suffix. A folded cell still
-      // stands for the service, so the name it had is still the true one — and
+      // stands for the service, so the name it had is still the true one, and
       // services_screen_test addresses it by that name.
       await _pump(tester, role: ServiceMatrixRole.readout);
 
@@ -154,7 +154,7 @@ void main() {
       expect(find.text('4K'), findsNothing);
     });
 
-    // The address is NOT on the readout — `home` §4 is explicit that it lives
+    // The address is NOT on the readout: `home` §4 is explicit that it lives
     // on the Portal's picker cells and on the service home. What the folded
     // card owes instead is the fact that it stands for more than one
     // connection, which is what `×2` says.
@@ -185,7 +185,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Moving the lens changes which connection the figures belong to, and
-      // changes nothing the cell prints about *where* — because it prints none.
+      // changes nothing the cell prints about *where*, because it prints none.
       expect(find.text('×2'), findsOneWidget);
       expect(find.textContaining('somewhere'), findsNothing);
     });
@@ -223,7 +223,7 @@ void main() {
 
     testWidgets('tapping moves the lens before it navigates', (tester) async {
       // Navigating alone would land on whichever connection the lens already
-      // pointed at — which is the cell the user did not tap.
+      // pointed at, which is the cell the user did not tap.
       final container = await _pump(tester, role: ServiceMatrixRole.picker);
       expect(
         container.read(activeInstanceProvider(ServiceKey.radarr))?.id,

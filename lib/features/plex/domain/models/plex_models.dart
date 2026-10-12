@@ -2,7 +2,7 @@
 ///
 /// Everything the dashboard renders arrives as [StreamSession] / [StreamItem] /
 /// [StreamLibrary]; these types exist for the three things that are genuinely
-/// Plex's and not a media server's in general — what `GET /identity` and `GET /`
+/// Plex's and not a media server's in general: what `GET /identity` and `GET /`
 /// say about the box, what a pasted `X-Plex-Token` turns out to be, and the
 /// `MediaContainer` paging envelope that Plex insists must be read back rather
 /// than assumed.
@@ -14,7 +14,7 @@ import 'package:flutter/foundation.dart';
 ///
 /// **Not** `parse_utils.parseInt`, and the difference is load-bearing on Plex:
 /// that helper collapses a missing value to `0`, while Plex's own rule is
-/// "missing means ABSENT, not zero" — an absent `viewCount` means unwatched, an
+/// "missing means ABSENT, not zero": an absent `viewCount` means unwatched, an
 /// absent `viewOffset` means there is no resume point at all, and a `0` in
 /// either slot would be a different claim. `leafCount` vs `viewedLeafCount`
 /// depends on the same distinction to decide whether a show is fully watched or
@@ -36,7 +36,7 @@ double? plexDouble(dynamic value) {
 /// Reads a bool that Plex may send as `true`, `1` or `"1"`.
 ///
 /// Returns null for an absent key so a caller can tell "the server said no"
-/// from "the server did not say" — `myPlexSubscription` absent is not the same
+/// from "the server did not say": `myPlexSubscription` absent is not the same
 /// claim as `myPlexSubscription: false`, and the difference decides whether the
 /// UI blames Plex Pass for a refused terminate.
 bool? plexBool(dynamic value) {
@@ -57,7 +57,7 @@ String? plexString(dynamic value) {
   return text.isEmpty ? null : text;
 }
 
-/// Converts a Plex epoch — **seconds**, not milliseconds — to a UTC [DateTime].
+/// Converts a Plex epoch (**seconds**, not milliseconds) to a UTC [DateTime].
 ///
 /// `addedAt`, `updatedAt`, `lastViewedAt`, `viewedAt` and `scannedAt` are all
 /// epoch seconds while `duration` and `viewOffset` on the very same object are
@@ -76,7 +76,7 @@ DateTime? plexEpochSeconds(dynamic value) {
 /// local ones: rows whose `key`/`thumb` are absolute `https://plex.tv` or
 /// metadata-provider URLs and whose `source` is `provider://tv.plex.provider.*`.
 /// Rendering one would make the app fetch from plex.tv, which this client is
-/// built never to touch — so a cloud row is dropped at the parse boundary
+/// built never to touch, so a cloud row is dropped at the parse boundary
 /// instead of being filtered later by whichever widget happens to remember.
 ///
 /// The test is deliberately three-sided rather than trusting `source` alone:
@@ -114,7 +114,7 @@ enum PlexTokenIssue {
   /// Nothing wrong that this client can see.
   none,
 
-  /// The pasted value is a plex.tv JSON Web Token — they start `eyJ`, expire
+  /// The pasted value is a plex.tv JSON Web Token: they start `eyJ`, expire
   /// after seven days, and can only be refreshed by calling plex.tv. Since this
   /// client never contacts plex.tv, a JWT is a dead end rather than a delay, and
   /// saying so is more useful than letting it work for a week and then fail.
@@ -137,7 +137,7 @@ PlexTokenIssue inspectPlexToken(String token) {
   return PlexTokenIssue.none;
 }
 
-/// `GET /identity` — the one Plex endpoint that needs no credential.
+/// `GET /identity`, the one Plex endpoint that needs no credential.
 @immutable
 class PlexServerIdentity {
   final String? machineIdentifier;
@@ -163,7 +163,7 @@ class PlexServerIdentity {
   }
 }
 
-/// `GET /` — the authenticated capability sheet.
+/// `GET /`: the authenticated capability sheet.
 @immutable
 class PlexServerCapabilities {
   final String? friendlyName;
@@ -179,7 +179,7 @@ class PlexServerCapabilities {
   final bool? myPlexSubscription;
 
   /// Whether the server has Plex Home users beyond the owner. Informational
-  /// only: their watch state is still unreadable — see
+  /// only: their watch state is still unreadable: see
   /// `PlexClient.getViewers`.
   final bool? multiuser;
 
@@ -215,7 +215,7 @@ class PlexServerCapabilities {
   /// Whether stopping a stream is available at all on this server.
   ///
   /// Treated as available when the server did not say, so a missing attribute
-  /// hides the button on nobody's server by mistake — the terminate call still
+  /// hides the button on nobody's server by mistake; the terminate call still
   /// explains itself if it comes back 401.
   bool get canTerminateSessions => myPlexSubscription ?? true;
 }
@@ -237,7 +237,7 @@ class PlexPage<T> {
   /// `MediaContainer.offset`, echoed back by the server.
   final int offset;
 
-  /// `MediaContainer.size` — how many rows the server put in this page.
+  /// `MediaContainer.size`: how many rows the server put in this page.
   final int size;
 
   /// `MediaContainer.totalSize`, when the response is paginated at all. Null on

@@ -1,7 +1,7 @@
 /// What the Sonarr Overview reads, and the pure functions that shape it.
 ///
-/// Sonarr shares Radarr's bar exactly — Overview, Library, Calendar, Queue,
-/// Wanted, History — so this file is deliberately the sibling of
+/// Sonarr shares Radarr's bar exactly: Overview, Library, Calendar, Queue,
+/// Wanted, History, so this file is deliberately the sibling of
 /// `radarr_overview_provider.dart` and departs from it only where the record
 /// forces it to. The record here is an **episode inside a season inside a
 /// series**, and that is the one difference that runs through everything: a
@@ -11,7 +11,7 @@
 ///
 /// The one structural departure: Radarr derives its Coming up from the library
 /// because a film's dates are on the film. Episodes are not on the series row
-/// at all — the honest source is `GET /api/v3/calendar`, which `SonarrService`
+/// at all: the honest source is `GET /api/v3/calendar`, which `SonarrService`
 /// has never called (the same block `lib/core/router.dart` records for the
 /// Calendar tab). What is reachable is `nextAiring`, one instant per series on
 /// the `series` call the KPI rail already makes, so the week window here counts
@@ -64,7 +64,7 @@ const int sonarrHistoryTodayLimit = 3;
 /// One page of a backlog endpoint.
 ///
 /// Only the envelope's `totalRecords` is printed as a figure; the rows are read
-/// for one thing only — how many distinct series they span — and only when the
+/// for one thing only: how many distinct series they span, and only when the
 /// page provably holds all of them. See [sonarrSeriesSpread].
 const int sonarrBacklogPageSize = 20;
 
@@ -85,7 +85,7 @@ class SonarrAiringEntry {
 /// The week window, and whether its emptiness can be believed.
 ///
 /// [canReport] exists because `nextAiring` is absent for two entirely different
-/// reasons — nothing is scheduled, or this server never sent the field — and
+/// reasons: nothing is scheduled, or this server never sent the field, and
 /// they must not render as the same sentence. An empty list with
 /// [canReport] false is "Sonarr did not say", which is a missing answer; an
 /// empty list with it true is "nothing airs this week", which is an answer.
@@ -105,14 +105,14 @@ class SonarrAiringWeek {
 /// Whether Sonarr told us enough for silence to mean "nothing".
 ///
 /// This guards the narrow case only: the server answered and the *field* was
-/// absent. The wide one — the server did not answer at all — is not this
+/// absent. The wide one, the server did not answer at all, is not this
 /// function's to catch and cannot be caught here, because a failed fetch and an
 /// empty library arrive as the same `[]`. It is caught one layer down, by
 /// [sonarrOverviewSeriesProvider] reading `getSeriesOrThrow`: by the time a
 /// list reaches this function it is a list Sonarr actually sent, so `[]` means
 /// an empty library.
 ///
-/// True as soon as one series carries a date — the server answers the question,
+/// True as soon as one series carries a date: the server answers the question,
 /// so any series without one genuinely has nothing scheduled. True also for a
 /// library where nothing *could* air: every series ended or was deleted, and an
 /// empty week is then simply the truth. False only in the third case, a library
@@ -132,7 +132,7 @@ bool sonarrCanReportAirings(List<SonarrSeries> series) {
 /// Sonarr's series `status` is a small closed vocabulary; `continuing` and
 /// `upcoming` are the two that mean "more is coming". `ended` and `deleted`
 /// mean the opposite, and `unknown` is treated as ended rather than as
-/// expecting a date — the alternative makes one un-catalogued series in a
+/// expecting a date: the alternative makes one un-catalogued series in a
 /// library of finished shows suppress the whole section.
 bool sonarrMayStillAir(SonarrSeries series) {
   final status = series.status.toLowerCase();
@@ -143,7 +143,7 @@ bool sonarrMayStillAir(SonarrSeries series) {
 ///
 /// The window opens at local midnight **today** (inclusive) and closes at local
 /// midnight [days] days later (exclusive): an episode that aired earlier today
-/// is still part of today's row — the user has not seen this screen yet — and
+/// is still part of today's row (the user has not seen this screen yet), and
 /// one dated exactly seven days out belongs to next week's window.
 ///
 /// The end is built with `DateTime(y, m, d + days)` rather than
@@ -155,7 +155,7 @@ bool sonarrMayStillAir(SonarrSeries series) {
 /// so a series airing Tuesday and Friday appears once, on Tuesday. That is why
 /// the section counts series: an episode count derived from this would be short
 /// by exactly the episodes it cannot see, which is the worst kind of wrong
-/// figure — plausible.
+/// figure: plausible.
 SonarrAiringWeek sonarrAiringWeek(
   List<SonarrSeries> series, {
   required DateTime now,
@@ -202,7 +202,7 @@ final sonarrOverviewSeriesProvider = seriesProvider;
 /// the source refused. See `lib/core/providers/provider_retry.dart`.
 ///
 /// That Retry is reachable now, which it was not while the source swallowed its
-/// own failure into `[]` — and it has to invalidate the source too, not only
+/// own failure into `[]`, and it has to invalidate the source too, not only
 /// this fold: the source is plain, so a Retry that re-ran the fold alone read
 /// the same cached error straight back and could never recover.
 final sonarrAiringWeekProvider = FutureProvider.autoDispose<SonarrAiringWeek>((
@@ -219,13 +219,13 @@ final sonarrAiringWeekProvider = FutureProvider.autoDispose<SonarrAiringWeek>((
 /// Each carries its own tone, and that is the whole point of the enum: two of
 /// these are faults and two are backlog, which the five-arm tone rule paints
 /// neutral. Painting the backlog amber is the single most common way that rule
-/// is broken — a library with twelve episodes still to find is not a library
+/// is broken: a library with twelve episodes still to find is not a library
 /// that is broken.
 enum SonarrAttentionKind {
   /// Sonarr grabbed the release and could not move it into the library.
   importFailed(StatusTone.warning, Icons.file_download_off_rounded),
 
-  /// The transfer is not moving. A fault — the user did not ask for this.
+  /// The transfer is not moving. A fault: the user did not ask for this.
   stalled(StatusTone.warning, Icons.sync_problem_rounded),
 
   /// Monitored episodes that have aired and are not on disk. Backlog: nothing
@@ -270,7 +270,7 @@ class SonarrAttentionItem {
   IconData get icon => kind.icon;
 
   /// The row as a sentence, with the dots the layout uses turned back into
-  /// commas — `·` is decoration, and a screen reader either names it or drops
+  /// commas: `·` is decoration, and a screen reader either names it or drops
   /// it depending on the user's punctuation setting.
   String get spoken =>
       joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
@@ -279,7 +279,7 @@ class SonarrAttentionItem {
 /// The slot a queue or history record is about: `S2 E5`, or `S4` for a season
 /// pack, or null when the record names neither.
 ///
-/// [arrEpisodeCode] needs both numbers and answers null without them — which is
+/// [arrEpisodeCode] needs both numbers and answers null without them, which is
 /// exactly the shape of a season pack, the record the board's own example row
 /// is made of ("Season pack failed to import · Slow Horses S04"). Dropping to
 /// the bare season is what lets that row name the thing that failed instead of
@@ -295,7 +295,7 @@ String? sonarrEpisodeSlot(Map<String, dynamic> record) {
   return formatSeasonCode(season);
 }
 
-/// `Slow Horses S4 E6` — the subject of a row, as far as the record names it.
+/// `Slow Horses S4 E6`: the subject of a row, as far as the record names it.
 String sonarrRecordSubject(Map<String, dynamic> record) {
   final named = joinDisplayParts([
     arrSeriesTitle(record),
@@ -308,7 +308,7 @@ String sonarrRecordSubject(Map<String, dynamic> record) {
 /// Reads the faults out of a page of **raw** `/queue` records.
 ///
 /// Raw, because `ArrQueueSnapshot` folds a queue down to one entry per series
-/// id and keeps neither the release title nor `added` — and this section is
+/// id and keeps neither the release title nor `added`, and this section is
 /// entirely made of those two. On Sonarr the fold costs more than on Radarr: a
 /// season pack and three single episodes of one series collapse to one entry,
 /// so three of the four faults would vanish.
@@ -356,7 +356,7 @@ List<SonarrAttentionItem> sonarrQueueFaults(
   return List.unmodifiable(items);
 }
 
-/// The missing-episodes backlog row, or null when there is nothing to report —
+/// The missing-episodes backlog row, or null when there is nothing to report,
 /// **and null also when nobody could answer**.
 ///
 /// [total] is `ArrRecordPage.total`, which is nullable precisely so a server
@@ -370,7 +370,7 @@ SonarrAttentionItem? sonarrMissingEpisodesItem(int? total, {int? seriesCount}) {
     headline: total == 1
         ? '1 missing monitored episode'
         : '$total missing monitored episodes',
-    // "across 5 series" only when the page provably held every record — see
+    // "across 5 series" only when the page provably held every record: see
     // [sonarrSeriesSpread]. Otherwise the mechanism, which is true at any size:
     // nothing is wrong, Sonarr is still looking.
     detail: seriesCount == null
@@ -437,7 +437,7 @@ bool _isImportFault(Map<String, dynamic> record) {
   }
   // Sonarr's canonical "One or more episodes expected in this release were not
   // imported or missing" arrives as a pending import carrying a status message,
-  // which is how the service says a human has to look at it — see
+  // which is how the service says a human has to look at it: see
   // `arrQueueSeverity`.
   return state == 'importpending' &&
       arrQueueSeverity(record) != ArrQueueSeverity.ok;
@@ -540,7 +540,7 @@ class SonarrDownloadedEpisode {
     required this.age,
   });
 
-  /// Sonarr's series id — required, because the tile is a link and a poster
+  /// Sonarr's series id: required, because the tile is a link and a poster
   /// that cannot navigate is a promise the page cannot keep.
   final int seriesId;
 
@@ -652,7 +652,7 @@ class SonarrHistoryEntry {
   /// The series and the slot: `Severance S2 E4`.
   final String subject;
 
-  /// What happened to it, in the shared history vocabulary — `Imported`,
+  /// What happened to it, in the shared history vocabulary: `Imported`,
   /// `Grabbed`, `Failed`.
   final String event;
 
@@ -670,7 +670,7 @@ class SonarrHistoryEntry {
 /// The records from today, newest first, capped at [limit].
 ///
 /// "Today" is the local calendar day of [now]. A record from 23:50 yesterday is
-/// out even though it is twenty minutes old — the section is headed `today`,
+/// out even though it is twenty minutes old. The section is headed `today`,
 /// and a heading is a promise.
 List<SonarrHistoryEntry> sonarrHistoryToday(
   List<dynamic> records, {
@@ -733,8 +733,8 @@ const List<String> _weekdayNames = [
 /// `Today`, `Tomorrow`, then `Wed 3`.
 ///
 /// Top-level and public where Radarr keeps its twin private inside the screen:
-/// it is a windowing rule like the others — which day a timestamp belongs to,
-/// relative to an explicit `now` — and the one boundary worth a test is that
+/// it is a windowing rule like the others: which day a timestamp belongs to,
+/// relative to an explicit `now`, and the one boundary worth a test is that
 /// 23:59 today and 00:01 tomorrow are different words.
 ///
 /// English weekday names are hard-coded for the same reason the month names in

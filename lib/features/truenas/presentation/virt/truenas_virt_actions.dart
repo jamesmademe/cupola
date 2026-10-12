@@ -8,7 +8,7 @@ import 'package:cupola/features/truenas/presentation/virt/truenas_virt_providers
 import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
 
 /// Creates a new Incus instance (container or VM). This is a best-effort
-/// minimal create — the server validates the full payload and surfaces any
+/// minimal create: the server validates the full payload and surfaces any
 /// missing requirements via the error snackbar.
 Future<void> createInstanceFlow(
   BuildContext context,

@@ -114,7 +114,7 @@ int _rung(double pixels) {
 /// For a picture that fills whatever its parent gives it (a grid tile, a
 /// poster, a backdrop): the box is the constraints it receives. [box] fixes it
 /// instead, for a slot whose layout does not say what the picture was decoded
-/// for — a hero shuttle, whose size animates while its picture must stay the
+/// for a hero shuttle, whose size animates while its picture must stay the
 /// one already decoded.
 class ArtworkDecodeBox extends StatelessWidget {
   const ArtworkDecodeBox({super.key, required this.builder, this.box});

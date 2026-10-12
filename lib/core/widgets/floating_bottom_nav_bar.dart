@@ -28,7 +28,7 @@ class FloatingNavDestination {
   ///
   /// Painted in **ink**, never a status tone and never a colour of the
   /// section's own: a green or amber pill living in permanent chrome reads as
-  /// stack health, and the chrome is monochrome — colour comes from the content
+  /// stack health, and the chrome is monochrome: colour comes from the content
   /// and the five tones, nothing else. An ink disc with the on-ink numeral is
   /// the loudest thing the room can draw without a hue.
   final int badgeCount;
@@ -40,7 +40,7 @@ class FloatingNavDestination {
   /// Actions a screen reader offers on this destination beside activating it.
   ///
   /// The accessible door to something the bar otherwise reaches only by a
-  /// gesture — the shell hangs the Portal here, since a drag is exactly what a
+  /// gesture: the shell hangs the Portal here, since a drag is exactly what a
   /// screen reader cannot perform. Null for none. Only the bar reads it: the
   /// rails have no gesture to stand in for.
   final Map<CustomSemanticsAction, VoidCallback>? customSemanticsActions;
@@ -57,8 +57,8 @@ class FloatingNavDestination {
 
   /// What the badge prints: the count, or `9+` past nine.
   ///
-  /// One rule for every surface that draws [badgeCount] — the phone's bar and
-  /// the desktop rail — because both badges sit on a 20pt glyph, and a third
+  /// One rule for every surface that draws [badgeCount]: the phone's bar and
+  /// the desktop rail, because both badges sit on a 20pt glyph, and a third
   /// digit is wider than the glyph it annotates.
   String get badgeLabel => badgeCount > 9 ? '9+' : '$badgeCount';
 }
@@ -93,7 +93,7 @@ class FloatingNavBarMetrics {
   /// The nav bar is compact chrome sitting over content: letting its label grow
   /// without limit pushes the bar over half the screen, and ignoring the
   /// preference outright is hostile. Growing up to this factor keeps the label
-  /// legible while the bar stays a bar — the same compromise the system tab bar
+  /// legible while the bar stays a bar: the same compromise the system tab bar
   /// makes.
   static const double maxTextScaleFactor = 1.3;
 
@@ -106,7 +106,7 @@ class FloatingNavBarMetrics {
 
   /// Height of the bar at the current reading size.
   ///
-  /// Derived from the tallest thing inside it — the selection pill — so the row
+  /// Derived from the tallest thing inside it (the selection pill), so the row
   /// can never overflow the surface.
   static double barHeightFor(BuildContext context) {
     final pillHeight = _NavBarItem.pillHeightFor(
@@ -134,14 +134,14 @@ class FloatingNavBarMetrics {
   static double getScrollViewBottomPadding(BuildContext context) {
     // No bar, no clearance. A desktop window navigates from the rail and the
     // deck, so reserving room at the foot of every scroll view would leave one
-    // dead strip along the bottom of all 73 screens — and this one helper is
+    // dead strip along the bottom of all 73 screens, and this one helper is
     // where all of them ask, which is why the answer belongs here rather than
     // in 50 build methods.
     if (AppBreakpoints.isDesktopShell(context)) return 0;
 
     // `paddingOf`, not `of`: this helper is called from ~50 `build` methods, and
     // an unscoped `MediaQuery.of` subscribes every one of them to *any*
-    // MediaQueryData change — including `viewInsets`, which animates every frame
+    // MediaQueryData change, including `viewInsets`, which animates every frame
     // the soft keyboard opens or closes. The padding aspect changes only on a
     // real safe-area change (rotation, notch) and when the bar comes or goes.
     return MediaQuery.paddingOf(context).bottom + AppSpacing.lg;
@@ -159,7 +159,7 @@ class FloatingNavBarMetrics {
 /// - Glass surface: a semi-opaque tint, deliberately NOT a backdrop blur.
 ///   With `extendBody: true` every screen scrolls under this bar, so a
 ///   [BackdropFilter] here re-blurred the whole backdrop on every scroll
-///   frame — measured on device at 15–25ms of raster per frame, half the
+///   frame, measured on device at 15–25ms of raster per frame, half the
 ///   scroll budget gone. Same rule, same reason as [GlassAppBar].
 ///
 /// Example usage:
@@ -535,8 +535,8 @@ class _NavBarIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The room's strong fill — white at 12% in the dark room, the day room's
-    // ink at 12% on paper — and no edge: the pill is the one lit shape in the
+    // The room's strong fill (white at 12% in the dark room, the day room's
+    // ink at 12% on paper) and no edge: the pill is the one lit shape in the
     // bar, the same in every section, so it says "you are here" and nothing
     // about which section "here" is.
     final activeBackground = CupolaRoom.of(context).fillStrong;
@@ -765,7 +765,7 @@ class _NavBarItem extends StatelessWidget {
   static const double _selectedWidthSlack = 6.0;
   static const double minSelectedWidth = 84.0;
 
-  /// Height of the animated selection pill — shorter than the full inner bar
+  /// Height of the animated selection pill: shorter than the full inner bar
   /// height so the highlight feels proportionate rather than filling the bar.
   static const double _pillHeight = 36.0;
 
@@ -818,7 +818,7 @@ class _NavBarItem extends StatelessWidget {
   ///
   /// [scaler] must be threaded in: measuring at 1.0x while the label renders
   /// scaled is what made the bar overflow at accessibility text sizes. So must
-  /// [labelStyle], for the same reason — see [labelStyleOf].
+  /// [labelStyle], for the same reason; see [labelStyleOf].
   static double preferredSelectedWidthFor(
     FloatingNavDestination destination,
     TextScaler scaler,
@@ -846,14 +846,14 @@ class _NavBarItem extends StatelessWidget {
     // Monochrome: the selected icon and label are the primary ink on the
     // strong fill (see [_NavBarIndicator]), the rest the secondary ink. Both
     // are the room's own inks, spaced for the surfaces they sit on, so there is
-    // no hue to walk and nothing a section could make fail in daylight — which
+    // no hue to walk and nothing a section could make fail in daylight, which
     // is where a section accent over a 13% tint of itself measured under 2:1.
     final itemColor = isSelected
         ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant;
 
     // Rail parity: NavigationRail and NavigationBar both append this, so the
-    // wide-window rail already announced "Tab 1 of 4" while this bar did not —
+    // wide-window rail already announced "Tab 1 of 4" while this bar did not:
     // the same app saying two different things about the same navigation. '\n'
     // is the separator Flutter itself uses when merging labels, so the string is
     // byte-identical to Material's.
@@ -921,7 +921,7 @@ class _NavBarItem extends StatelessWidget {
                       ),
                     ),
                     // Flexible so the label ellipsises when the row is tighter
-                    // than the measured preference — at large reading sizes the
+                    // than the measured preference: at large reading sizes the
                     // available width can fall short of what the pill wants.
                     Flexible(
                       child: AnimatedSize(
@@ -966,7 +966,7 @@ class _NavBarItem extends StatelessWidget {
 /// A count on a navigation icon: the phone's bar and the tablet's rail
 /// draw the same one.
 ///
-/// Deliberately ink rather than a status tone — see
+/// Deliberately ink rather than a status tone; see
 /// [FloatingNavDestination.badgeCount]. Excluded from semantics because the
 /// destination already speaks the count in its label; a second node would read
 /// the number twice.
@@ -1021,7 +1021,7 @@ class NavBadgedIcon extends StatelessWidget {
               child: Text(
                 label,
                 // The label's clamp, so the count grows with the reading size
-                // exactly as far as the bar around it does — and no further.
+                // exactly as far as the bar around it does, and no further.
                 textScaler: FloatingNavBarMetrics.effectiveTextScaler(context),
                 style: Theme.of(context).textTheme.labelSmall
                     ?.weight(FontWeight.w600)

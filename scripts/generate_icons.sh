@@ -17,7 +17,7 @@ set -euo pipefail
 # What --write produces:
 #   assets/brand/*.svg      the three canonical compositions (mark, full ground,
 #                           simplified small-size variant)
-#   assets/brand/cupola_mark.png  the in-app mark drawn by ServiceRing — a real
+#   assets/brand/cupola_mark.png  the in-app mark drawn by ServiceRing, a real
 #                           app asset declared in pubspec.yaml, not scratch
 #   ios|macos .icon/Assets  Icon Composer layers, light and dark groups
 #   macos cupola_icon_legacy.icns  the macOS fallback, for systems that predate

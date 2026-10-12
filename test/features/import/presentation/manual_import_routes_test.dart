@@ -41,7 +41,7 @@ void main() {
 
     test('an unnamed connection stays unnamed', () {
       // Empty means "the lens", which is what every link written before the
-      // parameter existed means — and it must not become the literal id ''.
+      // parameter existed means, and it must not become the literal id ''.
       for (final id in const [null, '']) {
         final uri = Uri.parse(
           manualImportLocation(

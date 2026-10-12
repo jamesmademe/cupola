@@ -1,7 +1,7 @@
 /// What the Unraid Overview reads, and the pure functions that shape it.
 ///
 /// Everything on this page is folded from the **three documents
-/// [UnraidClient] speaks** — `info`, `array` and `dockerContainers` — and two
+/// [UnraidClient] speaks**: `info`, `array` and `dockerContainers`, and two
 /// of them are already loaded by the service home: the KPI rail reads
 /// [unraidArrayProvider] and [unraidDockerProvider]. Only `info` is a call this
 /// page adds, and it is the one that carries the uptime and the release the
@@ -15,8 +15,8 @@
 ///
 /// The board draws Parity, VMs, Notifications, Shares and a CPU/RAM/Net strip.
 /// None of them is stubbed, because `UnraidClient` makes no call that could
-/// fill them and the committed SDL (`test/fixtures/unraid/schema.graphql`) —
-/// which is this app's contract with the API — declares no field for them
+/// fill them and the committed SDL (`test/fixtures/unraid/schema.graphql`),
+/// which is this app's contract with the API, declares no field for them
 /// either. A section given a fake zero is worse than a section that was never
 /// promised: "0 notifications" is a sentence about a quiet server, and what we
 /// actually have is silence about a question nobody asked.
@@ -41,7 +41,7 @@ import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 /// Disk rows the Array section draws before its header is the only place the
 /// rest are reported.
 ///
-/// Six, which is a whole small array — the header states the census either way,
+/// Six, which is a whole small array; the header states the census either way,
 /// and [unraidDiskPreview] floats anything wrong to the top so a preview can
 /// never be the reason a failing slot went unseen.
 const int unraidDiskPreviewLimit = 6;
@@ -59,7 +59,7 @@ const int unraidContainerPreviewLimit = 5;
 /// fetch it never reads.
 ///
 /// `retry: noProviderRetry`, because [unraidClientProvider] throws
-/// `Unraid not configured` — a condition no amount of waiting changes, so a
+/// `Unraid not configured`: a condition no amount of waiting changes, so a
 /// backoff here is a timer that never stops and a battery cost that never buys
 /// anything. The screen checks `isServiceConfigured` before this is ever
 /// watched; this is the belt to that braces.
@@ -84,12 +84,12 @@ class UnraidSystemFact {
 
   final IconData icon;
 
-  /// Label first, figure second — the order a person says it, which is the
+  /// Label first, figure second: the order a person says it, which is the
   /// inverse of the visual order the row draws (figure large, label under it).
   String get spoken => joinSpokenParts([label, value]);
 }
 
-/// `18 days`, `7 hours`, `12 minutes` — how long the server has been up.
+/// `18 days`, `7 hours`, `12 minutes`: how long the server has been up.
 ///
 /// `info.os.uptime` is typed `String` in the SDL and carries a **boot
 /// timestamp**, not a duration (`2026-07-01T00:00:00Z` in the committed
@@ -97,7 +97,7 @@ class UnraidSystemFact {
 /// printed. That is the whole reason this is a pure function taking an explicit
 /// clock: every boundary below is a test, and none of them needs to wait.
 ///
-/// Null — which the row renders as `—` — in three cases, and each is a figure
+/// Null (which the row renders as `—`) in three cases, and each is a figure
 /// we do not have rather than a zero we could print:
 ///
 ///  * the field was absent or blank;
@@ -123,7 +123,7 @@ String? unraidUptimeLabel(String? raw, {required DateTime now}) {
   if (elapsed.inHours >= 1) return _plural(elapsed.inHours, 'hour');
   if (elapsed.inMinutes >= 1) return _plural(elapsed.inMinutes, 'minute');
   // A server up for forty seconds has just come back, and that is the useful
-  // reading — not `0 minutes`, which looks like a figure that failed to load.
+  // reading, not `0 minutes`, which looks like a figure that failed to load.
   return 'just booted';
 }
 
@@ -173,14 +173,14 @@ final unraidOverviewSystemProvider =
 ///
 /// Null and never `0 B`: the percentage beside it on the readout rail is the
 /// figure a user acts on, and an array that reports no capacity is one we
-/// cannot say anything about — including that it is empty.
+/// cannot say anything about, including that it is empty.
 ///
 /// One decimal, from the shared ladder in `byte_format.dart`: a 31.2 TB array
 /// and a 31.9 TB one read apart, and this is a figure the user watches grow.
 ///
 /// The unit is printed once when both figures land on the same one, because
 /// that is how the board draws it and how a person reads it aloud. When they
-/// differ — 800 GB used of 9.3 TB — both units stay, since collapsing them
+/// differ (800 GB used of 9.3 TB), both units stay, since collapsing them
 /// there would be off by a factor of a thousand.
 String? unraidCapacityLabel(UnraidArray array) {
   final used = array.usedBytes;
@@ -200,7 +200,7 @@ String? unraidCapacityLabel(UnraidArray array) {
 
 /// The word the header prints for the array's state, or null when it has none.
 ///
-/// Lower-cased because it sits in a sentence of facts, not in a badge — the
+/// Lower-cased because it sits in a sentence of facts, not in a badge: the
 /// readout rail above prints the API's own `STARTED` in its cell. `UNKNOWN` is
 /// the model's stand-in for an absent field rather than a state the array
 /// reported, so it is dropped: an array that did not say is not an array in an
@@ -229,7 +229,7 @@ class UnraidArrayDigest {
   /// `5.6 of 9.3 TB`, or null when it reported no capacity.
   final String? capacityLabel;
 
-  /// Every slot the array answered with — **not** the length of [preview], and
+  /// Every slot the array answered with: **not** the length of [preview], and
   /// **null** when the array answered with no slot list at all.
   ///
   /// `array.disks` is the whole list: the query is not paged and nothing caps
@@ -245,14 +245,14 @@ class UnraidArrayDigest {
   /// Slots at or above [UnraidDisk.warmThresholdCelsius] that are **not**
   /// already flagged.
   ///
-  /// The subtraction runs this way round on purpose. A drive can be both — a
+  /// The subtraction runs this way round on purpose. A drive can be both: a
   /// `DISK_DSBL` slot at 47 °C is the array running without a drive it expected
-  /// while that drive cooks — and one of the two clauses has to give it up so
+  /// while that drive cooks, and one of the two clauses has to give it up so
   /// the headline does not report one drive as two problems. The clause that
   /// gives it up is this one, because the other names the more serious fact.
   final int warmCount;
 
-  /// Slots the array has flagged — a disabled or invalid slot, which is the
+  /// Slots the array has flagged: a disabled or invalid slot, which is the
   /// array telling us it is running without a drive it expected.
   ///
   /// Counted whatever the temperature says: a flagged slot is never dropped
@@ -284,8 +284,8 @@ class UnraidArrayDigest {
 
 /// Faulted and warm slots first, then the array's own order, capped at [limit].
 ///
-/// Stable within each group, so the second half still reads in slot order —
-/// parity, disk1, disk2 — which is how the user's own Unraid web UI lists them.
+/// Stable within each group, so the second half still reads in slot order:
+/// parity, disk1, disk2, which is how the user's own Unraid web UI lists them.
 ///
 /// The float is not cosmetic. A preview of six over an array of thirty would
 /// otherwise hide the one disk that is failing behind five that are fine, and a
@@ -327,7 +327,7 @@ UnraidArrayDigest unraidArrayDigest(
 /// Carries `noProviderRetry` because [unraidArrayProvider] carries it: a
 /// derivation that dropped it would reintroduce, one step down, exactly the
 /// backoff its source refused. The claim is only worth writing because the
-/// source now makes it — this override sat here while `unraidArrayProvider` was
+/// source now makes it. This override sat here while `unraidArrayProvider` was
 /// still on Riverpod's default, where it bought nothing: a fold cannot settle
 /// before the thing it awaits.
 final unraidOverviewArrayProvider =
@@ -340,7 +340,7 @@ final unraidOverviewArrayProvider =
 /// The Array tab already states this rule and this must not contradict it: a
 /// drive with no reading is asleep, not at zero. The unit is spaced as the
 /// board spells it (`47 °C`), and the word replaces the figure entirely rather
-/// than standing beside an em dash — we know exactly why the figure is missing,
+/// than standing beside an em dash. We know exactly why the figure is missing,
 /// and saying so is better than saying nothing.
 String unraidDiskReading(UnraidDisk disk) {
   final temp = disk.temp;
@@ -374,7 +374,7 @@ class UnraidDockerDigest {
   });
 
   /// Every container `dockerContainers` answered with. The query is not paged,
-  /// so this is a census and may be stated as a total — unlike the length of
+  /// so this is a census and may be stated as a total, unlike the length of
   /// [preview], which never may.
   final int total;
 
@@ -412,8 +412,8 @@ class UnraidDockerDigest {
 /// the problem. Alphabetical after that, which is the order the Docker tab
 /// lists them in.
 ///
-/// A **stopped** container is not floated. It is backlog — the user stopped it,
-/// they know — and promoting it would make the top of the section a list of
+/// A **stopped** container is not floated. It is backlog: the user stopped it,
+/// they know, and promoting it would make the top of the section a list of
 /// decisions already taken.
 List<UnraidDockerContainer> unraidContainerPreview(
   List<UnraidDockerContainer> containers, {
@@ -451,7 +451,7 @@ UnraidDockerDigest unraidDockerDigest(
 }
 
 /// The Docker section's fold, carrying `noProviderRetry` because
-/// [unraidDockerProvider] carries it — see [unraidOverviewArrayProvider].
+/// [unraidDockerProvider] carries it; see [unraidOverviewArrayProvider].
 final unraidOverviewDockerProvider =
     FutureProvider.autoDispose<UnraidDockerDigest>((ref) async {
       return unraidDockerDigest(await ref.watch(unraidDockerProvider.future));

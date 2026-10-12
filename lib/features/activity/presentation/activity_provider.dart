@@ -44,8 +44,8 @@ const _globalActivityPageSize = 50;
 /// The whole point of this type is that a failure is *reportable*. Every service
 /// used to be wrapped in `catch (_) { return const []; }`, so a dead Sonarr and
 /// an idle Sonarr produced byte-identical output and the screen confidently
-/// said "Nothing downloading right now". Errors are caught per service — one
-/// unreachable instance must never blank the others — but they are carried, not
+/// said "Nothing downloading right now". Errors are caught per service: one
+/// unreachable instance must never blank the others, but they are carried, not
 /// swallowed.
 class ActivityServiceResult {
   final ServiceKey service;
@@ -60,7 +60,7 @@ class ActivityServiceResult {
   final String instanceId;
 
   /// What to call this connection in a sentence, and empty whenever the
-  /// service has only one — the rule `ServiceConnectionRow` and
+  /// service has only one: the rule `ServiceConnectionRow` and
   /// `ServiceMatrixCell` already follow. A lone Radarr must not grow a name
   /// for the only Radarr there is.
   final String label;
@@ -68,7 +68,7 @@ class ActivityServiceResult {
   final List<GlobalActivityItem> items;
 
   /// How many records this connection **has** of this kind, as the server
-  /// reported it — or null when it did not say.
+  /// reported it, or null when it did not say.
   ///
   /// Not `items.length`, and the gap between the two is the whole reason this
   /// field exists: the arr paged endpoints serve twenty rows by default, so a
@@ -77,7 +77,7 @@ class ActivityServiceResult {
   /// a large backlog look small and a full queue look idle.
   ///
   /// **Null means unanswered, never none.** A caller that gets null must print
-  /// a figure it can defend — "20 shown" — or no figure at all; falling back to
+  /// a figure it can defend ("20 shown") or no figure at all; falling back to
   /// `items.length` reinstates the defect one layer up.
   final int? total;
 
@@ -150,14 +150,14 @@ class ActivityServiceResult {
   /// Configured, asked, and answered.
   bool get reached => configured && error == null;
 
-  /// Configured, asked, and failed — silent or refused; see [didNotAnswer].
+  /// Configured, asked, and failed: silent or refused; see [didNotAnswer].
   bool get failed => configured && error != null;
 
   /// Why it failed, classified. Null when it did not.
   ServiceFailureReason? get failureReason =>
       failed ? classifyConnectionFailure(error) : null;
 
-  /// Failed because nothing answered — the red case. A connection that
+  /// Failed because nothing answered: the red case. A connection that
   /// answered with a refusal or a fault failed too, and is amber.
   bool get didNotAnswer {
     final reason = failureReason;
@@ -201,7 +201,7 @@ class ActivityFeed {
   /// Every connection of [service] that took part in this load.
   ///
   /// The filter strip and the group headers still speak in services, so they
-  /// need the per-connection results folded back up — but only where a *number*
+  /// need the per-connection results folded back up, but only where a *number*
   /// is wanted. Anything that names a failure keeps the connection.
   Iterable<ActivityServiceResult> resultsFor(ServiceKey service) =>
       results.where((r) => r.service == service);
@@ -222,7 +222,7 @@ class ActivityFeed {
   bool get noArrAnswered =>
       arrConnections.isNotEmpty && arrConnections.every((r) => r.failed);
 
-  /// Nothing was actually reached — every configured service errored.
+  /// Nothing was actually reached: every configured service errored.
   ///
   /// This is the case that must surface as an error with a retry rather than as
   /// an empty state, because "no items" here means "we have no idea".
@@ -257,7 +257,7 @@ class GlobalActivityItem {
   /// and the identity a write needs is this one: \*arr queue ids are per server
   /// and each server numbers from one, so `id: 7` names a different download on
   /// each Sonarr. Empty for a row whose connection is unknown, which is how
-  /// every fixture predating the merge still reads — such a row falls back to
+  /// every fixture predating the merge still reads; such a row falls back to
   /// the lens exactly as it always did.
   final String instanceId;
 
@@ -272,8 +272,8 @@ class GlobalActivityItem {
   /// tabular cell.
   ///
   /// Separate from [subtitle] because they are not the same fact and the
-  /// desktop row was printing the wrong one. `subtitle` is prose — the release
-  /// name, the episode code, the artist — and the table was right-aligning it
+  /// desktop row was printing the wrong one. `subtitle` is prose: the release
+  /// name, the episode code, the artist, and the table was right-aligning it
   /// in tabular mono under a column the class doc called "the figures", so a
   /// 60-character release filename arrived ellipsised in a numeric column and
   /// the size and time left were nowhere on the row.
@@ -282,15 +282,15 @@ class GlobalActivityItem {
   /// size/speed/eta fields and \*arr reports no transfer rate on a queue record
   /// at all, so splitting this would be a data change with a comparator per
   /// column. One cell, joined with ` · `, is what the data honestly supports.
-  /// Empty for the kinds that have no figures — a wanted row is a title and a
+  /// Empty for the kinds that have no figures: a wanted row is a title and a
   /// date, not a measurement.
   final String figures;
 
-  /// The fully resolved status — tone, label, progress, warning and all.
+  /// The fully resolved status: tone, label, progress, warning and all.
   ///
   /// Replaces the previous `String status` + `double? progress` +
   /// `String? warning` triple. Those were flattened at load time, which left the
-  /// tile with nothing to colour by except the row's *kind* — the bug that made
+  /// tile with nothing to colour by except the row's *kind*: the bug that made
   /// a failed import render in the success green.
   final MediaStatusInfo status;
 
@@ -389,7 +389,7 @@ typedef ActivityConnection = ({
 /// What a paged bucket keys its cursors and its accumulated pages on.
 ///
 /// Identity only, and deliberately not [ActivityConnection]: a record compares
-/// by every field, and that one also carries `label` — a rendering detail
+/// by every field, and that one also carries `label`, a rendering detail
 /// derived from settings, which flips from empty to a name the moment a second
 /// connection of the same service is configured. Keyed on the whole record, a
 /// cursor stored before that change can never be looked up after it, and the
@@ -417,8 +417,8 @@ List<ActivityConnection> activityArrConnections(SettingsModel settings) {
 /// deliberately: a leg per connection is only honest if the row under it opens
 /// the server that listed it, and every read in the Discover feature resolved
 /// through the lens. That is no longer true of the two things an /activity
-/// request row actually does — approve/decline now go through
-/// `seerrServiceForProvider`, and the row opens `/activity/discover?i=` — so
+/// request row actually does: approve/decline now go through
+/// `seerrServiceForProvider`, and the row opens `/activity/discover?i=`, so
 /// the fan-out has something to stand on.
 ///
 /// Global *search* stays on one Seerr section, and that is not an
@@ -455,8 +455,8 @@ List<ActivityConnection> _connectionsOf(
 /// The \*arr service for **one connection**, whatever the lens is pointing at.
 ///
 /// The write half of the aggregation. An aggregated queue lists rows from
-/// several servers, and a queue record id is per server — every \*arr numbers
-/// its queue from one — so "remove id 7" sent to the wrong Sonarr removes a
+/// several servers, and a queue record id is per server: every \*arr numbers
+/// its queue from one, so "remove id 7" sent to the wrong Sonarr removes a
 /// different download and reports success. Every action a row offers therefore
 /// resolves through here with that row's own [ActivityConnection.instanceId].
 ///
@@ -476,7 +476,7 @@ final connectionArrServiceProvider =
 
       // "The lens" reached without asking settings which connection that is.
       // The per-connection provider would answer the same thing for an empty
-      // id, but only after reading the lens — so a row carrying no connection
+      // id, but only after reading the lens, so a row carrying no connection
       // would start needing a settings scope it never needed before.
       if (instanceId.isEmpty) {
         return ref.watch(resolvedArrServiceProvider(serviceType));
@@ -568,7 +568,7 @@ ActivityFeed _mergeJoined(
 }
 
 /// Blocklist, complete: `getBlocklistPage` pages every record, so a one-shot
-/// provider is all this bucket needs — blocklists are small enough that
+/// provider is all this bucket needs: blocklists are small enough that
 /// fetching them whole is one request, unlike History or Wanted.
 final globalBlocklistItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
@@ -580,7 +580,7 @@ final globalBlocklistItemsProvider = FutureProvider<ActivityFeed>((ref) async {
 /// History, paged: the first window loads, "load more" fetches the rest.
 ///
 /// History is the one bucket whose full contents can be thousands of rows with
-/// embedded series/episode data — several megabytes and a dozen requests if
+/// embedded series/episode data: several megabytes and a dozen requests if
 /// fetched up front. The official web UI pages it, and so does this: a window
 /// of 50 per service, then explicit "load more" pages.
 final globalHistoryFeedProvider =
@@ -621,12 +621,12 @@ class FinishedToday {
 
 /// What landed today, with its true count beside the capped rows.
 ///
-/// In the history feed's own order, which is faults first and then newest —
+/// In the history feed's own order, which is faults first and then newest,
 /// deliberately not re-sorted by time here, because a failed import is the row
 /// worth surfacing and re-sorting would bury it under five successes.
 ///
 /// A provider rather than a filter inside a widget because **two** surfaces
-/// draw this — the Activity page and the desktop inspector pane — and a second
+/// draw this (the Activity page and the desktop inspector pane), and a second
 /// hand-rolled `date.year == now.year && …` is how two readouts of one day
 /// start disagreeing at midnight. The pane's own copy had already drifted: it
 /// compared the UTC date of each record with the local day.
@@ -648,7 +648,7 @@ final finishedTodayProvider = Provider<FinishedToday>((ref) {
 /// taken inside a page is the day only when the page proves it reaches past
 /// the day, connection by connection. Either of two things proves it:
 ///
-///  * the connection has nothing more to give — its total is in hand, or its
+///  * the connection has nothing more to give: its total is in hand, or its
 ///    last page came back short; or
 ///  * one of its records is older than today. History is served newest first,
 ///    so every one of today's is above that one.
@@ -706,7 +706,7 @@ FinishedToday finishedTodayOf(
 /// How many records the first page of a paged bucket asks for.
 ///
 /// Matches the web UI's initial page size, so the first paint costs the same
-/// three requests it always did — just with pages big enough to matter.
+/// three requests it always did, just with pages big enough to matter.
 const _pagedInitialPageSize = 50;
 
 /// Page size for every "load more" page after the first.
@@ -722,7 +722,7 @@ const _pagedMorePageSize = 200;
 /// [PagedCursor.requestAt] introduces, the list's length answers none of the
 /// questions the next cursor needs: [received] is how far the offset advanced
 /// (records past the skip), and [pageWasFull] is whether the *server* filled the
-/// window — the fallback signal for a server that sends no total.
+/// window: the fallback signal for a server that sends no total.
 typedef _PageDelta = ({
   List<GlobalActivityItem> items,
   int received,
@@ -731,7 +731,7 @@ typedef _PageDelta = ({
 
 /// One (kind, connection) pair's progress through a paged bucket.
 class PagedCursor {
-  /// How many records of the set this pair has walked past — the **offset**,
+  /// How many records of the set this pair has walked past: the **offset**,
   /// not the number of rows on screen.
   ///
   /// Counted in records the server sent rather than in items we managed to map,
@@ -762,13 +762,13 @@ class PagedCursor {
   /// accept: a 1-based page over a window of [pageSize], plus however many
   /// records of that window this pair already holds and must drop.
   ///
-  /// Derived, and no longer a stored `nextPage` incremented once per load —
+  /// Derived, and no longer a stored `nextPage` incremented once per load:
   /// that is correct only while every page is the same size, and these are not.
   /// The first page asks for 50 and every page after it asks for 200, so
   /// `page: 2, pageSize: 200` requested records 201-400 and **records 51-200
   /// were never asked for at all**: the list skipped 150 rows in silence. Once
   /// the envelope's total started deciding [hasMore] the same gap turned the
-  /// footer into a control that could not be satisfied — `fetched` stalled
+  /// footer into a control that could not be satisfied: `fetched` stalled
   /// short of `total` while every further page came back empty, so "load more"
   /// stayed lit and each press spent a request on nothing.
   ///
@@ -785,7 +785,7 @@ class PagedCursor {
   /// empty round-trip a list ending exactly on a page boundary used to cost is
   /// gone, and so is the footer spinner that came with it.
   ///
-  /// The heuristic survives underneath for the servers that send no total — an
+  /// The heuristic survives underneath for the servers that send no total: an
   /// older build, a proxy that rewrote the body. There "full last page" is the
   /// only signal there is: a page that came back short was the last one.
   bool get hasMore => total != null ? fetched < total! : lastPageFull;
@@ -795,7 +795,7 @@ class PagedCursor {
 
 /// The window a paged bucket currently shows.
 ///
-/// [feed] deliberately keeps the same shape the one-shot buckets produce — the
+/// [feed] deliberately keeps the same shape the one-shot buckets produce; the
 /// screen's four branches (loading, nothing configured, all failed, data) only
 /// need a feed and a retry callback, and they get exactly those.
 class PagedArrFeedState {
@@ -840,7 +840,7 @@ class PagedArrFeedState {
 /// mechanism reloads every bucket that is alive, paged or not; the previous
 /// feed stays on screen (with the hairline "refreshing" bar) until the first
 /// pages come back. [loadMore] then fetches the next page of every pair that
-/// has one, in parallel, and re-merges — the merged feed is re-sorted whole, so
+/// has one, in parallel, and re-merges; the merged feed is re-sorted whole, so
 /// the severity-first order stays an order, not a per-page concatenation.
 class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   PagedArrFeedNotifier({required this.kinds});
@@ -911,7 +911,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
         // the pair keeps the answer it already had and stays retryable. Derived
         // from the missing page instead, `lastPageFull` came out false, `hasMore`
         // went false with it, and one unreachable connection ended its own half
-        // of the list for good — looking, on screen, exactly like a list that
+        // of the list for good, looking on screen exactly like a list that
         // had run out.
         lastPageFull: didFail
             ? cursor.lastPageFull
@@ -1024,7 +1024,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
         page: request.page,
         pageSize: _pagedMorePageSize,
       );
-      // The leading slice is the overlap [PagedCursor.requestAt] documents —
+      // The leading slice is the overlap [PagedCursor.requestAt] documents:
       // records this pair already shows. Appending it would print each of them
       // twice, which is the one way this fix could be worse than the gap it
       // closes.
@@ -1035,7 +1035,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
             .map((item) => _arrItem(kind, connection, stringKeyMap(item)))
             .toList(growable: false),
         received: fresh.length,
-        // The window the *server* filled, not the part of it that was new —
+        // The window the *server* filled, not the part of it that was new:
         // measured after the skip, a full page would read short and end the
         // list one page early on every server that sends no total.
         pageWasFull: page.records.length == _pagedMorePageSize,
@@ -1050,7 +1050,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   ActivityFeed _buildFeed(Map<ActivityPageKey, PagedCursor> cursors) {
     final results = <ActivityServiceResult>[
       // The services with nothing configured, once each rather than once per
-      // kind — they have no connection to be keyed on.
+      // kind. They have no connection to be keyed on.
       for (final service in _unconfiguredArrServices)
         ActivityServiceResult.unconfigured(service),
     ];
@@ -1093,7 +1093,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
 /// underneath are lens-aware: each is rebuilt by `watchApiClient` when the
 /// connection it describes changes, and the outgoing `ApiClient` closes its
 /// `Dio` on dispose. Read once and held, this provider kept handing out a
-/// service whose transport had been shut — so a *write* from the Activity
+/// service whose transport had been shut, so a *write* from the Activity
 /// control room (an auto-search, a queue removal) threw `StateError` on a
 /// closed client, or, if the lens had moved before this ever rebuilt, went
 /// quietly to the connection the user had just navigated away from.
@@ -1104,7 +1104,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
 /// wrong. `watch` says the same thing once.
 ///
 /// Still the right provider for the surfaces that genuinely show **one**
-/// connection — the per-service Activity screen, whose own title names the lens
+/// connection: the per-service Activity screen, whose own title names the lens
 /// it is reading. The aggregated feed reaches for [connectionArrServiceProvider]
 /// instead, which is this provider for an empty id and a named connection
 /// otherwise.
@@ -1141,7 +1141,7 @@ final resolvedArrServiceProvider =
 ///
 /// Keyed on `(service, connection)` rather than on the service alone, which is
 /// the whole of this pass in one map: folding two Sonarrs into one entry threw
-/// away the answer the screen needs — which of them is down, and which of them
+/// away the answer the screen needs: which of them is down, and which of them
 /// a row belongs to.
 ActivityFeed _merge(
   List<ActivityServiceResult> results, {
@@ -1166,7 +1166,7 @@ ActivityFeed _merge(
       instanceId: result.instanceId,
       label: existing.label.isEmpty ? result.label : existing.label,
       items: [...existing.items, ...result.items],
-      // The two halves' sizes add up — Wanted asks one connection for missing
+      // The two halves' sizes add up: Wanted asks one connection for missing
       // and for cutoff unmet, which are disjoint sets. Dropped here, every
       // merged connection came out "unanswered", and a half that did not say
       // leaves the sum unsaid too rather than shrinking it to the other half.
@@ -1200,7 +1200,7 @@ ActivityFeed _merge(
 /// user has not set Seerr up at all.
 ///
 /// The last service in this feed to be aggregated. With two Seerrs configured,
-/// the second one's requests were simply not on the screen — /activity resolved
+/// the second one's requests were simply not on the screen: /activity resolved
 /// them through the lens from top to bottom, so the answer to "what is my stack
 /// doing" silently excluded a whole server's worth of pending approvals.
 ///
@@ -1351,7 +1351,7 @@ Future<ActivityServiceResult> _loadArrConnection(
 ///
 /// It used to return the bare record list, which is why every figure this feed
 /// produced answered the wrong question. `wanted/missing` serves twenty rows by
-/// default, so a library with 340 gaps reported "20 missing" — not an
+/// default, so a library with 340 gaps reported "20 missing", not an
 /// approximation, a different question ("how many did we fetch") that happened
 /// to look like an answer to the one the user asked. The paged primitives carry
 /// the envelope's `totalRecords`, so the count and the rows now come from the
@@ -1360,10 +1360,10 @@ Future<ActivityServiceResult> _loadArrConnection(
 /// The queue and the blocklist are walks rather than pages: [getQueuePage]
 /// and [getBlocklistPage] fetch every page the envelope's total names, and say
 /// when they could not. They used to hand back the bare rows, and this counted
-/// them — so the two ends where a walk proves nothing were stated as totals: a
+/// them, so the two ends where a walk proves nothing were stated as totals: a
 /// server that sends no `totalRecords` stops the walk after one full page of
 /// 200, and the walk gives up after fifty pages. Every other total may still
-/// be null — a server that did not send `totalRecords` has told us nothing,
+/// be null: a server that did not send `totalRecords` has told us nothing,
 /// and `records.length` would be the old lie with a fresh coat on it.
 Future<ArrRecordPage> _loadPage(
   ArrActivityMixin service,
@@ -1376,7 +1376,7 @@ Future<ArrRecordPage> _loadPage(
       return service.getQueuePage();
     case GlobalActivityKind.blocklist:
       return service.getBlocklistPage();
-    // The page variants, not the record-only ones — and on Radarr and Sonarr
+    // The page variants, not the record-only ones, and on Radarr and Sonarr
     // that is now also what attaches `includeMovie` / `includeSeries` +
     // `includeEpisode`, since both services hang those off this primitive.
     case GlobalActivityKind.history:
@@ -1386,7 +1386,7 @@ Future<ArrRecordPage> _loadPage(
     case GlobalActivityKind.cutoff:
       return service.getCutoffPage(page: page, pageSize: pageSize);
     // Seerr answers this kind on its own leg; nothing here asked a server. The
-    // total is therefore **unknown**, not zero — a confident "0 requests" from
+    // total is therefore **unknown**, not zero: a confident "0 requests" from
     // a question that was never put is exactly the failure this type exists to
     // stop.
     case GlobalActivityKind.request:
@@ -1460,7 +1460,7 @@ MediaNames? _namesFor(GlobalActivityKind kind, Map<String, dynamic> item) =>
 ///
 /// The previous comparator sorted purely by date descending, which for the queue
 /// meant `estimatedCompletionTime` descending: the download finishing soonest
-/// went last, and anything stalled — no ETA at all — sorted dead last. The one
+/// went last, and anything stalled (no ETA at all) sorted dead last. The one
 /// row the user opened the screen to find was at the bottom.
 ///
 /// Three keys, in order:
@@ -1573,7 +1573,7 @@ String _subtitleFor(
 /// Built here, once, rather than in the row: the desktop table wants them
 /// tabular and right-aligned, and a widget that parses English back out of a
 /// prose line to find a number is wrong the first time a service words it
-/// differently. Only the two kinds that carry a measurement produce anything —
+/// differently. Only the two kinds that carry a measurement produce anything:
 /// the rest return empty and the column collapses to whitespace rather than to
 /// an em dash per row, which would draw a ladder of nothing down the page.
 ///

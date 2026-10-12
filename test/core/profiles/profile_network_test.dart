@@ -1,5 +1,5 @@
 /// Each behaviour, through the app's own clients, produces the failure the
-/// app's own classifiers expect of a live server — the contract the next
+/// app's own classifiers expect of a live server: the contract the next
 /// packages' fixes are tested against.
 ///
 /// Every client here comes out of a production provider; nothing is

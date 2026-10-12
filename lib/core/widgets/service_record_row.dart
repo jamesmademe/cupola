@@ -22,7 +22,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 ///
 /// Not every row in the app is this row. A variant whose detail wraps freely,
 /// or whose figure sits on a different type role, is a different row and says
-/// so by staying where it is — NZBGet's is exactly that and is deliberately
+/// so by staying where it is: NZBGet's is exactly that and is deliberately
 /// left alone.
 class ServiceRecordRow extends StatelessWidget {
   const ServiceRecordRow({

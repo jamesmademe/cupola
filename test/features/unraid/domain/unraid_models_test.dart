@@ -4,11 +4,11 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 
 /// Decision 15 on one row: a container stopped on purpose is neutral, an
-/// unexpected exit and an unhealthy one are amber, and red never appears —
+/// unexpected exit and an unhealthy one are amber, and red never appears.
 /// Unraid answered, so nothing here is an unreachable host.
 ///
-/// Every expectation below is on the *rule* — the condition the status line
-/// resolves to and the tone that condition carries — never on a colour value.
+/// Every expectation below is on the *rule*: the condition the status line
+/// resolves to and the tone that condition carries, never on a colour value.
 UnraidDockerContainer _container({
   required String status,
   String state = 'exited',
@@ -24,7 +24,7 @@ UnraidDockerContainer _container({
 }
 
 void main() {
-  group('UnraidDockerContainer — the status line is read, not skimmed', () {
+  group('UnraidDockerContainer: the status line is read, not skimmed', () {
     test('a clean exit is a deliberate stop, and neutral', () {
       final container = _container(status: 'Exited (0) 2 days ago');
 
@@ -35,7 +35,7 @@ void main() {
     });
 
     test('a non-zero exit is a fault, and amber', () {
-      // 137 is the OOM kill — the case the design names by number.
+      // 137 is the OOM kill, the case the design names by number.
       final container = _container(status: 'Exited (137) 3 hours ago');
 
       expect(container.condition, UnraidContainerCondition.exitedUnexpectedly);
@@ -172,8 +172,8 @@ void main() {
     test('a release nobody stated is empty, never the word "Unraid"', () {
       // `distro` and `release` are both nullable in the committed SDL. Filling
       // the distro in here put a string the server never sent under a row
-      // labelled `Release` — in the one slot the page reserves for what the
-      // server said — and made the fold's em-dash branch unreachable from a
+      // labelled `Release`, in the one slot the page reserves for what the
+      // server said, and made the fold's em-dash branch unreachable from a
       // real payload.
       expect(UnraidInfo.fromJson(const {}).distro, '');
       expect(UnraidInfo.fromJson(const {}).version, '');
@@ -208,7 +208,7 @@ void main() {
     test('a slot list the server did not send is silence, not zero slots', () {
       // `disks: [ArrayDisk!]` is nullable, and this library is tolerant of a
       // field a release renamed. Collapsing both into `const []` let the header
-      // above assert "0 disks" — an array with no drives — out of silence.
+      // above assert "0 disks" (an array with no drives) out of silence.
       final silent = UnraidArray.fromJson(const {'state': 'STARTED'});
       expect(silent.reportedDisks, isFalse);
       expect(silent.disks, isEmpty);

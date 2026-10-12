@@ -7,8 +7,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The one-line answer to "is my stack all right", derived once.
 ///
-/// Every surface that prints an aggregate — the Home's line, Stack's header,
-/// the services alert band's own headline —
+/// Every surface that prints an aggregate (the Home's line, Stack's header,
+/// the services alert band's own headline)
 /// reads this, so they cannot disagree about how many services are answering.
 /// Four widgets each counting for themselves is how a window ends up saying
 /// `14 of 16` in one corner and `2 unreachable` next to `all clear` in another.
@@ -18,7 +18,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// point at and the headline inherits that coin flip. Folding is also the only
 /// way this sentence can say the word the design needs:
 ///
-///  * **degraded** — a service whose connections disagree. The service still
+///  * **degraded**: a service whose connections disagree. The service still
 ///    answers, so calling it unreachable is false, and calling it answering
 ///    hides the half that is not.
 ///
@@ -28,7 +28,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// that stops the numbers adding up. `14 of 16 answering · 1 degraded ·
 /// 2 unreachable` is 16 services, not 17.
 ///
-/// This used to be two classes — this one, lens-scoped and unable to say
+/// This used to be two classes: this one, lens-scoped and unable to say
 /// *degraded* or age itself, and a `StackReadout` the Dashboard derived beside
 /// it. Two derivations of one sentence is the classic way two surfaces come to
 /// disagree the first time one of them is wrong.
@@ -60,7 +60,7 @@ class StackHealth {
   final int signedOut;
 
   /// Services that answered, with at least one connection answering with a
-  /// refusal or a fault — a refused key, a 5xx — and none dark. Counted inside
+  /// refusal or a fault (a refused key, a 5xx) and none dark. Counted inside
   /// [answering] (they did answer) and named as a qualifier, like [degraded]:
   /// a refused key is not an outage, and the header must not say it is.
   final int faulted;
@@ -71,7 +71,7 @@ class StackHealth {
   /// Services where at least one connection answered. Includes [degraded].
   final int answering;
 
-  /// Services whose connections disagree — some answered, some did not.
+  /// Services whose connections disagree: some answered, some did not.
   ///
   /// A service with one connection can never land here: the state means
   /// *disagreement*, and one opinion cannot disagree with itself.
@@ -80,7 +80,7 @@ class StackHealth {
   /// Services whose every connection is dark.
   final int unreachable;
 
-  /// Services still being asked. **Not a fault**, and never counted as one —
+  /// Services still being asked. **Not a fault**, and never counted as one:
   /// this is what stops the readout crying wolf for the first second of every
   /// cold open.
   final int checking;
@@ -90,7 +90,7 @@ class StackHealth {
   final int notSetUp;
 
   /// When the last probe settled, for the bucketed age. Null while the first
-  /// answers are still coming in — there is no age to print for a reading that
+  /// answers are still coming in: there is no age to print for a reading that
   /// has not happened.
   final DateTime? checkedAt;
 
@@ -131,7 +131,7 @@ class StackHealth {
     return [?headline, ...qualifiers, ?age].join(' · ');
   }
 
-  /// `refreshed just now`, `refreshed 6 minutes ago` — **never** seconds.
+  /// `refreshed just now`, `refreshed 6 minutes ago`: **never** seconds.
   ///
   /// A readout that counts seconds invites the reader to watch it count, and the
   /// probes behind this are minutes apart. Null while a probe is still out: the
@@ -258,7 +258,7 @@ StackHealth stackHealthFrom({
 /// [StackHealth.unreachable] with the names kept: `length` equals that count by
 /// construction, because both walk [foldServiceState] over the same fold. A
 /// surface that picked its own offenders off [serviceSummaryProvider] would be
-/// asking the *lens* — one connection's opinion standing in for a service — and
+/// asking the *lens* (one connection's opinion standing in for a service), and
 /// that is how the header and the line under it came to contradict each other.
 ///
 /// A **degraded** service is deliberately absent: it answered, so naming it here
@@ -293,7 +293,7 @@ final unreachableServicesProvider = Provider<List<ServiceKey>>((ref) {
 /// The counts are derived from the summaries and would recompute happily in a
 /// `Provider`, but the *age* of the reading is a fact about when the probes
 /// settled, and a `Provider` that called `DateTime.now()` in its body would
-/// restamp itself every time any unrelated dependency moved — a readout that
+/// restamp itself every time any unrelated dependency moved: a readout that
 /// claims to have been refreshed "just now" because a theme toggle rebuilt it.
 /// A notifier instance survives its own `build`, so it can remember when the
 /// last probe actually landed.

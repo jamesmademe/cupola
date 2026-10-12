@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 ///
 /// One number for the whole body was the mistake: `bodyMaxWidth` is a *reading*
 /// measure, derived from where the eye loses the line it came from on the return
-/// sweep, and a table has no return sweep — it is read down its columns. Capping
+/// sweep, and a table has no return sweep: it is read down its columns. Capping
 /// an episode table at 720 inside a 1000pt window does not make it readable, it
 /// makes it a table with a margin and four columns fighting for 688pt.
 enum MediaDetailMeasure {
@@ -21,7 +21,7 @@ enum MediaDetailMeasure {
 /// The region label is a `String` and never a `Widget`: the spine builds every
 /// heading, so every heading on every page is `Semantics(header: true)` with the
 /// page accent by construction. A caller physically cannot ship an unlabelled or
-/// accent-less section, and cannot inset one either — the spine owns the gutter.
+/// accent-less section, and cannot inset one either: the spine owns the gutter.
 ///
 /// A slot is emitted only when it has something to say. There is no "empty
 /// slot" state: the widget cannot see through its own child, so a slot holding
@@ -31,7 +31,7 @@ class MediaDetailSlot {
   /// Region label, drawn in sentence case in the micro role. Null renders no
   /// label at all.
   ///
-  /// **Pass sentence case** — `'Missing subtitles'`, not `'MISSING SUBTITLES'`.
+  /// **Pass sentence case**: `'Missing subtitles'`, not `'MISSING SUBTITLES'`.
   /// The widget draws it as given and hands the same string to
   /// `Semantics(label:)`, so a pre-shouted label is read out as shouting by
   /// VoiceOver and cannot be un-shouted downstream.
@@ -56,14 +56,14 @@ class MediaDetailSlot {
   /// eight rows on screen rather than all 250.
   final Widget? sliver;
 
-  /// `.lazy` only: a box emitted between the label and [sliver] — a selector
-  /// row, a summary line. Never staggered separately from the label.
+  /// `.lazy` only: a box emitted between the label and [sliver] (a selector
+  /// row, a summary line). Never staggered separately from the label.
   ///
   /// **Not auto-inset, horizontally or vertically.** A selector rail is supposed
   /// to bleed past the content column, so the caller owns this widget's
   /// horizontal padding; pad it with the screen gutter (`AppSpacing.lg`) when
   /// the content should align to the column. The caller also owns the gap
-  /// between this box and the first row of [sliver] — the spine emits them
+  /// between this box and the first row of [sliver]: the spine emits them
   /// flush, because a pill rail and a summary line want different air above the
   /// list and neither is the page's rhythm.
   ///
@@ -91,13 +91,13 @@ class MediaDetailSlot {
   ///
   /// Pass it only where the label cannot serve: an unlabelled slot that has to
   /// move, or two slots on one page sharing a label. Everything else is keyed by
-  /// the heading the user reads, which keeps the declaration legible — a page
+  /// the heading the user reads, which keeps the declaration legible. A page
   /// says `sideTrack: {'Overview', 'Details', 'Collection'}` and that is exactly
   /// what stands in the side track.
   ///
   /// The cost of that legibility: renaming a label moves the region unless the
   /// set is renamed with it. That is why a slot the page did *not* name stays in
-  /// the main track — the failure mode is a section in the wrong column, never a
+  /// the main track: the failure mode is a section in the wrong column, never a
   /// section that disappears.
   final String? id;
 
@@ -148,14 +148,14 @@ class MediaDetailSlot {
 /// a per-caller declaration. A variant omits a region; it never reorders one.
 ///
 /// This replaces the `contentSections` + `slivers` pair, which was the
-/// mechanical cause of the ordering bug — every content section was emitted
+/// mechanical cause of the ordering bug: every content section was emitted
 /// inside one `SliverToBoxAdapter(Column(...))` and only then the slivers, so
 /// any caller that needed a lazy child list got it rendered *after* everything
 /// else on the page. Lidarr's Albums landed after the genre chips and Bazarr's
 /// wanted episodes after Details and Tags for exactly that reason.
 @immutable
 class MediaDetailBody {
-  /// Above region 1 — one line about the whole page: a `FaultBand` over a
+  /// Above region 1, one line about the whole page: a `FaultBand` over a
   /// read that failed, or the `InlineErrorRetry` that says a source the
   /// answer needs did not answer. No label, and drawn only when there is
   /// one.
@@ -168,7 +168,7 @@ class MediaDetailBody {
   /// it does [readout], so the glyph lands on the column edge at every width.
   final Widget? band;
 
-  /// Region 1 — the decisive facts, glyph-led, as a bleeding rail. No label.
+  /// Region 1: the decisive facts, glyph-led, as a bleeding rail. No label.
   ///
   /// Pass it with its own default screen-gutter padding (`AppSpacing.lg`): a
   /// caller builds this above `MediaDetailView` and so cannot see the resolved
@@ -179,12 +179,12 @@ class MediaDetailBody {
   /// gutter or the two insets compound.
   final Widget? readout;
 
-  /// Region 2 — **the manifest**: the child records the service tracks under
+  /// Region 2, **the manifest**: the child records the service tracks under
   /// this title, checked against what actually arrived.
   ///
   /// A shipping manifest is a list of what a thing is supposed to consist of,
-  /// checked against what actually turned up. That gap — `41 of 48`,
-  /// `3 missing · 2 languages`, `No file` — exists only because the -arr
+  /// checked against what actually turned up. That gap (`41 of 48`,
+  /// `3 missing · 2 languages`, `No file`) exists only because the -arr
   /// services model *expected* children separately from *present* children
   /// (`episodeCount` vs `episodeFileCount`, `trackCount` vs `trackFileCount`,
   /// `missingSubtitlesCount`), and rendering it is the reason this page is an
@@ -197,15 +197,15 @@ class MediaDetailBody {
   /// the request ledger (a Seerr movie).
   final List<MediaDetailSlot> operate;
 
-  /// Region 3 — running prose: the overview, or a person's biography.
+  /// Region 3, running prose: the overview, or a person's biography.
   final List<MediaDetailSlot> synopsis;
 
-  /// Region 4 — the encyclopaedic block, in this internal order: the `DETAILS`
+  /// Region 4, the encyclopaedic block, in this internal order: the `DETAILS`
   /// fact grid, then `WHERE TO WATCH`, then `SCORES`, then the catalogue
   /// (`GENRES` / `KEYWORDS` / `TAGS`).
   final List<MediaDetailSlot> reference;
 
-  /// Region 5 — everything that is about **other** titles: the `CAST` rail,
+  /// Region 5, everything that is about **other** titles: the `CAST` rail,
   /// then `COLLECTION`, then `FILMOGRAPHY`.
   ///
   /// `WHERE TO WATCH` used to end this list and does not belong here: where a
@@ -218,7 +218,7 @@ class MediaDetailBody {
   /// **The split is per slot, not per region**, and the region-based one it
   /// replaces was the inverse of what is drawn. The spine used to send `operate`
   /// and `related` to the side track and keep `synopsis` and `reference` in the
-  /// main one; every board does the opposite — the Overview, the Details grid
+  /// main one; every board does the opposite: the Overview, the Details grid
   /// and the Reference block stand in the 380 column while the file, the
   /// episode table, the releases and the history run the wide one.
   ///
@@ -230,7 +230,7 @@ class MediaDetailBody {
   /// says about details generally: they share the chrome and nothing else.
   ///
   /// Null means the page has not declared, and the legacy region split applies.
-  /// It is not a default worth having — it is there so a page that predates this
+  /// It is not a default worth having; it is there so a page that predates this
   /// keeps the layout it shipped with instead of silently collapsing to one
   /// column. An empty set is a real declaration: everything in the main track.
   ///

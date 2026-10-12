@@ -31,7 +31,7 @@ void main() {
     });
 
     test('nothing in the queue is amber', () {
-      // The queue has no fault state — a broken job leaves it for history — so
+      // The queue has no fault state: a broken job leaves it for history, so
       // an amber here would be the backlog mistake in its download form.
       for (final state in NzbgetGroupState.values) {
         expect(state.tone, isNot(StatusTone.warning), reason: state.name);
@@ -56,7 +56,7 @@ void main() {
   });
 
   group('nzbgetEtaLabel', () {
-    test('a stopped queue has no ETA — never "0 min", never "∞"', () {
+    test('a stopped queue has no ETA: never "0 min", never "∞"', () {
       expect(
         nzbgetEtaLabel(remainingMegabytes: 2048, rateBytesPerSecond: 0),
         isNull,
@@ -153,7 +153,7 @@ void main() {
       // The commonest state of a download client, and the one where every
       // clause is guarded off at once: no downloading, no post-processing, no
       // jobs to count, and a `status` whose remaining total is zero. An empty
-      // string is not a shorter header — `SectionHeader` treats a non-null
+      // string is not a shorter header: `SectionHeader` treats a non-null
       // subtitle as a subtitle, so it would draw a blank line under the word
       // Queue and speak "Queue, " with a dangling comma.
       final section = nzbgetQueueSection(
@@ -213,7 +213,7 @@ void main() {
       );
 
       expect(row.percentLabel, isNull);
-      // The size the server *did* report still prints — it is a fact, and the
+      // The size the server *did* report still prints. It is a fact, and the
       // only one of the two that was answered.
       expect(row.detail, 'tv · downloading · 4.8\u00A0GB');
     });
@@ -278,28 +278,31 @@ void main() {
       expect(NzbgetHistoryOutcome.unknown.tone, StatusTone.neutral);
     });
 
-    test('a URL record the daemon could not fetch is a FAULT, not "finished"', () {
-      // `history(false)` — the call the client makes — returns URL-kind records
-      // too, and their whole `Status` is one word with no `/`. Split on the
-      // slash they would become their own family, match no arm and land in
-      // `unknown`: neutral ink, the word "finished", uncounted in `failed`. The
-      // one thing on this page that must make someone look would be the one
-      // thing that reads as fine.
-      final (failure, failureReason) = nzbgetHistoryOutcome('URL_FAILURE');
-      expect(failure, NzbgetHistoryOutcome.failed);
-      expect(failure.tone, StatusTone.warning);
-      expect(failure.isFault, isTrue);
-      expect(failureReason, 'could not fetch the NZB');
+    test(
+      'a URL record the daemon could not fetch is a FAULT, not "finished"',
+      () {
+        // `history(false)`, the call the client makes, returns URL-kind records
+        // too, and their whole `Status` is one word with no `/`. Split on the
+        // slash they would become their own family, match no arm and land in
+        // `unknown`: neutral ink, the word "finished", uncounted in `failed`. The
+        // one thing on this page that must make someone look would be the one
+        // thing that reads as fine.
+        final (failure, failureReason) = nzbgetHistoryOutcome('URL_FAILURE');
+        expect(failure, NzbgetHistoryOutcome.failed);
+        expect(failure.tone, StatusTone.warning);
+        expect(failure.isFault, isTrue);
+        expect(failureReason, 'could not fetch the NZB');
 
-      expect(nzbgetHistoryOutcome('URL_SCAN_FAILURE'), (
-        NzbgetHistoryOutcome.failed,
-        'the NZB could not be read',
-      ));
-    });
+        expect(nzbgetHistoryOutcome('URL_SCAN_FAILURE'), (
+          NzbgetHistoryOutcome.failed,
+          'the NZB could not be read',
+        ));
+      },
+    );
 
     test('a URL record that did what it said is not a fault', () {
       // The link was fetched; the scan script chose not to look at it. Not
-      // damage, so not amber — the backlog mistake in reverse.
+      // damage, so not amber: the backlog mistake in reverse.
       expect(nzbgetHistoryOutcome('URL_SUCCESS'), (
         NzbgetHistoryOutcome.succeeded,
         null,
@@ -461,7 +464,7 @@ void main() {
       final section = nzbgetHistoryToday(const [], now: now);
 
       expect(section.rows, isEmpty);
-      // No "0 completed · 0 failed" — the section's own empty note carries it.
+      // No "0 completed · 0 failed": the section's own empty note carries it.
       expect(section.subtitle, 'today');
     });
   });

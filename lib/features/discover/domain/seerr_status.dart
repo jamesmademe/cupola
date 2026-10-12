@@ -248,13 +248,13 @@ List<MediaStatusInfo> seerrTitleStatuses(
 /// the presentation layer's hands and produced a bare
 /// [SeerrMediaAvailability] the shared status vocabulary could not render.
 /// Routing it through [seerrMediaStatus] means a season badge speaks exactly the
-/// same language as the page's own — including Seerr's wording for
+/// same language as the page's own, including Seerr's wording for
 /// "Partially available".
 ///
 /// Seasons absent from the payload are [seerrUntrackedSeasonStatus].
 ///
 /// The returned map covers **every** season in [seasons], so a caller never has
-/// to invent a fallback for a missing key — which is what the seasons list was
+/// to invent a fallback for a missing key, which is what the seasons list was
 /// doing, restating this exact `notTracked` decision inside a widget.
 ///
 /// The requester reads a season with no state the way they read one Seerr
@@ -302,7 +302,7 @@ Map<int, MediaStatusInfo> seerrSeasonStatuses(
 /// heard of this season, which is a different fact from "unknown" and the one the
 /// Request button acts on. [seerrSeasonStatuses] fills absent seasons with it, and
 /// `DiscoverSeasonsList` reads it for the total-function lookup Dart's
-/// `Map<int, …>[]` forces — rather than writing a second `notTracked` literal
+/// `Map<int, …>[]` forces, rather than writing a second `notTracked` literal
 /// that could silently disagree with this one.
 const MediaStatusInfo seerrUntrackedSeasonStatus = MediaStatusInfo(
   availability: MediaAvailability.notTracked,
@@ -311,7 +311,7 @@ const MediaStatusInfo seerrUntrackedSeasonStatus = MediaStatusInfo(
 /// Parses Seerr's `downloadStatus` array into a single queue entry.
 ///
 /// The records use the same field names as an \*arr `/queue` record, except
-/// that the remaining bytes arrive as `sizeLeft` rather than `sizeleft` —
+/// that the remaining bytes arrive as `sizeLeft` rather than `sizeleft`:
 /// `queueProgress` already accepts both spellings.
 ArrQueueEntry? seerrDownloadEntry(dynamic rawDownloadStatus) {
   if (rawDownloadStatus is! List || rawDownloadStatus.isEmpty) return null;

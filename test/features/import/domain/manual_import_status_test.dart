@@ -44,7 +44,7 @@ void main() {
 
     test('a permanent identity rejection is amber, not red', () {
       // Changed: this used to resolve to StatusTone.error. Red is reserved for
-      // a connection that did not answer — this one answered, and said it
+      // a connection that did not answer. This one answered, and said it
       // cannot name the file, which is a fault the user clears by assigning an
       // identity. The neighbouring 'Needs match' branch was already amber for
       // the same affordance, and the facet chip over both calls the group
@@ -80,7 +80,7 @@ void main() {
 
     test('a matched sample is neutral and says so', () {
       // A sample is matched as precisely as the rip beside it, so it used to
-      // read "Ready" — next to a checkbox the scan no longer ticks, which is a
+      // read "Ready", next to a checkbox the scan no longer ticks, which is a
       // row contradicting itself.
       final info = manualImportItemStatus(
         ServiceKey.radarr,
@@ -115,8 +115,8 @@ void main() {
 
     test('maps the lifecycle onto the closed tone vocabulary', () {
       // Changed: 'queued' used to resolve to StatusTone.warning. A command
-      // waiting its turn is the service working as designed — informational,
-      // the same tone the running one carries — and amber there put a fault
+      // waiting its turn is the service working as designed: informational,
+      // the same tone the running one carries, and amber there put a fault
       // colour on every import posted while another was still running.
       expect(
         manualImportCommandStatus(command('queued')).tone,

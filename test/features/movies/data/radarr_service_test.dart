@@ -60,7 +60,7 @@ void main() {
     // The override lives on the PAGE primitive, and this is the test that says
     // why it has to. `getHistoryPage` is the only variant that carries the
     // envelope's `totalRecords`, so it is the only one a count may be derived
-    // from — and while the parameter hung off `getHistory` instead, a caller
+    // from, and while the parameter hung off `getHistory` instead, a caller
     // that reached for the count got records with no embedded `movie`. The
     // embedded movie is the row: title, poster, year. The count and the content
     // could not both be right at once.

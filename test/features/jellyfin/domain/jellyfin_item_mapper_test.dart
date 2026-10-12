@@ -9,7 +9,7 @@ import 'package:cupola/features/stream/domain/models/stream_session.dart';
 ///
 /// Absence is the dangerous one. `UserData` only exists on a response when the
 /// request passed both `enableUserData=true` and a `userId`, and an API key has no
-/// user of its own — so "we never asked" and "asked, and the answer is none" arrive
+/// user of its own, so "we never asked" and "asked, and the answer is none" arrive
 /// as the same missing key. Reading either as `0` or `false` produces a badge that
 /// states something untrue with no error anywhere to catch it.
 void main() {
@@ -113,7 +113,7 @@ void main() {
 
     test('PlayedPercentage stands in when the tick field is absent', () {
       // The summarising endpoints send one or the other, never both. 40 is a
-      // percentage, so this is 40% of two hours — not 40 ms and not 40x too far.
+      // percentage, so this is 40% of two hours: not 40 ms and not 40x too far.
       final item = jellyfinStreamItemFromJson({
         'Id': 'a1',
         'Name': 'Arrival',
@@ -271,7 +271,7 @@ void main() {
       expect(mapped.bitrate, 5616000);
       // The encoder's own target, so this figure is real.
       expect(mapped.bitrateIsNominal, isFalse);
-      // Series leads, episode is the detail — the inverse of `StreamItem`.
+      // Series leads, episode is the detail: the inverse of `StreamItem`.
       expect(mapped.title, 'Severance');
       expect(mapped.subtitle, "S2 E4 · Woe's Hollow");
       expect(mapped.deviceLabel, 'Jellyfin Web · Chrome');
@@ -299,7 +299,7 @@ void main() {
 
     test('a direct stream still carries its explanation', () {
       // `StreamSession.transcodeReasons` is documented as populated for a
-      // direct stream as well as a transcode — a remux happens *because of*
+      // direct stream as well as a transcode. A remux happens *because of*
       // something, and Jellyfin reports it in the same array. Gating on
       // `isTranscode` dropped it, so a Jellyfin remux showed "Direct stream"
       // with no reason while the byte-identical Plex session explained itself.

@@ -40,7 +40,7 @@ void main() {
               Text('setup of ${state.pathParameters['service']}'),
         ),
       ],
-      // Any other place — the wizard — is named by where it went.
+      // Any other place (the wizard) is named by where it went.
       errorBuilder: (context, state) => Text('went to ${state.uri.path}'),
     );
     addTearDown(router.dispose);

@@ -15,7 +15,7 @@ import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Station 1 — Locate: walk the server's filesystem to the folder that holds
+/// Station 1 (Locate): walk the server's filesystem to the folder that holds
 /// the files, then hand it to Review for the scan.
 class ManualImportLocateScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
@@ -83,7 +83,7 @@ class _ManualImportLocateScreenState
     return ManualImportFrame(
       service: widget.service,
       // One title on all three stations; the station bar says which one this
-      // is. Three Title Case titles used to do that job badly — the page name
+      // is. Three Title Case titles used to do that job badly: the page name
       // changed under a flow that had not changed, and the browser back button
       // read as three unrelated destinations.
       title: manualImportTitle,
@@ -341,7 +341,7 @@ class _RootFolderChip extends StatelessWidget {
   }
 }
 
-/// One-tap return to the folder this service last scanned — the rescue scene
+/// One-tap return to the folder this service last scanned: the rescue scene
 /// almost always comes back to the same completed-downloads folder.
 class _LastFolderShortcut extends ConsumerWidget {
   final ServiceKey service;
@@ -354,7 +354,7 @@ class _LastFolderShortcut extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final path = folder.path;
-    // "Last scanned" alone cannot say whether it is still the right folder —
+    // "Last scanned" alone cannot say whether it is still the right folder:
     // this morning's rescue and last month's are the same card. The stamp is
     // only written from the version that records it, so a shortcut saved before
     // that says nothing rather than guessing.
@@ -431,7 +431,7 @@ class _LastFolderShortcut extends ConsumerWidget {
 ///
 /// A completed-downloads folder is five or six taps down a tree the user
 /// already knows the address of, and on a server with a deep mount the walk is
-/// the slowest part of the rescue — every level is a round trip the service
+/// the slowest part of the rescue: every level is a round trip the service
 /// answers by stat-ing a volume that may be spun down. Submitting jumps
 /// straight there; a path that does not exist comes back as the service's own
 /// error, which is the honest answer.

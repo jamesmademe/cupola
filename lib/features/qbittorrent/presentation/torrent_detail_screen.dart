@@ -60,8 +60,8 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
     // `qBittorrent not configured` is a provider that failed, and Riverpod
     // retries a failure on a backoff. A connection is configured in Settings or
     // it is not, so the poll and the retry are both spent on a question that
-    // cannot change while this page is open. The screen is the same either way
-    // — `AsyncValueWidget` was already routing that exception here.
+    // cannot change while this page is open. The screen is the same either way:
+    // `AsyncValueWidget` was already routing that exception here.
     //
     // It matters more on this page than on the list, because a deep link lands
     // straight on it: `/dashboard/qbittorrent/queue/torrent/<hash>` from a
@@ -740,7 +740,7 @@ class _ActionsTab extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         // Pause is an action the user chooses, not a state the client reports,
-        // so it wears no status tone at all — amber here said "something is
+        // so it wears no status tone at all: amber here said "something is
         // wrong" about a button, and hardcoded its ink black to survive it.
         FilledButton.icon(
           onPressed: () => runTorrentAction(

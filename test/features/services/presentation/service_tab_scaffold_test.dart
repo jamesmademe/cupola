@@ -173,7 +173,7 @@ void main() {
     ) async {
       // The band consumes the inset, so it is drawn an inset lower than
       // `kToolbarHeight` alone would say. A bar pinned to the bare constant
-      // ends up underneath it by exactly the inset — on every notched iPhone
+      // ends up underneath it by exactly the inset, on every notched iPhone
       // and every cutout Android, invisibly, because a test surface with no
       // inset cannot tell the two numbers apart.
       await pump(tester, ServiceKey.radarr, inset: topInset);
@@ -192,8 +192,8 @@ void main() {
       final band = bandRect(tester);
       final bar = barRect(tester);
 
-      // Flush: the bar starts exactly where the band ends. Not less — that is
-      // the overlap — and not more, which would be a strip of unclaimed
+      // Flush: the bar starts exactly where the band ends. Not less: that is
+      // the overlap, and not more, which would be a strip of unclaimed
       // gradient between two bands that read as one surface.
       expect(band.bottom, topInset + kToolbarHeight);
       expect(bar.top, band.bottom);
@@ -267,7 +267,7 @@ void main() {
     testWidgets('a configured service gets the empty well, not an error', (
       tester,
     ) async {
-      // Nothing failed, so nothing wears alarm chrome — the same well the
+      // Nothing failed, so nothing wears alarm chrome: the same well the
       // queue shows when the queue is genuinely empty.
       await pump(tester, configured: true);
 
@@ -382,7 +382,7 @@ void main() {
     ) async {
       // A hosted screen reserves the phone's band and bar, whatever window it
       // is in. On the desktop the band is not drawn, so the first line must
-      // land flush under the bar — not 56pt lower, where the band would be.
+      // land flush under the bar, not 56pt lower, where the band would be.
       await _onPlatform(TargetPlatform.macOS, () async {
         await tester.pumpWidget(
           ProviderScope(
@@ -450,7 +450,7 @@ void main() {
   });
 }
 
-/// Runs [body] as if the app were on [platform], and always puts it back —
+/// Runs [body] as if the app were on [platform], and always puts it back
 /// inside the body, since the binding checks foundation debug variables before
 /// any tear-down runs.
 Future<void> _onPlatform(

@@ -7,7 +7,7 @@
 ///    reported; red stays for a Prowlarr that does not answer at all, which is
 ///    the unreachable band's job and not a row's.
 ///  * **every figure carries its window.** `indexerstats` is fetched over
-///    [prowlarrStatsWindow] — twenty-four hours — so a query or grab count on
+///    [prowlarrStatsWindow] (twenty-four hours), so a query or grab count on
 ///    this page is a day's work and the section that draws it says so. A figure
 ///    whose label contradicts its window is the defect this file exists to
 ///    avoid.
@@ -41,7 +41,7 @@ const int prowlarrRecentPreviewLimit = 3;
 ///
 /// Excluded from Needs attention because the indexer-status rows already say
 /// the same thing with the indexer's own name on it; left in, every failing
-/// indexer would appear twice — once by name and once as "Indexers unavailable
+/// indexer would appear twice: once by name and once as "Indexers unavailable
 /// due to failures".
 const Set<String> prowlarrIndexerStatusChecks = {
   'IndexerStatusCheck',
@@ -67,7 +67,7 @@ class ProwlarrOverviewRow {
 
   final StatusTone tone;
 
-  /// The right-hand figure on an indexer row — `298 queries`, or `—` for an
+  /// The right-hand figure on an indexer row: `298 queries`, or `—` for an
   /// indexer the stats window has no sample for.
   final String? trailing;
 
@@ -93,7 +93,7 @@ const String prowlarrNoSample = '—';
 /// `disabled until 15:40` while the block is in force, `retrying now` after.
 ///
 /// The boundary is `isAfter(now)`, so a `disabledTill` that has just elapsed
-/// reads as retrying rather than as a block with a time in the past — which is
+/// reads as retrying rather than as a block with a time in the past, which is
 /// how a stale row ends up claiming an indexer is disabled when Prowlarr has
 /// already gone back to it.
 String? prowlarrDisabledLabel(String? disabledTill, {required DateTime now}) {
@@ -109,7 +109,7 @@ String? prowlarrDisabledLabel(String? disabledTill, {required DateTime now}) {
 ///
 /// **Amber, every one of them.** `indexerstatus` only ever returns indexers
 /// with an active problem, so the presence of a record *is* the fault; red is
-/// not available here and is not wanted — it belongs to a Prowlarr that did not
+/// not available here and is not wanted: it belongs to a Prowlarr that did not
 /// answer this call at all.
 List<ProwlarrOverviewRow> prowlarrIndexerFaultRows(
   List<ProwlarrIndexerStatus> statuses,
@@ -257,7 +257,7 @@ ProwlarrOverviewSection prowlarrIndexerRows(
 
 /// The newest history records, as rows.
 ///
-/// A refused query is amber and a grab is green — the same two arms
+/// A refused query is amber and a grab is green: the same two arms
 /// [prowlarrEventStyle] already walks, read here as tones so the row and the
 /// badge cannot drift.
 List<ProwlarrOverviewRow> prowlarrRecentRows(
@@ -292,7 +292,7 @@ String prowlarrEventLabel(ProwlarrHistoryItem item) {
   return item.successful ? verb : '$verb failed';
 }
 
-/// Green complete, amber fault, blue informational — never red.
+/// Green complete, amber fault, blue informational; never red.
 StatusTone prowlarrEventTone(ProwlarrHistoryItem item) {
   // Amber, and this is the rule the whole service follows: a refused query is a
   // fault the indexer reported. Red is kept for a Prowlarr that did not answer.

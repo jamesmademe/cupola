@@ -14,7 +14,7 @@ void main() {
     'a gap longer than the limit after the first event is not an error',
     () async {
       // Dockge re-pushes its stack list on a ten-second cron. A push a little
-      // late must not end a stream that has already answered — which is what
+      // late must not end a stream that has already answered, which is what
       // `Stream.timeout`, measuring every gap, did.
       final source = StreamController<int>.broadcast();
       final events = <int>[];

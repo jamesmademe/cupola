@@ -3,7 +3,7 @@
 /// ## Why the row is one line and not four fields
 ///
 /// The region this replaces printed a title, a `·`-joined subtitle assembled by
-/// each source in its own words, and a percentage — so a Radarr row said
+/// each source in its own words, and a percentage, so a Radarr row said
 /// `Radarr · Movie · Bluray-2160p · Dune.Part.Two…` and a SABnzbd row said
 /// `SABnzbd · movies · 1.2 GB`, and the two could not be read down a column.
 /// The four facts a transfer actually has are the same for every client:
@@ -31,8 +31,8 @@ import 'package:cupola/features/services/domain/source_coverage.dart';
 /// Why a transfer has left In flight to become a decision.
 ///
 /// It used to be one `bool stalled`, set by **any** warning an \*arr attached to
-/// a queue record. A download the arr could not import — finished, sitting on
-/// disk, waiting for a human — therefore came out as a stalled transfer, its
+/// a queue record. A download the arr could not import (finished, sitting on
+/// disk, waiting for a human) therefore came out as a stalled transfer, its
 /// remedy became "Open in qBittorrent", and a queue of eighteen blocked imports
 /// printed "The queue is empty" over "18 stalls". Three faults with three
 /// different remedies are three values.
@@ -73,8 +73,8 @@ StuckRemedy stuckRemedyFor({required int? swarmSeeds}) =>
 /// The fault an \*arr `/queue` record reports, or null while it is still a
 /// transfer.
 ///
-/// Read through [ArrQueueEntry.fromQueueItem] — the parser the detail pages,
-/// the poster grids and Activity already share — rather than off the raw
+/// Read through [ArrQueueEntry.fromQueueItem]: the parser the detail pages,
+/// the poster grids and Activity already share, rather than off the raw
 /// warning, which is what made every warning a stall. A record that is merely
 /// *carrying* a warning while its bytes still move (a quality the arr will not
 /// upgrade to, a client category it does not recognise) stays in flight.
@@ -130,7 +130,7 @@ String countedNoun(int count, String singular, String plural) =>
 /// a zero. See the library doc for why it is not `0`.
 const String kAbsentFigure = '—';
 
-/// `14.0 of 15.2 GB` — two sizes on one unit, or `—` when either is unknown.
+/// `14.0 of 15.2 GB` (two sizes on one unit, or `—` when either is unknown).
 ///
 /// Rendered on the **total's** unit deliberately: formatted independently, a
 /// transfer 900 MB into a 15.2 GB file reads `900 MB of 15.2 GB`, which asks the
@@ -147,7 +147,7 @@ String formatDoneOfTotal({int? doneBytes, int? totalBytes}) {
   return formatBytesOfTotal(doneBytes, totalBytes);
 }
 
-/// `3 min left`, `2 h 10 min left`, `3 d 4 h left`, `48 s left` — or `—` when
+/// `3 min left`, `2 h 10 min left`, `3 d 4 h left`, `48 s left`, or `—` when
 /// nobody knows. The span is `formatTimeSpan`'s.
 ///
 /// Never seconds above a minute, and never a bare number: "3" in a row of
@@ -160,7 +160,7 @@ String formatTimeLeft(int? seconds) {
 
 /// The whole row line: `2160p · 14.0 of 15.2 GB · 3 min left · qBittorrent`.
 ///
-/// The client is last and always present — it is the answer to "where do I go to
+/// The client is last and always present: it is the answer to "where do I go to
 /// touch this", and it is the one part of the line a merged region cannot leave
 /// to a glyph. [connection] leads when the row's service has two connections
 /// to tell apart (`Radarr 4K · 2160p · …`): the glyph says Radarr, and only
@@ -185,7 +185,7 @@ String formatInFlightLine({
 
 /// The region's eyebrow: `2 downloading · 15.5 MB/s across 2 clients`.
 ///
-/// The rate is summed **per client and only per client** — a byte rate is a
+/// The rate is summed **per client and only per client**: a byte rate is a
 /// countable unit, so it adds up, but only over sources that actually reported
 /// one. An \*arr does not report a rate for its own queue (the bytes are moving
 /// through a download client, which is reporting them already), so counting it
@@ -217,7 +217,7 @@ String inFlightEyebrow({
 /// The module shows active transfers only; a faulted one is a decision, not a
 /// transfer, and Needs you at the top of the Home counts it. Saying so is what
 /// stops the count here disagreeing with the client's own queue depth without
-/// explanation — and naming each fault by what it is, rather than calling all of them
+/// explanation, and naming each fault by what it is, rather than calling all of them
 /// stalls, is what stops the footnote sending the user to the wrong remedy.
 ///
 /// Names the module by its heading: identical faults are folded into one

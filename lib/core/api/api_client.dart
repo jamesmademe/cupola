@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 
-/// For endpoints that do real server-side work before answering — Sonarr/Radarr/
+/// For endpoints that do real server-side work before answering: Sonarr/Radarr/
 /// Lidarr's `manualimport` walks the folder, parses every release name and runs
-/// MediaInfo on each file — the default 15s ceiling fires long before a healthy
+/// MediaInfo on each file: the default 15s ceiling fires long before a healthy
 /// instance replies. Pass this (or another explicit value) per request rather
 /// than raising the global default, which would bring back multi-minute hangs on
 /// an unreachable host.
@@ -17,9 +17,9 @@ const kSlowScanReceiveTimeout = Duration(minutes: 5);
 /// slowest indexer gates the response and a rate-limited one can hold it for
 /// minutes. Under the default 15s ceiling those searches never returned at all.
 ///
-/// Five minutes is chosen to sit *above* every common gateway ceiling — nginx
+/// Five minutes is chosen to sit *above* every common gateway ceiling: nginx
 /// defaults to 60s, Cloudflare caps at 100s and cannot be raised on a free plan
-/// — which is what makes a failure attributable: a connection that dies at 62s
+/// That is what makes a failure attributable: a connection that dies at 62s
 /// was cut by something in the middle, not by us, and the UI can say so. A 60s
 /// client timeout would make Cupola indistinguishable from the proxy it is
 /// trying to blame.
@@ -32,13 +32,13 @@ const kReleaseSearchReceiveTimeout = Duration(minutes: 5);
 class ApiClient {
   final Dio _dio;
 
-  /// [baseUrl] may omit the scheme — the onboarding and settings fields both
+  /// [baseUrl] may omit the scheme; the onboarding and settings fields both
   /// accept a bare host, and Dio's `baseUrl` setter throws `ArgumentError` on
   /// one. Normalising here (rather than at each of the twelve call sites) means
   /// a bare host can only ever fail as a connection error.
   ///
   /// [pinnedCertFingerprint], when non-empty, is a self-signed certificate the
-  /// user explicitly trusted for this origin (trust-on-first-use, ADR-6) — see
+  /// user explicitly trusted for this origin (trust-on-first-use, ADR-6): see
   /// [SettingsModel.pinForUrl]. Null or empty leaves this client on the
   /// platform trust store only, exactly as before ADR-6.
   ///
@@ -70,7 +70,7 @@ class ApiClient {
   /// genuinely different contracts: passing both an `apiKey` and a header map
   /// would leave the caller guessing which one authenticates the request.
   ///
-  /// Everything else is deliberately shared — the timeouts, the JSON headers and
+  /// Everything else is deliberately shared: the timeouts, the JSON headers and
   /// above all [SameOriginRedirectInterceptor], which is what stops a credential
   /// being replayed to a host the user never configured. A bespoke `Dio` per
   /// media server would have had to re-earn that guarantee twice.
@@ -98,8 +98,8 @@ class ApiClient {
          // Redirects are followed by SameOriginRedirectInterceptor instead, so
          // the credential header can never be replayed to an unconfigured host.
          // `dart:io` would: its strip list covers `authorization` and the cookie
-         // headers only, so `X-Api-Key` — and `X-Plex-Token` on the
-         // [authenticatedBy] path — is copied to *any* redirect target.
+         // headers only, so `X-Api-Key` and `X-Plex-Token` on the
+         // [authenticatedBy] path is copied to *any* redirect target.
          baseUrl: UrlUtils.normalizeBaseUrl(baseUrl),
          certFingerprint: pinnedCertFingerprint,
          accessHeaders: accessHeaders,

@@ -18,7 +18,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// genre simply does not render).
 ///
 /// A row whose source **failed** is not a row with nothing in it. It used to
-/// collapse the same way — Seerr's reads turned every failure into `[]` — so a
+/// collapse the same way: Seerr's reads turned every failure into `[]`, so a
 /// dark Seerr quietly took its rails off the page and the page looked like a
 /// short catalogue. It now keeps its header and says what happened, in the
 /// classified words, with Retry: "Seerr did not answer" only when nothing did.

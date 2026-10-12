@@ -12,13 +12,13 @@ import 'package:cupola/core/utils/url_utils.dart';
 
 /// Bridges the Riverpod-held trust map to the leaf image widgets
 /// (`ContentCard`, `MediaPosterCard`, …) that predate Riverpod and stay off
-/// it deliberately — see `lib/core/widgets/AGENTS.md`: the overwhelming
+/// it deliberately; see `lib/core/widgets/AGENTS.md`: the overwhelming
 /// majority of that directory takes plain constructor parameters, and giving
 /// every poster widget a `ref` to cover the rare pinned case would cut
 /// against that grain for all of them, not just the one that needs it.
 ///
 /// [update] is called from exactly one place, a `ref.listen` on
-/// `currentSettingsProvider` in `CupolaApp` — the only spot in the widget
+/// `currentSettingsProvider` in `CupolaApp`, the only spot in the widget
 /// tree that both sees Riverpod and sits above every image. Everything
 /// downstream, including [pinnedImageCacheFor], reads the snapshot as a pure
 /// function of a URL.
@@ -32,7 +32,7 @@ class CertTrustRegistry {
   }
 
   /// Test-only: clears the snapshot so one test's pins cannot leak into the
-  /// next — this is process-wide state, not scoped to a `ProviderContainer`.
+  /// next: this is process-wide state, not scoped to a `ProviderContainer`.
   @visibleForTesting
   static void reset() => _trusted = const {};
 
@@ -55,7 +55,7 @@ typedef PinnedImageCache = ({BaseCacheManager manager, Client transport});
 
 /// How a pinned cache is built. A seam rather than a hard-coded constructor so
 /// the memoisation and retirement contract below can be tested without a real
-/// sqflite store — a [CacheManager] opens one in its constructor.
+/// sqflite store: a [CacheManager] opens one in its constructor.
 @visibleForTesting
 typedef PinnedImageCacheBuilder =
     PinnedImageCache Function({
@@ -65,7 +65,7 @@ typedef PinnedImageCacheBuilder =
       required int port,
     });
 
-/// The real builder — kept reachable so a test that swapped
+/// The real builder, kept reachable so a test that swapped
 /// [pinnedImageCacheBuilder] can put it back.
 @visibleForTesting
 PinnedImageCache defaultPinnedImageCacheBuilder({
@@ -116,9 +116,9 @@ void resetPinnedImageCaches() {
 /// A [CacheManager] pinned to [imageUrl]'s trusted certificate, or null when
 /// nothing is pinned for it.
 ///
-/// Null is the answer for the overwhelming majority of images — anything on
+/// Null is the answer for the overwhelming majority of images: anything on
 /// a certificate the OS already trusts, a plain `http://` LAN address, or a
-/// public host like TMDB — and it means exactly "use `CachedNetworkImage`'s
+/// public host like TMDB, and it means exactly "use `CachedNetworkImage`'s
 /// own default manager", so passing this straight through as `cacheManager:`
 /// is safe everywhere, pinned or not.
 BaseCacheManager? pinnedImageCacheFor(String? imageUrl) {
@@ -134,7 +134,7 @@ BaseCacheManager? pinnedImageCacheFor(String? imageUrl) {
     // A changed fingerprint means the user re-trusted this origin, so the
     // certificate everything in the old store was fetched under is no longer
     // the one they approved. Retiring it closes the sqlite store and the
-    // pinned `HttpClient` — flutter_cache_manager documents one instance per
+    // pinned `HttpClient`: flutter_cache_manager documents one instance per
     // cache key, and simply overwriting the memo entry left the previous
     // manager holding both open for the life of the process.
     unawaited(_retire(cached.cache));

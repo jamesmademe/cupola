@@ -15,8 +15,8 @@ enum ActivitySegment {
 
 enum WantedSegment {
   missing('Missing'),
-  // Sentence case. The same state is spelled in three places — this pill, the
-  // global screen's pill and `resolveWantedStatus`'s label — and Title Case
+  // Sentence case. The same state is spelled in three places: this pill, the
+  // global screen's pill and `resolveWantedStatus`'s label, and Title Case
   // here was the odd one out of an app that capitalises a state like a
   // sentence.
   cutoffUnmet('Cutoff unmet');
@@ -31,26 +31,26 @@ enum WantedSegment {
 ///
 /// Now a thin sliver wrapper over [SelectionPills]. It used to be a
 /// `SegmentedButton`, which meant the feature expressed one taxonomy through
-/// three different controls — this, a second `SegmentedButton` on the global
+/// three different controls: this, a second `SegmentedButton` on the global
 /// screen, and a hand-rolled chip row beneath that one. Queue/History/Blocklist
 /// is the same choice wherever it appears, so it now looks the same too.
 ///
 /// The header's extent is **derived from the reading size** rather than constant.
 /// Both `minExtent` and `maxExtent` used to be a flat `56.0` wrapped around a
 /// control made of text, so at an accessibility reading size the label outgrew
-/// the box and Flutter painted its overflow stripe across the selector — the
+/// the box and Flutter painted its overflow stripe across the selector: the
 /// exact failure The Grown Box Rule exists to prevent, on a pinned header the
 /// user cannot scroll away from.
 class ActivitySegmentSelector<T extends Enum> extends StatelessWidget {
   /// Height at the default reading size: a 48pt pill plus its 8pt bottom gap.
   static const double _baseHeight = 56.0;
 
-  /// The part of that height which scales — one `labelMedium` line.
+  /// The part of that height which scales: one `labelMedium` line.
   ///
   /// Unmoved by the type ramp, and checked rather than assumed: `SelectionPills`
   /// labels its pills `labelMedium`, a label role, and the app root's
   /// `DefaultTextHeightBehavior` keeps the new leading off a block's first
-  /// ascent and last descent — so one line still measures what it always did.
+  /// ascent and last descent, so one line still measures what it always did.
   /// The pill is floored at its 48pt touch target anyway, which the label and
   /// its `sm` padding sit well inside, so 56 still clears both.
   static const double _labelHeight = 16.0;

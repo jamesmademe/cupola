@@ -1,7 +1,7 @@
 /// What the SABnzbd Overview reads, and the pure functions that shape it.
 ///
 /// SABnzbd answers one endpoint per question and this page asks only two of
-/// them — `mode=queue`, shared with the readout band through
+/// them: `mode=queue`, shared with the readout band through
 /// [sabnzbdQueueProvider] so the rail and the rows cannot disagree about the
 /// same queue, and `mode=history` through [sabnzbdOverviewHistoryPageProvider],
 /// which this page asks for itself.
@@ -19,8 +19,8 @@
 ///  * **The tone rule, on SABnzbd's own status words.** A *paused* job is the
 ///    user's decision and therefore neutral; a *failed* one is a fault and
 ///    therefore amber; *repairing* is par2 working, which is the same
-///    post-processing run as unpacking and therefore blue. Collapsing them —
-///    which the previous dashboard did with a single `slot.status` string —
+///    post-processing run as unpacking and therefore blue. Collapsing them,
+///    which the previous dashboard did with a single `slot.status` string,
 ///    puts "you pressed pause" in the same colour as "this download broke".
 ///  * **A count states its own window, or wears a `+`.** A figure computed
 ///    inside a page is a floor, not a total, and the header says which it is.
@@ -37,17 +37,17 @@
 /// than stubbed, because a section that invents its rows is worse than a
 /// section that is not there:
 ///
-///  * **Servers** — needs `mode=status`, which carries the per-server
+///  * **Servers**: needs `mode=status`, which carries the per-server
 ///    connection counts and the SSL flag. [SabnzbdClient] never calls it.
-///  * **Warnings** ("Disk space low on /incomplete") — needs `mode=warnings`,
+///  * **Warnings** ("Disk space low on /incomplete"): needs `mode=warnings`,
 ///    and the disk figures beside it need `diskspace1`/`diskspacetotal1`, which
 ///    `mode=queue` does return but [SabnzbdQueue] does not parse.
-///  * **The speed limit under the speed readout** ("limit 60 · 80%") — needs
+///  * **The speed limit under the speed readout** ("limit 60 · 80%"): needs
 ///    `speedlimit`/`speedlimit_abs` off the same unparsed queue payload.
-///  * **Retry / Delete on a failed history row** — needs `mode=retry` and
+///  * **Retry / Delete on a failed history row**: needs `mode=retry` and
 ///    `mode=history&name=delete`. The client has neither, and a button that
 ///    cannot do the thing it names is worse than no button.
-///  * **"drag to reorder"** — needs a position write (`mode=switch`). The
+///  * **"drag to reorder"**: needs a position write (`mode=switch`). The
 ///    client has none, so the promise is deleted rather than drawn dead.
 library;
 
@@ -85,7 +85,7 @@ const int sabnzbdHistoryTodayLimit = 4;
 /// A hundred, not the client's default twenty, because this section counts *a
 /// day* and a count is only as true as the window it was taken in. Twenty
 /// records is one season pack plus a film; past that the page stops covering
-/// today and the counts become a floor — which the header then says with a `+`
+/// today and the counts become a floor, which the header then says with a `+`
 /// rather than pretending otherwise (see [sabnzbdHistoryToday]).
 ///
 /// A hundred is one request of a few tens of kilobytes and covers every day
@@ -101,27 +101,27 @@ const int sabnzbdHistoryPageSize = 100;
 /// function serves both and the two sections cannot disagree about what
 /// `Repairing` means.
 ///
-///  * **amber — a fault.** `Failed`, the download giving up, and nothing else.
+///  * **amber: a fault.** `Failed`, the download giving up, and nothing else.
 ///    `Repairing` is **not** here: par2 rebuilding articles that arrived broken
 ///    is the recovery working, one stage of the same post-processing run as
 ///    `Verifying` and `Extracting`, and it ends in a completed download far
 ///    more often than not. Nothing has failed, stalled or stopped, and nobody
-///    has to do anything — which is the definition of blue three lines down.
+///    has to do anything, which is the definition of blue three lines down.
 ///    The tone is not cosmetic: [sabnzbdHistoryToday] counts every amber row as
 ///    a failure, so an amber `Repairing` invents a failure in the header and
 ///    pushes the real one down the list on the day there is one.
-///  * **neutral — deliberate.** `Paused` is the user's own decision, and
+///  * **neutral: deliberate.** `Paused` is the user's own decision, and
 ///    `Deleted` is their decision one step further. Neither is damage, and
 ///    painting them amber is the single most common way the tone rule is
 ///    broken.
-///  * **blue — in flight.** `Queued`, `Downloading`, `Fetching`, `Grabbing`,
+///  * **blue: in flight.** `Queued`, `Downloading`, `Fetching`, `Grabbing`,
 ///    and the post-processing run (`Repairing`, `Extracting`, `Verifying`,
 ///    `Moving`, `Running`, `Propagating`, `Checking`) are all informational:
 ///    work is happening and nobody has to do anything.
-///  * **green — complete.** `Completed`, and nothing else.
+///  * **green: complete.** `Completed`, and nothing else.
 ///
 /// Red is deliberately unreachable from here. Red means the *service* did not
-/// answer, which is the unreachable band's job for the page as a whole — never
+/// answer, which is the unreachable band's job for the page as a whole; never
 /// a row's.
 StatusTone sabnzbdStatusTone(String status) {
   return switch (status.trim().toLowerCase()) {
@@ -165,7 +165,7 @@ String sabnzbdStatusLabel(String status) {
 /// The wire format is colon-separated and grows from the right: `12:30` is
 /// twelve minutes, `0:12:30` twelve and a half, `1:04:00:00` a day and four
 /// hours. Parsed from the right for that reason, rather than by assuming three
-/// fields — a queue with more than a day left is precisely the one whose ETA
+/// fields: a queue with more than a day left is precisely the one whose ETA
 /// the user wants, and the three-field assumption reads it as 1 hour 4 minutes.
 ///
 /// Null, not [Duration.zero], for `0:00:00`: SABnzbd reports that both for "a
@@ -209,7 +209,7 @@ String? sabnzbdEtaLabel(Duration? remaining) {
 
 /// The ETA readout, and the one figure on this page that is routinely absent.
 ///
-/// Returns [ServiceKpi.unavailable] — an em dash — whenever SABnzbd cannot
+/// Returns [ServiceKpi.unavailable] (an em dash) whenever SABnzbd cannot
 /// stand behind an estimate, and names which of the three reasons it is:
 ///
 ///  * the queue is **paused**, so `timeleft` freezes at whatever it last was;
@@ -238,7 +238,7 @@ ServiceKpi sabnzbdEtaKpi(SabnzbdQueue queue) {
 
 /// The readout band: Speed, Queue, Left, ETA.
 ///
-/// Four figures, like the board — but not the board's four. It draws **Disk
+/// Four figures, like the board, but not the board's four. It draws **Disk
 /// free** in the fourth slot, and the client never asks for it (see the library
 /// note), so the slot carries the size still to fetch instead of a fabricated
 /// terabyte count. `Left` is a figure SABnzbd actually answers, sits in the
@@ -246,8 +246,8 @@ ServiceKpi sabnzbdEtaKpi(SabnzbdQueue queue) {
 /// tile was there to support: how much is still coming.
 ///
 /// This page builds its own list rather than taking `serviceKpiProvider`'s,
-/// which for SABnzbd is Down/Queue/Remaining/Status/Total. That rail has no ETA
-/// — the readout the board gives the most prominent slot on the phone — and
+/// which for SABnzbd is Down/Queue/Remaining/Status/Total. It has no ETA,
+/// the readout the board gives the most prominent slot on the phone, and
 /// adding one there means editing a file thirteen other services share. Folding
 /// the two back together is worth doing once this batch lands; see the report.
 ///
@@ -304,11 +304,11 @@ class SabnzbdQueueRow {
 
   final StatusTone tone;
 
-  /// `72%`. A percentage SABnzbd answered, so `0%` is printed as `0%` — it
+  /// `72%`. A percentage SABnzbd answered, so `0%` is printed as `0%`: it
   /// means "not started", which is exactly what a queued job is.
   final String percentLabel;
 
-  /// Whether this row is a fault — failed, and only failed.
+  /// Whether this row is a fault: failed, and only failed.
   ///
   /// Exposed here rather than compared against [StatusTone] at the call site,
   /// for the same reason [SabnzbdHistoryEntry.failed] is: the judgement of what
@@ -353,7 +353,7 @@ SabnzbdQueueSection sabnzbdQueuePreview(
         name: slot.filename,
         detail: joinDisplayParts([
           sabnzbdStatusLabel(slot.status),
-          // `1.2 GB left of 3.4 GB` — the remainder *and* the job's own size,
+          // `1.2 GB left of 3.4 GB`: the remainder *and* the job's own size,
           // because the remainder alone is the same sentence a third of the
           // way in as it is at the end. The total is dropped rather than
           // dashed when `mode=queue` sent none, for the reason the ETA below
@@ -447,7 +447,7 @@ typedef SabnzbdHistorySection = ({
 /// that".
 ///
 /// "Today" is the local calendar day of [now]. A job that finished at 23:50
-/// yesterday is out even though it is twenty minutes old — the header says
+/// yesterday is out even though it is twenty minutes old. The header says
 /// `today`, and a heading is a promise. [completed] and [failed] count every
 /// record in the window, not just the [limit] the section draws, so the header
 /// can say `12 completed · 1 failed` over four rows without contradicting
@@ -458,9 +458,9 @@ typedef SabnzbdHistorySection = ({
 /// long enough to reach yesterday. Two things prove it did, and either is
 /// enough:
 ///
-///  * the server returned fewer records than [pageSize] — it had no more to
+///  * the server returned fewer records than [pageSize]: it had no more to
 ///    give, so everything that ever finished is in hand; or
-///  * at least one record is older than today — the page crossed midnight, so
+///  * at least one record is older than today: the page crossed midnight, so
 ///    every one of today's is above it.
 ///
 /// When neither holds, the counts are a **floor**: there are at least this many
@@ -473,7 +473,7 @@ typedef SabnzbdHistorySection = ({
 /// A slot whose `completed` timestamp is missing or unreadable is dropped
 /// rather than assumed to be recent: the section claims to be about today, and
 /// a record with no time cannot honour that claim in either direction. Such a
-/// slot proves nothing about the window either — it is counted against
+/// slot proves nothing about the window either: it is counted against
 /// [pageSize] and never as a record from before today.
 SabnzbdHistorySection sabnzbdHistoryToday(
   List<SabnzbdHistorySlot> slots, {
@@ -510,7 +510,7 @@ SabnzbdHistorySection sabnzbdHistoryToday(
     if (isFailure) {
       failed++;
     } else {
-      // Everything that is not a fault counts as work that got done — a job
+      // Everything that is not a fault counts as work that got done: a job
       // still unpacking at the moment of the poll is on its way to completed,
       // and a second count for "in post-processing" would be a third number in
       // a header that has room for two.

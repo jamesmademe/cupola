@@ -18,8 +18,8 @@ import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart'
 /// The layouts the window shell hosts: a well, a two-track spine, and the two
 /// master-detail consoles.
 ///
-/// All four are the same argument in four places — a desktop window is wide
-/// enough to hold two thoughts at once — so all four are tested the same way:
+/// All four are the same argument in four places: a desktop window is wide
+/// enough to hold two thoughts at once, so all four are tested the same way:
 /// once on a window, once on a phone, and the phone case must come back
 /// byte-identical to what it was before any of this existed.
 void main() {

@@ -15,7 +15,7 @@ typedef OnMediaItemTap<T> = void Function(T item, String heroTag);
 
 /// Callback signature for extracting a resolved status from a media item.
 ///
-/// The caller resolves the status — including the download queue — so the grid
+/// The caller resolves the status, including the download queue, so the grid
 /// and the item's detail page cannot show different badges for the same item.
 typedef StatusExtractor<T> = MediaStatusInfo? Function(T item);
 
@@ -88,7 +88,7 @@ class MediaGrid<T> extends StatelessWidget {
   /// 390pt-wide phone keeps exactly three columns.
   ///
   /// The measurement this number exists to forbid: a 640pt well asked for the
-  /// most columns it could fit answers **five at 118pt**, under the floor —
+  /// most columns it could fit answers **five at 118pt**, under the floor:
   /// where the same well, held to the floor, answers **four at 151pt**. Every
   /// grid in the app resolves its count through [columnsFor] for that reason;
   /// a delegate that rounds the count *up* from a maximum extent reproduces
@@ -101,7 +101,7 @@ class MediaGrid<T> extends StatelessWidget {
   /// ## The column floor rule: fewer tiles, never smaller ones
   ///
   /// A narrower frame drops a column. It does **not** shrink the tiles to keep
-  /// the count, which is the failure this arithmetic exists to prevent — a
+  /// the count, which is the failure this arithmetic exists to prevent: a
   /// 640pt well drawn with five columns gives 118pt posters, under a floor the
   /// tile's own layout is built on, where the same well at four gives 151.
   ///

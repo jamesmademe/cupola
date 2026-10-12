@@ -54,7 +54,7 @@ flutter run -d macos
 
 One gitignored file **must be present in every worktree / fresh checkout** before an Android release build will run. It is kept out of version control because it holds signing credentials.
 
-- `android/key.properties` — required for Android **release** builds. Copy from an existing worktree, or recreate from `android/key.properties.example` with real keystore values. Without it, `flutter run --release` on Android fails with a `Missing release signing config` error. Debug builds are unaffected.
+- `android/key.properties`: required for Android **release** builds. Copy from an existing worktree, or recreate from `android/key.properties.example` with real keystore values. Without it, `flutter run --release` on Android fails with a `Missing release signing config` error. Debug builds are unaffected.
 
 Other gitignored files that are typically per-developer rather than per-worktree: `.env`, `.env.local`, anything under `secrets/`, and `*.pem` / `*.key`. None of these break the standard build flow, but keep them out of commits.
 
@@ -115,7 +115,7 @@ Use example files or placeholder values when documentation needs configuration e
 
 Cupola is licensed under the [Apache License 2.0](LICENSE). Unless you state
 otherwise in writing, any contribution you intentionally submit for inclusion in
-this project is offered under the same license — inbound equals outbound, as
+this project is offered under the same license: inbound equals outbound, as
 described in section 5 of the license. No separate contributor agreement is
 required.
 

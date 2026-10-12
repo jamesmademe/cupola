@@ -12,7 +12,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// not-configured cards were collapsed onto the shared widget: each private copy
 /// deep-linked to `/settings/service/<routeParam>`, and the generic constructor
 /// went to the Settings root. A user who taps "Set up SABnzbd" from the
-/// SABnzbd dashboard lands on the SABnzbd form, not on a list to search —
+/// SABnzbd dashboard lands on the SABnzbd form, not on a list to search:
 /// the one place every `Set up X` goes.
 void main() {
   Future<String> pumpAndTap(
@@ -96,7 +96,7 @@ void main() {
   });
 
   group('on a service page the action is the ink button', () {
-    // The brand book: the one action on the page is the primary, and the primary is ink —
+    // The brand book: the one action on the page is the primary, and the primary is ink,
     // the theme's own FilledButton, the same for every service. It used to be
     // a tonal wash of the service's accent with a walked label.
     for (final (name, theme) in [

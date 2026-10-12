@@ -30,7 +30,7 @@ class QbittorrentService {
   /// Whether the WebUI refused a sign-in and the client is holding it.
   bool get loginRefused => _client.loginRefused;
 
-  /// For a user's explicit Retry only — see
+  /// For a user's explicit Retry only: see
   /// [QbittorrentClient.clearLoginRefusal].
   void clearLoginRefusal() => _client.clearLoginRefusal();
 
@@ -98,7 +98,7 @@ class QbittorrentService {
 
   /// Per-torrent detail (the WebUI General tab). Lets transport / 4xx errors
   /// propagate so the family provider's `AsyncValue.error` is the right
-  /// signal — the UI's `_PropRow` renders "—" per cell on `loading`/`error`.
+  /// signal: the UI's `_PropRow` renders "—" per cell on `loading`/`error`.
   Future<TorrentProperties> getTorrentProperties(String hash) async {
     final response = await _client.get(
       '/api/v2/torrents/properties',
@@ -145,7 +145,7 @@ class QbittorrentService {
   /// 5.1 renamed pause to stop and resume to start. A 4.x or 5.0 server answers
   /// **404** for `/torrents/start` and `/torrents/stop`, so sending only the new
   /// spelling makes the pause and resume buttons controls that fail on every
-  /// install older than 5.1 — and 404 is the one answer that says "this server
+  /// install older than 5.1, and 404 is the one answer that says "this server
   /// does not have this endpoint" rather than "this request was wrong".
   ///
   /// New spelling first, legacy second, deliberately: `/pause` and `/resume` are

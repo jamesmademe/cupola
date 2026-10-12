@@ -54,8 +54,8 @@ import 'package:cupola/core/widgets/selection_pills.dart';
 ///
 /// This is where a red service gets fixed, so the screen leads with what is
 /// wrong: the header states the saved connection in the service's own colour,
-/// and a failed test names the actual cause — a rejected key, a wrong base
-/// path, an untrusted certificate — rather than listing everything it could be.
+/// and a failed test names the actual cause: a rejected key, a wrong base
+/// path, an untrusted certificate, rather than listing everything it could be.
 class ServiceSettingsScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
 
@@ -71,7 +71,7 @@ class ServiceSettingsScreen extends ConsumerStatefulWidget {
   /// editing the first.
   final bool isNew;
 
-  /// Injectable so a widget test can stay off a real socket — see
+  /// Injectable so a widget test can stay off a real socket; see
   /// [CertificateProber].
   final CertificateProber certificateProber;
 
@@ -127,7 +127,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// The connection being edited, as it stood when the form opened.
   ///
-  /// Only [ServiceInstance.id] is relied on afterwards — every write re-reads
+  /// Only [ServiceInstance.id] is relied on afterwards: every write re-reads
   /// the live one by that id, so a value changed elsewhere while this form sat
   /// open is not clobbered by a stale copy.
   late final ServiceInstance _target;
@@ -150,7 +150,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// Services authenticated with username/password rather than an API key.
   ///
-  /// The registry owns this fact — see [ServiceKeyExtension.usesApiKey]. Spelled
+  /// The registry owns this fact; see [ServiceKeyExtension.usesApiKey]. Spelled
   /// out here as its own three-way check, adding a credential-authenticated
   /// service meant this screen and the persistence layer could disagree about
   /// which fields the service even has.
@@ -256,12 +256,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// Takes on a name this connection was given somewhere other than here.
   ///
   /// There is exactly one writer: the *sibling's* form. Saving a second
-  /// connection derives a name for the first one — see [_deriveSiblingLabels]
-  /// — and the first one's form is very often still on the stack underneath,
+  /// connection derives a name for the first one; see [_deriveSiblingLabels]
+  /// and the first one's form is very often still on the stack underneath,
   /// holding the empty string it loaded when that connection was the only one
   /// there was. Coming back to it, [_needsLabel] is now true, so the field
   /// appears empty and its validator refuses to save a connection the user
-  /// never touched and which *has* a name — one already on the badge, in the
+  /// never touched and which *has* a name: one already on the badge, in the
   /// lens sheet and above its section in search.
   ///
   /// Only when the field holds exactly what it loaded. An adoption that
@@ -271,7 +271,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// The listener is detached across the write so the assignment does not read
   /// as the user typing: that would clear a test result the values are still
   /// good for, and mark a form dirty that nobody has edited. Moving
-  /// `_initialValues` along with it is the other half of the same point — the
+  /// `_initialValues` along with it is the other half of the same point: the
   /// adopted name is the new baseline, not an unsaved change to warn about on
   /// the way out.
   void _adoptPersistedLabel(String persisted) {
@@ -323,7 +323,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     _liftCredentialsFromAddress();
 
     // The answer to a test is rendered under the fields, and behind a reverse
-    // proxy the wait for it can run to fifteen seconds — spending them behind
+    // proxy the wait for it can run to fifteen seconds, spending them behind
     // half a screen of keys is the one thing this screen can avoid. Dismissed
     // here rather than in each caller: the button, the return key and the
     // retest after trusting a certificate all come through this method.
@@ -346,7 +346,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           candidate.instanceById(_target.id)?.access ?? const NoAccess();
       // Through the local-network gate: a LAN address that fails because the OS
       // has not been allowed onto the network reports the permission, and one
-      // the user allows while the alert is up is simply tested again — the
+      // the user allows while the alert is up is simply tested again. The
       // retest that used to be theirs to work out.
       final candidateInstance = candidate.instanceById(_target.id) ?? _target;
       var result = await diagnoseThroughLocalNetworkGate(
@@ -357,7 +357,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
       // TLS exception flow: when the failure could be explained by a
       // certificate, offer to trust it and test again. Every service can
-      // reach this since ADR-6. Skipped once the server has answered —
+      // reach this since ADR-6. Skipped once the server has answered:
       // probing for a certificate after a rejected API key is a round trip
       // that can only come back null.
       if (mounted &&
@@ -475,7 +475,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final current = ref.read(currentSettingsProvider);
     // Captured before the write: an edited URL moves this service off an origin
     // whose certificate may have been pinned, and `_maybePromptCertTrust` below
-    // can only ever *add* a pin. Left behind, the entry outlives the address —
+    // can only ever *add* a pin. Left behind, the entry outlives the address:
     // and because `pinForUrl` is keyed purely by origin, any service later
     // pointed back at it would silently reuse the stale trust with no prompt.
     final priorUrl = current.instanceById(_target.id)?.url ?? '';
@@ -508,7 +508,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     setState(() => _saving = true);
     try {
       // This connection, not the service: the origin whose certificate is about
-      // to be probed — and offered for trust — has to be the one whose address
+      // to be probed, and offered for trust, has to be the one whose address
       // is in the field above.
       final target = updated.instanceById(_target.id);
       if (target == null) return null;
@@ -561,8 +561,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // The sibling that was alone until a moment ago has no name, and it is
     // about to need one: with two connections and one nameless, the badge and
     // every badge-bearing row would fall back to showing its id. Derived from
-    // whatever actually tells the two apart — the port when they share a host,
-    // the host when they do not — and editable in its own form afterwards.
+    // whatever actually tells the two apart: the port when they share a host,
+    // the host when they do not, and editable in its own form afterwards.
     // Never the word "Default": that names a role, and the role moves.
     if (_labelController.text.trim().isNotEmpty) {
       next = _deriveSiblingLabels(next, url);
@@ -572,7 +572,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// Writes this service's fields onto [current].
   ///
-  /// Which of the two shapes to write is the registry's answer — one branch on
+  /// Which of the two shapes to write is the registry's answer: one branch on
   /// the capability rather than a per-service chain. Routing a
   /// credential-authenticated service through the API-key path is what used to
   /// leave a saved username and password behind on a clear.
@@ -637,7 +637,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         // would have reset which person the other one reads through.
         .copyWithoutInstance(_target.id)
         // Forget this origin's pin too, but only when nothing else configured
-        // still reaches it — removing Sonarr must never break Radarr's trust
+        // still reaches it: removing Sonarr must never break Radarr's trust
         // in the same reverse proxy, and with instances that includes the
         // service's own second connection behind it.
         .copyWithoutUnusedCertificate(priorUrl);
@@ -645,8 +645,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     await ref.read(settingsProvider.notifier).updateSettings(cleared);
 
     // The lens outlives the connection it names unless something says
-    // otherwise. Harmless while it is only ever *resolved* — `activeInstance`
-    // falls back to the first instance when the id matches nothing — but the id
+    // otherwise. Harmless while it is only ever *resolved*; `activeInstance`
+    // falls back to the first instance when the id matches nothing, but the id
     // stays on disk for good, and the day a badge or a `?i=` NAMES it rather
     // than resolving it, the app is carrying a pointer to a server that was
     // deleted months ago.
@@ -666,7 +666,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // Never blocks the iOS back gesture outright — `canPop` stays true unless
+      // Never blocks the iOS back gesture outright: `canPop` stays true unless
       // there is something to lose, and the guard only asks.
       canPop: !_isDirty,
       onPopInvokedWithResult: (didPop, _) async {
@@ -680,7 +680,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
-    // Written by the sibling's form while this one sat open — see
+    // Written by the sibling's form while this one sat open; see
     // [_adoptPersistedLabel]. Listened for rather than read: this form is not
     // rebuilt by being returned to, so nothing else would notice.
     ref.listen(
@@ -695,7 +695,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // true as soon as *any* instance is set up, which on the add-a-connection
     // form meant an empty page announcing "Answering" (the first connection's
     // status), offering a viewer picker bound to the first server, and showing
-    // a Remove row for a connection that does not exist yet — its confirm
+    // a Remove row for a connection that does not exist yet: its confirm
     // dialog removed nothing and simply popped the screen.
     final saved = settings.instanceById(_target.id);
     final isConfigured = saved?.isConfigured ?? false;
@@ -721,7 +721,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         // The service's name alone. It read "Radarr Settings", which is the
         // name of a different page: *Service settings* is Radarr's own
         // configuration, read and written through Radarr's API, while this form
-        // is how Cupola reaches it — address, key, certificate, connection
+        // is how Cupola reaches it: address, key, certificate, connection
         // name. Two pages one word apart is how a user ends up on the wrong
         // one; the breadcrumb above already says Settings › Connections.
         title: Text(service.title),
@@ -752,7 +752,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             const SizedBox(height: AppSpacing.xl),
             // Before the address on purpose: name the thing, then say where it
             // lives. By the time someone is here for a second connection they
-            // are already thinking "these two are different" — that is the
+            // are already thinking "these two are different"; that is the
             // moment the name costs nothing to give.
             if (_needsLabel(settings)) ...[
               _buildLabelField(settings),
@@ -806,7 +806,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               _buildShareOffer(context),
             ],
             // Directly under the connection test, because the ceiling is a
-            // property of *this instance's path* — a stack can easily have Sonarr
+            // property of *this instance's path*: a stack can easily have Sonarr
             // behind a proxy and Radarr direct over Tailscale.
             if (SearchHeadroomCard.appliesTo(widget.service)) ...[
               const SizedBox(height: AppSpacing.lg),
@@ -816,11 +816,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             // the picker belongs to any service whose library has to be entered
             // through a person, not to "Jellyfin" by name. Only once a
             // connection exists, because the viewer list comes from `/Users` on
-            // the server — offering it before there is a server to ask would be
+            // the server. Offering it before there is a server to ask would be
             // a control that can only fail.
             // Bound to the connection this form edits. Read and written through
             // the service's flat projection, it listed the users of *this*
-            // server and saved the chosen one onto the FIRST connection —
+            // server and saved the chosen one onto the FIRST connection;
             // leaving that server pointed at a user id from a different user
             // table, which is the exact failure `ServiceInstance.viewerId`
             // exists to prevent.
@@ -1048,8 +1048,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
     // Tonal rather than a saturated accent slab. Two reasons, and both hold for
     // all thirteen accents: a full-strength fill in Readarr's red or Unraid's
-    // orange reads as an alarm on a control nothing is wrong with — red means
-    // unreachable, amber a fault — and the accent cannot be its own
+    // orange reads as an alarm on a control nothing is wrong with: red means
+    // unreachable, amber a fault, and the accent cannot be its own
     // label colour over its own tint (Radarr amber measures ≈1.80:1 there in
     // light theme). The tint carries the identity, `onSurface` carries the
     // words.
@@ -1131,8 +1131,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final versionNote = describeServerVersion(service, result.serverVersion);
 
     // A live region rather than an announcement: this panel appears below the
-    // button while focus stays on it, so the verdict — the whole point of the
-    // action — would otherwise have to be hunted for. `liveRegion` is the
+    // button while focus stays on it, so the verdict (the whole point of the
+    // action) would otherwise have to be hunted for. `liveRegion` is the
     // mechanism both platforms honour; a programmatic announcement is dropped on
     // Android. The outcome is spelled out because the glyph and the tint are the
     // only things carrying it (the "Fill in the address" message, for one, never
@@ -1211,7 +1211,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     }
     // The one control that fixes this sits *outside* the banner, because the
     // banner excludes its own subtree from the semantics tree to read as a
-    // single live region — a button in there would be unreachable to a screen
+    // single live region: a button in there would be unreachable to a screen
     // reader, which is precisely the user least able to go hunting through the
     // OS settings for a toggle nobody named.
     return Column(
@@ -1244,22 +1244,22 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   ///
   /// Three shapes, in the order they tell the two apart:
   ///
-  /// * the **port**, when they share a host — two arrs on one box, the
+  /// * the **port**, when they share a host: two arrs on one box, the
   ///   overwhelmingly common homelab;
-  /// * the **first path segment**, when they share a host *and* a port —
+  /// * the **first path segment**, when they share a host *and* a port:
   ///   `media.lan/radarr` beside `media.lan/radarr4k`, which is one reverse
   ///   proxy fronting both. This branch is not an edge case worth skipping: it
   ///   is the deployment ADR-6 exists to serve, those two instances necessarily
   ///   share a single certificate pin, and it is precisely where the user has
   ///   the least other signal to tell them apart. Without it both were labelled
-  ///   `media` — what they have in **common**;
+  ///   `media`: what they have in **common**;
   /// * the **hostname**, when they are on different boxes.
   ///
   /// Falls back to the id only when nothing parses, which is better than empty.
   /// Never the word "Default": that names a role, and the role moves the first
   /// time the list is reordered.
   ///
-  /// Uniqueness is the caller's job — see [_deriveSiblingLabels]. This answers
+  /// Uniqueness is the caller's job; see [_deriveSiblingLabels]. This answers
   /// "what is different about it", which can legitimately come out the same for
   /// two connections that really are near-identical.
   String _derivedLabel(ServiceInstance instance, String otherUrl) {
@@ -1285,12 +1285,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// invisible from the field validator: that compares the typed name against
   /// the siblings *as they stand in the model*, where the one being derived
   /// still has an empty label. So a derivation that collided with what the user
-  /// had just typed — or with another derivation — was written anyway, and two
+  /// had just typed, or with another derivation, was written anyway, and two
   /// connections ended up sharing a name in the badge, the lens sheet and every
   /// provenance chip, with nothing on screen able to tell them apart.
   ///
   /// A colliding name is suffixed with what is left to distinguish it: the
-  /// port, or failing that a counter. Ugly beats ambiguous — and it is editable
+  /// port, or failing that a counter. Ugly beats ambiguous, and it is editable
   /// in the sibling's own form the moment the user disagrees.
   SettingsModel _deriveSiblingLabels(SettingsModel next, String url) {
     final taken = <String>{
@@ -1328,7 +1328,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// Whether this form needs to ask for a name.
   ///
   /// Exactly when there is something to tell it apart from. One connection
-  /// needs no name — it is "Radarr" — and asking for one would be a field that
+  /// needs no name: it is "Radarr", and asking for one would be a field that
   /// earns nothing on the install almost everyone has.
   bool _needsLabel(SettingsModel settings) => _siblings(settings).isNotEmpty;
 
@@ -1508,7 +1508,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               hintText: 'https://your-server:${service.defaultPort}',
               // The default port comes from the registry, so this screen and
               // onboarding cannot disagree about it. The cleartext warning wins
-              // the helper slot when it fires — a live problem outranks a hint.
+              // the helper slot when it fires: a live problem outranks a hint.
               helperText:
                   warning ??
                   "${service.title}'s default port is "
@@ -1547,7 +1547,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// A standing confirmation that this address's origin has a trusted
   /// self-signed certificate, with a way to revoke it.
   ///
-  /// Rebuilds on every keystroke of the URL field — [settings] is captured
+  /// Rebuilds on every keystroke of the URL field. [settings] is captured
   /// from the enclosing build, but the origin a trust decision applies to
   /// depends on what is actually typed, which the saved value may no longer
   /// match. Renders nothing for the overwhelming majority of services, which
@@ -1629,7 +1629,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           : 'This also affects ${sharedWith.map((s) => s.title).join(', ')}: '
                 'the next connection from any of them will need to be '
                 'trusted again.',
-      // Reversible — the next connection re-offers the trust prompt — so no
+      // Reversible: the next connection re-offers the trust prompt, so no
       // "cannot be undone" sentence: it would overstate the stakes.
       confirmLabel: 'Forget certificate',
     );
@@ -1830,7 +1830,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // A Plex JSON Web Token expires after seven days and can only be renewed by
     // calling plex.tv, which this app never does. Accepting one would produce
     // software that works for a week and then fails with a 401 the user has no
-    // way to interpret — so it is refused at the point of paste, where the
+    // way to interpret, so it is refused at the point of paste, where the
     // message can still say what to paste instead.
     if (isPlex && trimmed.startsWith('eyJ')) {
       return 'That is a temporary token, it expires in 7 days and Cupola '
@@ -1851,8 +1851,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (apiKey.isEmpty) return;
 
     // Two layers, in order of how much they actually protect. The host's own
-    // sensitive-clip flags come first — they are the only thing that keeps the
-    // key out of Android's copy preview and off Universal Clipboard — and a
+    // sensitive-clip flags come first; they are the only thing that keeps the
+    // key out of Android's copy preview and off Universal Clipboard, and a
     // plain copy is the fallback for every platform and OS version that has no
     // such flag, because a copy button that refuses to copy is worse than an
     // unhardened one. Either way the timed clear below still runs.
@@ -1865,9 +1865,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     }
     if (!mounted) return;
     // The wording is part of the mitigation, not chrome: the clipboard is a
-    // shared surface — Android 13+ renders a preview of what was copied, and on
+    // shared surface: Android 13+ renders a preview of what was copied, and on
     // Apple platforms the general pasteboard syncs to the user's other devices
-    // through Universal Clipboard — so the honest thing is to say the key left
+    // through Universal Clipboard, so the honest thing is to say the key left
     // the app and when it will be taken back.
     SnackBarHelper.info(
       context,
@@ -1889,7 +1889,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// screen is not a reason to leave a credential on the clipboard.
   ///
   /// The read-back only *spares* a clipboard it can actually see holding
-  /// something else — the user copying over the key in the meantime, which is
+  /// something else: the user copying over the key in the meantime, which is
   /// worth not destroying. An unreadable clipboard is cleared, not spared:
   /// since Android 10 `getPrimaryClip` answers null to any app that does not
   /// have window focus, and 45 seconds after the copy the user is by
@@ -1909,7 +1909,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 /// saving a new key updates the header without a reload.
 ///
 /// Keyed on the **connection**, not the service. `serviceDiagnosisProvider`
-/// folds every connection into its worst answer — the right shape for a row
+/// folds every connection into its worst answer: the right shape for a row
 /// that says "Radarr", and the wrong one over a form whose address field
 /// belongs to exactly one server: it reported the first Radarr's state above
 /// the second Radarr's credentials.

@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ServicePortalPhysics — preview</title>
+<title>ServicePortalPhysics: preview</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
 </head>
 <body>
@@ -72,7 +72,7 @@
   function elasticOut(t) { if (t <= 0) return 0; if (t >= 1) return 1; return Math.pow(2, -10 * t) * Math.sin((t - 0.1) * (Math.PI * 2) / 0.4) + 1; }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function lerp(a, b, t) { return a + (b - a) * t; }
-  /* PortalPhysics (service_portal.dart) — hand-tuned literals, not motion tokens. */
+  /* PortalPhysics (service_portal.dart): hand-tuned literals, not motion tokens. */
   var PP = { threshold: 75, baseResistance: 0.60, falloff: 7, cardAnticipation: 0.80, safeZone: 140, springStiffness: 520, springDampingRatio: 0.95, flickGate: 700, cardTopInset: 34, cardScale: 0.42, cardCornerRadius: 22, engageBlend: 160, disengageBlend: 220, barHome: 260, barSpringBack: 500 };
   var NAV_MAX_DRAG = 15, NAV_RESISTANCE = 0.15, NAV_FALLOFF = 30, NAV_SPRING = 520;
   var REDUCED = 0.05; /* AnimationController.forward/animateTo under disableAnimations; animateWith (the spring) is not scaled */
@@ -106,7 +106,7 @@
     }
     this.raf = requestAnimationFrame(f);
   };
-  /* SpringSimulation(SpringDescription.withDampingRatio(mass 1, stiffness 520, ratio 0.95)) — underdamped solution, Tolerance 1e-3 */
+  /* SpringSimulation(SpringDescription.withDampingRatio(mass 1, stiffness 520, ratio 0.95)); underdamped solution, Tolerance 1e-3 */
   function spring(start, end, velocity) {
     var m = 1, k = PP.springStiffness, c = PP.springDampingRatio * 2 * Math.sqrt(m * k);
     var r = -c / (2 * m), w = Math.sqrt(4 * m * k - c * c) / (2 * m), c1 = start - end, c2 = (velocity - r * c1) / w;

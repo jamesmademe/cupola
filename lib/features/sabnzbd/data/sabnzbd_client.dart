@@ -55,7 +55,7 @@ String redactSabnzbdSecrets(String input) {
 class SabnzbdClient {
   /// [certFingerprint], when non-empty, is a self-signed certificate the user
   /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
-  /// when [dio] is injected — a caller supplying its own transport owns its
+  /// when [dio] is injected: a caller supplying its own transport owns its
   /// TLS behaviour too.
   SabnzbdClient({
     required String url,
@@ -68,8 +68,8 @@ class SabnzbdClient {
     // Redirects are followed by hand, and this client is the one that most
     // needs it: the API key travels in the **query string**, and a redirect is
     // resolved against `$request_uri`, which includes the query by definition.
-    // `dart:io`'s only protection is a header filter — it cannot strip a
-    // credential that is part of the URL — so a single
+    // `dart:io`'s only protection is a header filter; it cannot strip a
+    // credential that is part of the URL, so a single
     // `return 301 https://elsewhere$request_uri;` in a reverse proxy delivers
     // the key to another host, where it lands in that server's access log in
     // plaintext.
@@ -102,7 +102,7 @@ class SabnzbdClient {
       );
       final data = response.data;
       if (data is Map<String, dynamic>) {
-        // SABnzbd reports failures as {"status": false} — usually, but *not
+        // SABnzbd reports failures as {"status": false}: usually, but *not
         // always*, with an "error" string alongside. The bare form comes back
         // for a queue command against an unknown `nzo_id`, which is exactly
         // what a user hits by deleting a job that finished between the last
@@ -155,7 +155,7 @@ class SabnzbdClient {
     }
   }
 
-  /// Server version. Does not require the API key — which is exactly why it
+  /// Server version. Does not require the API key, which is exactly why it
   /// cannot be the reachability probe on its own: see [checkKeyAndVersion].
   ///
   /// Also the probe's proof of who answered: `{"version": …}`. A web page at
@@ -186,7 +186,7 @@ class SabnzbdClient {
   ///
   /// SABnzbd's `NzbQueue.queue_info` admits a job when
   /// `not limit or start <= n < start + limit`, so zero means "no page", not
-  /// "no rows" — and an absent `limit` parses to the same zero.
+  /// "no rows"; and an absent `limit` parses to the same zero.
   static const wholeQueue = 0;
 
   /// The active download queue: the first [limit] jobs, or all of them for
@@ -279,7 +279,7 @@ class SabnzbdClient {
 
   /// Adds an NZB by URL. [category] defaults to SABnzbd's `*` and [priority]
   /// runs -2..2. The URL is passed via Dio's [queryParameters] so it is encoded
-  /// automatically — never concatenated (security §10.2 #8).
+  /// automatically; never concatenated (security §10.2 #8).
   Future<void> addUrl(
     String nzbUrl, {
     String? category,

@@ -77,8 +77,8 @@ DockgeClient _dockgeClient(Ref ref, {required String? instanceId}) {
 /// hub this login belongs to, an agent's `host:port` otherwise.
 ///
 /// This is the app-bar connection lens, not a tab (decision 41). It is a Dockge
-/// concept rather than a Cupola one — one login, several instances relayed
-/// through it — so it lives beside the client instead of in the settings lens,
+/// concept rather than a Cupola one: one login, several instances relayed
+/// through it, so it lives beside the client instead of in the settings lens,
 /// which picks between *connections* the user configured.
 class DockgeAgentLens extends Notifier<String> {
   @override
@@ -141,7 +141,7 @@ final dockgeServiceForProvider = Provider.family<DockgeService, String>((
   return DockgeService(ref.watch(dockgeClientForProvider(instanceId)));
 });
 
-/// Live stack list — connects, requests a refresh, then streams every push
+/// Live stack list: connects, requests a refresh, then streams every push
 /// Dockge sends (`stackList` / `stackStatusList`).
 final dockgeStackListProvider = StreamProvider.autoDispose<List<DockgeStack>>((
   ref,
@@ -164,7 +164,7 @@ final dockgeStackListProvider = StreamProvider.autoDispose<List<DockgeStack>>((
   // gap, and Dockge re-pushes the list on a ten-second cron: a push landing a
   // few milliseconds late turned a healthy stream into this error, the
   // Overview into "Couldn't load Dockge" and the Dashboard card into a shimmer
-  // that never resolved — while Retry, reading the cached list, always worked.
+  // that never resolved, while Retry, reading the cached list, always worked.
   yield* firstEventWithin(
     client.stackListStream,
     const Duration(seconds: 10),
@@ -263,7 +263,7 @@ final dockgeTerminalTextProvider = StreamProvider.autoDispose
       // stack whose combined log is quiet sends nothing, so a stream that only
       // yielded from inside `await for` never left `AsyncLoading` and the pane
       // spun forever. Its own "Waiting for output…" branch was unreachable.
-      // An empty string is the honest first answer — joined, nothing said yet.
+      // An empty string is the honest first answer: joined, nothing said yet.
       yield '';
 
       final tail = TerminalTail();
@@ -278,7 +278,7 @@ final dockgeTerminalTextProvider = StreamProvider.autoDispose
 /// Terminal chunks arrive small and often. The line count is kept as a running
 /// total and the trim only runs when a cap is actually crossed, so an ordinary
 /// chunk costs its own length and nothing more. Re-scanning the whole 64 KiB
-/// buffer with `allMatches` on every chunk — which is what this replaces — is
+/// buffer with `allMatches` on every chunk, which is what this replaces, is
 /// quadratic work on the UI isolate for output nobody can read that fast.
 @visibleForTesting
 class TerminalTail {
@@ -317,7 +317,7 @@ class TerminalTail {
       lines--;
     }
     // The newline walk is a preference, not the cap. A stream carrying no
-    // `\n` at all left `cut` at zero and the buffer grew without bound — and
+    // `\n` at all left `cut` at zero and the buffer grew without bound, and
     // that is not only the hostile case: `docker compose pull` draws its
     // progress with `\r`. Whatever follows the last newline was equally
     // untrimmable once the caps were already met. The sibling implementation

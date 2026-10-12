@@ -2,7 +2,7 @@
 ///
 /// Seerr is the exception among the media services: its home leads with the
 /// **decisions**, then the work already under way, and the discover rails move
-/// down — approving is what the phone opens Seerr for, and the rails are the
+/// down: approving is what the phone opens Seerr for, and the rails are the
 /// reason the service exists rather than the reason the page is opened.
 ///
 /// Everything here is derived from the one request list the KPI rail already
@@ -169,7 +169,7 @@ const SeerrRowVoice _operatorVoice = (namesWho: true, showsProfile: true);
 /// The requests waiting on a human, shaped into rows.
 ///
 /// The filtering itself belongs to [seerrDecisionsProvider], which reads the
-/// request's OWN status and never `displayStatus` — the one trap on this
+/// request's OWN status and never `displayStatus`: the one trap on this
 /// service. This function only dresses what that provider already chose.
 List<SeerrOverviewRow> seerrDecisionRows(
   List<SeerrRequest> requests, {
@@ -184,7 +184,7 @@ List<SeerrOverviewRow> seerrDecisionRows(
 ///
 /// **This** one reads `displayStatus`, and that is correct here: the question
 /// is where the media is, not what the request needs from a person. The trap is
-/// in the other direction — a decisions list keyed off `displayStatus` silently
+/// in the other direction: a decisions list keyed off `displayStatus` silently
 /// drops the approvals for titles the library already holds.
 ///
 /// [StatusTone.info]: work in flight is informational, not a fault and not
@@ -215,7 +215,7 @@ SeerrOverviewSection seerrProcessingSection(
   }
 
   // Newest first, and an unparseable `createdAt` sorts last within the group
-  // rather than to the epoch — the same rule `sortRequestsPendingFirst` keeps,
+  // rather than to the epoch: the same rule `sortRequestsPendingFirst` keeps,
   // and for the same reason: an undated row planted at the bottom of a "newest
   // first" list reads as genuinely old.
   working.sort((a, b) {

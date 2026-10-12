@@ -2,18 +2,18 @@
 ///
 /// Under ADR-5, certificate pinning reached exactly two of fifteen services,
 /// and `SettingsModel.copyWithCertFingerprint` silently dropped a fingerprint
-/// for every other one — a trap for the day someone widened the gate without
+/// for every other one: a trap for the day someone widened the gate without
 /// making `ApiClient` pin-aware first. ADR-6 removed the gate: every service
-/// now reaches a pin-aware transport — `ApiClient`, one of the four
+/// now reaches a pin-aware transport: `ApiClient`, one of the four
 /// per-service `Dio` clients (qBittorrent, SABnzbd, NZBGet, Unraid), or its
-/// own WebSocket/Socket.IO client — and trust is keyed by TLS origin
+/// own WebSocket/Socket.IO client, and trust is keyed by TLS origin
 /// (`UrlUtils.certOrigin`) rather than by service. See ADR-6 in
 /// `context/decisions.md`.
 ///
 /// This file is the tripwire for *that* invariant instead: no service can be
 /// silently unpinnable, and two services sharing an origin must share one
 /// pin rather than diverging. If a change makes this file fail, the fix is
-/// almost never to carve a per-service exception back into `SettingsModel` —
+/// almost never to carve a per-service exception back into `SettingsModel`:
 /// check instead that whatever new construction site was added actually
 /// threads `pinForUrl`/a pinned adapter through, the way every existing one
 /// does.
@@ -48,7 +48,7 @@ void main() {
           fakeFingerprint,
           reason:
               '${service.name} could not round-trip a certificate pin. '
-              'Every service must be able to — trust is scoped to the TLS '
+              'Every service must be able to: trust is scoped to the TLS '
               'origin, not to a hand-picked list of services (ADR-6).',
         );
       }
@@ -73,7 +73,7 @@ void main() {
         fakeFingerprint,
         reason:
             'A certificate belongs to the host, not to one service reached '
-            'through it — trusting it for Radarr must also trust it for '
+            'through it: trusting it for Radarr must also trust it for '
             'Sonarr on the same origin (ADR-6).',
       );
       expect(
@@ -108,7 +108,7 @@ void main() {
         settings.pinForUrl(url),
         isNull,
         reason:
-            '"Forget" must remove the entry, not store an empty string — '
+            '"Forget" must remove the entry, not store an empty string; '
             'pinForUrl treats a missing key and an empty value the same, but '
             'only removal actually shrinks trustedCertificates, which is '
             'what lets an origin with nothing pinned stay absent from '
@@ -140,7 +140,7 @@ void main() {
         reason:
             'copyWithTrustedCertificate must be a no-op for a URL that '
             'cannot resolve to a TLS origin (UrlUtils.certOrigin returns '
-            'null for http://) — otherwise a garbage key with no matching '
+            'null for http://), otherwise a garbage key with no matching '
             'origin would sit in storage forever.',
       );
     });

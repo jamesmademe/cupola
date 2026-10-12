@@ -98,7 +98,7 @@ String? arrAuthorName(Map<String, dynamic> item) {
 /// records against `book` and `author` and against nothing else, so while they
 /// were missing every one of the other four lookups missed and this function
 /// answered null for *every* Readarr record. Its callers all fall back to
-/// [arrReleaseTitle] on null, which is the raw release string — so a Readarr
+/// [arrReleaseTitle] on null, which is the raw release string; so a Readarr
 /// queue row on the Dashboard read `Orbital.2023.RETAIL.EPUB-XYZ` while the
 /// row beside it from Radarr read `Dune`. One arm fixed every call site, and
 /// `readarr_overview_provider.dart` carries a local `readarrRecordTitle` whose
@@ -124,7 +124,7 @@ String? arrPrimaryMediaTitle(
 /// two of them into a single `bool`: a record the service marked `error` came out
 /// identical to one marked `warning`, so a definite failure and a passing notice
 /// were the same colour and the same weight on screen. [StatusTone] has had
-/// distinct `warning` and `error` all along — the information existed upstream
+/// distinct `warning` and `error` all along: the information existed upstream
 /// and was thrown away in the middle.
 enum ArrQueueSeverity { ok, warning, error }
 

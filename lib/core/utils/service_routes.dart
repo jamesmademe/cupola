@@ -24,8 +24,8 @@ class ServiceRoutes {
   static const requests = '/requests';
 
   /// Where the stack lived while it was the first tab, called Dashboard.
-  /// Every path under it rewrites onto [stack] in one hop — see the redirect
-  /// in `router.dart` — because a notification, a bookmark or a restored
+  /// Every path under it rewrites onto [stack] in one hop; see the redirect
+  /// in `router.dart`, because a notification, a bookmark or a restored
   /// session from before the move must not 404.
   static const legacyDashboard = '/dashboard';
 
@@ -51,7 +51,7 @@ class ServiceRoutes {
 
   /// The two the file was missing. Both services shipped with their callers
   /// building `'/services/transmission'` and `'/services/npm'` by hand, which
-  /// is how a single source of truth stops being one — and `npm` is precisely
+  /// is how a single source of truth stops being one, and `npm` is precisely
   /// the segment that is *not* derivable from the enum name, so a hand-built
   /// path is a spelling nobody checks.
   static const transmission = '$stack/transmission';
@@ -61,7 +61,7 @@ class ServiceRoutes {
   ///
   /// Every call site that wanted this built the path by hand instead, because
   /// there was nothing to call. Going through [ServiceKey.routeParam] keeps the
-  /// one irregular segment — Nginx Proxy Manager's `npm` — spelled in exactly
+  /// one irregular segment (Nginx Proxy Manager's `npm`) spelled in exactly
   /// one place.
   static String forService(ServiceKey service) =>
       '$stack/${service.routeParam}';
@@ -77,8 +77,8 @@ class ServiceRoutes {
   // the two blocks below are spelled out separately rather than factored into a
   // shared shape: the surfaces are written against `StreamServerClient` and take
   // the service as a parameter, but the tabs come from what each API can answer
-  // — Jellyfin has users, devices and scheduled tasks, Plex has an on-deck hub,
-  // its own activities and playlists — and a shared spelling would have to
+  // (Jellyfin has users, devices and scheduled tasks, Plex has an on-deck hub,
+  // its own activities and playlists), and a shared spelling would have to
   // invent a name one of them does not use.
   //
   // Both route shapes stay uniform in the way the arrs are not: a Jellyfin
@@ -88,7 +88,7 @@ class ServiceRoutes {
   static const jellyfinOverview = '$jellyfin/overview';
 
   /// The Libraries tab's root, **and** the base of one library's browse under
-  /// it — one constant because they are one address, the way
+  /// it; one constant because they are one address, the way
   /// [bazarrSeriesBase] is.
   ///
   /// This one **moved**: the browse was `/dashboard/jellyfin/library/:id`, a
@@ -96,7 +96,7 @@ class ServiceRoutes {
   /// old spelling still resolves; `router.dart` keeps a childless tail for it.
   static const jellyfinLibraries = '$jellyfin/libraries';
 
-  /// The item, inside the Libraries tab's branch — the same move Radarr's film
+  /// The item, inside the Libraries tab's branch: the same move Radarr's film
   /// made into Library, and for the same two reasons: a detail pushed *inside*
   /// its tab survives a switch away from the service, and the poster it flew
   /// from is still under it on one Navigator, so the Hero still flies.
@@ -120,7 +120,7 @@ class ServiceRoutes {
   static const plexItemBase = '$plexLibraries/item';
 
   /// `on-deck`, hyphenated, because that is how Plex writes it and the app does
-  /// not rename another product's furniture — `ServiceTab.onDeck.segment` is
+  /// not rename another product's furniture: `ServiceTab.onDeck.segment` is
   /// the one tab segment that is not simply its enum name.
   static const plexOnDeck = '$plex/on-deck';
   static const plexActivities = '$plex/activities';
@@ -145,7 +145,7 @@ class ServiceRoutes {
     return name.isEmpty ? route : _withQuery(route, {'title': name});
   }
 
-  /// One item at any depth of the tree — film, show, season or episode.
+  /// One item at any depth of the tree: film, show, season or episode.
   ///
   /// Jellyfin ids are GUIDs and a Plex `ratingKey` is documented as an opaque
   /// string that only *often* looks numeric, so neither can go through
@@ -202,8 +202,8 @@ class ServiceRoutes {
   // `const`, so nothing the analyzer sees ties a spelling to its tab. A test
   // does.
   //
-  // Seerr carried more pre-tab link shapes than any other service — three
-  // see-alls, a genre tree, two media details, a person and a collection — and
+  // Seerr carried more pre-tab link shapes than any other service: three
+  // see-alls, a genre tree, two media details, a person and a collection, and
   // **every one of them moved under `discover/`**, because Discover is the tab
   // that owns them: each is reached by tapping a row of the Discover page, and
   // a page pushed inside its own tab's branch survives a switch away from Seerr
@@ -213,7 +213,7 @@ class ServiceRoutes {
 
   /// Unchanged by the migration, and that is the point: the all-requests list
   /// was already a page at `/dashboard/seerr/requests`, which is exactly where
-  /// the Requests tab's root mounts — so every link that ever pointed at it
+  /// the Requests tab's root mounts, so every link that ever pointed at it
   /// still points at it, this time at a tab rather than at a pushed page.
   static const seerrRequests = '$seerr/requests';
   static const seerrIssues = '$seerr/issues';
@@ -278,7 +278,7 @@ class ServiceRoutes {
   static const sonarrOverview = '$sonarr/overview';
   static const sonarrLibrary = '$sonarr/library';
 
-  /// The show, inside the Library tab's branch — the same move as the film and
+  /// The show, inside the Library tab's branch: the same move as the film and
   /// for the same reason: a detail pushed *inside* its tab survives a switch
   /// away from Sonarr and keeps its Hero flight, because the list it flew from
   /// and the page it flew to share one Navigator.
@@ -300,9 +300,9 @@ class ServiceRoutes {
   // nothing the analyzer sees ties a spelling to its tab. A test does, one per
   // service.
   //
-  // The four do **not** share a bar the way the four \*arr do — qBittorrent has
+  // The four do **not** share a bar the way the four \*arr do; qBittorrent has
   // RSS where Transmission has Labels and Session, and the two Usenet clients
-  // carry History — so there is no shared list to factor out here. What they do
+  // carry History; so there is no shared list to factor out here. What they do
   // share is the shape: Overview first, the queue that was the whole service
   // second, and the job detail pushed inside that Queue branch.
   static const qbittorrentOverview = '$qbittorrent/overview';
@@ -346,8 +346,8 @@ class ServiceRoutes {
   //
   // Literals, like every other service's, and tied to their tabs by a test.
   //
-  // Bazarr is the one service whose bar names the record types themselves —
-  // Series and Movies, where the \*arr say Library — so the detail spelling is
+  // Bazarr is the one service whose bar names the record types themselves:
+  // Series and Movies, where the \*arr say Library; so the detail spelling is
   // `<tab>/:id` and not `<tab>/<record>/:id`: `series/series/42` would be a
   // stutter nobody would type. `bazarrSeriesBase` therefore needed no change at
   // all, which is the happiest case of the migration: every link that ever
@@ -358,7 +358,7 @@ class ServiceRoutes {
   static const bazarrHistory = '$bazarr/history';
   static const bazarrProviders = '$bazarr/providers';
 
-  /// The Series tab's root, **and** the base of the series detail under it —
+  /// The Series tab's root, **and** the base of the series detail under it:
   /// one constant because they are one address. Unchanged by the migration,
   /// which is the happiest case it had: every link that ever pointed at a
   /// Bazarr series still points at it, now at a page inside the Series tab's
@@ -387,7 +387,7 @@ class ServiceRoutes {
   static const prowlarrHistory = '$prowlarr/history';
   static const prowlarrStats = '$prowlarr/stats';
 
-  /// The indexer, inside the Indexers tab's branch — the same move the film
+  /// The indexer, inside the Indexers tab's branch: the same move the film
   /// made into Radarr's Library, and for the same reasons: a detail pushed
   /// *inside* its tab survives a switch away from Prowlarr, and the row it was
   /// pushed from is still under it on one Navigator.
@@ -398,7 +398,7 @@ class ServiceRoutes {
   /// field-driven page, and a fifth bar entry for a configuration screen is a
   /// bar entry nobody opens twice. It stays a page pushed from the service, so
   /// it hangs off the service node beside the shell rather than inside a
-  /// branch — no one tab owns it.
+  /// branch; no one tab owns it.
   static const prowlarrSettings = '$prowlarr/settings';
   static const prowlarrSyncProfiles = '$prowlarrSettings/sync-profiles';
   static const prowlarrTags = '$prowlarrSettings/tags';
@@ -416,7 +416,7 @@ class ServiceRoutes {
   // Literals, like the other three arrs, and tied to their tabs by a test.
   // `readarrLibrary` predates the model and needed no change: the author list
   // was already a page at `/dashboard/readarr/library`, which is exactly where
-  // the Library tab's root mounts — so every link that ever pointed at it still
+  // the Library tab's root mounts; so every link that ever pointed at it still
   // points at it, this time at a tab rather than at a pushed page.
   static const readarrOverview = '$readarr/overview';
   static const readarrLibrary = '$readarr/library';
@@ -432,8 +432,8 @@ class ServiceRoutes {
   // `ServiceTab.segment`. An earlier attempt at composing one shipped a path
   // containing a literal dollar sign that no analyzer could see.
   //
-  // Three services with nothing else in common — a Compose manager, a NAS and a
-  // reverse proxy — so there is no shared shape to factor out here and the
+  // Three services with nothing else in common: a Compose manager, a NAS and a
+  // reverse proxy; so there is no shared shape to factor out here and the
   // blocks below are spelled out one at a time. What they did share was being
   // **one page each**: every route below that is not a tab root used to hang off
   // the service root, because a one-page service had nowhere else to hang it.
@@ -441,7 +441,7 @@ class ServiceRoutes {
   static const dockgeStacks = '$dockge/stacks';
   static const dockgeTerminal = '$dockge/terminal';
 
-  /// The stack, inside the Stacks tab's branch — the move Radarr's film made
+  /// The stack, inside the Stacks tab's branch: the move Radarr's film made
   /// into Library, and for the same two reasons: a detail pushed *inside* its
   /// tab survives a switch away from Dockge and back, and the row it was pushed
   /// from is still under it on one Navigator.
@@ -464,7 +464,7 @@ class ServiceRoutes {
   static String dockgeStackEdit(String name) => '$dockgeStackBase/$name/edit';
 
   /// Unraid's six, and not one of them moved: the service shipped exactly one
-  /// path — its bare root — so there is no pre-tab spelling to keep resolving
+  /// path (its bare root), so there is no pre-tab spelling to keep resolving
   /// beyond that root, the way Transmission had none.
   static const unraidOverview = '$unraid/overview';
   static const unraidArray = '$unraid/array';
@@ -474,8 +474,8 @@ class ServiceRoutes {
   static const unraidShares = '$unraid/shares';
 
   /// Nginx Proxy Manager's five. Spelled `npm…` rather than
-  /// `nginxProxyManager…` because that is what the whole feature is called —
-  /// `NpmScreen`, `npmClientProvider`, `lib/features/npm/` — while
+  /// `nginxProxyManager…` because that is what the whole feature is called:
+  /// `NpmScreen`, `npmClientProvider`, `lib/features/npm/`, while
   /// [nginxProxyManager] keeps the product's full name because it is the one
   /// constant that *names the service*.
   ///
@@ -490,8 +490,8 @@ class ServiceRoutes {
 
   /// ## `i`: which connection a detail page belongs to
   ///
-  /// Every detail route below takes an optional `?i=<instanceId>`. Absent — the
-  /// shape every link in the app had before there could be two of a service —
+  /// Every detail route below takes an optional `?i=<instanceId>`. Absent, the
+  /// shape every link in the app had before there could be two of a service:
   /// means "whichever one this service is being read through", so nothing that
   /// does not care has to say anything.
   ///
@@ -501,7 +501,7 @@ class ServiceRoutes {
   /// accumulated down the tree and a new segment would have to be declared on
   /// every one of the descendants under it. It is also not `extra`: go_router
   /// replaces a non-JSON-encodable extra with null, silently, when it
-  /// serialises the match list for state restoration — a vector that survives
+  /// serialises the match list for state restoration: a vector that survives
   /// normal use and evaporates when the OS kills the app is the worst of the
   /// three options.
   static String radarrMovie(int id, {String? heroTag, String? instanceId}) {
@@ -691,9 +691,9 @@ class ServiceRoutes {
 
   /// App settings, and the per-service page under it.
   ///
-  /// Three widgets were interpolating the per-service settings path by hand —
+  /// Three widgets were interpolating the per-service settings path by hand:
   /// the not-configured leaf, the cross-service toast and the capability
-  /// toast — which is exactly the kind of string that survives a route rename
+  /// toast, which is exactly the kind of string that survives a route rename
   /// by silently 404ing in the one state nobody screenshots.
   static const settings = '/settings';
   static const settingsConnections = '$settings/connections';
@@ -721,12 +721,12 @@ class ServiceRoutes {
   ///
   /// One destination for one verb. The matrix cell and the not-set-up leaf
   /// sent the user to the connections list, a cross-service control's toast
-  /// to the form, and Streaming's empty state to the Dashboard — three places
+  /// to the form, and Streaming's empty state to the Dashboard: three places
   /// for the same tap. Every surface that says `Set up X` (the lexicon's
   /// `Lexicon.setUp`) navigates here, and nowhere else.
   static String setUp(ServiceKey service) => settingsFor(service);
 
-  /// The settings form of one saved connection of [service] — where a
+  /// The settings form of one saved connection of [service], where a
   /// too-narrow credential is replaced.
   ///
   /// Not [settingsFor]: a service can have two connections, and the fix for a

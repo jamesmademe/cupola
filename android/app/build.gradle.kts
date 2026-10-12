@@ -116,7 +116,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
     // For MainActivity.pruneFinishedWork, which drops WorkManager's stored copy
-    // of finished background searches — the arr API key travels in a job's
+    // of finished background searches. The arr API key travels in a job's
     // inputData and the plugin never prunes.
     //
     // background_downloader declares the same artifact, but as `implementation`,

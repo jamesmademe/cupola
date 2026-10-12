@@ -5,7 +5,7 @@
 /// that captured the client (and through it a `Dio`) could not be sent.
 ///
 /// Jellyfin describes a film, a series, a season, an episode, an album and a
-/// track with the *same* `BaseItemDto`, so one mapper covers every depth — the
+/// track with the *same* `BaseItemDto`, so one mapper covers every depth; the
 /// difference from the arr side that `StreamItem` was designed around.
 library;
 
@@ -55,12 +55,12 @@ StreamItemKind jellyfinItemKind(Object? rawType) {
 /// becomes part of `CachedNetworkImage`'s cache key.
 ///
 /// `?tag=` is carried along because Jellyfin's image route is otherwise
-/// indistinguishable across edits — replace a poster and every cache in the chain
+/// indistinguishable across edits: replace a poster and every cache in the chain
 /// keeps serving the old bytes from the identical URL. The tag is the server's own
 /// content hash, so it is both the correct cache key and free.
 ///
 /// **Order: the item's own art, then its parent's.** `Primary` first, then the
-/// other types the item actually has — an episode is routinely `Thumb`-only, and
+/// other types the item actually has: an episode is routinely `Thumb`-only, and
 /// asking for a `Primary` that does not exist 404s. Only when the item has no art
 /// at all does this fall back to `SeriesPrimaryImageTag` (or an album's parent),
 /// which is what keeps an episode list from rendering as a grid of grey
@@ -162,7 +162,7 @@ String? _itemSubtitle(Map<String, dynamic> item, StreamItemKind kind) {
 ///
 /// `PlaybackPositionTicks` is authoritative. `PlayedPercentage` is the fallback
 /// for the endpoints that summarise `UserData` without the tick field, and it is
-/// a **0–100** double — the one place in this feature where a value that looks
+/// a **0–100** double: the one place in this feature where a value that looks
 /// like a fraction is not one.
 int? _resumeOffsetMs(Map<String, dynamic> userData, Object? runtimeTicks) {
   final fromTicks = jellyfinMillisecondsFromTicks(
@@ -323,8 +323,8 @@ List<StreamItem> jellyfinStreamItemsFromJson(Object? raw) =>
 ///
 /// A hint carries **no `UserData`** at any `enableUserData` setting, so watch
 /// state is absent by construction: every hit maps to `isPlayed: false` with no
-/// resume point. That is a property of the endpoint and not a missing parameter
-/// — a search page that wants the watch mark has to re-read the item.
+/// resume point. That is a property of the endpoint, not a missing parameter:
+/// a search page that wants the watch mark has to re-read the item.
 StreamItem jellyfinSearchHintFromJson(Map<String, dynamic> hint) {
   final primaryTag = hint['PrimaryImageTag']?.toString();
   final thumbTag = hint['ThumbImageTag']?.toString();
@@ -378,14 +378,14 @@ StreamPlayMethod jellyfinPlayMethod(
   }
 }
 
-/// `Jellyfin Web · Chrome` — the client, then the device it runs on.
+/// `Jellyfin Web · Chrome`: the client, then the device it runs on.
 String _deviceLabel(Map<String, dynamic> session) {
   final client = session['Client']?.toString().trim() ?? '';
   final device = session['DeviceName']?.toString().trim() ?? '';
   if (client.isNotEmpty && device.isNotEmpty) return '$client · $device';
   if (client.isNotEmpty) return client;
   if (device.isNotEmpty) return device;
-  // `DeviceType` is the last resort — it is often null on third-party clients.
+  // `DeviceType` is the last resort; it is often null on third-party clients.
   return session['DeviceType']?.toString() ?? '';
 }
 
@@ -398,7 +398,7 @@ String _deviceLabel(Map<String, dynamic> session) {
 /// [mediaSourceId] is `PlayState.MediaSourceId` and is what makes this correct on
 /// a library that keeps more than one version of a film: `MediaSources` then holds
 /// both the 4K remux and the 1080p encode, and only one of them is on the wire.
-/// Picking the largest — or the first — would report a 60 Mbps remux for somebody
+/// Picking the largest, or the first, would report a 60 Mbps remux for somebody
 /// watching the 1080p file, on the one row the board exists to make trustworthy.
 /// The largest is still the fallback for the case where the id names no source we
 /// can see (a version deleted mid-playback, or a proxy that trimmed the array).
@@ -448,7 +448,7 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
 
   // A transcode reports the encoder's actual target, so that figure is real. Any
   // other method has no rate field at all and falls back to the source file's
-  // bitrate — nominal, and flagged as such so the board can never present it as
+  // bitrate: nominal, and flagged as such so the board can never present it as
   // measured throughput it does not have.
   final transcodeBitrate = transcoding == null
       ? null
@@ -461,7 +461,7 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
   final name = nowPlaying['Name']?.toString() ?? '';
   final seriesName = nowPlaying['SeriesName']?.toString() ?? '';
 
-  // For an episode the *series* is the headline and the episode is the detail —
+  // For an episode the *series* is the headline and the episode is the detail:
   // the opposite of `StreamItem`, and what makes a session row readable at a
   // glance. See `StreamSession.title`.
   final isEpisode = kind == StreamItemKind.episode && seriesName.isNotEmpty;
@@ -479,8 +479,8 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
     posterPath: jellyfinPosterPath(nowPlaying),
     playMethod: playMethod,
     // A direct stream has reasons too, and dropping them was the bug: Jellyfin
-    // remuxes *because of something* — an unsupported container, an external
-    // subtitle track — and reports it in the same `TranscodeReasons` array. The
+    // remuxes *because of something* (an unsupported container, an external
+    // subtitle track), and reports it in the same `TranscodeReasons` array. The
     // model says so at `StreamSession.transcodeReasons`, and Plex has always
     // passed its decisions through unconditionally, so the byte-identical
     // session explained itself on one server and not the other.
@@ -510,7 +510,7 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
 ///
 /// "Most expensive" is the enum's own order (transcode → direct stream → direct
 /// play), then bitrate, then the viewer's name so the list is stable between
-/// polls — `List.sort` is not stable, and a board that reshuffled two identical
+/// polls: `List.sort` is not stable, and a board that reshuffled two identical
 /// transcodes every three seconds would look broken.
 List<StreamSession> jellyfinStreamSessionsFromJson(Object? raw) {
   if (raw is! List) return const [];

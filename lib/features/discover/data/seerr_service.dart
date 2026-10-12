@@ -35,7 +35,7 @@ typedef _RequestTitle = ({
 /// Worth a type of its own because it is not an error on our side: the same
 /// request approved from the web UI a moment earlier, or deleted outright.
 /// Seerr answers 404 or 409, and the honest response is to say the state moved
-/// and reload — not to report a transport failure for something that already
+/// and reload, not to report a transport failure for something that already
 /// succeeded, by someone else.
 ///
 /// It is not the only way a write fails. A 403 is three different refusals:
@@ -110,7 +110,7 @@ class SeerrRequestList extends ListBase<SeerrRequest> {
 /// Same number and the same reasoning as the qBittorrent torrent parse and the
 /// Jellyfin item mapper: below it the isolate spawn costs more than the mapping
 /// does. Discover pages are TMDB-shaped and hold twenty rows, so in practice
-/// they map here — the gate exists for a server that answers with more.
+/// they map here; the gate exists for a server that answers with more.
 const int _seerrIsolateMapThreshold = 200;
 
 /// Maps a decoded discover page, moving to an isolate once it is big enough to
@@ -118,8 +118,8 @@ const int _seerrIsolateMapThreshold = 200;
 ///
 /// Top-level rather than a method on purpose: the closure handed to
 /// `Isolate.run` must capture only sendable values (here a decoded list and a
-/// `String?`), and one written inside an instance method can drag `this` —
-/// which holds an [ApiClient] — across the boundary.
+/// `String?`), and one written inside an instance method can drag `this`,
+/// which holds an [ApiClient], across the boundary.
 Future<List<MediaPreview>> _mapPreviews(
   List<dynamic> results,
   String? forcedMediaType,
@@ -142,7 +142,7 @@ final seerrServiceProvider = Provider<SeerrService>((ref) {
 
 /// Seerr bound to one named connection, whatever the lens is pointing at.
 ///
-/// The same shape — and for the same reasons — as `radarrServiceForProvider`;
+/// The same shape, and for the same reasons, as `radarrServiceForProvider`;
 /// read its comment before touching this one. What it buys here is /activity:
 /// the feed lists the requests of every configured Seerr, and a request id is
 /// **per instance**, so approving id 42 through the lens approves a different
@@ -150,13 +150,13 @@ final seerrServiceProvider = Provider<SeerrService>((ref) {
 ///
 /// Empty id means the lens, which is what the plain [seerrServiceProvider]
 /// answers. The lens's own id collapses onto that provider too, rather than
-/// opening a second `Dio` at the same address — and, just as load-bearing, so
+/// opening a second `Dio` at the same address, and, just as load-bearing, so
 /// that an override of the plain provider (how the whole suite supplies a fake
 /// Seerr) is not quietly bypassed on the path that names a connection.
 ///
 /// `read` of the lens, deliberately: watching it would rebuild every entry of
-/// this family whenever the lens moved — entries for connections that did not
-/// change — and `watchApiClient` closes the outgoing client on dispose, which
+/// this family whenever the lens moved, entries for connections that did not
+/// change, and `watchApiClient` closes the outgoing client on dispose, which
 /// would cut a request already in flight. The cost is that an entry minted
 /// before the lens landed on its id keeps a client of its own until disposal.
 ///
@@ -212,7 +212,7 @@ class SeerrService {
   /// id, since a movie and a series can share the number.
   ///
   /// Without this every refresh re-fetched the details of the same unknown
-  /// titles from Seerr's TMDB passthrough — the list only grows, so a refresh
+  /// titles from Seerr's TMDB passthrough: the list only grows, so a refresh
   /// that ran N calls ran N calls every time.
   final Map<String, _RequestTitle> _mediaCache = {};
 
@@ -279,7 +279,7 @@ class SeerrService {
   /// Reads every admin page while preserving the distinction between a complete
   /// empty list and a first page followed by a failed later page.
   ///
-  /// The first page is awaited alone because it carries `pageInfo.results` —
+  /// The first page is awaited alone because it carries `pageInfo.results`:
   /// there is no way to know how many pages exist before asking for one. Once
   /// that number is in hand the rest are **fetched together**: the old serial
   /// loop turned a 500-user server into ten round trips in single file for no
@@ -299,7 +299,7 @@ class SeerrService {
   /// A later page that fails does not take the rows already in hand with it,
   /// but it does set [SeerrAdminResult.isPartial]: the caller must keep the
   /// rows and must not present them as the whole list. `eagerError: false` is
-  /// the point of `Future.wait` here — every page is observed, so one refusal
+  /// the point of `Future.wait` here: every page is observed, so one refusal
   /// cannot leave the others as unhandled errors.
   Future<SeerrAdminResult<T>> _collect<T>(
     ({List<T> items, int total}) first,
@@ -409,7 +409,7 @@ class SeerrService {
   /// **Throws when the first page does not come back**, and that is the
   /// contract rather than an oversight. This used to wrap the whole load in
   /// `catch (e) { return []; }`, so a Seerr that was unreachable and a Seerr
-  /// with no requests produced byte-identical output — and no caller could tell
+  /// with no requests produced byte-identical output, and no caller could tell
   /// them apart, least of all /activity, which now lists several Seerrs at once
   /// and has to say which of them did not answer. A *later* page failing is
   /// still absorbed by [_requestPageSafely]: the pages that arrived are real,
@@ -557,7 +557,7 @@ class SeerrService {
     return (items: items, total: total);
   }
 
-  /// A later page failing must not blank the requests that did arrive — the
+  /// A later page failing must not blank the requests that did arrive; the
   /// caller gets the pages that answered and moves on. Null for a page that
   /// did not, so the caller can say the list is short; it used to come back
   /// as an empty page, which nothing could tell from the end of the list.
@@ -884,8 +884,8 @@ class SeerrService {
     return type != 'person';
   }
 
-  /// The `results` array of a Seerr list response, or a [FormatException] —
-  /// an answer nobody can read — when the body is not one.
+  /// The `results` array of a Seerr list response, or a [FormatException],
+  /// an answer nobody can read, when the body is not one.
   static List<dynamic> _resultsOf(Object? data) {
     final results = data is Map ? data['results'] : null;
     if (results is List) return results;
@@ -997,7 +997,7 @@ class SeerrService {
   ///
   /// **Throws for every other failure.** It used to answer all of them with
   /// `{}`, so a Seerr that did not answer read "Seerr answered, but it has
-  /// nothing filed under this collection" — an answer nobody gave.
+  /// nothing filed under this collection", an answer nobody gave.
   Future<Map<String, dynamic>> getCollection(int collectionId) async {
     try {
       final response = await _client.get('/api/v1/collection/$collectionId');
@@ -1125,7 +1125,7 @@ class SeerrService {
   /// answered with none; a failure throws.
   ///
   /// It used to answer every failure with `[]`, so the request sheet said "no
-  /// Radarr servers" — in red — about a Seerr that had not answered at all.
+  /// Radarr servers" in red, about a Seerr that had not answered at all.
   Future<List<Map<String, dynamic>>> getRadarrServers() =>
       _servers('/api/v1/service/radarr');
 

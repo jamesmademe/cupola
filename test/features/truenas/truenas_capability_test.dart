@@ -185,7 +185,7 @@ void main() {
     });
   });
 
-  group('service.* — the in-body check', () {
+  group('service.*: the in-body check', () {
     test('the matching sharing role changes its service only', () {
       final grant = trueNasGrantFor(
         {'SHARING_SMB_WRITE'},

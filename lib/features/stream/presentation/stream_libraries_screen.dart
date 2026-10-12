@@ -20,7 +20,7 @@ import 'package:cupola/features/stream/presentation/stream_overview_provider.dar
 ///
 /// One screen for both Jellyfin and Plex, like every other Stream surface: it is
 /// written against `StreamServerClient`, so the only per-service input is the
-/// [service] key. Two services, one family, two different bars — the difference
+/// [service] key. Two services, one family, two different bars: the difference
 /// lives in `tabsFor`, not here.
 ///
 /// **Entering the collection through a room rather than through a global title
@@ -38,7 +38,7 @@ import 'package:cupola/features/stream/presentation/stream_overview_provider.dar
 /// **No per-library item count, and that absence is honest rather than lazy.**
 /// Both servers can answer a count only as its own request per library
 /// (`/Items?limit=0`, `X-Plex-Container-Size=0`), and the design puts that cost
-/// here rather than on the Overview — but nothing calls
+/// here rather than on the Overview, but nothing calls
 /// `StreamServerClient.getLibraryItemCount` yet, so the card says what the one
 /// `getLibraries` response actually contains. A fabricated zero is the one thing
 /// it must not say.
@@ -144,14 +144,14 @@ class _LibrariesBody extends ConsumerWidget {
   }
 }
 
-/// The libraries, as destinations — and as a count of *rooms*, never of what is
+/// The libraries, as destinations, and as a count of *rooms*, never of what is
 /// in them.
 ///
 /// Decision 21: a per-library item count is its own round trip on both servers
 /// (`/Items?limit=0`, `X-Plex-Container-Size=0`), so six libraries would be six
 /// extra requests on every load. What one `getLibraries` response can say for
 /// free is how many rooms there are and which one is scanning, and that is what
-/// this draws. The count itself is still unbuilt — see the class comment on
+/// this draws. The count itself is still unbuilt; see the class comment on
 /// [StreamLibrariesScreen].
 class _LibrariesSection extends ConsumerWidget {
   const _LibrariesSection({required this.service, required this.libraries});
@@ -169,7 +169,7 @@ class _LibrariesSection extends ConsumerWidget {
           child: SectionHeader(
             title: 'Libraries',
             // Null until the list lands, so the header never prints "0
-            // libraries" over a region that is still loading — a figure whose
+            // libraries" over a region that is still loading. A figure whose
             // source has not answered is not zero. A list that failed with
             // nothing retained says so with an em dash; a retained one keeps
             // the census of the rows still drawn under the fault band.
@@ -229,7 +229,7 @@ class _LibrariesSection extends ConsumerWidget {
 ///
 /// Entering the collection through a *room on the server* rather than through a
 /// global title list is what keeps the Stream browse from reading as a second copy
-/// of Radarr's library — see `StreamLibraryLens` and the idle-month test.
+/// of Radarr's library; see `StreamLibraryLens` and the idle-month test.
 class _LibraryRow extends StatelessWidget {
   const _LibraryRow({required this.service, required this.library});
 
@@ -245,7 +245,7 @@ class _LibraryRow extends StatelessWidget {
 
     return AppCard.filled(
       // A library row is a full-width card with plenty of surface, so the ink
-      // ripple still reads as a touch spreading rather than as a selection — the
+      // ripple still reads as a touch spreading rather than as a selection: the
       // Ripple-Needs-Room Rule's threshold is not crossed here.
       onTap: () => context.push(route),
       semanticLabel: library.name,
@@ -308,7 +308,7 @@ class _LibraryRow extends StatelessWidget {
   /// The line under the library name.
   ///
   /// Composed from whatever the server actually said. Jellyfin exposes no
-  /// per-library scan timestamp — only a global scheduled task — so the scan half
+  /// per-library scan timestamp, only a global scheduled task, so the scan half
   /// is simply absent there rather than printed as "unknown", which would imply
   /// the server was asked and declined.
   ///

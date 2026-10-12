@@ -113,8 +113,8 @@ void main() {
 
     // Replaces "does not select a tab for unmatched shell routes". There is no
     // such thing any more: every route inside the shell belongs to a branch by
-    // construction, and a page with no tab of its own — the manual-import flow,
-    // the activity drill-down — is a route above the shell, which the bar is not
+    // construction, and a page with no tab of its own (the manual-import flow,
+    // the activity drill-down) is a route above the shell, which the bar is not
     // part of at all.
     testWidgets('a route outside the shell has no nav bar to select in', (
       tester,
@@ -223,7 +223,7 @@ void main() {
 
       // Still one: this is the whole performance claim. A return costs no
       // construction, and everything the page had subscribed to stayed
-      // subscribed — the 26 provider fetches a rebuilt first page used to
+      // subscribed: the 26 provider fetches a rebuilt first page used to
       // re-run never happen.
       expect(_ProbePage.mounts['HomePage'], 1);
       expect(_ProbePage.mounts['DiscoverPage'], 1);
@@ -302,8 +302,8 @@ void main() {
     testWidgets('re-tapping the active Stack tab announces the refresh', (
       tester,
     ) async {
-      // A re-tap refresh changes nothing on screen — no spinner, no route
-      // change — so without this the tap is indistinguishable from a no-op for a
+      // A re-tap refresh changes nothing on screen: no spinner, no route
+      // change, so without this the tap is indistinguishable from a no-op for a
       // screen-reader user.
       final announcements = SemanticsAnnouncementRecorder.install(tester);
       final harness = await _pumpShell(tester, initialLocation: '/stack');
@@ -443,7 +443,7 @@ void main() {
       tester,
     ) async {
       // The badge is the channel that has to keep working when notifications
-      // are denied, off, or missed — and the rail was the one surface where it
+      // are denied, off, or missed, and the rail was the one surface where it
       // never appeared, because it built its destinations itself.
       await _pumpShell(
         tester,
@@ -462,7 +462,7 @@ void main() {
         findsOneWidget,
       );
       // A number painted on an icon is invisible to a screen reader, so it has
-      // to reach the spoken label too — the same string the bottom bar speaks.
+      // to reach the spoken label too: the same string the bottom bar speaks.
       final labels = [
         for (final node in tester.widgetList<Semantics>(
           find.descendant(
@@ -493,7 +493,7 @@ void main() {
 
   // The Portal closes when what sits under its card moves. The route half of
   // that has always worked; the lens half is what multi-instance added, and it
-  // is invisible to a path comparison — which is exactly how it would have
+  // is invisible to a path comparison, which is exactly how it would have
   // shipped.
   group('the Portal and the lens', () {
     testWidgets('moving a lens closes the Portal over the stale page', (
@@ -515,7 +515,7 @@ void main() {
         reason: 'the floor is only in the tree while the Portal is open',
       );
 
-      // No navigation at all — the same thing the picker cell does after
+      // No navigation at all: the same thing the picker cell does after
       // `go` resolves to the path it is already on.
       await harness.container
           .read(activeInstancesProvider.notifier)
@@ -557,7 +557,7 @@ void main() {
       expect(find.byType(ServiceMatrix), findsOneWidget);
     });
 
-    // The hook above is REACTIVE — it closes because the content under the card
+    // The hook above is REACTIVE: it closes because the content under the card
     // moved. A tap on the cell the lens already points at, from the page that
     // cell leads to, moves neither the path nor the lens, so nothing reacted
     // and the Portal sat there over a snapshot looking broken. Closing on the
@@ -575,7 +575,7 @@ void main() {
 
       // The lens is PARKED on the first connection, not merely defaulting to
       // it. Without this the map has no entry for Radarr, `select` writes one,
-      // and the hook below closes the Portal on a lens that did move — which
+      // and the hook below closes the Portal on a lens that did move, which
       // is how a green test would have covered a defect the device reproduces
       // at will.
       await harness.container
@@ -616,7 +616,7 @@ void main() {
     ) async {
       // The counterweight to the fix: with the cell closing on the act AND the
       // hook closing on the lens moving, the same close must not be started
-      // twice — a second spring launched from the first one's current value
+      // twice: a second spring launched from the first one's current value
       // with no velocity is a visible hitch.
       final harness = await _pumpShell(
         tester,
@@ -642,7 +642,7 @@ void main() {
 
   // Back over an open Portal means "put the page back". It used to reach the
   // branch navigator first, which popped the room under the card and left the
-  // Portal to be closed by the route hook a frame later — over a page the user
+  // Portal to be closed by the route hook a frame later, over a page the user
   // never chose to leave.
   group('the Portal and back', () {
     testWidgets('system back closes the Portal and leaves the room alone', (
@@ -791,7 +791,7 @@ void main() {
   });
 
   // A screen reader cannot drag, so the drag is off under one and the tab bar
-  // carries the Portal as an action instead. Opening it — either way — says
+  // carries the Portal as an action instead. Opening it, either way, says
   // once what the floor holds.
   group('the Portal without the gesture', () {
     testWidgets('the Stack tab carries an action that opens it', (
@@ -814,7 +814,7 @@ void main() {
       );
       // The Stack, where the services are, has already asked every
       // connection. Without that the sentence says what is true at that
-      // moment — "2 checking" — which the sentence's own test covers.
+      // moment, "2 checking", which the sentence's own test covers.
       harness.container.listen(portalFloorCensusProvider, (_, _) {});
       await tester.pumpAndSettle();
 
@@ -964,8 +964,8 @@ void main() {
       // The bounce is under way: the page has begun to recede.
       await tester.pump(const Duration(milliseconds: 120));
       expect(find.byType(ServiceMatrix), findsOneWidget);
-      // The lift ends, then the hold — a timer, which settling alone does not
-      // run — then the release settles.
+      // The lift ends, then the hold: a timer, which settling alone does not
+      // run, then the release settles.
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pumpAndSettle();
@@ -1055,7 +1055,7 @@ void main() {
     testWidgets('a close already under way is not restarted', (tester) async {
       // Two identical closes, one interrupted halfway by a second request. A
       // restarted spring throws away the velocity it had built, so it is
-      // measurably further from home at the same instant — which on the device
+      // measurably further from home at the same instant, which on the device
       // is the hitch the user sees.
       Future<double> valueAfter({required bool closeTwice}) async {
         final controller = ServicePortalController(vsync: const TestVSync());
@@ -1209,7 +1209,7 @@ Future<void> _sendLifecycle(
 ///
 /// The point of four navigators is that leaving a tab no longer destroys it, and
 /// "was it destroyed?" is not a question a `Text` can answer. Each mount is one
-/// full construction of the page — the cost this migration exists to stop
+/// full construction of the page, the cost this migration exists to stop
 /// paying, and the moment every provider the page watches would be re-read.
 class _ProbePage extends StatefulWidget {
   const _ProbePage(this.label);
@@ -1261,7 +1261,7 @@ Future<_ShellHarness> _pumpShell(
   // Mirrors production's shape, because that shape is what the shell now reads:
   // six branches in `NavTab` order, each with its own navigator key, behind the
   // real cross-fade container. `/outside` sits at ROOT, where the manual-import
-  // flow and the activity drill-down live — a route with no tab of its own is
+  // flow and the activity drill-down live: a route with no tab of its own is
   // now a route outside the shell, not an unmatched route inside it.
   final router = GoRouter(
     initialLocation: initialLocation,

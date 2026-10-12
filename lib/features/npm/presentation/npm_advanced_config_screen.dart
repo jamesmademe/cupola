@@ -16,14 +16,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// NPM writes this text verbatim into the host's `server` section and reloads
 /// nginx. If it does not parse, **the hostname stops answering** and stays down
-/// until someone comes back and fixes it — and Cupola cannot warn first, because
+/// until someone comes back and fixes it, and Cupola cannot warn first, because
 /// it does not parse Nginx. Three things follow, and all three are drawn:
 ///
 ///  * the save asks for the **domain typed back**, not a tap. The domain is the
 ///    one word muscle memory cannot supply, and on a phone the thing that
 ///    actually goes wrong is editing the host you did not mean to open;
-///  * the only undo is the text this editor opened with — NPM keeps one block
-///    per host and no history — so that copy is held for the session and
+///  * the only undo is the text this editor opened with: NPM keeps one block
+///    per host and no history, so that copy is held for the session and
 ///    offered as *Revert*;
 ///  * whatever nginx says afterwards is printed **exactly as it came**
 ///    (`nginx: [emerg] unknown directive …`), because it names the directive
@@ -32,7 +32,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Pushed rather than routed: `lib/core/router.dart` has no NPM children at all
 /// (the whole service is one page), and adding the route belongs to the tab-model
-/// slice. See the unit report — this is the one deviation from "detail routes
+/// slice. See the unit report: this is the one deviation from "detail routes
 /// resolve from path params alone".
 class NpmAdvancedConfigScreen extends ConsumerStatefulWidget {
   const NpmAdvancedConfigScreen({super.key, required this.host});
@@ -108,8 +108,8 @@ class _NpmAdvancedConfigScreenState
       _nginxError = '';
     });
 
-    // Save and reload are one call — there is no separate reload endpoint and
-    // no dry run — so the toast can only report that the write was accepted.
+    // Save and reload are one call; there is no separate reload endpoint and
+    // no dry run, so the toast can only report that the write was accepted.
     // Whether nginx *loaded* it is the re-read below.
     NpmProxyHost? after;
     final ok = await runNpmAction(
@@ -189,8 +189,8 @@ class _NpmAdvancedConfigScreenState
           keyboardType: TextInputType.multiline,
           // `.mono` rather than the `'monospace'` family alias, which
           // resolves to nothing on iOS and macOS. An Nginx block is read in
-          // columns — an indented `location` body is the shape of the
-          // thing — so the face is load-bearing, not decorative.
+          // columns, an indented `location` body is the shape of the
+          // thing, so the face is load-bearing, not decorative.
           style: theme.textTheme.bodySmall!.mono.copyWith(
             color: colorScheme.onSurface,
           ),
@@ -241,7 +241,7 @@ class _NpmAdvancedConfigScreenState
             const SizedBox(width: AppSpacing.md),
             Expanded(
               // Gated on the account's scope, and still `null` while there
-              // is nothing to save — that is a different reason, and the
+              // is nothing to save. That is a different reason, and the
               // capability is never expressed as `null`.
               child: CapabilityGatedAction.builder(
                 service: ServiceKey.nginxProxyManager,

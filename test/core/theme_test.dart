@@ -50,7 +50,7 @@ void main() {
       expect(theme.colorScheme.primary, theme.colorScheme.onSurface);
       // `onSurfaceVariant` used to be pinned here to `#5A6273`. It moved to
       // `#4B5563`, because the old value was spaced against `surface` alone and
-      // measured 4.82:1 on `surfaceContainerHighest` — which is the chip fill
+      // measured 4.82:1 on `surfaceContainerHighest`, which is the chip fill
       // and the input fill, both of which paint this exact token as their
       // label. The hex is no longer asserted anywhere: a byte is not the rule,
       // and pinning one here is what let the real rule go unchecked. See
@@ -135,7 +135,7 @@ void main() {
     // secondary and tertiary text was below WCAG AA on every light screen.
     group('contrast', () {
       // `theme.dart` cannot call `ServiceTheme.foregroundOn` without importing a
-      // feature file, so the four scheme inks are constants — and this is what
+      // feature file, so the four scheme inks are constants, and this is what
       // stops a constant from being the wrong answer. Every filled control in
       // the app paints its label in one of these pairs.
       test('every filled scheme pair takes the ink that measures better', () {

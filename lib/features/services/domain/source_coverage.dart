@@ -14,14 +14,14 @@
 /// answered, which failed and why, and which have not said yet. The figure
 /// rule follows from that and nothing else:
 ///
-///  * every source failed — the figure reads `—` ([coveredFigure]);
-///  * some failed — the figure is the total over the rest, and the line under
+///  * every source failed: the figure reads `—` ([coveredFigure]);
+///  * some failed: the figure is the total over the rest, and the line under
 ///    it names what is not in it ([coverageNote]);
 ///  * one answered with only part of itself ([SourceCoverage.cutShort]: a
 ///    queue walk that stopped on a full page with no total, a history page
-///    that came back full) — the figure is a floor, `200+`, and there is
+///    that came back full), the figure is a floor, `200+`, and there is
 ///    nobody to name;
-///  * none failed — the figure is the total.
+///  * none failed: the figure is the total.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -92,7 +92,7 @@ class SourceCoverage {
   /// No source at all: nothing configured feeds the merge.
   static const none = SourceCoverage();
 
-  /// [service] answered the read — with only part of what it holds when
+  /// [service] answered the read: with only part of what it holds when
   /// [cutShort], which takes the figure to a floor. [instanceId] and [name]
   /// say which connection, for a service with more than one.
   factory SourceCoverage.answeredBy(
@@ -132,7 +132,7 @@ class SourceCoverage {
 
   /// The coverage of several reads taken together.
   ///
-  /// A connection read more than once — Radarr's queue and Radarr's history —
+  /// A connection read more than once (Radarr's queue and Radarr's history)
   /// is only answered when every one of its reads answered: one that failed
   /// takes its share out of the total, and one still out has not finished
   /// saying. Failed outranks pending, which outranks answered. Two connections
@@ -207,7 +207,7 @@ class SourceCoverage {
   bool get everySourceFailed =>
       answered.isEmpty && pending.isEmpty && failed.isNotEmpty;
 
-  /// Whether any failed source did not answer at all — the one failure red is
+  /// Whether any failed source did not answer at all: the one failure red is
   /// spent on. A line naming several takes red when one of them is silent.
   bool get anyDidNotAnswer => failed.values.any(failureDidNotAnswer);
 
@@ -258,7 +258,7 @@ String spokenCountPhrase(String phrase) {
 }
 
 /// The line under a total that leaves a source out: `Not in the total:
-/// Lidarr, SABnzbd, qBittorrent`, or null when nothing is missing — or when
+/// Lidarr, SABnzbd, qBittorrent`, or null when nothing is missing, or when
 /// nothing answered, which has no total to qualify and says
 /// [coverageFailureSentence] instead.
 ///
@@ -304,8 +304,8 @@ String? coverageNote(SourceCoverage coverage) {
 const _namesPerKind = 2;
 
 /// What a region says when every one of its sources failed, in place of
-/// anything it would have shown: `Radarr and Sonarr did not answer.` — and,
-/// for one that answered with a refusal, its own fault sentence: `qBittorrent
+/// anything it would have shown: `Radarr and Sonarr did not answer.` And for
+/// one that answered with a refusal, its own fault sentence: `qBittorrent
 /// answered but refused the sign-in.`
 ///
 /// The sources that did not answer share the alert band's sentence so the two

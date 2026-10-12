@@ -6,7 +6,7 @@
 ///
 ///     flutter test --tags catalog --run-skipped
 ///
-/// writes `build/design_catalog/<Card>/<platform>.<theme>.png` — one sheet per
+/// writes `build/design_catalog/<Card>/<platform>.<theme>.png`, one sheet per
 /// platform the scenes ask for, in dark and light, at twice logical size. The
 /// catalog asserts nothing: its job is to show what the code draws, so that a
 /// reader never has to trust a re-drawing of it. Its one guarantee is that it
@@ -24,13 +24,13 @@
 /// not across hosts, which is why the images are built, not committed.
 ///
 /// What a sheet cannot show, and how the cards deal with it:
-/// - a modal opened on the root navigator — open it on a scene-local
+/// - a modal opened on the root navigator: open it on a scene-local
 ///   `Navigator`, or draw its public parts; otherwise the README describes it;
 /// - hover, and any other pointer-only state;
-/// - a frame in the middle of a motion — the sheet is pumped in 400ms steps,
+/// - a frame in the middle of a motion: the sheet is pumped in 400ms steps,
 ///   so it lands before or after; motion has its own cards in
 ///   `design/system/motion/`;
-/// - a provider that arms a timer (a reachability probe, a poll) — override it
+/// - a provider that arms a timer (a reachability probe, a poll): override it
 ///   with a settled or never-completing future, or the pending timer fails the
 ///   test.
 library;
@@ -58,7 +58,7 @@ import 'package:cupola/core/theme.dart';
 const catalogOutput = 'build/design_catalog';
 
 /// The platforms a sheet can be drawn for. The platform is global to a render
-/// — it decides visual density, the padded tap target and the desktop shell —
+/// (it decides visual density, the padded tap target and the desktop shell),
 /// so scenes that differ in platform land on different sheets.
 enum CatalogPlatform {
   /// iOS: the phone the app is used on most. Padded 48dp tap targets,
@@ -84,7 +84,7 @@ class CatalogScene {
     this.textScale = 1,
   });
 
-  /// What the scene shows — the constructor or variant, and the state. Written
+  /// What the scene shows: the constructor or variant, and the state. Written
   /// for a reader who has the README beside it.
   final String caption;
 
@@ -100,7 +100,7 @@ class CatalogScene {
 
   /// Provider overrides for this scene alone. A scene that has any gets a
   /// container of its own, built from the card's overrides and then these, so
-  /// providers derived from an overridden one see the override too — a nested
+  /// providers derived from an overridden one see the override too. A nested
   /// `ProviderScope` would replace only the providers it names.
   final List<Override> overrides;
 
@@ -213,9 +213,9 @@ Future<void> _loadFonts() async {
   await _loadMonoFaces();
 }
 
-/// Every family ends its fallbacks on platform faces the app does not bundle —
+/// Every family ends its fallbacks on platform faces the app does not bundle:
 /// Apple Symbols for the modifier glyphs (⌘ ⌥) no bundled face has, then the
-/// mono faces — so a widget test would draw those glyphs as boxes. On a Mac
+/// mono faces, so a widget test would draw those glyphs as boxes. On a Mac
 /// the sheet borrows the system's: Apple Symbols under its own name and under
 /// `SF Mono`, SF Mono under `Menlo`. Elsewhere the faces are simply missing.
 Future<void> _loadMonoFaces() async {
@@ -237,7 +237,7 @@ Future<void> _loadMonoFaces() async {
 /// Declares one card: a test per platform its scenes use, each writing a dark
 /// and a light sheet.
 ///
-/// [overrides] builds the provider overrides every scene shares — typically
+/// [overrides] builds the provider overrides every scene shares, typically
 /// `settingsScopeOverrides(...)` from `test_helpers`. [width] is the sheet's
 /// logical width; scenes wider than it minus the 24pt margin are clipped.
 void catalogCard(

@@ -12,7 +12,7 @@ class TrueNasVirtApi extends TrueNasApiBase {
   /// Instances of a given [type] (`CONTAINER` or `VM`).
   ///
   /// Incus only. This used to union `virt.instance.query` with `vm.query`, the
-  /// legacy KVM subsystem, because a server can carry VMs from both — but the
+  /// legacy KVM subsystem, because a server can carry VMs from both, but the
   /// two are not interchangeable: a legacy VM has a numeric id, needs the
   /// `vm.*` RPCs for every lifecycle call, and exists whether or not Incus has
   /// a storage pool, which is why the VM door had to bypass the readiness gate

@@ -15,8 +15,8 @@ import 'package:cupola/features/transmission/presentation/widgets/transmission_t
 
 /// The first tab of Transmission's service home.
 ///
-/// Overview alone carries the identity block and the readouts — Queue, Labels
-/// and Session are each a view of one kind of record — and then four regions in
+/// Overview alone carries the identity block and the readouts; Queue, Labels
+/// and Session are each a view of one kind of record, and then four regions in
 /// the order the board draws them: what is moving, how it is filed, how the
 /// daemon is configured, what landed today.
 ///
@@ -28,8 +28,8 @@ import 'package:cupola/features/transmission/presentation/widgets/transmission_t
 /// Regions load and fail independently, which is the design's SECTION failure
 /// level. Here that independence is nearly free: three of the four regions are
 /// projections of the same `torrent-get`, so they succeed and fail together by
-/// construction, and only Session — the one built on `session-get` plus
-/// `free-space` — can be the odd one out. That is the shape worth having: a
+/// construction, and only Session, the one built on `session-get` plus
+/// `free-space`, can be the odd one out. That is the shape worth having: a
 /// daemon that lists its torrents but will not report its own free space still
 /// draws three full regions.
 class TransmissionOverviewScreen extends ConsumerWidget {
@@ -41,7 +41,7 @@ class TransmissionOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -53,7 +53,7 @@ class TransmissionOverviewScreen extends ConsumerWidget {
     // Asked **before** any provider is watched, and that ordering is the whole
     // point: `transmissionClientProvider` throws "Transmission not configured",
     // so letting a section's `AsyncValueWidget` catch it would paint the same
-    // pixels while leaving four *failed* providers behind — each scheduling a
+    // pixels while leaving four *failed* providers behind, each scheduling a
     // retry with backoff for a condition no amount of waiting changes, and each
     // surfacing in a widget test as a pending timer.
     final configured = ref.watch(
@@ -147,8 +147,8 @@ class _TransferringSection extends ConsumerWidget {
       // gutter: inside the padded body it would sit at double the page inset
       // and every other region would be out of alignment with it.
       //
-      // The board draws the queue's filter pills — All / Active / Seeding /
-      // Stopped / Errored — inside this region. They are not here on purpose:
+      // The board draws the queue's filter pills (All / Active / Seeding /
+      // Stopped / Errored) inside this region. They are not here on purpose:
       // filtering belongs to the Queue tab, and a pill on a five-row sample
       // either filters five rows (useless) or silently means something
       // different from the same pill one tab over (worse). The link goes there.
@@ -176,7 +176,7 @@ class _TransferringSection extends ConsumerWidget {
               // that turns a `TransmissionTorrent` into it. No `actions`: the
               // per-torrent command menu lives on the Queue tab, and a second
               // copy of it here would be a second place to get the destructive
-              // one — remove-with-data — wrong.
+              // one, remove-with-data, wrong.
               TransmissionTorrentTile(torrent: torrent),
           ],
         ),
@@ -239,7 +239,7 @@ class _LabelRow extends StatelessWidget {
         Icons.sell_outlined,
         size: 18,
         // The service accent walked until it can carry ink. A label is not a
-        // state, so it takes the service's own colour rather than a tone —
+        // state, so it takes the service's own colour rather than a tone:
         // painting it through the tone rule would have to pick an arm, and
         // "movies" is not any of the five.
         color: serviceOverviewInk(ServiceKey.transmission, colorScheme),
@@ -264,7 +264,7 @@ class _SessionSection extends ConsumerWidget {
       service: ServiceKey.transmission,
       title: 'Session',
       // No count and no summary line. The board's subtitle here was the port
-      // test's result, which this app cannot run — see the library comment on
+      // test's result, which this app cannot run; see the library comment on
       // `transmission_overview_provider.dart` for the three rows that went with
       // it.
       destination: ServiceTab.session,
@@ -308,8 +308,8 @@ class _SessionRow extends StatelessWidget {
       spoken: fact.spoken,
       leading: Icon(fact.icon, size: 18, color: tone),
       // The value rides the title line and the trailing slot stays empty. That
-      // slot is 132pt wide, one line, ellipsised — shaped for a figure like
-      // `298 queries` — and these values are sentences: at 3× reading size it
+      // slot is 132pt wide, one line, ellipsised, shaped for a figure like
+      // `298 queries`. These values are sentences: at 3× reading size it
       // would hold about seven characters of `Not limited`, and the value is
       // the whole row. On the title line it wraps instead, which is also the
       // shape the board draws this region in.
@@ -334,7 +334,7 @@ class _FinishedTodaySection extends ConsumerWidget {
       title: 'Finished today',
       subtitle: count == null ? '—' : '$count',
       // No link, deliberately. The board labels this region's link `History`,
-      // and Transmission's bar has no History tab — the daemon keeps no history
+      // and Transmission's bar has no History tab. The daemon keeps no history
       // of its own, only the torrents it still holds, which is exactly why this
       // region is derived from `doneDate` rather than fetched. A link naming a
       // tab that does not exist is a promise the app cannot keep.

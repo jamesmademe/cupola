@@ -70,8 +70,8 @@ const _library = StreamLibrary(
 /// **A section and a screen instead of one board.** The single Stream page was
 /// split by the tab model: the libraries became the Libraries tab and the
 /// sessions became a section the Overview composes. The rules asserted below did
-/// not move with them — a transcode is still amber, an idle room is still a
-/// quiet line — so these cases pump the piece that now owns each rule rather
+/// not move with them: a transcode is still amber, an idle room is still a
+/// quiet line, so these cases pump the piece that now owns each rule rather
 /// than a page that no longer exists.
 Widget _nowPlayingHost(ServiceKey service) => Scaffold(
   body: Consumer(
@@ -192,7 +192,7 @@ Color _toneOn(WidgetTester tester, Finder anchor, StatusTone tone) {
 /// Checked on the semantics node rather than on the widget: an icon-only button
 /// carries its name in `SemanticsNode.tooltip`, which is what both screen
 /// readers speak, and the whole point of the check is that the node exists at
-/// all — the card's readout sits under `excludeSemantics`, which is exactly the
+/// all: the card's readout sits under `excludeSemantics`, which is exactly the
 /// thing that used to swallow these.
 void expectReachableControl(WidgetTester tester, String name) {
   final finder = find.byTooltip(name);
@@ -267,7 +267,7 @@ void main() {
       expect(find.text('Transcode'), findsOneWidget);
 
       // CHANGED: this used to assert the raw `AppColors.warning` constant. The
-      // card no longer paints a palette entry — it paints the tone
+      // card no longer paints a palette entry; it paints the tone
       // `StreamSession.deliveryTone` resolves, walked for contrast against the
       // card's own fill, because raw warning measures 1.39:1 on paper and is
       // effectively invisible in daylight. The *rule* is unchanged: a transcode
@@ -324,7 +324,7 @@ void main() {
       await _pumpNowPlaying(tester, sessions: [_session()]);
 
       // The card wraps its four text lines in one `excludeSemantics` node so
-      // they are read as a sentence rather than as fragments — and that node
+      // they are read as a sentence rather than as fragments, and that node
       // used to swallow the stop button with them, leaving a control that was
       // on screen, tappable by a pointer and absent from the traversal. The
       // readout is one node; the controls are their own.
@@ -376,7 +376,7 @@ void main() {
       tester,
     ) async {
       // The reason is the longest string on the card and the one an earlier
-      // single-line design would have ellipsised first — which would have eaten
+      // single-line design would have ellipsised first, which would have eaten
       // exactly the string the surface exists to show.
       tester.view.physicalSize = const Size(375 * 3, 812 * 3);
       tester.view.devicePixelRatio = 3;
@@ -455,7 +455,7 @@ void main() {
       );
 
       // Decision 21: a per-library count is one extra round trip each, so what
-      // this list says is how many rooms there are — free out of the single
+      // this list says is how many rooms there are, free out of the single
       // `getLibraries` response. The count itself is unbuilt, and an unbuilt
       // figure prints nothing rather than 0. The scanning half of that line is
       // asserted on `streamLibrariesSummary` itself, because a live scan spins
@@ -493,7 +493,7 @@ void main() {
 
       // Pause and message are Jellyfin remote-control commands relayed over the
       // socket the server already holds. Plex's player routes address the client
-      // directly on the LAN, so the board keeps stop alone — absent, not dimmed:
+      // directly on the LAN, so the board keeps stop alone (absent, not dimmed):
       // a dimmed control promises a way to enable it and there is none.
       expectReachableControl(tester, 'Stop this playback');
       expectNoControl('Pause this playback');
@@ -513,7 +513,7 @@ void main() {
 
       // `PlexServerCapabilities.canTerminateSessions` treats silence as
       // available on purpose, so a missing attribute hides the button on
-      // nobody's server by mistake — the terminate call explains itself if it
+      // nobody's server by mistake; the terminate call explains itself if it
       // comes back 401. The board used to re-derive the gate as
       // `myPlexSubscription != true` and disagree with it.
       expectReachableControl(tester, 'Stop this playback');

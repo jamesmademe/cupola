@@ -45,7 +45,7 @@ class FakeRadarrService extends RadarrService {
   /// for both readings. A fake that answered `[]` here instead would turn
   /// every counting caller in the suite into the very bug the throwing variant
   /// exists to expose. A test that wants the *failure* builds the real service
-  /// over a failing client — see `service_kpi_provider_test.dart`.
+  /// over a failing client: see `service_kpi_provider_test.dart`.
   @override
   Future<List<RadarrMovie>> getMoviesOrThrow() async => getMovies();
 
@@ -109,7 +109,7 @@ class FakeRadarrService extends RadarrService {
   /// The paged primitives, delegating **back** to the record-only getters.
   ///
   /// The inverse of the production layering, and deliberately so. In the real
-  /// services `getHistory` delegates to `getHistoryPage` — which is what lets
+  /// services `getHistory` delegates to `getHistoryPage`, which is what lets
   /// Radarr and Sonarr hang `includeMovie` / `includeSeries` off one place. But
   /// every fake in this repo, here and in a dozen per-test subclasses, scripts
   /// the *record-only* getter, so the moment a caller moved to the page variant
@@ -121,7 +121,7 @@ class FakeRadarrService extends RadarrService {
   /// Inverting it here fixes every one of those subclasses at once and leaves
   /// each of them scripting the method it already scripts. The recursion this
   /// looks like is closed by the `getHistory` / `getMissing` / `getCutoff`
-  /// overrides above — delete one of those and the base's delegation and this
+  /// overrides above: delete one of those and the base's delegation and this
   /// one meet in a loop.
   ///
   /// The totals are **null**, which is the honest answer rather than a
@@ -162,8 +162,8 @@ class FakeRadarrService extends RadarrService {
     total: null,
   );
 
-  /// The walks, inverted the same way. A scripted queue is the whole queue —
-  /// the walk a fake stands in for reached its end — so its total is its
+  /// The walks, inverted the same way. A scripted queue is the whole queue:
+  /// the walk a fake stands in for reached its end, so its total is its
   /// length, the figure Activity read before a walk could say how far it got.
   @override
   Future<ArrRecordPage> getQueuePage({
@@ -287,8 +287,8 @@ class FakeSonarrService extends SonarrService {
     total: null,
   );
 
-  /// The walks, inverted the same way. A scripted queue is the whole queue —
-  /// the walk a fake stands in for reached its end — so its total is its
+  /// The walks, inverted the same way. A scripted queue is the whole queue:
+  /// the walk a fake stands in for reached its end, so its total is its
   /// length, the figure Activity read before a walk could say how far it got.
   @override
   Future<ArrRecordPage> getQueuePage({
@@ -415,8 +415,8 @@ class FakeLidarrService extends LidarrService {
     total: null,
   );
 
-  /// The walks, inverted the same way. A scripted queue is the whole queue —
-  /// the walk a fake stands in for reached its end — so its total is its
+  /// The walks, inverted the same way. A scripted queue is the whole queue:
+  /// the walk a fake stands in for reached its end, so its total is its
   /// length, the figure Activity read before a walk could say how far it got.
   @override
   Future<ArrRecordPage> getQueuePage({

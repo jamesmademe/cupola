@@ -14,13 +14,13 @@ import 'fake_secure_settings_store.dart';
 ///
 /// `sharedPreferencesProvider` and `initialSettingsProvider` throw unless
 /// overridden (they are wired in `main.dart`), and `SettingsNotifier.build`
-/// watches both — so any screen that asks `settings.isServiceConfigured(...)`
+/// watches both, so any screen that asks `settings.isServiceConfigured(...)`
 /// needs all of this. The Activity screen does, because it distinguishes "this
 /// service is not set up" from "this service did not answer".
 ///
 /// Most tests want [settingsScopeOverrides] instead, which returns the four
 /// overrides ready to spread. This record form is for the call sites that also
-/// need one of the pieces afterwards — `scope.prefs` to assert on what was
+/// need one of the pieces afterwards: `scope.prefs` to assert on what was
 /// persisted, say.
 typedef SettingsScope = ({
   SharedPreferences prefs,
@@ -81,7 +81,7 @@ Future<List<Override>> settingsScopeOverrides({
 /// for the wrong reason.
 ///
 /// For the credential-authenticated services the generic slot `copyWithService`
-/// writes is the password, which is where they keep their credential — and
+/// writes is the password, which is where they keep their credential, and
 /// `isServiceConfigured` only requires a URL of them anyway. A test that needs a
 /// username as well should reach for `copyWithCredentials`.
 SettingsModel settingsWithServices(List<ServiceKey> configured) {
@@ -111,7 +111,7 @@ const activityServiceKeys = [
 ///
 /// It lives here rather than on [SettingsModel] on purpose. Those names are the
 /// shape that could not hold a second Radarr, and production has no business
-/// with them any more — but a fixture saying `radarrUrl: 'http://nas:7878'` is
+/// with them any more, but a fixture saying `radarrUrl: 'http://nas:7878'` is
 /// still the clearest way to say what a test is about, and rewriting eighty of
 /// them into instance literals would be churn that serves no reader.
 ///

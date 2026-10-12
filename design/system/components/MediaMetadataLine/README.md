@@ -4,7 +4,7 @@ The facts of a title on one line: year, runtime, genre.
 
 Rendered from `lib/core/widgets/media_metadata_line.dart` by `test/design_catalog/media_metadata_line_catalog_test.dart`.
 
-- **Line** — trimmed, non-empty items joined with ` · ` (the house middot) in `body-medium` `on-surface-variant`; a caller sets `maxLines` to clamp it, and a clamped line ends in an ellipsis (the hero caps it at one line, the child list at two). An empty or all-blank list renders `SizedBox.shrink()`, not an empty gap. The text takes the full width it is given and aligns to the start unless the caller passes `textAlign`.
+- **Line**: trimmed, non-empty items joined with ` · ` (the house middot) in `body-medium` `on-surface-variant`; a caller sets `maxLines` to clamp it, and a clamped line ends in an ellipsis (the hero caps it at one line, the child list at two). An empty or all-blank list renders `SizedBox.shrink()`, not an empty gap. The text takes the full width it is given and aligns to the start unless the caller passes `textAlign`.
 
 The consumer provides `items` (already worded: `1922`, `1 h 34 min`, `Horror`) and, where the row is short, `maxLines`. It is used by the hero summary (`MediaDetailHero`) and by the rows of `MediaChildList`. Items are illustrative.
 

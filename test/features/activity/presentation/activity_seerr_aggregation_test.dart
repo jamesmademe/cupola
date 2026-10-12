@@ -15,8 +15,8 @@ import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 /// The second Seerr. The first one keeps the primary id, so every override that
-/// names `seerrServiceProvider` — which is how the whole suite supplies a fake
-/// Seerr — still addresses it.
+/// names `seerrServiceProvider` (which is how the whole suite supplies a fake
+/// Seerr) still addresses it.
 const _secondSeerr = ServiceInstance(
   id: 'seerr-2222222',
   service: ServiceKey.seerr,
@@ -86,7 +86,7 @@ void main() {
         ]),
       );
       expect(requests, hasLength(3));
-      // Both servers have a request id 1 — Seerr numbers its requests per
+      // Both servers have a request id 1: Seerr numbers its requests per
       // instance, which is exactly why a row has to carry its connection.
       expect(requests.map((i) => i.instanceId).toSet(), {
         'seerr',
@@ -110,8 +110,8 @@ void main() {
       };
 
       // The first Seerr has no label of its own, so it is called by its place
-      // among the Seerrs — the app's one rule, which the \*arr rows and the
-      // lens sheet follow too. Never its id.
+      // among the Seerrs (the app's one rule, which the \*arr rows and the
+      // lens sheet follow too). Never its id.
       expect(byTitle['From the first'], 'Seerr 1');
       expect(byTitle['From the second'], 'Anime');
     },
@@ -178,7 +178,7 @@ void main() {
   // The distinction above only exists if the service stops turning an outage
   // into an empty list. It used to `catch (e) { return []; }` around the whole
   // load, so a Seerr that never answered and a Seerr with no requests produced
-  // byte-identical output — and no caller could tell.
+  // byte-identical output, and no caller could tell.
   test('a Seerr that does not answer reports it', () async {
     final container = _container(
       settings: await settingsScopeOverrides(configured: activityServiceKeys),

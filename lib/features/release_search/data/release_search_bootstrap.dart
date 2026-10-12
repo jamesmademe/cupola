@@ -17,13 +17,13 @@ import 'package:cupola/features/release_search/data/release_search_transport.dar
 /// ran before switching it off would keep its API key on disk indefinitely.
 ///
 /// The gate for the feature lives one layer up, on the reach that decides which
-/// transport a search gets — see `releaseSearchTransportProvider`. Nothing here
+/// transport a search gets: see `releaseSearchTransportProvider`. Nothing here
 /// enqueues anything.
 ///
 /// Three library defaults are actively wrong for a release search:
 ///
 /// **`requestTimeout`** defaults to 60 seconds and measures the gap *between
-/// received bytes* — and this request is the pathological case, because the
+/// received bytes*, and this request is the pathological case, because the
 /// server sends nothing while it queries indexers. Left alone, every search over
 /// a minute would fail on iOS. It can only be set **once, before the first task
 /// is enqueued**, which is why it lives at startup rather than beside the
@@ -31,7 +31,7 @@ import 'package:cupola/features/release_search/data/release_search_transport.dar
 /// user's own timeout always sits below it.
 ///
 /// **`resourceTimeout`** is the only ceiling that still applies while the app is
-/// suspended, when no Dart timer can fire — so it is what actually bounds the
+/// suspended, when no Dart timer can fire: so it is what actually bounds the
 /// life of a task whose headers carry the service's API key, and the plugin
 /// keeps that task record in plaintext until it reaches a final state. An hour
 /// let a credential-bearing task outlive the user's own ceiling by ~50 minutes
@@ -40,7 +40,7 @@ import 'package:cupola/features/release_search/data/release_search_transport.dar
 /// grace, so the backstop sits just above the user's maximum instead of far
 /// beyond it.
 ///
-/// **`doRescheduleKilledTasks`** would silently re-issue a task the OS killed —
+/// **`doRescheduleKilledTasks`** would silently re-issue a task the OS killed,
 /// re-running a full search against the user's indexers with nobody watching. A
 /// killed search surfaces as a state to retry by hand instead.
 ///
@@ -49,7 +49,7 @@ import 'package:cupola/features/release_search/data/release_search_transport.dar
 Future<void> configureBackgroundSearch({
   bool Function()? supported,
   // `Config.requestTimeout` and friends are plain string keys, and the
-  // plugin's own parameter is `dynamic` — typed here so a wrong pair is a
+  // plugin's own parameter is `dynamic`: typed here so a wrong pair is a
   // compile error rather than a platform-channel surprise.
   Future<void> Function(List<(String, Object)> globalConfig)? configure,
   Future<void> Function({required bool doRescheduleKilledTasks})? start,

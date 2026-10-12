@@ -56,7 +56,7 @@ void main() {
     expect(sessionReads, 0);
   });
 
-  // RPC 16 is Transmission 3.00, which is where `labels` landed — on
+  // RPC 16 is Transmission 3.00, which is where `labels` landed, on
   // `torrent-get` and `torrent-set` together. It is the *oldest* daemon that
   // can be edited, and it used to be refused.
   testWidgets('labels are editable from RPC 16, where they landed', (
@@ -138,8 +138,8 @@ void main() {
   });
 
   // The two halves of the same rule. A field the daemon never sent is an em
-  // dash; a field it reported as zero is a zero. Collapsing them — which is
-  // what a non-nullable `parseInt` default does — states a figure nobody gave.
+  // dash; a field it reported as zero is a zero. Collapsing them, which is
+  // what a non-nullable `parseInt` default does: it states a figure nobody gave.
   testWidgets('a session field the daemon omitted reads an em dash', (
     tester,
   ) async {

@@ -1,8 +1,8 @@
 /// Checking that a media server's answer to "do you have this arr title" is
 /// that title.
 ///
-/// **Why this exists.** Both servers are asked by external id — Jellyfin through
-/// `anyProviderIdEquals`, Plex through `?guid=` — and both used to trust the
+/// **Why this exists.** Both servers are asked by external id: Jellyfin through
+/// `anyProviderIdEquals`, Plex through `?guid=`, and both used to trust the
 /// first row that came back. A server that ignores the filter does not fail: it
 /// answers 200 with the start of the whole library, so every Radarr and Sonarr
 /// page said "On Jellyfin · Ready to watch" and opened an arbitrary item. And a
@@ -11,8 +11,8 @@
 /// namespaces, and an episode carries TVDB and IMDb ids of its own. The first
 /// row of that set is not "the title" either.
 ///
-/// So a candidate is accepted only on its own evidence — the ids the server
-/// reports *for the item*, compared with the ones the arr asked about — and the
+/// So a candidate is accepted only on its own evidence: the ids the server
+/// reports *for the item*, compared with the ones the arr asked about, and the
 /// best-supported candidate wins. When nothing clears the bar the answer is
 /// null, and the caller renders nothing: a missing "On Jellyfin" card is a lost
 /// convenience, a wrong one is a false statement with a button on it.
@@ -29,7 +29,7 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 @immutable
 class StreamExternalQuery {
   /// The ids the arr knows the title by. At least one is needed for a query to
-  /// be made at all — a title is never the *search* key, only a tie-breaker
+  /// be made at all: a title is never the *search* key, only a tie-breaker
   /// (see [title]).
   final String? tmdbId;
   final String? tvdbId;
@@ -38,8 +38,8 @@ class StreamExternalQuery {
   /// The kind the arr's record is, when the caller says: Radarr asks about a
   /// [StreamItemKind.movie], Sonarr about a [StreamItemKind.series].
   ///
-  /// Null still narrows to those two — an arr detail page is a film or a show,
-  /// never a season, an episode or a track — but cannot tell them apart, and
+  /// Null still narrows to those two. An arr detail page is a film or a show,
+  /// never a season, an episode or a track, but cannot tell them apart, and
   /// TMDB numbers films and shows separately: Sonarr's TMDB id for a series can
   /// be some film's TMDB id too. Callers that know the kind should pass it.
   final StreamItemKind? kind;
@@ -66,7 +66,7 @@ class StreamExternalQuery {
       _normaliseId(tvdbId) != null ||
       _normaliseId(imdbId) != null;
 
-  /// How many ids the query carries — the score a candidate needs to be
+  /// How many ids the query carries: the score a candidate needs to be
   /// confirmed by every one of them.
   int get idCount =>
       [tmdbId, tvdbId, imdbId].where((id) => _normaliseId(id) != null).length;
@@ -80,14 +80,14 @@ class StreamExternalQuery {
 /// 1. **Kind.** With [StreamExternalQuery.kind] the candidate must be that
 ///    kind; without it, a film or a show.
 /// 2. **Ids decide wherever they can.** For every provider both sides report,
-///    the values must be equal — a single disagreement refuses the candidate,
+///    the values must be equal; a single disagreement refuses the candidate,
 ///    whatever else agrees, because two databases naming different titles is
 ///    exactly the case this cannot resolve. The score is the number of
 ///    providers that agree.
 /// 3. **Only when no provider can be compared** does the title decide: exact
 ///    normalised title *and* year, both required on both sides, scoring zero.
 ///
-/// A candidate with nothing comparable and no title evidence is refused — the
+/// A candidate with nothing comparable and no title evidence is refused. The
 /// server's say-so that it matched the filter is precisely what cannot be
 /// trusted.
 int? streamExternalMatchScore(StreamItem candidate, StreamExternalQuery query) {
@@ -127,9 +127,9 @@ int? streamExternalMatchScore(StreamItem candidate, StreamExternalQuery query) {
 /// What one media server answered when asked for a title by its ids.
 ///
 /// Three answers, because "no match" was two facts in one null: the server
-/// has nothing under those ids (**not in the library** — a claim the page may
+/// has nothing under those ids (**not in the library**, a claim the page may
 /// make, "Not on Jellyfin"), or it has rows that do not verify as the title
-/// (**not verified** — the brand book's case f, which makes no claim either
+/// (**not verified**, the brand book's case f, which makes no claim either
 /// way). A server that did not answer is neither: the lookup throws, and the
 /// caller classifies the failure.
 enum StreamLookupOutcome { found, notInLibrary, notVerified }

@@ -63,7 +63,7 @@ void main() {
     scenes: [
       CatalogScene(
         'Jellyfin scheduled tasks · running blue, failed amber, completed '
-        'green, idle neutral — the glyph and the figure share the tone',
+        'green, idle neutral: the glyph and the figure share the tone',
         (_) => _list(_tasks),
         width: 390,
       ),

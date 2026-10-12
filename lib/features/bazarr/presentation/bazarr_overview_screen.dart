@@ -117,7 +117,7 @@ class _WantedSection extends ConsumerWidget {
       service: ServiceKey.bazarr,
       title: 'Wanted subtitles',
       // "—" while it loads or after it failed: a "0 wanted" printed over an
-      // unanswered question is a claim nobody made. No age clause either —
+      // unanswered question is a claim nobody made. No age clause either:
       // Bazarr's wanted rows carry no date, so "oldest 8 days" cannot be said.
       subtitle: total == null ? '—' : '$total',
       destination: ServiceTab.wanted,
@@ -191,7 +191,7 @@ class _BazarrRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // Through the tone rule, never a raw `AppColors.*`. Backlog is neutral by
-    // construction, and a blacklisted entry is neutral too — blacklisting is a
+    // construction, and a blacklisted entry is neutral too: blacklisting is a
     // choice, not a fault.
     final tone = statusToneColor(
       colorScheme,

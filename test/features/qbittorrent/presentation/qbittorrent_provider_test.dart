@@ -221,7 +221,7 @@ void main() {
     // `stopped` is the spelling qBittorrent introduced with the 5.1
     // pause-to-stop rename. On 4.x and 5.0 an unrecognised `filter` is not an
     // error: `/torrents/info` answers the UNFILTERED list. The stub adapter
-    // reproduces that exactly — it keys on path and ignores query parameters —
+    // reproduces that exactly: it keys on path and ignores query parameters,
     // so a Paused tab that leans on the server filter comes back holding
     // everything, which is worse than a filter that errors.
     test('paused filter holds only paused torrents on a 4.x server', () async {
@@ -406,7 +406,7 @@ void main() {
     });
 
     test('surfaces service errors as AsyncValue.error', () async {
-      // The provider must NOT swallow errors — the UI's _PropRow renders
+      // The provider must NOT swallow errors. The UI's _PropRow renders
       // "—" per cell when the family is in `error` state, so we need that
       // state to actually fire (older qB versions return 404 on /properties,
       // network drops, etc.). Trigger the error by serving a non-object
@@ -440,7 +440,7 @@ void main() {
       addTearDown(container2.dispose);
 
       // The provider's family `.future` rethrows the service's error so the
-      // family is left in `AsyncError` — that's the state `_PropRow` keys on
+      // family is left in `AsyncError`, the state `_PropRow` keys on
       // to render "—" per cell. Use a plain try/catch to avoid `expectLater`
       // + `throwsA` hangs on Riverpod minor-version behavior changes.
       Object? caught;

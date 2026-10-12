@@ -12,7 +12,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// service has a subtitle-language axis, so these do not belong in
 /// `core/widgets`.
 
-/// A wrap of subtitle-language cards (code, full name, forced/HI) — the missing
+/// A wrap of subtitle-language cards (code, full name, forced/HI): the missing
 /// languages or the ones on disk; the slot label around it says which.
 class BazarrSubtitleLanguageWrap extends StatelessWidget {
   final List<BazarrSubtitleLanguage> languages;
@@ -38,7 +38,7 @@ class BazarrSubtitleLanguageWrap extends StatelessWidget {
           Semantics(
             container: true,
             excludeSemantics: true,
-            // Uppercase belongs in the eye, not in the ear — speak the full
+            // Uppercase belongs in the eye, not in the ear: speak the full
             // name, and spell the flags out as words.
             label: [
               lang.name ?? lang.code2 ?? 'Unknown language',
@@ -95,7 +95,7 @@ class BazarrSubtitleLanguageWrap extends StatelessWidget {
 
 /// One wanted episode row, on the shared dense-row primitive.
 ///
-/// Was the fourth hand-rolled dense row in the app — its own `Container` shell
+/// Was the fourth hand-rolled dense row in the app: its own `Container` shell
 /// instead of [AppCard], a fixed 36x36 leading box, a magic `vertical: 3`
 /// padding, `maxLines: 1` on a service-supplied title, and no press feedback at
 /// all. [MediaChildTile.numbered] is the one dense child row, so a wanted

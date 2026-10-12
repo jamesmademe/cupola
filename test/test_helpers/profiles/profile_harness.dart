@@ -17,8 +17,8 @@ import 'profile_network.dart';
 /// A profile made live: its fake network installed, and the overrides that
 /// start the app on its settings and its lens.
 ///
-/// The overrides are **only the startup ones** — settings, secure store,
-/// onboarding, the lens map — and the Home's poll. No service provider is
+/// The overrides are **only the startup ones**: settings, secure store,
+/// onboarding, the lens map, and the Home's poll. No service provider is
 /// overridden: every Radarr,
 /// Seerr, qBittorrent, TrueNAS and Dockge client is the app's own, built by
 /// the app's own providers, and reaches [network] through `HttpOverrides`.
@@ -81,7 +81,7 @@ class ProfileHarness {
   /// answer arrives on the real event loop, which fake time never turns, so the
   /// section shimmers until `pumpAndSettle` gives up. This yields to the real
   /// loop once per second of fake time. Throws like `pumpAndSettle` when
-  /// [timeout] of fake time passes with frames still scheduled — a screen
+  /// [timeout] of fake time passes with frames still scheduled: a screen
   /// that animates for ever is a finding, not something to wait out.
   Future<void> settle(
     WidgetTester tester, {
@@ -110,7 +110,7 @@ class ProfileHarness {
   ///
   /// **End every widget test that pumps a profile with Dockge in it with
   /// this.** Disposing a Dockge client disconnects its Socket.IO socket, and
-  /// socket_io_client defers the write's drain with `Timer.run` — a zero-length
+  /// socket_io_client defers the write's drain with `Timer.run`, a zero-length
   /// timer `flutter_test` finds still pending after its own teardown, which
   /// pumps no time. Harmless live; a failed test here.
   Future<void> unmount(WidgetTester tester) async {

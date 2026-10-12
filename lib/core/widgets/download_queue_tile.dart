@@ -13,7 +13,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 /// counting-down secondary line.
 ///
 /// **One plate, four clients.** The SABnzbd and NZBGet dashboards each carried a
-/// line-for-line copy of this, differing only in field names and accent colour —
+/// line-for-line copy of this, differing only in field names and accent colour:
 /// and the copies had already started to drift (one of them showed an ETA the
 /// other did not). qBittorrent then wrote a *third*, `TorrentTile`, which is the
 /// precise thing this widget exists to prevent: it had its own radius, its own
@@ -24,8 +24,8 @@ import 'package:cupola/core/widgets/status_badge.dart';
 ///
 /// Per the design's own list, only three things may differ between clients: the
 /// **label chip** ([statusLabel]), the **metrics** ([metrics]) and the **menu
-/// items** ([actions]). Everything else — geometry, type, tone resolution,
-/// selection, semantics — belongs to the plate. That is why the chip takes a
+/// items** ([actions]). Everything else (geometry, type, tone resolution,
+/// selection, semantics) belongs to the plate. That is why the chip takes a
 /// tone rather than a colour and the metrics take a flag rather than a colour:
 /// a caller that could pass a `Color` is a caller that can reintroduce the
 /// palette literal the migration removed.
@@ -53,10 +53,10 @@ class DownloadQueueTile extends StatelessWidget {
 
   final String title;
 
-  /// The counting-down line — status, category/ETA and remaining size.
+  /// The counting-down line: status, category/ETA and remaining size.
   final String subtitle;
 
-  /// 0..1, for the bar — or **null** for a job with no meaningful bar to draw.
+  /// 0..1, for the bar, or **null** for a job with no meaningful bar to draw.
   ///
   /// Nullable because "no progress" and "zero progress" are different facts and
   /// the row must not draw the second when it means the first: a queued, errored
@@ -75,7 +75,7 @@ class DownloadQueueTile extends StatelessWidget {
   /// The row's overflow menu, when the client supports per-job commands.
   final Widget? actions;
 
-  /// The state chip's text — "Downloading", "Seeding", "Paused".
+  /// The state chip's text: "Downloading", "Seeding", "Paused".
   ///
   /// Text plus a [statusTone], never a built widget: the chip's geometry and its
   /// contrast walk belong to the plate, and the three copies this replaced each
@@ -88,7 +88,7 @@ class DownloadQueueTile extends StatelessWidget {
   /// applied here rather than re-argued per client.
   final StatusTone statusTone;
 
-  /// The bottom figure row — transfer rates, ratios, whatever the client
+  /// The bottom figure row: transfer rates, ratios, whatever the client
   /// measures. Empty on the Usenet pair, which says everything it has in
   /// [subtitle].
   final List<DownloadQueueMetric> metrics;
@@ -103,7 +103,7 @@ class DownloadQueueTile extends StatelessWidget {
   /// must not look like one that is: left alone, a stalled poll leaves a row
   /// claiming "12 min left, 1.2 GB remaining" in the service accent, counting
   /// down nothing, and the user reads a healthy transfer where there is a dead
-  /// connection. So the ETA — the one figure that is definitely false — is
+  /// connection. So the ETA (the one figure that is definitely false) is
   /// replaced by the one fact that is definitely true, and the bar drains to a
   /// neutral so it stops reading as live.
   ///
@@ -115,7 +115,7 @@ class DownloadQueueTile extends StatelessWidget {
   /// Whether this row is part of a multi-select.
   ///
   /// 8% accent fill and a 40% accent border, which is what the artboards draw
-  /// and what qBittorrent's private copy already did — brought up to the plate
+  /// and what qBittorrent's private copy already did, brought up to the plate
   /// so the next client to grow bulk actions inherits it.
   final bool selected;
 
@@ -149,8 +149,8 @@ class DownloadQueueTile extends StatelessWidget {
 
     return Semantics(
       container: true,
-      // The row read as four unrelated fragments — a filename, "63%", a
-      // counting-down line, and a menu button with no subject — because nothing
+      // The row read as four unrelated fragments: a filename, "63%", a
+      // counting-down line, and a menu button with no subject, because nothing
       // here declared a container. One label, in the order a person would say
       // it, and the percentage spoken as a percentage rather than as a bare
       // numeral glued to the name.
@@ -181,7 +181,7 @@ class DownloadQueueTile extends StatelessWidget {
               : colorScheme.surface,
           // `shape` carries the radius *and* the border together. Passing
           // `borderRadius` beside a `shape` trips a Material assertion and
-          // blanks the whole list — the P0 qBittorrent's private copy shipped
+          // blanks the whole list: the P0 qBittorrent's private copy shipped
           // once and then carried a comment about forever.
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.borderRadiusMd,
@@ -193,8 +193,8 @@ class DownloadQueueTile extends StatelessWidget {
           ),
           // The ink is added only when there is something to press. An InkWell
           // around a row with no gestures is a control that highlights and does
-          // nothing, and — because the container above sets
-          // `explicitChildNodes` — it also publishes an empty, unlabelled
+          // nothing, and because the container above sets
+          // `explicitChildNodes`, it also publishes an empty, unlabelled
           // semantics node inside the labelled one, which is a stop on the
           // screen reader's path that says nothing when it gets there.
           child: _MaybeInk(
@@ -246,7 +246,7 @@ class DownloadQueueTile extends StatelessWidget {
                                       .weight(FontWeight.w600)
                                       .tabular
                                       // One plate, four clients: the percentage
-                                      // is the primary ink — the client's
+                                      // is the primary ink: the client's
                                       // accent is the lamp, which `onTint`
                                       // resolves to the room's ink.
                                       .copyWith(color: ink),
@@ -268,8 +268,8 @@ class DownloadQueueTile extends StatelessWidget {
                           value: progress!.clamp(0, 1),
                           minHeight: 4,
                           backgroundColor: colorScheme.surfaceContainerHighest,
-                          // A transfer in flight is the blue tone — in progress,
-                          // The brand book's bar — never the client's colour. A stale bar
+                          // A transfer in flight is the blue tone: in progress,
+                          // The brand book's bar: never the client's colour. A stale bar
                           // keeps its position and loses the tone: the blue is
                           // what makes a bar read as moving.
                           valueColor: AlwaysStoppedAnimation(
@@ -343,7 +343,7 @@ class DownloadQueueTile extends StatelessWidget {
   /// one a screen-reader user hears before they decide to keep listening. The
   /// metrics are appended because they are the only figures not already in the
   /// subtitle, and dropping them would make the spoken row poorer than the drawn
-  /// one — the failure mode the whole plate exists to stop repeating per client.
+  /// one: the failure mode the whole plate exists to stop repeating per client.
   String get _spokenLabel => [
     title,
     ?statusLabel,
@@ -385,7 +385,7 @@ class _MaybeInk extends StatelessWidget {
 ///
 /// A flag rather than a colour, deliberately. The two things a metric can be are
 /// "this client's own accent" and "everything else", and both resolve inside the
-/// plate against the composited surface — so there is no way for a caller to
+/// plate against the composited surface; so there is no way for a caller to
 /// hand in a palette literal, which is exactly how the three private copies got
 /// their contrast wrong.
 @immutable
@@ -501,7 +501,7 @@ enum DownloadQueueCommand { pause, resume, delete }
 /// The per-job overflow menu shared by the Usenet dashboards.
 ///
 /// [paused] chooses which half of the toggle is offered, exactly as the two
-/// private copies did — the difference being that there is now one of them.
+/// private copies did; the difference being that there is now one of them.
 class DownloadQueueActionsMenu extends StatelessWidget {
   const DownloadQueueActionsMenu({
     super.key,

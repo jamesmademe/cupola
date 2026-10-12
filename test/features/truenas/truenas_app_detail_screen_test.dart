@@ -72,8 +72,8 @@ void main() {
   });
 
   testWidgets('refuses a portal URL that is not a web address', (tester) async {
-    // Portal strings come from the server: a compromised TrueNAS — or a
-    // hostile chart in a third-party catalog — controls both the label and the
+    // Portal strings come from the server: a compromised TrueNAS, or a
+    // hostile chart in a third-party catalog, controls both the label and the
     // target, and these used to go straight to `launchUrl`.
     final launched = _installLauncherSpy();
     await _pump(tester, _app({'Web UI': 'intent://evil#Intent;end'}));

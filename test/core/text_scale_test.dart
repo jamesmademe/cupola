@@ -36,8 +36,8 @@ void main() {
     testWidgets('grows by exactly what the text grew', (tester) async {
       final context = await _contextAt(tester, 1.5);
 
-      // 34pt of text at 1.5x needs 17pt more room, and only the text part grows
-      // — the 138pt poster above it keeps its size.
+      // 34pt of text at 1.5x needs 17pt more room, and only the text part grows.
+      // The 138pt poster above it keeps its size.
       expect(
         TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
         closeTo(176 + 17, 0.01),

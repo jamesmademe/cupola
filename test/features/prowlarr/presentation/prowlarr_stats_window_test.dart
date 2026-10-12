@@ -11,7 +11,7 @@ void main() {
     test('asks Prowlarr for a bounded window, not for all time', () async {
       // The rule: the readout says "the last day" and the figure has to mean
       // it. This provider used to call getIndexerStats() bare, so Queries,
-      // Grabs and Fails were lifetime totals that only ever climbed — a Fails
+      // Grabs and Fails were lifetime totals that only ever climbed. A Fails
       // count that can never return to zero is not a fault signal, it is a
       // permanent amber KPI.
       final client = FakeApiClient()..getResponseData = <String, dynamic>{};
@@ -35,7 +35,7 @@ void main() {
 
     test('both bounds come from one clock read', () async {
       // Two KPIs resolved a few milliseconds apart must describe the same day.
-      // Reading `DateTime.now()` twice — once per bound — is how Grabs comes
+      // Reading `DateTime.now()` twice, once per bound, is how Grabs comes
       // to exceed Queries on a busy indexer.
       final client = FakeApiClient()..getResponseData = <String, dynamic>{};
       final container = ProviderContainer(

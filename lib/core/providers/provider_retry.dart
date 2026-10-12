@@ -6,7 +6,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 ///
 /// `ProviderContainer.defaultRetry` re-runs a build that throws up to **ten**
 /// times, backing off exponentially from 200ms to a 6.4s ceiling. It skips
-/// `Error` and `ProviderException` — but a `DioException` is an `Exception`, so
+/// `Error` and `ProviderException`, but a `DioException` is an `Exception`, so
 /// every network failure in this app is retried. The provider does not settle
 /// until that sequence ends: roughly forty seconds of backoff, plus ten round
 /// trips of whatever the request's own timeout is.
@@ -17,7 +17,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 /// loading state and a blip heals itself.
 ///
 /// It is wrong wherever another provider does `await ref.watch(x.future)`
-/// **inside a `try` that exists to degrade or to report** — because the `catch`
+/// **inside a `try` that exists to degrade or to report**, because the `catch`
 /// cannot run until the retries are exhausted. The handler's whole purpose is
 /// to keep going without this source, and it is held for forty seconds instead.
 /// A sequential loop over several sources multiplies that by the number of them

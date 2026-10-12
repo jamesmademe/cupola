@@ -5,7 +5,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 
 /// A failure sentence with no recovery verb of its own: the smallest member of
 /// the family [FaultBand] and [InlineErrorRetry] belong to, for the places that
-/// already offer the retry somewhere else — a form sheet whose submit button is
+/// already offer the retry somewhere else: a form sheet whose submit button is
 /// the retry, a purchase the user starts again by tapping a tier.
 ///
 /// It follows the same presence rule. The tone is spent on one 16pt glyph and
@@ -15,9 +15,9 @@ import 'package:cupola/core/widgets/status_badge.dart';
 ///
 /// The two constructors are the two arms a failed call can land on:
 ///
-///  * [FaultNote.unreachable] — the source did not answer, so the glyph is red,
+///  * [FaultNote.unreachable]: the source did not answer, so the glyph is red,
 ///    the one thing red means in a status. A load that never came back is this.
-///  * [FaultNote.fault] — the source answered and said no, or the operation
+///  * [FaultNote.fault]: the source answered and said no, or the operation
 ///    failed after it started. Amber, because nothing is unreachable.
 ///
 /// [surface] is the ground the note sits on, which the glyph is walked against;

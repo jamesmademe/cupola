@@ -444,8 +444,8 @@ void main() {
     });
 
     test('reads the report back out of the 400 Prowlarr answers with', () async {
-      // Servarr's ProviderControllerBase returns BadRequest(result) — body
-      // included — as soon as ANY provider is invalid, which is the *normal*
+      // Servarr's ProviderControllerBase returns BadRequest(result) with the body
+      // included: as soon as ANY provider is invalid, which is the *normal*
       // partial-failure case. ApiClient rejects >= 400, so without claiming the
       // body back the "N of M failed" report was unreachable code.
       final client = FakeApiClient()

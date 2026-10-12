@@ -73,7 +73,7 @@ void main() {
 
   group('pinnedImageCacheKey', () {
     // The bug: collapsing every non-alphanumeric to `_` made these two the
-    // same key, and a cache key is the name of a sqflite store — so two live
+    // same key, and a cache key is the name of a sqflite store, so two live
     // managers shared one database.
     test('two origins that differ only in punctuation get different keys', () {
       expect(
@@ -139,7 +139,7 @@ void main() {
 
     // The leak: the memo entry was overwritten with a new manager built on the
     // *same* cache key, so the superseded one kept its sqlite store and its
-    // pinned HttpClient open for the life of the process — and images fetched
+    // pinned HttpClient open for the life of the process, and images fetched
     // under the old certificate kept being served.
     test('retires the superseded cache when the fingerprint changes', () async {
       CertTrustRegistry.update(const {'https://nas.local:443': 'aa'});

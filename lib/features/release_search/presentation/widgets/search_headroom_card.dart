@@ -20,8 +20,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The ceiling is a property of **one instance's path**, not of the app: a stack
 /// can easily have Sonarr behind a proxy and Radarr direct over Tailscale. So the
 /// card lives beside that service's connection, and everything on it is either
-/// read from the response's own headers or measured from the user's real searches
-/// — never guessed, and never sent anywhere.
+/// read from the response's own headers or measured from the user's real searches.
+/// Never guessed, and never sent anywhere.
 class SearchHeadroomCard extends ConsumerStatefulWidget {
   const SearchHeadroomCard({super.key, required this.service});
 
@@ -157,8 +157,8 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
   /// another, and it belongs on the same card for the same reason.
   ///
   /// Derived from the reach rather than from either fact directly, so the two
-  /// instance-specific reasons — a certificate trusted only inside Cupola, and
-  /// a cleartext origin the background path must not carry an API key over —
+  /// instance-specific reasons (a certificate trusted only inside Cupola, and
+  /// a cleartext origin the background path must not carry an API key over)
   /// cannot drift apart from the transport actually chosen.
   ///
   /// Names what removes as well as what limits: on Android the 9-minute

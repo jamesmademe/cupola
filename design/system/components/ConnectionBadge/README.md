@@ -1,13 +1,13 @@
 # ConnectionBadge
 
-A small tag naming, as the user named it, which of a service's connections a row came from — drawn only when there is more than one to tell apart.
+A small tag naming, as the user named it, which of a service's connections a row came from, drawn only when there is more than one to tell apart.
 
 Rendered from `lib/core/widgets/connection_badge.dart` by `test/design_catalog/connection_badge_catalog_test.dart`, as the Activity feed uses it (`features/activity/presentation/widgets/activity_item_tiles.dart`). Connection names and titles are illustrative: the label is the user's own.
 
 ## Anatomy
 
 - Padding 6px horizontal, 2px vertical; `radius-xs2` (8); fill the accent (the lamp, for every service) at 14% alpha; 1px border, the accent at 34% alpha.
-- Text: the micro role (`AppTheme.chrome`, 11 / 600 / 14, the role's own tracking), in sentence case — the connection's name exactly as the user typed it, never recased. The ink is the accent walked against its own 14% wash over the ground the badge sits on (`ServiceTheme.onTint`, `tintAlpha: 0.14`) — the lamp resolves to the room's primary ink, so the badge is monochrome in both themes.
+- Text: the micro role (`AppTheme.chrome`, 11 / 600 / 14, the role's own tracking), in sentence case: the connection's name exactly as the user typed it, never recased. The ink is the accent walked against its own 14% wash over the ground the badge sits on (`ServiceTheme.onTint`, `tintAlpha: 0.14`); the lamp resolves to the room's primary ink, so the badge is monochrome in both themes.
 - An empty `label` renders `SizedBox.shrink()`: a stack with one Radarr never grows a badge naming the only Radarr.
 
 ## Placement
@@ -16,9 +16,9 @@ On the row, after the `StatusBadge`, `AppSpacing.sm` apart, at every width. On t
 
 ## The consumer provides
 
-- `label` — the connection's name, or empty to render nothing.
-- `accent` — the service's accent (`ServiceKey.accent`, the lamp).
-- `surface` — the ground the badge lands on, defaulting to `ColorScheme.surface`; a badge on a card passes `surfaceContainer`.
+- `label`: the connection's name, or empty to render nothing.
+- `accent`: the service's accent (`ServiceKey.accent`, the lamp).
+- `surface`: the ground the badge lands on, defaulting to `ColorScheme.surface`; a badge on a card passes `surfaceContainer`.
 
 ## Semantics
 
@@ -36,4 +36,4 @@ Each sheet is drawn in the dark and the light room.
 
 - Do pass the ground the badge lands on, or the ink is measured against the wrong colour.
 - Don't draw it for a service with a single connection.
-- Don't use it for status — it names a source, it carries no tone.
+- Don't use it for status: it names a source, it carries no tone.

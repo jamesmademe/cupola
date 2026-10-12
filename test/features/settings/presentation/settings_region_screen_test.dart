@@ -30,7 +30,7 @@ void main() {
 
     // No ensureSemantics()/dispose() ceremony in these: testWidgets already
     // enables semantics and owns the handle. Doing it by hand here was the
-    // pattern the next author would copy, and it would fail under addTearDown —
+    // pattern the next author would copy, and it would fail under addTearDown:
     // handle verification runs before tearDowns.
     testWidgets('selects US by default', (tester) async {
       await _pumpRegionScreen(tester);

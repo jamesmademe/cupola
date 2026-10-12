@@ -24,7 +24,7 @@ import '../../test_helpers/settings_scope.dart';
 /// The Overview of a media server, on both servers.
 ///
 /// One screen parameterised by `ServiceKey`, so most of what is asserted here is
-/// asserted twice — and the two cases where the servers genuinely differ (the On
+/// asserted twice, and the two cases where the servers genuinely differ (the On
 /// deck rail and the Server region, both Plex-only) are asserted as *absences*
 /// on Jellyfin, because an empty region there would be a claim the client never
 /// made.
@@ -45,7 +45,7 @@ void main() {
     // On deck is Plex's: `/hubs/continueWatching` has no Jellyfin counterpart
     // in this client, and an empty rail would read as "nothing in progress".
     expect(find.text('On deck'), findsNothing);
-    // And the board's other Jellyfin regions are absent rather than stubbed —
+    // And the board's other Jellyfin regions are absent rather than stubbed:
     // no `/ScheduledTasks`, no `/System/ActivityLog/Entries`, no recent list.
     expect(find.text('Scheduled tasks'), findsNothing);
     expect(find.text('Recently added'), findsNothing);
@@ -113,12 +113,12 @@ void main() {
       libraries: [_library(name: 'Films', refreshing: true)],
     );
 
-    // One node for the whole row, with the layout's dots read as pauses — not
+    // One node for the whole row, with the layout's dots read as pauses, not
     // three fragments a screen reader walks separately.
     expect(find.semantics.byLabel('Films, Movies, Scanning'), findsOneWidget);
   });
 
-  testWidgets('a library list that never answered reads — and never 0', (
+  testWidgets('a library list that never answered reads `—` and never 0', (
     tester,
   ) async {
     await _pump(tester, service: ServiceKey.jellyfin, failLibraries: true);
@@ -205,7 +205,7 @@ void main() {
 
     // `GET /` answered, and simply did not carry the attribute. An em dash says
     // the server was asked; "Not on this server" would be a claim it never
-    // made — and it is the claim that decides whether a stop control appears.
+    // made, and it is the claim that decides whether a stop control appears.
     expect(
       find.semantics.byLabel('Plex Pass, stopping a stream needs it, —'),
       findsOneWidget,
@@ -224,7 +224,7 @@ void main() {
     expect(find.text('Living room'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
     // Stated only because the server said `multiuser`, and stated as the
-    // limitation it causes rather than as trivia — with a figure in the figure
+    // limitation it causes rather than as trivia, with a figure in the figure
     // slot, so the row reads and speaks like the three above it instead of
     // putting a bare noun phrase where a datum goes.
     expect(find.text('Owner only'), findsOneWidget);

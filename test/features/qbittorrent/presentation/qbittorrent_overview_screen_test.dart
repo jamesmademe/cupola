@@ -107,7 +107,7 @@ void main() {
       ],
     );
 
-    // One node for the whole row, with the layout's dots read as pauses — not
+    // One node for the whole row, with the layout's dots read as pauses, not
     // four fragments a screen reader walks separately.
     expect(
       find.semantics.byLabel(
@@ -131,7 +131,7 @@ void main() {
     );
 
     // Nine faults, four rows. The header is the only place the other five are
-    // reported, so it prints the census — not the length of the sample below
+    // reported, so it prints the census, not the length of the sample below
     // it, which would tell a user with nine broken torrents they had four.
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Needs attention'),
@@ -165,7 +165,7 @@ void main() {
     );
   });
 
-  testWidgets('a fresh session reads — for its ratio, never 0.00', (
+  testWidgets('a fresh session reads `—` for its ratio, never 0.00', (
     tester,
   ) async {
     await _pump(
@@ -230,7 +230,7 @@ void main() {
     expect(row.trailing, isNull);
   });
 
-  testWidgets('a section whose source has not answered prints — not 0', (
+  testWidgets('a section whose source has not answered prints `—` not 0', (
     tester,
   ) async {
     await _pump(tester, failTorrents: true);

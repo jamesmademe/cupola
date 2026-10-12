@@ -377,8 +377,8 @@ void _invalidateHome(WidgetRef ref) {
   // them on.
   ref.invalidate(homeStorageProvider);
   ref.invalidate(atriumTrendingProvider);
-  // Each decision source, and what they read that keeps an answer of its own
-  // — Prowlarr's indexer status among them, which nothing else here drops, so
+  // Each decision source, and what they read that keeps an answer of its own:
+  // Prowlarr's indexer status among them, which nothing else here drops, so
   // a pull left a fixed indexer on the list as failing.
   ref.invalidate(dashboardDecisionSourceProvider);
   for (final service in ServiceKey.values) {

@@ -25,7 +25,7 @@ void main() {
     await _pump(tester);
 
     // Identity and the readouts come before any section, and only this tab
-    // carries them — the Array and Docker halves stopped drawing them when the
+    // carries them: the Array and Docker halves stopped drawing them when the
     // old single page was split, which is why they are here.
     expect(find.byType(ServiceKpiPeek), findsOneWidget);
 
@@ -87,7 +87,7 @@ void main() {
     // it: a slot Unraid reads no temperature from is asleep, not at zero.
     expect(find.text('spun down'), findsOneWidget);
     expect(find.textContaining('0\u00A0°C'), findsNothing);
-    // One node for the whole row, with the unit said rather than glyphed — not
+    // One node for the whole row, with the unit said rather than glyphed, not
     // three fragments a screen reader walks separately.
     expect(
       find.semantics.byLabel('parity, DISK_OK, spun down'),
@@ -149,13 +149,13 @@ void main() {
     );
   });
 
-  testWidgets('a figure whose source did not answer reads — and never 0', (
+  testWidgets('a figure whose source did not answer reads `—` and never 0', (
     tester,
   ) async {
     await _pump(tester, failArray: true);
 
     // "0 disks" over an unanswered question is a claim nobody made, and the
-    // claim it makes — "there is no array" — is the one a user would act on.
+    // claim it makes, "there is no array", is the one a user would act on.
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Array'),
     );
@@ -169,7 +169,7 @@ void main() {
     await _pump(
       tester,
       // `disks` is nullable in the committed SDL, and this app has never run
-      // against a real instance — so the array answering without a slot list is
+      // against a real instance, so the array answering without a slot list is
       // a real shape, not a hypothetical.
       array: const UnraidArray(
         state: 'STARTED',

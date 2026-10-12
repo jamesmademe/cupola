@@ -10,7 +10,7 @@ import 'package:cupola/core/theme.dart';
 ///
 /// Publishes itself as one heading to assistive technology. Title, subtitle and
 /// the chevron are three visual pieces of one label, so the header silences its
-/// own subtree and speaks a composed string instead — otherwise a screen reader
+/// own subtree and speaks a composed string instead, otherwise a screen reader
 /// stops on each fragment and the "see all" affordance, being a bare chevron,
 /// has no name at all.
 class SectionHeader extends StatelessWidget {
@@ -37,7 +37,7 @@ class SectionHeader extends StatelessWidget {
   ///
   /// Defaults to [title], plus [subtitle] when there is one. Pass it when the
   /// visible title folds a count into brackets ("Alerts (3)"), or when a
-  /// non-interactive [trailing] carries information the sentence needs — this
+  /// non-interactive [trailing] carries information the sentence needs; this
   /// header silences its own subtree, so a trailing count is not spoken unless
   /// it is in here.
   final String? semanticLabel;
@@ -51,7 +51,7 @@ class SectionHeader extends StatelessWidget {
 
   /// Whether [trailing] is a control in its own right.
   ///
-  /// Set by the constructors rather than by callers — [SectionHeader.action] is
+  /// Set by the constructors rather than by callers: [SectionHeader.action] is
   /// how you ask for it. It keeps [trailing] outside the region this header
   /// silences, so a nested button stays reachable.
   final bool trailingIsInteractive;
@@ -67,7 +67,7 @@ class SectionHeader extends StatelessWidget {
     this.semanticHint,
   }) : trailingIsInteractive = false;
 
-  /// A header whose [trailing] is its own control — a "New" button, say.
+  /// A header whose [trailing] is its own control, a "New" button, say.
   ///
   /// Not tappable itself: two tap targets in one row, one of them the whole row,
   /// is exactly the ambiguity a screen-reader user would have to resolve by
@@ -97,7 +97,7 @@ class SectionHeader extends StatelessWidget {
     // Title and optional subtitle, as one label rather than two stops: a
     // subtitle read on its own has no context.
     //
-    // Clamped because this is chrome, and follows the reading size only so far —
+    // Clamped because this is chrome, and follows the reading size only so far:
     // the same contract `TextScaleMetrics` states for a compact box and the
     // floating nav bar applies at 1.3x. Unclamped, `titleLarge` at 2x is 44pt
     // bold, wider than the room a header row leaves beside its action, and
@@ -146,7 +146,7 @@ class SectionHeader extends StatelessWidget {
               : null);
 
     // Past this reading size a title and its action stop fitting one line on a
-    // phone, and no amount of eliding fixes that — a truncated "See a…" is worse
+    // phone, and no amount of eliding fixes that. A truncated "See a…" is worse
     // than a second line. So the row becomes a stack, which is the same answer
     // iOS gives its own controls at accessibility sizes. Keyed off the scaler
     // rather than a `LayoutBuilder` on purpose: a `LayoutBuilder` cannot report

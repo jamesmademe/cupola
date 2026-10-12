@@ -250,13 +250,13 @@ for platform in ("ios", "macos"):
 
 # Neither platform may carry an .appiconset: actool ignores every one of them once
 # the target's app icon is a .icon bundle, so a catalogue is dead weight that reads
-# as live — and a regenerated one invites the conclusion that the icon changed.
+# as live, and a regenerated one invites the conclusion that the icon changed.
 for platform in ("ios", "macos"):
     if (root / f"{platform}/Runner/Assets.xcassets/AppIcon.appiconset").exists():
         fail(f"{platform} carries an AppIcon.appiconset, which actool never reads")
 
 # iOS's own fallback is whatever actool derives from the .icon and names in the
-# Info.plist, so there is no file here to check — only the absence above.
+# Info.plist, so there is no file here to check; only the absence above.
 
 # macOS falls back to the .icns named by CFBundleIconFile, which has to be deeper
 # than the four elements actool derives from a .icon bundle.

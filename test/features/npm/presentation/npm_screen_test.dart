@@ -73,7 +73,7 @@ Future<void> _pump(
   int certificates = 9,
   NpmSection? failingSection,
 }) async {
-  // Tall, so a list of nine rows is laid out rather than being cut off — the
+  // Tall, so a list of nine rows is laid out rather than being cut off. The
   // counts below are the whole point of two of these cases.
   tester.view.physicalSize = const Size(1000, 4000);
   tester.view.devicePixelRatio = 1.0;
@@ -86,7 +86,7 @@ Future<void> _pump(
           configured: const [ServiceKey.nginxProxyManager],
         ),
         // The client is never built: every provider that would reach it is
-        // answered here. That is also the shape of the screen's own rule —
+        // answered here. That is also the shape of the screen's own rule:
         // nothing asks NPM anything until the service is configured.
         npmProxyHostsProvider.overrideWith(
           (ref) async => [_host(1, 'jellyfin.lan'), _host(2, 'immich.lan')],
@@ -170,7 +170,7 @@ Future<void> _pump(
 /// How the page was split across NPM's bar, asserted on the screen itself.
 ///
 /// `router_test.dart` proves each tab mounts the constructor it names. This
-/// file proves the constructors draw what the split decided they draw — which
+/// file proves the constructors draw what the split decided they draw, which
 /// is the half a route assertion cannot see, and the half that is a design
 /// decision rather than a wiring one.
 void main() {
@@ -308,8 +308,8 @@ void main() {
 
   testWidgets('the permission band is on both tabs, not just the one with the '
       'menu', (tester) async {
-    // Both tabs carry a gated control — Enable/Disable in the host menu on one,
-    // Renew on a certificate on the other — so leaving the sentence that
+    // Both tabs carry a gated control: Enable/Disable in the host menu on one,
+    // Renew on a certificate on the other, so leaving the sentence that
     // explains the attenuation on one tab would be the failure
     // `npm_write_gate.dart` exists to prevent.
     for (final screen in const [
@@ -335,7 +335,7 @@ void main() {
   testWidgets('the default-admin warning is on every variant', (tester) async {
     // A fact about the box rather than about a section: on an install that
     // still ships `admin@example.com` it outranks everything else on either
-    // tab, and the fixture above is 2.11 — inside that window.
+    // tab, and the fixture above is 2.11, inside that window.
     for (final screen in const [
       NpmScreen(showAppBar: false),
       NpmScreen.proxyHosts(showAppBar: false),
@@ -358,7 +358,7 @@ void main() {
     // Configuration is checked before any provider is read, so nothing here is
     // overridden: a variant that reached `npmClientProvider` would throw, and a
     // provider that throws schedules a retry for a condition no waiting
-    // changes — which this test would report as a pending timer.
+    // changes, which this test would report as a pending timer.
     for (final screen in const [
       NpmScreen(showAppBar: false),
       NpmScreen.proxyHosts(showAppBar: false),

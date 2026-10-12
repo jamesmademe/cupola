@@ -46,7 +46,7 @@ dependencies:
   # Promoted from a transitive dependency of `cached_network_image` so
   # `lib/core/network/pinned_image_cache.dart` can build a per-origin
   # `CacheManager`/`HttpFileService` pinned to a trusted self-signed
-  # certificate (ADR-6) — posters from an arr instance behind one would
+  # certificate (ADR-6), posters from an arr instance behind one would
   # otherwise stay broken even after the API transport is pinned, since
   # `cached_network_image` fetches over its own HTTP stack.
   flutter_cache_manager: ^3.4.1
@@ -68,7 +68,7 @@ dependencies:
   web_socket: ^1.0.1
   # Carries one long-running release search across app suspension on iOS and
   # Android. Its `DataTask` is routed onto a real background `URLSession`, which
-  # is what lets a multi-minute request survive being backgrounded — and needs no
+  # is what lets a multi-minute request survive being backgrounded, and needs no
   # `UIBackgroundModes`, so there is nothing to justify at App Store review. Two
   # of its defaults are actively wrong for this use and are overridden at startup
   # in `main.dart`: `requestTimeout` (60s "waiting for more data", and our server
@@ -76,19 +76,19 @@ dependencies:
   # re-run a killed search against the user's indexers).
   background_downloader: ^9.5.7
   # Tells the user a background search finished. Only `POST_NOTIFICATIONS` is
-  # required, because `zonedSchedule` is never called — which is what keeps this
+  # required, because `zonedSchedule` is never called, which is what keeps this
   # clear of the Play-restricted exact-alarm permissions.
   flutter_local_notifications: ^22.2.0
   # SHA-256 fingerprints for trust-on-first-use TLS certificate pinning.
   crypto: ^3.0.0
   # Grapheme-slot text rolling, used only where a *changing* value is the
   # information: live figures, state words, command labels. Pure Dart, no
-  # platform channels, no transitive dependencies — see `lib/core/reel_motion.dart`
+  # platform channels, no transitive dependencies; see `lib/core/reel_motion.dart`
   # for the one place its timing is chosen.
   #
   # Pinned to an exact version on purpose. It is pre-1.0 with a single
   # maintainer, and it reaches into `TextPainter`, dry layout and baseline
-  # metrics — the part of Flutter most likely to move under it. A caret here
+  # metrics, the part of Flutter most likely to move under it. A caret here
   # would let a patch release change text layout across the app unreviewed.
   reel_text: 0.4.3
 
@@ -96,7 +96,7 @@ dependencies:
   # Windows and Linux, so it needs the window itself to stop drawing one: this
   # is the only package that can hide a title bar while keeping the macOS
   # traffic lights, which the design requires inset over our strip rather than
-  # replaced by lookalikes. Desktop-only by construction — every call site is
+  # replaced by lookalikes. Desktop-only by construction: every call site is
   # behind `DesktopWindow.isSupported`, so the mobile builds never touch it.
   window_manager: ^0.5.0
   material_symbols_icons: ^4.2960.0
@@ -155,7 +155,7 @@ flutter:
         - asset: assets/fonts/CupolaServices.otf
 
   assets:
-    # The product mark — the Cupola seen from above: six lit window panes on the
+    # The product mark: the Cupola seen from above, with six lit window panes on the
     # hexagon's edge midpoints, around the central circular window. Rendered from
     # `assets/brand/cupola_mark.svg`, which is the vector source of record.
     - assets/brand/cupola_mark.png

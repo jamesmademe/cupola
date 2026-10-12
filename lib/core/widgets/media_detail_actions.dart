@@ -48,7 +48,7 @@ class MediaOverflowAction {
 /// **Haptics live here, once.** Each service screen used to fire its own, and
 /// they had drifted: Radarr fired `selectionClick` on both searches and
 /// `mediumImpact` before Delete while Sonarr and Lidarr fired nothing at all.
-/// The sheet is the tap target now, so the sheet owns the feedback — a
+/// The sheet is the tap target now, so the sheet owns the feedback: a
 /// destructive row gets `mediumImpact`, everything else `selectionClick`, and
 /// [PressableScale]'s own light impact is suppressed so exactly one fires.
 Future<void> showMediaDetailActions(
@@ -73,7 +73,7 @@ Future<void> showMediaDetailActions(
 /// single action.
 ///
 /// The rows sit on a route that pops *before* the action runs, and a
-/// [MediaOverflowAction] is a bare [VoidCallback] — so the host learns about a
+/// [MediaOverflowAction] is a bare [VoidCallback], so the host learns about a
 /// tap only once it has already started the work, and cannot refuse a second
 /// one. Two fingers landing on Manual import and Delete in the same frame is
 /// enough: both rows fire, both pop, and the second pop takes the detail page
@@ -135,7 +135,7 @@ class _MediaOverflowRowsState extends State<_MediaOverflowRows> {
 class _MediaOverflowRow extends StatelessWidget {
   final MediaOverflowAction action;
 
-  /// Null disables the row — either the action carries no invoker, or the sheet
+  /// Null disables the row: either the action carries no invoker, or the sheet
   /// has already been spent on another one.
   final VoidCallback? onInvoke;
 
@@ -146,8 +146,8 @@ class _MediaOverflowRow extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final enabled = onInvoke != null;
-    // One ink for every row. A destructive one is set apart by where it sits —
-    // below the divider, last — and by its haptic, never by red: red means
+    // One ink for every row. A destructive one is set apart by where it sits:
+    // below the divider, last, and by its haptic, never by red: red means
     // unreachable and nothing else, and the confirmation says what goes.
     final glyphColor = enabled
         ? colorScheme.onSurfaceVariant

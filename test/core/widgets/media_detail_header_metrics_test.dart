@@ -103,7 +103,7 @@ void main() {
       expect(atCeiling, greaterThan(justBelow));
       expect(ceilingTen, closeTo(10 * ceiling, 0.001));
 
-      // At and past it, both stop — which is the whole invariant: a hero grown
+      // At and past it, both stop, which is the whole invariant: a hero grown
       // on one clamp and painted on another clips its status badge off the top.
       expect(atTriple, atCeiling);
       expect(tripleTen, ceilingTen);
@@ -124,7 +124,7 @@ void main() {
       }
     });
 
-    test('t = 0 renders identity — byte-identical to the static hero', () {
+    test('t = 0 renders identity, byte-identical to the static hero', () {
       const phase = MediaDetailHeroPhase(t: 0);
       expect(phase.scrimDepth, 0);
       expect(phase.barReveal, 0);

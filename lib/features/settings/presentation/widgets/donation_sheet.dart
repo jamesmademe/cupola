@@ -13,7 +13,7 @@ import 'package:cupola/features/settings/data/donation_service.dart';
 /// On open it fetches products from the App Store, shows the available tiers,
 /// and manages the full purchase lifecycle (buying → completing → thank-you).
 ///
-/// Not used on macOS / Android — those platforms open the Ko-fi URL directly.
+/// Not used on macOS / Android: those platforms open the Ko-fi URL directly.
 class DonationSheet extends StatefulWidget {
   const DonationSheet({super.key});
 
@@ -81,7 +81,7 @@ class _DonationSheetState extends State<DonationSheet> {
         _loading = false;
       });
     } catch (_) {
-      // Store unavailable — fall back to Ko-fi.
+      // Store unavailable: fall back to Ko-fi.
       if (!mounted) return;
       Navigator.of(context).pop(true);
     }
@@ -258,7 +258,7 @@ class _DonationSheetState extends State<DonationSheet> {
   }
 
   // Both messages come from the purchase stream: the store answered and the
-  // purchase did not go through. That is a fault, not an unreachable store —
+  // purchase did not go through. That is a fault, not an unreachable store:
   // an unreachable store never gets this far, the sheet falls back to Ko-fi.
   Widget _buildError(BuildContext context) {
     return Padding(

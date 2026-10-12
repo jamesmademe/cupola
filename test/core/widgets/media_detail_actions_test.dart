@@ -280,7 +280,7 @@ void main() {
       await _openSheet(tester);
 
       // Red means unreachable and nothing else. Delete is set apart by where
-      // it sits — below the divider, last — never by colour.
+      // it sits, below the divider and last, never by colour.
       final scheme = Theme.of(
         tester.element(find.text('Delete from Radarr')),
       ).colorScheme;
@@ -335,7 +335,7 @@ void main() {
       // One frame in: the sheet has popped but is still on screen for the
       // length of its exit, and every row on it is a bare closure that pops
       // before the host learns anything. A sheet is spent on one action, so
-      // nothing on it is live any more — not the row that was tapped and not
+      // nothing on it is live any more: not the row that was tapped and not
       // the destructive one beside it.
       await tester.pump();
 

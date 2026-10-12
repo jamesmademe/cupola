@@ -6,21 +6,21 @@ import 'package:cupola/core/app_animation.dart';
 /// The app's roll vocabulary: four presets, and no call site may hand-write a
 /// `ReelTextOptions`.
 ///
-/// `reel_text` ships its own defaults — a 300ms roll on `Cubic(0.34, 1.56, 0.64,
-/// 1)` with `bounce: 0.6` — and they are a springy overshoot chosen to look good
+/// `reel_text` ships its own defaults: a 300ms roll on `Cubic(0.34, 1.56, 0.64,
+/// 1)` with `bounce: 0.6`, and they are a springy overshoot chosen to look good
 /// in a package demo. Nothing in this app moves on that curve. Durations and
 /// curves come from [AppAnimation], so they come from here too, and the presets
 /// below are the only place the two systems meet.
 ///
 /// **Stagger has no [AppAnimation] equivalent**, because nothing else in the app
-/// staggers *within* a single string — [StaggeredEntrance] staggers between
+/// staggers *within* a single string: [StaggeredEntrance] staggers between
 /// siblings at 45ms and that is a different axis. The values below are
 /// authored, and each one is a ratio of the roll it belongs to rather than a
 /// number picked by eye: a figure's glyphs travel almost together (the value is
 /// one unit), a state word's a little wider (a word is read as a word), a
 /// command's tight under the thumb.
 ///
-/// See also the Reduce Motion note on [waiting] — the one preset that is not
+/// See also the Reduce Motion note on [waiting]: the one preset that is not
 /// self-suppressing.
 abstract final class ReelMotion {
   ReelMotion._();
@@ -36,7 +36,7 @@ abstract final class ReelMotion {
   ///
   /// It also carries **no colour flash**. `ReelTextOptions.color` tints incoming
   /// glyphs before fading back, and spending that on a status figure would make
-  /// a hue say something the figure's tone did not — colour is information, and
+  /// a hue say something the figure's tone did not: colour is information, and
   /// a flash is not. A figure changes brightness and position, never hue.
   static const figure = ReelTextOptions(
     direction: ReelTextDirection.down,
@@ -51,7 +51,7 @@ abstract final class ReelMotion {
   /// `Queued` → `Downloading` → `Importing`.
   ///
   /// Same clock as [figure] and a slightly wider stagger. A word is read as a
-  /// word, so its letters may arrive across a short sweep — but only just: past
+  /// word, so its letters may arrive across a short sweep, but only just: past
   /// about 24ms per glyph a nine-letter state word takes longer to settle than
   /// the poll interval that produced it, and the label is then permanently in
   /// motion.
@@ -67,14 +67,14 @@ abstract final class ReelMotion {
   /// A command label answering a press: `Test connection` → `Next service`.
   ///
   /// The one preset that keeps a trace of overshoot, and it is earned rather
-  /// than decorative — this roll is *feedback for a touch*, the same job
+  /// than decorative: this roll is *feedback for a touch*, the same job
   /// [PressableScale]'s 0.97 dip does, and a label that lands dead-flat under
   /// the thumb reads as a repaint instead of a response. The bounce is a
   /// quarter of the package's default, so it settles rather than wobbles.
   ///
   /// `interrupt: false` is the important field. A primary button is spam-prone,
   /// and interrupting snaps the in-flight roll to its target before starting the
-  /// next one — which on a double tap paints the intermediate label for one
+  /// next one, which on a double tap paints the intermediate label for one
   /// frame. Queueing the latest target instead is what the package recommends
   /// for exactly this case.
   static const command = ReelTextOptions(
@@ -94,7 +94,7 @@ abstract final class ReelMotion {
   /// tactile on a single press reads as a twitch on a repeating beat.
   ///
   /// The beat is not set here: `reel_text` derives it from this preset when no
-  /// `step` is given — the roll ([AppAnimation.durationSm], 320 ms, with no
+  /// `step` is given: the roll ([AppAnimation.durationSm], 320 ms, with no
   /// bounce to stretch it) plus the 24 ms exit offset plus a fixed 160 ms rest,
   /// so one tick every 504 ms, about two a second. Changing the duration or the
   /// exit offset moves it.
@@ -104,7 +104,7 @@ abstract final class ReelMotion {
   /// frame timer, so under Reduce Motion an ellipsis loop still hard-swaps
   /// `Testing` → `Testing.` → `Testing..` on that 504 ms beat. Text changing on
   /// a timer with no animation is not motion, but it is still something moving
-  /// for a user who asked for less — so callers check
+  /// for a user who asked for less; so callers check
   /// [MediaQuery.disableAnimationsOf] and show a settled label instead. That
   /// check lives in [ReelCommandButton]; do not re-implement it per screen.
   static const waiting = ReelTextOptions(

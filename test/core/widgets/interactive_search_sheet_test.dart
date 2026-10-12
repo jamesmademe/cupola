@@ -396,7 +396,7 @@ void main() {
 
       // The download *did* start. Reporting through the row's dead element
       // skipped the pop and the confirmation and quietly re-armed every button
-      // instead — nothing on screen said anything had happened, and tapping the
+      // instead. Nothing on screen said anything had happened, and tapping the
       // same release again grabbed it twice.
       expect(find.byType(InteractiveSearchSheet), findsNothing);
       expect(find.text('Download started'), findsOneWidget);
@@ -406,7 +406,7 @@ void main() {
       tester,
     ) async {
       // The other half: a failure keeps the sheet open, so the busy state has
-      // to clear and the reason has to be shown — and neither can depend on the
+      // to clear and the reason has to be shown, and neither can depend on the
       // row that started it still being in the tree.
       final completer = Completer<void>();
       await _showSheet(

@@ -8,7 +8,7 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 ///
 /// Keyed on the pair, because `movieId 42` is a different film on each Radarr:
 /// a family keyed on the int alone would serve the 4K server's answer to a page
-/// that asked the HD one, and — worse — would not refetch, because from the
+/// that asked the HD one, and, worse, would not refetch, because from the
 /// cache's point of view nothing about the question had changed.
 ///
 /// An empty [ArrItemRef.instanceId] means the lens.

@@ -15,19 +15,19 @@ import 'package:cupola/core/providers/provider_retry.dart';
 ///
 /// Throws if Jellyfin is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.jellyfin)` before reading. The
-/// `'not configured'` substring is load-bearing — `AsyncValueWidget` string-matches
+/// `'not configured'` substring is load-bearing: `AsyncValueWidget` string-matches
 /// it to render `NotConfiguredPlaceholder` instead of an error.
 ///
 /// Follows the **lens**, like every other service's client. It used to read the
 /// flat `jellyfinUrl`/`jellyfinApiKey`/`jellyfinUserId` projections, which are
-/// always the *first* connection — so a second Jellyfin could be configured,
+/// always the *first* connection, so a second Jellyfin could be configured,
 /// probed and counted and never once read.
 ///
 /// The chosen viewer is read here rather than passed per call, so picking a
 /// different household member rebuilds this provider and invalidates every
 /// dependent lens. That is why nothing downstream is keyed by viewer: the viewer
 /// is part of *which client you are talking to*, not part of a query's identity.
-/// It comes off the resolved instance for the same reason the address does —
+/// It comes off the resolved instance for the same reason the address does:
 /// two servers have two user tables.
 ///
 /// `watchTransport`, not a bare `watch` of the whole `SettingsModel`, and that is
@@ -41,14 +41,14 @@ final jellyfinClientProvider = Provider<JellyfinClient>((ref) {
 
 /// Jellyfin bound to one named connection, whatever the lens is pointing at.
 ///
-/// The same shape as `radarrServiceForProvider` — read its comment before
+/// The same shape as `radarrServiceForProvider`: read its comment before
 /// touching this one. What it buys here is the settings form: the viewer picker
 /// lists `/Users` of the connection being edited, which is not necessarily the
 /// one the rest of the app is reading through, and a user id only means anything
 /// against the server that issued it.
 ///
 /// The lens's own id collapses onto [jellyfinClientProvider] rather than opening
-/// a second socket to the same server — and so an override of the plain provider
+/// a second socket to the same server, and so an override of the plain provider
 /// is not quietly bypassed on the path that names a connection. `read` of the
 /// lens for the same reason the \*arr families give: watching it would rebuild
 /// every entry whenever the lens moved, and a rebuild closes the outgoing `Dio`
@@ -69,7 +69,7 @@ final jellyfinClientForProvider = Provider.family<JellyfinClient, String>((
 /// The viewer is read from the **instance**, not from `settings.jellyfinUserId`.
 /// That projection is the first connection's, so following the lens without this
 /// would have every user-scoped query on the second server carry a user id from
-/// the first server's user table — an id that does not exist there.
+/// the first server's user table: an id that does not exist there.
 JellyfinClient _jellyfinClient(Ref ref, {required String? instanceId}) {
   final transport = watchTransport(
     ref,
@@ -100,7 +100,7 @@ JellyfinClient _jellyfinClient(Ref ref, {required String? instanceId}) {
 ///
 /// Widgets should depend on this one: nothing above the data layer has any
 /// business knowing whether it is talking to Jellyfin or Plex, and a screen that
-/// takes the interface can be reused for both — which is the entire point of
+/// takes the interface can be reused for both, which is the entire point of
 /// having it. `cancelToken` now lives on `StreamServerClient` itself, so even the
 /// cancellable per-item fetches below go through here; the concrete provider
 /// stays public only for the Jellyfin-specific extras (`getViewers` filtering,
@@ -119,7 +119,7 @@ final jellyfinSessionsProvider = FutureProvider<List<StreamSession>>((
 ) async {
   return ref.watch(jellyfinServerProvider).getSessions();
   // `retry: noProviderRetry` below, because `streamActivityProvider` awaits
-  // this inside a `try` written to carry on without a dark server — and it
+  // this inside a `try` written to carry on without a dark server, and it
   // walks the media servers one at a time, so ten backing-off retries here are
   // spent before Plex is even asked. See [noProviderRetry].
 }, retry: noProviderRetry);
@@ -131,7 +131,7 @@ final jellyfinSessionsProvider = FutureProvider<List<StreamSession>>((
 /// failed build ten times behind an exponential backoff and holds the future
 /// until it has, so a server that has gone dark is a spinner for the better
 /// part of a minute before any surface can say "unreachable" and offer the
-/// Retry it already draws. (The "not configured" throw never needed the flag —
+/// Retry it already draws. (The "not configured" throw never needed the flag;
 /// it reaches a watcher as a `ProviderException`, which `defaultRetry`
 /// declines on its own.)
 final jellyfinLibrariesProvider = FutureProvider<List<StreamLibrary>>((
@@ -182,7 +182,7 @@ final jellyfinItemProvider = FutureProvider.autoDispose
       return client.getItem(itemId, cancelToken: cancelToken);
     }, retry: noProviderRetry);
 
-/// The children of a series, season or album — seasons, episodes or tracks.
+/// The children of a series, season or album: seasons, episodes or tracks.
 ///
 /// Empty for a leaf item, which the client answers without a request.
 final jellyfinItemChildrenProvider = FutureProvider.autoDispose
@@ -197,7 +197,7 @@ final jellyfinItemChildrenProvider = FutureProvider.autoDispose
 /// a **figure** rather than draw a board.
 ///
 /// Written when `getSessions()` still answered an unreachable server with
-/// `const []` — wrong for a counter, where `0 streams` is a claim nobody made,
+/// `const []`, wrong for a counter, where `0 streams` is a claim nobody made,
 /// and, it turned out, wrong for the board too. Both now throw; the KPI rail
 /// and the reachability signal keep reading this one.
 ///

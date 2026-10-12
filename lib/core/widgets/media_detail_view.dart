@@ -35,7 +35,7 @@ import 'package:cupola/core/widgets/staggered_entrance.dart';
 /// materialises with [title]. On iOS/macOS bouncing physics, pulling down
 /// stretches the backdrop.
 ///
-/// The body is declared as a [MediaDetailBody] — five named regions, emitted in
+/// The body is declared as a [MediaDetailBody]: five named regions, emitted in
 /// one fixed order, each holding [MediaDetailSlot]s. The spine owns every
 /// heading, every gap and every horizontal inset; a caller owns only content.
 /// That is what makes the section order a structural guarantee rather than
@@ -58,7 +58,7 @@ class MediaDetailView extends StatelessWidget {
 
   final Widget? background;
 
-  /// The page's accent (`ServiceKey.accent` — the lamp, for every service):
+  /// The page's accent (`ServiceKey.accent`, the lamp for every service):
   /// the room light and the hero's glow, and, walked through
   /// `ServiceTheme.onTint`, the ink of every region label and the current
   /// selection, which a lamp resolves to the room's primary ink. Null for a
@@ -80,7 +80,7 @@ class MediaDetailView extends StatelessWidget {
   /// Owned here so the indicator, the always-scrollable physics and the hero's
   /// overscroll stretch are reconciled in one place. This replaces the old
   /// `physics` escape hatch, which existed only so two screens could feed their
-  /// own [RefreshIndicator] — and left the pull gesture visibly accepted and
+  /// own [RefreshIndicator], and left the pull gesture visibly accepted and
   /// inert on the other six.
   final Future<void> Function()? onRefresh;
 
@@ -129,7 +129,7 @@ class MediaDetailView extends StatelessWidget {
           // Not `MediaQuery.sizeOf`: above 840dp the shell switches to a
           // `NavigationRail`, so the window width is not the route width and a
           // column centred on the window would sit off-centre in the route. The
-          // usual objection to a `LayoutBuilder` — it cannot report intrinsics —
+          // usual objection to a `LayoutBuilder` (it cannot report intrinsics)
           // does not apply to a route body that fills its parent.
           builder: (context, constraints) {
             final gutter = MediaDetailMetrics.gutterOf(constraints.maxWidth);
@@ -194,8 +194,8 @@ class MediaDetailView extends StatelessWidget {
   /// used to be typed here: with the side track at its drawn 380 and the
   /// `AppSpacing.xl` channel between them, 1140 is the first width at which the
   /// main track still clears `MediaDetailMetrics.bodyMaxWidth` (1140 - 380 - 32
-  /// = 728). At the old 1000 the main track was 588 — narrower than the reading
-  /// measure the page exists to hold — and the side track's content was drawn
+  /// = 728). At the old 1000 the main track was 588, narrower than the reading
+  /// measure the page exists to hold, and the side track's content was drawn
   /// for 380 it did not have. A touch build never takes this path at any width:
   /// a tablet in landscape is still held in two hands, and the spine is what it
   /// is holding.
@@ -206,20 +206,20 @@ class MediaDetailView extends StatelessWidget {
   /// The spine and its side track, as one scroll.
   ///
   /// `SliverCrossAxisGroup` rather than a `Row` of two scroll views: the two
-  /// tracks scroll together as one page — which is what the design draws — and
+  /// tracks scroll together as one page, which is what the design draws, and
   /// each half keeps its own slivers, so a 250-episode season inside `operate`
   /// still builds the eight rows on screen and not all 250. A `Row` would have
   /// cost either the laziness or the shared scroll.
   ///
   /// Which slots go where is `MediaDetailBody.sideTrack`'s answer, per slot.
-  /// This method used to answer it per *region* — `operate` and `related` moved,
-  /// the rest stayed — and that is the inverse of every board: the Overview and
+  /// This method used to answer it per *region*: `operate` and `related` moved,
+  /// the rest stayed, and that is the inverse of every board: the Overview and
   /// the Details grid stand in the 380 column while the episode table and the
   /// releases run the wide one.
   ///
   /// **Reading order is not visual order here.** A screen reader walks the main
   /// track and then the side track, so it hears every main-track slot in
-  /// canonical region order and then every side-track one — the spine's five
+  /// canonical region order and then every side-track one: the spine's five
   /// regions, some of them later than on the phone. Interleaving them back would
   /// need sort keys the sliver
   /// semantics tree does not honour across cross-axis groups, and a broken sort
@@ -236,9 +236,9 @@ class MediaDetailView extends StatelessWidget {
     // itself.
     //
     // This is what the code already did and never admitted: it computed a
-    // `mainWidth` capped at `bodyMaxWidth`, fed it to `gutterOf` — which then
+    // `mainWidth` capped at `bodyMaxWidth`, fed it to `gutterOf`, which then
     // always returned exactly `AppSpacing.lg`, because the cap made the surplus
-    // zero — and let `SliverCrossAxisExpanded(flex: 1)` hand the main track
+    // zero, and let `SliverCrossAxisExpanded(flex: 1)` hand the main track
     // every remaining pixel anyway. So the cap bound nothing here while binding
     // hard on the one-track path, which is a silent difference between two
     // layouts of the same page. Said out loud instead: on this path the side
@@ -307,7 +307,7 @@ class MediaDetailView extends StatelessWidget {
   /// stay lazy *and* land mid-page. A 250-episode season builds the eight rows
   /// on screen, not 250.
   ///
-  /// Gaps live here and nowhere else — a caller that pads its own slot is
+  /// Gaps live here and nowhere else: a caller that pads its own slot is
   /// fighting the page's rhythm. The 24-above / 8-below asymmetry around a label
   /// is the grouping mechanism (DESIGN.md: sections separated by 24dp, plus the
   /// `/services` engraved header's asymmetric-proximity argument). No dividers,
@@ -333,7 +333,7 @@ class MediaDetailView extends StatelessWidget {
     var staggerIndex = firstStaggerIndex;
 
     /// One stagger unit. A label and its box share an index so they arrive as
-    /// one object; a lazy list and a rail are never wrapped at all — a
+    /// one object; a lazy list and a rail are never wrapped at all, since a
     /// [StaggeredEntrance] inside a `SliverList.builder` fires in `initState` on
     /// every scroll-in and replays forever.
     Widget stagger(Widget child, int index) {
@@ -346,7 +346,7 @@ class MediaDetailView extends StatelessWidget {
       );
     }
 
-    // Above region 1 — the band. A FaultBand or an InlineErrorRetry carries
+    // Above region 1: the band. A FaultBand or an InlineErrorRetry carries
     // the screen gutter itself, so it is handed only the surplus a centred
     // column takes on (zero on a phone): its glyph lands on the column edge.
     // Padded by the full gutter inside a region, it sat 16pt in from
@@ -364,7 +364,7 @@ class MediaDetailView extends StatelessWidget {
       );
     }
 
-    // Region 1 — the readout. A bleeding rail: it owns its own horizontal
+    // Region 1, the readout. A bleeding rail: it owns its own horizontal
     // padding so the first cell aligns to the column while the rail runs past
     // it.
     //
@@ -470,7 +470,7 @@ class MediaDetailView extends StatelessWidget {
 /// Builds the shared pinned hero header sliver.
 ///
 /// Used by both [MediaDetailView] and [MediaDetailLoadingView] so the header
-/// geometry is identical in the loading and loaded states — swapping one for
+/// geometry is identical in the loading and loaded states, so swapping one for
 /// the other produces zero header displacement.
 @visibleForTesting
 Widget mediaDetailHeaderSliver(
@@ -556,7 +556,7 @@ class _MediaDetailHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   /// Overscroll stretch of the backdrop on bouncing physics (iOS/macOS).
   /// Under clamping physics (Android) this is a silent no-op, and under
-  /// Reduce Motion the stretch is disabled — the scene must not grow on its
+  /// Reduce Motion the stretch is disabled: the scene must not grow on its
   /// own past the finger's pull.
   @override
   OverScrollHeaderStretchConfiguration? get stretchConfiguration =>
@@ -655,7 +655,7 @@ class _MediaDetailHeader extends StatelessWidget {
   /// poster scaled to 0.86 plus the 16pt inset ≈ 122pt against a 184pt range)
   /// with margin, so by t = 1 the row is fully clipped and only the glass bar
   /// remains. Under Reduce Motion the row moves at exactly content speed
-  /// instead (factor 1.0) — a plain scroll with no differential motion.
+  /// instead (factor 1.0): a plain scroll with no differential motion.
   double get _posterExitFactor => phase.reduceMotion ? 1.0 : 0.7;
 
   @override
@@ -690,7 +690,7 @@ class _MediaDetailHeader extends StatelessWidget {
           ),
       ],
     );
-    // Destination settle: the scene develops behind the poster's Hero flight —
+    // Destination settle: the scene develops behind the poster's Hero flight:
     // the art fades in and eases home from a slight zoom as the push
     // completes, and reverses under an interactive pop. Identity once the
     // route is settled (value 1), so resting frames are unaffected.
@@ -698,7 +698,7 @@ class _MediaDetailHeader extends StatelessWidget {
       // `drive(CurveTween(...))` and never a `CurvedAnimation`, which is not a
       // style choice: this build runs from a `SliverPersistentHeaderDelegate`
       // whose `shouldRebuild` is deliberately always true, inside a
-      // `LayoutBuilder` — so it runs once per frame for the whole collapse
+      // `LayoutBuilder`, so it runs once per frame for the whole collapse
       // range. `CurvedAnimation`'s constructor registers a status listener on
       // its parent that only `dispose()` removes, and the parent here is the
       // *route's* animation, which outlives every one of those frames; each
@@ -766,7 +766,7 @@ class _MediaDetailHeader extends StatelessWidget {
           // The permeable bottom edge.
           //
           // `heroScrim` bottoms out on *opaque* `surface`, which occludes the
-          // page's ambient accent radials — while the body one pixel below
+          // page's ambient accent radials, while the body one pixel below
           // shows them. Measured on a 390x844 phone with a violet accent, that
           // put a hard single-row step of up to 19/255 in the blue channel
           // across the full width, at every collapse position and in both
@@ -779,14 +779,14 @@ class _MediaDetailHeader extends StatelessWidget {
           // So the fix is the house discipline, not a blur: a gradient scrim
           // that continues the art group's own floor tone and fades it to
           // nothing, letting the room read through the last gutter. Same RGB at
-          // both stops with only the alpha moving — lerping to
+          // both stops with only the alpha moving, lerping to
           // `Colors.transparent` would travel through transparent *black* and
           // smudge a grey band across the light theme.
           //
           // One gutter, not more: at full collapse this band is the pinned
           // bar's bottom 16pt, which sits clear of the bar's title, so the
           // collapsed title keeps its full backing while content still fades
-          // under the bar instead of being cut by it. Costs no `saveLayer` —
+          // under the bar instead of being cut by it. Costs no `saveLayer`:
           // the art group is clipped short rather than masked, so the poster
           // row (a Hero source that must never be faded), the glass bar and the
           // back button all stay outside it.
@@ -811,7 +811,7 @@ class _MediaDetailHeader extends StatelessWidget {
           // Poster row: glued to the rising bottom edge (content speed) plus
           // an exit push so it slides under the incoming content and is fully
           // clipped by the time the bar owns the band. Never wrapped in an
-          // Opacity — a Hero source at opacity 0 would make the return flight
+          // Opacity: a Hero source at opacity 0 would make the return flight
           // materialise from nothing instead of sliding out from under the
           // bar. The damped `stretch * 0.35` holds the row near the bottom
           // while the art stretches further on overscroll.
@@ -832,7 +832,7 @@ class _MediaDetailHeader extends StatelessWidget {
             ),
           ),
           // Collapsed glass bar. GlassSurface is a gradient scrim, not a
-          // BackdropFilter — the No-Blur-Under-Scroll rule applies to a
+          // BackdropFilter: the No-Blur-Under-Scroll rule applies to a
           // pinned bar with content scrolling beneath it.
           Positioned(
             top: 0,
@@ -902,7 +902,7 @@ class _CollapsedBarContent extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(top: topPadding),
       // The bar's height grew on the single-line-chrome clamp, so its text
-      // must lay out on the same clamp — otherwise a 2x reader gets an
+      // must lay out on the same clamp, otherwise a 2x reader gets an
       // overflow stripe instead of the promised ellipsis.
       child: MediaQuery(
         data: MediaQuery.of(context).copyWith(
@@ -926,7 +926,7 @@ class _CollapsedBarContent extends StatelessWidget {
   }
 }
 
-/// Positions [MediaDetailBackButton], which owns both poses — a dark floating
+/// Positions [MediaDetailBackButton], which owns both poses: a dark floating
 /// disc over the expanded artwork, and a bare chrome glyph centred in the
 /// collapsed glass bar. Shared with the placeholder/error pages so the two
 /// cannot drift apart.
@@ -1030,9 +1030,9 @@ class _FallbackHeroBackdrop extends StatelessWidget {
 ///
 /// Builds the same pinned hero header as [MediaDetailView] (via
 /// [mediaDetailHeaderSliver]) so the load → data swap produces zero header
-/// displacement, and the same room and the same measure below it — same
+/// displacement, and the same room and the same measure below it: same
 /// [AmbientBackground], same transparent [Material], same
-/// [MediaDetailMetrics.gutterOf] column — so nothing moves sideways either.
+/// [MediaDetailMetrics.gutterOf] column, so nothing moves sideways either.
 ///
 /// The skeleton is shaped like the body it becomes: a first card, then a
 /// readout-sized rail, then a section. A generic stack of text lines and a card
@@ -1125,7 +1125,7 @@ class _MediaDetailLoadingBody extends StatelessWidget {
   /// One row of readout cells.
   static const double _readoutHeight = 78.0;
 
-  /// A first section — the manifest, usually.
+  /// A first section: the manifest, usually.
   static const double _sectionHeight = 140.0;
 
   @override

@@ -23,7 +23,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Above this many ready files, groups arrive collapsed.
 ///
 /// A three-file rescue should show its contents immediately; a four-hundred
-/// file backlog should show its *shape* — the list of shows — and let the user
+/// file backlog should show its *shape* (the list of shows), and let the user
 /// open the one they came for.
 const _autoCollapseThreshold = 20;
 
@@ -37,8 +37,8 @@ const _filterThreshold = 6;
 /// The part of the scan that is actually on screen.
 ///
 /// Every count under a section header describes *this*, never the whole scan.
-/// The two used to be mixed on one screen — "Showing 64 of 1970 files" above a
-/// section reading "59 of 123 selected" — and the fraction that named neither
+/// The two used to be mixed on one screen: "Showing 64 of 1970 files" above a
+/// section reading "59 of 123 selected", and the fraction that named neither
 /// the visible list nor a selection the user could see was the one number
 /// nobody could reconcile.
 class _VisibleFiles {
@@ -47,7 +47,7 @@ class _VisibleFiles {
   final List<ManualImportItem> other;
   final List<ManualImportItem> imported;
 
-  /// The text filter alone, without the facet chips — the sections that are
+  /// The text filter alone, without the facet chips: the sections that are
   /// deliberately outside the facet row (a batch in flight) still use it.
   final bool Function(ManualImportItem) matchesQuery;
 
@@ -73,7 +73,7 @@ class _VisibleFiles {
   ///
   /// Not a rounding error: the scan preselects every ready file, so filtering
   /// down to one series and clearing it leaves a full selection of files the
-  /// user cannot see — and the import button would spend it silently.
+  /// user cannot see, and the import button would spend it silently.
   int offScreenSelectedCount(ManualImportFlowState state) {
     final shown = _paths;
     return state.selectedItems
@@ -89,20 +89,20 @@ class _VisibleFiles {
   }
 }
 
-/// Station 2 — Review: the scanned files, grouped by what they need and by what
+/// Station 2 (Review): the scanned files, grouped by what they need and by what
 /// they matched to.
 ///
 /// Selection and matching live on one list. A file is either matched (checkbox,
-/// included in the import), already in the library (checkbox too — ticking it
+/// included in the import), already in the library (checkbox too; ticking it
 /// asks for a replacement), in need of a match (tap to fix), or of a kind this
 /// service does not import. The old flow split selection and matching across two
 /// screens, so you selected blind and discovered the match problems a screen
 /// later.
 ///
 /// The counts across the top are the screen's one control for *what is on it*.
-/// Show/hide used to be spread over three places — an app-bar toggle for the
+/// Show/hide used to be spread over three places: an app-bar toggle for the
 /// imported files, a collapsing header for the unmatched ones, a second one for
-/// the unimportable ones — and none of them said what they were hiding. Now the
+/// the unimportable ones, and none of them said what they were hiding. Now the
 /// four counts are four filters, and the row beneath them says how much of the
 /// scan is currently on screen.
 class ManualImportReviewScreen extends ConsumerStatefulWidget {
@@ -143,7 +143,7 @@ class _ManualImportReviewScreenState
   ///
   /// "Other" starts hidden: files this service cannot import are the one class
   /// that is never actionable, and a real downloads folder holds dozens of them.
-  /// Everything else starts visible — including the files already in the
+  /// Everything else starts visible, including the files already in the
   /// library, because the whole job of the Review step is to show what the scan
   /// found, and a file silently missing from the list is how "I already imported
   /// that" became an unanswerable question.
@@ -232,8 +232,8 @@ class _ManualImportReviewScreenState
       // is station 2.
       title: manualImportTitle,
       // The canvas prints the size of the scan here and the folder on its own
-      // line in the body. The desktop board spells it out — "5 files parsed and
-      // probed on the server" — and the phone board prints "5 files"; this is
+      // line in the body. The desktop board spells it out: "5 files parsed and
+      // probed on the server", and the phone board prints "5 files"; this is
       // one string at every width, so it is the short form, which is the only
       // one that survives a 375pt app bar with two actions in it. The long
       // sentence's real content, that the server parses and probes every file,
@@ -336,7 +336,7 @@ class _ManualImportReviewScreenState
     );
   }
 
-  /// Everything that survives both filters — the chip row and the text field.
+  /// Everything that survives both filters: the chip row and the text field.
   ///
   /// Computed once per build and handed to both the list and the footer, so the
   /// counts under the section headers and the warning above the import button
@@ -381,7 +381,7 @@ class _ManualImportReviewScreenState
     final rows = <Widget>[
       ImportStationBar(service: service, activeIndex: 1),
       // The folder is the one fact the whole screen is about and it used to
-      // live only in the app-bar subtitle, where the file count now is — so a
+      // live only in the app-bar subtitle, where the file count now is, so a
       // scan of the wrong folder looked exactly like a scan of the right one
       // until you read a two-line title.
       _ScannedFolderLine(
@@ -459,7 +459,7 @@ class _ManualImportReviewScreenState
       rows.addAll(_inFlightRows(command, inFlight));
     } else if (command != null && state.submittedItems.isNotEmpty) {
       // A finished import has moved its files out of the folder, so there are
-      // no rows left to show — but the batch still happened, and the only way
+      // no rows left to show, but the batch still happened, and the only way
       // back to its result would otherwise be gone with them.
       rows.add(
         _LastImportBanner(
@@ -471,7 +471,7 @@ class _ManualImportReviewScreenState
       );
     }
 
-    // Nothing left to show, for one of two different reasons — and the recovery
+    // Nothing left to show, for one of two different reasons, and the recovery
     // differs, so the two are never collapsed into one "no results".
     if (visibleCount == 0 && totalCount > 0) {
       final searching = query.trim().isNotEmpty;
@@ -544,12 +544,12 @@ class _ManualImportReviewScreenState
         .toList(growable: false);
     // Radarr needs only a movie id, so one identity legitimately covers several
     // files. Sonarr and Lidarr need per-file episodes and tracks, which is what
-    // the bulk sheet maps — and what makes assigning "everything at once"
+    // the bulk sheet maps, and what makes assigning "everything at once"
     // meaningless there unless the user picked the files.
     final canAssignTogether = picked.length >= 2;
 
     // No collapse of its own any more. A folder can hold hundreds of unmatched
-    // files and scrolling past all of them is not a review — but that is exactly
+    // files and scrolling past all of them is not a review, but that is exactly
     // what the "need a match" chip does now, with the count still on screen.
     // Two controls for one job is how a section came to be hideable in a place
     // that never said what it was hiding.
@@ -640,7 +640,7 @@ class _ManualImportReviewScreenState
   /// imported ones used to sit in a collapsed section at the bottom of the
   /// screen, which answered "is it in the library?" only for someone who already
   /// suspected it was: the useful place for "S01E05 is already imported" is
-  /// between S01E04 and S01E06, in the same group, in broadcast order — where
+  /// between S01E04 and S01E06, in the same group, in broadcast order, where
   /// the gap it explains actually is.
   List<Widget> _matchedRows(
     ManualImportFlowState state,
@@ -922,7 +922,7 @@ class _LastImportBanner extends StatelessWidget {
 /// What a filter is hiding, and the shortcut to act on only what is left.
 ///
 /// Without this the counts and the import button above and below a filtered
-/// list describe the whole scan while the list describes a slice of it — true,
+/// list describe the whole scan while the list describes a slice of it: true,
 /// but easy to misread as "these are the files I am importing".
 class _FilterStatus extends StatelessWidget {
   final int visibleCount;
@@ -1008,7 +1008,7 @@ class _AssignHint extends StatelessWidget {
   }
 }
 
-/// The scan is server-side and genuinely slow — minutes on big folders — so
+/// The scan is server-side and genuinely slow (minutes on big folders), so
 /// the wait gets a legible shape: the message up front, skeleton rows below.
 class _ScanningState extends StatelessWidget {
   final ServiceKey service;

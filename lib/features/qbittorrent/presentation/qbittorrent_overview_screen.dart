@@ -14,8 +14,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of qBittorrent's service home.
 ///
-/// Overview alone carries the identity block and the readouts — Queue and RSS
-/// are each a view of one kind of record — and then four regions: what is
+/// Overview alone carries the identity block and the readouts: Queue and RSS
+/// are each a view of one kind of record, and then four regions: what is
 /// broken, what is moving, how the library is filed, and what the session has
 /// done. Each region that has a tab to go to ends in a link named exactly like
 /// that tab.
@@ -30,7 +30,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// **Needs attention is promoted out of the queue.** The desktop board folds
 /// the stalled and errored torrents into the queue table, which works there
 /// because that table draws all eighteen rows. An Overview preview draws five,
-/// and on a real server the broken torrent is rarely in the first five — it is
+/// and on a real server the broken torrent is rarely in the first five: it is
 /// the one that stopped moving days ago. A fault that a preview can hide is a
 /// fault the page failed to report, so the faults get their own region above
 /// the queue and the queue preview shows only what is actually moving. Nothing
@@ -43,12 +43,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// not request trustworthy values for them. An em dash is reserved for a
 /// requested figure whose source did not answer, not for an endpoint we never
 /// asked for.
-///  * **Disk free** — the board's fourth readout, `4.1 TB /downloads`, lives in
+///  * **Disk free**: the board's fourth readout, `4.1 TB /downloads`, lives in
 ///    `server_state.free_space_on_disk` on `GET /api/v2/sync/maindata`, which
 ///    this client never calls. It is left out of the Session list rather than
 ///    printed as `—`: an em dash belongs to a figure whose source was asked and
 ///    did not answer, and nobody asked this one.
-///  * **DHT nodes, listen port and the all-time global ratio** — same endpoint,
+///  * **DHT nodes, listen port and the all-time global ratio**: same endpoint,
 ///    same reasoning. The *session* ratio below is arithmetic on two figures
 ///    `/transfer/info` did answer with, and is labelled as the session's.
 ///
@@ -64,7 +64,7 @@ class QbittorrentOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -77,7 +77,7 @@ class QbittorrentOverviewScreen extends ConsumerWidget {
     // throws `qBittorrent not configured`, and letting `AsyncValueWidget` catch
     // that throw would draw the same pixels while leaving four *failed*
     // providers behind it, each scheduling a retry with backoff for a condition
-    // no amount of waiting changes — which surfaces in tests as a pending timer
+    // no amount of waiting changes, which surfaces in tests as a pending timer
     // and on device as a battery cost.
     final configured = ref.watch(
       currentSettingsProvider.select(
@@ -162,16 +162,16 @@ class _NeedsAttentionSection extends ConsumerWidget {
     // caps at `qbittorrentAttentionLimit`, so its length is a sample: a server
     // with twelve broken torrents would print "4" over four rows and report the
     // other eight nowhere. `QbittorrentQueueCounts.faults` counts `stalled` and
-    // `errored` over the whole list — the same population the rows are drawn
+    // `errored` over the whole list: the same population the rows are drawn
     // from, since `qbittorrentFaultKindOf` answers non-null for exactly those
-    // two parsed states — so the header is where the remainder gets reported.
+    // two parsed states, so the header is where the remainder gets reported.
     final counts = ref.watch(qbittorrentOverviewCountsProvider).asData?.value;
 
     return ServiceOverviewSection(
       service: ServiceKey.qbittorrent,
       title: 'Needs attention',
       // `—` while the list is in flight or after it failed. A `0` printed over
-      // an unanswered question is a claim nobody made — and the claim it makes
+      // an unanswered question is a claim nobody made, and the claim it makes
       // ("nothing is wrong") is the one the user would act on.
       subtitle: counts == null ? '—' : '${counts.faults}',
       // Every fault here is a torrent, and every torrent lives on the Queue
@@ -375,7 +375,7 @@ class _CategoryRow extends StatelessWidget {
 
     return ServiceOverviewRow(
       spoken: row.spoken,
-      // The service's own accent, walked to ink by the shared helper — a
+      // The service's own accent, walked to ink by the shared helper: a
       // category is inventory, not a status, so it takes no tone from the
       // five-arm rule.
       leading: Icon(
@@ -404,8 +404,8 @@ class _SessionSection extends ConsumerWidget {
       service: ServiceKey.qbittorrent,
       title: 'Session',
       // Says the window in the header, because every figure below it is scoped
-      // to the current run of the daemon and three of them — downloaded,
-      // uploaded, ratio — look exactly like all-time totals otherwise.
+      // to the current run of the daemon and three of them: downloaded,
+      // uploaded, and ratio look exactly like all-time totals otherwise.
       subtitle: 'since qBittorrent started',
       // No link: qBittorrent's bar is Overview, Queue and RSS. There is no
       // Session tab to send anyone to.
@@ -441,14 +441,14 @@ class _SessionRow extends StatelessWidget {
     return ServiceOverviewRow(
       spoken: fact.spoken,
       leading: Icon(fact.icon, size: 18, color: colorScheme.onSurfaceVariant),
-      // The figure in the title slot and its label beneath — the inverse of the
+      // The figure in the title slot and its label beneath, the inverse of the
       // other three regions, and deliberately so. There the title is the
       // subject (a torrent, a category) and the trailing figure is secondary,
       // which is the shape `ServiceOverviewRow` was built for. Session has no
       // subject: "Downloaded this session" is chrome and `1.2 TB` is the
       // content, so putting the label in the primary slot would print six
       // captions at 13/w600 with their answers dimmed to 11pt at the right
-      // margin — and capped at 132pt, where a long figure ellipsises. The board
+      // margin, and capped at 132pt, where a long figure ellipsises. The board
       // draws these the other way round (figure large, label small) for the
       // same reason, and `AppTheme.data` sitting above Label is the theme
       // saying it: the thing that needs a human must never be smaller than the

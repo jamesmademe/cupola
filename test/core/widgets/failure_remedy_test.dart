@@ -23,7 +23,7 @@ void main() {
   ]) {
     for (final platform in [TargetPlatform.iOS, TargetPlatform.macOS]) {
       for (final compact in [false, true]) {
-        testWidgets('$room · ${platform.name} · compact: $compact — amber ink '
+        testWidgets('$room, ${platform.name}, compact $compact: amber ink '
             'on the amber fill clears 4.5:1, 44pt high', (tester) async {
           debugDefaultTargetPlatformOverride = platform;
           final theme = build();

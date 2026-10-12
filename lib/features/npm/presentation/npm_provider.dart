@@ -14,7 +14,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// One long-lived client per configuration, and here that is not just an
 /// optimisation: the bearer token lives on the instance and nowhere else, so a
-/// fresh client per call would mean a fresh login per call — against a server
+/// fresh client per call would mean a fresh login per call, against a server
 /// with no rate limiting, on an account whose password is the key to every
 /// route on the box.
 final npmClientProvider = Provider<NpmClient>((ref) {
@@ -107,7 +107,7 @@ final npmOtherHostsProvider = FutureProvider<List<NpmSimpleHost>>((ref) async {
   return results.expand((hosts) => hosts).toList(growable: false);
 }, retry: noProviderRetry);
 
-/// The unauthenticated health document — version, and whether this install is
+/// The unauthenticated health document: version, and whether this install is
 /// old enough to still carry NPM's hard-coded default administrator.
 final npmServerInfoProvider = FutureProvider<NpmServerInfo>((ref) async {
   return ref.watch(npmClientProvider).serverInfo();

@@ -87,7 +87,7 @@ List<QbittorrentRssFeed> qbittorrentRssFeedsFromJson(Object? raw) {
       final value = entry.value;
       if (value is String) {
         // The legacy shape: the leaf is the feed URL and nothing else. No
-        // articles came with it, so no count can be stated — see
+        // articles came with it, so no count can be stated: see
         // [QbittorrentRssFeed.unreadCount].
         feeds.add(
           QbittorrentRssFeed(

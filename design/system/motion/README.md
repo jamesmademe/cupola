@@ -6,7 +6,7 @@ the real durations, curves and spring constants, read from the Dart source named
 honours Reduce Motion the way Flutter does (animations run at 5% of their duration; springs and
 repeats stop).
 
-Because they are re-drawings, they can drift. When the motion code changes, change the card with it —
+Because they are re-drawings, they can drift. When the motion code changes, change the card with it:
 the constants are named in both places.
 
 `motion.css` and `motion.js` (the port of `ServiceTheme.onTint` / `foregroundOn` that lets a label

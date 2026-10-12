@@ -7,7 +7,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// One configured connection to one server.
 ///
 /// The unit the app is keyed on. [ServiceKey] answers *what kind of thing is
-/// this* — its API, its icon, where its credential lives in its own UI — and a
+/// this*: its API, its icon, where its credential lives in its own UI, and a
 /// [ServiceInstance] answers *which one*: this Radarr at this address with this
 /// key, told apart from the other Radarr by a name the user chose.
 ///
@@ -15,7 +15,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// [id] is opaque, stable and generated once. The first instance of a service
 /// takes the service's own [ServiceKeyExtension.routeParam] as its id, and
-/// every later one takes `routeParam-xxxxxxxx`. That is not cosmetic — it is
+/// every later one takes `routeParam-xxxxxxxx`. That is not cosmetic: it is
 /// what makes this change invisible to an existing install:
 ///
 /// * every storage key on this class derives from [id], and for the first
@@ -37,7 +37,7 @@ class ServiceInstance {
   /// Which kind of server this is.
   final ServiceKey service;
 
-  /// The short name the user gave this instance — `4K`, `HD`, `Casa`.
+  /// The short name the user gave this instance: `4K`, `HD`, `Casa`.
   ///
   /// Empty for a service with only one instance, and that emptiness is the
   /// whole of the "you do not pay for the fold until you need it" rule: with no
@@ -51,7 +51,7 @@ class ServiceInstance {
   /// The secret half of this instance's credential: an API key, a password or
   /// a token, depending on what the service issues. One slot rather than three
   /// because a connection has exactly one secret, and which vocabulary it goes
-  /// by is the service's business — see [ServiceKeyExtension.credentialLabel].
+  /// by is the service's business; see [ServiceKeyExtension.credentialLabel].
   final String credential;
 
   /// The non-secret half, for the services that authenticate on a pair.
@@ -162,8 +162,8 @@ class ServiceInstance {
 
   /// Where the secret lives, in secure storage.
   ///
-  /// The suffix belongs to the *service* — Plex issues a token, qBittorrent
-  /// takes a password, the arrs mint an API key — so it comes from the registry
+  /// The suffix belongs to the *service*: Plex issues a token, qBittorrent
+  /// takes a password, the arrs mint an API key, so it comes from the registry
   /// rather than being flattened to one word here. That is what makes the
   /// primary instance's key byte-identical to the one already on disk.
   String get credentialStorageKey =>
@@ -229,7 +229,7 @@ class ServiceInstance {
 
   /// The join: `Radarr` with no label, `Radarr · 4K` with one.
   ///
-  /// **Formatting only — it cannot answer whether the label should be shown.**
+  /// **Formatting only. It cannot answer whether the label should be shown.**
   /// A label outlives the sibling that made it necessary: derive one for the
   /// original Radarr when a second is added, remove the second, and the survivor
   /// still carries `4K` while every badge, chip and section heading has gone

@@ -37,8 +37,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Lidarr's service home.
 ///
-/// Overview alone carries the identity block and the readouts — every other tab
-/// is a view of one kind of record — and then the sections in the order the
+/// Overview alone carries the identity block and the readouts: every other tab
+/// is a view of one kind of record, and then the sections in the order the
 /// narrow board draws them: what needs a decision, what arrived, what happened
 /// today, and where it all lands. Each section that belongs to exactly one tab
 /// ends in a link named exactly like that tab.
@@ -50,7 +50,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// **The board's first region is missing, and that is the design.** `HomeLidarr`
 /// opens on a seven-day calendar of upcoming releases. A Lidarr artist carries
-/// no release dates — the date belongs to the album — and this client's only
+/// no release dates: the date belongs to the album, and this client's only
 /// album call is artist-scoped, so the window would need `GET /api/v1/calendar`,
 /// which it does not make. Radarr can draw the same region because a film's
 /// dates ride on the library row it already has; Lidarr cannot, and a window
@@ -67,7 +67,7 @@ class LidarrOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -87,7 +87,7 @@ class LidarrOverviewScreen extends ConsumerWidget {
       body: SafeArea(
         // Checked **before** anything reaches a provider, not after: a fetch on
         // an unconfigured service throws "Lidarr not configured", and a
-        // FutureProvider that throws is a failed provider — Riverpod schedules
+        // FutureProvider that throws is a failed provider. Riverpod schedules
         // a backoff retry for a condition no amount of waiting changes, which
         // surfaces in tests as a pending timer and on device as four doomed
         // requests per section.
@@ -117,7 +117,7 @@ class _OverviewBody extends ConsumerWidget {
         // library that is still holding the answer it already had, so without
         // these a pull-to-refresh re-sorts the same six artists and reports
         // itself finished. Both reads: the grid's degrading one and this
-        // screen's own — see `lidarrOverviewArtistsProvider`.
+        // screen's own. See `lidarrOverviewArtistsProvider`.
         ref.invalidate(musicProvider);
         ref.invalidate(lidarrOverviewArtistsProvider);
         // And the rail's own non-swallowing read of it. See
@@ -211,7 +211,7 @@ class _AttentionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // Through the tone rule, never a raw `AppColors.*`: amber is a fault, and
-    // the backlog row — monitored albums with no files — is neutral by
+    // the backlog row (monitored albums with no files) is neutral by
     // construction. Walking it against the surface it actually lands on is the
     // other half: the accent-tinted section ground is not `surface`.
     final tone = statusToneColor(
@@ -248,7 +248,7 @@ class _RecentlyAddedSection extends ConsumerWidget {
       //
       // The word and **no figure**. The rail is the newest
       // [lidarrRecentlyAddedLimit] artists, so its length is the cap for any
-      // library that has added that many — a count of the sample printed in the
+      // library that has added that many: a count of the sample printed in the
       // place a section subtitle counts the set. Radarr's sibling rail, which
       // is capped the same way, states no figure at all for the same reason.
       subtitle: 'artists',
@@ -286,7 +286,7 @@ class _PosterRail extends ConsumerWidget {
     final instance = ref.watch(activeInstanceProvider(ServiceKey.lidarr));
 
     return SizedBox(
-      // 138pt poster, the gap, and two label lines — grown by the reading size
+      // 138pt poster, the gap, and two label lines, grown by the reading size
       // so the captions are not clipped at an accessibility text size.
       height: TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
       // The box grew by the *clamped* scale, so the text has to be laid out at
@@ -336,13 +336,13 @@ class _PosterTile extends StatelessWidget {
     // and tags a poster of the same artist, and two live Heroes sharing a tag
     // is an assertion, not a flight.
     final heroTag = 'lidarr_overview_recent_${artist.id}';
-    // Albums, never tracks. The two are different counts of different things —
-    // an artist with four albums has some hundreds of tracks — and the model
+    // Albums, never tracks. The two are different counts of different things:
+    // an artist with four albums has some hundreds of tracks, and the model
     // carries both, which is exactly how they get swapped.
     //
     // Zero is silence, not a caption. `albumCount` reads `statistics`, which is
     // nullable on the model and absent from any artist record the server sent
-    // without it — so a plain `'${artist.albumCount} albums'` captions the tile
+    // without it, so a plain `'${artist.albumCount} albums'` captions the tile
     // "0 albums" and says it to a screen reader too, which is a fact about the
     // payload wearing the clothes of a fact about the artist, in the reassuring
     // direction. The same guard `global_search_provider.dart` puts on the same
@@ -467,7 +467,7 @@ class _HistoryRow extends StatelessWidget {
 
 /// Where this Lidarr files music, and how much room is left.
 ///
-/// The board's version of this region carries a capacity bar — `2.2 TB used ·
+/// The board's version of this region carries a capacity bar: `2.2 TB used ·
 /// 55% of 4 TB`. A root folder record reports free space and nothing else, so
 /// the bar has no denominator that is not invented; it is absent, and the one
 /// figure the server really sends is stated plainly beside the path. The narrow

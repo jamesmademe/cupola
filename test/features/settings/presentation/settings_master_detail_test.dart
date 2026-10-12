@@ -10,8 +10,8 @@ import 'package:cupola/features/settings/presentation/widgets/settings_master_de
 
 /// The settings rail: which row it lights, and what it calls the first one.
 ///
-/// Both are rules rather than renderings — the rail's whole job is to say where
-/// you are — so neither assertion touches a colour or a width.
+/// Both are rules rather than renderings: the rail's whole job is to say where
+/// you are, so neither assertion touches a colour or a width.
 void main() {
   testWidgets('the row you are standing on is the marked one', (tester) async {
     // The regression: Connections pointed at `/settings/services`, a legacy
@@ -81,7 +81,7 @@ void main() {
 }
 
 /// The rail draws on a desktop build only, and the override has to be undone
-/// inside the test body — `flutter_test` asserts on it before tear-downs run.
+/// inside the test body: `flutter_test` asserts on it before tear-downs run.
 Future<void> _onDesktop(Future<void> Function() body) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
   try {

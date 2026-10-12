@@ -34,7 +34,7 @@ class CopyLiteral {
   final String prose;
 }
 
-/// Every string literal in [source] that a person could read — see the file
+/// Every string literal in [source] that a person could read: see the file
 /// comment for what is left out.
 List<CopyLiteral> copyOf(String path, String source) {
   final found = <CopyLiteral>[];
@@ -207,10 +207,10 @@ bool _isWireValue(String s, int start, int end) {
   if (RegExp(r'(contains|startsWith|endsWith)\($').hasMatch(before)) {
     return true;
   }
-  // An index — `json['IsPaused']` — not a list literal.
+  // An index (`json['IsPaused']`), not a list literal.
   if (RegExp(r'[\w)\]]\[$').hasMatch(before)) return true;
   // A switch pattern (`'paused' =>`, `'a' || 'b' =>`), a map key or a case
-  // label (`'Down': …`, `case 'x':`) — the colon straight after the quote,
+  // label (`'Down': …`, `case 'x':`), the colon straight after the quote,
   // where a ternary's is spaced.
   if (RegExp(r'^\s*(=>|\|\|)').hasMatch(after)) return true;
   if (after.startsWith(':')) return true;

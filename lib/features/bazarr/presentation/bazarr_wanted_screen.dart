@@ -63,7 +63,7 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
     final isConfigured = settings.isServiceConfigured(ServiceKey.bazarr);
 
     // Built once and placed in one of two positions. Episodes and Movies are
-    // two halves of ONE entry on Bazarr's bar — Wanted — so unlike the library
+    // two halves of ONE entry on Bazarr's bar (Wanted), so unlike the library
     // this inner bar survives the tab model; what changes is where it hangs.
     final tabBar = TabBar(
       controller: _tabController,
@@ -114,7 +114,7 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
             )
           // The shared placeholder, not a private copy. A deep link into Wanted
           // with Bazarr unconfigured used to render a bare sentence with no
-          // icon, no button and no route — the dead end the dashboard's own
+          // icon, no button and no route: the dead end the dashboard's own
           // copy of this state was replaced to stop being.
           : NotConfiguredPlaceholder.forService(ServiceKey.bazarr),
     );

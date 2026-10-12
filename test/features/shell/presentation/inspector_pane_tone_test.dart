@@ -15,7 +15,7 @@ import '../../../test_helpers/settings_scope.dart';
 
 /// The inspector, in the theme it was never checked in.
 ///
-/// The pane painted three `AppColors` constants straight onto the canvas —
+/// The pane painted three `AppColors` constants straight onto the canvas:
 /// `navActivity` for its own glyph, `warning` for a troubled transfer's bar,
 /// `success` for a finished row's dot. Those are dark-palette values (2.20:1,
 /// 1.39:1 and 2.07:1 against surface-light), so the pane rendered the dark
@@ -23,7 +23,7 @@ import '../../../test_helpers/settings_scope.dart';
 /// least legible things on it.
 ///
 /// And the dot was worse than dim: it painted **red** for a failed import. Red
-/// in this app means one thing — a connection that did not answer — and an
+/// in this app means one thing: a connection that did not answer, and an
 /// import the service reported as failed is the opposite of that.
 GlobalActivityItem _queueItem({required bool warning}) => GlobalActivityItem(
   kind: GlobalActivityKind.queue,
@@ -83,7 +83,7 @@ void main() {
   group('InspectorPane ink', () {
     // Every coloured mark the pane draws has to change between themes. A colour
     // that is byte-identical in light and dark is a palette constant that never
-    // went through the walk — which is exactly what `AppColors.navActivity`,
+    // went through the walk, which is exactly what `AppColors.navActivity`,
     // `AppColors.warning` and `AppColors.success` were doing here.
     testWidgets('paints nothing at its raw dark-palette value', (tester) async {
       Color glyph() {

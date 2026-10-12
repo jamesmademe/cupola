@@ -89,7 +89,7 @@ void main() {
   });
 
   group('bazarrWantedSection', () {
-    test('backlog is NEUTRAL — a wanted count is not a fault', () {
+    test('backlog is NEUTRAL: a wanted count is not a fault', () {
       final section = bazarrWantedSection(const [
         BazarrWantedItem(title: 'Poor Things', radarrId: 1),
       ], total: 47);
@@ -129,7 +129,7 @@ void main() {
       );
     });
 
-    test('a blacklisted entry is NEUTRAL — blacklisting is a choice', () {
+    test('a blacklisted entry is NEUTRAL: blacklisting is a choice', () {
       expect(
         bazarrHistoryTone(
           _history(

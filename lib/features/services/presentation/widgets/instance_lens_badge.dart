@@ -29,7 +29,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// all seventeen services. The Portal replaced it and it was deleted, which is
 /// what freed this spot. The two are not the same control and must not become
 /// it: the Portal answers *where do I go*, this answers *which one of these am
-/// I looking at*. The boundary is one rule — **this never lists another
+/// I looking at*. The boundary is one rule: **this never lists another
 /// service.** The day a row here points at Sonarr, the duplicate the Portal
 /// just removed is back.
 class InstanceLensBadge extends ConsumerWidget {
@@ -52,7 +52,7 @@ class InstanceLensBadge extends ConsumerWidget {
     // named reads `Radarr 2`, never its id.
     final label = ref.watch(connectionNameProvider(active.id)) ?? service.title;
     // The label is the accent on its own tint, so it is walked against the
-    // composite it lands on — the pill over the lit header band on a desktop
+    // composite it lands on: the pill over the lit header band on a desktop
     // window, over the plain surface on a phone. Raw Radarr amber on its tint
     // is under 2:1 on paper.
     final ink = ServiceTheme.onTint(
@@ -118,7 +118,7 @@ Future<void> _showLensSheet(
 ) {
   // Configured only. The sheet is the one control that *persists* a lens, so a
   // row here for a connection with no address is an offer to point the whole
-  // app at nothing — and `select` writes to disk, so the app would come back up
+  // app at nothing, and `select` writes to disk, so the app would come back up
   // that way at the next cold start, showing a NotConfiguredPlaceholder with
   // the working connection two centimetres away in the same sheet.
   //

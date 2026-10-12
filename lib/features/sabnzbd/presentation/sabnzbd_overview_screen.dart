@@ -16,16 +16,16 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of SABnzbd's service home.
 ///
-/// Overview alone carries the identity block and the readouts — Queue, History
-/// and Servers are each one kind of record — and then the two regions this
+/// Overview alone carries the identity block and the readouts: Queue, History
+/// and Servers are each one kind of record, and then the two regions this
 /// client can actually fill: **what is downloading now**, and **what finished
 /// today, failures first**.
 ///
 /// **Queue before History**, which is the board's order and the spine's: the
 /// service's own work first, history last. On the wide artboard the queue is
 /// the main column and history sits under it; on the narrow one the body is
-/// composed fault card → queue → history, and the fault card — the disk-space
-/// warning this client cannot fetch — is the only thing the board puts above
+/// composed fault card → queue → history, and the fault card, the disk-space
+/// warning this client cannot fetch, is the only thing the board puts above
 /// the queue. An earlier draft of this file had them the other way round and
 /// described that as the board's order; it is not, and the description was the
 /// worse half of the mistake.
@@ -50,7 +50,7 @@ class SabnzbdOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -61,7 +61,7 @@ class SabnzbdOverviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Checked **before** anything reaches a provider. `sabnzbdClientProvider`
     // throws "SABnzbd not configured", and letting `AsyncValueWidget` catch
-    // that throw would paint the same pixels — but a `FutureProvider` that
+    // that throw would paint the same pixels, but a `FutureProvider` that
     // throws is a *failed* provider, and Riverpod schedules a backoff retry for
     // a condition no amount of waiting changes. It surfaces in tests as a
     // pending timer and on device as a wake-up every few seconds for a server
@@ -118,7 +118,7 @@ class _OverviewBody extends ConsumerWidget {
           ServiceKpiPeek(
             // Built from the queue this page already watches, so the rail and
             // the rows below it are the same poll. `whenData` keeps the loading
-            // and error arms intact — the rail shimmers and then collapses,
+            // and error arms intact: the rail shimmers and then collapses,
             // which is what it does everywhere else.
             kpis: ref
                 .watch(sabnzbdQueueProvider)
@@ -136,7 +136,7 @@ class _OverviewBody extends ConsumerWidget {
 // ─── 1. Queue ───────────────────────────────────────────────────────────────
 
 /// A section's failure in the header's words: `did not answer`, `refused
-/// the key` — classified, so a refusal is never read as silence.
+/// the key`, classified, so a refusal is never read as silence.
 String _failureWord(Object? error) => Lexicon.inline(
   failureLabel(
     classifyConnectionFailure(error),
@@ -150,7 +150,7 @@ String _failureWord(Object? error) => Lexicon.inline(
 /// The board labels this region `Queue 4 · drag to reorder`. The handle is
 /// **not** drawn: SABnzbd can reorder a queue (`mode=switch`), `SabnzbdClient`
 /// cannot, and a drag that silently does nothing is the worst of the three
-/// options. The words go with it — a caption promising a gesture that is not
+/// options. The words go with it: a caption promising a gesture that is not
 /// wired is the same lie one step quieter.
 class _QueueSection extends ConsumerWidget {
   const _QueueSection();
@@ -170,8 +170,8 @@ class _QueueSection extends ConsumerWidget {
       // `not answering` rather than an em dash after a failure, and no subtitle
       // at all while it loads, for the reason the History header gives: the
       // header is spoken as "Queue, <subtitle>", and a dash is heard as nothing
-      // or as "em dash" — where the job count is simply not known yet, saying
-      // nothing is the truthful shape.
+      // or as "em dash" (where the job count is simply not known yet, saying
+      // nothing is the truthful shape).
       subtitle: section.hasError && data == null
           ? _failureWord(section.error)
           : data == null
@@ -225,7 +225,7 @@ class _QueueRow extends StatelessWidget {
       ),
       title: row.name,
       // A failed job is the reason this section is on the page at all; a queued
-      // one, or one par2 is repairing on its way to done, is not — and only the
+      // one, or one par2 is repairing on its way to done, is not, and only the
       // fault takes the ink.
       titleColor: row.isFault ? tone : null,
       detail: row.detail,
@@ -317,7 +317,7 @@ class _HistoryRow extends StatelessWidget {
     return ServiceOverviewRow(
       spoken: entry.spoken,
       // A dot rather than a glyph per state. SABnzbd's status vocabulary is
-      // open-ended — it gains words between releases — and an icon table that
+      // open-ended (it gains words between releases), and an icon table that
       // has to guess for an unknown one draws a picture that is wrong rather
       // than absent. The state is in the detail line as a word, so the colour
       // is a scan marker and not the only channel.

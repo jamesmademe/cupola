@@ -188,7 +188,7 @@ Future<void> testAllIndexersFlow(BuildContext context, WidgetRef ref) async {
   }
 }
 
-/// Runs `ApplicationIndexerSync` — the web UI's "Sync App Indexers".
+/// Runs `ApplicationIndexerSync`, the web UI's "Sync App Indexers".
 ///
 /// The command is queued, so its outcome is polled briefly: a sync that fails
 /// (an app that is unreachable) does so within a second or two, and reporting

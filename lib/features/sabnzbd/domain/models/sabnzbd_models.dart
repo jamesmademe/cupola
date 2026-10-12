@@ -2,8 +2,8 @@
 /// as strings, so parsing is deliberately tolerant.
 ///
 /// Every size and rate label here goes through `core/utils/byte_format.dart`.
-/// This file used to carry two private formatters of its own — one for
-/// megabytes, one for bytes — which disagreed with each other on precision and
+/// This file used to carry two private formatters of its own: one for
+/// megabytes, one for bytes, which disagreed with each other on precision and
 /// with NZBGet's pair on unit thresholds, so the same quantity read differently
 /// depending on which dashboard you were looking at.
 library;
@@ -13,12 +13,12 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 
 /// SABnzbd reports decimals with the server's locale separator, so a comma has
-/// to become a dot before parsing — which is why this is not `doubleOrNull`.
+/// to become a dot before parsing, which is why this is not `doubleOrNull`.
 ///
 /// Null when the field was absent, blank or unreadable. Kept separate from
 /// [_asDouble] because the two answers are different facts: a size the server
-/// reported as zero is zero, and a size it never reported is not a size at all
-/// — and the second one has to reach the UI as an absence so the row can drop
+/// reported as zero is zero, and a size it never reported is not a size at all,
+/// and the second one has to reach the UI as an absence so the row can drop
 /// the clause instead of printing a fabricated `0 B`.
 double? _asDoubleOrNull(dynamic value) {
   if (value == null) return null;
@@ -32,8 +32,8 @@ double _asDouble(dynamic value) => _asDoubleOrNull(value) ?? 0;
 
 /// A size that is only a size when it is above zero.
 ///
-/// SABnzbd answers `mb: 0` for a job whose full size it does not yet know — a
-/// fetched-but-unparsed NZB, a job still being grabbed — and zero beside a
+/// SABnzbd answers `mb: 0` for a job whose full size it does not yet know: a
+/// fetched-but-unparsed NZB, a job still being grabbed, and zero beside a
 /// gigabyte still to fetch is a contradiction, not a measurement. Folded into
 /// the same absence as a missing field so exactly one branch downstream has to
 /// handle "no total".
@@ -106,7 +106,7 @@ class SabnzbdQueue {
   /// How many jobs are queued: the server's own figure where it gave one, and
   /// the page length where it did not.
   ///
-  /// Never below the number of slots in hand — a `noofslots_total` smaller than
+  /// Never below the number of slots in hand: a `noofslots_total` smaller than
   /// the page it came with describes a different queue than the one being
   /// drawn, and the rows on screen are the floor of what can honestly be
   /// counted.
@@ -135,7 +135,7 @@ class SabnzbdQueue {
           .toList(growable: false),
       // `noofslots_total` is the whole queue; `noofslots` is what the current
       // view holds after the limit and any filter. The total first, the view as
-      // a fallback, and null when the payload carries neither — a depth nobody
+      // a fallback, and null when the payload carries neither: a depth nobody
       // reported is not a depth to invent.
       reportedSlots:
           intOrNull(json['noofslots_total']) ?? intOrNull(json['noofslots']),
@@ -176,7 +176,7 @@ class SabnzbdQueueSlot {
   /// and says nothing about how big the job is, so `1.2 GB left` reads the
   /// same on a download a third of the way in as on one that is nearly done.
   /// `mode=queue` returns `mb` on every slot beside `mbleft`, so the figure is
-  /// a parse away — but a server that omits it must leave the clause off the
+  /// a parse away, but a server that omits it must leave the clause off the
   /// row rather than have a total invented for it.
   final double? mb;
 
@@ -195,8 +195,8 @@ class SabnzbdQueueSlot {
 
   /// What a queue row says about size: `1.2 GB left of 3.4 GB`.
   ///
-  /// Falls back to `1.2 GB left` — the clause dropped, never `1.2 GB left of
-  /// 0 B` and never an em dash wedged mid-sentence — when [mb] is absent. A
+  /// Falls back to `1.2 GB left` (the clause dropped, never `1.2 GB left of
+  /// 0 B` and never an em dash wedged mid-sentence) when [mb] is absent. A
   /// dash inside a dotted detail line reads as a figure that failed to load,
   /// where the truth is that this server never claimed one.
   ///

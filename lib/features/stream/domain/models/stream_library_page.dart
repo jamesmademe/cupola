@@ -5,7 +5,7 @@
 /// that both produce an affirmative false claim on screen.**
 ///
 ///  * *Empty because it failed.* Both clients degrade a remote failure to an
-///    empty list, which is the project's read-path convention and is right — a
+///    empty list, which is the project's read-path convention and is right: a
 ///    timed-out dashboard section should not take the page down. But a browse
 ///    that only saw `[]` told the user "This library is empty · The server
 ///    reports no items here" about a server that had not answered at all.
@@ -34,7 +34,7 @@ enum StreamPageOutcome {
   failed,
 
   /// The lens is per-viewer and no viewer is selected, so the server was never
-  /// asked. Also not a claim about the library — the user has a setting to
+  /// asked. Also not a claim about the library: the user has a setting to
   /// change, not an empty shelf to look at.
   viewerRequired,
 }

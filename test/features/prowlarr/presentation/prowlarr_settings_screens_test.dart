@@ -12,7 +12,7 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_tags_screen.dart'
 ProwlarrProviderResource _resource(Map<String, dynamic> json) =>
     ProwlarrProviderResource.fromJson(json);
 
-/// Every provider these screens read, overridden exactly once — Riverpod
+/// Every provider these screens read, overridden exactly once. Riverpod
 /// asserts on a container that overrides the same provider twice, so the
 /// defaults are merged with the per-test data rather than appended to it.
 Future<void> _pump(

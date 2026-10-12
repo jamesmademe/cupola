@@ -42,7 +42,7 @@ void main() {
       ),
       CatalogScene(
         'AppEmptyState.inline · one left-aligned line beside a small glyph, no '
-        'action — for an expected absence, not a failure',
+        'action: for an expected absence, not a failure',
         (_) => const AppEmptyState.inline(
           icon: Icons.info_outline_rounded,
           title: 'Nothing trusted yet',

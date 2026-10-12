@@ -17,7 +17,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Three states get drawn this way and they are the same cell:
 ///
-///  * a jump into another service that is not configured — Radarr's *Open in
+///  * a jump into another service that is not configured: Radarr's *Open in
 ///    qBittorrent* with no qBittorrent saved;
 ///  * a write blocked by a credential that may only read;
 ///  * anything else where the affordance is real and the precondition is not.
@@ -25,7 +25,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// ## Why it is not disabled, and not hidden
 ///
 /// Both of the obvious answers were in the tree and both are wrong in the same
-/// direction — they remove the control from the one user who most needs it
+/// direction; they remove the control from the one user who most needs it
 /// explained.
 ///
 /// `onPressed: null` makes Material publish `Semantics(enabled: false)`, and a
@@ -36,21 +36,21 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// would turn it on, and the app's own capability becomes a secret.
 ///
 /// So the cell keeps everything except the action: the full 44pt target, the
-/// button role, the name, and a hint that says what it wants — *requires
+/// button role, the name, and a hint that says what it wants: *requires
 /// qBittorrent*. Only the foreground drains to 38%, which is the one signal a
 /// sighted user reads for free and a screen-reader user was previously charged
 /// for. Pressing it is not a dead end either: it raises a toast whose single
 /// action is the fix.
 ///
 /// **Dimmed means not configured, never unreachable.** A service that is down
-/// keeps full ink and gets a `FaultBand` instead — the two states need opposite
+/// keeps full ink and gets a `FaultBand` instead; the two states need opposite
 /// answers ("go set this up" against "this is what it said last") and one
 /// visual language cannot carry both.
 ///
 /// ## The two shapes
 ///
 /// The default constructor draws the whole cell itself, around a
-/// **non-interactive** child — a glyph, a caption — through [PressableScale].
+/// **non-interactive** child (a glyph, a caption) through [PressableScale].
 /// [GatedAffordance.builder] is for a control that is already a button (a
 /// `TextButton`, a FAB, an `OutlinedButton`): it hands the builder the
 /// gated `onPressed` and an `annotate` function, and the builder's own button
@@ -70,15 +70,15 @@ class GatedAffordance extends StatelessWidget {
 
   /// For a control that is already a button.
   ///
-  /// [builder] receives the gated `onPressed` — never null, so the button is
-  /// never `Semantics(enabled: false)` — and `annotate`, which wraps the
+  /// [builder] receives the gated `onPressed`, never null, so the button is
+  /// never `Semantics(enabled: false)`, and `annotate`, which wraps the
   /// button's **own content** in the dim and the hint. The annotation has to go
   /// inside: `ButtonStyleButton` publishes a `container: true` node, so a
   /// `Semantics(hint:)` wrapped around the button lands on a second,
   /// non-actionable node the screen reader never focuses.
   ///
-  /// A caller keeps any *other* reason to pass `null` to its button — a save
-  /// with nothing to save — but the precondition this widget gates is never
+  /// A caller keeps any *other* reason to pass `null` to its button: a save
+  /// with nothing to save, but the precondition this widget gates is never
   /// expressed that way.
   const GatedAffordance.builder({
     super.key,
@@ -99,7 +99,7 @@ class GatedAffordance extends StatelessWidget {
   /// to announce. The builder shape's button names itself.
   final String? label;
 
-  /// What the control wants, in the user's terms — `requires qBittorrent`,
+  /// What the control wants, in the user's terms: `requires qBittorrent`,
   /// `requires an admin account`. Null publishes no hint.
   ///
   /// A cross-service jump publishes its hint in **both** states: *requires
@@ -157,7 +157,7 @@ class GatedAffordance extends StatelessWidget {
             opacity: dimmedOpacity,
             // The foreground only. The cell's own hit area, padding and any
             // surrounding plate stay at full strength, because the target is
-            // not what is unavailable — the action is.
+            // not what is unavailable: the action is.
             child: child,
           );
 
@@ -166,7 +166,7 @@ class GatedAffordance extends StatelessWidget {
       // `enabled: true` and the hint. That is the whole mechanism: the node
       // stays on the screen reader's path in both states and the hint carries
       // the difference. Handing it `null` here is the bug this widget exists to
-      // stop — Material would render the disabled look and the semantics tree
+      // stop: Material would render the disabled look and the semantics tree
       // would lose the control entirely.
       onTap: enabled ? onTap : onBlocked,
       semanticLabel: label,
@@ -174,7 +174,7 @@ class GatedAffordance extends StatelessWidget {
       // One node for the cell, not three fragments: the child's own text would
       // otherwise compete with [label] and the row would read twice.
       excludeChildSemantics: true,
-      // No haptic on the blocked arm — a tap that does not act should not feel
+      // No haptic on the blocked arm: a tap that does not act should not feel
       // like one that did.
       haptic: enabled,
       child: ConstrainedBox(
@@ -206,7 +206,7 @@ typedef GatedAffordanceBuilder =
 /// lands on that service's own settings page.
 ///
 /// The toast sentence is the caller's because only the caller knows what the
-/// jump was *for* — "Connect qBittorrent to open this transfer" and "Connect
+/// jump was *for*: "Connect qBittorrent to open this transfer" and "Connect
 /// Seerr to see cast" are the same mechanism and different promises.
 class CrossServiceAction extends ConsumerWidget {
   const CrossServiceAction({
@@ -219,7 +219,7 @@ class CrossServiceAction extends ConsumerWidget {
     this.hint,
   }) : builder = null;
 
-  /// For a jump that is already a button — see [GatedAffordance.builder].
+  /// For a jump that is already a button; see [GatedAffordance.builder].
   const CrossServiceAction.builder({
     super.key,
     required this.target,
@@ -267,7 +267,7 @@ class CrossServiceAction extends ConsumerWidget {
       blockedMessage,
       // The action is the fix, named as every other way in names it, and it
       // is the *specific* fix: this service's own setup form, where its setup
-      // note is printed — the one place every `Set up X` goes.
+      // note is printed: the one place every `Set up X` goes.
       actionLabel: Lexicon.setUp(target.title),
       onAction: () => context.go(ServiceRoutes.setUp(target)),
     );
@@ -312,7 +312,7 @@ class _CapabilityGate {
 /// service answered (or refused a write), the caller's sentences name the
 /// missing permission and the toast's one action is the fix: that
 /// connection's settings form, labelled with the service's own verb. When
-/// Cupola could not ask, the credential may well be fine — the hint and toast
+/// Cupola could not ask, the credential may well be fine: the hint and toast
 /// say so, and the action re-asks instead of sending the user to replace a
 /// key that may work.
 _CapabilityGate _resolveCapabilityGate(
@@ -371,7 +371,7 @@ void _showCapabilityBlocked(
   );
 }
 
-/// Whether a write on [resource] of [connectionId] may go ahead — and, when it
+/// Whether a write on [resource] of [connectionId] may go ahead, and when it
 /// may not, the answer the user gets instead of the action.
 ///
 /// For the writes that cannot be wrapped in a gated widget: a `PopupMenuItem`
@@ -405,17 +405,17 @@ enum _GateShape { cell, icon, builder, toggle }
 ///
 /// The write half of cross-cutting C: the banner says what the credential
 /// cannot do once, at the top of the page, and every write below it dims to
-/// match rather than disappearing. The readouts keep refreshing — a read-only
+/// match rather than disappearing. The readouts keep refreshing: a read-only
 /// key reads perfectly well, and the page is still worth looking at.
 ///
 /// One constructor per shape of control, because each hosts its hint and its
 /// dim differently and a flag could not say which:
 ///
-///  * the default — a bare glyph or caption cell, drawn by [GatedAffordance];
-///  * [CapabilityGatedAction.icon] — every `IconButton` write;
-///  * [CapabilityGatedAction.builder] — a `TextButton`, `FilledButton`,
+///  * the default: a bare glyph or caption cell, drawn by [GatedAffordance];
+///  * [CapabilityGatedAction.icon]: every `IconButton` write;
+///  * [CapabilityGatedAction.builder]: a `TextButton`, `FilledButton`,
 ///    `OutlinedButton` or FAB the caller builds;
-///  * [CapabilityGatedAction.toggle] — every `Switch` write.
+///  * [CapabilityGatedAction.toggle]: every `Switch` write.
 ///
 /// A menu item is the fifth shape and is not a widget of this class: see
 /// [CapabilityGatedMenuLabel] and [capabilityWriteAllowed].
@@ -463,7 +463,7 @@ class CapabilityGatedAction extends ConsumerWidget {
        value = null,
        onChanged = null;
 
-  /// A button the caller builds — see [GatedAffordance.builder].
+  /// A button the caller builds; see [GatedAffordance.builder].
   const CapabilityGatedAction.builder({
     super.key,
     required this.service,
@@ -519,7 +519,7 @@ class CapabilityGatedAction extends ConsumerWidget {
   /// read-only on another, so the *scope* cannot be looked up from [service].
   final String connectionId;
 
-  /// For services that scope per resource — which resource this writes
+  /// For services that scope per resource, which resource this writes
   /// (`vms`, `proxy_hosts`, a TrueNAS area). Null asks about the connection
   /// as a whole.
   final String? resource;
@@ -616,8 +616,8 @@ class CapabilityGatedAction extends ConsumerWidget {
 /// The label of a `PopupMenuItem` write, dimmed and hinted when the write is
 /// blocked.
 ///
-/// The item itself stays `enabled: true` — a disabled menu item is skipped by
-/// screen readers, the same failure as a disabled button — and its
+/// The item itself stays `enabled: true`: a disabled menu item is skipped by
+/// screen readers, the same failure as a disabled button, and its
 /// `onSelected` asks [capabilityWriteAllowed] before acting. The hint lands on
 /// the item's own node because `PopupMenuItem` merges its content.
 class CapabilityGatedMenuLabel extends ConsumerWidget {
@@ -670,7 +670,7 @@ class CapabilityGatedMenuLabel extends ConsumerWidget {
 /// The verdict is the caller's to read (`roleGateProvider` for the Seerr the
 /// surface shows), so the control itself reads no provider.
 class RoleGatedAction extends StatelessWidget {
-  /// A control that is already a button — see [GatedAffordance.builder].
+  /// A control that is already a button; see [GatedAffordance.builder].
   const RoleGatedAction.builder({
     super.key,
     required this.verdict,

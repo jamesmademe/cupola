@@ -75,7 +75,7 @@ String formatRelativeActivityDate(String? isoDate, {DateTime? now}) {
 /// `3 h ago`, `2 days ago`, then the day beyond a week (`Tue 29 Sep`).
 ///
 /// Split out from [formatRelativeActivityDate] so callers holding a `DateTime`
-/// — the global activity feed keeps one as `sortDate` — do not have to
+/// (the global activity feed keeps one as `sortDate`) do not have to
 /// round-trip it through an ISO string to display it.
 String formatRelativeDateTime(DateTime date, {DateTime? now}) {
   final local = date.toLocal();
@@ -113,7 +113,7 @@ String formatActivityDateTime(String? isoDate) {
   return parsed == null ? isoDate : formatDateTimeStamp(parsed);
 }
 
-/// `2026-09-20 14:03` — the same stamp from an already-parsed timestamp.
+/// `2026-09-20 14:03`: the same stamp from an already-parsed timestamp.
 ///
 /// The [DateTime] sibling of [formatActivityDateTime], which now delegates to
 /// it. Two byte-identical private copies of this body were written in one pass
@@ -126,7 +126,7 @@ String formatDateTimeStamp(DateTime? value) {
   return '${formatIsoDate(local.toIso8601String())} ${formatTimeOnly(local)}';
 }
 
-/// `08:12` — the clock and nothing else.
+/// `08:12`: the clock and nothing else.
 ///
 /// A sibling of [formatActivityDateTime] rather than a change to it: every one
 /// of that function's callers wants the date, and the one surface that does not
@@ -156,7 +156,7 @@ String formatDateOnly(String? isoDate) {
 }
 
 /// Renders a byte count for the Activity surfaces that get one from loosely
-/// typed JSON — history `data.size`, `sizeOnDisk`, an episode file's `size`.
+/// typed JSON: history `data.size`, `sizeOnDisk`, an episode file's `size`.
 ///
 /// Was a private GB-only ladder (`'${bytes / 1024^3} GB'`, two decimals, no
 /// rung either side), which put two different ladders on the *same* detail
@@ -206,7 +206,7 @@ String? formatCutoffSize(Map<String, dynamic> item, ServiceType serviceType) {
 /// The display label for an \*arr history `eventType`.
 ///
 /// Delegates to the domain resolver so the label and the severity colour can
-/// never drift apart — they used to live in two separate switches, one here and
+/// never drift apart: they used to live in two separate switches, one here and
 /// one in the tile, and the tile's disagreed.
 String humanizeEventType(String value) => historyEventDisplay(value).$1;
 
@@ -372,8 +372,8 @@ String? blocklistSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
 
 /// The one secondary line every \*arr activity row prints under its title.
 ///
-/// Queue, history and blocklist rows all describe the same thing — "which
-/// episode/artist, and which release" — and used to carry a byte-identical copy
+/// Queue, history and blocklist rows all describe the same thing: "which
+/// episode/artist, and which release", and used to carry a byte-identical copy
 /// of this switch each, with a fourth in `activity_provider.dart`.
 ///
 /// [release] is the release string itself, deliberately not the key it lives

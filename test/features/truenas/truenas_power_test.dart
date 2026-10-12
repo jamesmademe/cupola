@@ -34,7 +34,7 @@ class _RecordingClient extends TrueNasWsClient {
 }
 
 void main() {
-  group('decision 38 — power', () {
+  group('decision 38: power', () {
     test('shutdown and reboot name the two RPCs and carry a reason', () async {
       final client = _RecordingClient();
       final api = TrueNasSystemApi(client);

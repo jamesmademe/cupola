@@ -1,7 +1,7 @@
 /// What the Dockge Overview reads, and the pure functions that fold it.
 ///
 /// Everything on this page comes from **one** push the service home is already
-/// paying for — Dockge's `stackList` through [dockgeStackListProvider] — plus
+/// paying for: Dockge's `stackList` through [dockgeStackListProvider], plus
 /// the `agentList` the app-bar lens already watches through
 /// [dockgeAgentsProvider]. Nothing here fetches on its own, so opening Overview
 /// costs no round trip the Stacks tab was not already making.
@@ -11,13 +11,13 @@
 ///
 /// ## There is no window rule on this page, and that is a finding
 ///
-/// Every other Overview in the app has one — "next 7 days", "today", "idle 42
-/// min" — and each takes an explicit `now` so its boundary can be tested
+/// Every other Overview in the app has one: "next 7 days", "today", "idle 42
+/// min", and each takes an explicit `now` so its boundary can be tested
 /// without a clock. Dockge's has none to take: `stackList` carries a name, an
 /// integer status, tags, a compose filename and an endpoint, and **not one
 /// timestamp**. The board's `bazarr · 3 h ago` and `exit code 137 · out of
 /// memory` have no source in this protocol; per-container evidence would need
-/// `serviceStatusList` — one socket round trip *per stack* — and even that
+/// `serviceStatusList`, one socket round trip *per stack*, and even that
 /// answers a docker status string, not a structured exit code.
 ///
 /// So the rows say what happened and stop. A window the server cannot
@@ -30,7 +30,7 @@
 /// the cached stacks whenever the lens moves: the client holds the stack list
 /// of exactly one instance at a time. So a census folded here counts the stacks
 /// on the *selected* agent, and a header printing it as a bare `12 stacks` on a
-/// two-agent install would state a subset as a total — the same defect as
+/// two-agent install would state a subset as a total: the same defect as
 /// counting inside a paged response. [dockgeStackCensus] is honest because the
 /// section that draws it names the agent whenever there is more than one; see
 /// `dockge_overview_screen.dart`.
@@ -53,13 +53,13 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 /// Rows in the Stacks preview.
 const int dockgeStackPreviewLimit = 5;
 
-// There is no cap on the Agents section, and that is deliberate — see
+// There is no cap on the Agents section, and that is deliberate. See
 // [dockgeAgentRows]. It is the only region on this page with no "see the rest"
 // link, so anything a cap hid would be reported nowhere at all.
 
 /// How many stack names an aggregate row spells out before it counts the rest.
 ///
-/// Three, because the row is one line of evidence and not a list — the Stacks
+/// Three, because the row is one line of evidence and not a list. The Stacks
 /// tab is the list.
 const int dockgeAggregateNamesLimit = 3;
 
@@ -79,7 +79,7 @@ class DockgeStackCensus {
   });
 
   /// Every stack on the selected agent. A total within that agent, never
-  /// across the deployment — see the library doc.
+  /// across the deployment. See the library doc.
   final int total;
 
   final int running;
@@ -91,12 +91,12 @@ class DockgeStackCensus {
 
   /// `CREATED_FILE` and `CREATED_STACK` folded together, because Dockge itself
   /// prints one word for the pair ([DockgeStackStatus.label] is `Inactive` for
-  /// both) and the difference — a compose file on disk versus a project
-  /// directory — is not a difference the user acts on.
+  /// both) and the difference, a compose file on disk versus a project
+  /// directory, is not a difference the user acts on.
   final int inactive;
 
   /// `UNKNOWN`: Dockge answered and declined to say. Kept apart from
-  /// [inactive] on purpose — "not started" is a fact and "we do not know" is
+  /// [inactive] on purpose: "not started" is a fact and "we do not know" is
   /// not, and folding the second into the first would print the fact.
   final int unknown;
 
@@ -162,12 +162,12 @@ class DockgeIdleGroup {
   /// row here is an aggregate, so the headline is the whole claim.
   final String headline;
 
-  /// Whatever the push carried about it — tags, or the names behind an
+  /// Whatever the push carried about it: tags, or the names behind an
   /// aggregate. Often empty, and that emptiness is the truth: see the library
   /// doc on why there is no timestamp and no exit code to print here.
   final String detail;
 
-  /// The row as one sentence, with the layout's `·` turned back into commas —
+  /// The row as one sentence, with the layout's `·` turned back into commas:
   /// `·` is decoration, and a screen reader either names it or drops it
   /// depending on the user's punctuation setting.
   String get spoken =>
@@ -329,7 +329,7 @@ class DockgeAgentRow {
 
   final StatusTone tone;
 
-  /// The agent the lens is on — the one every other figure on this page was
+  /// The agent the lens is on: the one every other figure on this page was
   /// folded from.
   ///
   /// Read by the row, which rings its dot. The `showing its stacks` clause in
@@ -340,15 +340,15 @@ class DockgeAgentRow {
   String get spoken => joinSpokenParts([name, spokenFromDotted(detail)]);
 }
 
-/// The instances, hub first — the order [DockgeClient.latestAgents] already
-/// guarantees — and **every one of them**.
+/// The instances, hub first, the order [DockgeClient.latestAgents] already
+/// guarantees, and **every one of them**.
 ///
 /// Uncapped, unlike the two stack regions, because the Agents section has no
 /// tab to send the remainder to: the picker is the app-bar lens, so a capped
 /// list would drop agents six and up off the page entirely while its header
 /// stated the sample's own length as the deployment's total. A login's agent
 /// list is a handful of registered instances, not a feed, so drawing all of it
-/// costs nothing — and the header can then count what is in front of the user.
+/// costs nothing, and the header can then count what is in front of the user.
 ///
 /// The selected one says so, and that clause is load-bearing rather than
 /// decorative: it is the sentence that explains why the census above counts
@@ -356,8 +356,8 @@ class DockgeAgentRow {
 ///
 /// An offline agent is the **one red** in this feature, and the model's own doc
 /// says why: red means a connection that did not answer, and that is exactly
-/// what an offline agent is. `connecting` is informational — it has not failed
-/// yet — which is [StatusTone.info]; neither reading is invented here, both
+/// what an offline agent is. `connecting` is informational: it has not failed
+/// yet, which is [StatusTone.info]; neither reading is invented here, both
 /// come from [DockgeAgent.tone].
 List<DockgeAgentRow> dockgeAgentRows(
   List<DockgeAgent> agents, {
@@ -370,8 +370,8 @@ List<DockgeAgentRow> dockgeAgentRows(
         name: agent.name,
         tone: agent.tone,
         detail: joinDisplayParts([
-          // The hub has no `host:port` of its own — it is the address the user
-          // typed into Settings — so it names itself by what it is.
+          // The hub has no `host:port` of its own: it is the address the user
+          // typed into Settings, so it names itself by what it is.
           agent.isLocal ? 'this connection' : agent.endpoint,
           agent.status.toLowerCase(),
           if (selected) 'showing its stacks',
@@ -389,7 +389,7 @@ List<DockgeAgentRow> dockgeAgentRows(
 ///
 /// Omitting `retry:` is not "no retry": `ProviderContainer.defaultRetry` re-runs
 /// a build that throws ten times, 200ms to a 6.4s ceiling, some forty seconds in
-/// all — see `lib/core/providers/provider_retry.dart`. Each of these folds is a
+/// all. See `lib/core/providers/provider_retry.dart`. Each of these folds is a
 /// `FutureProvider` whose whole body is `await ref.watch(<stream>.future)`, so a
 /// stream sitting on an `AsyncError` makes the fold *throw*, and the default
 /// policy then re-reads that same held error ten times, synchronously, with no
@@ -399,7 +399,7 @@ List<DockgeAgentRow> dockgeAgentRows(
 ///
 /// The sources do carry the recovery, and it is not a backoff: a live socket
 /// reconnects on its own, and the section's Retry invalidates
-/// [dockgeStackListProvider] itself rather than the fold — invalidating a fold
+/// [dockgeStackListProvider] itself rather than the fold: invalidating a fold
 /// only re-reads the error the stream is still holding, and the stream, being
 /// watched by the other fold, is never disposed and so never re-subscribes
 /// on its own. See `dockge_overview_screen.dart`.
@@ -451,14 +451,14 @@ int _caseInsensitive(String a, String b) =>
 ///
 /// Tags only. `isManagedByDockge` is deliberately not printed: the model parses
 /// it as `json['isManagedByDockge'] == true`, so a push that simply omits the
-/// key yields `false` for every row — and a clause reading "not managed by
+/// key yields `false` for every row, and a clause reading "not managed by
 /// Dockge" under all twelve stacks would be a fabrication on an install where
 /// the field is absent. A claim that defaults to the accusing side is a claim
 /// this page will not make.
 String _stackQualifiers(DockgeStack stack) =>
     stack.tags.where((tag) => tag.trim().isNotEmpty).join(', ');
 
-/// `media, immich, npm` — and `media, immich, npm and 2 more` past the limit.
+/// `media, immich, npm`, and `media, immich, npm and 2 more` past the limit.
 ///
 /// "and", not another `·`: a dotted list that simply stops reads as truncated,
 /// and the count is the half that cannot be dropped.

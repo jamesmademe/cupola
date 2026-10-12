@@ -96,7 +96,7 @@ void main() {
 
     // The override lives on the PAGE primitive, and this is the test that says
     // why it has to. `getHistoryPage` is the only variant carrying the
-    // envelope's `totalRecords`, so it is the only one a count may come from —
+    // envelope's `totalRecords`, so it is the only one a count may come from,
     // and while the parameters hung off `getHistory` instead, a caller that
     // reached for the count got records with neither the series nor the
     // episode embedded. On Sonarr that is the whole row: a bare history record
@@ -281,7 +281,7 @@ void main() {
         final body = client.lastPostData as Map<String, dynamic>;
         expect(body['monitored'], isFalse);
         // Not `all`: a series that is not monitored with every episode
-        // monitored is a contradiction Sonarr resolves by grabbing nothing —
+        // monitored is a contradiction Sonarr resolves by grabbing nothing;
         // and it would still queue a search sweep.
         expect(body['addOptions'], {
           'monitor': 'none',

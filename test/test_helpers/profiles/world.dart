@@ -1,11 +1,11 @@
-/// The fictional household the profiles live in — World A of the design
+/// The fictional household the profiles live in: World A of the design
 /// brief, so a test and a design board name the same things: Radarr and
 /// Radarr 4K, Sprite Fright at 62 %, Big Buck Bunny stuck at 47 %, Anna and
 /// Luca waiting on Seerr.
 ///
 /// Rows are built here rather than read from `test/fixtures/` because they
-/// join across services — a Radarr queue row and its qBittorrent torrent share
-/// a download id, a Seerr request names the Radarr server that takes it — and
+/// join across services: a Radarr queue row and its qBittorrent torrent share
+/// a download id, a Seerr request names the Radarr server that takes it, and
 /// because their times are relative to the network's `now`, so "2 h ago"
 /// renders as "2 h ago" on whatever day the suite runs. Shapes that carry no
 /// title (TrueNAS `auth.me`, NPM `users/me`, Unraid `me`, Plex `/identity`)
@@ -32,7 +32,7 @@ abstract final class WorldHosts {
   static const transmission = 'http://nas.home.arpa:9091';
 
   /// A second Jellyfin, at the cabin: in no profile, for a test that adds it
-  /// with `ConfigProfile.withConnection` — two of a media server.
+  /// with `ConfigProfile.withConnection`: two of a media server.
   static const jellyfinCabin = 'http://cabin.home.arpa:8096';
 
   /// The cabin's Seerr, likewise in no profile: two Seerr, each with its own
@@ -320,7 +320,7 @@ class WorldDownload {
   final String id;
   final String release;
 
-  /// `qbittorrent`, `sabnzbd` or `transmission` — a `ServiceKey` name.
+  /// `qbittorrent`, `sabnzbd` or `transmission`, a `ServiceKey` name.
   final String client;
   final DownloadState state;
 

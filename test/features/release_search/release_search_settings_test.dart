@@ -30,7 +30,7 @@ void main() {
   test('the timeout can never reach the transport ceiling', () {
     // The background library's iOS request timeout is fixed at startup, and a
     // user-facing value that met it would give two different failures the same
-    // elapsed — which is the ambiguity the verdicts exist to remove.
+    // elapsed, which is the ambiguity the verdicts exist to remove.
     expect(
       ReleaseSearchSettings.maxTimeout,
       lessThan(const Duration(minutes: 15)),
@@ -108,8 +108,8 @@ void main() {
   group('the background search switch', () {
     test('ships off, on every path that can produce a value', () async {
       // Not a preference with a convenient default: on means the OS gets the
-      // request, API key and all, in writing. So every route to a value — fresh
-      // prefs, absent prefs — has to answer off, including the fallback that
+      // request, API key and all, in writing. So every route to a value (fresh
+      // prefs, absent prefs) has to answer off, including the fallback that
       // exists for widget tests.
       final c = await container();
       expect(c.read(releaseSearchSettingsProvider).backgroundEnabled, isFalse);
@@ -169,7 +169,7 @@ void main() {
         isTrue,
         reason:
             'the notification preference is disabled by the master, not reset '
-            'by it — it has to come back when the master does',
+            'by it: it has to come back when the master does',
       );
     });
   });

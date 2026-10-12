@@ -226,7 +226,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Delete 2 indexers?'), findsOneWidget);
-    // A bare count is unverifiable — the user has to be able to read what is
+    // A bare count is unverifiable: the user has to be able to read what is
     // about to go.
     expect(find.textContaining('ItaTorrents, NZBgeek'), findsOneWidget);
   });

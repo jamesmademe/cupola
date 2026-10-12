@@ -43,7 +43,7 @@ enum TrueNasCapabilityArea {
   /// `sharing.nfs.create` / `update` / `delete`.
   nfs({'SHARING_NFS_WRITE'}),
 
-  /// `mail.update` — mail's role prefix is `ALERT`.
+  /// `mail.update`: mail's role prefix is `ALERT`.
   mailConfig({'ALERT_WRITE'}),
 
   /// `mail.send`: no role declared on 25.04, so full admin only; `MAIL_WRITE`
@@ -53,7 +53,7 @@ enum TrueNasCapabilityArea {
   /// `pool.dataset.create` / `update`.
   datasetWrite({'DATASET_WRITE'}),
 
-  /// `pool.dataset.delete` — its own role; `SHARING_ADMIN` does not imply it.
+  /// `pool.dataset.delete`: its own role; `SHARING_ADMIN` does not imply it.
   datasetDelete({'DATASET_DELETE'}),
 
   /// `zfs.snapshot.create`.
@@ -80,7 +80,7 @@ enum TrueNasCapabilityArea {
   /// `cloudsync.update` / `delete` / `sync`.
   cloudSync({'CLOUD_SYNC_WRITE'}),
 
-  /// `rsynctask.update` / `delete` — rsync's role prefix is `SNAPSHOT_TASK`.
+  /// `rsynctask.update` / `delete`: rsync's role prefix is `SNAPSHOT_TASK`.
   rsyncTask({'SNAPSHOT_TASK_WRITE'}),
 
   /// `rsynctask.run`: full admin only on 25.04, `SNAPSHOT_TASK_WRITE` from
@@ -132,7 +132,7 @@ const _serviceSharingRoles = {
 
 /// Whether [roles] may start, stop or update [service].
 ///
-/// `service.*` checks twice: the method's role, then — inside the method —
+/// `service.*` checks twice: the method's role, then, inside the method,
 /// `app_has_write_privilege_for_service`, which admits only `FULL_ADMIN`, the
 /// general service-write role, or the sharing role matching the service.
 /// Anyone else is refused with EPERM. On 25.04 the general arm checks for
@@ -151,7 +151,7 @@ bool trueNasMayWriteService(
       roles.contains('SERVICE_WRITE');
 }
 
-/// The roles in an `auth.me` result, or null when it carries none — an answer
+/// The roles in an `auth.me` result, or null when it carries none: an answer
 /// that says nothing.
 Set<String>? trueNasRolesFromMe(Object? me) {
   if (me is! Map) return null;

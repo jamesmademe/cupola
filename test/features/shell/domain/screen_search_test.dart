@@ -62,7 +62,7 @@ void main() {
     });
 
     // Two screens overlap for a frame during a route transition. The outgoing
-    // one must not unregister the field the incoming one just claimed —
+    // one must not unregister the field the incoming one just claimed;
     // otherwise ⌘F goes dead on arrival, which is worse than not being offered.
     testWidgets('an outgoing screen does not unregister the incoming field', (
       tester,

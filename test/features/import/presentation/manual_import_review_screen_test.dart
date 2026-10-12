@@ -30,7 +30,7 @@ Map<String, dynamic> _episode({
   return {
     'path': '/downloads/$name',
     // The \*arrs put the basename *without* the extension in `name`, so the
-    // fixture does too — anything reading `name` as "the file" shows up.
+    // fixture does too: anything reading `name` as "the file" shows up.
     'name': name.replaceFirst(RegExp(r'\.[A-Za-z0-9]+$'), ''),
     // Deliberately disagrees with the matched episode below on some rows, so a
     // row that displays parsed data instead of matched data fails.
@@ -253,7 +253,7 @@ void main() {
     expect(find.bySemanticsLabel('Step 2 of 3: Review'), findsOneWidget);
 
     // Five ready episodes, one genuinely unmatched file. The playlist and the
-    // song are not counted as needing a match — they are not Sonarr's business.
+    // song are not counted as needing a match: they are not Sonarr's business.
     expect(find.text('5 ready'), findsOneWidget);
     expect(find.text('1 needs a match'), findsOneWidget);
     expect(find.text('2 other'), findsOneWidget);
@@ -320,7 +320,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'boruto');
     await tester.pump();
 
-    // Both counts under the header describe the two rows on screen — not the
+    // Both counts under the header describe the two rows on screen, not the
     // five ready files of the whole scan, which is the fraction nobody could
     // reconcile with "Showing 2 of 8 files" directly above it.
     expect(
@@ -394,7 +394,7 @@ void main() {
     ) async {
       await _pumpReview(tester);
 
-      // Daredevil has a single file, so it gets no group header — the row has
+      // Daredevil has a single file, so it gets no group header. The row has
       // to carry both matched names itself, and the filename stays line two.
       expect(
         find.text('Daredevil: Born Again · Excessive Force'),
@@ -438,7 +438,7 @@ void main() {
   ) async {
     await _pumpReview(tester);
 
-    // With nothing ticked there is no bulk action at all — the old "Fix all"
+    // With nothing ticked there is no bulk action at all. The old "Fix all"
     // applied one series to every unmatched file, playlists included.
     expect(find.textContaining('Assign'), findsNothing);
 
@@ -489,8 +489,8 @@ void main() {
       await tester.tap(find.text('1 needs a match'));
       await tester.pump();
 
-      // The rows are gone — which is what makes a folder with hundreds of
-      // unmatched files navigable — while the count itself stays on screen, so
+      // The rows are gone, which is what makes a folder with hundreds of
+      // unmatched files navigable, while the count itself stays on screen, so
       // what is hidden is still stated rather than merely absent.
       expect(find.text('1 needs a match'), findsOneWidget);
       expect(find.text('Needs attention'), findsNothing);
@@ -540,7 +540,7 @@ void main() {
     ) async {
       await _pumpReview(tester);
 
-      // An `Align` — or a `Container` with an `alignment` — expands to the
+      // An `Align` (or a `Container` with an `alignment`) expands to the
       // widest constraint it is handed, and inside a `Wrap` that is the whole
       // row: every chip took a line of its own and the row read as a stack of
       // buttons. Geometry, because no finder can see that.

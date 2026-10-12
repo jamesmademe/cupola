@@ -68,8 +68,8 @@ class _PoolCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final used = pool.usedFraction;
-    // A degraded pool is amber, not red. The NAS answered — it told us the pool
-    // is unhealthy — and red on this canvas is reserved for a host that did not
+    // A degraded pool is amber, not red. The NAS answered: it told us the pool
+    // is unhealthy, and red on this canvas is reserved for a host that did not
     // answer at all. `colorScheme.error` here said "unreachable" about a server
     // that was talking to us.
     final warning = statusToneColor(colorScheme, StatusTone.warning);

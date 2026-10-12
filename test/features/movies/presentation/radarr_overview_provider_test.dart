@@ -26,7 +26,7 @@ class _ScriptedRadarr extends FakeRadarrService {
   final List<dynamic> queue;
   final List<dynamic> history;
 
-  /// What `wanted/cutoff` reports as its `totalRecords` — **null** for a fork
+  /// What `wanted/cutoff` reports as its `totalRecords`: **null** for a fork
   /// that does not serve the endpoint, which is what
   /// `ArrRecordPage.fromEnvelope` degrades an unreadable envelope to.
   final int? cutoffTotal;
@@ -57,7 +57,7 @@ class _ScriptedRadarr extends FakeRadarrService {
     Map<String, dynamic>? queryParameters,
   }) async {
     allCutoffCalls++;
-    // What the real one answers: every record, a page of 250 at a time — and
+    // What the real one answers: every record, a page of 250 at a time, and
     // `[]` when the fork does not serve the endpoint, which is why a caller
     // that counts these cannot tell "none" from "never answered".
     return List<dynamic>.generate(
@@ -128,7 +128,7 @@ RadarrMovie _movie({
 );
 
 /// Local-time ISO, so the window's local calendar days are what the test is
-/// actually exercising — a `Z` suffix would move the boundary by the runner's
+/// actually exercising: a `Z` suffix would move the boundary by the runner's
 /// offset and make the assertion pass or fail by timezone.
 String _iso(DateTime date) => date.toIso8601String();
 
@@ -529,7 +529,7 @@ void main() {
 
       expect(await container.read(radarrCutoffUnmetCountProvider.future), 3);
       // One request, and not one record downloaded. `getAllCutoff` walks up to
-      // fifty pages of 250 records to answer with `records.length` — a figure
+      // fifty pages of 250 records to answer with `records.length`: a figure
       // the envelope hands over in a field, and one that silently caps at
       // 12,500.
       expect(service.cutoffPageCalls, 1);

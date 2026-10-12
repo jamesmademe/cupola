@@ -19,8 +19,8 @@ List<WorldDownload> _rowsOf(ServerContext c, String client) => [
 
 /// qBittorrent's WebUI: form login, `SID` cookie, then the v2 API.
 ///
-/// A refused sign-in is `200 Fails.` on the login route — the ≤ 5.0 spelling
-/// the client is written against — and `403` everywhere else, which is what an
+/// A refused sign-in is `200 Fails.` on the login route: the ≤ 5.0 spelling
+/// the client is written against, and `403` everywhere else, which is what an
 /// unauthenticated WebUI answers.
 class QbittorrentFake extends ServiceFake {
   const QbittorrentFake();

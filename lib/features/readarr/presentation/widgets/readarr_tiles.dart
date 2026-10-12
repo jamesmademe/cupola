@@ -12,7 +12,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// **A reader of the shared \*arr table, not a third derivation of it.** This
 /// function used to hold its own `switch`, and its default arm was
-/// `eventType.toUpperCase()` — so `bookFileRenamed`, an event the shared table
+/// `eventType.toUpperCase()`: so `bookFileRenamed`, an event the shared table
 /// has named all along, read "BOOKFILERENAMED" on the History tab while the
 /// Readarr Overview, resolving the same record through
 /// `historyEventDisplay`, read "Renamed". It also disagreed on `grabbed`,
@@ -29,7 +29,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
     icon: _glyphIcon(historyEventGlyph(eventType)),
     // Walked, never the raw palette constant: on paper `AppColors.info`
     // measures 3.34:1 and `AppColors.success` 2.07:1, so a grab and an import
-    // — the two events this list shows most — were the only ones in it that
+    // (the two events this list shows most) were the only ones in it that
     // could not be read in daylight.
     color: statusToneColor(colorScheme, tone),
     // The table's own sentence-case wording, unchanged. The badge used to
@@ -118,7 +118,7 @@ class ReadarrAuthorTile extends StatelessWidget {
                       ),
                       Text(
                         subtitle,
-                        // "3/12 books · 4 missing" — counts that move as the
+                        // "3/12 books · 4 missing": counts that move as the
                         // library is scanned.
                         style: Theme.of(context).textTheme.bodySmall!.tabular
                             .copyWith(color: colorScheme.onSurfaceVariant),

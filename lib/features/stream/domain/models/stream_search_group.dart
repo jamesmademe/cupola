@@ -2,8 +2,8 @@
 /// it.
 ///
 /// **Grouping is the answer, not a presentation choice.** Both servers return a
-/// library search already sorted into kinds — Jellyfin because `/Search/Hints`
-/// types every hint, Plex because `/hubs/search` answers in hubs — and a client
+/// library search already sorted into kinds: Jellyfin because `/Search/Hints`
+/// types every hint, Plex because `/hubs/search` answers in hubs, and a client
 /// that flattens them throws away the one thing that makes five hits readable.
 /// Worse, it makes the two servers disagree: a flattened Plex search puts
 /// whatever the server ranked first at the top, and the page has no way to say
@@ -11,7 +11,7 @@
 ///
 /// **An empty group is a result.** A band with no items stays in the list and
 /// draws as a zero pill, because the strip has to say what was *searched* rather
-/// than only what answered — "Episodes 0" is the difference between "this server
+/// than only what answered: "Episodes 0" is the difference between "this server
 /// holds no matching episode" and "we never asked". Callers must therefore not
 /// filter on [isEmpty]; it exists to let the pill style itself.
 library;

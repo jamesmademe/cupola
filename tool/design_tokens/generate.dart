@@ -15,7 +15,7 @@
 /// dart run tool/design_tokens/generate.dart --check  # exit 1 if stale
 /// ```
 ///
-/// Pure Dart on purpose — `dart:io` and `dart:convert` only — so it runs
+/// Pure Dart on purpose (`dart:io` and `dart:convert` only), so it runs
 /// without a Flutter toolchain and adds nothing to the dependency graph.
 library;
 
@@ -1100,7 +1100,7 @@ String _renderDart(
 ) {
   final out = StringBuffer()
     ..writeln(
-      '// GENERATED — edit design/tokens/, then run '
+      '// GENERATED: edit design/tokens/, then run '
       '`dart run tool/design_tokens/generate.dart`.',
     )
     ..writeln('//')

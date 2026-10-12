@@ -31,7 +31,7 @@ Future<void> _fire(
 }
 
 /// Reads the snackbar's rendered string, so an assertion sees exactly what the
-/// user does — including the newline that separates the two registers.
+/// user does, including the newline that separates the two registers.
 String _snackText(WidgetTester tester) {
   final content = tester.widget<Text>(
     find.descendant(of: find.byType(SnackBar), matching: find.byType(Text)),

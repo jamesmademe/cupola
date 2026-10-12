@@ -162,7 +162,7 @@ void main() {
 
     // The embeds hang off the **page** primitive so the record-only spelling
     // inherits them; hung off `getHistory` instead, every caller that reaches
-    // for the envelope's total — which is every caller that prints a figure —
+    // for the envelope's total, which is every caller that prints a figure,
     // would get records with no `album` to fold on.
     test('getHistory inherits the embeds through the page primitive', () async {
       client.getResponseData = const {'records': []};
@@ -192,7 +192,7 @@ void main() {
     // `arrArtistName(row)` over the wanted page to say "across 6 artists", and
     // `artist` only rides a `wanted/missing` record when the request asks for
     // it. Without this the set is always empty on a real server and the clause
-    // is dropped every time — honest, but a promise the code could never keep.
+    // is dropped every time: honest, but a promise the code could never keep.
     test('getMissingPage asks for the artist the backlog counts', () async {
       client.getResponseData = const {'records': [], 'totalRecords': 0};
 

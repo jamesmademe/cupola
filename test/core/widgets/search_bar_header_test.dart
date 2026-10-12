@@ -34,7 +34,7 @@ void main() {
       tester,
     ) async {
       // The brand book: the field is the same field whichever service it searches, so the
-      // glyph is monochrome — it used to take the caller's service accent,
+      // glyph is monochrome; it used to take the caller's service accent,
       // which put seven hues under 3:1 on paper. The secondary ink is spaced
       // for the field's own fill in both rooms.
       final theme = brightness == Brightness.light

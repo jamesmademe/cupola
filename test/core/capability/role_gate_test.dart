@@ -504,7 +504,7 @@ void main() {
 
     test('is a sentence: a capital, a full stop, no em dash', () {
       for (final reason in reasons) {
-        expect(reason, isNot(contains('—')), reason: reason);
+        expect(reason, isNot(contains('\u2014')), reason: reason);
         expect(reason, endsWith('.'), reason: reason);
         expect(reason[0], reason[0].toUpperCase(), reason: reason);
         expect(reason, isNot(contains('  ')), reason: reason);

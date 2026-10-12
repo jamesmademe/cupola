@@ -39,7 +39,7 @@ class NzbgetException implements Exception, HasFailureReason, HasFailureCause {
 class NzbgetClient {
   /// [certFingerprint], when non-empty, is a self-signed certificate the user
   /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
-  /// when [dio] is injected — a caller supplying its own transport owns its
+  /// when [dio] is injected: a caller supplying its own transport owns its
   /// TLS behaviour too.
   NzbgetClient({
     required String url,
@@ -53,7 +53,7 @@ class NzbgetClient {
     // to a host the user did not configure. `dart:io` is not enough on its own:
     // it copies `Authorization` when the redirect target is a *parent* of the
     // original host, so `nzbget.homelab.net` → `homelab.net` hands the password
-    // over — and on a home network that apex is usually a shared reverse proxy
+    // over, and on a home network that apex is usually a shared reverse proxy
     // or a wildcard catch-all.
     _dio = guardedDio(
       baseUrl: baseUrl,
@@ -175,8 +175,8 @@ class NzbgetClient {
   /// expose the `listfeeds` / `viewfeed` methods older planning notes assumed.
   ///
   /// `config` is the whole settings document, which includes `ControlPassword`
-  /// and every `ServerN.Password`. There is no narrower call — NZBGet has no
-  /// per-section read — so the mitigation is downstream instead:
+  /// and every `ServerN.Password`. There is no narrower call: NZBGet has no
+  /// per-section read, so the mitigation is downstream instead:
   /// [nzbgetFeedsFromConfig] keeps only `FeedN.*` options and the rest is
   /// dropped on the floor with the response. Nothing here logs the body, and
   /// nothing but the feed records leaves this method.

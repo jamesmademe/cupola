@@ -60,7 +60,7 @@ void main() {
     ) async {
       // `truenasClientProvider` throws this before it opens a socket, so every
       // section used to render a generic error card with a Retry that could
-      // never succeed — the only service in the app that answered its own
+      // never succeed: the only service in the app that answered its own
       // setup screen with an alarm.
       await _pump(
         tester,

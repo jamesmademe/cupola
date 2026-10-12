@@ -28,7 +28,7 @@ class ReadarrService with ArrActivityMixin {
   /// Asks for the book and the author with every queue record.
   ///
   /// A Readarr queue record on its own carries `bookId`/`authorId` and the raw
-  /// release name, nothing else — so a row built from it could only print
+  /// release name, nothing else, so a row built from it could only print
   /// `Orbital.2023.RETAIL.EPUB-XYZ`. The embeds are what turn that back into
   /// `Import failed · Orbital`, and they only ride along when the request asks
   /// for them, exactly as Sonarr must ask for `includeSeries`/`includeEpisode`.
@@ -47,7 +47,7 @@ class ReadarrService with ArrActivityMixin {
 
   /// On the **page** primitive, not on `getHistory`.
   ///
-  /// `getHistory` delegates here, so both spellings pick the parameters up —
+  /// `getHistory` delegates here, so both spellings pick the parameters up,
   /// but only this way round. Hung off `getHistory` instead, a caller reaching
   /// for `getHistoryPage` (the one carrying the envelope's total, and therefore
   /// the only one a count may be derived from) would get records with no

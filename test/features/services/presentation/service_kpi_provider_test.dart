@@ -520,7 +520,7 @@ void main() {
     test('counts the queue, not the page the client asked for', () async {
       // The client asks for 50 slots. A 62-job queue therefore arrives as 50
       // rows plus a `noofslots_total` of 62, and a count off `slots.length`
-      // reads 50 for every queue deeper than the page — a figure that stops
+      // reads 50 for every queue deeper than the page: a figure that stops
       // moving exactly when it matters.
       final kpis = await _kpisFor(ServiceKey.sabnzbd, [
         sabnzbdQueueProvider.overrideWith(

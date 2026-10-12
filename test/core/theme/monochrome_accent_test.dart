@@ -14,8 +14,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// service, so every surface that used to be tinted by a service is lit by the
 /// lamp instead, and a label asked of it resolves to the room's ink. These
 /// scans keep the brand colours from finding their way back into paint by
-/// another door — `AppColors.radarr` read straight, `brandAccent` handed to a
-/// button — and keep the retired section accents retired. They are source
+/// another door: `AppColors.radarr` read straight, `brandAccent` handed to a
+/// button, and keep the retired section accents retired. They are source
 /// scans for the same reason `neutral_destructive_test.dart` is: the
 /// regression is one plausible line in a diff, and it looks fine on the screen
 /// it was written for.
@@ -74,7 +74,7 @@ void main() {
     const informational = {
       // Chart series: six lines on one graph are told apart by colour, and
       // the palette borrows brand bytes for it. A categorical palette is its
-      // own axis — the dataviz pass replaces it; until then it is data.
+      // own axis: the dataviz pass replaces it; until then it is data.
       'lib/features/truenas/presentation/reporting/truenas_reporting_screen.dart',
     };
     final brand = RegExp(
@@ -124,8 +124,8 @@ void main() {
 
   test('no button is filled with a service accent', () {
     // A service accent is the lamp, and a lamp-filled button is a grey button
-    // that reads as disabled. The primary is the ink button — the theme's own
-    // FilledButton — and a secondary is the ghost.
+    // that reads as disabled. The primary is the ink button, the theme's own
+    // FilledButton, and a secondary is the ghost.
     final opener = RegExp(
       r'\b(?:FilledButton|TextButton|OutlinedButton|ElevatedButton|IconButton|'
       r'FloatingActionButton)\.styleFrom\(|\bButtonStyle\(|'

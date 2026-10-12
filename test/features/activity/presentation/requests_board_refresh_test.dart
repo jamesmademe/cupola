@@ -13,8 +13,8 @@ import '../../../test_helpers/settings_scope.dart';
 /// Seerr's Requests tab, which hosts the household's list and pulls it.
 ///
 /// One Seerr, which is the common case and the one the defect lived in. With
-/// a single connection the list is read for the lens — an empty
-/// `instanceId` — and `requestsForProvider('')` is then a passthrough of
+/// a single connection the list is read for the lens: an empty
+/// `instanceId`, and `requestsForProvider('')` is then a passthrough of
 /// `requestsProvider`. Dropping only the family entry rebuilds it against a
 /// value the plain provider is still holding, so the gesture re-renders the
 /// identical rows and never reaches the server. A fixture with two Seerr would

@@ -57,7 +57,7 @@ class MainFlutterWindow: NSWindow {
 /// The general pasteboard syncs through Universal Clipboard, so a plain copy of
 /// an API key hands it to every Mac, iPhone and iPad signed into the same
 /// account. `NSPasteboard.ContentsOptions.currentHostOnly` is what keeps a clip
-/// on this machine, and it is not reachable from Flutter's clipboard plumbing —
+/// on this machine, and it is not reachable from Flutter's clipboard plumbing;
 /// hence this channel. Dart falls back to a plain copy whenever `copySecret`
 /// answers false, so nothing here can break the copy button.
 enum SecureClipboardChannel {
@@ -89,7 +89,7 @@ enum SecureClipboardChannel {
     // 12.0, so every version that can run it can harden the clip. The old
     // `#available(macOS 11.0, *)` guard returned false on pre-11 systems,
     // which sent `_copyApiKey` down its plain-copy fallback and
-    // put the API key on the syncing general pasteboard — the exact leak this
+    // put the API key on the syncing general pasteboard: the exact leak this
     // channel exists to close, disabled on the oldest OS it supports.
     let pasteboard = NSPasteboard.general
     // Replaces clearContents(): it clears and applies the options to whatever is
@@ -105,14 +105,14 @@ enum SecureClipboardChannel {
 /// The same permission iOS 14 introduced arrived on the Mac with macOS 15, and it
 /// fails the same silent way: a service on the LAN simply stops answering, so a
 /// connection test blames the address. Dart calls `resolve` only after such a
-/// failure — see the iOS twin of this channel in `ios/Runner/AppDelegate.swift`,
+/// failure; see the iOS twin of this channel in `ios/Runner/AppDelegate.swift`,
 /// which carries the full reasoning.
 ///
 /// One deliberate difference from iOS: the sandbox lets a release build browse
 /// for Bonjour services (`network.client`) but not advertise one
 /// (`network.server`, which only the debug profile grants). So the listener half
 /// of the probe is expected to fail in a release build, and the probe is built to
-/// survive that: a refusal is still detected — the *browser* is what reports it —
+/// survive that: a refusal is still detected (the *browser* is what reports it),
 /// while a grant comes back as `unknown`, which claims nothing and leaves the
 /// original connection failure exactly as it was. Granting the entitlement in
 /// `Release.entitlements` would buy the positive answer, at the cost of shipping
@@ -140,7 +140,7 @@ enum LocalNetworkAccessChannel {
 
   /// The probe in flight, and everyone waiting on it.
   ///
-  /// One probe answers every waiter — see the iOS twin for why this lives here
+  /// One probe answers every waiter; see the iOS twin for why this lives here
   /// rather than in Dart.
   ///
   /// `AnyObject` so this property does not inherit the probe's own availability.
@@ -173,7 +173,7 @@ enum LocalNetworkAccessChannel {
   }
 
   /// Opens the Local Network list in System Settings, falling back to the pane
-  /// that contains it when the anchor is not honoured — the anchor names are
+  /// that contains it when the anchor is not honoured. The anchor names are
   /// Apple's, undocumented, and have been renamed between releases before.
   private static func openPrivacySettings() -> Bool {
     let anchored = URL(
@@ -205,7 +205,7 @@ private final class LocalNetworkProbe {
   ///
   /// See the iOS twin: measured rather than guessed: a cold Bonjour registration and discovery on an
   /// already-granted machine took 0.97s, so the obvious ~1s threshold sits right
-  /// on top of it. The asymmetry decides the rest — reading a fast human as
+  /// on top of it. The asymmetry decides the rest: reading a fast human as
   /// `granted` costs them one tap on Test, while reading a slow round trip as
   /// `just_granted` re-runs a doomed connection in full.
   private static let humanDelay: TimeInterval = 2.5
@@ -285,7 +285,7 @@ private final class LocalNetworkProbe {
     finish?(verdict)
   }
 
-  /// Only the mDNS refusal counts — see the iOS twin. It matters more here: this
+  /// Only the mDNS refusal counts; see the iOS twin. It matters more here: this
   /// sandbox may browse but not advertise in a release build, and a POSIX error
   /// read as a refusal would tell a Mac user whose permission is switched on to go
   /// and switch it on.

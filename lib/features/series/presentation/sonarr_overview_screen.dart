@@ -43,8 +43,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Sonarr's service home.
 ///
-/// Overview alone carries the identity block and the readouts — every other tab
-/// is a view of one kind of record — and then four sections in the order the
+/// Overview alone carries the identity block and the readouts: every other tab
+/// is a view of one kind of record, and then four sections in the order the
 /// **mobile** board draws them, which is the order that survives a narrow
 /// window: what is airing, what needs a decision, what arrived, what happened
 /// today. Each section ends in a link named exactly like the tab it jumps to.
@@ -54,12 +54,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// the model and every departure here is forced by the record rather than
 /// chosen. The record is an episode inside a season inside a series, so a row
 /// names the slot as well as the series, and the week window counts *series*
-/// rather than episodes because that is all its source can honestly support —
+/// rather than episodes because that is all its source can honestly support:
 /// see `sonarr_overview_provider.dart`.
 ///
 /// **Two regions of the board are not drawn.** The desktop board's `Root
 /// folder` panel ("2.3 TB free · 81% of 12 TB") needs `GET /api/v3/diskspace`
-/// for the capacity — `rootfolder` carries free space and no total — and the
+/// for the capacity: `rootfolder` carries free space and no total, and the
 /// mobile board drops the panel entirely, which is the board itself saying it
 /// is desktop furniture rather than a promise. The per-row actions (`Manual
 /// import`, `Search all`) need a bridge this app does not have. Both are
@@ -80,7 +80,7 @@ class SonarrOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -102,7 +102,7 @@ class SonarrOverviewScreen extends ConsumerWidget {
             // Checked BEFORE anything reaches a provider: a `FutureProvider`
             // that throws "Sonarr not configured" is a *failed* provider, and
             // Riverpod schedules a backoff retry for a condition no waiting
-            // changes — which surfaces in a widget test as a pending timer.
+            // changes, which surfaces in a widget test as a pending timer.
             //
             // `.forService`, never the generic form: this is a service
             // dashboard, so the door goes to Sonarr's own connection form
@@ -129,7 +129,7 @@ class _OverviewBody extends ConsumerWidget {
         // `FutureProvider`s cached for the session, so invalidating just the
         // derived pair re-ran `sonarrAiringWeek` against the same cached list
         // with a new clock, and re-read the KPI rail off the same cached list
-        // again — a pull-to-refresh that refetched nothing. An episode that
+        // again, a pull-to-refresh that refetched nothing. An episode that
         // aired, a series added, a show that ended: none of it appeared.
         // One read of the library, which the rail and the week share
         // (`sonarrKpiLibraryProvider` and `sonarrOverviewSeriesProvider` are
@@ -192,7 +192,7 @@ class _AiringSection extends ConsumerWidget {
       service: ServiceKey.sonarr,
       title: 'Airing this week',
       // Series, never episodes. One `nextAiring` per series is all this window
-      // has, so a series airing twice this week is one row here — and calling
+      // has, so a series airing twice this week is one row here, and calling
       // these episodes would be short by exactly the ones it cannot see.
       subtitle:
           'next $sonarrAiringDays days · ${count == null ? '—' : '$count series'}',
@@ -290,8 +290,8 @@ class _NeedsAttentionSection extends ConsumerWidget {
       service: ServiceKey.sonarr,
       title: 'Needs attention',
       subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
-      // No link: every row here belongs to a different tab — a stalled download
-      // to Queue, a backlog to Wanted — and a single destination would have to
+      // No link: every row here belongs to a different tab: a stalled download
+      // to Queue, a backlog to Wanted, and a single destination would have to
       // lie about the rest.
       child: AsyncValueWidget<List<SonarrAttentionItem>>(
         value: items,
@@ -327,7 +327,7 @@ class _AttentionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // Through the tone rule, never a raw `AppColors.*`: amber is a fault, and
-    // the backlog rows — missing episodes, episodes below the cutoff — are
+    // the backlog rows (missing episodes, episodes below the cutoff) are
     // neutral by construction. `surface:` is the container this row actually
     // lands on, which is what the walk needs to guarantee contrast.
     final tone = statusToneColor(
@@ -397,7 +397,7 @@ class _PosterRail extends ConsumerWidget {
     final instance = ref.watch(activeInstanceProvider(ServiceKey.sonarr));
 
     return SizedBox(
-      // 138pt poster, the gap, and two label lines — grown by the reading size
+      // 138pt poster, the gap, and two label lines, grown by the reading size
       // so the captions are not clipped at an accessibility text size.
       height: TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
       // The box grew by the *clamped* scale, so the text has to be laid out at

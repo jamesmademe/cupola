@@ -46,7 +46,7 @@ class GlobalSearchResult {
   /// A separate fact from anything in [tags], which are words on a chip: this
   /// is what the row's trailing affordance reads to decide between "already
   /// here" and "add it". It used to sniff the tags for the substring
-  /// `available`, which tied a semantic decision to a label's wording — and to
+  /// `available`, which tied a semantic decision to a label's wording, and to
   /// a field the lookup endpoints never populate.
   final bool inLibrary;
 
@@ -55,10 +55,10 @@ class GlobalSearchResult {
   ///
   /// Null on two kinds of row, for two different reasons: one the server
   /// already holds (there is nothing to add), and a Seerr or Bazarr row
-  /// (neither is a library this app can write into from here — Seerr's own
+  /// (neither is a library this app can write into from here: Seerr's own
   /// request flow lives on its detail page). The trailing plus is drawn from
   /// this rather than from the service, so an affordance can never outlive
-  /// what is behind it — which is the defect this field exists to close: every
+  /// what is behind it, which is the defect this field exists to close: every
   /// arr row wore a plus that led to a detail page saying "add it in Radarr".
   ///
   /// It carries the CONNECTION, not the lens. Two Radarr answer as two
@@ -111,7 +111,7 @@ class GlobalSearchResult {
   /// Whether this result has artwork worth flying.
   ///
   /// Bazarr's API carries no poster, so its rows would otherwise fly an empty
-  /// grey box into the detail page's fallback glyph — motion with nothing to
+  /// grey box into the detail page's fallback glyph, motion with nothing to
   /// follow. Same rule the Recently Added rail applies.
   bool get canFlyPoster => imageUrl.isNotEmpty;
 }
@@ -119,7 +119,7 @@ class GlobalSearchResult {
 /// One leg of the fan-out: one service, one of its connections.
 ///
 /// The unit of work *and* the key the leg provider family is keyed on, which is
-/// what makes a per-lane Retry a one-liner —
+/// what makes a per-lane Retry a one-liner:
 /// `ref.invalidate(globalSearchLegProvider(leg))` and nothing wider. A record
 /// rather than a class because [ServiceInstance] already carries value
 /// equality, so the key compares by what it names: edit a connection's address
@@ -146,7 +146,7 @@ enum SearchLaneState {
   searching,
 
   /// The server answered. [GlobalSearchServiceResults.results] is the answer,
-  /// and an empty one means "this library does not have it" — never "the box
+  /// and an empty one means "this library does not have it", never "the box
   /// is off", which is the distinction the whole per-connection fan-out rests
   /// on.
   answered,
@@ -168,8 +168,8 @@ extension SearchLaneStateVocabulary on SearchLaneState {
   ///
   /// The two arms that are easy to get wrong, and are the point of the sheet:
   ///
-  /// * **timed out is AMBER, not red.** A slow server is a fault — something to
-  ///   look at — but the address, the key and the route are all fine, and red
+  /// * **timed out is AMBER, not red.** A slow server is a fault: something to
+  ///   look at, but the address, the key and the route are all fine, and red
   ///   would send the user auditing settings that are already correct.
   /// * **red is UNREACHABLE and nothing else.** It is the one state where there
   ///   is no server on the other end to be slow, so it is the one state worth
@@ -194,7 +194,7 @@ extension SearchLaneStateVocabulary on SearchLaneState {
 /// One lane of the global search: one connection, its state, and whatever it
 /// managed to say.
 class GlobalSearchServiceResults {
-  /// The connection this lane asked — and the key its Retry invalidates.
+  /// The connection this lane asked, and the key its Retry invalidates.
   final SearchLeg leg;
 
   final List<GlobalSearchResult> results;
@@ -231,8 +231,8 @@ class GlobalSearchServiceResults {
   ///   the rest of the app fine.
   /// * `localNetworkBlocked` is a *fault*, not [SearchLaneState.unreachable],
   ///   even though nothing left the device. Nothing is wrong with the address,
-  ///   the server or the key — the OS has simply not been told Cupola may talk
-  ///   to this network — and red here sends the user auditing settings that are
+  ///   the server or the key: the OS has simply not been told Cupola may talk
+  ///   to this network, and red here sends the user auditing settings that are
   ///   already correct. Same argument `describeConnection` makes.
   factory GlobalSearchServiceResults.fault(SearchLeg leg, Object? error) {
     // The lane's own deadline is the one bare timeout whose meaning is known:
@@ -261,7 +261,7 @@ class GlobalSearchServiceResults {
   /// with one Radarr must not grow a label naming the only Radarr there is.
   ///
   /// On the *section*, not on the rows. Every result under a heading came from
-  /// the same server — one leg, one connection — so a chip repeated down forty
+  /// the same server (one leg, one connection), so a chip repeated down forty
   /// rows would say the same thing forty times.
   ///
   /// Read off the leg rather than stored: it used to be a field the provider
@@ -281,7 +281,7 @@ class GlobalSearchServiceResults {
   String titleFor(RoleGate gate) =>
       gate.namesService(service) ? laneTitle : Lexicon.requestsLane;
 
-  /// Whether the lane stopped short of an answer. Not "is red" — three of the
+  /// Whether the lane stopped short of an answer. Not "is red": three of the
   /// four stopped states are amber.
   bool get hasFault => state.canRetry;
 

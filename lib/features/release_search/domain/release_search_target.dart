@@ -6,7 +6,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 /// What a release search is being run for.
 enum ReleaseSearchScope {
   /// Sonarr, `seriesId` + `seasonNumber`. This is also what the "whole series"
-  /// action runs — Sonarr's `/release` has no series-wide form, so that button
+  /// action runs: Sonarr's `/release` has no series-wide form, so that button
   /// searches a season like any other.
   season,
 
@@ -23,7 +23,7 @@ enum ReleaseSearchScope {
   album,
 }
 
-/// Identifies the thing a release search is for, and — crucially — how targets
+/// Identifies the thing a release search is for, and, crucially, how targets
 /// relate to each other.
 ///
 /// The relationship is what makes deduplication correct. An episode search and
@@ -55,7 +55,7 @@ class ReleaseSearchTarget {
   /// adopted by a search running somewhere else entirely.
   ///
   /// Empty until [stampedWith] is called. Every target in the app is built by a
-  /// screen and handed to `showReleaseSearch`, which stamps it there — one
+  /// screen and handed to `showReleaseSearch`, which stamps it there: one
   /// place, rather than a required argument at twenty construction sites that
   /// would each have to go and ask the same question.
   final String instanceId;
@@ -70,7 +70,7 @@ class ReleaseSearchTarget {
   final String label;
 
   /// Set for [ReleaseSearchScope.season], and for an episode when its season is
-  /// known — without it an episode cannot be recognised as part of a season.
+  /// known: without it an episode cannot be recognised as part of a season.
   final int? seasonNumber;
 
   /// The containing entity: `seriesId` for an episode, `artistId` for an album.
@@ -124,7 +124,7 @@ class ReleaseSearchTarget {
        parentId = artistId,
        instanceId = '';
 
-  /// True when a search for `this` would be answered by a search for [other] —
+  /// True when a search for `this` would be answered by a search for [other]:
   /// an episode by its season, an album by its artist.
   ///
   /// Deliberately not symmetric and deliberately not transitive beyond one step:
@@ -134,7 +134,7 @@ class ReleaseSearchTarget {
     if (other.service != service) return false;
     // Same server, or nothing is covered. Two Sonarr have two unrelated series
     // tables, so `seriesId 7` on one says nothing at all about `seriesId 7` on
-    // the other — adopting across connections would hand the user a season's
+    // the other: adopting across connections would hand the user a season's
     // releases from a library that does not contain the episode they asked for.
     if (other.instanceId != instanceId) return false;
     return switch (scope) {
@@ -160,7 +160,7 @@ class ReleaseSearchTarget {
   /// This target, bound to the connection [instanceId] names.
   ///
   /// Called once, by `showReleaseSearch`, before anything compares this target
-  /// against a running job or a cached result — so every target the job manager
+  /// against a running job or a cached result, so every target the job manager
   /// ever sees is already stamped, and the empty default never reaches it.
   ReleaseSearchTarget stampedWith(String instanceId) => ReleaseSearchTarget(
     service: service,

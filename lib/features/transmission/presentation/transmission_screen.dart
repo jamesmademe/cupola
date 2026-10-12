@@ -106,7 +106,7 @@ class _TransmissionDashboard extends ConsumerWidget {
       // the rest, so a daemon with eight downloads read as one with five. The
       // Queue tab *is* the queue: every torrent `torrent-get` returned is a
       // row here, each header states how many there are, and only the rows on
-      // screen are built — a seedbox's two thousand seeds included.
+      // screen are built, a seedbox's two thousand seeds included.
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
@@ -176,7 +176,7 @@ String? transmissionTorrentCountLabel(int? count) {
 
 /// One section's rows, as a sliver.
 ///
-/// [rows] is the section's slice of the loaded list — null exactly when
+/// [rows] is the section's slice of the loaded list, null exactly when
 /// [torrentsAsync] is not in its data branch. The loading and failure states
 /// are drawn once per section, as before; only the data state changed, from
 /// the first N rows in a `Column` to every row in a lazily built list.
@@ -233,7 +233,7 @@ Widget _torrentRows(
 /// Global controls: add a torrent, and the turtle toggle.
 ///
 /// Turtle rather than a "pause all": Transmission has no global pause, and
-/// faking one by stopping every torrent would be a lie with a bad recovery —
+/// faking one by stopping every torrent would be a lie with a bad recovery:
 /// "resume all" could not know which ones the user had stopped deliberately.
 /// The alternative speed limit is the real control the daemon offers for
 /// "quieten down without losing my state", so that is what is here.
@@ -309,7 +309,7 @@ Future<void> _showAddTorrentDialog(BuildContext context, WidgetRef ref) async {
 /// The link field of the add flow. Pops with the text on Add, null on Cancel.
 ///
 /// A widget of its own so the field's controller lives exactly as long as the
-/// field. It used to be disposed the moment `showDialog` returned — which is
+/// field. It used to be disposed the moment `showDialog` returned, which is
 /// when the route *starts* its exit animation, with the field still on screen
 /// and still listening to it.
 class _AddTorrentDialog extends StatefulWidget {
@@ -443,11 +443,11 @@ class _TorrentMenu extends ConsumerWidget {
 /// Confirms a removal, with deleting the downloaded files as a separate,
 /// off-by-default choice.
 ///
-/// Two decisions, not one. Removing a torrent from the daemon is recoverable —
+/// Two decisions, not one. Removing a torrent from the daemon is recoverable:
 /// re-add it and it re-checks. Deleting its data is not: Transmission unlinks
 /// the files and nothing goes to a trash. Folding them into a single "Delete"
 /// button is how people lose a library, so the destructive half is a checkbox
-/// the user has to reach for — and once they do, the button's own words change
+/// the user has to reach for, and once they do, the button's own words change
 /// to *Remove and delete files*. Nothing turns red: red means unreachable and
 /// nothing else.
 Future<void> _confirmRemove(

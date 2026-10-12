@@ -42,14 +42,14 @@ void main() {
     });
 
     test('a certificate NPM dated but did not date reads an em dash, not 0', () {
-      // `0 days` would render as "expires today" — the one reading a user would
+      // `0 days` would render as "expires today", the one reading a user would
       // act on, over a question the server never answered.
       expect(npmCertificateExpiryLabel(_cert(expiresOn: null), now), '—');
     });
 
     test('a certificate that lapsed hours ago is expired, not due today', () {
       // `daysUntilExpiry` truncates toward zero, so six hours past the date it
-      // answers 0 — and 0 on the future branch reads "expires today", a
+      // answers 0, and 0 on the future branch reads "expires today", a
       // deadline, about a certificate every browser is already refusing. The
       // window is a full day wide and it is exactly the day someone opens the
       // app.
@@ -176,7 +176,7 @@ void main() {
     });
 
     test('an expired certificate is amber, never red', () {
-      // Red is reserved for an NPM that did not answer. This one answered — it
+      // Red is reserved for an NPM that did not answer. This one answered: it
       // answered with bad news.
       final items = npmAttentionItems(
         hosts: const [],
@@ -195,8 +195,8 @@ void main() {
       'a certificate that lapsed hours ago is an expired fault, not a deadline',
       () {
         // The truncated day count says 0 here. Ranked on that it would fall
-        // into the expiring arm — the enum's lowest priority, documented as "a
-        // deadline, not yet an outage" — where a preview of four can push it
+        // into the expiring arm, the enum's lowest priority, documented as "a
+        // deadline, not yet an outage", where a preview of four can push it
         // off the screen behind lesser faults.
         final items = npmAttentionItems(
           hosts: const [],
@@ -237,7 +237,7 @@ void main() {
 
       expect(items.single.kind, NpmAttentionKind.certificateExpiring);
       expect(items.single.headline, '2 certificates expiring');
-      // Soonest first, and the renewal inference — certbot renews from thirty
+      // Soonest first, and the renewal inference: certbot renews from thirty
       // days out, so a Let's Encrypt certificate still short-dated inside that
       // window is one whose renewal has not completed.
       expect(
@@ -444,7 +444,7 @@ void main() {
         'gone',
         'near',
         'far',
-        // Not urgent — unknown. Heading a list ordered by urgency would assert
+        // Not urgent: unknown. Heading a list ordered by urgency would assert
         // the one thing nobody knows about it.
         'undated',
       ]);
@@ -503,8 +503,8 @@ void main() {
     });
 
     test('lapsed and lapsing are counted apart, worst named first', () {
-      // `isExpiringSoon` has no lower bound — an already-dead certificate
-      // satisfies it — so folding both into one clause would have this header
+      // `isExpiringSoon` has no lower bound, so an already-dead certificate
+      // satisfies it, so folding both into one clause would have this header
       // say "2 expiring" while Needs attention, three inches above, says
       // "Certificate expired". One screen, one fact, two severities, and the
       // header stating the softer one.

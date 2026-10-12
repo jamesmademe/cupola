@@ -23,7 +23,7 @@ import 'package:cupola/features/truenas/domain/truenas_version.dart';
 /// Follows the **lens**. It used to read the flat `truenasUrl`/`truenasApiKey`
 /// projections, which are always the *first* connection, so a second NAS could
 /// be configured, probed and counted and never once read. Every one of the eight
-/// domain APIs below watches this single client, so they all follow with it —
+/// domain APIs below watches this single client, so they all follow with it:
 /// the breadth of the surface was never the obstacle it looked like.
 ///
 /// Moving the lens tears the socket down and opens another, which is exactly
@@ -31,8 +31,8 @@ import 'package:cupola/features/truenas/domain/truenas_version.dart';
 ///
 /// ## Retry: none, anywhere in this feature
 ///
-/// Every TrueNAS provider — this one, [truenasClientForProvider] and each
-/// `FutureProvider` under `presentation/` — carries `retry: noProviderRetry`.
+/// Every TrueNAS provider (this one, [truenasClientForProvider] and each
+/// `FutureProvider` under `presentation/`) carries `retry: noProviderRetry`.
 /// Riverpod's default re-runs a failed build ten times over roughly forty
 /// seconds, and for all of that time the provider reports *loading*, so a NAS
 /// that went dark drew a skeleton that never resolved instead of the offline
@@ -44,7 +44,7 @@ import 'package:cupola/features/truenas/domain/truenas_version.dart';
 /// `FutureProvider`, so a Retry always re-runs the call that failed.
 ///
 /// The client throws "not configured" from this build, and would be retried
-/// for it like any other `Exception` — for a condition no waiting changes.
+/// for it like any other `Exception`: a condition no waiting changes.
 final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
   final transport = watchTransport(ref, ServiceKey.truenas);
   if (!transport.configured) {

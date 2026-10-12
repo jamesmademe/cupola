@@ -154,7 +154,7 @@ void main() {
   ) async {
     // The regression this section was written against and still had: the
     // library fetch degraded to `[]`, the provider resolved *successfully*, and
-    // the header printed "0 series" over "Nothing airing this week" — under an
+    // the header printed "0 series" over "Nothing airing this week", under an
     // identity band that its own probe had already marked Unreachable. The
     // confident claim was the fabricated one.
     await _pump(tester, service: _scripted(libraryThrows: true), version: null);
@@ -216,7 +216,7 @@ void main() {
   });
 
   testWidgets('a backlog nobody answered is absent, not zero', (tester) async {
-    // The fake's default page carries `total: null` — the wire shape of a fork
+    // The fake's default page carries `total: null`, the wire shape of a fork
     // that does not serve `wanted/*`. No row, and no reassuring "0 missing".
     await _pump(tester, service: _scripted());
 
@@ -287,7 +287,7 @@ void main() {
   ) async {
     // The week is derived from a session-cached library. Invalidating only the
     // derived provider re-ran the window function against the same cached list
-    // with a new `DateTime.now()` — a pull that recomputed and fetched nothing,
+    // with a new `DateTime.now()`, a pull that recomputed and fetched nothing,
     // so an episode that aired, a series added or a show that ended never
     // appeared.
     final service = _ScriptedSonarr(
@@ -367,7 +367,7 @@ void main() {
     // `AsyncValueWidget`s each catch the same "not configured" throw: those
     // give the same pixels, but a `FutureProvider` that threw is a *failed*
     // provider on a backoff for a condition no waiting changes. The
-    // `pumpAndSettle` above is what would catch it — a retrying provider never
+    // `pumpAndSettle` above is what would catch it: a retrying provider never
     // settles.
     expect(find.byType(SectionHeader), findsNothing);
     expect(find.byType(ServiceKpiPeek), findsNothing);
@@ -476,7 +476,7 @@ class _ScriptedSonarr extends FakeSonarrService {
   @override
   Future<List<SonarrSeries>> getSeries() async => series;
 
-  /// The read the Overview actually makes — the one that is allowed to fail.
+  /// The read the Overview actually makes: the one that is allowed to fail.
   @override
   Future<List<SonarrSeries>> getSeriesOrThrow() async {
     libraryCalls++;
@@ -513,7 +513,7 @@ class _ScriptedSonarr extends FakeSonarrService {
 
 /// History fails; the library still answers.
 ///
-/// Two regions read that page — Recently downloaded and History today — so this
+/// Two regions read that page (Recently downloaded and History today), so this
 /// fails exactly two of the four sections and proves the other two are
 /// independent of them.
 class _FailingHistorySonarr extends _ScriptedSonarr {

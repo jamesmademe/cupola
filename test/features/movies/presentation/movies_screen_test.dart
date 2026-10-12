@@ -65,7 +65,7 @@ void main() {
     expect(find.textContaining('Exception'), findsNothing);
     expect(find.textContaining('solved by the library'), findsNothing);
 
-    // The Retry is live and asks again — once per tap, not ten times behind a
+    // The Retry is live and asks again: once per tap, not ten times behind a
     // backoff.
     final before = api.getCallCount;
     api.getException = null;

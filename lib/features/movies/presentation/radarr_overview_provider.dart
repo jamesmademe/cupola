@@ -4,7 +4,7 @@
 /// readouts, so everything else on it is derived rather than fetched twice:
 /// Coming up and Recently added both fall out of [radarrOverviewMoviesProvider],
 /// and Needs attention reads the *raw* queue records
-/// rather than [ArrQueueSnapshot] — the snapshot collapses to one headline per
+/// rather than [ArrQueueSnapshot], the snapshot collapses to one headline per
 /// media id and drops the titles and timestamps the fault rows are made of.
 ///
 /// Every windowing rule lives in a top-level pure function taking an explicit
@@ -54,7 +54,7 @@ const int radarrHistoryTodayLimit = 3;
 /// Which of a film's three dates an upcoming entry is about.
 ///
 /// Radarr carries all three on the library row, so a film can legitimately
-/// appear twice in one week — a digital release on Tuesday and a physical one
+/// appear twice in one week: a digital release on Tuesday and a physical one
 /// on Friday are two events, not one row that has to pick a winner.
 enum RadarrReleaseKind {
   inCinemas(Lexicon.inCinemas),
@@ -91,7 +91,7 @@ class RadarrUpcomingRelease {
 ///
 /// The window opens at local midnight **today** (inclusive) and closes at local
 /// midnight [days] days later (exclusive): a film released earlier today is
-/// still "coming up" — the user has not seen it on this screen yet — and one
+/// still "coming up" (the user has not seen it on this screen yet), and one
 /// dated exactly seven days out belongs to next week's window, not this one.
 ///
 /// The end is built with `DateTime(y, m, d + days)` rather than
@@ -147,7 +147,7 @@ final radarrOverviewMoviesProvider = moviesProvider;
 /// Derived client-side rather than from `/api/v3/calendar`: for Radarr the
 /// calendar endpoint answers with library movies whose dates fall in range, and
 /// the library is already loaded. (Sonarr and Lidarr genuinely need the
-/// endpoint — an episode is not a row of the series list.)
+/// endpoint: an episode is not a row of the series list.)
 final radarrComingUpProvider =
     FutureProvider.autoDispose<List<RadarrUpcomingRelease>>((ref) async {
       final movies = await ref.watch(radarrOverviewMoviesProvider.future);
@@ -193,7 +193,7 @@ enum RadarrAttentionKind {
   /// Radarr grabbed the release and could not move it into the library.
   importFailed(StatusTone.warning, Icons.file_download_off_rounded),
 
-  /// The transfer is not moving. A fault — the user did not ask for this.
+  /// The transfer is not moving. A fault: the user did not ask for this.
   stalled(StatusTone.warning, Icons.sync_problem_rounded),
 
   /// Files on disk below the configured quality cutoff. Backlog, so neutral:
@@ -209,7 +209,7 @@ enum RadarrAttentionKind {
 /// One row of Needs attention: what happened, to what, and when.
 ///
 /// The per-row cross-service action the board draws ("Open in qBittorrent",
-/// "Manual import") is deliberately absent — the bridge those need does not
+/// "Manual import") is deliberately absent: the bridge those need does not
 /// exist in `lib/` yet, and a button that cannot do the thing it names is worse
 /// than no button.
 @immutable
@@ -233,7 +233,7 @@ class RadarrAttentionItem {
   IconData get icon => kind.icon;
 
   /// The row as a sentence, with the dots the layout uses turned back into
-  /// commas — `·` is decoration, and a screen reader either names it or drops
+  /// commas. `·` is decoration, and a screen reader either names it or drops
   /// it depending on the user's punctuation setting.
   String get spoken =>
       joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
@@ -242,7 +242,7 @@ class RadarrAttentionItem {
 /// Reads the faults out of a page of **raw** `/queue` records.
 ///
 /// Raw, because `ArrQueueSnapshot` folds a queue down to one entry per movie id
-/// and keeps neither the release title nor `added` — and this section is
+/// and keeps neither the release title nor `added`, and this section is
 /// entirely made of those two.
 ///
 /// Stalled is tested before import: a transfer that is not moving has not
@@ -291,7 +291,7 @@ List<RadarrAttentionItem> radarrQueueFaults(
   return List.unmodifiable(items);
 }
 
-/// The backlog row, or null when there is no backlog to report — and null too
+/// The backlog row, or null when there is no backlog to report, and null too
 /// when the server never reported one.
 ///
 /// A null [count] is "we could not ask", which draws no row rather than a
@@ -328,7 +328,7 @@ bool _isImportFault(Map<String, dynamic> record) {
   }
   // Radarr's canonical "Unable to Import Automatically" arrives as a pending
   // import carrying a status message, which is how the service says a human has
-  // to look at it — see `arrQueueSeverity`.
+  // to look at it. See `arrQueueSeverity`.
   return state == 'importpending' &&
       arrQueueSeverity(record) != ArrQueueSeverity.ok;
 }
@@ -355,9 +355,9 @@ final radarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
 ///
 /// One request, and the figure read off the envelope's `totalRecords` rather
 /// than counted from the records themselves. `getAllCutoff()` answers the same
-/// question by walking up to fifty pages of 250 records — thousands of maps
+/// question by walking up to fifty pages of 250 records, thousands of maps
 /// parsed to take a `.length` the envelope hands over in a field, and a count
-/// that silently caps at 12,500 — and it swallows its own failure into `[]`,
+/// that silently caps at 12,500, and it swallows its own failure into `[]`,
 /// which made "this fork does not serve wanted/cutoff" and "there is no
 /// backlog" the same answer.
 ///
@@ -366,7 +366,7 @@ final radarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
 final radarrCutoffUnmetCountProvider = FutureProvider.autoDispose<int?>((
   ref,
 ) async {
-  // The page itself is thrown away — only the total is read — so ask for the
+  // The page itself is thrown away, only the total is read, so ask for the
   // smallest one the server will send.
   final page = await ref
       .watch(radarrServiceProvider)
@@ -407,7 +407,7 @@ class RadarrHistoryEntry {
   /// The film.
   final String title;
 
-  /// What happened to it, in the shared history vocabulary — `Imported`,
+  /// What happened to it, in the shared history vocabulary: `Imported`,
   /// `Grabbed`, `Failed`.
   final String event;
 
@@ -425,7 +425,7 @@ class RadarrHistoryEntry {
 /// The records from today, newest first, capped at [limit].
 ///
 /// "Today" is the local calendar day of [now]. A record from 23:50 yesterday is
-/// out even though it is twenty minutes old — the section is headed `today`,
+/// out even though it is twenty minutes old: the section is headed `today`,
 /// and a heading is a promise.
 List<RadarrHistoryEntry> radarrHistoryToday(
   List<dynamic> records, {

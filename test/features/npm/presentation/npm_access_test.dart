@@ -53,7 +53,7 @@ Future<CapabilityGrant> _settled(ProviderContainer container) async {
 
 /// Decision 34's behaviour, on the shared capability layer.
 void main() {
-  group('the NPM gate — decision 34', () {
+  group('the NPM gate: decision 34', () {
     test('an admin may write and gets no band', () async {
       final container = await _container(() async => _account(admin: true));
       final grant = await _settled(container);

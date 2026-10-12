@@ -10,24 +10,24 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 
 /// The full-page state a media detail route shows when it has no media to show.
 ///
-/// Wears the same chrome as the loaded page — a room lit by the service's own
-/// accent under a glass bar — so a movie that turns out to be unreachable does
+/// Wears the same chrome as the loaded page: a room lit by the service's own
+/// accent under a glass bar, so a movie that turns out to be unreachable does
 /// not land the user on a differently-dressed screen. The six detail screens
 /// each carried a private copy of this that opened with a flat opaque app-bar
 /// strip and no ambient light at all, which made the failure look like a
 /// different app rather than the same page with nothing in it.
 ///
 /// Two cases, one shape:
-/// - [MediaDetailPlaceholderView.error] — the lookup failed. A
+/// - [MediaDetailPlaceholderView.error]: the lookup failed. A
 ///   `<Service> not configured` throw routes to [NotConfiguredPlaceholder],
 ///   matching the detection `AsyncValueWidget` already uses, because an
 ///   unconfigured service is a normal daily condition rather than a fault.
-/// - [MediaDetailPlaceholderView.notFound] — the service answered and does not
+/// - [MediaDetailPlaceholderView.notFound]: the service answered and does not
 ///   have this item. Also not a fault, so it gets the empty-state voice.
 ///
 /// Both cases take [onRetry]. A detail page reached over a reverse proxy that
 /// blinks is the single most common failure in this product, and without a way
-/// back the only exit was the back button — the page became a dead end for a
+/// back the only exit was the back button: the page became a dead end for a
 /// condition that usually clears on the next request. Callers wire it to
 /// `ref.invalidate(...)` of the provider that actually failed, so recovery
 /// happens in place instead of costing a navigation round trip.
@@ -81,7 +81,7 @@ class MediaDetailPlaceholderView extends StatelessWidget {
   Widget build(BuildContext context) {
     final Widget body;
     if (error != null) {
-      // A missing configuration is not retryable — the fix is in Settings — so
+      // A missing configuration is not retryable: the fix is in Settings, so
       // that branch keeps its own call to action and drops [onRetry].
       body = error.toString().contains('not configured')
           ? NotConfiguredPlaceholder(serviceName: serviceName)
@@ -116,8 +116,8 @@ class MediaDetailPlaceholderView extends StatelessWidget {
       ),
       // Both bodies are leaves that own no viewport: at an accessibility
       // reading size an icon well, a wrapped headline, a message and a button
-      // can clear a short phone. The page owns the viewport — `minHeight` keeps
-      // the state centred while it fits and lets it grow past that — and the
+      // can clear a short phone. The page owns the viewport: `minHeight` keeps
+      // the state centred while it fits and lets it grow past that, and the
       // scroll view ends on the floating nav bar's clearance.
       body: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(

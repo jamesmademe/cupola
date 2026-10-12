@@ -21,7 +21,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// ## What the user reads first
 ///
 /// The headline names what failed; [error] is demoted to a detail line beneath
-/// it. It used to be the reverse in effect — "Something went wrong" said nothing,
+/// it. It used to be the reverse in effect: "Something went wrong" said nothing,
 /// so the raw `error.toString()` under it was the message, and on this app's
 /// failures that is a Dio exception with a URL and a status code in it. That is
 /// diagnostics, not an explanation, and it was the first thing the eye landed on.
@@ -30,17 +30,17 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// The raw `error.toString()` survived as the detail line for a while, on the
 /// argument that a self-hoster can act on "connection refused". What it
-/// actually printed was a class name and a library's own apology — "DioException
+/// actually printed was a class name and a library's own apology: "DioException
 /// [connection error]: The connection errored: Connection refused This
-/// indicates an error which most likely cannot be solved by the library." — on
+/// indicates an error which most likely cannot be solved by the library." On
 /// every failed load in the app. The detail now comes from the failure
 /// classification ([connectionFailureSentence]): the same causes the connection
 /// form names, without a service to name.
 ///
 /// ## Tone follows the cause
 ///
-/// Red only when nothing answered. A host that answered — a refused key, a
-/// 5xx, a timeout after connecting, a reply nobody can read, a certificate — is
+/// Red only when nothing answered. A host that answered (a refused key, a
+/// 5xx, a timeout after connecting, a reply nobody can read, a certificate) is
 /// a **fault**, amber, because there is one concrete thing to go and fix; and
 /// so is a failure nobody can attribute, because "did not answer" is a claim
 /// about the host that nothing supports. The split is [failureTone], the same
@@ -50,7 +50,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// the state's tone (`Radarr did not answer` in red, `Radarr answered but
 /// refused the key` in amber), and the sentence under it says why or what to
 /// do instead of repeating it. There is **no well** behind
-/// the glyph — the brand book's Presence Rule: a fault is a quiet line, and a
+/// the glyph: the brand book's Presence Rule: a fault is a quiet line, and a
 /// red fill is the disease drawn as chrome. The glyph alone carries the tone,
 /// measured against the ground it sits on.
 ///
@@ -207,7 +207,7 @@ class AppErrorState extends StatelessWidget {
           children: [
             Icon(failureIcon(reason), size: compact ? 26 : 32, color: toneInk),
             const SizedBox(height: AppSpacing.lg),
-            // What happened, naming who, in the tone of the state — the
+            // What happened, naming who, in the tone of the state: the
             // brand book's fault sentence, said once: the classification's
             // headline, never "Couldn't load Radarr", and red only when
             // nothing answered.
@@ -219,8 +219,8 @@ class AppErrorState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             // Why, or what to do: one step down the type ladder and a step
-            // dimmer. Plain words from the classification — see the class
-            // comment — and left out when they would only restate the
+            // dimmer. Plain words from the classification; see the class
+            // comment, and left out when they would only restate the
             // headline.
             if (_detail(
                   error,

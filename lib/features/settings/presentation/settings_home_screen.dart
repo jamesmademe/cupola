@@ -33,8 +33,8 @@ export 'package:cupola/features/settings/presentation/widgets/settings_section_l
 /// form, which is why it is called Overview.
 ///
 /// Below that width there is no rail to be the index, so this route *is* the
-/// index: the same connections card at the top — the one thing that can be
-/// wrong rather than merely set — and under it the doors, grouped. One route,
+/// index: the same connections card at the top, the one thing that can be
+/// wrong rather than merely set, and under it the doors, grouped. One route,
 /// one URL, a deep link that resolves the same on both.
 class SettingsHomeScreen extends ConsumerWidget {
   const SettingsHomeScreen({super.key});
@@ -173,8 +173,8 @@ class SettingsHomeScreen extends ConsumerWidget {
       SettingsGroupCard(
         children: [
           // None of these five carries an accent. The accent slot on a settings
-          // row is the status slot — it is where the connections card puts the
-          // verdict — and Region wore `AppColors.success` while Send feedback
+          // row is the status slot; it is where the connections card puts the
+          // verdict, and Region wore `AppColors.success` while Send feedback
           // wore the amber this system reserves for a fault. A preference has
           // no state to report.
           _regionRow(context, settings),
@@ -201,7 +201,7 @@ class SettingsHomeScreen extends ConsumerWidget {
     ];
   }
 
-  /// Trusted certificates, always — not only when something is pinned.
+  /// Trusted certificates, always, not only when something is pinned.
   ///
   /// It used to be reachable from exactly one place: a row on the Connections
   /// screen that appears only when the map is non-empty. The rail carries it on

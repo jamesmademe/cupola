@@ -33,8 +33,8 @@ class DockgeStackDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Checked **before** the detail provider is read. This page is reachable by
-    // deep link — `/dashboard/dockge/stacks/stack/<name>`, and every pre-tab
-    // spelling still rewrites onto it — so it can be the first Dockge thing the
+    // deep link (`/dashboard/dockge/stacks/stack/<name>`, and every pre-tab
+    // spelling still rewrites onto it), so it can be the first Dockge thing the
     // app builds on an install that was never set up. `dockgeClientProvider`
     // throws there, and a provider that throws is a failed provider scheduling
     // a retry with backoff for a condition no waiting changes.
@@ -179,8 +179,8 @@ class _ActionBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    // Six chips that used to be six palette colours — green Start, red Stop,
-    // blue Update, amber Down — which put the whole status vocabulary on a row
+    // Six chips that used to be six palette colours (green Start, red Stop,
+    // blue Update, amber Down), which put the whole status vocabulary on a row
     // of *controls*. A tone describes a state; nothing here has a state. Amber
     // on "Down" claimed a fault about an action the user is about to take on
     // purpose, and red says "unreachable", which is the one thing red means on
@@ -274,7 +274,7 @@ class _ActionBar extends ConsumerWidget {
   /// Asks before a command that interrupts the running stack, then runs it.
   ///
   /// These four fired on the tap while the same Stop and Restart on the Stacks
-  /// list asked first — the page one level *deeper* was the careless one.
+  /// list asked first: the page one level *deeper* was the careless one.
   /// Start stays a single tap: it adds, it interrupts nothing.
   Future<void> _confirmThenRun(
     BuildContext context,

@@ -66,7 +66,7 @@ void main() {
       final state = tester.getRect(find.byType(AppEmptyState));
 
       // The state fills the viewport it was given as a minimum, which is what
-      // lets its own `Center` do the centring — rather than the column sitting
+      // lets its own `Center` do the centring, rather than the column sitting
       // at the top of a scroll view sized to its content.
       expect(state.height, closeTo(viewport.height, 1));
       expect(state.center.dy, closeTo(viewport.center.dy, 1));

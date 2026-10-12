@@ -13,12 +13,12 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 /// there is no route constant for the settings tree yet.
 const String _regionSettingsLocation = '/settings/region';
 
-/// "Region · IT" — a **readout** of Settings › Region with a door to it.
+/// "Region · IT": a **readout** of Settings › Region with a door to it.
 ///
 /// Decision 32, and the whole point of the widget is what it refuses to be. A
 /// picker here would change nothing: region is not a parameter on any
 /// `/api/v1/discover/*` call, so no choice made on this page could alter which
-/// titles the rails return. What the setting does reach is one level down — a
+/// titles the rails return. What the setting does reach is one level down: a
 /// title's release dates, its certification and where it can be watched, all of
 /// which a title's own page (`media_page.dart`) reads through `regionProvider`.
 ///
@@ -26,7 +26,7 @@ const String _regionSettingsLocation = '/settings/region';
 /// one: no selected-state fill, no chevron-down, and deliberately not
 /// [AppRadius.pill], which the token reserves for selected affordances. A
 /// region chip that looks like a filter and filters nothing is a setting the
-/// user concludes is broken — that failure is why decision 32 was asked at all.
+/// user concludes is broken. That failure is why decision 32 was asked at all.
 ///
 /// It is still one button: the whole plate opens app settings, and it keeps the
 /// 48dp target even though the visible plate is smaller, so it is reachable by
@@ -42,7 +42,7 @@ class DiscoverRegionChip extends ConsumerWidget {
 
     // Watched rather than read: the label is the live value of the setting, so
     // changing the region in Settings and coming back shows the new one without
-    // the page being rebuilt for any other reason. Nothing is re-fetched — see
+    // the page being rebuilt for any other reason. Nothing is re-fetched; see
     // the class comment for why there is nothing to re-fetch.
     final code = SettingsModel.normalizeRegion(ref.watch(regionProvider));
 
@@ -73,7 +73,7 @@ class DiscoverRegionChip extends ConsumerWidget {
             widthFactor: 1,
             // The plate is what the eye reads; the node above is what the
             // screen reader reads. Without this exclusion the code comes along
-            // too and the label becomes "Region, Italy / Region · IT" — the
+            // too and the label becomes "Region, Italy / Region · IT", the
             // initialism this widget spells out for exactly that reason.
             child: ExcludeSemantics(
               child: Container(

@@ -360,7 +360,7 @@ void main() {
     // `{page, pageSize, totalRecords, records}` and the app kept only the last
     // field, so every count derived from history / missing / cutoff was the size
     // of the *page*. A library with 340 gaps read "20 missing", because 20 is
-    // the default page size — not an approximation, an answer to a different
+    // the default page size. Not an approximation, an answer to a different
     // question that happened to look like an answer to this one.
     test('getMissingPage carries the set size, not the page size', () async {
       client.getResponseData = {
@@ -481,7 +481,7 @@ void main() {
       // Deliberately unlike [fetchQualityProfiles], which degrades to `[]`.
       // An add sheet that cannot reach the server must say so: an empty list
       // here would render as "this server has no libraries configured", which
-      // is D13's lesson — offline made indistinguishable from empty.
+      // is D13's lesson: offline made indistinguishable from empty.
       client.getException = Exception('connection refused');
 
       expect(service.fetchRootFolders(), throwsA(isA<Exception>()));

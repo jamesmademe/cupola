@@ -25,7 +25,7 @@ Future<void> showImportServicePickerSheet(BuildContext context) {
 /// The Activity app bar's way into the wizard.
 ///
 /// It picks a **connection**, not a service. With two Radarrs, a sheet that
-/// offers "Radarr" has to resolve that through the lens — and the lens is the
+/// offers "Radarr" has to resolve that through the lens, and the lens is the
 /// one thing the wizard must not be bound by, because the files it moves go
 /// into whichever library it was pointed at. The second connection is drawn as
 /// its own row rather than behind a second step: two rows are cheaper than two
@@ -87,7 +87,7 @@ class _ImportServicePickerSheet extends ConsumerWidget {
         _row(
           context,
           service: service,
-          // The glyph is the service, the label is the connection — the same
+          // The glyph is the service, the label is the connection: the same
           // division every multi-connection surface in the app uses. Named by
           // the app's one rule, so a connection the user never named reads
           // `Radarr 2` rather than a blank line under a second "Radarr".

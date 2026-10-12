@@ -39,7 +39,7 @@ class TrueNasReportingGraph {
   ///
   /// A netdata window is returned oldest-first and can run to thousands of rows
   /// per graph. Callers that only draw a live gauge or a short sparkline pass a
-  /// cap so the discarded rows are never mapped into Dart objects at all — the
+  /// cap so the discarded rows are never mapped into Dart objects at all, the
   /// dashboard polls this every few seconds on the UI isolate.
   factory TrueNasReportingGraph.fromJson(
     Map<String, dynamic> json, {

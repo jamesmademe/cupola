@@ -11,7 +11,7 @@ import 'package:cupola/core/lifecycle/poll_probe.dart';
 ///
 /// Enforced by `test/core/no_ungated_polling_test.dart`. A `Timer.periodic`
 /// anywhere else is a poller with no gate, which is how a hidden tab ends up
-/// talking to the network — and it is invisible in review, because the timer and
+/// talking to the network, and it is invisible in review, because the timer and
 /// the page that should own it live in different files.
 extension GatedPoll on Ref {
   /// Repeating work for the page that is on screen.
@@ -21,7 +21,7 @@ extension GatedPoll on Ref {
   /// losing visibility drops the last listener and disposal cancels the timer.
   ///
   /// On creation the poller asks the clock when it is next due: a full interval
-  /// if it has never run — the page has just loaded what it shows — or whatever
+  /// if it has never run; the page has just loaded what it shows, or whatever
   /// is left of one, which can be nothing at all after a long absence. Only that
   /// last case ticks straight away, and it is deferred to a microtask because
   /// [onTick] invalidates providers, which is illegal inside a provider's build.
@@ -29,7 +29,7 @@ extension GatedPoll on Ref {
   /// The stop is one frame plus a microtask behind the page going away: the
   /// rebuild drops the watch, dropping the last listener schedules disposal, and
   /// disposal cancels the timer. Against a multi-second interval that window
-  /// never contains a tick in practice — but a test that fast-forwards the clock
+  /// never contains a tick in practice, but a test that fast-forwards the clock
   /// without pumping that frame first will see the old timer fire, which is the
   /// test skipping the stop rather than the stop failing.
   void gatedPoll({
@@ -79,7 +79,7 @@ extension GatedPoll on Ref {
 /// Two screens do: the TrueNAS dashboard drives a WebSocket rather than a
 /// provider, and the manual-import Track station stops on a command result rather
 /// than on visibility. Both need to start and stop from `build`, so [setLive] is
-/// safe to call there — it never runs [onTick] synchronously.
+/// safe to call there; it never runs [onTick] synchronously.
 class GatedPollTimer {
   GatedPollTimer({
     required this.id,
@@ -104,7 +104,7 @@ class GatedPollTimer {
   ///
   /// Deliberately **not** recorded by [_tick]. A tick firing means a request
   /// went out, which is the one thing that is still true when the queue
-  /// endpoint has stopped answering — a timer that fires every ten seconds into
+  /// endpoint has stopped answering; a timer that fires every ten seconds into
   /// a dead socket would report itself perfectly healthy forever. Only the
   /// owner knows whether the answer arrived, so the owner reports it.
   ///
@@ -132,7 +132,7 @@ class GatedPollTimer {
   /// [tolerance] is a multiple of [interval] rather than a constant, because
   /// "old" is only meaningful relative to how often the page expected an
   /// answer: a two-second import poll is in trouble after six seconds, a
-  /// sixty-second dashboard poll is not. Three intervals is the default — one
+  /// sixty-second dashboard poll is not. Three intervals is the default: one
   /// missed answer is a slow network, three is a pattern.
   ///
   /// False before the first success: a page that has not loaded yet is loading.

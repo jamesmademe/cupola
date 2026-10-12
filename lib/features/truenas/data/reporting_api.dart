@@ -17,7 +17,7 @@ class TrueNasReportingApi extends TrueNasApiBase {
   /// [maxPoints] caps how many of the newest samples are mapped per graph.
   ///
   /// **Throws when nothing was read.** This used to catch every failure, fall
-  /// back graph by graph, swallow those too and return `[]` — so a TrueNAS that
+  /// back graph by graph, swallow those too and return `[]`, so a TrueNAS that
   /// had stopped answering produced a successful, empty answer. The Reporting
   /// page drew "No reporting data available." instead of a fault, and the
   /// dashboard counted each empty reply as an arrival, so its stale band could
@@ -77,7 +77,7 @@ class TrueNasReportingApi extends TrueNasApiBase {
   /// has no grain finer than `HOUR`, so asking for one by unit drags a full
   /// hour of every series across the socket and through the parser on every
   /// tick. Servers that don't honour an explicit range fall back to that hourly
-  /// window — same data, just more of it — and the attempt is not repeated.
+  /// window (same data, just more of it), and the attempt is not repeated.
   Future<List<TrueNasReportingGraph>> getLiveGraphs(
     List<String> names, {
     Duration window = const Duration(minutes: 5),
@@ -100,7 +100,7 @@ class TrueNasReportingApi extends TrueNasApiBase {
         if (graphs.any((g) => g.data.isNotEmpty)) return graphs;
       } on TrueNasRpcException {
         // The server refused the range: fall through to the rolling window
-        // below. Only a refusal — a failed connection says nothing about what
+        // below. Only a refusal: a failed connection says nothing about what
         // the server supports, and must not switch the narrow query off for
         // the rest of the session; it propagates, so the poll sees a failure.
       }
@@ -119,7 +119,7 @@ class TrueNasReportingApi extends TrueNasApiBase {
         .map((n) => {'name': n, 'identifier': ?identifier})
         .toList();
     // `reporting.get_data` takes `[graphs, query]` where each graph is
-    // `{name, identifier?}`. `query.page` has a server-side minimum of 1 —
+    // `{name, identifier?}`. `query.page` has a server-side minimum of 1:
     // sending 0 (the previous behaviour) fails validation with "Invalid
     // params". The previously-used `reporting.netdata_graph` is the *singular*
     // variant that expects a single name string, not a list.

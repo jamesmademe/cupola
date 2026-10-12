@@ -36,21 +36,21 @@ bool allowRedirectStatus(int? status) =>
 /// A redirect [SameOriginRedirectInterceptor] refused to follow.
 ///
 /// Carries both the verdict and the sentence explaining it, because the enum
-/// alone cannot say *which* host a reverse proxy bounced the request to — and
+/// alone cannot say *which* host a reverse proxy bounced the request to, and
 /// that sentence is the only thing that tells the user their proxy, not their
 /// address, is the problem.
 ///
 /// [reason] is [ServiceFailureReason.redirected], which is its own cause rather
-/// than a borrowed one. It was `notFound` for a while — close, since both mean
-/// "the server answered but the API is not here" — but the fixes differ: a
+/// than a borrowed one. It was `notFound` for a while: close, since both mean
+/// "the server answered but the API is not here", but the fixes differ: a
 /// missing base path is corrected in the address field, whereas a refused
 /// redirect is corrected on the proxy sitting in front of the service, and the
 /// address the user typed may be perfectly right. Either way it tells
 /// `certProbeWorthwhile` the handshake already succeeded, so no TLS probe is
 /// worth running.
 ///
-/// All three refusals — cross-origin target, missing `Location`, redirect loop
-/// — share the reason and differ only in [failureDetail], which is the sentence
+/// All three refusals (cross-origin target, missing `Location`), redirect loop
+/// share the reason and differ only in [failureDetail], which is the sentence
 /// the UI actually shows.
 class RedirectRefused implements Exception, HasFailureReason, HasFailureDetail {
   const RedirectRefused(this.message);
@@ -192,7 +192,7 @@ class SameOriginRedirectInterceptor extends Interceptor {
     // encoding the body, so replaying `request.headers` verbatim after dropping
     // that body sends a GET whose headers still promise N bytes. `dart:io` then
     // throws `HttpException: Content size below specified contentLength` at
-    // `request.close()` — the legitimate same-origin redirect this interceptor
+    // `request.close()`: the legitimate same-origin redirect this interceptor
     // exists to follow would fail with an opaque transport error (a Radarr
     // `POST /api/v3/command` behind a proxy that normalises a trailing slash).
     // 307/308 keep the body, so they keep the headers that describe it.
@@ -240,7 +240,7 @@ class SameOriginRedirectInterceptor extends Interceptor {
 /// The three redirect settings are one decision rather than three.
 /// `followRedirects: false` is what hands a 3xx to
 /// [SameOriginRedirectInterceptor] instead of letting `dart:io` replay the
-/// request — and its credential — at a host the user never configured; the
+/// request, and its credential, at a host the user never configured; the
 /// interceptor is what actually refuses the cross-origin case; and
 /// [allowRedirectStatus] is what stops Dio rejecting those statuses as failures
 /// before the interceptor ever runs. Set any two without the third and the
@@ -257,8 +257,8 @@ class SameOriginRedirectInterceptor extends Interceptor {
 /// `Authorization: Basic` themselves (NZBGet, Transmission), so their own
 /// refusal is never read as a proxy's password prompt.
 ///
-/// [injected] is returned untouched. A caller supplying its own transport — a
-/// test stub, in practice — owns redirect handling and TLS along with it, and
+/// [injected] is returned untouched. A caller supplying its own transport: a
+/// test stub, in practice, owns redirect handling and TLS along with it, and
 /// installing a pinned adapter over it would replace the very thing it was
 /// injected to replace.
 ///

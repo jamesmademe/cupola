@@ -28,7 +28,7 @@ const _loginPath = '/api/v2/auth/login';
 const _listPath = '/api/v2/torrents/info';
 
 /// A qBittorrent that can be switched off, held mid-request, or made to refuse
-/// the password — and that counts every request by path, because the defects
+/// the password, and that counts every request by path, because the defects
 /// under test are stated in units of network traffic.
 class _Qb implements HttpClientAdapter {
   final Map<String, int> calls = {};
@@ -297,7 +297,7 @@ void main() {
   // OPS-03. qBittorrent bans an address after five failed logins (for an hour,
   // by default), and behind a proxy the address is the proxy's. The client
   // used to reset its rejection flag at the start of every login, so each poll
-  // tick — and each default retry — spent another attempt.
+  // tick, and each default retry, spent another attempt.
   group('a rejected password', () {
     testWidgets('is sent once, however long the page polls', (tester) async {
       qb.rejectLogin = true;

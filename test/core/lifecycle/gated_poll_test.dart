@@ -95,7 +95,7 @@ void main() {
       expect(ticks, hasLength(2));
     });
 
-    testWidgets('onTick may invalidate providers — it never runs inside build', (
+    testWidgets('onTick may invalidate providers: it never runs inside build', (
       tester,
     ) async {
       // The reason the first tick is deferred to a microtask: invalidating a
@@ -181,7 +181,7 @@ void main() {
     });
   });
 
-  group('gatedPoll vetoes — the zero-tolerance assertions', () {
+  group('gatedPoll vetoes: the zero-tolerance assertions', () {
     testWidgets('an inactive branch never ticks, however long it waits', (
       tester,
     ) async {
@@ -268,7 +268,7 @@ void main() {
       expect(timer.isStaleAt(DateTime(2026)), isFalse);
     });
 
-    test('a tick is not a success — only an answer is', () {
+    test('a tick is not a success: only an answer is', () {
       // The distinction the whole field exists for. A timer firing means a
       // request went out, which is exactly what stays true when the endpoint
       // has stopped answering: a timer ticking into a dead socket would report

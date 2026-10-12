@@ -17,7 +17,7 @@ const double _floor = 44;
 ///
 /// Every control here once declared 44 and measured 40, because
 /// `VisualDensity.compact` takes 8 off `minimumSize` *and* off the padded tap
-/// target — a size nobody reads back once it is written. So the assertion is
+/// target, a size nobody reads back once it is written. So the assertion is
 /// the rendered box of the button itself, which is where the padding lives.
 void _expectReachable(WidgetTester tester, Finder button) {
   expect(button, findsOneWidget);

@@ -110,7 +110,7 @@ void main() {
         expect(find.text(tab.label), findsOneWidget, reason: tab.name);
       }
 
-      // And the row really is wider than the frame — otherwise this test would
+      // And the row really is wider than the frame; otherwise this test would
       // pass on a bar that squeezed its labels to fit.
       expect(tester.getSize(find.byType(Row).first).width, greaterThan(320));
     });

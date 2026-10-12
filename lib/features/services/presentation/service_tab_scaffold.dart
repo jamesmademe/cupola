@@ -13,7 +13,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// under it.
 ///
 /// **The bar is drawn here and not by the shell.** That is what lets a pushed
-/// page — a film, a wizard, a search result — hide it without leaving the branch
+/// page (a film, a wizard, a search result) hide it without leaving the branch
 /// it was pushed from: the page is pushed on *this* branch's navigator and
 /// simply covers this widget. A bar owned by the shell would sit above every
 /// branch navigator and could not be covered by anything inside one, so hiding
@@ -26,7 +26,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// On a desktop window there is no band above it: the bar is drawn as
 /// [ServiceTabBar.header] and is the service's whole header, flush with the
-/// deck. See [ServiceHomeScreen.drawsBand]. That header is not glass — it is
+/// deck. See [ServiceHomeScreen.drawsBand]. That header is not glass: it is
 /// the room's one lit surface, opaque so its ink can be measured.
 class ServiceTabScaffold extends StatelessWidget {
   final ServiceKey service;
@@ -55,7 +55,7 @@ class ServiceTabScaffold extends StatelessWidget {
           // the router hands it one constant when the route is built, and the
           // route is not rebuilt when a resize moves the window across
           // [AppBreakpoints.desktopMobile]. So the screen keeps that layout and
-          // is lifted by the band this window does not draw — its reserved band
+          // is lifted by the band this window does not draw: its reserved band
           // falls above the edge instead of standing as a 56pt gap. Decided
           // here, per build, because only here is there a context to ask.
           Positioned(
@@ -87,7 +87,7 @@ class ServiceTabScaffold extends StatelessWidget {
       children: [
         child,
         Positioned(
-          // The band's full height, inset included — not `kToolbarHeight`.
+          // The band's full height, inset included, not `kToolbarHeight`.
           // The band consumes the top inset (`Positioned(top: 0)` under a
           // `SafeArea`), so on every notched phone it reaches an inset lower
           // than the constant, and a bar placed at the bare constant would be
@@ -123,7 +123,7 @@ class ServiceTabScaffold extends StatelessWidget {
 
     // `goBranch`, not `context.go`. It restores the target branch's own stack,
     // which is the whole of "back returns to the tab you left, scrolled where
-    // you left it" — a plain `go` would rebuild that branch at its root and
+    // you left it"; a plain `go` would rebuild that branch at its root and
     // throw away where the user was.
     //
     // `StatefulNavigationShell.of` walks up for the nearest shell state, so

@@ -27,7 +27,7 @@ void main() {
     // Decision 46, and the reason the threshold moved here from the onboarding
     // feature: **the compact frame is not a narrow one.** The flow used to gate
     // its two-column arrangement on `desktopCompact` (1100), which is why the
-    // four drawn compact frames were code the app could never reach — at 720 it
+    // four drawn compact frames were code the app could never reach; at 720 it
     // kept the phone's stacked layout in a window shaped nothing like a phone.
     testWidgets('720x450 answers the same as 1440x900', (tester) async {
       late bool full;

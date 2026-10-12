@@ -110,7 +110,7 @@ void main() {
       await tester.pump();
       expect(find.text('live'), findsOneWidget);
 
-      // Two state changes, two rebuilds — the reason the scope carries a bool
+      // Two state changes, two rebuilds: the reason the scope carries a bool
       // rather than the Portal's own animation.
       expect(builds.length - buildsAfterMount, 2);
     });

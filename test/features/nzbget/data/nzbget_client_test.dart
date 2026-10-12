@@ -168,7 +168,7 @@ void main() {
 
     test('a refused editqueue reports false rather than throwing', () async {
       // NZBGet answers HTTP 200 with `{"result": false}` when it declines a
-      // command — pausing a group whose NZBID has already left the queue, for
+      // command: pausing a group whose NZBID has already left the queue, for
       // instance. There is no JSON-RPC `error` object to catch, so the return
       // value is the only evidence the mutation did not happen.
       final adapter = CapturingHttpAdapter(

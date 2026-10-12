@@ -90,7 +90,7 @@ typedef SeerrRequestGate = ({
 /// barred title.
 ///
 /// A request's own status is read, never the `displayStatus` that lets the
-/// media's availability stand in for it — the trap every Seerr list in this
+/// media's availability stand in for it: the trap every Seerr list in this
 /// app has to step around.
 SeerrRequestGate seerrRequestGate(
   Map<String, dynamic>? mediaInfo, {

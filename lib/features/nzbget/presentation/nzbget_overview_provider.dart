@@ -1,7 +1,7 @@
 /// What the NZBGet Overview reads, and the pure functions that shape it.
 ///
-/// Everything here is derived from the three calls the client already makes —
-/// `status`, `listgroups`, `history` — because the KPI rail on the same page
+/// Everything here is derived from the three calls the client already makes:
+/// `status`, `listgroups`, `history`, since the KPI rail on the same page
 /// loads all three: a second fetch for the same figures would double the
 /// traffic to a box that is usually a Raspberry Pi and still answer the same
 /// numbers.
@@ -14,19 +14,19 @@
 /// rather than duplicated, because a section that renders a lie is worse than
 /// one that is missing:
 ///
-///  * **Disk free** — NZBGet's `status` result carries `FreeDiskSpaceMB` /
+///  * **Disk free**: NZBGet's `status` result carries `FreeDiskSpaceMB` /
 ///    `FreeDiskSpaceHi` / `FreeDiskSpaceLo`, but [NzbgetStatus] parses only the
 ///    rate, the remaining size and the paused flag, and `NzbgetClient` exposes
 ///    no raw accessor to reach past it.
-///  * **The speed limit** ("no limit" under the Speed tile) — same call, same
+///  * **The speed limit** ("no limit" under the Speed tile): same call, same
 ///    gap: `DownloadLimit` is dropped by the model. The client can *set* a rate
 ///    (`rate`) and cannot read the one in force.
-///  * **Servers** — rendered on the dedicated Servers tab from the client
+///  * **Servers**: rendered on the dedicated Servers tab from the client
 ///    configuration response, not repeated in this Overview.
-///  * **Feeds** and **Messages** — rendered on their dedicated tabs from the
+///  * **Feeds** and **Messages**: rendered on their dedicated tabs from the
 ///    corresponding NZBGet configuration/log reads.
 ///
-///  * **Retry / Delete on a failed history row** — NZBGet does those through
+///  * **Retry / Delete on a failed history row**: NZBGet does those through
 ///    `editqueue` with the `History*` command family, which `NzbgetClient`
 ///    never sends; its `editQueue` is public but the three wrappers over it are
 ///    all group commands. A button that cannot do the thing it names is worse
@@ -65,8 +65,8 @@ const int nzbgetHistoryTodayLimit = 3;
 /// post-processing; this collapses them to the five states that differ in
 /// *tone*, and [nzbgetGroupStageLabel] keeps the stage word for the eye.
 ///
-/// Nothing here is amber. NZBGet's queue has no fault state — a job that broke
-/// leaves the queue and lands in history as `FAILURE/*` — so painting any of
+/// Nothing here is amber. NZBGet's queue has no fault state; a job that broke
+/// leaves the queue and lands in history as `FAILURE/*`, so painting any of
 /// these amber would be the backlog mistake in its download-client form.
 enum NzbgetGroupState {
   /// Bytes are moving. Blue: activity, not alarm.
@@ -78,7 +78,7 @@ enum NzbgetGroupState {
   /// Par-check, repair, unpack, move, script. Still work in progress.
   postProcessing(StatusTone.info, Icons.build_rounded),
 
-  /// The user paused this job. Deliberate, therefore neutral — pausing is the
+  /// The user paused this job. Deliberate, therefore neutral: pausing is the
   /// client obeying, not a condition to fix.
   paused(StatusTone.neutral, Icons.pause_circle_outline_rounded),
 
@@ -164,7 +164,7 @@ class NzbgetQueueEntry {
   final String name;
   final NzbgetGroupState state;
 
-  /// NZBGet's word for the stage — `repairing`, `unpacking`.
+  /// NZBGet's word for the stage: `repairing`, `unpacking`.
   final String stage;
 
   /// Category, stage and total size, as far as the record carried them.
@@ -173,7 +173,7 @@ class NzbgetQueueEntry {
   /// `56%`, or null when NZBGet reported no file size **or no remaining size**.
   ///
   /// Null and never `0%`: a job whose size the server did not report has no
-  /// measurable progress, and `0%` is the one reading a user would act on —
+  /// measurable progress, and `0%` is the one reading a user would act on:
   /// it says "stuck", which nobody established. The remaining half matters for
   /// the opposite reason: a missing remaining size used to compute `100%`,
   /// which says "done".
@@ -200,7 +200,7 @@ NzbgetQueueEntry nzbgetQueueEntry(NzbgetGroup group) {
       stage,
       // The whole size, not what is left: the board prints the job's size, and
       // "4.8 GB" beside "56%" is a fact the two numbers agree on. A size the
-      // record did not carry is dropped rather than printed — see
+      // record did not carry is dropped rather than printed: see
       // [NzbgetQueueEntry.percentLabel].
       switch (group.fileSizeMb) {
         final int mb when mb > 0 => formatMegabytes(mb),
@@ -243,7 +243,7 @@ class NzbgetQueueSection {
   /// `nothing queued` when every clause is silent.
   ///
   /// Every clause is dropped rather than zeroed when its source is silent, so
-  /// this line only ever states things that were actually measured — but the
+  /// this line only ever states things that were actually measured. But the
   /// commonest state of a download client is an empty queue, and there every
   /// clause is guarded off at once. An empty string is not a shorter header:
   /// `SectionHeader` treats a non-null subtitle as a subtitle, so it draws the
@@ -270,9 +270,9 @@ class NzbgetQueueSection {
 ///
 /// Null rather than a number whenever the arithmetic would be a fiction:
 ///
-///  * no rate (paused, idle, or a `status` that did not answer) — dividing by
+///  * no rate (paused, idle, or a `status` that did not answer): dividing by
 ///    zero gives infinity, and "∞ left" is a decoration, not information;
-///  * nothing remaining — there is no wait to describe.
+///  * nothing remaining: there is no wait to describe.
 ///
 /// Deliberately coarse and prefixed "about": it is one instantaneous sample
 /// divided into a total, so a minute of precision would be a confidence the
@@ -373,7 +373,7 @@ enum NzbgetHistoryOutcome {
   failed(StatusTone.warning, 'failed'),
 
   /// Finished, but damaged, unrepaired, out of space or password-locked. Still
-  /// a fault — the file on disk is not what the user asked for.
+  /// a fault: the file on disk is not what the user asked for.
   warned(StatusTone.warning, 'warning'),
 
   /// Removed on purpose, by a human or by a dupe rule. Backlog, not damage.
@@ -397,11 +397,11 @@ enum NzbgetHistoryOutcome {
 
 /// The slash-less statuses NZBGet gives a **URL-kind** history record.
 ///
-/// `history(false)` — the call `NzbgetClient` makes — returns NZB records *and*
+/// `history(false)` (the call `NzbgetClient` makes) returns NZB records *and*
 /// the URL records left behind by an NZB fetched from a link, and those do not
 /// follow the `FAMILY/REASON` shape at all: their whole `Status` is one word.
 /// Split on `/`, the word becomes the family, no arm matches and the record
-/// lands in [NzbgetHistoryOutcome.unknown] — neutral ink, the word "finished",
+/// lands in [NzbgetHistoryOutcome.unknown]: neutral ink, the word "finished",
 /// uncounted in `failed` and unsorted by faults-first. An NZB the daemon could
 /// not even fetch would be the one thing on this page that silently reads as
 /// fine.
@@ -416,15 +416,15 @@ const Map<String, (NzbgetHistoryOutcome, String?)> _urlOutcomes = {
     'the NZB could not be read',
   ),
   // The link was fetched; the scan script chose not to look at it. Not damage,
-  // so not amber — and the fetch itself did what it said.
+  // so not amber, and the fetch itself did what it said.
   'URL_SCAN_SKIPPED': (NzbgetHistoryOutcome.succeeded, 'scan skipped'),
   'URL_SUCCESS': (NzbgetHistoryOutcome.succeeded, null),
   // NZBGet's own "I do not know", kept distinct from ours.
   'URL_UNKNOWN': (NzbgetHistoryOutcome.unknown, null),
 };
 
-/// NZBGet's history `Status` is `FAMILY/REASON` — `FAILURE/PAR`,
-/// `DELETED/DUPE` — except for the URL-kind records of [_urlOutcomes], which
+/// NZBGet's history `Status` is `FAMILY/REASON`: `FAILURE/PAR`,
+/// `DELETED/DUPE`, except for the URL-kind records of [_urlOutcomes], which
 /// carry no slash. This splits it into the outcome and the reason in words.
 ///
 /// The reason is translated rather than printed raw: `PAR` alone means nothing
@@ -454,7 +454,7 @@ const Map<String, (NzbgetHistoryOutcome, String?)> _urlOutcomes = {
   return (outcome, _historyReason(outcome, reason));
 }
 
-/// The `REASON` half, in words — or null when it adds nothing.
+/// The `REASON` half in words, or null when it adds nothing.
 String? _historyReason(NzbgetHistoryOutcome outcome, String reason) {
   if (reason.isEmpty) return null;
   // `SUCCESS/ALL` and `SUCCESS/GOOD` are "it worked", which the outcome word
@@ -548,7 +548,7 @@ class NzbgetHistorySection {
 /// section is headed `today`, and a heading is a promise. A record from 23:50
 /// yesterday is out even though it is twenty minutes old.
 ///
-/// A record with no `HistoryTime` is dropped rather than sorted to one end — it
+/// A record with no `HistoryTime` is dropped rather than sorted to one end: it
 /// cannot be placed inside or outside the window, and guessing either way is
 /// how a list ordered by time stops being ordered by time.
 ///
@@ -620,8 +620,8 @@ NzbgetHistorySection nzbgetHistoryToday(
 
 /// Today's history, from the single `history` answer the client makes.
 ///
-/// NZBGet answers the whole history in one call — there is no page parameter on
-/// the method the client sends — so the windowing is all client-side and costs
+/// NZBGet answers the whole history in one call: there is no page parameter on
+/// the method the client sends, so the windowing is all client-side and costs
 /// nothing extra.
 final nzbgetOverviewHistoryProvider =
     FutureProvider.autoDispose<NzbgetHistorySection>((ref) async {

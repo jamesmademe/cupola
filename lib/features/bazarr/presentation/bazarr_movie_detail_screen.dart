@@ -127,7 +127,7 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
         // The page has no promoted action: the refresh lives on the section
         // label, where the spine documents a refresh control as belonging, and
         // on the pull gesture above.
-        // Region 2 — the manifest, and the only question this page exists to
+        // Region 2: the manifest, and the only question this page exists to
         // answer. It used to render *after* Details and Tags, because the old
         // spine emitted every content section before every sliver.
         operate: [
@@ -169,7 +169,7 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
                   );
                 }
                 if (item.missingLanguages.isEmpty) {
-                  // Bazarr filed this movie as wanted but named no languages —
+                  // Bazarr filed this movie as wanted but named no languages:
                   // "No language data available" reported the app's own gap
                   // rather than the server's, and gave a self-hoster nothing to
                   // check.
@@ -262,7 +262,7 @@ class BazarrDetailErrorState extends StatelessWidget {
   }
 }
 
-/// The looked-up item does not exist in Bazarr — a normal state, not an
+/// The looked-up item does not exist in Bazarr: a normal state, not an
 /// error, so it gets the empty-state voice rather than alarm chrome.
 class BazarrDetailNotFoundState extends StatelessWidget {
   const BazarrDetailNotFoundState({

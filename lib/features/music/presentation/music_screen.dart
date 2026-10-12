@@ -36,7 +36,7 @@ final lidarrCutoffUnmetArtistIdsProvider = FutureProvider.autoDispose<Set<int>>(
   },
 );
 
-/// `6 albums · complete` / `9 albums · 34 tracks missing` — the caption the
+/// `6 albums · complete` / `9 albums · 34 tracks missing`: the caption the
 /// circular artist tile carries instead of a status dot.
 ///
 /// Top-level and pure so the wording is assertable without a pumped wall.

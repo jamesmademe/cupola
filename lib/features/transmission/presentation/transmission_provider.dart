@@ -22,7 +22,7 @@ final transmissionClientProvider = Provider<TransmissionClient>((ref) {
   // `watchTransport`, which is the same narrow select this used to spell out by
   // hand plus the one thing the hand-written version could not do: follow the
   // lens. Spelled out here, the four fields resolved to `transmissionUrl` and
-  // friends — the FIRST connection — so moving the lens to the seedbox changed
+  // friends (the FIRST connection), so moving the lens to the seedbox changed
   // the badge in the app bar and nothing else. The label said one daemon and
   // every torrent on screen came from the other.
   final transport = watchTransport(ref, ServiceKey.transmission);
@@ -81,7 +81,7 @@ final transmissionTorrentsProvider = FutureProvider<List<TransmissionTorrent>>((
   return ref.watch(transmissionClientProvider).torrents();
 }, retry: noProviderRetry);
 
-/// Aggregate counters — speeds and torrent counts.
+/// Aggregate counters: speeds and torrent counts.
 final transmissionStatsProvider = FutureProvider<TransmissionStats>((
   ref,
 ) async {

@@ -19,7 +19,7 @@ void main() {
     testWidgets('speaks as one row rather than four fragments', (tester) async {
       // The plate that serves every Usenet client had no semantics container at
       // all, so a screen reader walked it as a filename, a bare numeral, and a
-      // counting-down line with nothing tying them together — and read "63"
+      // counting-down line with nothing tying them together, and read "63"
       // where a person would say "63 percent".
       final handle = tester.ensureSemantics();
 
@@ -52,7 +52,7 @@ void main() {
       // The row's label is a container, never an exclusion: the overflow menu
       // is the only control on the plate, and a container that swallowed it
       // would take pause, resume and delete off the screen reader's path
-      // entirely — the thing the one-plate-for-four-clients rule exists to get
+      // entirely: the thing the one-plate-for-four-clients rule exists to get
       // right once.
       final handle = tester.ensureSemantics();
       var received = <DownloadQueueCommand>[];
@@ -126,7 +126,7 @@ void main() {
     });
 
     // A plate with no gestures is a plate, not a control that highlights and
-    // does nothing — and it must not claim a selection state it cannot change.
+    // does nothing, and it must not claim a selection state it cannot change.
     testWidgets('a row with no gestures is not a button', (tester) async {
       final handle = tester.ensureSemantics();
 
@@ -150,7 +150,7 @@ void main() {
       expect(data.flagsCollection.isButton, isFalse);
       // `Tristate.none`, not `isFalse`: a row with no gestures does not claim a
       // selection state at all, which is different from claiming an unselected
-      // one — the second would have a screen reader announce "not selected" on
+      // one: the second would have a screen reader announce "not selected" on
       // every Usenet job in the list.
       expect(data.flagsCollection.isSelected, Tristate.none);
 
@@ -195,7 +195,7 @@ void main() {
     testWidgets('offers the half of the toggle the job is not already in', (
       tester,
     ) async {
-      // A running job is offered Pause and a paused one Resume — never both,
+      // A running job is offered Pause and a paused one Resume, never both,
       // and never the one it is already doing. Pause is a download-client
       // capability, which is why this menu has it and no \*arr queue row does.
       await tester.pumpWidget(
@@ -328,7 +328,7 @@ void main() {
     testWidgets('the bar keeps its position and loses its colour', (
       tester,
     ) async {
-      // It is still what the service last said, so it stays — but the blue
+      // It is still what the service last said, so it stays; but the blue
       // tone is what makes a bar read as moving, and this one is not.
       await pump(tester, sampleAge: const Duration(minutes: 4));
 
@@ -349,7 +349,7 @@ void main() {
       final bar = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
-      // A transfer in flight is the blue tone — in progress — never the
+      // A transfer in flight is the blue tone, in progress, never the
       // client's colour.
       final context = tester.element(find.byType(DownloadQueueTile));
       final scheme = Theme.of(context).colorScheme;

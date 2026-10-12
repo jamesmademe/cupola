@@ -11,7 +11,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// in. The Home and Stack both show it, and nothing else, until there is a
 /// first connection.
 ///
-/// The page owns the viewport, not the empty state — see the contract on
+/// The page owns the viewport, not the empty state: see the contract on
 /// `AppEmptyState`. Its height is entirely text, and at an accessibility
 /// reading size a 72pt icon well, a wrapped title, a two-line message and a
 /// button clear a short phone, taking the only button on the screen with
@@ -19,7 +19,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// the default reading size.
 ///
 /// Default physics deliberately: there is no `RefreshIndicator` here, because
-/// with nothing configured there is nothing to re-fetch — the page rebuilds
+/// with nothing configured there is nothing to re-fetch: the page rebuilds
 /// off settings.
 class NothingSetUpView extends StatelessWidget {
   const NothingSetUpView({super.key, required this.bottomPadding});
@@ -56,9 +56,9 @@ class NothingSetUpView extends StatelessWidget {
 /// This is the same object onboarding opens with, which is what makes "Skip for
 /// now" cost nothing: the promise persists as the empty state instead of
 /// evaporating into a grey placeholder. The button opens Connections, where each
-/// service is set up on its own form — so it says "Set up a service", not the
+/// service is set up on its own form, so it says "Set up a service", not the
 /// pick step's "Pick your services", which would promise the several-at-once
-/// choice it does not lead back to. Deliberately *not* `AppEmptyState` — that
+/// choice it does not lead back to. Deliberately *not* `AppEmptyState`: that
 /// widget is for a region that came up empty, and this page is the product's
 /// front door on a first run.
 class _NothingSetUp extends StatelessWidget {

@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// It is a source scan rather than a review habit because the failure it catches
 /// is invisible in a diff. A `Timer.periodic` and the page that should own it
 /// live in different files, so a new poller reads as three correct lines in a
-/// provider — and only shows up as a phone that talks to five services from a
+/// provider, and only shows up as a phone that talks to five services from a
 /// tab nobody is looking at.
 ///
 /// Three checks, each with a message that says what to do instead. If one fires
@@ -66,7 +66,7 @@ void main() {
   });
 
   test('a polling provider is only ever watched through the gate', () {
-    // Matches `ref.watch(somethingPollingProvider)` and its `...Tick...` kin —
+    // Matches `ref.watch(somethingPollingProvider)` and its `...Tick...` kin:
     // the naming every poller in the app follows.
     final ungatedWatch = RegExp(
       r'ref\.watch\(\s*\w*(?:Polling|Tick)\w*Provider',
@@ -83,7 +83,7 @@ void main() {
       isEmpty,
       reason:
           'A plain `ref.watch` of a polling provider keeps it alive for as long '
-          'as the widget is mounted — and since the four tabs became branches, '
+          'as the widget is mounted, and since the four tabs became branches, '
           'a widget stays mounted long after it stops being read. Use '
           '`ref.watchWhileLive(context, thatProvider)` instead.',
     );
@@ -120,7 +120,7 @@ void main() {
           'Between a poller and a RefreshOnReturn it is worse and quieter: the '
           "poller's ticks keep resetting the staleness clock, so the page never "
           'looks old enough to refresh on return and nothing ever says so. Ids '
-          'are per unit of work — see `qbittorrent.detail.\$hash`, which is per '
+          'are per unit of work: see `qbittorrent.detail.\$hash`, which is per '
           'torrent for exactly this reason.',
     );
 

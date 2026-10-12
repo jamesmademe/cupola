@@ -32,7 +32,7 @@ class TransferInfo {
       // `true`, as `1` and as `"true"` depending on build and endpoint, and a
       // strict identity reads every spelling but one as "off". Telling the user
       // the alternative limits are off while they are on makes them throttle a
-      // throttled client — see the bool row in this feature's AGENTS.md.
+      // throttled client: see the bool row in this feature's AGENTS.md.
       altSpeedEnabled: parseBool(json['use_alt_speed_limits']),
     );
   }

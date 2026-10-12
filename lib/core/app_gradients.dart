@@ -17,7 +17,7 @@ class AppGradients {
   /// [depth] (0–1) progressively dims the art as the detail hero collapses:
   /// at 0 this is the resting scrim, at 1 the mid stop goes fully opaque and
   /// the top stop picks up a 35% wash so the art recedes behind chrome. The
-  /// deepening scrim is deliberately the whole legibility story — blurring the
+  /// deepening scrim is deliberately the whole legibility story: blurring the
   /// backdrop image was evaluated and rejected because an `ImageFiltered` over
   /// a full-bleed image re-rasterises it on every scroll frame, the same
   /// per-frame cost class the No-Blur-Under-Scroll rule exists to prevent.

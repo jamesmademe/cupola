@@ -56,7 +56,7 @@ Future<void> runWantedAutoSearch(
     }
 
     if (!context.mounted) return;
-    // "<Service> is searching <what>" — the one shape every detail page uses.
+    // "<Service> is searching <what>": the one shape every detail page uses.
     // This surface is one tap from those pages and used to answer a search with
     // a bare "Search started", which named neither the actor nor the scope.
     SnackBarHelper.success(
@@ -76,7 +76,7 @@ Future<void> runWantedAutoSearch(
 /// Opens interactive search for a Wanted row.
 ///
 /// Takes a [WidgetRef] rather than a service because the single entry point
-/// resolves the service from the target — which is also what makes this row obey
+/// resolves the service from the target, which is also what makes this row obey
 /// the same adoption and cache rules as the detail screens.
 Future<void> showWantedInteractiveSearch(
   BuildContext context,
@@ -87,7 +87,7 @@ Future<void> showWantedInteractiveSearch(
 
   /// The connection this row came off, for the surfaces that show more than
   /// one. Empty leaves the target unstamped, and `showReleaseSearch` falls back
-  /// to the lens exactly as it did before — which is what the per-service
+  /// to the lens exactly as it did before, which is what the per-service
   /// Activity screen, whose title names its lens, actually wants.
   String instanceId = '',
 }) async {
@@ -108,7 +108,7 @@ Future<void> showWantedInteractiveSearch(
       label: sheetTitle,
     ),
     // A Wanted row knows the episode but not its season, so this target cannot
-    // be matched to a running season search — the containment check requires
+    // be matched to a running season search: the containment check requires
     // both, and guessing would adopt a job that does not cover this episode.
     ServiceType.series => ReleaseSearchTarget.episode(
       episodeId: itemId,

@@ -8,7 +8,7 @@ generated, so edit the SVGs or this script and rebuild rather than touching
 either output.
 
 Every source is a 24x24 viewBox filled shape. Its paths are unioned through
-Skia's path ops first, which resolves each path's own `fill-rule` — several
+Skia's path ops first, which resolves each path's own `fill-rule`; several
 marks cut their holes with `evenodd`, and a font only has nonzero winding.
 """
 

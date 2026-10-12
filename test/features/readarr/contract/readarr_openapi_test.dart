@@ -4,7 +4,7 @@ import '../../../test_helpers/fixtures.dart';
 
 /// Tier-3 contract test (plan §7.4). Readarr publishes an OpenAPI spec, so the
 /// spec is the source of truth: these tests fail loudly if an endpoint we call
-/// or a field we parse is renamed/removed upstream — the drift signal for a
+/// or a field we parse is renamed/removed upstream: the drift signal for a
 /// service we cannot exercise live. Regenerate `readarr/openapi.json` from a
 /// pinned container to refresh the contract (plan §9 contract-drift job).
 void main() {

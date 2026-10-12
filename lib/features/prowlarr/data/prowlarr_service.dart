@@ -97,7 +97,7 @@ class ProwlarrService {
 
   /// Recent activity for a single indexer.
   ///
-  /// `history/indexer` is a flat, server-filtered array — unlike the paged
+  /// `history/indexer` is a flat, server-filtered array; unlike the paged
   /// `history` endpoint it takes an `indexerId`, so the detail screen no longer
   /// has to over-fetch and filter client side.
   Future<List<ProwlarrHistoryItem>> getIndexerHistory(
@@ -289,8 +289,8 @@ class ProwlarrService {
 
   /// Every indexer definition Prowlarr can add, from `indexer/schema`.
   ///
-  /// This is by far the largest response the app fetches — well over a thousand
-  /// definitions — so it gets a longer receive timeout, is parsed off the main
+  /// This is by far the largest response the app fetches: well over a thousand
+  /// definitions, so it gets a longer receive timeout, is parsed off the main
   /// isolate, and has `capabilities`/`presets` stripped before the maps are
   /// retained: both are recomputed server side on save and together account for
   /// most of the payload's weight.
@@ -397,7 +397,7 @@ class ProwlarrService {
     return ProwlarrCommand.fromJson(mapOrNull(response.data) ?? const {});
   }
 
-  /// Pushes the current indexer set to every configured application — the
+  /// Pushes the current indexer set to every configured application, the
   /// "Sync App Indexers" button of the web UI.
   Future<ProwlarrCommand> syncAppIndexers() =>
       runCommand('ApplicationIndexerSync');
@@ -420,7 +420,7 @@ class ProwlarrService {
   /// message worth showing.
   ///
   /// A rejected save/test answers with `[{propertyName, errorMessage}, …]`,
-  /// none of which survives `DioException.toString()` — the user would see
+  /// none of which survives `DioException.toString()`: the user would see
   /// "status code of 400" instead of "Unable to connect: invalid API key".
   Future<Response> _mutate(
     Future<Response> Function() call,
@@ -436,15 +436,15 @@ class ProwlarrService {
 
   /// POSTs a `testall` endpoint and returns the per-provider report.
   ///
-  /// Servarr's `ProviderControllerBase.TestAll` answers `BadRequest(result)` —
-  /// **body included** — the moment any one provider comes back invalid, and
+  /// Servarr's `ProviderControllerBase.TestAll` answers `BadRequest(result)`:
+  /// **body included**, the moment any one provider comes back invalid, and
   /// [ApiClient]'s `validateStatus` rejects anything >= 400, so Dio throws and
   /// the report never reaches the caller. That made the partial-failure report
   /// unreachable in exactly the case it was written for: the UI fell through to
   /// its outer catch and said "status code of 400" instead of "3 of 12 indexers
   /// failed: invalid API key".
   ///
-  /// [_mutate] is *not* the fix here — it turns the 400 into an `Exception`
+  /// [_mutate] is *not* the fix here: it turns the 400 into an `Exception`
   /// carrying a message, which is right for a save but throws away the very
   /// structure this call exists to read. So the body is claimed back directly,
   /// and only when it is actually the report: a 401 or a proxy's HTML error page
@@ -504,8 +504,8 @@ class ProwlarrService {
         .whereType<Map>()
         .map(stringKeyMap)
         .map((json) {
-          // Parse first — that flattens `capabilities.categories` into plain ids
-          // for the category filter — then strip the heavy keys from the very map
+          // Parse first. That flattens `capabilities.categories` into plain ids
+          // for the category filter, then strip the heavy keys from the very map
           // the model's `raw` points at. Mutating after the parse is what keeps the
           // retained payload small while the derived ids survive.
           final indexer = ProwlarrIndexer.fromJson(json);

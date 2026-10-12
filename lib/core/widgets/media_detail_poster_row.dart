@@ -7,12 +7,12 @@ import 'package:cupola/core/widgets/media_detail_hero_summary.dart';
 /// Prototype-style hero title row for media detail screens.
 ///
 /// This row is the payload of the collapsing hero header, and it is the only
-/// widget that renders inside the header's expanded band — so it is also where
+/// widget that renders inside the header's expanded band, so it is also where
 /// the header's reading-size contract is honoured: everything here lays out on
 /// [MediaDetailHeaderMetrics.heroTextScaler], the same clamp
 /// [MediaDetailHeaderMetrics.expandedHeight] grew the band by. The row is
 /// bottom-anchored inside a `ClipRect`, so text that outgrows the band is not
-/// marked with an overflow stripe — it is cut off the top, taking the status
+/// marked with an overflow stripe: it is cut off the top, taking the status
 /// badge with it.
 class MediaDetailPosterRow extends StatelessWidget {
   /// The poster widget (typically a [MediaPosterCard]).
@@ -91,7 +91,7 @@ class MediaDetailPosterRow extends StatelessWidget {
             height: effectivePosterHeight,
             // Decorative. The poster is the same artwork the hero backdrop is
             // already showing behind it, and the title standing beside it is
-            // this region's accessible name — so a poster node would put an
+            // this region's accessible name, so a poster node would put an
             // extra stop before the title with nothing to say. `MediaPosterCard`
             // wraps a `CachedNetworkImage`, which publishes an `image`-flagged
             // node with an empty label whether or not anyone wanted one; this is

@@ -144,7 +144,7 @@ void main() {
   testWidgets('a job nobody measured draws no bar and says so', (tester) async {
     // Regression: `remainingSizeMb` defaulted to 0, so a job whose remaining
     // size NZBGet never reported computed `(size - 0) / size` == 1 and drew a
-    // full progress bar — a percentage nobody computed, presented as finished.
+    // full progress bar: a percentage nobody computed, presented as finished.
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

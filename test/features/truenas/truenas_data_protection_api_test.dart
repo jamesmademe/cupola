@@ -61,7 +61,7 @@ void main() {
     });
 
     test('scrub runs pool.scrub.run by pool name, forcing the threshold', () {
-      // The real signature is `pool.scrub.run(name: str, threshold: int)` —
+      // The real signature is `pool.scrub.run(name: str, threshold: int)`:
       // sending the task id was rejected. Threshold 0 is what makes "Run now"
       // run now instead of skipping a recently scrubbed pool.
       final client = _RecordingClient();

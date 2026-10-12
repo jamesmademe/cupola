@@ -55,7 +55,7 @@ class ServiceDiagnosis {
        webPage = null;
 
   /// The full form, for the places that set a field the positional list cannot
-  /// reach — Dart allows optional positionals or optional named, not both, and
+  /// reach: Dart allows optional positionals or optional named, not both, and
   /// the positional shape above is what every call site already uses.
   const ServiceDiagnosis._all({
     required this.status,
@@ -94,7 +94,7 @@ class ServiceDiagnosis {
       );
 
   /// The OS refused to let Cupola onto the local network, so the request never
-  /// left the device. Not derived from an error — see
+  /// left the device. Not derived from an error; see
   /// [ServiceFailureReason.localNetworkBlocked].
   const ServiceDiagnosis.localNetworkBlocked()
     : this(
@@ -119,7 +119,7 @@ class ServiceDiagnosis {
   final ServiceFailureReason? reason;
 
   /// Non-null only when the connection failed specifically because the server
-  /// presents a certificate not trusted by the platform and not yet pinned —
+  /// presents a certificate not trusted by the platform and not yet pinned;
   /// [UntrustedCertificateProbe.rotated] is what tells the UI whether this is
   /// a first-time trust or this origin's pin no longer matches (ADR-6).
   final UntrustedCertificateProbe? certificateProbe;
@@ -129,14 +129,14 @@ class ServiceDiagnosis {
   /// Almost always null: a [ServiceFailureReason] plus the service's name is
   /// enough to write a better sentence than a client library would. The
   /// exception is a component that knows something the closed vocabulary cannot
-  /// hold — `SameOriginRedirectInterceptor` refusing a cross-origin redirect
+  /// hold: `SameOriginRedirectInterceptor` refusing a cross-origin redirect
   /// knows *which* origin it was sent to, and `redirected` alone can only say
   /// "a redirect Cupola will not follow". Rendered in place of
   /// [connectionFailureMessage] when present, never alongside it.
   final String? detail;
 
   /// The version string the server reported during the test, for the services
-  /// that say — null everywhere else. Raw and unparsed: turning it into words,
+  /// that say; null everywhere else. Raw and unparsed: turning it into words,
   /// and into a caveat where the version matters, is `describeServerVersion`'s
   /// job, so both surfaces that report a test say the same thing about it.
   final String? serverVersion;
@@ -152,7 +152,7 @@ class ServiceDiagnosis {
   /// What the UI should actually say about this outcome.
   ///
   /// One accessor rather than `detail ?? connectionFailureMessage(...)` repeated
-  /// at each surface — the settings screen and the onboarding walk both report
+  /// at each surface: the settings screen and the onboarding walk both report
   /// the same test, and them disagreeing is exactly the drift this codebase
   /// keeps paying for elsewhere.
   String messageFor(ServiceKey service) => failureMessageOf(
@@ -221,7 +221,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
     try {
       final ok = await client.ping().timeout(const Duration(seconds: 8));
       // A rejected login throws with `unauthorized`, so `false` here means the
-      // socket dropped after authenticating — a connection fault, not a wrong
+      // socket dropped after authenticating: a connection fault, not a wrong
       // password. Reporting it as "credentials rejected" sent users to re-type a
       // password that was fine.
       return ok
@@ -281,7 +281,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
     );
     // `session-get` in one round trip forces the CSRF handshake, validates
     // the Basic credentials, and proves the rpc/host whitelists admit this
-    // device — the three ways a reachable Transmission still refuses to talk.
+    // device: the three ways a reachable Transmission still refuses to talk.
     return _probe(
       client.testConnection,
       timeout: const Duration(seconds: 8),
@@ -290,7 +290,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
   }
 
   // Named, not inferred. This used to read `if (!service.usesApiKey)`, which is
-  // a *negative capability* rather than an identity — so every future
+  // a *negative capability* rather than an identity, so every future
   // credential-authenticated service was silently routed here, and Transmission
   // would have had its password POSTed as form data to
   // `/api/v2/auth/login` on the Transmission host. It 404s, so the failure
@@ -372,7 +372,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       await client.call('core.ping').timeout(const Duration(seconds: 6));
       // The version is a second hop on the socket that is already open and
       // authenticated, and it is deliberately *not* allowed to change the
-      // verdict — a server that pings is connected whether or not it will name
+      // verdict: a server that pings is connected whether or not it will name
       // itself. Hence the swallowed failure: the outcome loses one line, not
       // its green tick.
       String? version;
@@ -396,8 +396,8 @@ Future<ServiceDiagnosis> diagnoseCredentials(
   }
 
   // The two media servers authenticate with a header the shared `ApiClient`
-  // does not send — `Authorization: MediaBrowser Token=` for Jellyfin,
-  // `X-Plex-Token` for Plex — and both health endpoints in the table above are
+  // does not send: `Authorization: MediaBrowser Token=` for Jellyfin,
+  // `X-Plex-Token` for Plex, and both health endpoints in the table above are
   // anonymous. Verified through the generic branch, *any* non-empty string
   // therefore came back 2xx and the tile went green while every real call 401ed.
   // Their own clients are what actually present the credential.
@@ -411,7 +411,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
     bool accepted;
     String? version;
     try {
-      // `/System/Info` — the authenticated twin of the public probe. Swallows
+      // `/System/Info`, the authenticated twin of the public probe. Swallows
       // its own errors and answers false for all of them, which is why the
       // refusal still has to be explained below rather than reported as-is.
       accepted = await client.verifyCredential().timeout(
@@ -457,7 +457,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
     try {
       // Unlike Jellyfin's, this one already separates the two questions: it
       // answers false only for an actual refusal and rethrows a `PlexException`
-      // carrying its own `ServiceFailureReason` for anything else — including
+      // carrying its own `ServiceFailureReason` for anything else, including
       // the JWT it refuses to send at all, which is an unauthorized the user has
       // to fix by pasting a different *kind* of token. So no second probe.
       final accepted = await client.verifyCredential().timeout(
@@ -514,7 +514,7 @@ Future<ServiceDiagnosis> diagnoseSeerr(
 /// close the client whichever way it went.
 ///
 /// [timeout] is a parameter rather than a constant because the deadlines are
-/// per-service and deliberate — a client that logs in before it can answer
+/// per-service and deliberate: a client that logs in before it can answer
 /// needs more than one hop's worth of headroom.
 ///
 /// [close] is a `FutureOr` so the one asynchronous `close` (TrueNAS, which has a
@@ -538,7 +538,7 @@ Future<ServiceDiagnosis> _probe(
 }
 
 /// Reachability and status classification over the shared [ApiClient], which
-/// has been pin-aware since ADR-6 — this is the branch the pinning scope used
+/// has been pin-aware since ADR-6. This is the branch the pinning scope used
 /// to carve out. [pin] threads straight through; when it is null this is
 /// byte-identical to the pre-ADR-6 unpinned client.
 Future<ServiceDiagnosis> _diagnoseOverApiClient(
@@ -551,8 +551,8 @@ Future<ServiceDiagnosis> _diagnoseOverApiClient(
   // Fails closed on a routing bug. An empty entry in
   // [ServiceKey.statusEndpoint] means "this service is verified through its own
   // client", and every one of those has a branch above. If a new service
-  // reaches here without one, the request below would be `GET ''` — a plain
-  // fetch of the base URL — which most of these servers answer 200 for with
+  // reaches here without one, the request below would be `GET ''`: a plain
+  // fetch of the base URL, which most of these servers answer 200 for with
   // their own web UI, *whatever* credential was supplied. That is a green
   // "Answering" tile for a wrong password: the exact bug that shipped once for
   // Jellyfin and Plex. Reporting the service as unreachable is wrong too, but
@@ -592,7 +592,7 @@ Future<ServiceDiagnosis> _diagnoseOverApiClient(
 /// Asks the credential-free endpoint whether the box is even there. If it
 /// answers, the address is right and the credential is the thing that was
 /// refused; if it does not, the original failure was never about the key and
-/// the reachability verdict — unreachable, TLS, wrong base path — is the honest
+/// the reachability verdict (unreachable, TLS, wrong base path) is the honest
 /// one to report. Costs a second round trip only on the failure path.
 Future<ServiceDiagnosis> _explainCredentialRefusal(
   ServiceKey service, {
@@ -618,8 +618,8 @@ Future<ServiceDiagnosis> _explainCredentialRefusal(
 /// answer among them.
 ///
 /// Folded rather than answered off the first instance, and that is the whole of
-/// what this function had to learn: the surfaces that read it — the Connections
-/// row, the Settings home list — speak in services and now also print how many
+/// what this function had to learn: the surfaces that read it (the Connections
+/// row, the Settings home list) speak in services and now also print how many
 /// connections a service has. "Answering · radarr.lan · 2 connections" while the
 /// second Radarr is switched off is a green row for a stack with a dead server
 /// in it, and it is green on the one screen the user would go to in order to fix
@@ -681,7 +681,7 @@ int _attention(ServiceConnectionStatus status) => switch (status) {
 /// folds every connection into one answer, which is right for a row that names
 /// the service and wrong for a form that is editing exactly one of them.
 /// [settings] is still
-/// needed for the two values that are not the instance's own — the pin, which
+/// needed for the two values that are not the instance's own: the pin, which
 /// belongs to a TLS origin, and the Plex client id, which belongs to the install.
 Future<ServiceDiagnosis> diagnoseInstance(
   ServiceInstance instance,
@@ -753,8 +753,8 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
 ///
 /// The mirror of [certProbeWorthwhile], and it rules out one more: a TLS failure
 /// proves the packets reached a server, so the OS was never in the way. What is
-/// left — nothing answered, nothing answered in time, or nothing attributable —
-/// is exactly how a permission the user has not granted looks from the socket.
+/// left: nothing answered, nothing answered in time, or nothing attributable.
+/// That is exactly how a permission the user has not granted looks from the socket.
 bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
   // Nothing was sent: the secret never left the device's storage.
@@ -779,17 +779,17 @@ bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
 ///
 /// The order is the whole design. Cupola never asks first: on iOS the *failing
 /// connection is what raises the system alert*, so by the time this asks, the
-/// alert the user must answer is already on screen — and asking only after a
+/// alert the user must answer is already on screen, and asking only after a
 /// failure means a public server timing out can never raise a Local Network
 /// prompt out of nowhere. Three outcomes, three different truths:
 ///
-/// * `justGranted` — the user allowed it while we were asking. The failed
+/// * `justGranted`: the user allowed it while we were asking. The failed
 ///   connection was dialled through a closed gate, so its verdict is void and
 ///   the test is simply run again. This is the retest the user used to have to
 ///   work out for themselves.
-/// * `denied` — report the permission, not the address. The old copy sent people
+/// * `denied`: report the permission, not the address. The old copy sent people
 ///   to re-check a hostname and port that were right all along.
-/// * anything else — keep the original failure untouched. Claiming a permission
+/// * anything else: keep the original failure untouched. Claiming a permission
 ///   problem on a hunch would be the same bug in the other direction.
 ///
 /// [timeout] is how long the OS gets to answer. Pass something generous where a
@@ -820,8 +820,8 @@ Future<ServiceDiagnosis> diagnoseThroughLocalNetworkGate(
 ///
 /// An untrusted certificate surfaces as `tls`, and as `unreachable`/`unknown`
 /// when the handshake fails before a reason can be attributed. Anything the
-/// server answered — a rejected key, a 404, a 500, a redirect nobody could
-/// follow — rules the certificate out: the response proves the handshake
+/// server answered (a rejected key, a 404, a 500, a redirect nobody could
+/// follow) rules the certificate out: the response proves the handshake
 /// already completed, so probing for an untrusted certificate costs a round
 /// trip to learn nothing.
 bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
@@ -846,7 +846,7 @@ bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
 
 /// Verifies one connection against [settings] and, when it fails in a way a
 /// certificate could explain, attaches the probe so the UI can offer to trust
-/// it. Every service can reach this since ADR-6 — there is no
+/// it. Every service can reach this since ADR-6; there is no
 /// pinning-capability gate left to check. Never trusts anything itself.
 ///
 /// Takes the instance rather than the service: the caller is a form editing one
@@ -941,7 +941,7 @@ String connectionFailureMessage(
       // The generic form. A refusal from `SameOriginRedirectInterceptor`
       // carries its own sentence naming the origin it was sent to, and
       // `messageFor` shows that instead; this is what is left when only the
-      // reason survived — an unfollowable 3xx from a client that does not
+      // reason survived: an unfollowable 3xx from a client that does not
       // explain itself.
       return 'Reached the server, but it answered with a redirect Cupola '
           'will not follow. A reverse proxy in front of ${service.title} is '
@@ -1037,7 +1037,7 @@ final instanceDiagnosisProvider =
       return diagnoseSavedInstance(ref, instance, settings);
     });
 
-/// The connection state of a single service — folded across every connection it
+/// The connection state of a single service, folded across every connection it
 /// has, so the answer is never better than its worst one. See [diagnoseService].
 final serviceDiagnosisProvider =
     FutureProvider.family<ServiceDiagnosis, ServiceKey>((ref, service) async {
@@ -1061,14 +1061,14 @@ final serviceDiagnosisProvider =
       }
       final settings = ref.read(currentSettingsProvider);
       // Deliberately *not* through `diagnoseThroughLocalNetworkGate`. This runs
-      // unattended — on launch, and for every configured service at once — and
+      // unattended, on launch, and for every configured service at once, and
       // resolving the permission is not a passive question: on iOS it can put an
       // alert on screen, and it costs a Bonjour round trip per service. Neither
       // belongs in a background refresh nobody asked for.
       //
       // The cost is that a service blocked by the permission reads `Unreachable`
       // in the list rather than naming the permission. It is named the moment the
-      // user does the obvious thing — open the service and test it — which is
+      // user does the obvious thing (open the service and test it), which is
       // where the fix lives anyway.
       return diagnoseService(
         service,

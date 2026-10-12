@@ -23,7 +23,7 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 /// JSON array, and its filter chips are a closed All/Available/Missing/In-Queue
 /// vocabulary in which a null status silently classifies every item as *Missing*.
 /// The paged-grid idiom in `discover_see_all_screen.dart` is the seam that fits,
-/// and it needed no changes to take string ids — its Hero tags are built by
+/// and it needed no changes to take string ids. Its Hero tags are built by
 /// interpolation.
 ///
 /// **The watch state is the point of the tile.** A bare poster wall is the thing
@@ -44,7 +44,7 @@ class StreamPosterTile extends ConsumerWidget {
   /// Position in the full list, included in the Hero tag.
   ///
   /// Two items can carry the same id across a lens change, and a duplicated Hero
-  /// tag throws at flight time rather than degrading — the same reason
+  /// tag throws at flight time rather than degrading: the same reason
   /// `MediaGrid` and the discover see-all screen both include it.
   final int index;
 

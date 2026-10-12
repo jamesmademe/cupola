@@ -36,7 +36,7 @@ class TrueNasDashboardMetrics {
   final TrueNasReportingGraph? network;
 
   /// The network sparkline series, derived once per fetch. Deriving it in the
-  /// widget re-walked every sample on every rebuild — and the dashboard
+  /// widget re-walked every sample on every rebuild, and the dashboard
   /// rebuilds on a timer.
   final List<double> networkSeries;
 
@@ -72,7 +72,7 @@ class TrueNasDashboardMetrics {
   ///
   /// Answering null rather than a number is the whole point. Netdata's
   /// `system.cpu` chart is a stacked percentage that *excludes* idle, so with
-  /// no `idle` dimension the old arithmetic returned `total/total` — a flat
+  /// no `idle` dimension the old arithmetic returned `total/total`, a flat
   /// 100% CPU on a completely idle box, and non-null, so the load-per-core
   /// fallback never got a chance to run. The memory side had the mirror bug:
   /// no `used` dimension meant `0/total`, a confident 0%. A metric we cannot
@@ -101,7 +101,7 @@ class TrueNasDashboardMetrics {
 }
 
 /// Network interfaces. Split off the live metrics because addresses change on
-/// a human timescale, not a 3-second one — this rides the slow refresh tick.
+/// a human timescale, not a 3-second one. This rides the slow refresh tick.
 final truenasDashboardInterfacesProvider = FutureProvider.autoDispose((
   ref,
 ) async {
@@ -119,7 +119,7 @@ final truenasDashboardMetricsProvider =
       final reporting = ref.watch(truenasReportingApiProvider);
 
       // One WS round-trip for all three graphs, over the shortest window that
-      // still feeds a sparkline — the gauges only ever read the last sample.
+      // still feeds a sparkline; the gauges only ever read the last sample.
       List<TrueNasReportingGraph> graphs;
       var answered = true;
       try {
@@ -161,14 +161,14 @@ class _TrueNasDashboardScreenState
   /// Fast cadence for live metrics (CPU / memory / network).
   static const _liveInterval = Duration(seconds: 3);
 
-  /// The heavier system/pools/alerts snapshot — and the interface list, which
-  /// changes on a human timescale — refresh every [_slowEvery] live ticks
+  /// The heavier system/pools/alerts snapshot, and the interface list, which
+  /// changes on a human timescale, refresh every [_slowEvery] live ticks
   /// (~15s) so they stay fresh without hammering the server.
   static const _slowEvery = 5;
   int _tick = 0;
 
   /// The screen owns its timer rather than a provider, because each tick is a
-  /// hop on the WebSocket the TrueNAS client holds open — not a provider
+  /// hop on the WebSocket the TrueNAS client holds open, not a provider
   /// invalidation this page can express any other way. [GatedPollTimer] gives it
   /// the same visibility contract a gated provider gets.
   GatedPollTimer? _live;
@@ -198,7 +198,7 @@ class _TrueNasDashboardScreenState
   Widget build(BuildContext context) {
     // The most expensive poll in the app: one `getLiveGraphs` RPC every three
     // seconds, plus two more every fifteen, over a socket that may be crossing a
-    // VPN. It used to pause only while the app was backgrounded — so it went on
+    // VPN. It used to pause only while the app was backgrounded, so it went on
     // spending that from behind another tab, or under the Storage page pushed on
     // top of it, for as long as the app lived.
     (_live ??= GatedPollTimer(
@@ -211,7 +211,7 @@ class _TrueNasDashboardScreenState
     // **The clock is stamped on an arrival, and only on an arrival.**
     //
     // `noteSuccess()` also used to be called from the body of `build`, off the
-    // last *cached* value — which is precisely the case the band exists for.
+    // last *cached* value, which is precisely the case the band exists for.
     // When the metrics socket dies the provider keeps its final
     // `AsyncData(answered: true)`, so every incidental rebuild (a theme
     // change, the tick below, this listener's own `setState`) re-read that
@@ -594,7 +594,7 @@ class _AlertCard extends ConsumerWidget {
     final level = alert.level.toUpperCase();
     // TrueNAS's own severities, mapped onto the app's four tones. CRITICAL and
     // ERROR are still faults the server is reporting, not a connection that
-    // died — amber, like WARNING, because red would say the NAS is gone while
+    // died: amber, like WARNING, because red would say the NAS is gone while
     // the alert it raised is on screen.
     final color = statusToneColor(colorScheme, switch (level) {
       'CRITICAL' || 'ERROR' || 'WARNING' => StatusTone.warning,

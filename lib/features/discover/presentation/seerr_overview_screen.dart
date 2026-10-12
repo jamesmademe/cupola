@@ -39,7 +39,7 @@ import 'package:cupola/features/media/presentation/open_media.dart';
 ///
 /// **Seerr is the exception among the media services.** Every other home leads
 /// with what is arriving or what is on disk; this one leads with the decisions,
-/// then the work already accepted, and the discover rails move *down* — because
+/// then the work already accepted, and the discover rails move *down*, because
 /// approving is what the phone opens Seerr for, and the rails are the reason
 /// the service exists rather than the reason the page is opened.
 ///
@@ -252,7 +252,7 @@ class _RequestRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // Through the tone rule, never a raw `AppColors.*`. A pending request is
-    // neutral here by construction — see [SeerrOverviewRow.tone].
+    // neutral here by construction; see [SeerrOverviewRow.tone].
     final tone = statusToneColor(
       colorScheme,
       row.tone,
@@ -317,7 +317,7 @@ class _PosterRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      // 138pt poster, the gap, and two label lines — grown by the reading size
+      // 138pt poster, the gap, and two label lines, grown by the reading size
       // so the captions are not clipped at an accessibility text size.
       height: TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
       // The box grew by the *clamped* scale, so the text has to be laid out at

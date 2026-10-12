@@ -3,12 +3,12 @@
 /// This is the focal moment of the whole Stream surface. Plex's own web app
 /// shows a "Converting" badge and buries the reason two clicks deep in a
 /// dashboard nobody opens; Tautulli shows the field names. Neither tells the
-/// person holding the phone the one thing they can act on — *which* part of the
+/// person holding the phone the one thing they can act on: *which* part of the
 /// file the box is paying to rewrite, and whether it is losing the race.
 ///
 /// Plex has no equivalent of Jellyfin's single `PlayMethod` plus enumerated
-/// `TranscodeReasons`. It reports three independent decisions — video, audio,
-/// subtitle — each `directplay`, `copy` or `transcode`, alongside the source and
+/// `TranscodeReasons`. It reports three independent decisions: video, audio,
+/// subtitle, each `directplay`, `copy` or `transcode`, alongside the source and
 /// target codec for each. The play method and the reason list are both *derived*
 /// from those, here, so that `StreamSession` arrives at the widget already
 /// resolved: the project's rule is that a widget renders a status and never
@@ -32,7 +32,7 @@ enum PlexStreamDecision {
   /// Re-encoded. This is the one that costs a CPU.
   transcode,
 
-  /// Burned into the video — subtitles only, and the most expensive subtitle
+  /// Burned into the video: subtitles only, and the most expensive subtitle
   /// outcome because it forces the video to be re-encoded too.
   burn,
 
@@ -117,7 +117,7 @@ String? plexContainerLabel(String? container) {
 
 @immutable
 class PlexTranscodeSession {
-  /// Opaque transcode key. Not a session id — terminating uses `Session.id`.
+  /// Opaque transcode key. Not a session id; terminating uses `Session.id`.
   final String? key;
 
   /// Plex has enough buffer and has deliberately slowed the encoder. A healthy
@@ -133,7 +133,7 @@ class PlexTranscodeSession {
 
   /// Encoder speed as a multiple of realtime. Below `1.0` the transcode is
   /// falling behind playback, which is what a buffering stream looks like from
-  /// the server's side — the single most useful number on the object.
+  /// the server's side: the single most useful number on the object.
   final double? speed;
 
   /// Transcode duration in **milliseconds**.
@@ -202,7 +202,7 @@ class PlexTranscodeSession {
   /// Reads the `TranscodeSession` embedded in a `/status/sessions` entry.
   ///
   /// Absent for a direct play, and absence is the *only* signal Plex gives for
-  /// one — there is no `playMethod` field to read.
+  /// one: there is no `playMethod` field to read.
   static PlexTranscodeSession? maybeFrom(Map<String, dynamic> sessionJson) {
     final raw = sessionJson['TranscodeSession'];
     if (raw is Map) {
@@ -222,7 +222,7 @@ class PlexTranscodeSession {
   /// How the bytes are reaching the client.
   ///
   /// `videoDecision == 'copy'` is a container rewrap with the video untouched,
-  /// which is Jellyfin's `DirectStream` under another name — mapping it to
+  /// which is Jellyfin's `DirectStream` under another name: mapping it to
   /// `transcode` would put a nearly-free session at the top of a board sorted by
   /// cost, and mapping it to `directPlay` would hide a remux that some clients
   /// genuinely struggle with.
@@ -248,8 +248,8 @@ class PlexTranscodeSession {
   ///
   /// Deliberately populated for a direct *stream* as well as a transcode. The
   /// `StreamSession` doc says the list is empty unless the method is
-  /// `transcode`, and that holds for a direct play — which has no
-  /// `TranscodeSession` at all and therefore nothing to explain — but suppressing
+  /// `transcode`, and that holds for a direct play, which has no
+  /// `TranscodeSession` at all and therefore nothing to explain, but suppressing
   /// "container rewrap · audio TrueHD → AAC" on a remux would throw away the
   /// only explanation the server offered.
   List<String> get reasons {
@@ -281,7 +281,7 @@ class PlexTranscodeSession {
       reasons.add('subtitle converted');
     }
 
-    // A rewrap is only worth naming when it is the *reason* — alongside a video
+    // A rewrap is only worth naming when it is the *reason*: alongside a video
     // re-encode the new container is a consequence, not a cause.
     if (videoDecision == PlexStreamDecision.copy) {
       final target = plexContainerLabel(container);

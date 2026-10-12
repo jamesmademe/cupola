@@ -135,7 +135,7 @@ void main() {
       expect(item!.headline, '312 missing monitored albums');
     });
 
-    test('backlog is neutral — never the amber of a fault', () {
+    test('backlog is neutral: never the amber of a fault', () {
       final item = lidarrMissingAlbumsItem(
         const ArrRecordPage(
           records: [

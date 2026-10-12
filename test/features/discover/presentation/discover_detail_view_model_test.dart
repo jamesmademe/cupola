@@ -226,7 +226,7 @@ void main() {
         },
       });
 
-      // Id 0 makes the rail untappable, so it builds no Hero and no tag —
+      // Id 0 makes the rail untappable, so it builds no Hero and no tag;
       // deduping these would only lose faces.
       expect(viewModel.cast, hasLength(2));
     });

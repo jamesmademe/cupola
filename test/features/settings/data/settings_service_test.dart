@@ -324,7 +324,7 @@ void main() {
       test(
         'a legacy fingerprint with no saved URL is dropped rather than guessed',
         () async {
-          // No truenas_url saved — the origin the pin belonged to is
+          // No truenas_url saved: the origin the pin belonged to is
           // unknowable, so ADR-6 accepts losing it: the user re-trusts on
           // next connect rather than the app inventing a key for it.
           await secureStore.write(
@@ -369,7 +369,7 @@ void main() {
     group('scheme-less URL migration', () {
       // Older builds stored the address field verbatim, and qBittorrent's had no
       // validator at all, so a working install can hold `192.168.1.5:8080`. That
-      // value used to mean `http://` — the client prepended it — and now means
+      // value used to mean `http://` (the client prepended it), and now means
       // `https://`, so on upgrade the same config dies in the TLS handshake with
       // no fallback. Nothing writes a scheme-less URL any more, so anything in
       // storage without one is by definition pre-normalisation data.
@@ -379,21 +379,21 @@ void main() {
         final loaded = await service.loadSettings();
 
         expect(loaded.qbittorrentUrl, 'http://192.168.1.5:8080');
-        // Written back, so the rewrite happens once instead of on every load —
+        // Written back, so the rewrite happens once instead of on every load;
         // and so it survives even if the user never saves anything.
         expect(prefs.getString('qbittorrent_url'), 'http://192.168.1.5:8080');
       });
 
-      test('Dockge is migrated too — same commit changed both', () async {
+      test('Dockge is migrated too: same commit changed both', () async {
         await prefs.setString('dockge_url', 'nas.lan:5001');
 
         expect((await service.loadSettings()).dockgeUrl, 'http://nas.lan:5001');
       });
 
       // The scoping is the whole safety property. Scheme-less has always meant
-      // `https://` everywhere else — the \*arrs never worked without a scheme at
+      // `https://` everywhere else. The \*arrs never worked without a scheme at
       // all (Dio's `baseUrl` setter throws on `sonarr.lan:8989`), and SABnzbd,
-      // NZBGet, Unraid and TrueNAS shipped with the https default — so
+      // NZBGet, Unraid and TrueNAS shipped with the https default, so
       // rewriting those to `http://` downgraded a working TLS config: the
       // TrueNAS API key onto a `ws://` socket, the Dockge login into cleartext,
       // and every trusted-certificate pin orphaned, because `certOrigin` returns

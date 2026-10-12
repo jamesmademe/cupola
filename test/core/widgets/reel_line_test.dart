@@ -6,7 +6,7 @@ import 'package:reel_text/reel_text.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 
 /// The gate [ReelLine] applies is a real paragraph shaping, and it runs inside a
-/// [LayoutBuilder] — so without memoisation it is paid again on every build of
+/// [LayoutBuilder], so without memoisation it is paid again on every build of
 /// every rolling line, including every frame of any ancestor animation. These
 /// tests pin both halves: the work is not redone when nothing that can change
 /// the answer changed, and it *is* redone when something did.
@@ -65,8 +65,8 @@ void main() {
     tester,
   ) async {
     // The painter is laid out unconstrained, so what it reports is the line's
-    // intrinsic width and the box only enters as a comparison. A resize — a
-    // rotation, a split view, a collapsing header — must not re-shape anything.
+    // intrinsic width and the box only enters as a comparison. A resize (a
+    // rotation, a split view, a collapsing header) must not re-shape anything.
     final rebuild = ValueNotifier<int>(0);
     addTearDown(rebuild.dispose);
 
@@ -163,7 +163,7 @@ void main() {
   ) async {
     // A cached width outlives the font it was measured with. Swapping a
     // fallback face in, or the user changing the system font, moves every one
-    // of them — and a stale cache would keep answering with the old metrics
+    // of them, and a stale cache would keep answering with the old metrics
     // forever, so a line that no longer fits would keep rolling off the edge.
     await _pump(tester, width: 1000, style: style);
     expect(ReelLine.debugMeasurements, 1);

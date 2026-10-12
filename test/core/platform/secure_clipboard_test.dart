@@ -41,7 +41,7 @@ void main() {
 
     test('reports not handled when no host implements the channel', () async {
       // The fallback that keeps the copy button working on a platform with no
-      // native side at all — desktop Linux/Windows, or any host where the
+      // native side at all: desktop Linux/Windows, or any host where the
       // registration did not run.
       expect(
         await SecureClipboard.copySecret(

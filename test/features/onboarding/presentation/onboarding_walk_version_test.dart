@@ -39,7 +39,7 @@ void main() {
       // The test passed, so nothing else on the step can tell the user that
       // half the console is about to come up empty. Matched on the reported
       // version rather than on the floor: the step's standing setup note names
-      // the floor too, which is the point — it warned before the test, and this
+      // the floor too, which is the point: it warned before the test, and this
       // line is what the test itself found.
       final line = find.textContaining('24.10.1');
       expect(line, findsOneWidget);

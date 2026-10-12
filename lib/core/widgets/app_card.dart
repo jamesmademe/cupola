@@ -25,7 +25,7 @@ enum AppCardVariant {
 /// How a tappable card acknowledges a press.
 ///
 /// Deliberately a parameter rather than a set of named constructors, which is
-/// the house style for card *variants*. Feedback is orthogonal to appearance —
+/// the house style for card *variants*. Feedback is orthogonal to appearance:
 /// expressing the pair as constructors means a `filled`/`outlined`/
 /// `surfaceOutlined`/`elevated` cross product, eight names for two decisions.
 enum AppCardPressFeedback {
@@ -35,8 +35,8 @@ enum AppCardPressFeedback {
   /// touch spreading across a surface.
   ink,
 
-  /// The card dips under the thumb — [PressableScale]'s 0.97 and a light
-  /// haptic — and paints no ink at all.
+  /// The card dips under the thumb: [PressableScale]'s 0.97 and a light
+  /// haptic, and paints no ink at all.
   ///
   /// For cards too small for the first reading to survive: a ripple that
   /// *floods* its container is how a chip signals selection, not how a surface
@@ -82,7 +82,7 @@ class AppCard extends StatelessWidget {
   ///
   /// The defaults light one card on its own: a strong wash from the top right,
   /// on the one card that owns the screen. A card in a *grid* wants a fraction
-  /// of it and usually a different corner — the stack matrix lights each cell
+  /// of it and usually a different corner: the stack matrix lights each cell
   /// from the top left at 0.08, because thirteen cells at full strength stop
   /// reading as lit cells and start reading as decoration.
   final double accentGlowAlpha;
@@ -97,9 +97,9 @@ class AppCard extends StatelessWidget {
   ///
   /// Controls inside [child] keep nodes of their own. There are two shapes:
   ///
-  ///  * No nested control — pass [excludeChildSemantics] and let this label say
+  ///  * No nested control: pass [excludeChildSemantics] and let this label say
   ///    everything.
-  ///  * A nested control (a popup menu, a delete button) — leave
+  ///  * A nested control (a popup menu, a delete button): leave
   ///    [excludeChildSemantics] off and wrap only the parts this label already
   ///    speaks in [ExcludeSemantics] at the call site:
   ///
@@ -334,7 +334,7 @@ class AppCard extends StatelessWidget {
             );
 
       // Under `scale`, `PressableScale` is the whole gesture layer *and* the
-      // semantics node — it publishes the button role, the name and the tap
+      // semantics node; it publishes the button role, the name and the tap
       // action itself, so `_spoken` must not also wrap one or the card becomes
       // two nested actionable nodes. It sits outside the shadow so the card
       // dips as one object, shadow included.
@@ -372,8 +372,8 @@ class AppCard extends StatelessWidget {
   /// Publishes the card as one named node, or leaves it alone when unlabelled.
   ///
   /// Deliberately the outermost widget `build` returns: a wrapper buried inside
-  /// the [Material]/[InkWell] would leave `tester.getSemantics` — and the
-  /// platform — resolving some other node, and the failure is silent.
+  /// the [Material]/[InkWell] would leave `tester.getSemantics`, and the
+  /// platform, resolving some other node, and the failure is silent.
   Widget _spoken(Widget card) {
     if (semanticLabel == null) return card;
 
@@ -424,8 +424,8 @@ class SettingsCard extends StatelessWidget {
 
   /// What [subtitleLeading] means, in words.
   ///
-  /// Callers pass a bare `Icon` or spinner whose entire meaning is its glyph — a
-  /// cloud for "connected", a slashed cloud for "not reachable" — so a screen
+  /// Callers pass a bare `Icon` or spinner whose entire meaning is its glyph: a
+  /// cloud for "connected", a slashed cloud for "not reachable"; so a screen
   /// reader gets nothing from it. Set this whenever [subtitleLeading] is set.
   /// Announced between the title and the subtitle, the order the eye reads them.
   final String? subtitleLeadingLabel;
@@ -545,8 +545,8 @@ class SettingsCard extends StatelessWidget {
             ),
           ),
         ),
-        // `trailing` is the one slot that can hold a control — a delete button,
-        // say — so it is the one slot this row does not silence.
+        // `trailing` is the one slot that can hold a control: a delete button,
+        // say; so it is the one slot this row does not silence.
         if (trailing != null) ...[
           const SizedBox(width: AppSpacing.sm),
           trailing!,

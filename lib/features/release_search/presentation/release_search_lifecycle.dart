@@ -32,7 +32,7 @@ class AppForegroundNotifier extends Notifier<bool> {
 /// with results would be worse than the limitation it is trying to describe.
 ///
 /// So the app records that it went away, and if the request then dies the failure
-/// is attributed to the OS — "Stopped when you left Cupola" — instead of to the
+/// is attributed to the OS ("Stopped when you left Cupola") instead of to the
 /// user's network, which is the difference between a limitation of this build and
 /// a problem they should go and investigate.
 ///
@@ -54,7 +54,7 @@ class _ReleaseSearchLifecycleState extends ConsumerState<ReleaseSearchLifecycle>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Registers the notification tap handler at startup — without this, a tap
+    // Registers the notification tap handler at startup: without this, a tap
     // on a notice after the OS relaunched Cupola has no handler to land on
     // until some search posts a new one. Post-frame so the router behind the
     // handler exists before a cold-start tap is replayed; best-effort inside,

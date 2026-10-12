@@ -25,7 +25,7 @@ const kMaxJobs = 20;
 
 enum ReleaseSearchJobStatus {
   /// Waiting for a concurrency slot. A first-class state, not a disguised
-  /// [running] — the user is told the search has not started yet.
+  /// [running]: the user is told the search has not started yet.
   queued,
   running,
 
@@ -56,7 +56,7 @@ enum ReleaseSearchFailureKind {
   /// Our own `receiveTimeout` fired.
   clientTimeout,
 
-  /// The connection went away — most often because the device left the network
+  /// The connection went away, most often because the device left the network
   /// that can reach the instance.
   connectionLost,
 
@@ -97,7 +97,7 @@ class ReleaseSearchFailure {
   final String diagnosis;
 
   /// The raw exception, kept because a self-hoster can genuinely act on
-  /// "502 · nginx" — but always demoted beneath the headline, never the message.
+  /// "502 · nginx", but always demoted beneath the headline, never the message.
   final String? detail;
 
   /// The intermediary named by the response, when one identified itself.
@@ -138,7 +138,7 @@ class ReleaseSearchJob {
   /// carries the time it was queued, and [elapsed] stays zero until it runs.
   final DateTime startedAt;
 
-  /// When the search actually left the queue — which is what elapsed counts from,
+  /// When the search actually left the queue, which is what elapsed counts from,
   /// since a job can sit queued for a while first.
   final DateTime? runningSince;
 
@@ -152,8 +152,8 @@ class ReleaseSearchJob {
   /// Time spent searching, **stamped when the search finished**.
   ///
   /// Zero while a job is still running: [elapsedAt] derives that from the clock
-  /// instead. The alternative — a timer in the manager incrementing this once a
-  /// second — kept the widget tree permanently dirty, which means no test using
+  /// instead. The alternative: a timer in the manager incrementing this once a
+  /// second, kept the widget tree permanently dirty, which means no test using
   /// `pumpAndSettle` could ever settle while a search was in flight. A derived
   /// value costs nothing and makes the manager purely event-driven.
   final Duration elapsed;
@@ -182,7 +182,7 @@ class ReleaseSearchJob {
       status == ReleaseSearchJobStatus.completed &&
       (releases?.isNotEmpty ?? false);
 
-  /// How long the releases stay grabbable, or null when there is no window —
+  /// How long the releases stay grabbable, or null when there is no window:
   /// a job that has not completed, or one already expired.
   Duration? grabWindowRemaining(DateTime now) {
     final finished = finishedAt;
@@ -244,12 +244,12 @@ class ReleaseSearchJob {
 /// Resolves a job to the app's closed status vocabulary.
 ///
 /// Lives here rather than in a widget because statuses arrive at the UI already
-/// resolved — a badge renders a tone, it never derives one.
+/// resolved: a badge renders a tone, it never derives one.
 ///
 /// Two judgments are deliberate. A **completed search that found nothing takes
 /// no tone at all**: green would be a lie and amber would make a working stack
 /// look broken, when in fact the answer arrived correctly. And an **expired job
-/// is calm, not alarming** — a window closing is normal for this product, so it
+/// is calm, not alarming**, a window closing is normal for this product, so it
 /// reads as unlit rather than as a fault.
 StatusTone releaseSearchTone(ReleaseSearchJob job) {
   return switch (job.status) {
@@ -275,7 +275,7 @@ StatusTone releaseSearchTone(ReleaseSearchJob job) {
 /// is permanent until the certificate is trusted at the OS level rather than
 /// only inside Cupola, and [ReleaseSearchReach.whileOpenCleartext] lifts the
 /// moment the instance is reached over https. [ReleaseSearchReach.beyondTheApp]
-/// never takes this branch at all — its transport runs on through suspension,
+/// never takes this branch at all: its transport runs on through suspension,
 /// so a failure there keeps its own identity (a gateway's status, a timeout)
 /// instead of being blamed on the user having left.
 ///
@@ -407,7 +407,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
 
   // Only a reach that actually dies with the app may blame backgrounding.
   // On [ReleaseSearchReach.beyondTheApp] the native task keeps running through
-  // suspension, so its failures — a proxy giving up, a task the OS lost — have
+  // suspension, so its failures (a proxy giving up, a task the OS lost) have
   // nothing to do with the user having left, and saying "cannot continue in
   // the background" on the one path built to do exactly that would be a lie.
   if (wasBackgrounded && reach != ReleaseSearchReach.beyondTheApp) {
@@ -438,7 +438,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
               'this platform. Searching again asks your indexers a second '
               'time.',
         // Names the setting, because this is the one reach the user can lift
-        // from here — and a failure is when they most want to know how.
+        // from here, and a failure is when they most want to know how.
         ReleaseSearchReach.whileOpenSwitchedOff =>
           'Background search is switched off, so a search ends when you leave '
               'Cupola. Turning it on in Settings › Background search lets the '

@@ -22,7 +22,7 @@ void main() {
 
   setUp(() async {
     // The feed distinguishes "not configured" from "did not answer", so it reads
-    // settings — which throw unless overridden.
+    // settings, which throw unless overridden.
     settingsOverrides = await settingsScopeOverrides(
       configured: activityServiceKeys,
     );
@@ -154,7 +154,7 @@ void main() {
         contains('House.of.the.Dragon.S02E03.1080p.WEB-DL-GROUP'),
       );
 
-      // The surviving services still render — but the failure is carried, not
+      // The surviving services still render, but the failure is carried, not
       // swallowed, so the screen can say the list is incomplete instead of
       // implying Radarr had nothing.
       expect(feed.isPartial, isTrue);
@@ -177,7 +177,7 @@ void main() {
 
         final feed = await container.read(globalNowItemsProvider.future);
 
-        // Nothing was reached, so "no items" means "we have no idea" — the case
+        // Nothing was reached, so "no items" means "we have no idea": the case
         // that used to render as "Nothing downloading right now".
         expect(feed.items, isEmpty);
         expect(feed.allConfiguredFailed, isTrue);
@@ -371,8 +371,8 @@ void main() {
 
     // The whole point of moving onto the page primitives. `history` serves a
     // window; the envelope says how big the set is. Read off the window, the
-    // figure answered "how many did we fetch" — 50, forever, for a server with
-    // 340 records — and it looked exactly like an answer to the question the
+    // figure answered "how many did we fetch": 50, forever, for a server with
+    // 340 records, and it looked exactly like an answer to the question the
     // user asked.
     test('a bucket reports the size of the set, not of the window', () async {
       final container = createContainer(
@@ -389,7 +389,7 @@ void main() {
       expect(radarr.items, hasLength(50));
       expect(radarr.total, 340);
       // And the total, once the server has given one, is what decides whether
-      // there is more — so a list ending exactly on a page boundary no longer
+      // there is more, so a list ending exactly on a page boundary no longer
       // costs an empty round trip to discover it.
       expect(state.hasMore, isTrue);
       final radarrCursor = state.cursors.entries
@@ -399,8 +399,8 @@ void main() {
       expect(radarrCursor.hasMore, isTrue, reason: '50 of 340 fetched');
     });
 
-    // Null is not zero. A server that did not send `totalRecords` — an older
-    // build, a proxy that rewrote the body — has told us nothing about the size
+    // Null is not zero. A server that did not send `totalRecords` (an older
+    // build, a proxy that rewrote the body) has told us nothing about the size
     // of the set, and falling back to the row count here would reinstate the
     // defect one layer up while looking like a sensible default.
     test(
@@ -463,7 +463,7 @@ void main() {
       );
       // The first page asked for the initial 50-wide window; the load-more page
       // asks for the 200-wide one. It asks for **page 1** of that wider window,
-      // not page 2 — `page: 2, pageSize: 200` would start at record 201 and
+      // not page 2: `page: 2, pageSize: 200` would start at record 201 and
       // leave records 51-200 unrequested for ever. The bucket therefore
       // re-fetches the first 50 and drops them itself (`PagedCursor.requestAt`
       // returns that skip), which costs one overlapping window once and is the
@@ -476,7 +476,7 @@ void main() {
     test('a failed load-more page stays retryable and says so', () async {
       // The page that never arrived used to be read as the page that proved the
       // list had ended: `lastPageFull` was derived from the missing result,
-      // came out false, and took `hasMore` with it — so one unreachable
+      // came out false, and took `hasMore` with it, so one unreachable
       // connection closed its own half of the feed for good, looking exactly
       // like a list that had run out. `loadMoreFailed` was never set by
       // anything either, which left the footer's retry unreachable code.
@@ -534,7 +534,7 @@ void main() {
 
     test('a queue row carries measurements, not the release name', () async {
       // The desktop table's right-aligned tabular cell was fed `subtitle`,
-      // which is prose — the release filename, the episode code, the artist —
+      // which is prose (the release filename, the episode code, the artist),
       // so a numeric column printed an ellipsised release title and the size
       // and time left appeared nowhere on the row. `figures` is the separate
       // field that fixes it, and the two must stay different facts.
@@ -832,7 +832,7 @@ class _ThrowingQueueLidarrService extends FakeLidarrService {
 /// next" instead of "the records at this position" answers a question nobody
 /// asked: it silently pre-applies the skip, the bucket applies it again, and a
 /// page of 10 fresh records is skipped down to nothing. That is exactly how
-/// this file's two load-more tests broke — not because the paging was wrong,
+/// this file's two load-more tests broke, not because the paging was wrong,
 /// but because the double had never modelled paging at all.
 List<dynamic> _serverWindow(List<dynamic> records, int page, int pageSize) {
   final start = (page - 1) * pageSize;
@@ -844,9 +844,9 @@ List<dynamic> _serverWindow(List<dynamic> records, int page, int pageSize) {
 /// mechanics rather than the fake's willingness to answer everything at once.
 ///
 /// Overrides `getHistory`, not `getHistoryPage`, and that is deliberate: the
-/// shared [FakeRadarrService] **inverts** the production delegation — in the
+/// shared [FakeRadarrService] **inverts** the production delegation: in the
 /// real services `getHistory` delegates to `getHistoryPage`, in the fakes
-/// `getHistoryPage` delegates to `getHistory` — precisely so that a local
+/// `getHistoryPage` delegates to `getHistory`: precisely so that a local
 /// subclass can keep scripting the record-only getter and still be reached by a
 /// caller that has moved onto the envelope. Override `getHistoryPage` here
 /// instead (as `_TotalledHistoryRadarrService` does, because *it* is testing
@@ -873,7 +873,7 @@ class _PagedHistoryRadarrService extends FakeRadarrService {
 }
 
 /// Pages like [_PagedHistoryRadarrService], but throws on every call after the
-/// first for as long as [failNext] is set — the connection that dies mid-scroll
+/// first for as long as [failNext] is set: the connection that dies mid-scroll
 /// and then comes back.
 class _FlakySecondPageRadarrService extends FakeRadarrService {
   _FlakySecondPageRadarrService({required this.records});
@@ -910,7 +910,7 @@ class _ThrowingHistoryRadarrService extends FakeRadarrService {
 /// rows *and* the size of the set behind them.
 ///
 /// It overrides the **page** primitive rather than `getHistory`, which is the
-/// layering the shared fakes invert for everyone else — here the total is the
+/// layering the shared fakes invert for everyone else. Here the total is the
 /// thing under test, so this one has to speak the envelope itself.
 class _TotalledHistoryRadarrService extends FakeRadarrService {
   _TotalledHistoryRadarrService({required this.pageSize, required this.total});

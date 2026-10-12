@@ -11,7 +11,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 ///
 /// Every tab a service has gets a branch from the first day the bar draws it,
 /// which is why this exists. The bar is generated from `tabsFor`, so a tab
-/// without a branch is an index that selects nothing — a bar and a router
+/// without a branch is an index that selects nothing, a bar and a router
 /// disagreeing, which is worse than a view that admits it is not built.
 ///
 /// It wears the *empty* archetype and not an error one, deliberately: nothing
@@ -21,7 +21,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 ///
 /// Two states, not one. A service that is not set up answers first, because
 /// "the Calendar is empty" would be a claim about a server this app has never
-/// spoken to — the emptiness of a thing you cannot see is not a fact.
+/// spoken to: the emptiness of a thing you cannot see is not a fact.
 ///
 /// **No route reaches this today.** Every tab on every bar now resolves to a
 /// screen, so the only callers left are the tests that keep this honest. It is

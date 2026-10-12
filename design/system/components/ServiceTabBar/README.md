@@ -6,17 +6,17 @@ Rendered from `lib/core/widgets/service_tab_bar.dart` by `test/design_catalog/se
 
 ## Default bar
 
-- Height 44. Horizontal padding `space-lg`; tabs `space-xs` apart; every tab built (no lazy list). The row scrolls and is aligned to the start — never distributed, never centred.
+- Height 44. Horizontal padding `space-lg`; tabs `space-xs` apart; every tab built (no lazy list). The row scrolls and is aligned to the start, never distributed, never centred.
 - Tab: at least 44 wide, padding `space-md` × `space-sm`, `label-large`, one line, growing with the reading size to 1.3× and no further (`FloatingNavBarMetrics.effectiveTextScaler`, the phone bar's ceiling), so it stays whole in the 44pt row every hosted page reserves; at 200% the row used to cut it below its baseline. Unselected: weight 500 in `dim-text` (the tertiary ink). Selected: weight 600 in `on-surface` (the primary ink).
-- Pill: the selected tab sits on the room's strong fill (`fill-strong`), 36 tall, `radius-pill`, centred in the 44 cell and positioned behind the label so nothing shifts when it appears. It spans the label plus its `space-md` padding on both sides — the pill of the phone's bar and the desktop rail, never the service's colour.
+- Pill: the selected tab sits on the room's strong fill (`fill-strong`), 36 tall, `radius-pill`, centred in the 44 cell and positioned behind the label so nothing shifts when it appears. It spans the label plus its `space-md` padding on both sides, the pill of the phone's bar and the desktop rail, never the service's colour.
 
-## `.header` — the desktop service header
+## `.header`, the desktop service header
 
 Used on a desktop window 720 wide or more, for every tabbed service (TrueNAS draws its own console). It replaces the phone's band and is the one lit surface on a service page.
 
-- **Room light.** A service room has no artwork, so it is lit by the neutral lamp: the band is opaque, the service's accent — the lamp, for every service — at 12% (`roomLightAlpha`) composited over `surface`, across the full 44. A bloom fills its lower 11px (`bloomHeight`), a vertical gradient from the lamp at 0 to the lamp at 30% (`bloomAlpha`), painted under the row so the labels are drawn crisp above it. No border: the selected pill already marks the row.
+- **Room light.** A service room has no artwork, so it is lit by the neutral lamp: the band is opaque, the service's accent (the lamp, for every service) at 12% (`roomLightAlpha`) composited over `surface`, across the full 44. A bloom fills its lower 11px (`bloomHeight`), a vertical gradient from the lamp at 0 to the lamp at 30% (`bloomAlpha`), painted under the row so the labels are drawn crisp above it. No border: the selected pill already marks the row.
 - **Ink is measured against the lit band.** The labels are the room's inks, and every one clears 4.5:1 on the band in both themes. The composite is published to descendants through `ServiceBandSurface`, so the connection lens and any action placed in the header measure against the band too (`ServiceBandSurface.of(context)`; outside a header it answers `surface`).
-- Row: `space-lg`, the identity — the brand book's lit tile: a 24 × 24 well on the room's strong fill with a 1px `line-edge` border, radius `sm2` (10), holding the service mark at 14 in `on-surface` (a step brighter than a mark in a list) — then 10 (`space.scale.row`) and the service name in `AppTheme.rowTitle` (15 / 600 / 20 leading, `on-surface`, capped at 220 and ellipsised); the connection lens when the service has several; `space-sm`; a 1 × 20 `outline-variant` rule; the tabs (padding `space-sm` instead of `space-lg`); the service's own actions; `space-sm`.
+- Row: `space-lg`, the identity, the brand book's lit tile: a 24 × 24 well on the room's strong fill with a 1px `line-edge` border, radius `sm2` (10), holding the service mark at 14 in `on-surface` (a step brighter than a mark in a list), then 10 (`space.scale.row`) and the service name in `AppTheme.rowTitle` (15 / 600 / 20 leading, `on-surface`, capped at 220 and ellipsised); the connection lens when the service has several; `space-sm`; a 1 × 20 `outline-variant` rule; the tabs (padding `space-sm` instead of `space-lg`); the service's own actions; `space-sm`.
 - The tabs give way first: they scroll, while the name ellipsises and the actions stay.
 
 ## Consumer provides

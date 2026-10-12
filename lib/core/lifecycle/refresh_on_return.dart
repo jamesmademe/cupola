@@ -8,7 +8,7 @@ import 'package:cupola/core/lifecycle/poll_clock.dart';
 ///
 /// This exists because of what the four persistent branches took away. A tab
 /// used to be destroyed when you left it, so coming back rebuilt it and every
-/// `autoDispose` provider it read fetched again — a refresh nobody wrote,
+/// `autoDispose` provider it read fetched again: a refresh nobody wrote,
 /// arriving as a side effect of the cost this migration removed. Keeping the tab
 /// alive keeps its numbers, including numbers from twenty minutes ago.
 ///
@@ -17,8 +17,8 @@ import 'package:cupola/core/lifecycle/poll_clock.dart';
 /// [maxAge]. A glance at another tab and back costs nothing, which the old
 /// behaviour could not manage.
 ///
-/// [onStale] is expected to be the same refresh the tab's own re-tap performs —
-/// `triggerNavigationRefresh` — rather than a second path to the same
+/// [onStale] is expected to be the same refresh the tab's own re-tap performs:
+/// `triggerNavigationRefresh`, rather than a second path to the same
 /// invalidations. It is not announced: a re-tap speaks because the user pressed
 /// something.
 class RefreshOnReturn extends ConsumerStatefulWidget {

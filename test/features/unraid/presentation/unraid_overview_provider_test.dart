@@ -6,7 +6,7 @@ import 'package:cupola/features/unraid/presentation/unraid_overview_provider.dar
 /// The Unraid Overview's window and fold rules, as pure functions.
 ///
 /// Every one of them takes its clock as an argument, so these run without a
-/// container, without a pump and without waiting — which is the point of
+/// container, without a pump and without waiting, which is the point of
 /// writing them as top-level functions in the first place.
 void main() {
   group('unraidUptimeLabel', () {
@@ -37,7 +37,7 @@ void main() {
     test(
       'compares in UTC, so an offset in the answer does not shift a day',
       () {
-        // 2026-09-16T14:00+02:00 is 12:00Z — exactly a day. Compared naively
+        // 2026-09-16T14:00+02:00 is 12:00Z, exactly a day. Compared naively
         // against a local `now` it would read 22 hours or 26.
         expect(
           unraidUptimeLabel('2026-09-16T14:00:00+02:00', now: now),
@@ -47,7 +47,7 @@ void main() {
     );
 
     test('a figure we cannot compute is null, never a number', () {
-      // Absent, blank, not a timestamp, and a boot time in the future — the
+      // Absent, blank, not a timestamp, and a boot time in the future: the
       // last one is clock skew between phone and server, and "up minus three
       // hours" is not a fact about anything.
       expect(unraidUptimeLabel(null, now: now), isNull);
@@ -143,7 +143,7 @@ void main() {
         limit: 6,
       );
 
-      // `array.disks` is the whole list — the query is not paged — so nine may
+      // `array.disks` is the whole list, the query is not paged, so nine may
       // honestly be stated as a total while six rows are drawn.
       expect(digest.diskCount, 9);
       expect(digest.preview, hasLength(6));
@@ -199,7 +199,7 @@ void main() {
       // DISK_DSBL at 47 °C is the array running without a drive it expected,
       // *while that drive cooks*. The old subtraction dropped it from the fault
       // count because it was warm, so the header said "1 above 45 °C" and never
-      // mentioned that a slot was flagged — the more serious of the two facts,
+      // mentioned that a slot was flagged: the more serious of the two facts,
       // suppressed by the less serious one.
       final digest = unraidArrayDigest(
         const UnraidArray(
@@ -222,7 +222,7 @@ void main() {
     test('an array that reported no slot list does not claim 0 disks', () {
       // `disks` is nullable in the committed SDL. A header reading "0 disks"
       // over silence is a positive claim that the array has no drives, and the
-      // section under it would say "No disks reported" beside it — two
+      // section under it would say "No disks reported" beside it: two
       // assertions built out of a field that never arrived.
       final digest = unraidArrayDigest(
         UnraidArray.fromJson(const {'state': 'STARTED'}),
@@ -301,7 +301,7 @@ void main() {
 
       // The OOM-killed container leads even though it sorts last: five rows
       // over forty containers would otherwise report the alphabet rather than
-      // the problem. The one somebody stopped stays where it is — that is
+      // the problem. The one somebody stopped stays where it is: that is
       // backlog, and the user already knows.
       expect(digest.preview.map((c) => c.name), ['zulu', 'alpha']);
       expect(digest.failed, 1);

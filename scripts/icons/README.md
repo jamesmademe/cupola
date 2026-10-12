@@ -42,8 +42,8 @@ channel, so they carry the dark appearance: the product's committed identity.
 ### Android has a real fallback to think about
 
 A launcher resolves the icon in its own configuration context, and not every
-launcher honours `-night` there. When it does not, the unqualified resource wins
-— so a dark-theme user on such a launcher sees the *light* icon. That is why the
+launcher honours `-night` there. When it does not, the unqualified resource wins,
+so a dark-theme user on such a launcher sees the *light* icon. That is why the
 light appearance has to stand on its own and not merely be a variant.
 
 Background and foreground must always be changed together. Swapping only
@@ -53,7 +53,7 @@ silently regressed.
 
 ### Apple's layers are not a picture
 
-`icon.json` composes six layers — core, panes, frame, in light and dark — and the
+`icon.json` composes six layers (core, panes, frame, in light and dark), and the
 system applies glass, specular and refraction on top. The ground is *not* a
 layer: it comes from the `fill-specializations` gradient in `icon.json`, which
 `export.py` keeps in step with the light body colour.
@@ -66,7 +66,7 @@ Icon Composer or on a device.
 ## Small sizes
 
 Below 64px the cloud passes only add mud, so every small target takes a
-simplified twin — same geometry, no clouds, no spill. `SIMPLE_BELOW` in
+simplified twin: same geometry, no clouds, no spill. `SIMPLE_BELOW` in
 `export.py` is the threshold; `icon-simple` and `icon-simple-light` are the
 twins.
 
@@ -75,7 +75,7 @@ twins.
 Transparency is kept only where something else composites the asset: Apple's
 layer groups, Android's adaptive foreground and themed icon, and
 `assets/brand/cupola_mark.png`, which `ServiceRing` draws over the app's own
-surface. Everywhere else it is flattened — on Apple's 1024 marketing slot an
+surface. Everywhere else it is flattened: on Apple's 1024 marketing slot an
 alpha channel is an App Store submission blocker.
 
 ## What is not generated

@@ -38,8 +38,8 @@ class SabnzbdScreen extends ConsumerWidget {
       appBar: showAppBar ? const GlassAppBar(title: Text('SABnzbd')) : null,
       body: SafeArea(
         // The shared placeholder, not a private copy. Four dashboards had grown
-        // their own version of "this service isn't set up" — same shape, four
-        // different icons, paddings and sentences — while
+        // their own version of "this service isn't set up", same shape, four
+        // different icons, paddings and sentences, while
         // `NotConfiguredPlaceholder` exists precisely to unify that state.
         child: isConfigured
             ? _SabnzbdDashboard(topPadding: topPadding)
@@ -121,8 +121,8 @@ class _SabnzbdDashboard extends ConsumerWidget {
 /// The count the Queue header states, or null while there is nothing to count.
 ///
 /// Null rather than `0 jobs` during a load or after a failure: a figure whose
-/// source did not answer is not a zero. The number is [SabnzbdQueue.jobCount] —
-/// the server's own `noofslots_total` — never the length of the page in hand,
+/// source did not answer is not a zero. The number is [SabnzbdQueue.jobCount]:
+/// the server's own `noofslots_total`, never the length of the page in hand,
 /// and should the server ever report more jobs than it sent, the header says
 /// how many of them are drawn instead of passing the page off as the queue.
 String? sabnzbdQueueCountLabel(SabnzbdQueue? queue) {
@@ -273,7 +273,7 @@ class _AddNzbRequest {
 ///
 /// A `ConsumerStatefulWidget` that **watches** the categories rather than
 /// reading them once. `ref.read(sabnzbdCategoriesProvider).asData?.value` was
-/// the previous shape, and nothing else in the app watches that provider — so
+/// the previous shape, and nothing else in the app watches that provider, so
 /// on first open it was cold, the read returned `AsyncLoading` with no value,
 /// the dropdown was hidden entirely and the NZB went in with no category at
 /// all. The captured local was never re-read either, so the dropdown stayed
@@ -370,7 +370,7 @@ class _QueueTile extends ConsumerWidget {
       title: slot.filename,
       // `1.2 GB left of 3.4 GB`, not the bare remainder this row used to
       // print. Remaining alone reads identically at 30% and at 95%, which is
-      // the one thing a queue row is looked at to tell apart — and the bare
+      // the one thing a queue row is looked at to tell apart, and the bare
       // figure did not even say it was a remainder. The clause is dropped
       // whole when the slot carried no total; see
       // `SabnzbdQueueSlot.sizeProgressLabel`.
@@ -418,7 +418,7 @@ class _QueueTile extends ConsumerWidget {
   /// Asks before a job leaves the queue.
   ///
   /// It used to go on the tap, toast "Job removed", and that was the only
-  /// word about it — on a menu row one slip of the finger from Pause. The
+  /// word about it: on a menu row one slip of the finger from Pause. The
   /// files question is SABnzbd's own: it keeps what it downloaded unless told
   /// otherwise, so the box starts unticked, and ticking it is the one way here
   /// to lose them.

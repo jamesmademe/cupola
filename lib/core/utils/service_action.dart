@@ -20,7 +20,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// detail screen after a delete) only on success.
 ///
 /// With a [capability], a permission refusal is not reported as a failure: it
-/// marks that connection read-only and raises the refusal toast instead — see
+/// marks that connection read-only and raises the refusal toast instead; see
 /// [reportCapabilityRefusal].
 Future<bool> runServiceAction(
   BuildContext context,
@@ -58,7 +58,7 @@ Future<bool> runServiceAction(
 /// hand-written `catch` skips its own generic toast.
 ///
 /// Not a failure toast, and not red: nothing broke. The service answered the
-/// question the probe asked — this credential may read and not change this —
+/// question the probe asked: this credential may read and not change this:
 /// and from here on every write for the connection draws dimmed and the page
 /// banner says why.
 ///

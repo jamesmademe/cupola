@@ -78,7 +78,7 @@ void main() {
     expect(find.text('Online'), findsNothing);
   });
 
-  testWidgets('a section whose source failed reads — and not 0', (
+  testWidgets('a section whose source failed reads `—` and not 0', (
     tester,
   ) async {
     await _pump(
@@ -219,8 +219,8 @@ void main() {
     );
 
     // `albumCount` reads a nullable `statistics` and falls back to zero, so the
-    // tile that captioned it unguarded said "0 albums" — and said it to a
-    // screen reader too — about an artist the server described no count for.
+    // tile that captioned it unguarded said "0 albums", and said it to a
+    // screen reader too, about an artist the server described no count for.
     expect(find.text('0 albums'), findsNothing);
     expect(find.text('4 albums'), findsOneWidget);
 
@@ -252,8 +252,8 @@ void main() {
         .widgetList<SectionHeader>(find.byType(SectionHeader))
         .firstWhere((header) => header.title == 'Recently added');
     // Ten artists were added and the rail holds six: a count here would be the
-    // cap wearing the clothes of a census. The word stays — the rail is one
-    // granularity coarser than the board drew — and the figure goes.
+    // cap wearing the clothes of a census. The word stays; the rail is one
+    // granularity coarser than the board drew, and the figure goes.
     expect(recentlyAdded.subtitle, 'artists');
     expect(recentlyAdded.subtitle, isNot(contains('6')));
   });
@@ -476,7 +476,7 @@ class _StatusClient extends ApiClient {
 }
 
 /// One artist. Pass `statistics: null` for the record a server sent without
-/// them — the shape every "0 albums" caption was really describing.
+/// them, the shape every "0 albums" caption was really describing.
 LidarrArtist _artist({
   required int id,
   String name = 'Artist',

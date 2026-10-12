@@ -26,7 +26,7 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// It used to be a filled, bordered card: `errorContainer` at 40% behind an
 /// `error` stroke at 50%, with the sentence in `onErrorContainer`. That is the
 /// chrome of an alarm, and in a self-hosted stack a section that did not load
-/// is a Tuesday — the download client is rebuilding, the indexer is rate
+/// is a Tuesday: the download client is rebuilding, the indexer is rate
 /// limited, the box is off. A page that shouts on every open is a page whose
 /// shouting stops being read.
 ///
@@ -35,9 +35,9 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// spent on exactly one 16pt glyph. Three rules govern every failure surface in
 /// the app and this widget is the smallest of them:
 ///
-///  1. presence is the signal — no fill, no border, the error tone on the glyph
+///  1. presence is the signal: no fill, no border, the error tone on the glyph
 ///     and nowhere else;
-///  2. the recovery verb is never painted in the error tone — a red Retry makes
+///  2. the recovery verb is never painted in the error tone: a red Retry makes
 ///     the cure look like the disease, so beside silence it is the primary
 ///     ink. An amber fault's remedy is the one fill a fault gets: the amber
 ///     fill ([remedyFillStyle]), as a compact control on the line;
@@ -53,7 +53,7 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// The [error] that failed is required, and the glyph takes the
 /// classification's tone and glyph: red only when nothing answered, amber for
 /// a refusal or any other failure that did answer. It used to be optional,
-/// and every section that left it out stayed red for any failure — a refused
+/// and every section that left it out stayed red for any failure: a refused
 /// key read exactly like a switched-off box. Word the [message] from the same
 /// classification (`sectionFailureMessage`), so the glyph and the sentence
 /// cannot disagree.

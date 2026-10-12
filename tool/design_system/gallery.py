@@ -213,7 +213,7 @@ def build() -> Path:
                 )
         if not sheets:
             missing.append(card)
-            sheets.append('<p class="missing">Not rendered yet — run with <code>--render</code>.</p>')
+            sheets.append('<p class="missing">Not rendered yet: run with <code>--render</code>.</p>')
         sections.append(
             f'<section id="{card}"><div class="doc">{markdown(readme.read_text())}</div>'
             f'<div class="sheets">{"".join(sheets)}</div></section>'

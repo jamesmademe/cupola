@@ -31,7 +31,7 @@ import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 /// The window's top strip: one interior, three shells.
 ///
 /// The only part of the app that knows which operating system it is running on,
-/// and it may only use that knowledge for three things — where the window
+/// and it may only use that knowledge for three things: where the window
 /// buttons go, how tall the strip is, and which modifier the labels print.
 /// Colour, type, spacing, icons and motion are never per-OS, and a change here
 /// that touches any of them is a bug however good it looks on one platform.
@@ -63,7 +63,7 @@ class WindowChrome extends ConsumerWidget {
   static const double height = 44;
 
   /// The compact window's strip. Six points shorter, and its chips lose their
-  /// labels rather than their tone — the shortcut stays, because the strip is
+  /// labels rather than their tone; the shortcut stays, because the strip is
   /// the only place a pointer-only user meets it, and the tooltip still says
   /// the whole name.
   static const double compactHeight = 38;
@@ -282,7 +282,7 @@ class _AnswerLineState extends ConsumerState<_AnswerLine> {
   void _ask() => Actions.invoke(context, const RefreshAllIntent());
 }
 
-/// The way to anything. A field in shape only — it opens the command deck.
+/// The way to anything. A field in shape only: it opens the command deck.
 ///
 /// Drawn as a field rather than as a button because that is what it does: the
 /// deck it opens is a search, and a control shaped like its own result is how
@@ -469,20 +469,20 @@ class _InspectorSwitchState extends State<_InspectorSwitch> {
 /// The window's obligations, for a screen the shell does not host.
 ///
 /// Onboarding gates the shell, and a handful of flows live above it on the root
-/// navigator — so those screens have no [WindowChrome], and the window's three
+/// navigator, so those screens have no [WindowChrome], and the window's three
 /// jobs have to be done by something. This is that something, and annotation
 /// `onb1` is explicit that it is load-bearing rather than decoration:
 ///
 ///  * on **Windows and Linux** it is the only thing that can move a frameless
-///    window, and the only place its caption buttons can be — without it the
+///    window, and the only place its caption buttons can be; without it the
 ///    window cannot be moved and, worse, cannot be closed;
 ///  * on **macOS** it reserves the traffic-light gutter, so AppKit's buttons
 ///    have somewhere to sit that is not on top of the beat. It used to render
 ///    nothing at all here (the old guard bailed on `!drawsOwnButtons`, which is
 ///    exactly the Mac), so the onboarding walk drew its content under the
 ///    lights;
-///  * on **all three** it carries the trail. Not a window *title* — the Chrome
-///    sheet forbids one — but the same breadcrumb the shell prints everywhere
+///  * on **all three** it carries the trail. Not a window *title*: the Chrome
+///    sheet forbids one, but the same breadcrumb the shell prints everywhere
 ///    else, so the strip above a beat is recognisably the strip above a page.
 ///
 /// Renders nothing on a phone, which has no window to move and no gutter to
@@ -801,7 +801,7 @@ class _CaptionButton extends StatefulWidget {
   final String label;
 
   /// GNOME draws 26pt round buttons; Windows draws 44x44 rectangles, and its
-  /// maximise button must keep its own hover — snap layouts open from it.
+  /// maximise button must keep its own hover; snap layouts open from it.
   final bool gnome;
   final bool danger;
   final VoidCallback onPressed;

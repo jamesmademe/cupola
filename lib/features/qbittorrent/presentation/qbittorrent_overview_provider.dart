@@ -1,8 +1,8 @@
 /// What the qBittorrent Overview reads, and the pure functions that shape it.
 ///
 /// Everything on this page is derived from **two** calls the app already makes:
-/// `/api/v2/torrents/info` through [allTorrentsProvider] — which the Queue tab
-/// and the KPI rail both already hold — and `/api/v2/transfer/info` through
+/// `/api/v2/torrents/info` through [allTorrentsProvider], which the Queue tab
+/// and the KPI rail both already hold, and `/api/v2/transfer/info` through
 /// [transferInfoProvider]. Nothing here fetches on its own, so opening Overview
 /// costs no round trip that the service home was not already paying for.
 ///
@@ -29,7 +29,7 @@
 /// The rule has a second edge, and this page has been on the wrong side of it:
 /// a sentinel helper applied to a field that has no sentinel prints "we could
 /// not ask" over an answer that arrived. `/transfer/info`'s session counters
-/// are plain counters — `0` is a fresh daemon, not a missing figure — so they
+/// are plain counters: `0` is a fresh daemon, not a missing figure, so they
 /// go through [qbittorrentSessionTotalLabel] and never through `formatSize`.
 library;
 
@@ -59,7 +59,7 @@ const int qbittorrentTransferPreviewLimit = 5;
 /// Rows in the Categories section.
 ///
 /// Five, because past that the section stops being a shape of the library and
-/// becomes the library — which is what the Queue tab is for.
+/// becomes the library, which is what the Queue tab is for.
 const int qbittorrentCategoryLimit = 5;
 
 /// What a torrent with no category is filed under.
@@ -76,7 +76,7 @@ const String qbittorrentNoCategoryLabel = 'No category';
 /// All three are **amber**, and none of them is red: red is reserved for a
 /// qBittorrent that did not answer at all, which the unreachable band says once
 /// for the whole page. A torrent that failed is a fault on a server that is
-/// plainly alive — it answered to tell us.
+/// plainly alive: it answered to tell us.
 ///
 /// What is deliberately **not** here is a torrent the user stopped. qB reports
 /// it as `pausedDL`/`stoppedUP`, and painting that amber is the single most
@@ -89,15 +89,15 @@ const String qbittorrentNoCategoryLabel = 'No category';
 /// it, worst first. A torrent qB has given up on will not recover by itself; a
 /// stalled one may find a seed in the next ten minutes, so it reads last.
 enum QbittorrentFaultKind {
-  /// `error` — libtorrent gave up on it and said so.
+  /// `error`: libtorrent gave up on it and said so.
   errored(Icons.error_outline_rounded),
 
-  /// `missingFiles` — the data qB is seeding is no longer where it left it.
+  /// `missingFiles`: the data qB is seeding is no longer where it left it.
   /// Split from [errored] because the thing to go and fix is a filesystem, not
   /// the torrent.
   missingFiles(Icons.folder_off_rounded),
 
-  /// `stalledDL` — connected, not moving. The user did not ask for this.
+  /// `stalledDL`: connected, not moving. The user did not ask for this.
   stalled(Icons.sync_problem_rounded);
 
   const QbittorrentFaultKind(this.icon);
@@ -129,7 +129,7 @@ class QbittorrentAttentionItem {
   StatusTone get tone => kind.tone;
   IconData get icon => kind.icon;
 
-  /// The row as one sentence, with the layout's `·` turned back into commas —
+  /// The row as one sentence, with the layout's `·` turned back into commas:
   /// `·` is decoration, and a screen reader either names it or drops it
   /// depending on the user's punctuation setting.
   String get spoken =>
@@ -140,13 +140,13 @@ class QbittorrentAttentionItem {
 ///
 /// Null in three cases, and each one is a figure this page refuses to invent:
 ///
-///  * `lastActivity <= 0` is qB's "never seen it move" sentinel — printing the
+///  * `lastActivity <= 0` is qB's "never seen it move" sentinel: printing the
 ///    epoch difference would claim the torrent stalled in 1970;
 ///  * a timestamp in the future is a clock skew between phone and server, and
 ///    a negative age rendered as "stalled -3 min" is worse than silence;
 ///  * under a minute is not an idle period, it is the gap between two polls.
 ///
-/// Whole minutes up to an hour, then whole hours, then days — the same ladder
+/// Whole minutes up to an hour, then whole hours, then days: the same ladder
 /// [formatRelativeDateTime] walks, without its "ago", because this is a
 /// duration and not a point in time.
 String? qbittorrentIdleLabel(int lastActivity, {required DateTime now}) {
@@ -164,7 +164,7 @@ String? qbittorrentIdleLabel(int lastActivity, {required DateTime now}) {
   return days == 1 ? '1 day' : '$days days';
 }
 
-/// `92%` — the progress fraction as whole percent.
+/// `92%`: the progress fraction as whole percent.
 ///
 /// Whole percent rather than [Torrent.progressFormatted]'s `92.0%`: the tenth
 /// is noise beside a name that is already being ellipsised, and it is the
@@ -199,7 +199,7 @@ QbittorrentFaultKind? qbittorrentFaultKindOf(Torrent torrent) {
 /// thing has been wrong: a torrent that died an hour ago has had longer to
 /// matter than one that died during this poll.
 ///
-/// A deliberately stopped torrent never appears here at any position — see
+/// A deliberately stopped torrent never appears here at any position: see
 /// [QbittorrentFaultKind].
 List<QbittorrentAttentionItem> qbittorrentFaultRows(
   List<Torrent> torrents, {
@@ -279,7 +279,7 @@ class QbittorrentTransferRow {
 
   final String name;
 
-  /// `92%`, already rendered — it is the row's trailing figure.
+  /// `92%`, already rendered: it is the row's trailing figure.
   final String percent;
 
   /// Category, size, rate and (downloading only) what is left.
@@ -301,7 +301,7 @@ class QbittorrentTransferRow {
 ///
 /// Downloading first and by progress descending, which is the board's order and
 /// also the useful one: the thing about to land is the thing worth looking at.
-/// Seeding follows, ordered by upload rate — a seed nobody is pulling from is
+/// Seeding follows, ordered by upload rate: a seed nobody is pulling from is
 /// the least interesting row on the page.
 ///
 /// Faults are **absent by construction**: `stalledDL`, `error` and
@@ -337,7 +337,7 @@ List<QbittorrentTransferRow> qbittorrentTransferRows(
       final seeding = torrent.parsedState == TorrentState.seeding;
       // `etaFormatted` renders qB's "practically never" sentinel as `∞`, which
       // a screen reader calls "infinity" in the middle of a sentence about a
-      // download. The glyph is dropped and the clause with it — an unknowable
+      // download. The glyph is dropped and the clause with it: an unknowable
       // ETA is better left unsaid than rendered as a symbol.
       final eta = torrent.etaFormatted;
       return QbittorrentTransferRow(
@@ -369,7 +369,7 @@ List<QbittorrentTransferRow> qbittorrentTransferRows(
 ///
 /// Each field is a plain census of the list qB answered with; none of them is a
 /// fallback for a fetch that failed. When the list itself did not arrive the
-/// section prints `—` rather than constructing one of these full of zeroes —
+/// section prints `—` rather than constructing one of these full of zeroes:
 /// `0 torrents` and "we could not ask" are opposite readings and the user acts
 /// differently on each.
 @immutable
@@ -387,7 +387,7 @@ class QbittorrentQueueCounts {
   final int downloading;
   final int seeding;
 
-  /// Deliberately stopped. **Backlog, not a fault** — see
+  /// Deliberately stopped. **Backlog, not a fault**: see
   /// [QbittorrentFaultKind].
   final int paused;
 
@@ -471,12 +471,12 @@ class QbittorrentCategoryRow {
 /// Derived from `/torrents/info` rather than fetched from
 /// `/api/v2/torrents/categories`: the categories endpoint answers with the
 /// *configured* categories and their save paths, and this section is about
-/// where the library actually sits — a configured category holding nothing has
+/// where the library actually sits: a configured category holding nothing has
 /// nothing to say on an Overview. The count and the size therefore always agree
 /// with the Queue tab, because they are the same list folded twice.
 ///
 /// Uncategorised torrents are collected under [qbittorrentNoCategoryLabel] and
-/// pinned **last** whatever their size, because it is not a category — it is
+/// pinned **last** whatever their size, because it is not a category: it is
 /// the absence of one, and sorting it to the top would make the section look
 /// like the user had named a category after the thing they had not done.
 List<QbittorrentCategoryRow> qbittorrentCategoryRows(
@@ -545,7 +545,7 @@ class QbittorrentSessionFact {
 /// `0` means *no limit* for `/transfer/info`'s `dl_rate_limit` /
 /// `up_rate_limit` and for `/transfer/setDownloadLimit`, which is the exact
 /// inverse of the per-torrent `dl_limit` / `up_limit` that [formatLimit]
-/// renders — there `0` is a cleared limit and `-1` is unlimited. Passing a
+/// renders: there `0` is a cleared limit and `-1` is unlimited. Passing a
 /// global limit through `formatLimit` prints a bare `0` on an uncapped link,
 /// which reads as "throttled to nothing": the most misleading single character
 /// this screen could draw. Negatives are folded in defensively; no qB version
@@ -555,13 +555,13 @@ String qbittorrentGlobalLimitLabel(int bytesPerSecond) =>
 
 /// A session byte counter, where `0` is an answer.
 ///
-/// **Not [formatSize].** That helper is qB's *torrent-size* sentinel wrapper —
-/// `bytes <= 0 ? '—'` — and it is right there, because a magnet with no
+/// **Not [formatSize].** That helper is qB's *torrent-size* sentinel wrapper:
+/// `bytes <= 0 ? '—'`, and it is right there, because a magnet with no
 /// metadata reports size `0` and "zero bytes" is not a size any torrent has.
 /// `dl_info_data` / `up_info_data` are counters on `/transfer/info`: a daemon
 /// restarted ten minutes ago that has not moved anything reports `0` and means
 /// it. Rendering that as `—` would say `/transfer/info` had not answered while
-/// five rows beside it prove it did — the page inverting its own rule, refusing
+/// five rows beside it prove it did: the page inverting its own rule, refusing
 /// to print `0` for an unanswered question and then printing "unanswered" for a
 /// genuine zero.
 ///
@@ -588,7 +588,7 @@ String qbittorrentSessionRatioLabel({
 ///
 /// Six facts and no more. The board's Session panel also asks for DHT nodes, the
 /// listen port's reachability and free disk space; none of the three is on any
-/// endpoint this client calls, so they are **absent rather than zeroed** — see
+/// endpoint this client calls, so they are **absent rather than zeroed**: see
 /// the screen's own doc for which call would be needed.
 ///
 /// The two limits are the *effective* ones: when alternative limits are on, qB

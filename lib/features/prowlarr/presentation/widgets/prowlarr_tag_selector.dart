@@ -51,7 +51,7 @@ class _ProwlarrTagSelectorState extends ConsumerState<ProwlarrTagSelector> {
     final label = _controller.text.trim();
     if (label.isEmpty || _creating) return;
 
-    // An existing label is selected rather than duplicated — Prowlarr would
+    // An existing label is selected rather than duplicated: Prowlarr would
     // accept the duplicate and leave two identical tags behind.
     final existing = ref.read(prowlarrTagsProvider).asData?.value ?? const [];
     for (final tag in existing) {

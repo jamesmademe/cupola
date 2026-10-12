@@ -17,7 +17,7 @@ import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 /// The second Sonarr. The first one keeps the primary id, so its storage keys
-/// — and every override that names `sonarrServiceProvider` — are unchanged.
+/// (and every override that names `sonarrServiceProvider`) are unchanged.
 const _secondSonarr = ServiceInstance(
   id: 'sonarr-2222222',
   service: ServiceKey.sonarr,
@@ -57,7 +57,7 @@ ProviderContainer _container({
 void main() {
   // The device pass that started this: two Sonarrs, eight downloads, all of
   // them on the second connection. With the lens on it the pill said 8; moved
-  // to the first it said 0 and "Nothing from Sonarr right now" — while the
+  // to the first it said 0 and "Nothing from Sonarr right now", while the
   // eight were still downloading.
   test(
     'the queue is the sum of a service\'s connections, not the lens\'s',
@@ -102,7 +102,7 @@ void main() {
         feed.items.where((i) => i.service == ServiceKey.sonarr),
         hasLength(3),
       );
-      // Both queue ids are 1 — per-server numbering, which is exactly why a row
+      // Both queue ids are 1: per-server numbering, which is exactly why a row
       // has to carry its connection rather than its service alone.
       expect(
         feed.items
@@ -134,8 +134,8 @@ void main() {
     );
 
     // The first Sonarr has no label of its own, so it is called by its place
-    // — the app's one rule, which the search sections and the lens sheet
-    // follow too. Never its id.
+    // (the app's one rule, which the search sections and the lens sheet
+    // follow too). Never its id.
     expect(sonarrRow.instanceLabel, 'Sonarr 1');
   });
 
@@ -186,7 +186,7 @@ void main() {
     expect(feed.isPartial, isTrue);
     expect(feed.allConfiguredFailed, isFalse);
 
-    // And the failure names the connection, not just the service — "Sonarr did
+    // And the failure names the connection, not just the service: "Sonarr did
     // not answer" is the wrong sentence when the other Sonarr did.
     final failed = feed.failures.single;
     expect(failed.service, ServiceKey.sonarr);

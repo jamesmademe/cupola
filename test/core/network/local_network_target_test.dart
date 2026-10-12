@@ -20,7 +20,7 @@ void main() {
     });
 
     test('keeps the neighbours of those ranges out', () {
-      // One octet outside 172.16/12 in each direction — the range most often
+      // One octet outside 172.16/12 in each direction: the range most often
       // mis-implemented as "anything starting with 172".
       expect(localNetworkHostVerdict('172.15.0.1'), isFalse);
       expect(localNetworkHostVerdict('172.32.0.1'), isFalse);
@@ -58,7 +58,7 @@ void main() {
       expect(localNetworkHostVerdict('radarr.lan'), isTrue);
       expect(localNetworkHostVerdict('sonarr.internal'), isTrue);
       expect(localNetworkHostVerdict('nas.home.arpa'), isTrue);
-      // A single label — a router's own DNS, or a Compose service name.
+      // A single label: a router's own DNS, or a Compose service name.
       expect(localNetworkHostVerdict('radarr'), isTrue);
     });
 

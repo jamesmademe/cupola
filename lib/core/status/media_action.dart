@@ -28,7 +28,7 @@ enum MediaActionKind {
 /// path, so it passes `canAdd: false` and an untracked title yields a *sentence*
 /// instead of a full-width accent CTA whose only behaviour is an info snackbar
 /// reading "Add Movie is not available yet from this view." An action is
-/// withheld, never disabled — a disabled full-width control teaches nothing.
+/// withheld, never disabled: a disabled full-width control teaches nothing.
 @immutable
 class MediaActionCapabilities {
   final bool canSearch;
@@ -53,8 +53,8 @@ class MediaActionCapabilities {
 /// The one action a resolved status promotes, and why.
 ///
 /// For [MediaActionKind.none] the [label] is empty and [icon] is not rendered;
-/// only [consequence] is. The consequence lives here — beside the decision that
-/// produced it — rather than being composed at the call site, so a state can
+/// only [consequence] is. The consequence lives here, beside the decision that
+/// produced it, rather than being composed at the call site, so a state can
 /// never ship a button without an explanation or an explanation that contradicts
 /// its button.
 @immutable
@@ -82,7 +82,7 @@ class MediaPrimaryAction {
 /// fully resolved from the feature's `domain/` layer.
 ///
 /// First match wins, and the order mirrors [MediaStatusInfo.label]'s own
-/// precedence — pipeline beats unmonitored beats availability — so the promoted
+/// precedence (pipeline beats unmonitored beats availability), so the promoted
 /// verb and the status headline can never describe different situations.
 ///
 /// Three of the outcomes are the point of the whole exercise:
@@ -95,7 +95,7 @@ class MediaPrimaryAction {
 /// * **An action is withheld, never disabled.** [MediaActionKind.none] renders
 ///   no button, and the consequence carries the page instead.
 /// * **Monitoring is not an action.** It is a persistent binary of the user's
-///   copy, so it lives in the overflow — except at the one rung where *not*
+///   copy, so it lives in the overflow, except at the one rung where *not*
 ///   monitoring is the reason nothing is happening.
 ///
 /// **A button names its MECHANISM; the consequence sentence names the SITUATION.**
@@ -106,12 +106,12 @@ class MediaPrimaryAction {
 ///
 /// This replaced four names for the automatic search (`Find releases`,
 /// `Find missing`, `Automatic search`) and three for the interactive one
-/// (`Find an upgrade`, `Find another release`, `Interactive search`) — seven
+/// (`Find an upgrade`, `Find another release`, `Interactive search`); seven
 /// labels for two behaviours. Worse, the state-shaped names pointed the wrong
 /// way: `Find releases` reads as *show me the releases*, which is the
 /// interactive behaviour, while the button it sat on performed the automatic
-/// grab. On a rung where both mechanisms are on screen at once — a missing title
-/// promotes the automatic one and shows the interactive one beside it — the user
+/// grab. On a rung where both mechanisms are on screen at once: a missing title
+/// promotes the automatic one and shows the interactive one beside it; the user
 /// could not tell which was which, and the label was the reason.
 ///
 /// The per-state nuance those names carried is not lost, it moved to where state
@@ -140,7 +140,7 @@ MediaPrimaryAction resolveMediaAction(
       case MediaPipeline.clientUnavailable:
         // Names the component that is down and the consequence the badge
         // withholds: the whole queue is frozen, not just this title. "The
-        // download client" and never a brand name — the app does not know which
+        // download client" and never a brand name: the app does not know which
         // client is configured.
         return _queueOrNothing(
           caps,
@@ -156,7 +156,7 @@ MediaPrimaryAction resolveMediaAction(
         );
       case MediaPipeline.importBlocked:
         // The fact the badge withholds leads: the bytes arrived safely and the
-        // blockage is at the import step. Deliberately no detail frame here —
+        // blockage is at the import step. Deliberately no detail frame here:
         // on this rung the service's message is usually a path-length wall of
         // text, and the promoted verb has already done the sentence's job.
         final consequence =
@@ -182,7 +182,7 @@ MediaPrimaryAction resolveMediaAction(
                     '${formatPercent(percent)}.',
         );
       // These five shared one branch that printed `detail ?? pipeline.label`
-      // plus an appended percentage — the badge's own word with a diagnostic
+      // plus an appended percentage: the badge's own word with a diagnostic
       // stapled to it, which is the worst restatement on the ladder. Each rung
       // now says what follows from itself instead.
       case MediaPipeline.queued:
@@ -283,7 +283,7 @@ MediaPrimaryAction resolveMediaAction(
       // Provable rather than hopeful: the unmonitored rung above is checked
       // first, so anything reaching here IS monitored, and therefore genuinely
       // in Wanted and in RSS. Naming the ongoing process instead of the absence
-      // is the whole mechanism — it is what replaced "Expected on disk, nothing
+      // is the whole mechanism: it is what replaced "Expected on disk, nothing
       // there.", which had no actor and so read as a monitoring alert.
       final consequence = '$serviceName is hunting a release for this title.';
       if (caps.canSearch) {
@@ -311,8 +311,8 @@ MediaPrimaryAction resolveMediaAction(
       return _nothing(consequence);
 
     case MediaAvailability.upgradable:
-      // Names the reason the badge omits — the cutoff, which is the real
-      // Radarr/Sonarr noun — and the consequence: the search is still live.
+      // Names the reason the badge omits: the cutoff, which is the real
+      // Radarr/Sonarr noun, and the consequence: the search is still live.
       final consequence =
           'The file is below your quality cutoff, so $serviceName keeps '
           'looking.';
@@ -329,13 +329,13 @@ MediaPrimaryAction resolveMediaAction(
     case MediaAvailability.available:
       // This sentence pays for the withheld primary: it tells the operator the
       // absence of a button is a *result*, not a gap. It is half the answer to
-      // "the action row feels too empty" — the visible secondaries beside the
+      // "the action row feels too empty", the visible secondaries beside the
       // overflow are the other half.
       //
       // "everything it expects" and not "nothing is outstanding": the first
       // draft used the latter, which is bookish and ambiguous enough to be read
       // as "nothing is excellent". What this rung is actually about is the count
-      // the page already shows — 89 of 89, 1 file — which is what the service
+      // the page already shows (89 of 89, 1 file), which is what the service
       // expected and got.
       return _nothing(
         "$serviceName has everything it expects, so it isn't searching.",
@@ -367,7 +367,7 @@ MediaPrimaryAction resolveMediaAction(
 ///
 /// The service's words arrive after a colon, never inside our own grammar, so a
 /// screen reader is handed a whole clause instead of the bare fragment the old
-/// ladder passed through — `status.detail` *was* the entire sentence on two
+/// ladder passed through: `status.detail` *was* the entire sentence on two
 /// rungs. Returns null when nothing legible survives, which is what lets a
 /// caller fall back to its own clause instead of rendering a colon and nothing.
 String? _reports(String serviceName, String? detail) {
@@ -397,7 +397,7 @@ String _withWarning(MediaStatusInfo status, String serviceName, String base) {
   return reported == null ? base : '$base $reported';
 }
 
-/// Every queue state routes to the queue — or, where the host gave no route
+/// Every queue state routes to the queue, or, where the host gave no route
 /// there, to a sentence.
 ///
 /// The spec's ladder promotes `openQueue` unconditionally on these rungs; it is

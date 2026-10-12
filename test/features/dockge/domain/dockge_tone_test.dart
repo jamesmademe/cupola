@@ -5,7 +5,7 @@ import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 
 void main() {
-  group('DockgeStackStatus — decision 15', () {
+  group('DockgeStackStatus: decision 15', () {
     test('a stack that was never started is neutral, not amber', () {
       // "Inactive" is a compose file with no containers up. Nothing stopped,
       // nothing failed. Amber said a fault was waiting to be dealt with.
@@ -48,7 +48,7 @@ void main() {
     });
   });
 
-  group('DockgeAgent — decision 41', () {
+  group('DockgeAgent: decision 41', () {
     test('an agent that is not answering is the one red in the feature', () {
       // The exception that proves the rule: this *is* a connection that did not
       // answer, which is exactly what red means.
@@ -62,7 +62,7 @@ void main() {
       );
     });
 
-    test('connecting is informational — it has not failed yet', () {
+    test('connecting is informational: it has not failed yet', () {
       expect(
         const DockgeAgent(
           endpoint: 'nas:5001',

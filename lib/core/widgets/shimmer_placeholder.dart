@@ -150,8 +150,8 @@ class ShimmerList extends StatelessWidget {
   ///
   /// The default constructor shrink-wraps and refuses to scroll so it can be
   /// nested inside another scroll view. A skeleton that *is* the page needs the
-  /// opposite: given a bounded box shorter than six 72pt rows — which is any
-  /// phone once a filter bar is above it — a shrink-wrapped column overflows,
+  /// opposite: given a bounded box shorter than six 72pt rows, which is any
+  /// phone once a filter bar is above it: a shrink-wrapped column overflows,
   /// where a scroll view simply clips. Two screens had written their own copy
   /// of this class to get that, byte for byte.
   const ShimmerList.page({

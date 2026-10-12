@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// The Weight Ceiling Rule: **nothing is set heavier than 600.**
 ///
-/// The type system sets every role at 600 or lighter — the display roles
+/// The type system sets every role at 600 or lighter: the display roles
 /// (screen, media, room, feature, section and the figures) at 600, the text
-/// roles at 400–600, the mono role at 450 — and the brand book's earlier
+/// roles at 400–600, the mono role at 450. The brand book's earlier
 /// ceiling (800 for Display, 700 for Headline, the app-bar title and the KPI
 /// figure) has no role left to allow. The display face carries its voice
 /// through width and optical size, not through weight.

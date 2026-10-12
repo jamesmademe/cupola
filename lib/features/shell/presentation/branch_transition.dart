@@ -9,8 +9,8 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 /// Replaces `StatefulShellRoute.indexedStack`'s own container for one reason:
 /// that one swaps branches with no transition at all, and a hard cut between two
 /// opaque full-screen surfaces reads as a glitch rather than as a move. It keeps
-/// everything else that container does — including, load-bearing, the
-/// [Offstage] + [TickerMode] pair described on [_BranchLayer].
+/// everything else that container does (including, load-bearing, the
+/// [Offstage] + [TickerMode] pair described on [_BranchLayer]).
 ///
 /// The transition is the arriving branch fading and rising over the one it
 /// replaces, and every part of that sentence was settled by measurement on a
@@ -22,7 +22,7 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 ///
 /// Uniform on every platform by construction: no `TargetPlatform` is consulted
 /// anywhere here. Tabs are siblings, and a fade is what Material prescribes for
-/// moving between top-level destinations — the platform page transitions are for
+/// moving between top-level destinations: the platform page transitions are for
 /// pushing a child over a parent, which is what a branch root's own page
 /// transition still does.
 Widget buildBranchTransition(
@@ -103,7 +103,7 @@ class _BranchTransitionState extends State<BranchTransition>
     // Paint order, not branch order: the incoming branch goes LAST so it is on
     // top of the one it is replacing.
     //
-    // Ordering by index instead was a bug with a tell — the fade only showed in
+    // Ordering by index instead was a bug with a tell: the fade only showed in
     // one direction. Going to a higher-numbered tab it landed on top and faded
     // in; going to a lower-numbered one it faded in *underneath* a fully opaque
     // layer, which is invisible, and read as the hard cut this transition exists
@@ -163,7 +163,7 @@ class _BranchLayer extends StatelessWidget {
     //
     //  * `Offstage` is what stops a put-away branch laying out, painting,
     //    hit-testing or reaching a screen reader.
-    //  * `TickerMode(enabled:)` is what mutes its `AnimationController`s — the
+    //  * `TickerMode(enabled:)` is what mutes its `AnimationController`s: the
     //    service ring's spinner and every shimmer placeholder are silenced by
     //    this line and by nothing else in the app. Dropping it sets them
     //    animating behind a tab nobody is looking at.
@@ -176,8 +176,8 @@ class _BranchLayer extends StatelessWidget {
       child: TickerMode(
         enabled: isCurrent,
         // Composed with the scope above, not asserted over it. This container
-        // is nestable now — a service's own shell sits inside the Dashboard
-        // branch — and `isActiveOf` returns the NEAREST scope, so an inner
+        // is nestable now: a service's own shell sits inside the Dashboard
+        // branch, and `isActiveOf` returns the NEAREST scope, so an inner
         // branch publishing a bare `isCurrent` would claim to be live while the
         // branch above it was put away: its pollers would keep running behind a
         // tab nobody is looking at, and it would not even rebuild to find out,
@@ -198,7 +198,7 @@ class _BranchLayer extends StatelessWidget {
               // its full opacity underneath and therefore needs no opacity
               // layer at all.
               //
-              // Cross-fading the two instead — each in its own FadeTransition —
+              // Cross-fading the two instead, each in its own FadeTransition,
               // was measured on device at 18ms of average raster per switch
               // against 10ms for a hard cut: two full-screen `saveLayer`s per
               // frame, which is the same bill the Zoom transition was dropped
@@ -207,7 +207,7 @@ class _BranchLayer extends StatelessWidget {
               // The rise is a transform inside that one layer, so it is free:
               // a bare opacity ramp on a whole screen reads as a dissolve, and
               // what a tab switch wants to say is that something arrived.
-              // Small on purpose — 4% over 200ms — because the destination must
+              // Small on purpose, 4% over 200ms, because the destination must
               // not appear to zoom.
               child: opacity == null
                   ? RepaintBoundary(child: child)

@@ -39,7 +39,7 @@ void main() {
         width: 360,
       ),
       CatalogScene(
-        'SectionHeader · long title at 1.6x text scale — clamped, wraps '
+        'SectionHeader · long title at 1.6x text scale, clamped, wraps '
         'between words instead of breaking mid-word; the chevron stays on the '
         'title line, since only an explicit trailing stacks',
         (context) => MediaQuery(

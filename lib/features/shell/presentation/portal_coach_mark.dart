@@ -1,11 +1,11 @@
 /// The Portal's coach mark: a pill above the nav bar, shown when the user has
 /// made [PortalHintsState.coachJourneyThreshold] manual switches without ever
-/// opening the Portal — the moment of demonstrated need, not first launch.
+/// opening the Portal: the moment of demonstrated need, not first launch.
 ///
 /// Its × is the Settings → Hints → Portal switch (which turns it back on);
 /// opening the Portal resets the need-counter and the pill retires by itself.
 /// When it appears, the bar plays one demo bounce so the words and the physics
-/// arrive together — except under Reduce Motion, where it only fades in.
+/// arrive together, except under Reduce Motion, where it only fades in.
 library;
 
 import 'package:flutter/material.dart';
@@ -38,7 +38,7 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
       portalHintsProvider.select((s) => s.coachVisible),
     );
     // Reduce Motion, read the way the shell's own demo bounce reads it: the
-    // words still arrive, but nothing lifts — no bounce of the bar, and the
+    // words still arrive, but nothing lifts: no bounce of the bar, and the
     // pill fades in place instead of sliding up into it.
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     // A screen reader skips the bounce too, as the shell does: the bar moving
@@ -60,7 +60,7 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
     // Just above the bar. Inside a body with `extendBody: true` the Scaffold
     // hands down a MediaQuery whose padding.bottom ALREADY includes the whole
     // bottomNavigationBar (bar + safe area): that figure IS the bar's top
-    // edge — do not add the bar's own metrics on top of it.
+    // edge: do not add the bar's own metrics on top of it.
     return Positioned(
       left: 0,
       right: 0,

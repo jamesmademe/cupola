@@ -24,14 +24,14 @@ class ServiceKpi {
   /// `null` is the resting state: an ordinary metric that nobody needs to look
   /// at, drawn in the service accent like its three neighbours. A non-null tone
   /// means the builder that computed this number decided it is the reason you
-  /// would open the service — and says in the same breath *which kind* of
+  /// would open the service, and says in the same breath *which kind* of
   /// reason, which is the part the old `Color? accent` could not carry:
   ///
-  ///  * [StatusTone.neutral] — backlog. 34 films are missing. Worth surfacing,
+  ///  * [StatusTone.neutral]: backlog. 34 films are missing. Worth surfacing,
   ///    not worth colouring; this is the normal resting state of an \*arr.
-  ///  * [StatusTone.warning] — a fault. An indexer is failing, a pool is at 80%.
+  ///  * [StatusTone.warning]: a fault. An indexer is failing, a pool is at 80%.
   ///    A stopped stack is backlog, not a fault: Dockge cannot say why it stopped.
-  ///  * [StatusTone.info] — activity. Bytes are moving, someone is watching.
+  ///  * [StatusTone.info]: activity. Bytes are moving, someone is watching.
   ///
   /// It used to be a raw `Color?`, which conflated *noteworthy* with *amber*:
   /// every flagged metric was painted `AppColors.warning`, so a library with a
@@ -42,7 +42,7 @@ class ServiceKpi {
 
   /// A second line under the figure, in the figure's own words.
   ///
-  /// Only ever the *reason* a number is not what you expect — `client not
+  /// Only ever the *reason* a number is not what you expect: `client not
   /// answering` under an unavailable queue. Not a trend, not a unit, not a
   /// restatement of the label.
   final String? note;
@@ -75,7 +75,7 @@ class ServiceKpi {
   /// Reads **`—`**, and this is the rule the whole constructor exists to
   /// enforce: a number that could not be fetched is not zero. The builders used
   /// to write `_statInt(map) ?? 0`, so a download client that was down drew
-  /// `Queue 0` — indistinguishable from a queue that had just drained, and the
+  /// `Queue 0`: indistinguishable from a queue that had just drained, and the
   /// reading the user would act on is the opposite one. The other outcome was
   /// worse: letting the sub-fetch throw took the entire rail into `AsyncError`
   /// and lost the eight figures the service *could* still answer.
@@ -95,7 +95,7 @@ class ServiceKpi {
        tone = null,
        members = null;
 
-  /// What an unanswered figure prints. An em dash, never `0` and never blank —
+  /// What an unanswered figure prints. An em dash, never `0` and never blank:
   /// a blank cell reads as a layout bug.
   static const String unavailableValue = '—';
 
@@ -105,7 +105,7 @@ class ServiceKpi {
   /// What a screen reader hears for the whole card.
   ///
   /// The em dash is the one character on the rail that assistive technology
-  /// cannot render usefully — VoiceOver reads it as "dash" or skips it — so the
+  /// cannot render usefully: VoiceOver reads it as "dash" or skips it, so the
   /// figure that matters most is the figure that announced worst. Spelled out,
   /// with the reason attached. A floor (`200+`) says `at least 200` for the
   /// same reason ([Lexicon.spokenFigure]).

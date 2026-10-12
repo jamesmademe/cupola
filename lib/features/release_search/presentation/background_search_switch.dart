@@ -19,7 +19,7 @@ final backgroundTaskHygieneProvider = Provider(
 ///
 /// 1. **Cancel every active search.** On the native transport a cancelled task
 ///    reaches a final state, and a final state is the condition under which the
-///    plugin deletes its own record — the one holding the API key. A search left
+///    plugin deletes its own record, the one holding the API key. A search left
 ///    to drain keeps that record until it ends on its own.
 /// 2. **Then persist the flag.** After this the reach resolves to
 ///    `whileOpenSwitchedOff` and nothing new can be handed to the OS.

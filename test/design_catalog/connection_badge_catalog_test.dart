@@ -84,7 +84,7 @@ void main() {
         ),
       ),
       CatalogScene(
-        "label: '' · renders nothing — a single connection grows no badge",
+        "label: '' · renders nothing, a single connection grows no badge",
         (_) => Wrap(
           spacing: 12,
           children: [

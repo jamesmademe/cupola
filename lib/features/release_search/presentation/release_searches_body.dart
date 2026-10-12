@@ -12,7 +12,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Keeps the windows honest while the section is on screen.
 ///
-/// No network of its own — it re-evaluates in-memory grab windows — but it can
+/// No network of its own (it re-evaluates in-memory grab windows), but it can
 /// start a queued search as a consequence, which is reason enough to hold it to
 /// the same rule as everything else: a section nobody is looking at does not get
 /// to begin an indexer search.
@@ -40,7 +40,7 @@ class ReleaseSearchesGroup extends ConsumerWidget {
 
   /// Opens the sheet a tapped notification asked for, once.
   ///
-  /// This is the half of the notification handoff that needs a `BuildContext` —
+  /// This is the half of the notification handoff that needs a `BuildContext`:
   /// see [pendingReleaseSearchJobProvider] for why the tap cannot open the sheet
   /// itself. Cleared *before* showing, so a rebuild while the sheet is up cannot
   /// stack a second one; and post-frame, because opening a route during build is
@@ -49,7 +49,7 @@ class ReleaseSearchesGroup extends ConsumerWidget {
     final pending = ref.watch(pendingReleaseSearchJobProvider);
     if (pending == null) return;
 
-    // Everything happens after the frame — including the clear. Riverpod
+    // Everything happens after the frame, including the clear. Riverpod
     // forbids writing to a provider during build, and a request for a job that
     // no longer exists still has to be cleared or it would be retried forever.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -59,7 +59,7 @@ class ReleaseSearchesGroup extends ConsumerWidget {
       if (job == null) return;
       // Only a job with releases to pick earns the sheet. A stopped search's
       // notice says "Search stopped", not "pick one", and its destination is
-      // the card in this list — verdict, and Search again beside it. Opening a
+      // the card in this list: verdict, and Search again beside it. Opening a
       // picker over an empty or failed result would answer a question the
       // notification never asked.
       if (!job.isGrabbable) return;

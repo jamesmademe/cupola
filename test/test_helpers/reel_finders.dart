@@ -8,13 +8,13 @@ import 'package:reel_text/reel_text.dart';
 /// `find.text` matches a `Text` widget's own `data`, and a rolling line has
 /// none: `ReelText` splits its string into one clipped slot per grapheme and
 /// each slot is its own `Text`. So `find.text('Available')` finds nothing on a
-/// rolled label, while `find.text('R')` cheerfully matches a *slot* — which is
+/// rolled label, while `find.text('R')` cheerfully matches a *slot*, which is
 /// how a per-grapheme renderer turns into a false positive in a test that was
 /// asserting something else entirely.
 ///
 /// Use this wherever a test asserts *content* rather than motion. It matches the
-/// value the user is actually given — the string on a `Text`, or a `ReelText`'s
-/// target text and spoken label — so a test does not have to know which sites in
+/// value the user is actually given: the string on a `Text`, or a `ReelText`'s
+/// target text and spoken label, so a test does not have to know which sites in
 /// the app happen to roll, and does not break when one starts or stops.
 ///
 /// Assertions genuinely about the roll should reach for [ReelText] by type
@@ -22,7 +22,7 @@ import 'package:reel_text/reel_text.dart';
 Finder findLine(String text) =>
     _match((value) => value == text, 'with value "$text"');
 
-/// [findLine], matching on a substring — the counterpart to
+/// [findLine], matching on a substring: the counterpart to
 /// `find.textContaining`.
 Finder findLineContaining(String text) =>
     _match((value) => value.contains(text), 'containing "$text"');
@@ -35,8 +35,8 @@ Finder _match(
 
   if (widget is ReelText) {
     // Both, not one or the other: a rolled line's painted string and its
-    // spoken string are allowed to differ — an eyebrow is uppercased for the
-    // eye and expanded for the ear — and a test may reasonably assert either.
+    // spoken string are allowed to differ (an eyebrow is uppercased for the
+    // eye and expanded for the ear), and a test may reasonably assert either.
     return [
       widget.text,
       widget.semanticsLabel,
@@ -46,7 +46,7 @@ Finder _match(
   if (widget is Text) {
     // Skip the slots. `ReelText` renders one `Text` per grapheme, so a
     // single-character value like "4" matches the line *and* the one slot
-    // inside it — which is how this finder reported two widgets where the
+    // inside it, which is how this finder reported two widgets where the
     // screen shows one number.
     var insideReel = false;
     element.visitAncestorElements((ancestor) {

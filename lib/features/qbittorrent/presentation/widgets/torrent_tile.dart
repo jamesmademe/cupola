@@ -8,9 +8,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A torrent, on the app's one queue plate.
 ///
-/// This used to be a full second implementation of [DownloadQueueTile] — 267
+/// This used to be a full second implementation of [DownloadQueueTile]: 267
 /// lines with its own radius, padding, leading glyph tile, state chip, progress
-/// bar and speed labels — which is the exact duplication the shared widget was
+/// bar and speed labels, which is the exact duplication the shared widget was
 /// written to prevent, and it had already drifted in the ways duplicates do: no
 /// semantics container at all (a screen reader walked a torrent as four unlabelled
 /// fragments), a state chip painted from raw `AppColors` constants that measure
@@ -19,8 +19,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// What is left is the mapping, which is the only part that was ever
 /// qBittorrent's: field names, the state vocabulary, and the two transfer rates.
-/// Three things differ between clients on this plate — the label chip, the
-/// metrics and the menu items — and all three of qBittorrent's are below.
+/// Three things differ between clients on this plate: the label chip, the
+/// metrics and the menu items, and all three of qBittorrent's are below.
 class TorrentTile extends StatelessWidget {
   final Torrent torrent;
   final bool selected;
@@ -32,8 +32,8 @@ class TorrentTile extends StatelessWidget {
   /// A slot rather than a menu built here: decision 28 puts the per-torrent
   /// commands behind a 44pt trailing target and leaves long-press to selection,
   /// and the commands themselves need the screen's `ref` to dispatch. Nothing
-  /// passes it yet — the qBittorrent screen still reaches its commands through
-  /// the detail page's Actions tab — so the slot exists and stays empty rather
+  /// passes it yet: the qBittorrent screen still reaches its commands through
+  /// the detail page's Actions tab, so the slot exists and stays empty rather
   /// than the plate growing a menu it cannot wire.
   final Widget? actions;
 
@@ -75,7 +75,7 @@ class TorrentTile extends StatelessWidget {
             label: '↓ ${torrent.dlSpeedFormatted}',
             accented: true,
             // The arrow is the whole meaning of this figure and screen readers
-            // do not agree on what to do with it — some skip it, some say
+            // do not agree on what to do with it: some skip it, some say
             // "downwards arrow". Spelt out, it is a sentence.
             spoken: 'downloading at ${torrent.dlSpeedFormatted}',
           ),
@@ -94,7 +94,7 @@ class TorrentTile extends StatelessWidget {
 
   /// Whether this state has a transfer to draw a bar for.
   ///
-  /// A complete torrent has no bar either — it is seeding, and a full bar under
+  /// A complete torrent has no bar either: it is seeding, and a full bar under
   /// a seeding row says "finishing" about something that finished.
   bool _drawsBar(TorrentState state) =>
       torrent.progress < 1 &&
@@ -105,21 +105,21 @@ class TorrentTile extends StatelessWidget {
 
 /// qBittorrent's ten states, in the app's five tones.
 ///
-/// The private tile painted these from the palette directly — accent for
+/// The private tile painted these from the palette directly: accent for
 /// downloading, `AppColors.success` for seeding, `AppColors.warning` for
-/// stalled — which is both a contrast bug and a vocabulary one. Going through
+/// stalled, which is both a contrast bug and a vocabulary one. Going through
 /// [StatusTone] means the tone rule decides, in the five arms it has everywhere
 /// else:
 ///
 ///  * **green** for seeding, the only state that means "this one is done";
-///  * **amber** for stalled and error — both *faults*: something that should be
+///  * **amber** for stalled and error, both *faults*: something that should be
 ///    moving and is not. Red would claim the client did not answer, and it did:
 ///    it answered by telling us the torrent is stuck;
 ///  * **blue** for a live download, which is work in flight, and for a
 ///    torrent queued for its turn: it is in line, as a queued grab is in an
 ///    arr's queue, a queued job in SABnzbd's and NZBGet's. It used to be
 ///    neutral here and in Transmission alone, so one word read in two tones;
-///  * **neutral** for paused and unknown — deliberate stops, which are the
+///  * **neutral** for paused and unknown: deliberate stops, which are the
 ///    normal resting state of a torrent client and must not compete for
 ///    attention with the two states that are actually wrong.
 ///

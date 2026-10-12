@@ -198,8 +198,8 @@ void main() {
       expect(find.text('Rejected'), findsOneWidget);
       // A bare red block glyph became a labelled StatusBadge, so the state is
       // words as well as colour and it reads identically to every other row.
-      // The colour is gone now — a release the user rejected is the blocklist
-      // obeying, not a fault — so the glyph carries what happened on its own.
+      // The colour is gone now: a release the user rejected is the blocklist
+      // obeying, not a fault, so the glyph carries what happened on its own.
       expect(find.text('Blocked'), findsOneWidget);
       expect(find.byIcon(Icons.block_rounded), findsOneWidget);
     });
@@ -441,8 +441,8 @@ void main() {
           ),
         );
 
-        // The room's own amber — the day room's is deeper than the dark
-        // room's — walked over its wash on the tile.
+        // The room's own amber (the day room's is deeper than the dark
+        // room's) walked over its wash on the tile.
         expect(
           chipInk(tester, 'Warning'),
           ServiceTheme.onTint(
@@ -745,7 +745,7 @@ void main() {
       (tester) async {
         // Decision `act`: blocklisting a HISTORY record is
         // `POST /api/{v}/history/failed/{id}` and no client method calls it,
-        // while the queue's Blocklist indexes the queue — sending a history id
+        // while the queue's Blocklist indexes the queue. Sending a history id
         // there would act on a different record. So the failed row's only way
         // out is the import wizard, seeded from `data.droppedPath`: the read
         // that made this row actionable at all.
@@ -859,7 +859,7 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text('7.5\u00A0GB · 12\u00A0min left'), findsOneWidget);
-          // The release is not lost — it moved to where prose belongs, under
+          // The release is not lost: it moved to where prose belongs, under
           // the title.
           expect(
             find.text('Dune.Part.Two.2024.2160p.WEB-DL-GROUP'),
@@ -872,7 +872,7 @@ void main() {
         tester,
       ) async {
         // The gate was `isDesktopShell && width >= 1100`, so dragging a window
-        // under 1100 swapped the whole list for phone cards — a different
+        // under 1100 swapped the whole list for phone cards, a different
         // information architecture at a size reached by moving a mouse. The
         // size-class rule is the opposite: fewer parts, never smaller ones.
         await _onDesktop(() async {
@@ -931,7 +931,7 @@ void main() {
       // Regression: the sheet's buttons popped the sheet and then ran the
       // action with the *sheet's own* context. `showAppConfirmDialog` still
       // opened (its navigator is captured synchronously), but by the time the
-      // user confirmed, the sheet route was disposed — so every
+      // user confirmed, the sheet route was disposed, so every
       // `if (!context.mounted) return;` guard in ActivityActions
       // short-circuited and the mutation never ran. No request, no snackbar,
       // no error. The row overflow menu passes the tile's context and worked,
@@ -974,7 +974,7 @@ void main() {
       await tester.tap(find.text('Remove from queue'));
       await tester.pumpAndSettle();
 
-      // The confirmation still appears — closing the sheet must not take the
+      // The confirmation still appears: closing the sheet must not take the
       // dialog with it.
       expect(find.text('Remove from queue?'), findsOneWidget);
 
@@ -1005,7 +1005,7 @@ class _RecordingRadarrService extends FakeRadarrService {
 }
 
 /// The table draws on a desktop build only, and the override has to be undone
-/// inside the test body — `flutter_test` asserts on it before tear-downs run.
+/// inside the test body: `flutter_test` asserts on it before tear-downs run.
 Future<void> _onDesktop(Future<void> Function() body) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
   try {

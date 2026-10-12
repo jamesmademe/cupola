@@ -123,7 +123,7 @@ String _iconForSource(String source) {
     case 'metacritic':
       return 'MC';
     // Radarr and Sonarr send `rottenTomatoes`, not `rotten`, and they send
-    // `trakt` — neither of which used to match, so both fell to the default
+    // `trakt`, neither of which used to match, so both fell to the default
     // branch and became the first two letters of the key: `RO` and `TR`.
     case 'rotten':
     case 'rottentomatoes':

@@ -28,7 +28,7 @@ class StreamLibrary {
   ///
   /// A Jellyfin `VirtualFolderInfo.ItemId` (a GUID) or a Plex section `key` (a
   /// numeric-looking string that the official schema explicitly declines to
-  /// guarantee is numeric). Modelled as [String] for that reason — this is the
+  /// guarantee is numeric). Modelled as [String] for that reason: this is the
   /// value that forced `idExtractor` off `int`.
   final String id;
 

@@ -16,7 +16,7 @@ String mapImportError(Object error, ServiceKey service) {
   final title = service.title;
   if (error is DioException) {
     // A receive timeout means the connection succeeded and $title simply took
-    // too long to answer — telling the user to check the URL sends them after
+    // too long to answer. Telling the user to check the URL sends them after
     // the wrong problem.
     if (error.type == DioExceptionType.receiveTimeout) {
       return '$title took too long to answer. Scanning a large folder, or one '

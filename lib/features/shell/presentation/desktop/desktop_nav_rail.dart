@@ -384,7 +384,7 @@ class _RailItemState extends State<_RailItem> {
     // The outline in both states, never a filled glyph. The pill behind it
     // already says which section is current; filling the glyph too said it
     // twice, and on a rail of four the one solid shape outweighed everything
-    // else in the shell. The phone's bar keeps the fill — there the label and
+    // else in the shell. The phone's bar keeps the fill: there the label and
     // the fill are the whole of the selected state.
     //
     // Weight 300 through Material Symbols' `wght` axis: Material Icons has one
@@ -473,7 +473,7 @@ class _RailItemState extends State<_RailItem> {
   }
 }
 
-/// The count, on the ink disc — never a status tone, never a section's colour.
+/// The count, on the ink disc: never a status tone, never a section's colour.
 class _RailBadge extends StatelessWidget {
   const _RailBadge({required this.label});
 
@@ -500,7 +500,7 @@ class _RailBadge extends StatelessWidget {
       key: const ValueKey('desktop-rail-badge'),
       // 18, not the 15 this was. DESIGN.md's type floor is enforced rather than
       // asserted, and it records that this badge grew precisely so it would not
-      // need a 9px numeral — the phone's did, and the rail's was left behind.
+      // need a 9px numeral: the phone's did, and the rail's was left behind.
       // Where the geometry cannot take 11px, the geometry yields.
       //
       // A floor, not a height, as the phone bar's badge: at 200% a fixed 18pt

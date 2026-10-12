@@ -61,7 +61,7 @@ void main() {
     // Regression guard for the P0 found in QA: the tile passed both
     // `borderRadius` and `shape` to Material, which trips
     // `!(shape != null && borderRadius != null)` and blanked the entire
-    // qBittorrent list. Only mounting the widget catches a build assertion —
+    // qBittorrent list. Only mounting the widget catches a build assertion;
     // the provider tests never did.
     testWidgets('builds without tripping a Material assertion', (tester) async {
       await _pump(tester, TorrentTile(torrent: _torrent()));
@@ -73,8 +73,8 @@ void main() {
 
     // The rule this whole file now exists to hold: **one plate, four clients.**
     // qBittorrent carried a private second implementation of
-    // `DownloadQueueTile` — the precise duplication that widget was written to
-    // prevent — and it had drifted into its own radius, its own padding and no
+    // `DownloadQueueTile`, the precise duplication that widget was written to
+    // prevent; it had drifted into its own radius, its own padding and no
     // semantics container at all. A tile that stops rendering through the
     // shared plate is a third copy in the making, whatever it looks like.
     testWidgets('renders through the shared queue plate', (tester) async {
@@ -139,7 +139,7 @@ void main() {
     });
 
     // The tone rule, on the one state where it is least intuitive. Red in this
-    // app means exactly one thing — a connection that did not answer — and a
+    // app means exactly one thing: a connection that did not answer, and a
     // torrent qBittorrent reports as errored is the opposite of that: the
     // client answered, and told us the transfer is stuck. That is a fault, and
     // faults are amber. The private tile painted `colorScheme.error` here.
@@ -155,7 +155,7 @@ void main() {
     });
 
     // Seeding is the one qBittorrent state that means "this one is done", and
-    // queued/paused are backlog — the resting state of every torrent client,
+    // queued/paused are backlog: the resting state of every torrent client,
     // which must not compete for attention with the two states that are wrong.
     testWidgets('tones the calm states green, blue and neutral', (
       tester,
@@ -205,7 +205,7 @@ void main() {
     });
 
     // The row used to speak as four unrelated fragments, because the private
-    // tile declared no semantics container — and its two transfer rates were
+    // tile declared no semantics container, and its two transfer rates were
     // carried by an arrow glyph that screen readers either skip or read as the
     // name of the character. A rate a sighted user can see and a screen-reader
     // user cannot is a missing feature, not a missing flourish.

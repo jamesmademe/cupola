@@ -197,7 +197,7 @@ void main() {
     // `/torrents/start` and `/torrents/stop` arrived with qBittorrent 5.1's
     // pause-to-stop rename. A 4.x or 5.0 server has never heard of them and
     // answers 404, so the pause and resume buttons are controls that fail on
-    // every install older than 5.1 — the one failure mode this app is not
+    // every install older than 5.1: the one failure mode this app is not
     // allowed to ship. The legacy spelling is the fallback, not the default:
     // `/pause` and `/resume` are deprecated from 5.1 on and will go.
     test('pauseTorrents falls back to /pause when /stop is unknown', () async {

@@ -12,15 +12,15 @@ Rendered from `lib/core/widgets/shimmer_placeholder.dart` (`ShimmerPlaceholder`,
 
 ## Presets
 
-- `AppSkeleton.listRows()` — `ShimmerList`: 5 cards 104pt tall by default (the settled height of an activity tile, so nothing jumps on load), 8pt apart, `AppSpacing.lg` padding. `ShimmerList.page` is the scrolling twin for a skeleton that is the whole page.
-- `ListRowsShimmer()` — dashboard section rows: 4 rows 60pt tall by default, `AppSpacing.lg` side padding, `AppSpacing.sm` below each; square corners (the bare `ShimmerPlaceholder` constructor, no radius).
-- `AppSkeleton.posterRow()` — 168pt tall at 2:3 (112 wide), `AppSpacing.md` apart, `AppSpacing.lg` side padding, 6 posters by default, not scrollable.
-- `AppSkeleton.posterGrid()` — `ShimmerGrid`: 3 columns at 2:3, 12pt gaps, `AppSpacing.lg` padding, 9 cells by default. Needs a bounded height from its host — it is a plain `GridView.builder`, not shrink-wrapped.
-- `AppSkeleton.detailBody()` — a 220pt backdrop band (no radius), then a 96 × 144 `AppRadius.borderRadiusMd` poster beside lines of 200 × 22, 120 and 160, then after `AppSpacing.xl` two full-width lines and one of 240.
+- `AppSkeleton.listRows()` (`ShimmerList`): 5 cards 104pt tall by default (the settled height of an activity tile, so nothing jumps on load), 8pt apart, `AppSpacing.lg` padding. `ShimmerList.page` is the scrolling twin for a skeleton that is the whole page.
+- `ListRowsShimmer()`: dashboard section rows: 4 rows 60pt tall by default, `AppSpacing.lg` side padding, `AppSpacing.sm` below each; square corners (the bare `ShimmerPlaceholder` constructor, no radius).
+- `AppSkeleton.posterRow()`: 168pt tall at 2:3 (112 wide), `AppSpacing.md` apart, `AppSpacing.lg` side padding, 6 posters by default, not scrollable.
+- `AppSkeleton.posterGrid()` (`ShimmerGrid`): 3 columns at 2:3, 12pt gaps, `AppSpacing.lg` padding, 9 cells by default. Needs a bounded height from its host; it is a plain `GridView.builder`, not shrink-wrapped.
+- `AppSkeleton.detailBody()`: a 220pt backdrop band (no radius), then a 96 × 144 `AppRadius.borderRadiusMd` poster beside lines of 200 × 22, 120 and 160, then after `AppSpacing.xl` two full-width lines and one of 240.
 
 ## Consumer provides
 
-Only counts and heights — `AppSkeleton`'s presets take no colour or shape parameters.
+Only counts and heights: `AppSkeleton`'s presets take no colour or shape parameters.
 
 ## Semantics
 

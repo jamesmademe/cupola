@@ -1,5 +1,5 @@
 /// Runs a section search: null for an empty query (nothing was asked), the
-/// answer otherwise — and the failure, rethrown, when there was no answer.
+/// answer otherwise, and the failure, rethrown, when there was no answer.
 ///
 /// It used to catch every failure into `[]`, so a Radarr that did not answer,
 /// or refused the key, drew "No results" under a search nobody ran. "No

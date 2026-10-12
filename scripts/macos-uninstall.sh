@@ -17,14 +17,14 @@ APP_PATH="/Applications/${APP_NAME}.app"
 # App bundles that have shipped under a different name than the current one.
 # The 2026-08 rebrand from Seekarr to Cupola changed the bundle filename
 # itself (not just the identifier), so a Cupola install does not overwrite
-# Seekarr.app — it sits in /Applications alongside it until removed by name.
+# Seekarr.app. It sits in /Applications alongside it until removed by name.
 LEGACY_APP_PATHS=(
   "/Applications/Seekarr.app"
 )
 
 # Bundle IDs that have shipped over the app's history, newest first. Clear
-# them all so stale data from older builds — the pre-rebrand
-# `com.labs.matthw.seekarr` and its two predecessors — doesn't survive a
+# them all so stale data from older builds (the pre-rebrand
+# `com.labs.matthw.seekarr` and its two predecessors) doesn't survive a
 # reinstall. Append-only: the rebrand is exactly the moment this data is
 # most likely to be orphaned, not a trigger to prune the list.
 BUNDLE_IDS=(

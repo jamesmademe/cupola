@@ -117,7 +117,7 @@ void main() {
     });
 
     test('a refusal is a fault, not an outage', () {
-      // The server answered — it just said no. Red here would send the user
+      // The server answered; it just said no. Red here would send the user
       // auditing an address that is correct.
       final lane = GlobalSearchServiceResults.fault(
         (instance: _fourK, name: ''),

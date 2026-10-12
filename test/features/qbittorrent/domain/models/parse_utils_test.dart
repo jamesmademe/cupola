@@ -190,7 +190,7 @@ void main() {
 
     test('renders local YYYY-MM-DD HH:MM with zero-padding', () {
       // 2026-06-15 14:30:00 UTC. We don't assert the hour exactly (depends on
-      // the test machine's timezone) — we just verify the format shape and
+      // the test machine's timezone), so we just verify the format shape and
       // the date components.
       final epoch =
           DateTime.utc(2026, 6, 15, 14, 30).millisecondsSinceEpoch ~/ 1000;

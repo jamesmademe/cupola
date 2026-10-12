@@ -16,7 +16,7 @@ typedef Crumb = ({String label, String? location});
 /// and a restart all arrive with nothing but the path, and a breadcrumb that
 /// went blank in those cases would take the window's title with it.
 ///
-/// The trail is deliberately shallow — section, service, area — and stops
+/// The trail is deliberately shallow (section, service, area) and stops
 /// there. Nobody navigates by the fourth crumb, and an item's own name is
 /// already the largest thing on the page under it.
 abstract final class ShellBreadcrumb {
@@ -129,7 +129,7 @@ abstract final class ShellBreadcrumb {
   ///
   /// Inside a service the third crumb *is* a tab, so it takes the tab's own
   /// label rather than a title-cased guess at the segment. The guess was not
-  /// merely lucky — it was already wrong twice: nothing knew `vms` or `rss`,
+  /// merely lucky. It was already wrong twice: nothing knew `vms` or `rss`,
   /// so the crumb printed `Vms` and `Rss` beside bars that say VMs and RSS.
   static String _label(String segment, {ServiceKey? service}) {
     if (service != null) {

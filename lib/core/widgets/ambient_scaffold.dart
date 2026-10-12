@@ -31,7 +31,7 @@ class AmbientScaffold extends StatelessWidget {
   /// Whether the body is centred in a reading-width well on a desktop window.
   ///
   /// True for every screen, because a dashboard stretched across a 27-inch
-  /// display is the same information with the reading line broken — see
+  /// display is the same information with the reading line broken; see
   /// [DesktopContentWell]. Pass false only for a body that genuinely owns the
   /// whole window: a full-bleed console, a map, a video surface.
   ///

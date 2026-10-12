@@ -50,8 +50,8 @@ class ProwlarrSelectOption {
 /// Prowlarr describes every indexer-specific setting (base URL, cookie, API
 /// key, seed ratio…) through this one shape, so the edit form is generated from
 /// it rather than hand-written per indexer. [raw] is kept verbatim because a
-/// save must send the whole field object back — including keys this client does
-/// not model — with only [value] replaced.
+/// save must send the whole field object back, including keys this client does
+/// not model, with only [value] replaced.
 class ProwlarrField {
   final String name;
   final String? label;
@@ -678,7 +678,7 @@ class ProwlarrHistoryPage {
 /// They all share one server-side contract (`GET /<path>`, `/<path>/schema`,
 /// `POST`, `PUT /<path>/{id}`, `DELETE /<path>/{id}`, `/<path>/test`,
 /// `/<path>/testall`) and describe their own settings through `fields`, so this
-/// client models them once — the differences are the handful of typed
+/// client models them once: the differences are the handful of typed
 /// properties named in [ProwlarrProviderResource].
 enum ProwlarrProviderKind {
   application(
@@ -770,7 +770,7 @@ class ProwlarrProviderResource {
   /// Applications only: `disabled`, `addOnly` or `fullSync`.
   String? get syncLevel => stringOrNull(raw['syncLevel']);
 
-  /// Applications have no `enable` flag of their own — a sync level of
+  /// Applications have no `enable` flag of their own; a sync level of
   /// `disabled` is what "off" means. Download clients do have one.
   bool get isActive {
     final level = syncLevel;

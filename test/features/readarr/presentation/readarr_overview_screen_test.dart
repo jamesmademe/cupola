@@ -179,9 +179,9 @@ void main() {
           {
             'book': {'title': 'James'},
             // The spelling Readarr actually sends. Every fixture on this
-            // screen used to say `downloadFolderImported` — which is how
+            // screen used to say `downloadFolderImported`, which is how
             // Radarr and Sonarr spell an import and a string Readarr never
-            // writes — so the suite was green on a screen that had never seen
+            // writes, so the suite was green on a screen that had never seen
             // a Readarr record.
             'eventType': 'bookFileImported',
             'date': today
@@ -415,7 +415,7 @@ class _FailingHistoryReadarr extends _ScriptedReadarr {
 /// A Readarr whose root folders answer once and then stop.
 ///
 /// The wire shape of a server that was reachable when the page loaded and is
-/// not when the user pulls — which is the only way to get an `AsyncError`
+/// not when the user pulls, which is the only way to get an `AsyncError`
 /// carrying a retained value.
 class _FlakyRootFoldersReadarr extends _ScriptedReadarr {
   _FlakyRootFoldersReadarr({super.rootFolders});

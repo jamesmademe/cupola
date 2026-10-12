@@ -275,7 +275,7 @@ Widget _phones(List<Widget> screens) => Row(
 );
 
 /// Types [text] into the first text field below it once it has laid out, the
-/// way a user would — the scaffold's field owns its own controller, so a
+/// way a user would: the scaffold's field owns its own controller, so a
 /// preset query would leave the field blank.
 class _Typed extends StatefulWidget {
   const _Typed({required this.text, required this.child});

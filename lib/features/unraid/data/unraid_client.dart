@@ -38,7 +38,7 @@ class UnraidException
   /// Unraid answered `FORBIDDEN`: the key is valid and may not do this.
   ///
   /// Its own flag because the message is "Forbidden resource", which the
-  /// generic message heuristic folds into *unauthorized* — and a key that
+  /// generic message heuristic folds into *unauthorized*, and a key that
   /// works but may not write is not a key that does not work.
   final bool forbidden;
 
@@ -55,8 +55,8 @@ class UnraidException
 /// refused permission, so the status says nothing. The error's
 /// `extensions.code` does: `FORBIDDEN` (Nest's `ForbiddenException`, message
 /// "Forbidden resource") is a valid key that may not do this, and
-/// `UNAUTHENTICATED` is a key that does not work. Anything else — an older
-/// server with no code — falls back to reading the message.
+/// `UNAUTHENTICATED` is a key that does not work. Anything else (an older
+/// server with no code) falls back to reading the message.
 @visibleForTesting
 UnraidException unraidGraphQlError(Object? error) {
   final message = error is Map
@@ -84,7 +84,7 @@ UnraidException unraidGraphQlError(Object? error) {
 /// Client for the Unraid GraphQL API.
 ///
 /// Authenticates with the `x-api-key` header (security §10.2 #10). Every
-/// dynamic *value* is passed through the GraphQL `variables` map — never
+/// dynamic *value* is passed through the GraphQL `variables` map, never
 /// string-interpolated into the query (§10.2 #11).
 ///
 /// The one document that is not a compile-time constant is [runVmAction]'s,
@@ -101,7 +101,7 @@ UnraidException unraidGraphQlError(Object? error) {
 class UnraidClient {
   /// [certFingerprint], when non-empty, is a self-signed certificate the user
   /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
-  /// when [dio] is injected — a caller supplying its own transport owns its
+  /// when [dio] is injected: a caller supplying its own transport owns its
   /// TLS behaviour too.
   UnraidClient({
     required String url,
@@ -128,8 +128,8 @@ class UnraidClient {
   /// Decodes a GraphQL response body, or throws an [UnraidException] the caller
   /// can classify.
   ///
-  /// A 200 carrying HTML — the URL points at some other web app, or at a reverse
-  /// proxy's landing page — used to throw a raw `TypeError`/`FormatException`
+  /// A 200 carrying HTML (the URL points at some other web app, or at a reverse
+  /// proxy's landing page) used to throw a raw `TypeError`/`FormatException`
   /// that was neither an `UnraidException` nor classifiable, so the UI fell back
   /// to a generic failure. `notFound` says the useful thing: the API is not here.
   static Map<String, dynamic> _decodeGraphQl(dynamic raw) {
@@ -200,8 +200,8 @@ class UnraidClient {
   // Only the fields the committed SDL declares AND `UnraidShare` reads. A
   // GraphQL server does not null out an unknown field, it rejects the whole
   // document: one speculative field here takes the Shares tab down entirely,
-  // which is how `allocator`, `splitLevel`, `floor`, `cow` and `color` — none
-  // of them in the SDL, none of them parsed — got removed again.
+  // which is how `allocator`, `splitLevel`, `floor`, `cow` and `color` (none
+  // of them in the SDL, none of them parsed) got removed again.
   static const _sharesQuery =
       'query { shares { id name used size cache comment luksStatus } }';
 
@@ -224,7 +224,7 @@ class UnraidClient {
   /// Every document this client can send, keyed by the call that sends it.
   ///
   /// The contract test walks these and asserts each selected field against the
-  /// committed SDL. A hand-maintained list of needles cannot do that — it only
+  /// committed SDL. A hand-maintained list of needles cannot do that: it only
   /// proves the fields somebody remembered to list are still there, which is
   /// how a `shares` selection of five fields nobody had written down shipped
   /// past a green test and would have taken the whole tab down on the first
@@ -309,7 +309,7 @@ class UnraidClient {
   }
 
   /// Runs [action] on one VM. **False means the daemon ran the mutation and
-  /// refused it** — already stopping, libvirt busy, a privilege the coarse
+  /// refused it**: already stopping, libvirt busy, a privilege the coarse
   /// capability check cannot see. Callers must report that; it never throws.
   Future<bool> runVmAction(String id, UnraidVmAction action) async {
     final data = await _query(vmActionDocument(action), variables: {'id': id});

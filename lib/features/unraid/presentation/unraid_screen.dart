@@ -39,7 +39,7 @@ enum UnraidSection {
   final String label;
 }
 
-/// One section of Unraid — the array's disks, or the Docker containers.
+/// One section of Unraid: the array's disks, or the Docker containers.
 ///
 /// **It used to be both**, one under the other on a single page at
 /// `/dashboard/unraid`. Unraid's bar draws them as separate destinations, so
@@ -57,8 +57,8 @@ enum UnraidSection {
 ///
 /// **Two pages write; Array, Docker and Shares only read.** The contract this
 /// app is written against (`test/fixtures/unraid/schema.graphql`) declares two
-/// mutations Cupola uses — `vm { start stop resume … }` and
-/// `archiveNotification` — and those are the VMs and Notifications writes,
+/// mutations Cupola uses: `vm { start stop resume … }` and
+/// `archiveNotification`, and those are the VMs and Notifications writes,
 /// each gated on the key's scope (`unraid_capability.dart`). Container writes
 /// stay absent on purpose: decision 14 draws Stop and Restart a container, but
 /// the contract declares no container mutation, and guessing a name would ship
@@ -67,14 +67,14 @@ enum UnraidSection {
 /// `UnraidDockerContainer.condition` for the half that *is* readable from what
 /// the API already returns.
 class UnraidScreen extends ConsumerWidget {
-  /// The array half — Unraid's Array tab.
+  /// The array half: Unraid's Array tab.
   const UnraidScreen.array({
     super.key,
     this.showAppBar = true,
     this.topPadding = 0,
   }) : section = UnraidSection.array;
 
-  /// The container half — Unraid's Docker tab.
+  /// The container half: Unraid's Docker tab.
   const UnraidScreen.docker({
     super.key,
     this.showAppBar = true,
@@ -117,7 +117,7 @@ class UnraidScreen extends ConsumerWidget {
     final settings = ref.watch(currentSettingsProvider);
     // Checked **before** any provider is read, not after: `unraidClientProvider`
     // throws when Unraid is not configured, and a `FutureProvider` that throws
-    // is a failed provider — it schedules a retry with backoff for a condition
+    // is a failed provider: it schedules a retry with backoff for a condition
     // no waiting changes, and surfaces in tests as a pending timer.
     final isConfigured = settings.isServiceConfigured(ServiceKey.unraid);
 
@@ -248,7 +248,7 @@ class _UnraidSection extends ConsumerWidget {
   ];
 }
 
-/// `14 containers · 12 running · 1 unhealthy` — only the arms that are non-zero.
+/// `14 containers · 12 running · 1 unhealthy`: only the arms that are non-zero.
 ///
 /// A tally that printed every arm would read "0 unhealthy" on a healthy server,
 /// which is a sentence about a problem where there is none.
@@ -400,7 +400,7 @@ class _VmTile extends ConsumerWidget {
     try {
       // **The boolean is the answer, not the absence of a throw.** Unraid
       // answers 200 with `{"vm":{"stop":false}}` when it ran the mutation and
-      // refused it — the VM is already stopping, libvirt is busy, the key has
+      // refused it: the VM is already stopping, libvirt is busy, the key has
       // a privilege the coarse capability check cannot see. Ignoring it
       // refreshed the list and told the user nothing, which reads exactly like
       // a tap that did not register.
@@ -623,7 +623,7 @@ class _UnraidTile extends StatelessWidget {
   final String detail;
   final Widget? trailing;
 
-  // One sentence for the row, and the parts it is made of silenced — but only
+  // One sentence for the row, and the parts it is made of silenced, but only
   // the parts, not the trailing control. `ExcludeSemantics` around the whole
   // `ListTile` would take the Archive and start/stop buttons with it, and a
   // bare `container: true` leaves the title and detail as their own stops, so
@@ -715,7 +715,7 @@ class _DiskTile extends StatelessWidget {
       surface: colorScheme.surface,
     );
     // The plate is a 12% accent wash, so its glyph is ink on that composite
-    // rather than on the surface — seven of the seventeen accents lose the
+    // rather than on the surface: seven of the seventeen accents lose the
     // contrast check otherwise, and Unraid's orange is one of them.
     final plateInk = ServiceTheme.onTint(
       ServiceKey.unraid.accent,
@@ -725,7 +725,7 @@ class _DiskTile extends StatelessWidget {
 
     return Semantics(
       container: true,
-      // Three fragments — a device name, a `DISK_OK` token and a bare numeral —
+      // Three fragments (a device name, a `DISK_OK` token and a bare numeral)
       // read as three unrelated stops. One sentence, in the order a person
       // would say it, with the unit spoken rather than glyphed.
       label: [
@@ -865,7 +865,7 @@ class _ContainerTile extends StatelessWidget {
   ///
   /// A tone-keyed icon can only answer one picture for the four amber states,
   /// and "unhealthy while up" and "OOM-killed an hour ago" are not the same
-  /// picture — the first is a warning about something running, the second is a
+  /// picture: the first is a warning about something running, the second is a
   /// thing that is down.
   IconData get _glyph => switch (container.condition) {
     UnraidContainerCondition.running => Icons.play_circle_rounded,
@@ -884,7 +884,7 @@ class _ContainerTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     // Decision 15 in one line: green for up and healthy, amber for a fault the
     // server told us about, neutral for a stop somebody chose. The tone comes
-    // from the parsed condition — the row used to paint everything that was not
+    // from the parsed condition: the row used to paint everything that was not
     // `running` in the dim foreground, so an OOM kill and a deliberate stop
     // were the same colour and the same words.
     final tone = statusToneColor(

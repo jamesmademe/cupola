@@ -55,7 +55,7 @@ void main() {
   // /activity is a control room, not a readout: the same service this provider
   // hands out is what an auto-search and a queue removal are sent through. It
   // held the first one it ever resolved, and `watchApiClient` closes the Dio of
-  // the client it replaces — so after a lens move a write went to a shut
+  // the client it replaces, so after a lens move a write went to a shut
   // transport, or to the server the user had just navigated away from.
   test('the Activity service follows the lens', () async {
     final container = await _container();

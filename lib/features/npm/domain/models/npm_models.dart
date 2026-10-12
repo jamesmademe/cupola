@@ -83,11 +83,11 @@ class NpmAuditEntry {
   }
 }
 
-/// `GET /api/` — the unauthenticated health document.
+/// `GET /api/`: the unauthenticated health document.
 ///
 /// The only response that proves an Nginx Proxy Manager backend is at the other
 /// end. A bare 200 does not: the admin port serves a single-page app through
-/// `try_files … /index.html`, so almost any path returns 200 HTML — including
+/// `try_files … /index.html`, so almost any path returns 200 HTML, including
 /// against a wrong port, a wrong host, or an entirely different web server.
 class NpmServerInfo {
   const NpmServerInfo({
@@ -188,14 +188,14 @@ class NpmProxyHost {
   /// `meta.nginx_online`.
   ///
   /// **Not a live health signal, and must never be rendered as one.** NPM
-  /// writes this only from `internalNginx.configure()` — on create, on updating
+  /// writes this only from `internalNginx.configure()`: on create, on updating
   /// an already-enabled host, and on enable. Nothing polls, nothing re-checks.
   /// A host whose backend died an hour ago still reads true here, and a host
   /// that failed to load stays false until someone edits it again.
   ///
   /// So the honest reading is "nginx refused this configuration the last time
-  /// it was asked to load it", which is genuinely useful — it is invisible
-  /// everywhere else and it means the hostname is not being served — but it is
+  /// it was asked to load it", which is genuinely useful: it is invisible
+  /// everywhere else and it means the hostname is not being served, but it is
   /// a config verdict, not an uptime probe. Calling it "Online" in the UI would
   /// promise monitoring this app does not do.
   final bool configLoaded;
@@ -298,7 +298,7 @@ class NpmCertificate {
   ///
   /// **Truncated toward zero, so it cannot be used to ask whether a
   /// certificate has lapsed.** `Duration.inDays` on a date six hours in the
-  /// past is 0, not -1, which makes `days < 0` blind for a full day — and that
+  /// past is 0, not -1, which makes `days < 0` blind for a full day, and that
   /// day is exactly the one somebody opens the app on. [hasExpired] is the
   /// question; this is only the magnitude.
   int? daysUntilExpiry(DateTime now) {
@@ -311,8 +311,8 @@ class NpmCertificate {
   ///
   /// A date comparison rather than a day count, for the reason spelled out on
   /// [daysUntilExpiry]: the truncated count says 0 for the whole twenty-four
-  /// hours after a certificate lapses, and 0 reads as "expires today" — a
-  /// deadline — about something every browser is already refusing.
+  /// hours after a certificate lapses, and 0 reads as "expires today", a
+  /// deadline, about something every browser is already refusing.
   ///
   /// False for an undated certificate: no date, no claim in either direction.
   bool hasExpired(DateTime now) {
@@ -322,11 +322,11 @@ class NpmCertificate {
 
   /// Certificates worth surfacing. Let's Encrypt renews at 30 days out, so a
   /// shorter window than that would only ever fire on one that is already
-  /// failing to renew — which is exactly the case this is for.
+  /// failing to renew, which is exactly the case this is for.
   ///
   /// **Deliberately still true for a lapsed certificate.** This is the "needs
   /// a human" window, and the Dashboard's decision feed
-  /// (`_expiringCertificateDecisions`) is built straight off it — narrowing it
+  /// (`_expiringCertificateDecisions`) is built straight off it: narrowing it
   /// here would make an expired certificate vanish from the one surface that
   /// collects faults across services. Anything that *prints the word
   /// "expiring"* has to pair it with [hasExpired] instead, so a lapse is never
@@ -343,14 +343,14 @@ class NpmCertificate {
   /// is derived rather than quoted. NPM keeps no renewal-error field on the
   /// certificate record: the text exists in `/api/audit-log` (not modelled) and
   /// in the body of the renew call, which [NpmClient] deliberately never
-  /// renders — certbot failures carry the DNS-provider credentials used for the
+  /// renders: certbot failures carry the DNS-provider credentials used for the
   /// challenge. What is left is the fact itself, and the fact is enough:
   /// certbot renews from 30 days out, so a certificate still short-dated inside
   /// that window is one whose renewal is not completing. The board says exactly
-  /// that — "renewal not completing · Let's Encrypt renews from 30 days out".
+  /// that: "renewal not completing · Let's Encrypt renews from 30 days out".
   ///
-  /// The copy stays on the safe side of the inference — "renewal has not run"
-  /// rather than "renewal failed" — because the window is the only evidence
+  /// The copy stays on the safe side of the inference: "renewal has not run"
+  /// rather than "renewal failed", because the window is the only evidence
   /// there is. Inside it, that sentence is true whether certbot is erroring or
   /// simply never being reached.
   ///
@@ -402,11 +402,11 @@ enum NpmResource {
   final String key;
 }
 
-/// `GET /api/users/me` — who this token belongs to and what it may do.
+/// `GET /api/users/me`: who this token belongs to and what it may do.
 ///
 /// Decision 34: the screen knows before a write is attempted. NPM says so
-/// itself, so the alternative — offering every control and letting a 403 teach
-/// the user — is a choice rather than a limitation.
+/// itself, so the alternative (offering every control and letting a 403 teach
+/// the user) is a choice rather than a limitation.
 ///
 /// **The email is deliberately not modelled.** The role is what the UI needs;
 /// the address identifies a person and would end up in every diagnostics dump
@@ -425,7 +425,7 @@ class NpmAccount {
 
   /// `roles` contains `admin`. NPM does write an admin a manage-all permission
   /// row (on setup and on user creation), but it never *consults* that row for
-  /// an admin — the role alone grants everything — so this short-circuits the
+  /// an admin: the role alone grants everything, so this short-circuits the
   /// lookup rather than trusting a map that an older install, a hand-edited
   /// row or a response without `?expand=permissions` could leave empty and dim
   /// every control on the screen for the one account that can use them.
@@ -465,8 +465,8 @@ class NpmAccount {
 /// What a client-side probe found at a proxy host's forward target.
 ///
 /// Three values, not two: a host nobody probed is not a host that failed. The
-/// probe is budgeted — the board heads the table "8 of 23 enabled checked
-/// from this device" — so [unchecked] is the normal state for most rows
+/// probe is budgeted: the board heads the table "8 of 23 enabled checked
+/// from this device", so [unchecked] is the normal state for most rows
 /// and must read as the absence of a measurement rather than as a verdict.
 enum NpmUpstream {
   /// Something accepted a TCP connection on the forward host and port.
@@ -480,7 +480,7 @@ enum NpmUpstream {
   unchecked,
 }
 
-/// A `302`/`301` hostname, a `404` host, or a TCP/UDP stream — the three
+/// A `302`/`301` hostname, a `404` host, or a TCP/UDP stream: the three
 /// smaller host kinds, which differ enough to name but not enough to model
 /// separately for a dashboard.
 class NpmSimpleHost {

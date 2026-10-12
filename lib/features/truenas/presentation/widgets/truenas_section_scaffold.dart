@@ -14,8 +14,8 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_version_ban
 /// background, a glass app bar with back navigation, and an optional
 /// min-version warning banner above the body.
 ///
-/// A page with writes passes [capabilityAreas] — the TrueNAS capability areas
-/// its controls write — and the scaffold draws the capability banner under
+/// A page with writes passes [capabilityAreas] (the TrueNAS capability areas
+/// its controls write), and the scaffold draws the capability banner under
 /// the version banner, above everything else, whenever the key may not write
 /// one of them. Structural rather than per page, so no page can forget it or
 /// place it second. Null is a page with no writes, and draws no slot.
@@ -47,7 +47,7 @@ class TrueNasSectionScaffold extends StatelessWidget {
     // bottom nav bar overlays them. The body's own scroll view is responsible
     // for reserving bottom space (via
     // `FloatingNavBarMetrics.getScrollViewBottomPadding`) so content scrolls
-    // *under* the translucent bar — exactly like the TrueNAS hub. Here we only
+    // *under* the translucent bar, exactly like the TrueNAS hub. Here we only
     // lift the FAB so it can't be hidden behind the bar.
     return AmbientScaffold(
       accent: ServiceKey.truenas.accent,

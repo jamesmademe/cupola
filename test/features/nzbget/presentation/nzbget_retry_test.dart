@@ -30,7 +30,7 @@ DioException _refused(String method) => DioException(
 
 void main() {
   // Riverpod's default retry re-runs a failed build ten times behind an
-  // exponential backoff, and — the part that costs something — the future does
+  // exponential backoff, and the part that costs something: the future does
   // not settle until it has. A dark NZBGet therefore left every one of these
   // pending for roughly forty seconds: no error, no unreachable band, a
   // spinner. `retry: noProviderRetry` is what makes the failure arrive at the

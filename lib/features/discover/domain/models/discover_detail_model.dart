@@ -79,7 +79,7 @@ class RelatedVideo {
     return RelatedVideo(
       // The server's `url` is only taken when it is a web address. It is the
       // one field here that ends up being *launched*, and this app hands it to
-      // the platform's external handler — where `javascript:`, `data:`,
+      // the platform's external handler, where `javascript:`, `data:`,
       // `intent:` and `file:` are all syntactically valid URIs that
       // `Uri.tryParse` happily accepts. Anything else falls back to the builder
       // below, which can only ever produce https, and an empty string makes the

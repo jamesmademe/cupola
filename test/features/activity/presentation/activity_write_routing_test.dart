@@ -28,7 +28,7 @@ const _second = ServiceInstance(
 /// Both rows carry queue id **7** on purpose: \*arr queue ids are per server and
 /// every server numbers from one, so an id alone cannot say which download this
 /// is. That is the whole reason a write has to be routed by the row's
-/// connection — sending id 7 to the wrong Sonarr removes somebody else's
+/// connection: sending id 7 to the wrong Sonarr removes somebody else's
 /// download and reports success.
 GlobalActivityItem _row(String instanceId, String title) => GlobalActivityItem(
   kind: GlobalActivityKind.queue,

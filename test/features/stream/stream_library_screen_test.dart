@@ -295,8 +295,8 @@ void main() {
     ) async {
       // Plex has no separate continue/next-up endpoints, so one `onDeck`
       // response is split after mapping and a mid-list page can come back with
-      // no rows while the next one is full. Stopping there — which is what
-      // `lastPageIsEmpty` did — rendered "Nothing in progress" over a library
+      // no rows while the next one is full. Stopping there, which is what
+      // `lastPageIsEmpty` did, rendered "Nothing in progress" over a library
       // that had plenty, and `PagedLayoutBuilder` never asks again once the
       // accumulated count is zero.
       final server = _ScriptedServer({
@@ -351,7 +351,7 @@ void main() {
       tester,
     ) async {
       // The offset lives on the State now, which means it is shared across a
-      // controller rebuild in a way `PagingState` never was — and
+      // controller rebuild in a way `PagingState` never was, and
       // `PagingController.dispose` only detaches the result, it does not stop
       // the fetch. So the fetch has to be fenced: a stale one must not issue a
       // second request (under the *new* lens, since it read the field fresh)
@@ -361,7 +361,7 @@ void main() {
         const {},
         lensPages: {
           // Empty but "there is more", so an unfenced fetch walks on to a
-          // second request — the observable symptom.
+          // second request: the observable symptom.
           StreamLibraryLens.continueWatching: {
             0: _page(const [], nextStartIndex: 50, hasMore: true),
           },
@@ -434,7 +434,7 @@ void main() {
       tester,
     ) async {
       // A Jellyfin API key is an administrator with no user attached, so
-      // "continue watching" has no subject until one is chosen — and the picker
+      // "continue watching" has no subject until one is chosen, and the picker
       // lives in settings, which this screen offers no path to on its own.
       final server = _ScriptedServer({
         0: const StreamLibraryPage.viewerRequired(),
@@ -452,7 +452,7 @@ void main() {
     ) async {
       // The panel's whole point is that the user has something to act on. The
       // action lives on another route, nothing else here reads settings, and
-      // `PagedLayoutBuilder` never retries a first-page error — so coming back
+      // `PagedLayoutBuilder` never retries a first-page error, so coming back
       // used to find the same "Choose whose watch state to show", with the
       // viewer already chosen.
       final server = _ScriptedServer({

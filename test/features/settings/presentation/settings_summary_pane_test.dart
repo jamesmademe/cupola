@@ -50,7 +50,7 @@ void main() {
       tester,
     ) async {
       // About, Revisit onboarding and Reset are not pages, so the rail never
-      // had them — and while only the phone index built them, a window this
+      // had them, and while only the phone index built them, a window this
       // wide had no door to the licence page, feedback, the donation sheet,
       // the onboarding replay or Reset at all.
       await _onDesktop(() async {
@@ -210,7 +210,7 @@ void main() {
   });
 }
 
-/// The rail — and so the summary pane — draws on a desktop build only. The
+/// The rail, and so the summary pane, draws on a desktop build only. The
 /// override is undone inside the body because `flutter_test` asserts on it
 /// before tear-downs run.
 Future<void> _onDesktop(Future<void> Function() body) async {

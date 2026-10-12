@@ -18,7 +18,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 /// blue = it has reservations, amber = it refuses.
 ///
 /// It used to carry its own `Color` and its own red, which made it a second
-/// tone vocabulary beside [StatusTone] — and put the alarm colour on a screen
+/// tone vocabulary beside [StatusTone], and put the alarm colour on a screen
 /// where nothing is unreachable. A release the decision engine refused is the
 /// engine working: the \*Arr read the release, applied the profile and said no.
 /// That is a fault of the release, not of the connection, and the three states
@@ -144,7 +144,7 @@ class _ReleaseListItemState extends State<ReleaseListItem> {
           borderRadius: AppRadius.borderRadiusMd,
           child: Stack(
             children: [
-              // Status rail — the fastest signal in the list.
+              // Status rail: the fastest signal in the list.
               Positioned(
                 top: 0,
                 bottom: 0,
@@ -362,7 +362,7 @@ class _ReleaseMetaRow extends StatelessWidget {
     );
   }
 
-  /// Torrents with no seeders will never finish — call that out in colour.
+  /// Torrents with no seeders will never finish. Call that out in colour.
   ///
   /// Amber rather than red: a swarm with nobody in it is a property of the
   /// release, and the indexer answered perfectly well to tell us so.
@@ -590,7 +590,7 @@ class _SectionHeader extends StatelessWidget {
           title,
           // Not `AppTheme.eyebrow`: this repeats inside every expanded release
           // card (and twice in one when a release is both scored and
-          // rejected), so it is a dense label, not a region kicker — and
+          // rejected), so it is a dense label, not a region kicker, and
           // therefore sentence case, since the eyebrow is the one uppercase
           // voice.
           style: theme.textTheme.labelSmall!
@@ -612,8 +612,8 @@ class _SectionHeader extends StatelessWidget {
 /// The tone of a custom-format score: green when the profile rewards it,
 /// neutral when it penalises it.
 ///
-/// Not red. A negative score is the quality profile doing its job — the *Arr
-/// weighed the format and marked it down — and red is reserved for a service
+/// Not red. A negative score is the quality profile doing its job: the *Arr
+/// weighed the format and marked it down, and red is reserved for a service
 /// that did not answer. The minus sign carries the direction in words, so the
 /// colour is not the only signal. Zero counts as positive, which is how the
 /// chips always read it.
@@ -637,7 +637,7 @@ class ScoreBadge extends StatelessWidget {
     // for why: the wash keeps the tone's own byte so a positive score still
     // reads green, while the number on top of it is measured against the
     // composite it actually lands on. Painting both raw is what put a `+120` at
-    // about 1.95:1 on paper — a green number on a green wash, legible at night
+    // about 1.95:1 on paper: a green number on a green wash, legible at night
     // and effectively invisible in daylight.
     final fill = statusToneFill(colorScheme, tone);
     final ink = statusToneColor(

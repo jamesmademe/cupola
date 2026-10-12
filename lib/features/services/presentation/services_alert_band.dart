@@ -7,8 +7,8 @@
 /// badge nobody reads on the day it turns red. The header above it already says
 /// the count in words, in neutral, which is where a number belongs.
 ///
-/// It replaces an 8pt dot in the app bar whose only affordance was a `Tooltip` —
-/// useless on the phone this app is mostly used on — and which counted against
+/// It replaces an 8pt dot in the app bar whose only affordance was a `Tooltip`,
+/// useless on the phone this app is mostly used on, and which counted against
 /// every `ServiceKey.values` entry rather than the configured ones, so a healthy
 /// five-service stack reported "5 online, 8 offline".
 ///
@@ -16,7 +16,7 @@
 ///
 /// It used to be a full-width card filled with `error` at 10%, bordered in
 /// `error` at 28%, with an error-red glyph, an error-red sentence and an
-/// error-red Retry. That is the chrome of something that has just gone wrong —
+/// error-red Retry. That is the chrome of something that has just gone wrong,
 /// and for a self-hosted stack it mostly has not. A box on a home server is
 /// down for an afternoon while you rebuild it, or permanently because you
 /// stopped running it and have not removed it from Settings yet; either way the
@@ -25,12 +25,12 @@
 /// So the notice keeps its *presence* as the signal and gives up its volume:
 /// no fill, no border, a sentence in `onSurfaceVariant`, and the error tone
 /// spent on exactly one 16pt glyph. That glyph is the whole of the alarm now,
-/// which is enough — the sentence names the service, and the cards below it
+/// which is enough: the sentence names the service, and the cards below it
 /// have already drained to unlit.
 ///
 /// ## Which services it names
 ///
-/// [unreachableServicesProvider], which is [StackHealth]'s own fold — a service
+/// [unreachableServicesProvider], which is [StackHealth]'s own fold: a service
 /// is an offender only when **every** connection of it is dark. It used to pick
 /// them off the lensed summary, so with two Radarr and the lens on the dark one
 /// the header above said `1 of 1 answering · 1 degraded` and this line said
@@ -40,7 +40,7 @@
 /// ## Why it can be dismissed, and why the dismissal is not persisted
 ///
 /// A notice you cannot silence about a service you knowingly left down is just
-/// a permanent banner. So it takes an acknowledgement — but scoped to the
+/// a permanent banner. So it takes an acknowledgement, but scoped to the
 /// outage, not to the notice: dismissing names the services currently dark, and
 /// anything that goes down *afterwards* raises the band again with only the new
 /// names in it.
@@ -146,12 +146,12 @@ class _AlertBandBody extends StatelessWidget {
     // The second sentence is the consequence, and it is what a wide surface has
     // room for: a dark SABnzbd does not merely fail to answer, it takes its
     // share of every figure on this page with it. The phone prints the first
-    // sentence only — there is one line of room, and the name of the service is
+    // sentence only: there is one line of room, and the name of the service is
     // the half that cannot be dropped.
     final wide = MediaQuery.sizeOf(context).width >= 600;
 
     // The one place the error tone is still spent. Through `onTint` with no
-    // tint — the composite is the scaffold surface itself — because the raw
+    // tint (the composite is the scaffold surface itself), because the raw
     // error red measures around 3:1 on the light background and this is a 16pt
     // glyph, which owes 3:1 as a graphical object and has no text beside it in
     // the same colour to lean on.

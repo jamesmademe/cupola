@@ -50,7 +50,7 @@ void main() {
         width: 320,
       ),
       CatalogScene(
-        'ServiceOfflineState · no first-failure time known, span dropped — '
+        'ServiceOfflineState · no first-failure time known, span dropped: '
         'Retry only, no onOpenSettings',
         (_) => ServiceOfflineState(serviceName: 'Transmission', onRetry: () {}),
         width: 320,

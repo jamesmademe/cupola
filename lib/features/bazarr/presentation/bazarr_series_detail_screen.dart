@@ -84,7 +84,7 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
       onPressed: refresh,
     );
     const label = 'Missing subtitles';
-    // How many episode rows follow — a different fact from the hero chip's
+    // How many episode rows follow: a different fact from the hero chip's
     // "N missing", so the same sentence is not printed twice.
     final count = wantedItems.isEmpty
         ? null
@@ -136,9 +136,9 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
         // the list *is* the page and holds the wide track until it can. Details
         // and Tags stand aside either way.
         sideTrack: const {'Details', 'Tags'},
-        // Region 2 — the manifest. The lazy episode list used to be handed to the
+        // Region 2: the manifest. The lazy episode list used to be handed to the
         // view as a sliver while the states went in as content sections, and the
-        // old spine emitted every content section first — so these rows rendered
+        // old spine emitted every content section first, so these rows rendered
         // *after* Details and Tags. A named region makes that unreachable while
         // keeping the list lazy: a heavily-wanted series builds the rows on
         // screen, not all of them.
@@ -153,7 +153,7 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
                   icon: Icons.check_circle_outline_rounded,
                   title: 'All languages covered',
                   message: 'No missing subtitles for this series.',
-                  // Raw `AppColors.success` is 2.07:1 on paper — the one mark
+                  // Raw `AppColors.success` is 2.07:1 on paper: the one mark
                   // on a screen whose whole message is "nothing is missing"
                   // was the one a daylight reader could not see.
                   accentColor: statusToneColor(

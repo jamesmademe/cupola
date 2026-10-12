@@ -7,8 +7,8 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
 
-/// Opens an edit form for a TrueNAS config section, then — before writing
-/// anything — shows an explicit review of exactly what changed and asks for
+/// Opens an edit form for a TrueNAS config section, then, before writing
+/// anything, shows an explicit review of exactly what changed and asks for
 /// confirmation.
 ///
 /// This deliberate two-step flow (edit → review diff → confirm) is the guard

@@ -13,7 +13,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Error thrown by [QbittorrentClient], carrying the [reason] so a caller
 /// verifying the connection can tell rejected credentials from an unreachable
-/// host — matching the contract the other service clients use.
+/// host, matching the contract the other service clients use.
 class QbittorrentException implements Exception, HasFailureReason {
   const QbittorrentException(
     this.message, {
@@ -36,7 +36,7 @@ enum _LoginRefusal {
   /// banned this address after too many failed sign-ins.
   banned,
 
-  /// `403` on the login route with some other body — qBittorrent's ban message
+  /// `403` on the login route with some other body: qBittorrent's ban message
   /// in another WebUI locale, or a reverse proxy refusing the request.
   forbidden,
 }
@@ -49,12 +49,12 @@ enum _LoginRefusal {
 /// `WebUIMaxAuthFailCount` (default **5**), bans that address for
 /// `WebUIBanDuration` (default **3600 s**). Behind a reverse proxy the address
 /// it bans is the proxy's, which is everybody. A client that re-sends a wrong
-/// password on a three-second poll — with Riverpod's default retry on top —
+/// password on a three-second poll, with Riverpod's default retry on top,
 /// spends the five attempts in seconds.
 ///
 /// So once the WebUI has refused a sign-in unambiguously ([_LoginRefusal]),
 /// this client never sends the login again on its own: every later call fails
-/// locally with the same sentence. Only two things lift it — new credentials,
+/// locally with the same sentence. Only two things lift it: new credentials,
 /// which build a new client (the providers watch the transport), and
 /// [clearLoginRefusal], which a *user's* Retry calls. A poll tick never does.
 ///
@@ -75,7 +75,7 @@ class QbittorrentClient {
   bool _authenticated = false;
   Future<bool>? _authInFlight;
 
-  /// Sticky once the WebUI has refused a sign-in unambiguously — see the class
+  /// Sticky once the WebUI has refused a sign-in unambiguously: see the class
   /// doc. Deliberately **not** reset by an attempt to sign in: it used to be,
   /// at the top of every login, which is what made it stop nothing.
   _LoginRefusal? _refusal;
@@ -105,7 +105,7 @@ class QbittorrentClient {
 
   /// [certFingerprint], when non-empty, is a self-signed certificate the user
   /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
-  /// when [dio] is injected — a caller supplying its own transport owns its
+  /// when [dio] is injected: a caller supplying its own transport owns its
   /// TLS behaviour too, the same rule the other per-service clients follow.
   ///
   /// [connectionId] and [refusalStore] together keep a refused sign-in for
@@ -131,8 +131,8 @@ class QbittorrentClient {
                password: password,
                accessHeaders: accessHeaders,
              ) {
-    // Redirects are followed by hand so the SID cookie — which is full account
-    // access to the torrent client — is never replayed to a host the user did
+    // Redirects are followed by hand so the SID cookie, which is full account
+    // access to the torrent client, is never replayed to a host the user did
     // not configure. `dart:io` exempts a redirect to a *parent* domain from its
     // own cookie stripping, so `qbit.homelab.net` → `homelab.net` hands the
     // session over.
@@ -194,13 +194,13 @@ class QbittorrentClient {
       password != null &&
       password!.isNotEmpty;
 
-  /// Whether a sign-in has been refused and is being held — see the class doc.
+  /// Whether a sign-in has been refused and is being held: see the class doc.
   bool get loginRefused => _refusal != null;
 
   /// Lets the next call sign in again after a refusal.
   ///
   /// For a **user's** explicit Retry only: the person has fixed the password
-  /// on the server, or waited out the ban, and asks once. Never from a timer —
+  /// on the server, or waited out the ban, and asks once. Never from a timer:
   /// a poll that cleared this would be exactly the loop it exists to stop.
   /// Forgets the connection's held refusal too, so every client of it asks.
   void clearLoginRefusal() {
@@ -308,14 +308,14 @@ class QbittorrentClient {
   /// Which refusal, if any, a login answer states unambiguously.
   ///
   /// * `401`, and `200 Fails.`: wrong credentials (qB 5.1+ and ≤ 5.0).
-  /// * `403`: qBittorrent's login route answers 403 for one reason only — the
+  /// * `403`: qBittorrent's login route answers 403 for one reason only: the
   ///   address is banned (`isBanned()` runs before the credentials are even
   ///   read). The body is its translated "Your IP address has been banned…"
   ///   sentence, so an English `banned` names the ban and any other 403 is
   ///   held as [_LoginRefusal.forbidden]: a ban in another locale or a proxy
   ///   refusing the route, neither of which a retry changes.
   ///
-  /// Anything else — a 2xx, a 5xx, no response at all — is not a refusal.
+  /// Anything else (a 2xx, a 5xx, no response at all) is not a refusal.
   static _LoginRefusal? _refusalFrom(int? status, dynamic body) {
     final text = body?.toString().trim().toLowerCase() ?? '';
     if (status == 401) return _LoginRefusal.credentials;
@@ -328,8 +328,8 @@ class QbittorrentClient {
     return null;
   }
 
-  /// The sentence a held refusal reads as. Static text only — never the body
-  /// or the request — so nothing here can carry the password.
+  /// The sentence a held refusal reads as. Static text only: never the body
+  /// or the request, so nothing here can carry the password.
   static QbittorrentException _refusalException(_LoginRefusal refusal) {
     return switch (refusal) {
       _LoginRefusal.credentials => const QbittorrentException(
@@ -353,7 +353,7 @@ class QbittorrentClient {
   /// Authenticates when credentials are configured, failing fast on a refusal.
   ///
   /// Without this the client pressed on to the data call, took a 403, let the
-  /// interceptor re-authenticate, and only then surfaced the failure — three
+  /// interceptor re-authenticate, and only then surfaced the failure: three
   /// round trips to learn the password was wrong, which on a slow link ran past
   /// the verify timeout and reported "check the address" instead. A refusal
   /// already held fails before anything reaches the network.

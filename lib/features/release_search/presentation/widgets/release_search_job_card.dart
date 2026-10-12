@@ -204,7 +204,7 @@ class ReleaseSearchJobCard extends StatelessWidget {
   }
 
   /// One spoken sentence for the card's summary. In-card controls keep their own
-  /// nodes — a single merged node would swallow them from the tree.
+  /// nodes: a single merged node would swallow them from the tree.
   String get _spokenSummary {
     // The connection, once there are two: "Searching on Radarr 4K".
     final service = connection ?? job.target.service.title;
@@ -301,7 +301,7 @@ class _Pill extends StatelessWidget {
 ///
 /// The split of labour mirrors `AppErrorState`: the headline names what happened
 /// in plain words, the diagnosis explains it, and the raw exception is demoted to
-/// dim mono — present, because a self-hoster can act on "502 · nginx", but never
+/// dim mono: present, because a self-hoster can act on "502 · nginx", but never
 /// the message.
 class _Verdict extends StatelessWidget {
   const _Verdict({required this.failure, required this.expanded});

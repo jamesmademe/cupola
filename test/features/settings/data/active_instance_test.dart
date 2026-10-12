@@ -115,7 +115,7 @@ void main() {
 
   group('moving the lens', () {
     // These write, so they need real storage behind them. A lens change that
-    // cannot be persisted throws rather than being swallowed — the same
+    // cannot be persisted throws rather than being swallowed: the same
     // contract every other settings write has.
     late SharedPreferences prefs;
 

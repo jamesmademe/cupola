@@ -4,7 +4,7 @@ import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 
 /// Transmission's `status` field.
 ///
-/// The integers are the wire values and are not arbitrary — they are the order
+/// The integers are the wire values and are not arbitrary: they are the order
 /// a torrent moves through, which is why `checkWait`/`downloadWait`/`seedWait`
 /// sit immediately before the states they queue for.
 enum TransmissionStatus {
@@ -36,7 +36,7 @@ enum TransmissionStatus {
       this == TransmissionStatus.seed ||
       this == TransmissionStatus.check;
 
-  /// Whether bytes are (meant to be) coming in — the set the hub's in-flight
+  /// Whether bytes are (meant to be) coming in: the set the hub's in-flight
   /// rail shows. Seeding is deliberately excluded: a library of four hundred
   /// seeding torrents is not "in flight" and would crowd out every other
   /// source.
@@ -65,8 +65,8 @@ enum TransmissionErrorKind {
     return TransmissionErrorKind.none;
   }
 
-  /// A tracker *warning* is noise on a healthy torrent — announce hiccups are
-  /// routine — while a tracker error or a local error means it has actually
+  /// A tracker *warning* is noise on a healthy torrent: announce hiccups are
+  /// routine, while a tracker error or a local error means it has actually
   /// stopped working. Only the latter two deserve a warning badge.
   bool get isBlocking =>
       this == TransmissionErrorKind.trackerError ||
@@ -124,7 +124,7 @@ class TransmissionTorrent {
   /// **Not durable.** Transmission reuses ids after a daemon restart, so
   /// anything persisted or matched across a restart must key on [hashString].
   /// The RPC `ids` argument accepts hash strings as well as integers, which is
-  /// why every write in [TransmissionClient] takes `List<String>` — see
+  /// why every write in [TransmissionClient] takes `List<String>`; see
   /// [rpcId].
   final int id;
 
@@ -144,7 +144,7 @@ class TransmissionTorrent {
   final int rateDownload;
   final int rateUpload;
 
-  /// Seconds remaining, or negative when Transmission does not know — `-1`
+  /// Seconds remaining, or negative when Transmission does not know: `-1`
   /// meaning "not available" and `-2` "unknown". Read [etaLabel] rather than
   /// formatting this directly.
   final int eta;
@@ -200,7 +200,7 @@ class TransmissionTorrent {
   String get ratioLabel =>
       uploadRatio < 0 ? '—' : uploadRatio.toStringAsFixed(2);
 
-  /// The short phrase shown under the name — the torrent's own status, or the
+  /// The short phrase shown under the name: the torrent's own status, or the
   /// reason it is not progressing when there is one.
   ///
   /// A stalled torrent is the state most worth surfacing: it looks exactly like
@@ -308,7 +308,7 @@ class TransmissionSession {
   /// Where a download is written **while it runs**, when
   /// [incompleteDirEnabled]. Transmission keeps the stored path while the flag
   /// is false, exactly as it keeps a speed limit that is not in force, so the
-  /// two fields have to be read together — see [activeDownloadDir].
+  /// two fields have to be read together; see [activeDownloadDir].
   final String incompleteDir;
   final bool incompleteDirEnabled;
 
@@ -318,7 +318,7 @@ class TransmissionSession {
   ///
   /// This, and not [downloadDir], is the volume a free-space figure has to
   /// measure: on the common setup that downloads into a separate incomplete
-  /// directory — a fast SSD in front of a slow array is the usual reason — the
+  /// directory (a fast SSD in front of a slow array is the usual reason), the
   /// space at `download-dir` describes a disk the grab is not touching until
   /// it finishes. The figure was never wrong about its own path; it answered
   /// the wrong question.
@@ -349,7 +349,7 @@ class TransmissionSession {
   ///
   /// A daemon that does not send `cache-size-mb` and a daemon with its cache
   /// switched off are different facts, and the Session tab has to be able to
-  /// tell them apart — one reads an em dash, the other reads `0 MB`. Only
+  /// tell them apart: one reads an em dash, the other reads `0 MB`. Only
   /// `peerPort` used to be guarded, with a `> 0` test at the call site, which
   /// left the other eight asserting a figure nobody sent.
   ///
@@ -411,7 +411,7 @@ class TransmissionSession {
   }
 }
 
-/// `session-stats` — the aggregate counters, without listing any torrent.
+/// `session-stats`: the aggregate counters, without listing any torrent.
 class TransmissionStats {
   const TransmissionStats({
     required this.downloadSpeed,

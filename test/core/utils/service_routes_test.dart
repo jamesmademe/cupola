@@ -72,7 +72,7 @@ void main() {
     test('the Radarr tab roots are spelled by the tabs they mount', () {
       // Both are written as literals in `ServiceRoutes` because an enum
       // instance's field is not a compile-time constant in Dart and these have
-      // to stay `const` — so nothing the analyzer sees ties the URL spelling to
+      // to stay `const`, so nothing the analyzer sees ties the URL spelling to
       // the tab. This does, and the film hangs off the second one, which means
       // a drift there moves every detail link in the app with it.
       expect(
@@ -144,7 +144,7 @@ void main() {
       );
       // Unchanged by the migration, and that is the assertion: the author list
       // was already at this address as a pushed page, so every link that ever
-      // pointed at it still resolves — now to the Library tab.
+      // pointed at it still resolves, now to the Library tab.
       expect(ServiceRoutes.readarrLibrary, '/stack/readarr/library');
       expect(
         ServiceRoutes.readarrLibrary,
@@ -173,8 +173,8 @@ void main() {
 
     test('the torrent detail hangs off the Queue tab', () {
       // It used to be `/dashboard/qbittorrent/torrent/<hash>`, a sibling of
-      // nothing. Every link to a torrent in the app is built by this helper —
-      // the list row and the Dashboard's activity readout — so this constant is
+      // nothing. Every link to a torrent in the app is built by this helper:
+      // the list row and the Dashboard's activity readout, so this constant is
       // what moved them all inside the branch at once.
       expect(
         ServiceRoutes.qbittorrentTorrentBase,
@@ -276,7 +276,7 @@ void main() {
       );
       // Requests did not move, and that is the assertion: the all-requests list
       // was already at this address as a pushed page, so every link that ever
-      // pointed at it still resolves — now to a tab.
+      // pointed at it still resolves, now to a tab.
       expect(ServiceRoutes.seerrRequests, '/stack/seerr/requests');
     });
 
@@ -391,7 +391,7 @@ void main() {
     });
 
     test('the Prowlarr tab roots are spelled by the tabs they mount', () {
-      // `library` became `indexers` — the word the bar uses and the word the
+      // `library` became `indexers`: the word the bar uses and the word the
       // page always meant. The literal is tied to the tab here because nothing
       // the analyzer sees ties them.
       expect(ServiceRoutes.prowlarr, '/stack/prowlarr');
@@ -488,9 +488,9 @@ void main() {
     });
 
     test('both media server details hang off the Libraries tab', () {
-      // Every link to a library or an item is built by these four helpers — the
+      // Every link to a library or an item is built by these four helpers: the
       // library row, the poster tile, the global search result and the
-      // availability slot on a Radarr or Sonarr detail — so these constants are
+      // availability slot on a Radarr or Sonarr detail, so these constants are
       // what moved them all inside the branch at once. The browse's own base
       // *is* the tab root, the way Bazarr's Series tab is also its series base.
       expect(
@@ -561,8 +561,8 @@ void main() {
     });
 
     test('the Unraid tab roots are spelled by the tabs they mount', () {
-      // Six, and not one of them moved: the service shipped exactly one path —
-      // its bare root — so this table is the whole of Unraid's URL surface.
+      // Six, and not one of them moved: the service shipped exactly one path:
+      // its bare root, so this table is the whole of Unraid's URL surface.
       expect(
         ServiceRoutes.unraidOverview,
         '${ServiceRoutes.unraid}/${ServiceTab.overview.segment}',

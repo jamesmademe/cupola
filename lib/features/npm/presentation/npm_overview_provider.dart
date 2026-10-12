@@ -2,9 +2,9 @@
 /// shape it.
 ///
 /// Nothing here fetches anything new. Every region is folded from the three
-/// documents `npm_provider.dart` already holds — `/api/nginx/proxy-hosts`,
+/// documents `npm_provider.dart` already holds: `/api/nginx/proxy-hosts`,
 /// `/api/nginx/certificates` and the client-side upstream probe that rides the
-/// first of them — so opening Overview costs no round trip the service home was
+/// first of them, so opening Overview costs no round trip the service home was
 /// not already paying for.
 ///
 /// Every windowing rule is a top-level pure function taking an explicit `now`,
@@ -15,7 +15,7 @@
 ///
 /// **The upstream probe is partial by design.** `NpmUpstreamProbe.defaultBudget`
 /// is eight, a real box fronts twenty or thirty hostnames, and the unchecked
-/// ones are *unmeasured* — not healthy. So `NpmUpstreamReport.downCount` is
+/// ones are *unmeasured*, not healthy. So `NpmUpstreamReport.downCount` is
 /// "down among the eight we looked at", and stating it as "2 upstreams down"
 /// with nothing else would turn fifteen unknowns into fifteen green ticks.
 ///
@@ -30,7 +30,7 @@
 /// fold living in the widget:
 ///
 ///  * every subtitle that reports anything derived from the probe carries
-///    [NpmUpstreamReport.coverage] beside it — see [npmProxyHostsSubtitle];
+///    [NpmUpstreamReport.coverage] beside it. See [npmProxyHostsSubtitle];
 ///  * a host with no verdict contributes **no clause at all** to its row, never
 ///    a reassuring one ([npmUpstreamClause] answers null for
 ///    [NpmUpstream.unchecked]);
@@ -46,7 +46,7 @@
 /// forward target this device could not reach is not one: see above. Neutral is the **backlog**: a
 /// host the user switched off is doing exactly what they asked, and painting it
 /// amber is the single commonest way the five-arm rule breaks. Red appears
-/// nowhere in this file — red is an NPM that did not answer, which the page's
+/// nowhere in this file: red is an NPM that did not answer, which the page's
 /// unreachable band says once for the whole screen. An *expired* certificate is
 /// emphatically not red: the server answered, it answered with bad news.
 library;
@@ -86,7 +86,7 @@ String npmCertificateProviderLabel(NpmCertificate certificate) =>
 /// `9 days left`, `expired 3 days ago`, `expired today`, or `—`.
 ///
 /// The em dash is for a certificate NPM handed over **without a parseable
-/// `expires_on`**. It is not "0 days", which would read as "expires today" —
+/// `expires_on`**. It is not "0 days", which would read as "expires today",
 /// the one reading a user would act on, over a question that was never
 /// answered.
 ///
@@ -134,7 +134,7 @@ String? npmUpstreamClause(NpmUpstream upstream) => switch (upstream) {
 /// top has to be what a person opened the screen for.
 ///
 ///  * a configuration nginx refused means the hostname is not being served at
-///    all — the site is simply gone;
+///    all: the site is simply gone;
 ///  * an expired certificate means every browser refuses it, which is the same
 ///    outage with a different error page;
 ///  * a certificate inside its window is a deadline, not yet an outage.
@@ -148,7 +148,7 @@ String? npmUpstreamClause(NpmUpstream upstream) => switch (upstream) {
 /// screen belongs to an NPM that did not answer, and every one of these facts
 /// arrived *because* it answered.
 enum NpmAttentionKind {
-  /// `meta.nginx_online` is false on an enabled host — nginx would not load the
+  /// `meta.nginx_online` is false on an enabled host: nginx would not load the
   /// configuration the last time it was asked to.
   nginxRefused(Icons.error_outline_rounded),
 
@@ -187,7 +187,7 @@ class NpmAttentionItem {
   StatusTone get tone => kind.tone;
   IconData get icon => kind.icon;
 
-  /// The row as one sentence, with the layout's `·` turned back into commas —
+  /// The row as one sentence, with the layout's `·` turned back into commas.
   /// `·` is decoration, and a screen reader either names it or drops it
   /// depending on the user's punctuation setting.
   String get spoken =>
@@ -198,7 +198,7 @@ class NpmAttentionItem {
 ///
 /// Returns the **whole** census rather than a page of it. The cap belongs to
 /// the widget, so the header can print a number that is the truth and the rows
-/// below it can be a sample — the other way round is the defect where nine
+/// below it can be a sample; the other way round is the defect where nine
 /// broken hosts are reported as four.
 ///
 /// Nothing here comes from the probe: what this device could reach is not a
@@ -240,7 +240,7 @@ List<NpmAttentionItem> npmAttentionItems({
     if (certificate.daysUntilExpiry(now) == null) continue;
     // `hasExpired`, never `days < 0`: the day count truncates, so for the
     // twenty-four hours after a certificate lapses it reads 0 and this arm
-    // would never fire — the lapse would instead fall through to the expiring
+    // would never fire: the lapse would instead fall through to the expiring
     // branch below and be ranked as a deadline, the lowest arm of the enum,
     // where a preview of four can push it off the screen entirely.
     if (certificate.hasExpired(now)) {
@@ -258,7 +258,7 @@ List<NpmAttentionItem> npmAttentionItems({
   }
 
   // One row for the set rather than one per certificate. Two certificates
-  // expiring the same week is one errand — renewal is not working — and four
+  // expiring the same week is one errand (renewal is not working), and four
   // rows of it would push the hostname that is actually down off a preview of
   // four.
   final expiring =
@@ -280,7 +280,7 @@ List<NpmAttentionItem> npmAttentionItems({
     // `npm_models.dart`: certbot renews from thirty days out, so a Let's
     // Encrypt certificate still short-dated inside that window is one whose
     // renewal is not completing. The copy stays on the safe side of the
-    // inference — "renewal has not completed", never "renewal failed" — because
+    // inference: "renewal has not completed", never "renewal failed", because
     // the window is the only evidence there is. NPM keeps the actual error in
     // `/api/audit-log`, which this client does not call.
     final stalled = expiring.any((c) => c.renewalNotCompleting(now));
@@ -344,8 +344,8 @@ class NpmProxyHostRow {
   /// What nginx is doing with this hostname, in words rather than in colour.
   ///
   /// Deliberately **not** "Online". `meta.nginx_online` is the verdict of the
-  /// last configuration attempt and nothing on the server polls it — see
-  /// [NpmProxyHost.configLoaded] — so "Online" would promise uptime monitoring
+  /// last configuration attempt and nothing on the server polls it. See
+  /// [NpmProxyHost.configLoaded], so "Online" would promise uptime monitoring
   /// this app does not do. "serving" says what is actually known: nginx holds a
   /// configuration for this hostname and is answering on it.
   String get stateLabel {
@@ -375,7 +375,7 @@ class NpmProxyHostRow {
 
   /// `radarr.lan:7878 · serving · upstream answering · TLS · access list`.
   ///
-  /// The upstream clause is absent — not "unknown", not a dash — for a host
+  /// The upstream clause is absent (not "unknown", not a dash) for a host
   /// nobody probed. The section header carries the coverage, so silence here
   /// means "not measured" and the header is what says how much of the table
   /// that covers.
@@ -437,7 +437,7 @@ List<NpmProxyHostRow> npmProxyHostRows(
 ///
 /// **The two figures count different populations, and the sentence says so.**
 /// The first is every proxy host, switched off ones included, because that is
-/// what the rows below it are. The probe's total is enabled hosts only — a
+/// what the rows below it are. The probe's total is enabled hosts only: a
 /// disabled host is not being served, so its backend is not a fact about this
 /// screen and no socket is opened for it. Printed as `25 · … 8 of 23` the pair
 /// invites one reading, that two hosts went missing in between;
@@ -518,7 +518,7 @@ List<NpmCertificateRow> npmCertificateRows(
 /// Amber for lapsed or lapsing, green for valid, neutral for undated.
 ///
 /// Expired is amber and **not** red, deliberately: red is reserved for a server
-/// that did not answer, and this one answered — it told us the date. Neutral
+/// that did not answer, and this one answered: it told us the date. Neutral
 /// for a certificate with no date is the honest third arm; green there would
 /// claim a validity nothing established.
 StatusTone _certificateTone(NpmCertificate certificate, DateTime now) {
@@ -531,15 +531,15 @@ StatusTone _certificateTone(NpmCertificate certificate, DateTime now) {
 
 /// `12 · 2 expired · 1 expiring`, or `12` when nothing is due.
 ///
-/// Every half counts the **whole** list NPM returned —
-/// `/api/nginx/certificates` is not paged and takes no limit — so these are
+/// Every half counts the **whole** list NPM returned;
+/// `/api/nginx/certificates` is not paged and takes no limit, so these are
 /// totals and may be stated as such. `—` while the list is in flight or after
 /// it failed.
 ///
 /// **Lapsed and lapsing are counted apart, and worst is named first.**
 /// [NpmCertificate.isExpiringSoon] has no lower bound on purpose (see its doc),
 /// so folding both into one `N expiring` would let this header say `2 expiring`
-/// about two certificates that are already dead — while the Needs attention
+/// about two certificates that are already dead, while the Needs attention
 /// region three inches above it says `Certificate expired`. One screen stating
 /// one fact at two severities, with the header stating the softer one, is the
 /// figure that lies.

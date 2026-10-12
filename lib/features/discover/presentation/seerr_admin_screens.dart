@@ -114,7 +114,7 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
 
     // A write, so the failure surfaces. Unguarded, a token that had lost
     // `MANAGE_ISSUES` threw out of the button callback: nothing invalidated,
-    // nothing said, and the row still open — indistinguishable from a tap that
+    // nothing said, and the row still open, indistinguishable from a tap that
     // never registered.
     try {
       await ref.read(seerrServiceProvider).resolveIssue(issue.id);

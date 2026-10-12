@@ -62,7 +62,7 @@ void main() {
     ) async {
       // Regression: the callback was typed `Future<void> Function(NzbgetClient)`
       // and `void` is a top type, so `Future<bool>` satisfied it and the result
-      // was discarded — this wrapper returned `true` unconditionally. NZBGet
+      // was discarded: this wrapper returned `true` unconditionally. NZBGet
       // answers HTTP 200 with `{"result": false}` when it declines a command,
       // so the UI said "Job paused" while nothing had happened.
       final adapter = CapturingHttpAdapter(

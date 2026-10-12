@@ -8,13 +8,13 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_pr
 /// The window rules, the sentinels and the tone rule, as pure functions.
 ///
 /// Every one of these takes its own `now`, so nothing here waits, sleeps or
-/// depends on the machine's clock — which is the whole reason the rules were
+/// depends on the machine's clock, which is the whole reason the rules were
 /// written as top-level functions rather than inside the widgets that draw
 /// them.
 void main() {
   final now = DateTime(2026, 9, 16, 15, 0);
 
-  group('qbittorrentIdleLabel — the last_activity sentinel', () {
+  group('qbittorrentIdleLabel: the last_activity sentinel', () {
     test('qB\'s 0 "never moved" sentinel says nothing, never 1970', () {
       // The bug this exists to stop: 0 read as an epoch is 1 Jan 1970, and the
       // row would have claimed the torrent stalled 20,000 days ago.
@@ -70,7 +70,7 @@ void main() {
     });
   });
 
-  group('qbittorrentFaultKindOf — the tone rule, five arms', () {
+  group('qbittorrentFaultKindOf: the tone rule, five arms', () {
     test('stalled is a FAULT: the user did not ask for this', () {
       expect(
         qbittorrentFaultKindOf(_torrent(state: 'stalledDL')),
@@ -291,7 +291,7 @@ void main() {
       );
     });
 
-    test('a seeding row is GREEN — complete, not in flight', () {
+    test('a seeding row is GREEN: complete, not in flight', () {
       final rows = qbittorrentTransferRows([
         _torrent(
           name: 'Poor.Things',
@@ -322,7 +322,7 @@ void main() {
       expect(rows.single.detail, isNot(contains('left')));
     });
 
-    test('a magnet with no metadata reads — for its size, never 0 B', () {
+    test('a magnet with no metadata reads `—` for its size, never 0 B', () {
       final rows = qbittorrentTransferRows([
         _torrent(name: 'magnet', state: 'metaDL', size: 0),
       ]);
@@ -390,7 +390,7 @@ void main() {
         _torrent(category: 'movies', size: 1),
       ]);
 
-      // Present — dropping it would make the section disagree with the count
+      // Present: dropping it would make the section disagree with the count
       // the Queue tab shows two taps away…
       expect(rows.map((r) => r.name), ['movies', qbittorrentNoCategoryLabel]);
       // …and pinned last despite being by far the largest, because it is the
@@ -431,7 +431,7 @@ void main() {
     });
   });
 
-  group('qbittorrentGlobalLimitLabel — the OTHER 0 sentinel', () {
+  group('qbittorrentGlobalLimitLabel: the OTHER 0 sentinel', () {
     test('0 is NO LIMIT globally, and must never print as a bare 0', () {
       // The per-torrent `dl_limit` reads 0 as "limit cleared" and -1 as
       // unlimited; `/transfer/info` is the inverse. Passing this through
@@ -491,7 +491,7 @@ void main() {
         'off',
       ]);
       // Free space, DHT nodes and the listen port are on /sync/maindata, which
-      // this client never calls — absent, rather than an invented em dash for a
+      // this client never calls: absent, rather than an invented em dash for a
       // figure nobody asked for.
       expect(facts.map((f) => f.label), isNot(contains('Free space')));
       expect(facts.map((f) => f.label), isNot(contains('DHT nodes')));
@@ -499,7 +499,7 @@ void main() {
 
     test('a counter that answered 0 reads 0 B, never an em dash', () {
       // `formatSize` would print `—` here, and it would be right to for a
-      // torrent size — a magnet with no metadata reports 0 and no torrent is
+      // torrent size: a magnet with no metadata reports 0 and no torrent is
       // zero bytes. A session counter is not a size: a daemon restarted ten
       // minutes ago has genuinely moved nothing, and `/transfer/info` answered
       // to say so.
@@ -530,7 +530,7 @@ void main() {
       );
     });
 
-    test('a fresh session reads — for its ratio, not 0.00', () {
+    test('a fresh session reads `—` for its ratio, not 0.00', () {
       final facts = qbittorrentSessionFacts(
         const TransferInfo(
           dlSpeed: 0,

@@ -121,7 +121,7 @@ void main() {
     // A field the daemon never sent is **null**, and that is the whole point:
     // `0` used to come back for both a missing `cache-size-mb` and a cache
     // switched off, so the Session tab stated a figure nobody reported. The
-    // flags stay false — a switch has to be drawn in one position, and off is
+    // flags stay false; a switch has to be drawn in one position, and off is
     // the safe one for a setting that was never mentioned.
     test('a field the daemon did not send is null, not zero', () {
       final session = _session(const {});

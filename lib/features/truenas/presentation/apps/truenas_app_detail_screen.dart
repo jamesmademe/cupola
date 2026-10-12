@@ -51,7 +51,7 @@ class TrueNasAppDetailScreen extends ConsumerWidget {
 
 /// Opens an app portal, refusing anything that is not a web address.
 ///
-/// App portals are strings the *server* chose — a compromised TrueNAS, or just
+/// App portals are strings the *server* chose: a compromised TrueNAS, or just
 /// a hostile chart in a third-party catalog, controls both the label and the
 /// target. Handing them straight to `launchUrl` let a tile reading "Web UI"
 /// fire `intent://`, `file://` or `tel:` from Cupola's context. A portal is a

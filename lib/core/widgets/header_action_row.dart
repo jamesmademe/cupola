@@ -38,7 +38,7 @@ class HeaderActionRow extends StatelessWidget {
   ///
   /// 48, not the 42 this used to be. 42 is under *both* platform minimums, and
   /// the app already documents 44 as its floor on the detail back button
-  /// (`MediaDetailBackButton.targetSize`) — so the shared constant was two
+  /// (`MediaDetailBackButton.targetSize`), so the shared constant was two
   /// points below a number the codebase writes down for itself, on a row that
   /// includes Delete. One cross-platform constant has to satisfy the larger of
   /// iOS' 44pt and Android's 48dp, which is 48; and 48 is also the height the
@@ -99,7 +99,7 @@ class HeaderActionRow extends StatelessWidget {
   /// Creates a [ButtonStyle] for expanded [FilledButton.icon] widgets.
   ///
   /// [minimumSize], never `fixedSize`: a fixed height cannot grow, so a label
-  /// that no longer fits is broken *inside the word* — which is how the request
+  /// that no longer fits is broken *inside the word*, which is how the request
   /// button came to read "Requeste / d" at an accessibility reading size. The
   /// button grows instead.
   static ButtonStyle expandedButtonStyle(
@@ -113,7 +113,7 @@ class HeaderActionRow extends StatelessWidget {
     minimumSize: const Size(double.infinity, buttonHeight),
     // Standard density on every platform: the desktop's compact density takes
     // 8 off `minimumSize`, which painted this button 40 tall beside the 48pt
-    // discs (`fixedSize`, which density does not touch) — two heights in one
+    // discs (`fixedSize`, which density does not touch): two heights in one
     // band.
     visualDensity: VisualDensity.standard,
     foregroundColor: foregroundColor,
@@ -200,9 +200,9 @@ class ActionStateGlyph extends StatelessWidget {
   ///
   /// Only the confirmed state needs it. A success green that reads cleanly on
   /// the near-black surface measures around 1.3:1 on Radarr's amber, so on a
-  /// filled accent control the check is resolved through [statusToneColor]
-  /// — which keeps the green's hue and walks its lightness until it clears AA
-  /// — rather than shipping a tone that is invisible on a third of the
+  /// filled accent control the check is resolved through [statusToneColor],
+  /// which keeps the green's hue and walks its lightness until it clears AA,
+  /// rather than shipping a tone that is invisible on a third of the
   /// palette. Defaults to `colorScheme.surface`.
   final Color? fill;
 

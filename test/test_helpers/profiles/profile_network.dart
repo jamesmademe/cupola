@@ -37,7 +37,7 @@ class NetworkRequest {
   /// Who answered, or null for a host nothing on the network owns.
   final ProfileServer? server;
 
-  /// True for an attempt that failed at dial time — a server that did not
+  /// True for an attempt that failed at dial time: a server that did not
   /// answer, or a host nobody owns. Nothing was sent; [headers] and [body]
   /// are empty.
   final bool dialRefused;
@@ -269,9 +269,9 @@ class ProfileServer {
 /// The fake network a profile lives on.
 ///
 /// Installed as `HttpOverrides.global`, so **every** `HttpClient` the app
-/// builds — the `Dio` inside `ApiClient`, the four clients with their own
+/// builds: the `Dio` inside `ApiClient`, the four clients with their own
 /// `Dio`, the pinned adapter of ADR-6, and the `WebSocket.connect` TrueNAS and
-/// Dockge dial through — lands here instead of on a socket. That is the point:
+/// Dockge dial through, lands here instead of on a socket. That is the point:
 /// the real service classes, the real providers and the Dashboard's own
 /// throwaway probe clients all run, and a test asserts on what they made of
 /// the answer. Nothing leaves the process; a host no server owns fails the way
@@ -407,7 +407,7 @@ class ProfileNetwork {
   final Map<String, Map<String, Object? Function(List<dynamic> params)>>
   _rpcRoutes = {};
 
-  /// Every request that reached the network, in order — including the dials
+  /// Every request that reached the network, in order, including the dials
   /// that failed ([NetworkRequest.dialRefused]).
   final List<NetworkRequest> requests = [];
 
@@ -638,7 +638,7 @@ class _FakeHttpClient implements HttpClient {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     // `badCertificateCallback`, `findProxy` and friends: accepted, never
-    // consulted — no certificate or proxy crosses this network.
+    // consulted: no certificate or proxy crosses this network.
     if (invocation.isSetter) return null;
     return super.noSuchMethod(invocation);
   }

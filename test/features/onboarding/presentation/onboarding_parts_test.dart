@@ -91,7 +91,7 @@ void main() {
       tester,
     ) async {
       // The body used to open with "Your whole stack is in one place" whatever
-      // fraction of it had actually been set up — a claim that teaches someone
+      // fraction of it had actually been set up: a claim that teaches someone
       // not to read the next one.
       await tester.pumpWidget(
         close(connected: [ServiceKey.radarr, ServiceKey.sonarr]),
@@ -111,7 +111,7 @@ void main() {
       tester,
     ) async {
       // Readarr is retired upstream, so naming it as the thing to add later is
-      // advice with a dead end — the whole reason the example is pinned.
+      // advice with a dead end: the whole reason the example is pinned.
       await tester.pumpWidget(close(connected: [ServiceKey.radarr]));
 
       expect(find.textContaining('Lidarr and the rest'), findsOneWidget);
@@ -172,7 +172,7 @@ void main() {
 
       expect(find.text('Radarr → Settings → General'), findsOneWidget);
       expect(find.text("Radarr's default port is 7878."), findsOneWidget);
-      // Whatever the validator's wording, there is a third line now — and it is
+      // Whatever the validator's wording, there is a third line now, and it is
       // the one painted in the error tone.
       final notes = tester
           .widgetList<Text>(find.byType(Text))

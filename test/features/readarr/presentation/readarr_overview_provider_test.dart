@@ -484,7 +484,7 @@ void main() {
 
     test('a cutoff endpoint the fork does not serve costs no row', () async {
       // `getCutoffPage` degrades to a null total there, and "we could not ask"
-      // must not come out as "20 books below cutoff" — or as any row at all.
+      // must not come out as "20 books below cutoff", or as any row at all.
       // The rest of the section is unaffected.
       final container = _container(
         _ScriptedReadarr(authors: [_author(books: 4, files: 1)]),

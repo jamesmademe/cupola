@@ -105,9 +105,9 @@ void main() {
 
   group('MediaDetailSectionLabel', () {
     // The detail pages' heading widget. Registered here beside [SectionHeader]
-    // because it makes the same three promises — one heading node, the
+    // because it makes the same three promises: one heading node, the
     // original-case string in the ear, and an interactive trailing that survives
-    // the silencing — and a seven-region page had no heading rotor at all until
+    // the silencing, and a seven-region page had no heading rotor at all until
     // it did.
     testWidgets('is one heading node with the count folded in', (tester) async {
       await _pump(
@@ -229,7 +229,7 @@ void main() {
       // An icon button's accessible name comes from its tooltip, which lands in
       // SemanticsData.tooltip rather than label. Asserting on it is also the
       // discriminator that matters: getSemantics walks up past merged nodes, so
-      // if the card had absorbed this button we would get the card's node back —
+      // if the card had absorbed this button we would get the card's node back;
       // and the card has no tooltip.
       expect(
         tester.getSemantics(find.byTooltip('Search options')),

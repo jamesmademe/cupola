@@ -43,7 +43,7 @@ import 'package:cupola/core/platform/browser_opener.dart';
 /// One thing waiting on a human.
 ///
 /// The row body links to the item; the trailing control is the decision. They
-/// are never the same destination — a row where "open it" and "do it" are one
+/// are never the same destination: a row where "open it" and "do it" are one
 /// gesture is a row you cannot inspect before acting.
 ///
 /// Requests draws it for the requests that wait; every other kind (a stall,
@@ -99,7 +99,7 @@ class DecisionRow extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     // Faults are amber; a pending request is backlog and stays neutral. The tone
-    // decides the marker's colour and nothing else — the row is not filled or
+    // decides the marker's colour and nothing else: the row is not filled or
     // bordered in it, because six amber rows would be a wall.
     final tone = decision.isFault ? StatusTone.warning : StatusTone.neutral;
     final toneColor = statusToneColor(
@@ -312,8 +312,8 @@ class DecisionControl extends ConsumerWidget {
 
     // Dimmed but tappable, never `Semantics(enabled: false)`: the shared
     // cross-service cell. Hiding or disabling the control would hide the fact
-    // with it, and the fact — that this stall can only be touched in a client
-    // this stack has no connection to — is what the page is for. Its toast's
+    // with it, and the fact (that this stall can only be touched in a client
+    // this stack has no connection to) is what the page is for. Its toast's
     // one action opens that client's settings.
     return CrossServiceAction.builder(
       target: required,
@@ -331,8 +331,8 @@ class DecisionControl extends ConsumerWidget {
 
 /// What the trailing control does, per kind.
 ///
-/// Two of the six are real writes from here — approve and decline are handled by
-/// [DecisionControl] above, and Start and Test are below — because both are a
+/// Two of the six are real writes from here: approve and decline are handled by
+/// [DecisionControl] above, and Start and Test are below, because both are a
 /// single confirmed call this app already owns. The other three *navigate to
 /// where the act happens*: a manual import is a three-station wizard, opening a
 /// stalled transfer is by design a jump into its client (decision 30: resume in

@@ -67,7 +67,7 @@ Future<ProfileHarness> _pumpHome(
 }
 
 /// Pumps [fakeTime] in small steps, yielding to the real event loop between
-/// them so the fast sources' isolates answer — without waiting out a slow one.
+/// them so the fast sources' isolates answer, without waiting out a slow one.
 Future<void> _advance(WidgetTester tester, Duration fakeTime) async {
   const step = Duration(milliseconds: 100);
   for (var elapsed = Duration.zero; elapsed < fakeTime; elapsed += step) {
@@ -84,7 +84,7 @@ void main() {
     (tester) async {
       final harness = await _pumpHome(
         tester,
-        // Under Dockge's own ten-second deadline, so it does answer — late.
+        // Under Dockge's own ten-second deadline, so it does answer, late.
         Profiles.p1.withLatency(WorldIds.dockge, const Duration(seconds: 8)),
         settle: false,
         // The rows themselves: the Home leads with one line and no longer

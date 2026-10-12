@@ -6,7 +6,7 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 /// Instead of Material's flat `elevation: n` (which tints the surface), Cupola
 /// uses explicit, layered [BoxShadow] stacks: a tight *contact* shadow plus a
 /// wide *ambient* one, tuned per brightness. The dark room casts a shadow only
-/// from what floats — the bar, sheets, menus, toasts — and from a poster, whose
+/// from what floats (the bar, sheets, menus, toasts) and from a poster, whose
 /// shadow is its own light: resting cards ([level1]) are flat there and lift
 /// softly on paper.
 ///

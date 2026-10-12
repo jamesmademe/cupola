@@ -17,7 +17,7 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// for exactly none of them: a service that did not answer, a sub-source inside
 /// a service that did not answer, a poll that stopped coming back, and a page
 /// that was already open when its service died all landed on the same red
-/// full-page leaf — or on nothing at all. The leaf is the expensive mistake,
+/// full-page leaf, or on nothing at all. The leaf is the expensive mistake,
 /// because it throws away the last readout the operator opened the app to see.
 /// A box that has been dark for six minutes is *precisely* when the numbers it
 /// reported seven minutes ago are worth reading.
@@ -25,19 +25,19 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// So all four are a band above content that stays, and they differ only in
 /// what the sentence says and which tone the glyph carries:
 ///
-///  * [FaultBand.unreachable] — the service did not answer at all. Identity,
+///  * [FaultBand.unreachable]: the service did not answer at all. Identity,
 ///    tabs and every readout below stay at full ink; the band names the age.
-///  * [FaultBand.section] — the service answered, one source inside it did not.
+///  * [FaultBand.section]: the service answered, one source inside it did not.
 ///    Only that section falls back, and a figure that source owns reads `—`,
 ///    never `0`.
-///  * [FaultBand.partial] — the service answered part of a read and not the
+///  * [FaultBand.partial]: the service answered part of a read and not the
 ///    rest. Amber: something that just replied did not fail to answer.
-///  * [FaultBand.stale] — nothing is broken, the poll stopped coming back.
+///  * [FaultBand.stale]: nothing is broken, the poll stopped coming back.
 ///    **Warning**, not error, and no dismiss: it is a condition of the data,
 ///    not an event, and it is still true after you acknowledge it.
-///  * [FaultBand.offlinePush] — a pushed page whose service died under it keeps
-///    its last render. Only a region that is live *by definition* — an
-///    interactive release search, whose results act on a grab — says so.
+///  * [FaultBand.offlinePush]: a pushed page whose service died under it keeps
+///    its last render. Only a region that is live *by definition*, an
+///    interactive release search, whose results act on a grab: says so.
 ///
 /// ## The three rules, which are the whole widget
 ///
@@ -52,14 +52,14 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 ///    compact amber fill ([remedyFillStyle]); every other verb stays ink.
 /// 3. **Nothing is dimmed for being unreachable.** Dimming means *not
 ///    configured* everywhere else on this canvas, and the two states need
-///    opposite responses — one is "go set this up", the other is "this is what
+///    opposite responses: one is "go set this up", the other is "this is what
 ///    it said last". Draining the readout to 38% would answer the wrong one.
 ///
 /// The band is a *line*, not a card, for the same reason [InlineErrorRetry] is:
 /// a stack where something is down most Tuesdays cannot afford alarm chrome on
 /// most Tuesdays.
 class FaultBand extends StatelessWidget {
-  /// Level 1 — the service did not answer at all.
+  /// Level 1: the service did not answer at all.
   ///
   /// [since] is when it was last seen answering; it turns the sentence from a
   /// fact into a measurement ("has not answered for 6 minutes"), which is what
@@ -85,7 +85,7 @@ class FaultBand extends StatelessWidget {
            : FaultBandAction('Settings', onOpenSettings);
 
   /// Level 1, when the service **answered**: the read failed with a refusal
-  /// or a fault — a refused key, a 5xx, a reply nobody can read.
+  /// or a fault: a refused key, a 5xx, a reply nobody can read.
   ///
   /// Amber, never [FaultBand.unreachable]'s red: the service is there, and
   /// telling the user it did not answer sends them to check a box that just
@@ -160,7 +160,7 @@ class FaultBand extends StatelessWidget {
     this.secondaryAction,
   });
 
-  /// Level 2 — the service answered; one source inside it did not.
+  /// Level 2: the service answered; one source inside it did not.
   ///
   /// The sentence is the caller's because only the caller knows the
   /// relationship: *"Radarr is answering. qBittorrent, the download client it
@@ -183,8 +183,8 @@ class FaultBand extends StatelessWidget {
   /// of a paged list came back and a later one did not, or one of several
   /// sources a list merges failed while the rest answered.
   ///
-  /// Amber, never [FaultBand.section]'s red: the service is there — it just
-  /// answered — so "did not answer" would be a claim about a host that
+  /// Amber, never [FaultBand.section]'s red: the service is there; it just
+  /// answered; so "did not answer" would be a claim about a host that
   /// replied. The sentence is the caller's, because only the caller knows how
   /// much arrived: *"Seerr returned 50 of 300 users; later pages are
   /// unavailable."* Pair it with a count that names what is shown ("50 shown")
@@ -199,10 +199,10 @@ class FaultBand extends StatelessWidget {
        primaryAction = FaultBandAction.remedy('Retry', onRetry),
        secondaryAction = null;
 
-  /// Level 3 — the poll stopped coming back.
+  /// Level 3: the poll stopped coming back.
   ///
   /// Warning, not error: nothing is unreachable and nothing failed, the figures
-  /// are simply older than they should be. And **no dismiss** — a stale reading
+  /// are simply older than they should be. And **no dismiss**: a stale reading
   /// is a property of the data, still true the instant after it is
   /// acknowledged, so a dismiss would only teach the user to hide it.
   ///
@@ -219,10 +219,10 @@ class FaultBand extends StatelessWidget {
        primaryAction = FaultBandAction('Refresh', onRefresh),
        secondaryAction = null;
 
-  /// Level 4 — the page loaded, then the service died under it.
+  /// Level 4: the page loaded, then the service died under it.
   ///
   /// The render stays: it is the last true thing the app knows. Only a region
-  /// that is live by definition falls back, and the caller decides which —
+  /// that is live by definition falls back, and the caller decides which:
   /// an interactive release list four minutes old is not a release list any
   /// more, because Grab would act on it.
   ///
@@ -252,7 +252,7 @@ class FaultBand extends StatelessWidget {
   /// The sentence, and the accessible label for the whole band.
   final String message;
 
-  /// The recovery verb. Always present — a band with nothing to do about it is
+  /// The recovery verb. Always present: a band with nothing to do about it is
   /// a band that should not be on the screen.
   final FaultBandAction primaryAction;
 
@@ -291,7 +291,7 @@ class FaultBand extends StatelessWidget {
 
     // Rule 1: the tone lands here and nowhere else. Walked against the ground
     // it is drawn on, because raw error measures about 3.4:1 on the light
-    // scaffold and raw warning about 1.4:1 — and with no fill behind it this
+    // scaffold and raw warning about 1.4:1, and with no fill behind it this
     // glyph is the entire signal.
     final alarm = statusToneColor(
       colorScheme,
@@ -394,9 +394,9 @@ const double _glyphSize = 16;
 
 /// A verb and what it does.
 ///
-/// A label and a callback rather than a `Widget`: the band owns rule 2 — the
+/// A label and a callback rather than a `Widget`: the band owns rule 2: the
 /// recovery verb is never painted red, and only an amber fault's remedy is
-/// filled — and a caller that could hand in its own styled button would be
+/// filled, and a caller that could hand in its own styled button would be
 /// able to break it from outside.
 @immutable
 class FaultBandAction {

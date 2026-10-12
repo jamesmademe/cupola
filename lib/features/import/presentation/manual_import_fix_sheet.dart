@@ -619,8 +619,8 @@ class _SheetHeader extends StatelessWidget {
                   style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
                 ),
                 // Wraps in full. Assigning an identity means reading the file
-                // name for the clues the service could not parse — the year,
-                // the date, the episode marker — so eliding it to one line
+                // name for the clues the service could not parse: the year,
+                // the date, the episode marker, so eliding it to one line
                 // hides the only evidence the decision can be made from.
                 Text(
                   subtitle,
@@ -959,7 +959,7 @@ class _ResultTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     // The row's own selected wash over the sheet is the ground both glyphs
-    // are measured against — the worse of its two states in either theme.
+    // are measured against: the worse of its two states in either theme.
     final rowGround = Color.alphaBlend(
       service.accent.withValues(alpha: 0.1),
       colorScheme.surfaceContainer,

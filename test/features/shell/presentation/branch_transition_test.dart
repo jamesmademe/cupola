@@ -59,7 +59,7 @@ class _HarnessState extends State<_Harness> {
 }
 
 /// A probe that reports what `BranchActivityScope.isActiveOf` answers where it
-/// is mounted — which is the question every gated poller in the app asks.
+/// is mounted, which is the question every gated poller in the app asks.
 class _ActivityProbe extends StatelessWidget {
   const _ActivityProbe({required this.label});
 
@@ -105,7 +105,7 @@ void main() {
       );
 
       expect(find.text('branch 0'), findsOneWidget);
-      // Hidden branches are still mounted — that is the point of the migration —
+      // Hidden branches are still mounted (that is the point of the migration),
       // but they must not be visible to a default finder.
       expect(find.text('branch 1'), findsNothing);
       expect(find.text('branch 1', skipOffstage: false), findsOneWidget);
@@ -204,7 +204,7 @@ void main() {
         ),
       );
 
-      /// Where the given branch sits in paint order — last is on top.
+      /// Where the given branch sits in paint order: last is on top.
       int depthOf(int branch) {
         final layers = find
             .byType(Offstage, skipOffstage: false)
@@ -260,7 +260,7 @@ void main() {
 
     group('nested inside another branch', () {
       // A service's own shell is mounted INSIDE the Dashboard branch, so two of
-      // these containers are in the tree at once — and `isActiveOf` resolves to
+      // these containers are in the tree at once, and `isActiveOf` resolves to
       // the nearest scope. An inner branch that published a bare `isCurrent`
       // would tell every poller under it that it was live while the branch
       // above it was put away, and would never rebuild to discover otherwise.

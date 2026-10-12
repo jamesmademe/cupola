@@ -7,8 +7,8 @@
 /// `plex_client.dart`.
 ///
 /// Plex describes a film, a show, a season, an episode, an album and a track
-/// with the *same* `Metadata` element — and a `/status/sessions` entry is one of
-/// those with `User`, `Player` and `Session` grafted on — so one mapper covers
+/// with the *same* `Metadata` element, and a `/status/sessions` entry is one of
+/// those with `User`, `Player` and `Session` grafted on: so one mapper covers
 /// every depth.
 library;
 
@@ -54,7 +54,7 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
       : viewCount >= 1;
 
   // `viewedLeafCount` is omitted on a show nobody has started, so an absent
-  // value alongside a present `leafCount` means zero watched — treating it as
+  // value alongside a present `leafCount` means zero watched: treating it as
   // unknown would hide the badge on exactly the shows the badge is for.
   final unplayed = leafCount == null
       ? null
@@ -65,7 +65,7 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
     title: title,
     subtitle: switch (kind) {
       // Contract: an episode's subtitle is the series name, a track's is the
-      // artist. Both live on `grandparentTitle` — Plex names the levels by
+      // artist. Both live on `grandparentTitle`: Plex names the levels by
       // distance, not by role.
       StreamItemKind.episode => grandparentTitle,
       StreamItemKind.track => grandparentTitle ?? parentTitle,
@@ -87,7 +87,7 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
     // Already milliseconds on Plex, unlike Jellyfin's 100ns ticks.
     runtimeMs: plexInt(json['duration']),
     isPlayed: isPlayed,
-    // Absent means "no resume point", which is not the same as 0 — and a 0 that
+    // Absent means "no resume point", which is not the same as 0. And a 0 that
     // reached the UI would render a progress bar at the very start of an
     // untouched item.
     resumeOffsetMs: (viewOffset ?? 0) > 0 ? viewOffset : null,
@@ -170,7 +170,7 @@ StreamExternalIds plexExternalIds(Map<String, dynamic> json) {
 /// Maps Plex's `type` string onto the shared item vocabulary.
 ///
 /// `artist` is the one place this bends. [StreamItemKind] has no artist member,
-/// and the enum's only behavioural consumer is `hasChildren` — so mapping an
+/// and the enum's only behavioural consumer is `hasChildren`: so mapping an
 /// artist to `other` would assert that an artist contains nothing and dead-end
 /// a music browse before it reaches an album. `album` keeps the traversal
 /// artist → album → track working and is wrong only about the level's name.
@@ -200,8 +200,8 @@ StreamItemKind plexItemKindFromType(dynamic type) {
 /// **Not [plexItemKindFromType], and the difference is deliberate.** That
 /// function answers "what should this row behave like", so it bends `artist`
 /// onto `album` to keep a music browse traversable and folds everything unknown
-/// onto `other`. A *band* is a different question — what is this group of hits
-/// about — and neither answer survives it: an Artists hub does not hold albums,
+/// onto `other`. A *band* is a different question: what is this group of hits
+/// about, and neither answer survives it: an Artists hub does not hold albums,
 /// and an Actors hub labelled `other` would claim a vocabulary entry the app
 /// does not have. Null says so, and the band still draws from the hub's own
 /// title.
@@ -237,7 +237,7 @@ StreamLibrary? plexLibraryFromJson(Map<String, dynamic> json) {
     // one on request rather than making the dashboard pay per library.
     itemCount: null,
     // Plex is the server that *does* report this per section, which is why
-    // `StreamLibrary.lastScannedAt` exists at all — and it is epoch seconds.
+    // `StreamLibrary.lastScannedAt` exists at all, and it is epoch seconds.
     lastScannedAt: plexEpochSeconds(json['scannedAt']),
     isRefreshing: plexBool(json['refreshing']) ?? false,
   );
@@ -279,14 +279,14 @@ StreamSession? plexSessionFromJson(Map<String, dynamic> json) {
 
   return StreamSession(
     // `Session.id`. Empty when the server reported no nested `Session` element,
-    // in which case there is nothing to terminate — `stopSession` refuses an
+    // in which case there is nothing to terminate: `stopSession` refuses an
     // empty id locally rather than sending one and getting a misleading 403.
     id: plexString(session?['id']) ?? '',
     // Empty rather than a placeholder: how an unnamed viewer reads is the
     // board's decision, not the client's.
     userName: plexString(user?['title']) ?? '',
     // For an episode the headline is the series and the subtitle carries the
-    // episode — the inverse of a library row, where the episode is the thing
+    // episode: the inverse of a library row, where the episode is the thing
     // being listed.
     title: kind == StreamItemKind.episode ? (grandparentTitle ?? title) : title,
     subtitle: switch (kind) {
@@ -318,15 +318,15 @@ StreamSession? plexSessionFromJson(Map<String, dynamic> json) {
     playMethod: transcode?.playMethod ?? StreamPlayMethod.directPlay,
     transcodeReasons: transcode?.reasons ?? const [],
     // `Session.bandwidth` is kilobits per second; the model is bits per second.
-    // Falls back to the file's own bitrate — also kbps — when the server did not
+    // Falls back to the file's own bitrate, also kbps, when the server did not
     // reserve bandwidth for this stream.
     bitrate: _bitsPerSecond(
       plexInt(session?['bandwidth']) ?? plexInt(_firstMedia(json)?['bitrate']),
     ),
     // **Always true on Plex.** `Session.bandwidth` is a reservation made by
     // Plex's streaming brain, not measured egress, and `Media.bitrate` describes
-    // the file. Neither is throughput, and labelling either as such — or summing
-    // them into a "total" — would be a fabricated claim.
+    // the file. Neither is throughput, and labelling either as such, or summing
+    // them into a "total", would be a fabricated claim.
     bitrateIsNominal: true,
     progress: durationMs != null && durationMs > 0 && viewOffsetMs != null
         ? (viewOffsetMs / durationMs).clamp(0.0, 1.0)
@@ -351,7 +351,7 @@ String? _episodeSubtitle(Map<String, dynamic> json, String title) {
 }
 
 /// Plex writes every child element as an array in JSON even when there is one of
-/// them — but the container key itself is optional, and some builds send a bare
+/// them, but the container key itself is optional, and some builds send a bare
 /// object for the singletons (`User`, `Player`, `Session`).
 Map<String, dynamic>? _childObject(dynamic raw) {
   if (raw is Map) return raw.cast<String, dynamic>();

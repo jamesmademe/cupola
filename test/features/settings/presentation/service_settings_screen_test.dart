@@ -38,8 +38,8 @@ void main() {
           return null;
         });
     // Default host: one with no native clipboard hardening. From Dart an absent
-    // handler and a platform that never registered one are the same thing — a
-    // MissingPluginException — and modelling it explicitly keeps the case
+    // handler and a platform that never registered one are the same thing: a
+    // MissingPluginException, and modelling it explicitly keeps the case
     // deterministic, since an unanswered channel would simply leave the copy
     // pending forever inside a widget test.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -62,8 +62,8 @@ void main() {
       await _pumpServiceSettings(tester, service: ServiceKey.radarr);
 
       // The pane is titled with the service's name alone. It used to read
-      // "Radarr Settings", which is the name of the *other* page — a service's
-      // own configuration, written through its API — and this one is the form
+      // "Radarr Settings", which is the name of the *other* page: a service's
+      // own configuration, written through its API, and this one is the form
       // for reaching it. Two "Radarr"s on screen now: the app bar and the
       // header card under it.
       expect(find.text('Radarr Settings'), findsNothing);
@@ -164,7 +164,7 @@ void main() {
             hardenedSecret = arguments?['secret'] as String?;
             hardenedLifetimeSeconds = arguments?['expiresInSeconds'] as int?;
             // The host really does put it on the system clipboard, so the fake
-            // one has to show it there too — otherwise the timed clear below
+            // one has to show it there too, otherwise the timed clear below
             // would have nothing to find and would pass vacuously.
             clipboardText = hardenedSecret;
             return true;
@@ -241,7 +241,7 @@ void main() {
       expect(clipboardText, 'copy-me');
 
       // Since Android 10 `getPrimaryClip` answers null to any app that does not
-      // have window focus — which is exactly where the user is 45 seconds after
+      // have window focus, which is exactly where the user is 45 seconds after
       // leaving to paste the key somewhere. Reading that null as "the user has
       // copied something else" made the clear a no-op on Android in precisely
       // the case it exists for, under a SnackBar promising it would run.
@@ -274,8 +274,8 @@ void main() {
           jellyfinApiKey: 'jf-key',
           jellyfinUserId: 'a1b2c3',
         ),
-        // Tall enough that the remove row — which sits below the viewer picker
-        // on a configured Jellyfin — is built without scrolling.
+        // Tall enough that the remove row, which sits below the viewer picker
+        // on a configured Jellyfin, is built without scrolling.
         viewport: const Size(800, 2400),
       );
 
@@ -294,7 +294,7 @@ void main() {
       tester,
     ) async {
       // `_maybePromptCertTrust` can only ever *add* a pin, so without this the
-      // entry outlives the address — and pins are keyed purely by origin, so a
+      // entry outlives the address, and pins are keyed purely by origin, so a
       // service later pointed back there would reuse the stale trust silently.
       const fingerprint = 'aa:bb:cc';
       final harness = await _pumpServiceSettings(
@@ -397,7 +397,7 @@ void main() {
       await tester.tap(find.text('Test connection'));
       await tester.pumpAndSettle();
 
-      // Icon + text were two nodes and neither said "failed" — the tint carried
+      // Icon + text were two nodes and neither said "failed": the tint carried
       // it. liveRegion is what makes the panel announce itself on both platforms;
       // a programmatic announcement would be dropped on Android.
       expect(
@@ -426,7 +426,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // The verdict lands under the fields, and behind a reverse proxy the wait
-      // for it runs to fifteen seconds — neither is worth spending behind a
+      // for it runs to fifteen seconds; neither is worth spending behind a
       // keyboard the form is done with.
       expect(tester.testTextInput.isVisible, isFalse);
     });
@@ -499,7 +499,7 @@ void main() {
       expect(find.textContaining('This device is blocking Cupola'), findsOne);
       expect(find.textContaining('Check the address'), findsNothing);
       // The verdict stays a single live region, so the control that fixes it has
-      // to sit *outside* that subtree to be reachable at all — see
+      // to sit *outside* that subtree to be reachable at all: see
       // `_buildTestResult`.
       expect(
         find.semantics.byLabel(RegExp(r'^Connection test failed\. ')),
@@ -507,7 +507,7 @@ void main() {
       );
 
       // The fix is not in this form, so this is the one failure that earns a
-      // button — and the button has to reach the host, not just look like it.
+      // button, and the button has to reach the host, not just look like it.
       // Below the fold since the form grew its Access row.
       await tester.ensureVisible(find.text('Open Settings'));
       await tester.pumpAndSettle();
@@ -542,8 +542,8 @@ Future<LocalNetworkAccess> _nothingGatesTheNetwork(
   Duration timeout = Duration.zero,
 }) async => LocalNetworkAccess.unrestricted;
 
-/// The OS is refusing, which is what a user who tapped Deny — or never saw the
-/// alert — is living with.
+/// The OS is refusing, which is what a user who tapped Deny (or never saw the
+/// alert) is living with.
 Future<LocalNetworkAccess> _theOsIsBlockingUs(
   String rawUrl, {
   Duration timeout = Duration.zero,

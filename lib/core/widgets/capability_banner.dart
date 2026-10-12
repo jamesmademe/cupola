@@ -14,9 +14,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// What this credential cannot do, said once, at the top of the page.
 ///
-/// The same line as [InlineErrorRetry] and [FaultBand] — no fill, no border,
+/// The same line as [InlineErrorRetry] and [FaultBand]: no fill, no border,
 /// one 16pt glyph, a sentence in `onSurfaceVariant`, one verb in brand
-/// primary — in the one tone none of them uses.
+/// primary, in the one tone none of them uses.
 ///
 /// ## Why it is blue
 ///
@@ -25,7 +25,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// role: in every case the credential is working exactly as it was created,
 /// and the app is reporting a **configuration fact**. Amber would put it in the
 /// same bucket as a stalled transfer and a failing indexer, which is a
-/// category error the user pays for — they would go looking for a fault that
+/// category error the user pays for; they would go looking for a fault that
 /// does not exist. Under the tone rule blue is "informational", and this is
 /// the definition of it.
 ///
@@ -41,8 +41,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// probe per credential: the banner is then drawn on **every visit** to every
 /// page of a read-only connection, and a live region would interrupt each of
 /// those visits with the same two sentences. It is a standing state of the
-/// connection, not an event — read when the user reaches it, like any other
-/// text — and the dimmed controls carry the same fact in their hints exactly
+/// connection, not an event: read when the user reaches it, like any other
+/// text, and the dimmed controls carry the same fact in their hints exactly
 /// where it matters, on the control about to be pressed.
 ///
 /// ## What it does not do
@@ -62,8 +62,8 @@ class CapabilityBanner extends StatelessWidget {
 
   /// What this credential cannot do, in the user's terms and in its own words:
   /// *"This Unraid key can read. Starting and stopping VMs needs a key with
-  /// write access to VMs."* Two sentences — what it can do, then what it
-  /// cannot — because a banner that only lists the refusals reads as breakage.
+  /// write access to VMs."* Two sentences: what it can do, then what it
+  /// cannot, because a banner that only lists the refusals reads as breakage.
   ///
   /// The caller writes it (through a `CapabilityCopy`): the scope names differ
   /// per service and a generic "limited permissions" would tell nobody which
@@ -71,12 +71,12 @@ class CapabilityBanner extends StatelessWidget {
   final String message;
 
   /// The fix. Lands on the page where that connection's credential is
-  /// replaced — or, when Cupola could not ask, asks again.
+  /// replaced, or, when Cupola could not ask, asks again.
   final VoidCallback onFix;
 
-  /// Overridable for the services whose credential is not a key — NPM hands out
+  /// Overridable for the services whose credential is not a key: NPM hands out
   /// a *role*, and "Update the key" would send the user looking for a field
-  /// that does not exist — and for *Check again*.
+  /// that does not exist, and for *Check again*.
   final String actionLabel;
 
   /// Above this reading scale the action goes on its own line.
@@ -84,8 +84,8 @@ class CapabilityBanner extends StatelessWidget {
   /// A `Row` of glyph, sentence and button overflows at large reading sizes: a
   /// `TextButton` is not flexible, so the action laid out at three times its
   /// normal width takes more room than the row has and the `Expanded` beside
-  /// it cannot give any more away. Shrinking the button is not an option — it
-  /// is a 44pt target with a name that has to stay readable — so past this
+  /// it cannot give any more away. Shrinking the button is not an option: it
+  /// is a 44pt target with a name that has to stay readable; so past this
   /// scale the layout stacks instead. It is the clamp
   /// `TextScaleMetrics.defaultMaxScaleFactor` uses for the boxes it grows,
   /// applied to the size the sentence is actually drawn at (the `bodySmall`
@@ -184,7 +184,7 @@ class CapabilityBanner extends StatelessWidget {
 ///
 /// One per page, **the first thing under the page's own chrome, above the
 /// first section**. It watches the connection's grant and renders nothing
-/// unless the credential is restricted for one of [resources] — so a
+/// unless the credential is restricted for one of [resources], so a
 /// read-write key, an unprobed connection and a page whose writes this
 /// credential may make all draw no banner at all.
 ///

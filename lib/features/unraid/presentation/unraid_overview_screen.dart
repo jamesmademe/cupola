@@ -13,8 +13,8 @@ import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
 /// The first tab of Unraid's service home.
 ///
-/// Overview alone carries the identity block and the readouts — Array and
-/// Docker are each a view of one kind of record — and then three regions: the
+/// Overview alone carries the identity block and the readouts; Array and
+/// Docker are each a view of one kind of record, and then three regions: the
 /// array and its disks, the containers, and what the server itself says about
 /// its uptime and release.
 ///
@@ -35,9 +35,9 @@ import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 /// current GraphQL contract. They are intentionally not duplicated in this
 /// Overview, which remains the server summary; mutation controls on those
 /// tabs are shown only when the instance advertises the matching capability.
-///  * **Parity** — `valid · checked 12 days ago · 0 errors` needs the parity
+///  * **Parity**: `valid · checked 12 days ago · 0 errors` needs the parity
 ///    history the `array` document does not carry.
-///  * **The System strip** — `CPU 12% · RAM 41% · Net 84 Mb/s` needs live
+///  * **The System strip**: `CPU 12% · RAM 41% · Net 84 Mb/s` needs live
 ///    metrics. `info { os }` answers a distro, a release and a boot time, which
 ///    is what the System section below actually draws.
 ///
@@ -61,7 +61,7 @@ class UnraidOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -74,7 +74,7 @@ class UnraidOverviewScreen extends ConsumerWidget {
     // `Unraid not configured`, and letting `AsyncValueWidget` catch that throw
     // would draw the same pixels while leaving three *failed* providers behind
     // it, each scheduling a retry with backoff for a condition no amount of
-    // waiting changes — which surfaces in tests as a pending timer and on
+    // waiting changes, which surfaces in tests as a pending timer and on
     // device as a battery cost.
     final configured = ref.watch(
       currentSettingsProvider.select(
@@ -157,8 +157,8 @@ class _ArraySection extends ConsumerWidget {
     final data = digest.asData?.value;
     // `—` while the document is in flight, after it failed, and also when it
     // answered with nothing this header could state. A `0 disks` printed over
-    // an unanswered question is a claim nobody made, and the claim it makes —
-    // "there is no array" — is the one a user would act on.
+    // an unanswered question is a claim nobody made, and the claim it makes:
+    // "there is no array" is the one a user would act on.
     final headline = data?.headline ?? '';
 
     return ServiceOverviewSection(
@@ -200,7 +200,7 @@ class _DiskRow extends StatelessWidget {
     // amber against the surface this row actually lands on, which on the light
     // theme is a different hue from the one the dark artboards draw. A drive
     // over the warning threshold, or a slot the array has flagged, is a
-    // **fault** and therefore amber — nothing on this page is ever red, because
+    // **fault** and therefore amber. Nothing on this page is ever red, because
     // red means the host did not answer, and a disk it told us about is proof
     // that it did.
     final tone = statusToneColor(
@@ -287,7 +287,7 @@ class _ContainerRow extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     // Five arms, one row: green for a container that is up and whose
     // healthcheck agrees, amber for the faults, neutral for every deliberate
-    // state — stopped, paused, never started. A container the user stopped is
+    // state: stopped, paused, never started. A container the user stopped is
     // **backlog**, and painting it amber beside one the kernel killed is how
     // the tone rule gets broken in a Docker list.
     final tone = statusToneColor(
@@ -335,7 +335,7 @@ class _SystemSection extends ConsumerWidget {
       // there is no metrics call to add one. Deleting the promise beats drawing
       // three meters that would read zero forever.
       //
-      // No link either — Unraid's bar is Overview, Array, Docker, VMs,
+      // No link either. Unraid's bar is Overview, Array, Docker, VMs,
       // Notifications and Shares, and there is no System tab to send anyone to.
       child: AsyncValueWidget<List<UnraidSystemFact>>(
         value: facts,
@@ -346,8 +346,8 @@ class _SystemSection extends ConsumerWidget {
           ref.invalidate(unraidInfoProvider);
         },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        // Never empty: `info` either answers both facts — with `—` for one it
-        // left out — or it fails, and a failure is the error state rather than
+        // Never empty: `info` either answers both facts (with `—` for one it
+        // left out), or it fails, and a failure is the error state rather than
         // an empty one.
         data: (data) =>
             Column(children: [for (final fact in data) _SystemRow(fact: fact)]),
@@ -368,7 +368,7 @@ class _SystemRow extends StatelessWidget {
     return ServiceOverviewRow(
       spoken: fact.spoken,
       leading: Icon(fact.icon, size: 18, color: colorScheme.onSurfaceVariant),
-      // The figure in the title slot and its label beneath — the inverse of the
+      // The figure in the title slot and its label beneath: the inverse of the
       // two regions above, and deliberately so. There the title is the subject
       // (a disk, a container) and the reading is secondary, which is the shape
       // `ServiceOverviewRow` was built for. System has no subject: "Uptime" is

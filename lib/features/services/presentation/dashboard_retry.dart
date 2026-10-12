@@ -7,7 +7,7 @@
 /// alert band re-probed the connection and left every region's sources where
 /// they were. So the probe could come back answering while "did not answer"
 /// stayed under In flight, the qBittorrent rows stayed missing and the card
-/// stayed at `—` — recovery only showed after a pull-to-refresh.
+/// stayed at `—`: recovery only showed after a pull-to-refresh.
 ///
 /// One function, so the band, the regions and the refresh drop the same set.
 library;
@@ -35,7 +35,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 
 /// The providers the Dashboard's merged regions read from [service] and that
-/// keep an answer of their own — what has to be dropped for that service's
+/// keep an answer of their own: what has to be dropped for that service's
 /// part of In flight and of Needs a decision to be read again.
 ///
 /// The \*arrs are absent on purpose: their queue and their history are read
@@ -111,7 +111,7 @@ void retryDashboardServices(WidgetRef ref, Iterable<ServiceKey> services) {
     }
   }
   // Keyed on the connection, so it cannot be narrowed to these services by
-  // key — and a retry that left the fleet's figures cached would redraw the
+  // key, and a retry that left the fleet's figures cached would redraw the
   // recovered card with the numbers from the outage.
   ref.invalidate(serviceKpiForProvider);
 

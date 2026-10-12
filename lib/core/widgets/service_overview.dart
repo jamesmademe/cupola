@@ -25,7 +25,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// of them were already written.** Radarr, Seerr, Bazarr and Prowlarr each
 /// carried a private `_OverviewSection` / `_OverviewRow` / `_SectionEmpty` /
 /// `_RowsSkeleton` / `_IdentityBlock` that differed only in which `ServiceKey`
-/// they named — the fifth copy would have been written before anyone noticed
+/// they named: the fifth copy would have been written before anyone noticed
 /// the first four had drifted. Nine more Overviews are owed.
 ///
 /// Everything here takes the [ServiceKey] and derives the rest: the ink by
@@ -37,9 +37,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// The room is monochrome (principle 3 of the brand book: colour is information), so a link
 /// that opens another tab is the secondary ink the brand book draws section links
-/// in, the same on every service — it used to be the service's accent, walked
+/// in, the same on every service: it used to be the service's accent, walked
 /// until it cleared AA. Public because a page's own section marks have to be
-/// inked the same way as the link and the lens chip here — four private copies
+/// inked the same way as the link and the lens chip here: four private copies
 /// of this one expression is exactly what the rest of this file exists to
 /// stop. [service] stays in the signature so every call site keeps naming
 /// whose Overview it is.
@@ -50,8 +50,8 @@ Color serviceOverviewInk(ServiceKey service, ColorScheme colorScheme) =>
 ///
 /// `goBranch`, not `context.go`: it restores that branch's own stack, which is
 /// what makes "back returns to the tab you left" true. `maybeOf` rather than
-/// `of` because an Overview is also legitimately built outside a shell — a
-/// widget test, a preview — where there is no branch to switch and the link
+/// `of` because an Overview is also legitimately built outside a shell, a
+/// widget test, a preview, where there is no branch to switch and the link
 /// simply does nothing rather than throwing.
 void _goToTab(BuildContext context, ServiceKey service, ServiceTab tab) {
   final tabs = tabsFor(service);
@@ -73,7 +73,7 @@ class ServiceOverviewSection extends StatelessWidget {
     this.destination,
   }) : padBody = true;
 
-  /// A region whose body bleeds to the window edge — a poster rail, whose first
+  /// A region whose body bleeds to the window edge: a poster rail, whose first
   /// tile aligns to the column while the row itself runs off it.
   ///
   /// A named constructor rather than a `padBody:` flag, per
@@ -122,8 +122,8 @@ class ServiceOverviewSection extends StatelessWidget {
                   label: tab.label,
                   color: serviceOverviewInk(service, colorScheme),
                 ),
-          // The link's "→" sits inside the region the header silences — read
-          // out it is "rightwards arrow" — so the destination comes back as a
+          // The link's "→" sits inside the region the header silences. Read
+          // out it is "rightwards arrow", so the destination comes back as a
           // hint instead.
           semanticHint: tab == null
               ? null
@@ -169,7 +169,7 @@ class _TabLink extends StatelessWidget {
 ///
 /// Capped rather than free: at an accessibility reading size an unconstrained
 /// figure next to an `Expanded` title is a right-edge overflow, and a row that
-/// throws is worse than a figure that ellipsises — the whole value is still in
+/// throws is worse than a figure that ellipsises. The whole value is still in
 /// the sentence a screen reader hears.
 const double _trailingMaxWidth = 132;
 
@@ -193,7 +193,7 @@ class ServiceOverviewRow extends StatelessWidget {
   final String title;
   final String detail;
 
-  /// Ink for the title where a row states its own tone — otherwise
+  /// Ink for the title where a row states its own tone; otherwise
   /// `onSurface`. It is passed already resolved, because the tone a row is
   /// carrying is the page's fact, not this widget's.
   final Color? titleColor;
@@ -210,7 +210,7 @@ class ServiceOverviewRow extends StatelessWidget {
     return Semantics(
       container: true,
       label: spoken,
-      // Nothing in this row is interactive, so the parts are safe to silence —
+      // Nothing in this row is interactive, so the parts are safe to silence:
       // read separately they are three fragments of one fact.
       excludeSemantics: true,
       child: Padding(

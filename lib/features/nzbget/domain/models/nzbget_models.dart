@@ -6,7 +6,7 @@
 ///
 /// Size and rate labels go through `core/utils/byte_format.dart`. This file
 /// used to carry `formatNzbgetRate` and `formatNzbgetMb`, which disagreed with
-/// SABnzbd's equivalents on both thresholds and precision — so an identical
+/// SABnzbd's equivalents on both thresholds and precision, so an identical
 /// quantity read differently depending on which download client reported it.
 library;
 
@@ -19,12 +19,12 @@ int combineHiLo(dynamic hi, dynamic lo) {
   return (intOrNull(hi) ?? 0) * (1 << 32) + (intOrNull(lo) ?? 0);
 }
 
-/// Reads one of NZBGet's sizes — `<field>MB`, or the `<field>Hi`/`<field>Lo`
-/// pair — in megabytes, and answers **null** when the record carried neither.
+/// Reads one of NZBGet's sizes (`<field>MB`, or the `<field>Hi`/`<field>Lo`
+/// pair), in megabytes, and answers **null** when the record carried neither.
 ///
 /// Null and not zero. NZBGet's own responses carry all three keys, so an
 /// absent one means a truncated reply, a version that does not report the
-/// field, or a record this app guessed the shape of — none of which is the
+/// field, or a record this app guessed the shape of: none of which is the
 /// same statement as "zero megabytes", and each of which used to be rendered
 /// as one.
 int? megabytesOrNull(Map<String, dynamic> json, String field) {
@@ -107,7 +107,7 @@ class NzbgetStatus {
 ///
 /// NZBGet 24.2 deprecated the 32-bit `DownloadRate` for the
 /// `DownloadRateLo`/`DownloadRateHi` pair, because a 32-bit rate tops out at
-/// 4 GiB/s — and a field NZBGet has deprecated is one it can stop sending. The
+/// 4 GiB/s, and a field NZBGet has deprecated is one it can stop sending. The
 /// pair wins whenever either half is there; older daemons, which send only
 /// `DownloadRate`, still read.
 int _downloadRate(Map<String, dynamic> json) {
@@ -140,7 +140,7 @@ class NzbgetGroup {
   /// The `drone` post-processing parameter, when the job carries one.
   ///
   /// Every \*arr that sends an NZB to NZBGet tags it with `drone=<guid>` and
-  /// records **that** as the queue record's `downloadId` — the NZBID only when
+  /// records **that** as the queue record's `downloadId`, the NZBID only when
   /// the job has no such parameter (Sonarr's `Nzbget.cs`, `GetQueue`: the id is
   /// the drone value, else `NzbId`). Radarr, Lidarr and Readarr share the code.
   final String? droneId;
@@ -148,7 +148,7 @@ class NzbgetGroup {
   /// The id an \*arr knows this job by: [droneId] first, the NZBID otherwise.
   ///
   /// The dashboard used to join on the NZBID alone, which is the one spelling
-  /// an \*arr never records for a job it sent — so an \*arr grab and the
+  /// an \*arr never records for a job it sent, so an \*arr grab and the
   /// NZBGet job moving it never met, and one download read as two.
   String get downloadId => droneId ?? '$nzbId';
   final String name;
@@ -164,7 +164,7 @@ class NzbgetGroup {
   /// Nullable and not defaulted to zero, which is the whole point: with a `0`
   /// standing in for silence, [progress] computed `(size - 0) / size` == 1 and
   /// a job whose remaining size the server never reported drew a full bar and
-  /// read `100%` — a percentage nobody computed, presented as finished. Zero
+  /// read `100%`, a percentage nobody computed, presented as finished. Zero
   /// stays available for what it actually means: a job with nothing left.
   final int? remainingSizeMb;
 

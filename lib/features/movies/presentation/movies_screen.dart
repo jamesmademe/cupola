@@ -30,8 +30,8 @@ import 'package:cupola/core/utils/arr_model_helpers.dart';
 /// than throwing, because the endpoint is missing on some *arr builds. So an
 /// empty set here means "Radarr had nothing to say", not strictly "nothing is
 /// below cutoff". A Radarr that is not answering at all never reaches this
-/// chip — the library provider fails first and the wall goes under a fault
-/// band — so the residue is a reachable Radarr with a dead cutoff route, which
+/// chip: the library provider fails first and the wall goes under a fault
+/// band, so the residue is a reachable Radarr with a dead cutoff route, which
 /// reads as an empty chip rather than a wrong number.
 final radarrCutoffUnmetIdsProvider = FutureProvider.autoDispose<Set<int>>((
   ref,

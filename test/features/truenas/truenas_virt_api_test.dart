@@ -46,7 +46,7 @@ const _incusContainer = {
 };
 
 void main() {
-  group('decision 36 — Incus instances only', () {
+  group('decision 36: Incus instances only', () {
     test('the VM list asks Incus and never the legacy KVM subsystem', () async {
       // The rule, not the payload: `vm.query` is a different subsystem with
       // numeric ids and its own lifecycle RPCs, and a VM listed from it could

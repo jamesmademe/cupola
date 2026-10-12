@@ -5,7 +5,7 @@ import 'package:cupola/features/truenas/domain/models/pool.dart';
 class TrueNasStorageApi extends TrueNasApiBase {
   const TrueNasStorageApi(super.client);
 
-  /// All pools, without topology (lighter — used for lists/KPIs).
+  /// All pools, without topology (lighter, used for lists/KPIs).
   Future<List<TrueNasPool>> getPools() =>
       queryList('pool.query', TrueNasPool.fromJson);
 

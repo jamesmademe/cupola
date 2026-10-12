@@ -17,7 +17,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The leaf for a configured service that did not answer, where there is
 /// genuinely nothing else to draw.
 ///
-/// Distinct from `NotConfiguredPlaceholder` (no URL or credential saved) — that
+/// Distinct from `NotConfiguredPlaceholder` (no URL or credential saved). That
 /// state asks the user to go and set something up, this one reports that
 /// something already set up has gone quiet. The two are not interchangeable and
 /// the app must never dim for the second: dimming means *not configured*
@@ -26,8 +26,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// ## Use `FaultBand.unreachable` instead, wherever you can
 ///
 /// This widget is the fallback, not the answer. A page that has *any* retained
-/// readout — a queue from two minutes ago, an array that was already degraded,
-/// a version string — owes the operator that readout at full ink with a
+/// readout: a queue from two minutes ago, an array that was already degraded,
+/// a version string, owes the operator that readout at full ink with a
 /// [FaultBand] above it, because the last thing the box said before it went
 /// dark is precisely what they opened the app to see. Replacing the page
 /// throws it away. This leaf is for the cold open, where the service has never
@@ -35,14 +35,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// ## What changed in the copy
 ///
-/// It used to offer troubleshooting — *"Cupola can't reach the server. Check
+/// It used to offer troubleshooting: *"Cupola can't reach the server. Check
 /// that X is running and that the URL in Settings is reachable."* That is a
 /// checklist for a first-time setup, printed at a user who has already set the
 /// service up and mostly knows why it is down. The design states a fact and an
 /// age instead, because the age is the only thing here the user does not
 /// already know: thirty seconds is a restart, forty minutes is an outage, and
 /// those are different decisions. And it gives the second action the fact
-/// implies — when the *address* is what changed, no number of retries helps.
+/// implies: when the *address* is what changed, no number of retries helps.
 ///
 /// ## `.failure`: the same leaf, told *why*
 ///
@@ -52,7 +52,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// `describeFailure`, the sentence from `connectionFailureMessage` (or the
 /// failure's own verbatim detail), and the address is the lens connection's
 /// host. Red only when nothing answered; a refused key, a 5xx, a timeout or a
-/// certificate is a **fault**, amber. It never prints the exception — a class
+/// certificate is a **fault**, amber. It never prints the exception: a class
 /// name and a library's message are diagnostics, and they were the whole
 /// detail line of every failed load.
 ///
@@ -98,7 +98,7 @@ class ServiceOfflineState extends StatelessWidget {
   ///
   /// The screens that gate on the probe used to draw the plain leaf for any
   /// failed summary, so a SABnzbd that refused the key read "SABnzbd did not
-  /// answer" — red, about a server that had just answered.
+  /// answer" in red, about a server that had just answered.
   factory ServiceOfflineState.fromSummary({
     Key? key,
     required ServiceSummary summary,
@@ -303,7 +303,7 @@ class _OfflineLeaf extends StatelessWidget {
             children: [
               // No fill behind it. Presence is the signal, and a page that has
               // already emptied itself does not need a second announcement in
-              // a tinted circle — the glyph alone carries the tone, measured
+              // a tinted circle: the glyph alone carries the tone, measured
               // against the ground it sits on.
               ExcludeSemantics(child: Icon(icon, size: 32, color: glyphColor)),
               const SizedBox(height: AppSpacing.lg),

@@ -41,8 +41,8 @@ void main() {
   group('the bootstrap', () {
     test('configures and purges even with the feature switched off', () async {
       // **The most important test in this feature.** What clears the records a
-      // previous session left on disk — the plugin's own pop at start(), and
-      // the WorkManager prune — runs from here. If "off" meant "skip the
+      // previous session left on disk (the plugin's own pop at start(), and
+      // the WorkManager prune) runs from here. If "off" meant "skip the
       // bootstrap", the user who switches background search off would keep the
       // last copy of their API key on disk for as long as the OS felt like it,
       // and the privacy setting would be a privacy regression. The flag is not
@@ -129,7 +129,7 @@ void main() {
     });
 
     test('a failing plugin does not take the launch down with it', () async {
-      // A platform without the plugin still runs the foreground path — which is
+      // A platform without the plugin still runs the foreground path, which is
       // the whole reason the transport sits behind an interface.
       await expectLater(
         configureBackgroundSearch(
@@ -212,7 +212,7 @@ void main() {
   group('switching it off', () {
     test('cancels first, then persists, then prunes', () async {
       // The order is the promise. A search left to drain keeps the plugin's
-      // record of it — headers, so the API key — until it ends on its own, so
+      // record of it (headers, so the API key) until it ends on its own, so
       // cancelling has to come first: a cancelled task reaches a final state,
       // which is the condition under which the plugin deletes that record.
       // Persisting before cancelling would also let a queued job start on the

@@ -14,7 +14,7 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// One playback plus which server is serving it.
 ///
 /// The pairing is the point: `/activity` merges sources, so a row has to be able
-/// to say where it came from — the same problem the Recently Added rail solves
+/// to say where it came from: the same problem the Recently Added rail solves
 /// with an accent dot and a spoken `accentLabel`. [instanceId] is the connection
 /// serving it, which is where its Stop goes, and [connectionName] is how the
 /// row names it once its service has two (`SettingsModel.connectionName`).
@@ -93,7 +93,7 @@ Future<bool> _ownerOnly(Ref ref, StreamConnection key, Object error) async =>
 /// **Deliberately not a `GlobalActivityItem`, and this is the load-bearing
 /// decision on this surface.** Forcing a session into that model needs a
 /// `ServiceType`, which is a closed `{movies, series, music, discover}` with no
-/// legal value for a media server — and adding one breaks **21 exhaustive
+/// legal value for a media server, and adding one breaks **21 exhaustive
 /// switches** across the activity feature, plus 6 more on `GlobalActivityKind`,
 /// two of which have `_ =>` fallbacks that would silently mis-route a session row
 /// instead of failing to compile. A playing session is also genuinely a different
@@ -106,12 +106,12 @@ Future<bool> _ownerOnly(Ref ref, StreamConnection key, Object error) async =>
 /// Sources degrade independently **while one of them still answers**: an
 /// unreachable Jellyfin yields no rows rather than emptying the section, and
 /// [streamActivityOfflineProvider] names it beside the sessions Plex did send.
-/// That partial answer is honest — every row on screen is a fact, and the
+/// That partial answer is honest: every row on screen is a fact, and the
 /// silence is named.
 ///
 /// When **no** configured server answered there is no partial answer to show,
 /// and this throws the last failure. It used to return `[]`, which the section
-/// drew as "Nobody is watching right now" about servers nobody could ask — the
+/// drew as "Nobody is watching right now" about servers nobody could ask. The
 /// offline note never fired either, because the sessions reads swallowed their
 /// own failures until they stopped.
 ///
@@ -160,7 +160,7 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
     Error.throwWithStackTrace(failure, failureStack!);
   }
 
-  // Transcodes first — the rows that are costing the box something are the rows
+  // Transcodes first: the rows that are costing the box something are the rows
   // worth reading first, and the per-service order underneath has to stay stable
   // so a bitrate updating in place does not reshuffle the list.
   //
@@ -259,8 +259,8 @@ final streamActivityOwnerOnlyProvider =
 
 /// Whether any media server is configured at all.
 ///
-/// The Streaming sub-segment is offered unconditionally — hiding a whole record
-/// type because nothing is set up yet would make the feature undiscoverable — so
+/// The Streaming sub-segment is offered unconditionally. Hiding a whole record
+/// type because nothing is set up yet would make the feature undiscoverable, so
 /// the body needs this to tell "not set up" from "nobody watching".
 final hasStreamServiceProvider = Provider<bool>((ref) {
   final settings = ref.watch(currentSettingsProvider);

@@ -209,7 +209,7 @@ void main() {
     // An interceptor that refuses a request reaches its verdict *and* has Dio
     // wrap it in a DioException carrying whatever status happened to trigger
     // the refusal. Re-deriving the reason from that status throws the verdict
-    // away — which is how refused redirects once all collapsed to `unknown`.
+    // away, which is how refused redirects once all collapsed to `unknown`.
     // The status here maps to something real now, so this asserts the verdict
     // still wins rather than merely filling a gap.
     test('an interceptor verdict wrapped by Dio beats the status code', () {
@@ -309,7 +309,7 @@ void main() {
     });
 
     // These used to collapse to `unknown`, which reaches the user as "Could
-    // not verify the instance. Double-check the address and credentials." —
+    // not verify the instance. Double-check the address and credentials.":
     // sending them to re-check a credential the server never looked at.
     test('an unfollowable 3xx is a redirect, not an unknown', () {
       for (final status in const [300, 301, 302, 303, 304, 307, 308]) {

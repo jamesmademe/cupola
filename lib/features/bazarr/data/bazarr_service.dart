@@ -23,8 +23,8 @@ class BazarrService {
     if (raw is Map<String, dynamic>) {
       return BazarrBadges.fromJson(raw);
     }
-    // Not a zero. A body that is not the badge map — a proxy's login page, an
-    // HTML error — answered this with all-zero badges, and the rail printed
+    // Not a zero. A body that is not the badge map (a proxy's login page, an
+    // HTML error) answered this with all-zero badges, and the rail printed
     // "Wanted 0" for a Bazarr that had said nothing about its backlog.
     throw Exception('Bazarr returned an unreadable badge payload');
   }
@@ -139,7 +139,7 @@ class BazarrService {
   /// Client-side search across the Bazarr library.
   ///
   /// Bazarr exposes no search endpoint, so matching happens here, against a
-  /// cached snapshot of the library's titles — see [_libraryIndex].
+  /// cached snapshot of the library's titles. See [_libraryIndex].
   ///
   /// [cancelToken] is honoured *cooperatively*, and only after the snapshot
   /// resolves: the download itself is shared with whatever query comes next, so
@@ -170,15 +170,15 @@ class BazarrService {
   /// records over the wire.
   ///
   /// **The snapshot is reused for [_searchIndexTtl].** Library membership does
-  /// not churn on a typing timescale — a series added while the user is midway
-  /// through a word is not what the search is for — so after the first query a
+  /// not churn on a typing timescale: a series added while the user is midway
+  /// through a word is not what the search is for, so after the first query a
   /// keystroke costs nothing at all.
   ///
   /// **A fetch already in flight is shared, not restarted.** This is also why
   /// the fetch deliberately takes no `CancelToken`: cancelling the in-flight
   /// download when a superseded query is discarded would abort the very request
   /// the *next* query is waiting on, and the round would start over. Sharing it
-  /// gets what cancellation was after — one download, not one per keystroke —
+  /// gets what cancellation was after: one download, not one per keystroke,
   /// without that trade.
   Future<List<BazarrSearchHit>> _libraryIndex(int length) {
     final cached = _searchIndex;
@@ -397,18 +397,18 @@ class BazarrService {
   // over an empty list and a Sync button with nothing behind it would both be
   // controls that fail, which is worse than their absence.
   //
-  // DECISION 22 — History and Blacklist are one tab with a pill, so Bazarr
+  // DECISION 22: History and Blacklist are one tab with a pill, so Bazarr
   // keeps six tabs. Neutral throughout: blacklisting is a choice, not a fault.
   // Missing:
   //   GET    /api/episodes/blacklist   (paged, same envelope as the histories)
   //   GET    /api/movies/blacklist
-  //   DELETE /api/episodes/blacklist   ({provider, subs_id}) — the row's ✕
+  //   DELETE /api/episodes/blacklist   ({provider, subs_id}): the row's ✕
   //   DELETE /api/movies/blacklist
-  //   POST   /api/episodes/blacklist   — blacklist-and-search from a history
+  //   POST   /api/episodes/blacklist: blacklist-and-search from a history
   //   POST   /api/movies/blacklist       row, the action that makes the list
   //                                      worth having
   //
-  // DECISION 23 — one Sync action per subtitle row, on the detail. The Feature
+  // DECISION 23: one Sync action per subtitle row, on the detail. The Feature
   // map had left it out and the detail drew it; the detail was right. Missing:
   //   PATCH  /api/subtitles  ({action: 'sync', language, path, type, id})
   // and, for the rest of the row's verbs the same boards draw:

@@ -28,24 +28,24 @@ enum ServiceKey {
 ///
 /// Cupola started as a media companion but is growing into a homelab hub, so
 /// services are grouped by the kind of job they do. This enum is the single
-/// source of truth for that grouping — the Home dashboard, Settings and the
+/// source of truth for that grouping: the Home dashboard, Settings and the
 /// onboarding flow all read from it, so a new service only needs a [domain]
 /// assignment in one place.
 enum ServiceDomain {
   media(label: 'Media'),
   downloads(label: 'Downloads'),
 
-  /// Media servers — the only services in the app that know about *people*.
+  /// Media servers: the only services in the app that know about *people*.
   ///
   /// Every other domain answers questions about objects: is this film owned,
   /// grabbed, subtitled, on disk. A media server is the only source of
-  /// subject-and-time state — who is watching, where they stopped, what is next
+  /// subject-and-time state: who is watching, where they stopped, what is next
   /// for them, what nobody has played. That is why this is its own domain and
   /// not more Media, and it is the guard against re-rendering Radarr's library
   /// under a second name.
   ///
   /// Ordered between [downloads] and [infrastructure] deliberately: the bands
-  /// then read as the pipeline they are — catalogue, acquire, watch, and the box
+  /// then read as the pipeline they are: catalogue, acquire, watch, and the box
   /// it all runs on.
   stream(label: 'Stream'),
   infrastructure(label: 'Infrastructure');
@@ -112,15 +112,15 @@ extension ServiceKeyExtension on ServiceKey {
 
   /// The service's own mark, from `ServiceGlyphs`.
   ///
-  /// A category glyph named what a service *does* — a download arrow, a play
-  /// button — and three download clients and two media servers came out as
+  /// A category glyph named what a service *does*: a download arrow, a play
+  /// button, and three download clients and two media servers came out as
   /// the same picture told apart only by colour. Each service now carries its
   /// own mark: the project's logo reduced to one filled shape (Simple Icons'
   /// where one exists, drawn from the official logo where it does not).
   ///
   /// Three are deliberately not logos. TrueNAS limits fair use of its marks to
   /// text and Unraid forbids its logo inside a third-party interface, so both
-  /// draw the kind of machine instead — a drive rack, a hard disk. Plex allows
+  /// draw the kind of machine instead: a drive rack, a hard disk. Plex allows
   /// its chevron only unaltered and, per its brand guide, only with written
   /// permission; until that exists it is a film strip, never a play symbol,
   /// which its guidelines also rule out.
@@ -148,7 +148,7 @@ extension ServiceKeyExtension on ServiceKey {
   /// for every service.
   ///
   /// The room is monochrome (principle 3 of the brand book: colour is information). Colour
-  /// reaches a pixel from the content — a title's light — and from the five
+  /// reaches a pixel from the content (a title's light), and from the five
   /// status tones, and from nothing else, so a service's mark in a list, its
   /// tab, its room and its buttons carry no hue of their own: the identity is
   /// the mark's shape and the name. Measured against the tones, Radarr,
@@ -157,7 +157,7 @@ extension ServiceKeyExtension on ServiceKey {
   /// accents left the interface rather than being walked further apart.
   ///
   /// **This getter is the switch.** Every surface that used to be tinted by a
-  /// service — a room's light, a glow, a tinted chip, a walked label — reads
+  /// service (a room's light, a glow, a tinted chip, a walked label) reads
   /// it, so it hands them all the lamp: a light where it is painted as light,
   /// and, through `ServiceTheme.onTint`, the room's ink where it is asked to
   /// carry a label. The brand colour survives as data in [brandAccent].
@@ -193,7 +193,7 @@ extension ServiceKeyExtension on ServiceKey {
   ///
   /// **The one place the app decides that.** Persistence, the settings form and
   /// the verifier all read this rather than re-deriving "is it one of these
-  /// three" — the three-way check used to be spelled out in five files, so the
+  /// three": the three-way check used to be spelled out in five files, so the
   /// next credential-authenticated service could be added to four of them and
   /// leave storage and the UI disagreeing about which fields even exist.
   ///
@@ -210,7 +210,7 @@ extension ServiceKeyExtension on ServiceKey {
     // Nginx Proxy Manager has **no long-lived API key at all**: the only
     // credential it accepts is the account's own email and password, which
     // `POST /api/tokens` exchanges for a short-lived bearer token. That is a
-    // property of the server, not a shortcut taken here — see [setupNote]
+    // property of the server, not a shortcut taken here; see [setupNote]
     // for what it means for the user.
     ServiceKey.nginxProxyManager => false,
     ServiceKey.seerr ||
@@ -235,7 +235,7 @@ extension ServiceKeyExtension on ServiceKey {
   /// attached**, so every user-scoped question (resume positions, next up,
   /// unplayed) needs a `userId` supplied explicitly. Plex is excluded because
   /// its token *is* its user and `/library/*` accepts no impersonation
-  /// parameter — a Plex library has exactly one perspective. Expressed as a
+  /// parameter. A Plex library has exactly one perspective. Expressed as a
   /// capability so the shared settings screen inserts the control the same way
   /// it decides on `SearchHeadroomCard.appliesTo`, rather than naming a
   /// `ServiceKey` inline.
@@ -250,7 +250,7 @@ extension ServiceKeyExtension on ServiceKey {
   /// The port this service listens on out of the box.
   ///
   /// Offered as a one-tap suggestion next to the address field, alongside the
-  /// host carried over from the service configured before it — on a home lab one
+  /// host carried over from the service configured before it. On a home lab one
   /// box usually runs everything on different ports, so between the two most
   /// services become a tap plus a pasted key. A suggestion only: a service
   /// behind a reverse proxy is reached on 443 with a path, and nothing here
@@ -266,7 +266,7 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.qbittorrent || ServiceKey.sabnzbd => 8080,
     ServiceKey.nzbget => 6789,
     ServiceKey.transmission => 9091,
-    // 81, not 80 or 443. Those two are the proxy *doing its job* — the
+    // 81, not 80 or 443. Those two are the proxy *doing its job*: the
     // hostnames it fronts. The admin interface, which is the only thing
     // carrying an API, listens separately.
     ServiceKey.nginxProxyManager => 81,
@@ -357,7 +357,7 @@ extension ServiceKeyExtension on ServiceKey {
             "password cannot travel with it.";
 
   /// Whether one saved credential of this service can carry a narrower scope
-  /// than the service's own writes in Cupola need — the services that get a
+  /// than the service's own writes in Cupola need: the services that get a
   /// capability probe, a banner and dimmed writes.
   ///
   /// Exhaustive, like [usesApiKey], so a new service has to answer.
@@ -418,8 +418,8 @@ extension ServiceKeyExtension on ServiceKey {
   /// The tail of `ServiceInstance.credentialStorageKey`, and the reason that
   /// key comes out byte-identical to the one an existing install already wrote:
   /// the suffix was never uniform. Three services' worth of vocabulary is
-  /// already on disk — an arr files an `api_key`, qBittorrent a `password`,
-  /// Plex a `token` — so this states it rather than flattening it and orphaning
+  /// already on disk: an arr files an `api_key`, qBittorrent a `password`,
+  /// and Plex a `token`, so this states it rather than flattening it and orphaning
   /// every stored secret.
   ///
   /// Not [credentialLabel] lowercased: that string is UI copy and may be
@@ -459,7 +459,7 @@ extension ServiceKeyExtension on ServiceKey {
   /// class would mean defending an arbitrary line at every one of them.
   ///
   /// True means **reachable**, not merely storable. There was briefly a second
-  /// flag here — `readsThroughLens` — that said no for Jellyfin, Plex and
+  /// flag here, `readsThroughLens`, that said no for Jellyfin, Plex and
   /// TrueNAS, whose clients were still built from the flat first-instance
   /// projections; it hid their lens badge and folded their picker cells, so a
   /// second connection of those three could be configured, probed and counted
@@ -480,7 +480,7 @@ extension ServiceKeyExtension on ServiceKey {
   /// feature, whose thirty-odd reads all resolve through the lens; Bazarr's ids
   /// are a *third* server's (`radarrId` / `sonarrSeriesId`), so its row does not
   /// even land on a Bazarr page. Both therefore search the lens and get one
-  /// section, unlabelled — which is what they did before, rather than two
+  /// section, unlabelled, which is what they did before, rather than two
   /// sections with identical contents under two different names.
   ///
   /// Not contradicted by /activity fanning Seerr out over its connections: a
@@ -608,13 +608,13 @@ extension ServiceKeyExtension on ServiceKey {
   /// be true before the connection is worth testing.
   ///
   /// A second getter rather than a reuse of [setupNote] because the walk says
-  /// less on purpose — its address field already prints the default port and
+  /// less on purpose: its address field already prints the default port and
   /// its credential field the breadcrumb, so what is left to say is the caveat
   /// itself. It lives here for the reason [setupNote] does: what a service says
   /// about itself belongs beside the rest of its description, so a new service
   /// is one entry in this file rather than a hunt through the screens that
   /// render it. The walk used to carry its own copy of this list, and TrueNAS
-  /// was missing from it — the version requirement was stated in Settings and
+  /// was missing from it. The version requirement was stated in Settings and
   /// nowhere in the flow that actually asks for the address.
   String? get walkNote => switch (this) {
     // Said before the test, not after: an older TrueNAS can connect and then
@@ -664,11 +664,11 @@ extension ServiceKeyExtension on ServiceKey {
   /// **Jellyfin and Plex are deliberately excluded, and this is a design
   /// decision rather than an omission.** Adding them would make the same film
   /// return in up to six sections: Radarr and Sonarr "search" is `movie/lookup`
-  /// and `series/lookup` — a TMDB/TVDB lookup, not a library search — so "Dune"
+  /// and `series/lookup`, a TMDB/TVDB lookup, not a library search, so "Dune"
   /// already produces four groups, in `Future.wait` declaration order with no
   /// relevance ranking, and `_SearchSection` renders every group including the
   /// empty ones. A Stream match is worth strictly more as a *decoration* on the
-  /// Radarr/Sonarr/Seerr row that is already there — "On Jellyfin · 34 min in" —
+  /// Radarr/Sonarr/Seerr row that is already there ("On Jellyfin · 34 min in"),
   /// joined on `tmdbId`, which is the same move `arrMediaExtrasSlots` already
   /// makes for Seerr data inside an arr screen.
   bool get isSearchable {
@@ -704,7 +704,7 @@ extension ServiceKeyExtension on ServiceKey {
 
   /// The endpoint used to prove a service is answering.
   ///
-  /// Empty for the services that verify over something other than REST —
+  /// Empty for the services that verify over something other than REST:
   /// TrueNAS (WebSocket JSON-RPC), Dockge (Socket.IO), SABnzbd (query-string
   /// API), NZBGet (JSON-RPC) and Unraid (GraphQL), each handled by its own
   /// branch in the version loader and in the credential verifier.
@@ -714,7 +714,7 @@ extension ServiceKeyExtension on ServiceKey {
   /// `X-Api-Key` header the shared `ApiClient` sends, so a 2xx here says nothing
   /// at all about the pasted credential. That is why those two verify through
   /// their own clients first and only fall back to this table to explain a
-  /// refusal — see `diagnoseCredentials` — and why the Dashboard's probe
+  /// refusal (see `diagnoseCredentials`) and why the Dashboard's probe
   /// never reads this table for them at all.
   String get statusEndpoint => switch (this) {
     ServiceKey.seerr => '/api/v1/status',
@@ -759,7 +759,7 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.sonarr => 'series',
     ServiceKey.lidarr => 'artists',
     ServiceKey.qbittorrent || ServiceKey.transmission => 'torrents',
-    // The hostnames it fronts. Not "hosts" on its own — a homelab already
+    // The hostnames it fronts. Not "hosts" on its own: a homelab already
     // calls the physical boxes that, and this counts neither of them.
     ServiceKey.nginxProxyManager => 'proxy hosts',
     ServiceKey.bazarr => 'subtitles',
@@ -770,7 +770,7 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.sabnzbd => 'downloads',
     ServiceKey.nzbget => 'downloads',
     ServiceKey.unraid => 'containers',
-    // The top-level thing you enumerate on a media server. Not "movies" —
+    // The top-level thing you enumerate on a media server. Not "movies":
     // a single Jellyfin or Plex instance mixes films, shows and music, and
     // naming one of them would both misdescribe the server and read as a
     // duplicate of Radarr's or Sonarr's own label.

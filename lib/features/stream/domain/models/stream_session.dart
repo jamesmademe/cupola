@@ -47,7 +47,7 @@ class StreamSession {
   /// Server-side id for write actions.
   ///
   /// On Jellyfin this is `SessionInfoDto.Id`; on Plex it is the nested
-  /// `Session.id` — **not** `sessionKey` and not `Player.machineIdentifier`,
+  /// `Session.id`, **not** `sessionKey` and not `Player.machineIdentifier`,
   /// which are two other identifiers on the same object that produce a 404 when
   /// substituted.
   final String id;
@@ -60,7 +60,7 @@ class StreamSession {
   /// For an episode this is the series name; [subtitle] carries the episode.
   final String title;
 
-  /// Season/episode, album/track, or year — whatever disambiguates [title].
+  /// Season/episode, album/track, or year: whatever disambiguates [title].
   final String? subtitle;
 
   /// The client doing the playing, e.g. `Infuse · iPhone` or `Chrome · Windows`.
@@ -69,7 +69,7 @@ class StreamSession {
   /// Relative artwork path on the server, not a resolved URL.
   ///
   /// Resolution needs the credential, and on Plex it needs a transcode-proxy
-  /// round trip, so it stays the client layer's job — a model that baked a token
+  /// round trip, so it stays the client layer's job. A model that baked a token
   /// into a string would put it into `CachedNetworkImage`'s cache key.
   final String? posterPath;
 
@@ -81,13 +81,13 @@ class StreamSession {
   /// and it is what turns "the box is busy" into something the user can act on.
   ///
   /// Empty for a [StreamPlayMethod.directPlay], and **populated for
-  /// [StreamPlayMethod.directStream] as well as [StreamPlayMethod.transcode]** —
+  /// [StreamPlayMethod.directStream] as well as [StreamPlayMethod.transcode]**:
   /// a remux still has an explanation ("audio TrueHD → E-AC3 · container rewrap
   /// to MKV") and it is the only one the server offers. Gate on [needsAttention]
   /// rather than on this being empty when you mean "is this costing me a CPU".
   final List<String> transcodeReasons;
 
-  /// Bits per second, and **nominal rather than measured** — see [bitrateIsNominal].
+  /// Bits per second, and **nominal rather than measured**; see [bitrateIsNominal].
   final int? bitrate;
 
   /// Whether [bitrate] describes the file rather than the wire.
@@ -97,7 +97,7 @@ class StreamSession {
   /// (Jellyfin) or a reservation made by Plex's streaming brain. A transcode is
   /// the one case where the figure is the encoder's actual target. The board must
   /// never sum these into a total, and must never label one as measured
-  /// throughput — that claim would be fabricated.
+  /// throughput. That claim would be fabricated.
   final bool bitrateIsNominal;
 
   /// Progress through the item, 0..1, or null when the server reports none.
@@ -134,19 +134,19 @@ class StreamSession {
   /// Resolved here rather than in the card, for the reason every other status in
   /// the app is: a widget renders a status and never computes one. The card used
   /// to branch on [needsAttention] and paint `AppColors.warning` directly, which
-  /// broke two rules at once — it bypassed the contrast walk `statusToneColor`
+  /// broke two rules at once: it bypassed the contrast walk `statusToneColor`
   /// performs (raw warning measures 1.39:1 on paper, effectively invisible in
   /// daylight) and it left a direct play in the neutral `onSurfaceVariant`, so
   /// the board said nothing about the state that is actually *good*.
   ///
   /// The mapping is the tone rule's, not a gradient of expense:
   ///
-  ///  * [StreamPlayMethod.directPlay] is **success** — the file is going out
+  ///  * [StreamPlayMethod.directPlay] is **success**: the file is going out
   ///    untouched, which is the complete-and-working arm.
   ///  * [StreamPlayMethod.directStream] is **success** too, and deliberately so.
   ///    A container rewrap leaves the video alone; it carries an explanation but
   ///    it is not a fault, and amber is reserved for faults.
-  ///  * [StreamPlayMethod.transcode] is **warning** — the box is re-encoding,
+  ///  * [StreamPlayMethod.transcode] is **warning**: the box is re-encoding,
   ///    which is the one delivery state that costs a CPU and can stutter.
   ///
   /// Never `error`: red means the server did not answer, and a transcode is the

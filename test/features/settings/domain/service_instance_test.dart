@@ -8,7 +8,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The storage keys every service already uses, copied verbatim from
 /// `_serviceStorageKeys` in `settings_service.dart`.
 ///
-/// Duplicated here on purpose — that map is private, and this is a tripwire
+/// Duplicated here on purpose: that map is private, and this is a tripwire
 /// rather than a mirror. Its whole job is to fail when the two drift, because
 /// the drift that matters is silent and unrecoverable: a credential written
 /// under one key and looked for under another is a credential the user has to
@@ -121,7 +121,7 @@ void main() {
         expect(instance.credentialStorageKey, expected.secret);
 
         // The username key is only read for the services that have one, but it
-        // has to be right for those — NZBGet already shipped once with a
+        // has to be right for those: NZBGet already shipped once with a
         // username that persisted correctly and was rendered by no screen.
         if (expected.username != null) {
           expect(instance.usernameStorageKey, expected.username);

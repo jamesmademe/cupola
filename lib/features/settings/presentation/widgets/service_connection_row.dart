@@ -54,7 +54,7 @@ class ServiceConnectionRow extends ConsumerWidget {
 
     // The screen this row lives on is called Connections, and until now it
     // could only ever show one per service: a second Radarr was invisible
-    // here, of all places. The count is the whole fix — the row still opens
+    // here, of all places. The count is the whole fix; the row still opens
     // the first connection's form, which is where the others are listed and
     // edited. Said only when there is more than one, the same rule the badge
     // and the lens sheet follow: a stack with a single Radarr must not grow a

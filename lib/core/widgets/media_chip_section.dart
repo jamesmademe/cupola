@@ -6,7 +6,7 @@ import 'package:cupola/core/widgets/tag_chip.dart';
 
 /// A wrapped run of catalogue chips for a detail page's region 4.
 ///
-/// Label-less by design — the slot owns the heading, so the same list can never
+/// Label-less by design: the slot owns the heading, so the same list can never
 /// reach two differently-titled sections.
 class MediaChipSection extends StatelessWidget {
   final List<String> values;
@@ -27,7 +27,7 @@ class MediaChipSection extends StatelessWidget {
   ///
   /// The slot's label must be `TAGS`, and this constructor must not be used for
   /// anything else. In this domain a tag targets release profiles and import
-  /// lists — it is a thing the user configured on their server — so labelling
+  /// lists, a thing the user configured on their server, so labelling
   /// genres "Tags" asserts something false about that server. Three screens
   /// used to do exactly that.
   const MediaChipSection.accented({
@@ -45,7 +45,7 @@ class MediaChipSection extends StatelessWidget {
 
     final colorScheme = Theme.of(context).colorScheme;
 
-    // The accent as a chip *label on its own 12% tint* — the second half of the
+    // The accent as a chip *label on its own 12% tint*: the second half of the
     // Luminance Rule, and a different sum from a foreground on an opaque fill.
     // Measured over its own tint on `surface-light`, Radarr's amber lands near
     // 1.80:1 untreated; `onTint` keeps the hue and walks the lightness until it

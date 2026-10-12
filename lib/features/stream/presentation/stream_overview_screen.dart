@@ -22,7 +22,7 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 
-/// The first tab of a media server's service home — Jellyfin's and Plex's both.
+/// The first tab of a media server's service home: Jellyfin's and Plex's both.
 ///
 /// **One screen, two services**, like every other surface in this folder: the
 /// only per-service input is [service], and the difference between the two
@@ -32,8 +32,8 @@ import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_s
 /// that Jellyfin has no endpoint for, and neither server draws anything the
 /// other one merely *might* have.
 ///
-/// Overview alone carries the identity block and the readouts — every other tab
-/// is a view of one kind of record — and then the regions in the order the
+/// Overview alone carries the identity block and the readouts; every other tab
+/// is a view of one kind of record, and then the regions in the order the
 /// *mobile* boards put them, which is the order that survives the narrow width:
 /// who is watching, what is half-watched, what the shelf is doing, and (Plex)
 /// what the box says about itself.
@@ -67,7 +67,7 @@ class StreamOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -88,7 +88,7 @@ class StreamOverviewScreen extends ConsumerWidget {
     // `plexClientProvider` both throw "<service> not configured", and letting
     // `AsyncValueWidget` catch that throw would draw the same pixels while
     // leaving failed providers behind it, each scheduling a retry with backoff
-    // for a condition no amount of waiting changes — which surfaces in tests as
+    // for a condition no amount of waiting changes, which surfaces in tests as
     // a pending timer and on device as a battery cost. It matters more here
     // than elsewhere: the sessions providers deliberately carry
     // `retry: noProviderRetry` precisely because a dark media server must not
@@ -152,7 +152,7 @@ class _OverviewBody extends ConsumerWidget {
     // and the library list are the two reads both servers answer; when both
     // failed with nothing retained there is no region left to draw, and three
     // stacked error wells each saying the same thing about the same box was a
-    // page shouting. The identity line and the readouts stay above it — the
+    // page shouting. The identity line and the readouts stay above it: the
     // host, and "—" where a figure had no answer.
     final serverDark =
         sessions.hasError &&
@@ -211,11 +211,11 @@ class _OverviewBody extends ConsumerWidget {
 /// `PlexClient.getContinueWatching` calls `/hubs/continueWatching`, which
 /// answers for the whole server in one request; Jellyfin's equivalent
 /// (`/Users/{id}/Items/Resume`) is not implemented, and its per-library
-/// `continueWatching` lens is not a substitute — it would be one request per
+/// `continueWatching` lens is not a substitute: it would be one request per
 /// library and would still have nothing to order the merged result by.
 ///
 /// The header states no count. The hub is asked for exactly as many rows as the
-/// rail draws, so there is no remainder to report — and a figure counted inside
+/// rail draws, so there is no remainder to report, and a figure counted inside
 /// a capped response and then printed as a total is the defect this batch has
 /// found four times.
 ///
@@ -265,7 +265,7 @@ class _OnDeckRail extends ConsumerWidget {
     final client = ref.watch(plexServerProvider);
 
     return SizedBox(
-      // 138pt poster, the gap, and two caption lines — grown by the reading
+      // 138pt poster, the gap, and two caption lines, grown by the reading
       // size so the captions are not clipped at an accessibility text size.
       height: TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
       // The box grew by the *clamped* scale, so the text has to be laid out at
@@ -298,8 +298,8 @@ class _OnDeckRail extends ConsumerWidget {
 ///
 /// **Not `StreamPosterTile`, and the reason is the Hero tag.** That widget tags
 /// its poster `stream_<service>_<id>_<index>`, and the On deck *tab* is alive in
-/// a sibling branch of the same shell drawing the same items with the same tags
-/// — two live Heroes sharing a tag is an assertion at flight time, not a
+/// a sibling branch of the same shell drawing the same items with the same tags.
+/// Two live Heroes sharing a tag is an assertion at flight time, not a
 /// degraded animation. Radarr's Overview rail carries its own namespace for
 /// exactly this reason. The tile is otherwise deliberately plain: the resume bar
 /// and unplayed badge belong to the grid where a row of them can be compared,
@@ -309,7 +309,7 @@ class _OnDeckRail extends ConsumerWidget {
 /// namespace settles the collision *between* rails and does nothing about one
 /// *inside* this rail, which is a real shape rather than a theoretical one:
 /// `streamOnDeckPreview` now drops a repeated `ratingKey`, and the index is the
-/// belt to that braces — a duplicated Hero tag throws at flight time instead of
+/// belt to that braces: a duplicated Hero tag throws at flight time instead of
 /// degrading, and one interpolation is a cheap price for never asserting.
 class _OnDeckTile extends StatelessWidget {
   const _OnDeckTile({
@@ -320,7 +320,7 @@ class _OnDeckTile extends StatelessWidget {
 
   final StreamItem item;
 
-  /// Position on the rail, included in the Hero tag — see the class comment.
+  /// Position on the rail, included in the Hero tag; see the class comment.
   final int index;
 
   final StreamImageSource? poster;
@@ -383,8 +383,8 @@ class _OnDeckTile extends StatelessWidget {
 ///
 /// **A peek, not the list.** The Libraries tab one tap away draws every room as
 /// a destination; this draws three of them as a readout, with the census over
-/// the top. Naming them costs nothing — one `getLibraries` response already
-/// answered names and kinds — and it is what keeps a page the user lands on
+/// the top. Naming them costs nothing: one `getLibraries` response already
+/// answered names and kinds, and it is what keeps a page the user lands on
 /// every time they open the service from being a header over a single "no scan
 /// running" note, which on a home server is the majority state rather than the
 /// edge case. Only the per-library item counts are refused (decision 21: one
@@ -475,7 +475,7 @@ class _ShelfRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // Through the tone rule, never a raw `AppColors.*`: a scan in progress is
-    // **informational** — the server is doing what it was told to do — and a
+    // **informational**: the server is doing what it was told to do, and a
     // library at rest is neutral. Neither is a fault, and amber here would put
     // a working library in the colour of a broken import.
     final tone = statusToneColor(
@@ -498,13 +498,13 @@ class _ShelfRow extends StatelessWidget {
 /// What the box says about itself, from the one call that asks it: `GET /`.
 ///
 /// **Plex only.** Jellyfin's equivalent facts are already in the identity block
-/// above — host, version, answering — and `JellyfinClient` fetches nothing
+/// above (host, version, answering), and `JellyfinClient` fetches nothing
 /// beyond them, so a second region there would be the same line twice.
 ///
 /// Three of the board's six rows are here and three are not: remote access and
 /// the mapped port, the transcoder's hardware, the cache size and the uptime all
 /// live in `GET /:/prefs` and `GET /statistics/resources`, which this client
-/// never calls. The version is not repeated — the identity block owns it.
+/// never calls. The version is not repeated: the identity block owns it.
 ///
 /// **Value first, label second**, the inversion the qBittorrent Session region
 /// uses: this region has no subject, so the figure is the content and the label
@@ -520,7 +520,7 @@ class _ServerSection extends ConsumerWidget {
       service: ServiceKey.plex,
       title: 'Server',
       // No link: every fact here is a connection setting, and Plex's bar has no
-      // tab that owns them — a link named after a tab that does not exist is a
+      // tab that owns them: a link named after a tab that does not exist is a
       // promise the app cannot keep.
       // A Plex that did not answer is the failure, in its words and tone: the
       // sheet used to come back null for any failure, and this section read
@@ -546,7 +546,7 @@ class _ServerRows extends StatelessWidget {
   Widget build(BuildContext context) {
     // A field the response omitted reads "—": the call answered, so saying
     // nothing at all would hide that the server was asked. `plexBool` keeps the
-    // three-way distinction alive for exactly this — `myPlexSubscription`
+    // three-way distinction alive for exactly this: `myPlexSubscription`
     // absent is not the same claim as `myPlexSubscription: false`.
     final pass = switch (capabilities.myPlexSubscription) {
       true => 'Active',
@@ -575,7 +575,7 @@ class _ServerRows extends StatelessWidget {
         ),
         // Only when the server said so. `multiuser` absent means the build did
         // not report it, and "owner only" would be a guess about someone's
-        // household — while `true` explains something the user will otherwise
+        // household, while `true` explains something the user will otherwise
         // notice as a defect: every watch state Cupola shows for Plex is the
         // owner's, because a token is one person and `/library/*` takes no
         // impersonation parameter.
@@ -611,7 +611,7 @@ class _ServerRow extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ServiceOverviewRow(
-      // Label then value, spoken — the reverse of the visual order, which leads
+      // Label then value, spoken: the reverse of the visual order, which leads
       // with the figure for scanning. Read aloud, "Active" before "Plex Pass"
       // is an answer arriving before its question.
       spoken: joinSpokenParts([spokenFromDotted(label), value]),

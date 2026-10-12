@@ -80,7 +80,7 @@ void main() {
     });
 
     test('containment is one-directional', () {
-      // A season search is not answered by an episode search — it needs more.
+      // A season search is not answered by an episode search: it needs more.
       expect(season2.isCoveredBy(episodeInSeason2), isFalse);
       expect(season2.conflictsWith(episodeInSeason2), isTrue);
     });
@@ -175,7 +175,7 @@ void main() {
       notifier().start(episodeInSeason2);
       final seasonJob = notifier().start(season2);
 
-      // Two distinct jobs — a season needs more than the episode's results — but
+      // Two distinct jobs (a season needs more than the episode's results), but
       // the season must not hit the same indexers at the same time.
       expect(jobs(), hasLength(2));
       expect(
@@ -597,7 +597,7 @@ void main() {
     test('a backgrounded job on the background transport keeps the failure\'s '
         'own identity', () {
       // The native task runs on through suspension, so "you left the app" can
-      // never be why it failed — a gateway's 504 must still read as the proxy
+      // never be why it failed: a gateway's 504 must still read as the proxy
       // giving up, and a lost connection as a lost connection.
       final gateway = classify(
         withResponse(
@@ -679,7 +679,7 @@ void main() {
     test('a failure after backgrounding is attributed to the OS', () async {
       // On a foreground-only reach: only a search that actually dies with the
       // app may blame the OS. The background transport keeps its failures'
-      // own identity — that case lives in `failure classification`.
+      // own identity; that case lives in `failure classification`.
       final completers = wireManualRunner(reach: ReleaseSearchReach.whileOpen);
       final job = notifier().start(season2);
 
@@ -708,7 +708,7 @@ void main() {
       ]);
       await pumpEventQueue();
 
-      // Android often does survive, and iOS survives a brief switch — the
+      // Android often does survive, and iOS survives a brief switch. The
       // manager must not pre-emptively fail a job that came back with results.
       expect(
         notifier().jobById(job.id)!.status,

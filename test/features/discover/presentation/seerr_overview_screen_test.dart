@@ -30,7 +30,7 @@ void main() {
     // carries them.
     expect(find.byType(ServiceKpiPeek), findsOneWidget);
 
-    // Decisions first — Seerr is the exception, and the rails move down.
+    // Decisions first: Seerr is the exception, and the rails move down.
     expect(
       tester
           .widgetList<SectionHeader>(find.byType(SectionHeader))

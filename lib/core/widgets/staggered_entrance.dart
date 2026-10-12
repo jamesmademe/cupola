@@ -9,7 +9,7 @@ import 'package:cupola/core/app_animation.dart';
 /// Plays once when the widget is first inserted (it never re-animates on
 /// subsequent rebuilds because the animation lives in [State]). For lazily
 /// built collections, pass [index] and [wrapCount] so the per-item delay
-/// cycles instead of growing unbounded as the user scrolls — this keeps the
+/// cycles instead of growing unbounded as the user scrolls: this keeps the
 /// stagger feeling continuous rather than laggy far down the list.
 class StaggeredEntrance extends StatefulWidget {
   final Widget child;

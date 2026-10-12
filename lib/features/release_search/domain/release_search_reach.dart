@@ -11,7 +11,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// fact the user can do nothing about.
 enum ReleaseSearchReach {
   /// The native `URLSession`/WorkManager path (iOS, Android). Runs on even
-  /// if the app is suspended or killed — Android's own ceiling aside — which
+  /// if the app is suspended or killed (Android's own ceiling aside), which
   /// is the promise the handoff offer has always made on these platforms.
   beyondTheApp,
 
@@ -22,7 +22,7 @@ enum ReleaseSearchReach {
   /// The foreground path, because the user has switched Background search off.
   ///
   /// The only one of these four the user can lift from inside the app, and the
-  /// only one that is a *choice* rather than a fact — which is why it names the
+  /// only one that is a *choice* rather than a fact: which is why it names the
   /// setting wherever it is explained. Off is the default: handing a search to
   /// the OS means handing it the arr admin key in writing (see
   /// [ReleaseSearchSettings.backgroundEnabled]), so the capability is offered
@@ -32,7 +32,7 @@ enum ReleaseSearchReach {
   /// The foreground path, for a reason that is true of *this instance*: its
   /// origin has a self-signed certificate trusted only inside Cupola
   /// (ADR-6), and the native background task validates TLS against the
-  /// platform trust store with no hook for an in-app pin — it cannot see
+  /// platform trust store with no hook for an in-app pin: it cannot see
   /// that trust at all. The only way back to [beyondTheApp] is installing
   /// the certificate on the device itself, not anything Cupola can do.
   whileOpenTrustedCert,
@@ -43,8 +43,8 @@ enum ReleaseSearchReach {
   /// redirect.
   ///
   /// The threat model is the whole reason this value exists, so it is written
-  /// down rather than left implied. Every HTTP stack in play — `dart:io`,
-  /// Android's `HttpURLConnection`, iOS's `URLSession` — strips `Authorization`
+  /// down rather than left implied. Every HTTP stack in play (`dart:io`,
+  /// Android's `HttpURLConnection`, iOS's `URLSession`) strips `Authorization`
   /// and `Cookie` when a redirect crosses origins, but `X-Api-Key` is a custom
   /// header and is replayed verbatim to whatever the redirect names. The
   /// in-app path answers that with `SameOriginRedirectInterceptor`; the native
@@ -54,7 +54,7 @@ enum ReleaseSearchReach {
   /// What that is *not* is a reason to distrust the user's own instance: an
   /// instance that wanted the key already has it, so a redirect it sends
   /// teaches an attacker nothing new. The genuinely new exposure is someone
-  /// **on the path** injecting the redirect, and that requires cleartext —
+  /// **on the path** injecting the redirect, and that requires cleartext:
   /// over TLS the response cannot be forged. So the line is drawn exactly
   /// there: `https` keeps the background reach, `http://` falls back to the
   /// transport that can refuse the redirect. Switching the instance to https
@@ -70,7 +70,7 @@ enum ReleaseSearchReach {
 /// because on desktop there is no background path to switch on and naming the
 /// setting there would invent a missing capability. [backgroundEnabled] comes
 /// next, because when the answer is "you turned it off" that is both the true
-/// cause and the only one the user can act on in a tap — a certificate or a
+/// cause and the only one the user can act on in a tap: a certificate or a
 /// scheme only starts mattering once the capability is wanted. The two
 /// per-instance facts come last, in the order that puts the permanent one
 /// before the fixable one.

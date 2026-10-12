@@ -25,7 +25,7 @@ import 'package:cupola/features/release_search/presentation/widgets/search_headr
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
-/// Settings for background release search — and, underneath them, the limits.
+/// Settings for background release search, and, underneath them, the limits.
 ///
 /// This is the third home in the awareness topology: the place a constraint that
 /// shapes the user's setup lives, next to the setting it shapes. Written in the
@@ -46,7 +46,7 @@ class _ReleaseSearchSettingsScreenState
   Future<void> _toggleBackground(bool wanted) =>
       ref.read(backgroundSearchSwitchProvider).set(wanted);
 
-  /// Asks the OS **first**, then records what it answered — so a denied
+  /// Asks the OS **first**, then records what it answered, so a denied
   /// permission never leaves the toggle claiming to be on.
   Future<void> _toggleNotifications(bool wanted) async {
     final notifier = ref.read(releaseSearchSettingsProvider.notifier);
@@ -70,7 +70,7 @@ class _ReleaseSearchSettingsScreenState
     // rather than left showing what was true before the prompt.
     ref.invalidate(notificationPermissionProvider);
     if (!granted) {
-      // Two different refusals, two different fixes — sending a Windows user
+      // Two different refusals, two different fixes: sending a Windows user
       // to hunt through system settings for a permission that was never asked
       // for would be a wild-goose chase.
       SnackBarHelper.error(
@@ -83,7 +83,7 @@ class _ReleaseSearchSettingsScreenState
   }
 
   /// Every release-search-capable service (Sonarr, Radarr, Lidarr) whose reach
-  /// is [reach] — the sets this screen's global settings have to name rather
+  /// is [reach]: the sets this screen's global settings have to name rather
   /// than hedge, since each limit is per instance, not per app. At most three
   /// names each.
   List<ServiceKey> _servicesWithReach(ReleaseSearchReach reach) => ServiceKey
@@ -111,8 +111,8 @@ class _ReleaseSearchSettingsScreenState
     // Read through `releaseSearchPlatformProvider` rather than from the host,
     // because that is the provider's whole purpose: `flutter_test` runs on a
     // desktop, so a direct `Platform` check would put every widget test on the
-    // desktop branch and leave the switch — and the disclosure that is the
-    // point of this screen — permanently unreachable from a test.
+    // desktop branch and leave the switch, and the disclosure that is the
+    // point of this screen: permanently unreachable from a test.
     final platform = ref.watch(releaseSearchPlatformProvider);
     final canRunInBackground = backgroundSearchSupported(platform: platform);
     // Resolved once, from the same source, and handed down: reading
@@ -129,7 +129,7 @@ class _ReleaseSearchSettingsScreenState
       appBar: const GlassAppBar(title: Text('Background search')),
       // Background search is a section of the settings rail
       // (`SettingsMasterDetail.sections`), and it was the single destination in
-      // that list not wrapped in the layout — a bare `GoRoute` rather than a
+      // that list not wrapped in the layout: a bare `GoRoute` rather than a
       // `_page`, rendering its body alone. On a desktop window that meant
       // selecting Background search made the rail *disappear*, so the one
       // control that got you here was the one control the page then hid: the
@@ -205,7 +205,7 @@ class _ReleaseSearchSettingsScreenState
                   busy: _asking,
                   // Nothing to announce when a search cannot outlive the app: the
                   // badge and the detail page already cover the in-app case.
-                  // Disabled rather than reset — the preference (and the OS
+                  // Disabled rather than reset: the preference (and the OS
                   // permission behind it) survives for when the master returns.
                   available: !canRunInBackground || settings.backgroundEnabled,
                   backgroundCapable: canRunInBackground,
@@ -237,7 +237,7 @@ class _ReleaseSearchSettingsScreenState
 
 /// The master switch: whether a search may be handed to the operating system.
 ///
-/// Identical on iOS and Android by decision — the capability and the trade-off
+/// Identical on iOS and Android by decision: the capability and the trade-off
 /// are the same, and only the *detail* of where the OS keeps its copy differs,
 /// which is what [_DisclosureBlock] varies. Absent on desktop, where
 /// [_DesktopStatusCard] takes its place.
@@ -315,7 +315,7 @@ class _DisclosureBlock extends StatelessWidget {
   const _DisclosureBlock({required this.isIOS});
 
   /// Which OS's storage is being described. Passed in rather than read from the
-  /// host so both variants are reachable from a test — the copy *is* the
+  /// host so both variants are reachable from a test: the copy *is* the
   /// feature here, and untestable copy is copy that drifts.
   final bool isIOS;
 
@@ -325,7 +325,7 @@ class _DisclosureBlock extends StatelessWidget {
       'so the request, including this service\'s admin API key, sits in system '
       'storage while the task runs.';
 
-  /// Where that copy lives, and what covers it, differs by OS — so this is the
+  /// Where that copy lives, and what covers it, differs by OS, so this is the
   /// half that is written twice. Both name the key plainly: it is administrative,
   /// which is the whole reason any of this matters.
   static String detailsFor({required bool isIOS}) {
@@ -400,7 +400,7 @@ class _DisclosureBlock extends StatelessWidget {
 
 /// Desktop's answer in place of the switch: a statement, not a control.
 ///
-/// macOS, Windows and Linux share one sentence because they share the reason —
+/// macOS, Windows and Linux share one sentence because they share the reason:
 /// nothing suspends the app, so nothing is ever handed to the OS and no record
 /// exists to warn about. A switch here would advertise a capability as missing
 /// when it is simply always on, and a disclosure would attach a risk to a
@@ -469,14 +469,14 @@ class _NotifyRow extends StatelessWidget {
   /// master switch is off on a platform that has one.
   final bool available;
 
-  /// Whether this platform has a background path at all — which is what
+  /// Whether this platform has a background path at all, which is what
   /// separates "not needed here" from "needs the master switch".
   final bool backgroundCapable;
 
   /// What the OS says right now: true granted, false denied, null unknown.
   ///
   /// Shown because the app's own preference and the system permission drift
-  /// apart silently — a permission revoked in system settings leaves the toggle
+  /// apart silently: a permission revoked in system settings leaves the toggle
   /// on and every notice dropped, which reads as a broken feature rather than a
   /// withdrawn permission.
   final bool? systemPermission;
@@ -486,7 +486,7 @@ class _NotifyRow extends StatelessWidget {
   final bool isIOS;
 
   /// Release-search services whose background reach is cut off by something
-  /// about the instance itself — a certificate trusted only inside Cupola, or
+  /// about the instance itself: a certificate trusted only inside Cupola, or
   /// a cleartext origin. Both land in the same sentence because the user-facing
   /// consequence is identical: a search that stops when they leave the app.
   /// See [ReleaseSearchReach].
@@ -512,8 +512,8 @@ class _NotifyRow extends StatelessWidget {
 
   /// The system's own answer, said only when it adds something.
   ///
-  /// Silent while unknown — a platform with no branch for this, or a plugin that
-  /// is not there — because "unknown" rendered as a status is worse than no
+  /// Silent while unknown: a platform with no branch for this, or a plugin that
+  /// is not there, because "unknown" rendered as a status is worse than no
   /// status at all. Silent too when the row is disabled by the master switch:
   /// the row already explains itself, and a second sentence about a permission
   /// that currently changes nothing is noise. A denial names the route rather
@@ -576,7 +576,7 @@ class _NotifyRow extends StatelessWidget {
                     child: Text(
                       line,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        // The status vocabulary's own amber, not `tertiary` —
+                        // The status vocabulary's own amber, not `tertiary`:
                         // which in this theme is a palette accent and rendered
                         // a blocked permission in green. Amber rather than red
                         // because a permission the user can switch back on is
@@ -624,22 +624,22 @@ class _LimitsCard extends StatelessWidget {
   /// Whether searches can currently be handed to the OS at all.
   ///
   /// What it gates is every limit that only exists *because* of background
-  /// execution — the app-killed loss, the Android ceiling, the per-instance
+  /// execution: the app-killed loss, the Android ceiling, the per-instance
   /// downgrades. Listing those while the feature is off would describe a mode
   /// the user is not in; the grab window and the privacy line are true either
   /// way and stay.
   final bool backgroundActive;
 
   /// Release-search services whose background reach is cut off by a
-  /// certificate trusted only inside Cupola — see [ReleaseSearchReach].
+  /// certificate trusted only inside Cupola: see [ReleaseSearchReach].
   final List<ServiceKey> pinnedServices;
 
   /// Release-search services whose background reach is cut off because they
-  /// are reached over cleartext `http://` — see [ReleaseSearchReach]. Kept
+  /// are reached over cleartext `http://`: see [ReleaseSearchReach]. Kept
   /// apart from [pinnedServices] because the fix is a different one.
   final List<ServiceKey> cleartextServices;
 
-  /// Only stated where it is true, rather than hedged everywhere — and only
+  /// Only stated where it is true, rather than hedged everywhere, and only
   /// while the ceiling can actually be hit.
   bool get androidCeilingApplies =>
       backgroundActive && defaultTargetPlatform == TargetPlatform.android;

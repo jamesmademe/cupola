@@ -15,7 +15,7 @@ const _slot = ['Test connection', 'Test again', 'Next service'];
 Future<void> _forever() => Completer<void>().future;
 
 /// Presses the button inside it once, after the first frame, with a future
-/// that never resolves — so the scene is drawn mid-wait.
+/// that never resolves, so the scene is drawn mid-wait.
 class _Pressed extends StatefulWidget {
   const _Pressed({required this.child});
 

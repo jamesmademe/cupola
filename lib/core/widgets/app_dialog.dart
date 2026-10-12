@@ -6,7 +6,7 @@ import 'package:cupola/core/theme.dart';
 
 /// A toggleable option (checkbox) shown inside [showAppConfirmDialog].
 ///
-/// An option that makes the action irreversible — *Delete files* — says so in
+/// An option that makes the action irreversible (*Delete files*) says so in
 /// its own [subtitle], in the same ink as every other line of the dialog. It
 /// used to take a `danger` flag that turned the option red and raised a red
 /// *cannot be undone* banner; red means unreachable and nothing else, so the
@@ -43,17 +43,17 @@ typedef AppConfirmLabelFor = String Function(bool Function(String key) checked);
 
 /// One canonical confirmation dialog for the whole app, and one style of it.
 ///
-/// Title, an optional sentence, optional [options] (checkboxes — e.g. the
+/// Title, an optional sentence, optional [options] (checkboxes, e.g. the
 /// "delete files" / "add exclusion" toggles used when removing media), and a
 /// Cancel / confirm pair. The confirm is always the theme's own `FilledButton`.
 ///
 /// **A destructive confirmation is not red.** Red in the tone rule means
-/// unreachable and nothing else — not "irreversible", not "careful". A delete
+/// unreachable and nothing else, not "irreversible", not "careful". A delete
 /// used to fill its button red, turn its title and glyph red and add a red
 /// *cannot be undone* banner; now the weight is carried by words:
 ///
-/// - [confirmLabel] is a verb that names what will happen — *Delete job*,
-///   *Take down*, *Remove from Radarr* — never *Confirm*, *OK*, *Yes* or a bare
+/// - [confirmLabel] is a verb that names what will happen: *Delete job*,
+///   *Take down*, *Remove from Radarr*, never *Confirm*, *OK*, *Yes* or a bare
 ///   *Delete*. `test/core/theme/neutral_destructive_test.dart` scans `lib/`
 ///   for that, and for any button or dialog painted with the error colour.
 /// - When an option changes what the action does, [confirmLabelFor] rewrites
@@ -61,7 +61,7 @@ typedef AppConfirmLabelFor = String Function(bool Function(String key) checked);
 ///   the button always says the whole of it. [confirmLabel] stays required and
 ///   is asserted to be what [confirmLabelFor] returns for the options' initial
 ///   values, so the call site reads true at a glance.
-/// - If the action cannot be undone, one neutral sentence says so — in
+/// - If the action cannot be undone, one neutral sentence says so, in
 ///   [message], or in the subtitle of the option that makes it so.
 ///
 /// There is no `destructive` flag any more: once it stopped painting red it
@@ -108,7 +108,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
                   title,
                   // An `AlertDialog` title sits *above* the scrollable content,
                   // so an unbounded one grows the dialog until the buttons
-                  // leave the viewport — there is no scroll to reach them by.
+                  // leave the viewport: there is no scroll to reach them by.
                   // Callers still cap the interpolated title; this is the floor
                   // under them.
                   maxLines: 2,
@@ -150,7 +150,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
           ),
           // A label that names the action (*Remove and delete files*) often
           // no longer fits beside Cancel on a phone, and the pair stacks. The
-          // confirm goes on top — Material's stacked order — rather than
+          // confirm goes on top (Material's stacked order), rather than
           // Cancel floating above it.
           actionsOverflowDirection: VerticalDirection.up,
           actionsOverflowButtonSpacing: AppSpacing.sm,
@@ -175,8 +175,8 @@ Future<AppConfirmResult> showAppConfirmDialog({
   return result ?? AppConfirmResult.cancelled;
 }
 
-/// The heavier gate: a confirmation whose button stays inert until [phrase] —
-/// a hostname, a domain — is typed out.
+/// The heavier gate: a confirmation whose button stays inert until [phrase] (
+/// a hostname, a domain) is typed out.
 ///
 /// For the few actions whose blast radius leaves the device or cannot be
 /// reached back from it: shutting a TrueNAS host down, taking an NPM proxy host
@@ -189,7 +189,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
 /// It is [showAppConfirmDialog] with a text field: the same title row, the same
 /// neutral `FilledButton` and a [confirmLabel] held to the same rule. The two
 /// copies it replaces each painted the button red and put an amber warning
-/// glyph above the title — a fault tone on a dialog nothing had gone wrong in.
+/// glyph above the title: a fault tone on a dialog nothing had gone wrong in.
 Future<bool> showAppTypedConfirmDialog(
   BuildContext context, {
   required String title,

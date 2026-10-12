@@ -18,7 +18,7 @@
 // with a stable placeholder. Raw payloads carry filesystem paths (which contain
 // usernames), release names, indexer names and download client names, and this
 // keeps a capture safe to paste into an issue. Numbers, booleans, nulls, the
-// status enums and the timing fields are kept verbatim — they are what the
+// status enums and the timing fields are kept verbatim; they are what the
 // fixtures exist to pin.
 import 'dart:convert';
 import 'dart:io';
@@ -200,7 +200,7 @@ Future<void> _captureArr(
     stdout.writeln(
       'The queue is empty, so there is nothing to capture and no fixture was\n'
       'written. Re-run this while something is actually downloading or waiting\n'
-      'to import — that is the state the fixtures exist to pin.',
+      'to import: that is the state the fixtures exist to pin.',
     );
     return;
   }
@@ -212,7 +212,7 @@ Future<void> _captureArr(
 }
 
 Future<void> _captureSeerr(ApiClient client) async {
-  // `/media` carries the mediaInfo objects — including `downloadStatus`, the
+  // `/media` carries the mediaInfo objects, including `downloadStatus`, the
   // live per-*arr download records the app now reads.
   final media = await _get(
     client,

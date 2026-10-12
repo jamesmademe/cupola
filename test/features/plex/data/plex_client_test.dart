@@ -55,7 +55,7 @@ class _Route {
 }
 
 /// Serves a canned body, status *and* content type per path, which
-/// [CapturingHttpAdapter] cannot do — the terminate paths hinge on a 401 from
+/// [CapturingHttpAdapter] cannot do: the terminate paths hinge on a 401 from
 /// one endpoint and a 200 from another within a single call, and the XML case
 /// hinges on the content type.
 class _RoutingAdapter implements HttpClientAdapter {
@@ -99,7 +99,7 @@ Map<String, dynamic> _firstSessionJson(String fixture) {
 /// A synthetic library page of [count] films, wrapped in a real paging envelope.
 ///
 /// Generated rather than a fixture on purpose: the point of the call site is the
-/// *row count* — enough to cross `PlexClient`'s isolate threshold — and sixty
+/// *row count* (enough to cross `PlexClient`'s isolate threshold), and sixty
 /// hand-written films would bury that in noise. The shape of each row is the one
 /// `library_movies_page.json` records.
 Map<String, dynamic> _generatedMoviePage(int count, {int? totalSize}) {
@@ -291,7 +291,7 @@ void main() {
 
     test('a JWT is refused before it is ever sent', () async {
       // plex.tv JSON Web Tokens last seven days and can only be refreshed by
-      // plex.tv, which this client never calls — so it is a dead end, not a
+      // plex.tv, which this client never calls, so it is a dead end, not a
       // delay, and saying so beats a week of working software.
       final adapter = _RoutingAdapter([_Route('/', status: 200, body: null)]);
       final client = _client(
@@ -336,7 +336,7 @@ void main() {
     });
 
     test('a 498 is the same verdict as a 401', () async {
-      // Plex's non-standard "token expired". Same remedy as a 401 — re-paste —
+      // Plex's non-standard "token expired". Same remedy as a 401 (re-paste),
       // and specifically *not* a reason to go asking plex.tv for a refresh.
       final adapter = _RoutingAdapter([_Route('/', status: 498, body: null)]);
       expect(await _client(adapter).verifyCredential(), isFalse);
@@ -369,7 +369,7 @@ void main() {
     test('XML served as XML is named as XML, and reads still degrade', () async {
       // The API's default when `Accept: application/json` never arrives. Dio
       // hands a `text/xml` body through as a string, so this is the branch that
-      // sees the leading `<` — the one the mislabelled case above cannot reach.
+      // sees the leading `<`, the one the mislabelled case above cannot reach.
       final adapter = _RoutingAdapter([
         _Route(
           '/',
@@ -415,7 +415,7 @@ void main() {
 
   group('sessions', () {
     test('an idle server has no Metadata key at all', () async {
-      // Plex sends `{"size": 0}` with the key absent — not an empty array, the
+      // Plex sends `{"size": 0}` with the key absent, not an empty array, the
       // way Jellyfin does. A naive cast to List throws here.
       final adapter = CapturingHttpAdapter(
         response: jsonFixtureMap('plex/sessions_idle.json'),
@@ -434,7 +434,7 @@ void main() {
 
       final session = sessions.single;
       // The nested `Session.id`, never `sessionKey` (417) and never
-      // `Player.machineIdentifier` — both 404 when substituted.
+      // `Player.machineIdentifier`: both 404 when substituted.
       expect(session.id, 'u7k2m9x4qp1zvb3n');
       expect(session.userName, 'matt');
       expect(session.title, 'Interstellar');
@@ -490,7 +490,7 @@ void main() {
         StreamPlayMethod.directPlay,
         StreamPlayMethod.directPlay,
       ]);
-      // Within a method, bitrate breaks the tie — the Plexamp session has no
+      // Within a method, bitrate breaks the tie: the Plexamp session has no
       // `Session` element and falls back to the file's own 15000 kbps.
       expect(sessions[2].title, 'Idioteque');
       expect(sessions[2].bitrate, 15000000);
@@ -562,7 +562,7 @@ void main() {
       // sit pinned at full for anything past 1%.
       expect(transcode.progress, 12.5);
       // A unitless multiple of realtime, and the most useful number on the
-      // object — below 1.0 the encoder is losing the race with playback.
+      // object: below 1.0 the encoder is losing the race with playback.
       expect(transcode.speed, 0.8);
       expect(transcode.durationMs, 3180000);
       expect(transcode.videoDecision, PlexStreamDecision.transcode);
@@ -648,7 +648,7 @@ void main() {
         ),
       ).getSessions()).single;
 
-      // 1_245_000 / 3_180_000 — milliseconds throughout, unlike Jellyfin's
+      // 1_245_000 / 3_180_000: milliseconds throughout, unlike Jellyfin's
       // 100-nanosecond ticks.
       expect(session.progress, closeTo(0.3915, 0.0001));
     });
@@ -819,7 +819,7 @@ void main() {
 
     test('unplayed uses show.unwatchedLeaves=1 for a show section', () async {
       // Sending the movie spelling at a show section returns the whole library
-      // rather than an error — a silently wrong lens.
+      // rather than an error: a silently wrong lens.
       final adapter = sectionsPlus({
         '/library/sections/2/all': jsonFixtureMap(
           'plex/library_shows_unplayed.json',
@@ -838,7 +838,7 @@ void main() {
       // leafCount 19 − viewedLeafCount 4.
       expect(items.first.unplayedChildCount, 15);
       expect(items.first.isPlayed, isFalse);
-      // The second show omits viewedLeafCount entirely, which means zero — the
+      // The second show omits viewedLeafCount entirely, which means zero: the
       // badge has to appear on exactly the shows nobody has started.
       expect(items[1].unplayedChildCount, 8);
     });
@@ -964,7 +964,7 @@ void main() {
       final query = adapter.lastUri!.queryParameters;
       expect(query['type'], '8');
       // Neither unwatched spelling applies to a music section, so neither is
-      // sent — `unwatched=1` at an artist section is silently ignored and would
+      // sent: `unwatched=1` at an artist section is silently ignored and would
       // make the lens a second copy of A–Z.
       expect(query.containsKey('unwatched'), isFalse);
       expect(query.containsKey('show.unwatchedLeaves'), isFalse);
@@ -999,7 +999,7 @@ void main() {
     test('a page past the isolate threshold still maps every row', () async {
       // 60 rows crosses the threshold, so this is the only test that runs the
       // mapping through `Isolate.run`. It fails loudly if the closure ever drags
-      // an unsendable `this` across the boundary — a failure that would
+      // an unsendable `this` across the boundary, a failure that would
       // otherwise be swallowed by the read path's degrade-to-empty and surface
       // as a library that is mysteriously blank on big sections only.
       final adapter = sectionsPlus({
@@ -1078,7 +1078,7 @@ void main() {
   group('items and nesting', () {
     test('getItem skips the file check and the agent refresh', () async {
       // A bare GET makes the server stat every file and can kick off an agent
-      // refresh, both synchronously — thirty seconds on a spun-down NAS.
+      // refresh, both synchronously: thirty seconds on a spun-down NAS.
       final adapter = CapturingHttpAdapter(
         response: jsonFixtureMap('plex/metadata_movie.json'),
       );
@@ -1285,7 +1285,7 @@ void main() {
 
         final query = adapter.lastUri!.queryParameters;
         expect(query['query'], 'inter');
-        // Per hub, and 3 by default — always sent explicitly.
+        // Per hub, and 3 by default: always sent explicitly.
         expect(query['limit'], '12');
         expect(query['includeExternalMedia'], '0');
 
@@ -1371,7 +1371,7 @@ void main() {
 
     test('the rejection rule is three-sided', () {
       // `source` is absent on an ordinary library row, so its absence has to
-      // mean "local" — which is why an absolute key or thumb must also disqualify.
+      // mean "local", which is why an absolute key or thumb must also disqualify.
       expect(
         plexIsServerItem({'ratingKey': '1', 'key': '/library/metadata/1'}),
         isTrue,
@@ -1609,8 +1609,8 @@ void main() {
 
       expect(await client.probeVersion(), isNull);
       expect(await client.getIdentity(), isNull);
-      // A whole surface each — Now playing, the shelf, On deck, the Server
-      // section, an item's contents, a search lane — so a dark server is a
+      // A whole surface each: Now playing, the shelf, On deck, the Server
+      // section, an item's contents, a search lane, so a dark server is a
       // failure there, never "Nobody is watching", "Nothing part-watched",
       // "The server did not describe itself", "Nothing inside" or 0 results.
       await expectLater(
@@ -1875,7 +1875,7 @@ void main() {
   });
 }
 
-/// Answers `/library/all` per `?guid=` value, and records every request — the
+/// Answers `/library/all` per `?guid=` value, and records every request. The
 /// join probes one id at a time, so which ids were tried is the behaviour.
 class _GuidAdapter implements HttpClientAdapter {
   _GuidAdapter(this.byGuid);

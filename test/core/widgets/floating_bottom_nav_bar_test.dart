@@ -40,7 +40,7 @@ void main() {
         );
 
         // Parity with NavigationRail, which the shell uses above 840dp and which
-        // appends this itself — the same app was saying two different things
+        // appends this itself, and the same app was saying two different things
         // about the same navigation.
         expect(
           tester.getSemantics(_navItem('Search')),
@@ -67,7 +67,7 @@ void main() {
     ) async {
       // Principle 3 of the brand book: the selected destination is the room's strong fill
       // under the primary ink, the rest the secondary ink, and no section
-      // carries a colour of its own — so the same pill is drawn whichever tab
+      // carries a colour of its own, so the same pill is drawn whichever tab
       // is selected.
       final scheme = AppTheme.darkTheme().colorScheme;
       for (final (index, selected, unselected) in const [

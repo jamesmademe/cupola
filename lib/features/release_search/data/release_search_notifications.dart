@@ -7,8 +7,8 @@ import 'package:cupola/features/release_search/domain/release_search_job.dart';
 
 /// What a finished search should say, if anything.
 ///
-/// A pure function so the whole decision — including the rule that a finished
-/// search never interrupts — is testable without a platform channel.
+/// A pure function so the whole decision (including the rule that a finished
+/// search never interrupts) is testable without a platform channel.
 @immutable
 class ReleaseSearchNotice {
   const ReleaseSearchNotice({required this.title, required this.body});
@@ -86,7 +86,7 @@ class ReleaseSearchNotifications {
 
   final FlutterLocalNotificationsPlugin _plugin;
 
-  /// Told a tapped notification's payload — the job id. Owned by the provider
+  /// Told a tapped notification's payload: the job id. Owned by the provider
   /// that can navigate; the notice's "Tap to pick one" is a lie without it.
   final void Function(String? payload)? onTap;
 
@@ -96,7 +96,7 @@ class ReleaseSearchNotifications {
   ///
   /// Windows and Linux have no branch in [requestPermission] and no
   /// initialization settings in [initialise], so the toggle can never turn on
-  /// there — and the settings screen words that as a platform gap rather than
+  /// there, and the settings screen words that as a platform gap rather than
   /// sending the user to hunt through system settings that are not the cause.
   static bool get platformSupported =>
       Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
@@ -113,21 +113,21 @@ class ReleaseSearchNotifications {
   ///
   /// It used to be `@mipmap/ic_launcher`, which is wrong twice. Android draws a
   /// small icon as an alpha mask, so a full-colour launcher icon is a white
-  /// blob; and this app's launcher icon is `cupola_icon` — there has been no
+  /// blob; and this app's launcher icon is `cupola_icon`: there has been no
   /// `ic_launcher` since the icons were regenerated. The plugin refuses to
   /// initialise with an icon it cannot find, and a notification with no small
   /// icon cannot post, so on Android none ever did.
   @visibleForTesting
   static const androidSmallIcon = 'ic_stat_cupola';
 
-  /// Deliberately no `zonedSchedule` anywhere in this class — that single
+  /// Deliberately no `zonedSchedule` anywhere in this class: that single
   /// omission is what keeps the Android manifest at one permission and clear of
   /// the Play-restricted exact-alarm permissions.
   Future<void> initialise() async {
     if (_initialised) return;
     _initialised = true;
     // Best-effort on purpose: a platform without the plugin behind it (or a
-    // test) must not take down whatever asked. The same posture show() takes —
+    // test) must not take down whatever asked. The same posture show() takes:
     // a notification that cannot post is a notification lost, nothing more.
     try {
       await _plugin.initialize(
@@ -152,7 +152,7 @@ class ReleaseSearchNotifications {
       // A notification tapped after the OS relaunched the app still deserves
       // its landing. Asked once, here, because this is the only moment early
       // enough to catch it and late enough for a router to exist behind
-      // [onTap] — provided something calls initialise at startup, which the
+      // [onTap], provided something calls initialise at startup, which the
       // release-search lifecycle widget does.
       final launch = await _plugin.getNotificationAppLaunchDetails();
       if (launch?.didNotificationLaunchApp ?? false) {
@@ -195,7 +195,7 @@ class ReleaseSearchNotifications {
   ///
   /// The two drift apart on their own: a permission granted here can be revoked
   /// in system settings later, and nothing tells the app. Without this the
-  /// toggle keeps claiming to be on while every notice is silently dropped —
+  /// toggle keeps claiming to be on while every notice is silently dropped,
   /// which is the failure mode a user reads as "the feature is broken".
   ///
   /// Null means *unknown*, and it is a real answer rather than a failure: the
@@ -227,7 +227,7 @@ class ReleaseSearchNotifications {
         return (await mac.checkPermissions())?.isEnabled;
       }
     } catch (_) {
-      // Unknown, not denied — see above.
+      // Unknown, not denied: see above.
     }
     return null;
   }

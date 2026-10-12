@@ -114,7 +114,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     final current = segments.length > 1
         ? configured.indexWhere((s) => s.routeParam == segments[1])
         : -1;
-    // From anywhere that is not a service, the gesture means "the first one" —
+    // From anywhere that is not a service, the gesture means "the first one":
     // forwards from the start, backwards from the end.
     final next = current < 0
         ? (delta > 0 ? 0 : configured.length - 1)
@@ -127,17 +127,17 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
   /// `⌘R`: ask again, whatever "again" means on the tab you are standing on.
   ///
   /// Settings used to map to `null` here, which made the shortcut a deliberate
-  /// no-op on a quarter of the app — and stayed a no-op after Settings grew a
+  /// no-op on a quarter of the app, and stayed a no-op after Settings grew a
   /// real "Test all" command, so the strip's own Refresh-all chip advertised a
   /// shortcut that did nothing on the pane where the user most wants it. The two
-  /// are one sentence — *ask every server again* — so they spend the same
+  /// are one sentence, *ask every server again*, so they spend the same
   /// command, defined once in `connection_test_command.dart`; re-implementing it
   /// here is how the button and the shortcut would start disagreeing about what
   /// "every" covers.
   ///
   /// The announcement comes with it. The work is invisible on a pane of
-  /// seventeen rows — the ones that re-enter their checking state are usually
-  /// off screen — and a command whose only feedback is below the fold is a
+  /// seventeen rows: the ones that re-enter their checking state are usually
+  /// off screen, and a command whose only feedback is below the fold is a
   /// command people press twice.
   void _refreshAll() {
     final section = widget.currentTab.refreshSection;

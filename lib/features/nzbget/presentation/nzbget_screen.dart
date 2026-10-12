@@ -36,7 +36,7 @@ class NzbgetScreen extends ConsumerWidget {
       accent: ServiceKey.nzbget.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('NZBGet')) : null,
       body: SafeArea(
-        // The shared placeholder, not a private copy — see the note on the
+        // The shared placeholder, not a private copy: see the note on the
         // SABnzbd dashboard, which had grown the same widget independently.
         child: isConfigured
             ? _NzbgetDashboard(topPadding: topPadding)
@@ -325,7 +325,7 @@ class _QueueTile extends ConsumerWidget {
           group.remainingLabel,
       ].join(' · '),
       // Null when NZBGet reported no size or no remaining size, so the bar is
-      // simply not drawn — which is the fix: the old `0` default computed a
+      // simply not drawn. That is the fix: the old `0` default computed a
       // full bar for a job nobody measured.
       progress: group.progress,
       // Preserve the distinction between a real zero and a percentage NZBGet
@@ -369,7 +369,7 @@ class _QueueTile extends ConsumerWidget {
   /// It used to go on the tap. No "also delete files" choice, unlike SABnzbd:
   /// `GroupDelete` is documented only as "delete groups and put to history",
   /// and whether it clears what was already downloaded depends on the
-  /// server's own settings and version — a checkbox here would be a promise
+  /// server's own settings and version: a checkbox here would be a promise
   /// this app cannot check. The sentence says only what the API does say.
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final result = await showAppConfirmDialog(

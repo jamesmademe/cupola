@@ -5,14 +5,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 const manualImportPathPrefix = '/import';
 
-/// Station 1 — Locate. Kept at the historical `/browse` path so existing
+/// Station 1 (Locate). Kept at the historical `/browse` path so existing
 /// deep links and entry points keep working.
 const manualImportBrowsePath = '$manualImportPathPrefix/browse';
 
-/// Station 2 — Review (selection and matching merged into one screen).
+/// Station 2 (Review, selection and matching merged into one screen).
 const manualImportReviewPath = '$manualImportPathPrefix/review';
 
-/// Station 3 — Track.
+/// Station 3 (Track).
 const manualImportProgressPath = '$manualImportPathPrefix/progress';
 
 /// The Review of every download one connection finished and would not
@@ -39,7 +39,7 @@ ServiceKey? manualImportServiceFromRoute(String? value) {
 ///
 /// [instanceId] is the load-bearing one. The flow browses one server's
 /// filesystem and moves files into one server's library, and it is bound to
-/// that connection for its whole life — so the connection has to travel in the
+/// that connection for its whole life, so the connection has to travel in the
 /// link, exactly like `ServiceRoutes`' own `?i=`. Without it a failed-import row
 /// on the HD Radarr opened a wizard pointed at whatever the lens happened to be
 /// on, and the files went into the 4K library. That is the one bug in this flow
@@ -89,7 +89,7 @@ VoidCallback? openManualImportCallback(
 ///
 /// A failed import is the scene manual import exists for, and the queue record
 /// that would have carried `outputPath` is gone by the time the failure is in
-/// History — so the folder has to come out of the event itself.
+/// History, so the folder has to come out of the event itself.
 ///
 /// `droppedPath` is where the download client left the release: the folder for
 /// a pack, the file itself for a single-file download, which is why it still
@@ -98,7 +98,7 @@ VoidCallback? openManualImportCallback(
 /// nothing).
 ///
 /// `importedPath` is the opposite default: it names a file the service *did*
-/// place, so it is always trimmed to its parent — never tested, because a
+/// place, so it is always trimmed to its parent, never tested, because a
 /// library file with no extension the test recognises would otherwise be
 /// browsed as if it were a folder.
 String? manualImportFolderFromFailedImport({
@@ -122,7 +122,7 @@ String? manualImportFolderFromFailedImport({
 
 /// Derives a browsable folder from a queue item's `outputPath`.
 ///
-/// The \*arr queue reports where the download client put the data — usually a
+/// The \*arr queue reports where the download client put the data, usually a
 /// folder, occasionally the file itself for single-file downloads. The
 /// filesystem endpoint only lists folders, so a path whose last segment looks
 /// like a file name (a short alphanumeric extension) is trimmed to its parent.

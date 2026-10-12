@@ -27,7 +27,7 @@ class MediaDetailValueOption<T> {
 /// form with a drag handle, and the app has none.
 ///
 /// Returns the picked option, or null if the sheet was dismissed. The caller
-/// decides whether a pick equal to the current value is worth a write — it is
+/// decides whether a pick equal to the current value is worth a write. It is
 /// not: a no-op write to a quality profile can still queue a library-wide
 /// upgrade sweep.
 Future<MediaDetailValueOption<T>?> showMediaValueSheet<T>(
@@ -90,7 +90,7 @@ List<MediaDetailValueOption<int>> qualityProfileOptions(
 ///
 /// Through [PressableScale] rather than a `ListTile`: that widget is the sole
 /// home of the press-scale, the haptic, the Reduce Motion check *and* the button
-/// role plus accessible name, and a ~48pt row floods its own ink splash — a
+/// role plus accessible name, and a ~48pt row floods its own ink splash: a
 /// flooded ripple reads as selection rather than as a touch, which is precisely
 /// the wrong signal on a row where one sibling genuinely *is* selected.
 class MediaValueOptionRow extends StatelessWidget {

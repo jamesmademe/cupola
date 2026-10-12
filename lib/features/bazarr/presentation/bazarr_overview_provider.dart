@@ -44,7 +44,7 @@ class BazarrOverviewRow {
 
   final StatusTone tone;
 
-  /// The row as one sentence, with the layout's `·` turned back into commas —
+  /// The row as one sentence, with the layout's `·` turned back into commas,
   /// in the headline too, which carries one on a history row.
   String get spoken =>
       joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
@@ -108,7 +108,7 @@ String bazarrMissingLanguagesLabel(List<BazarrSubtitleLanguage> languages) {
 /// The wanted preview, **neutral throughout**.
 ///
 /// A wanted count is backlog: nothing is broken, Bazarr is simply still
-/// looking. Painting it amber is the offence the tone rule exists to end — it
+/// looking. Painting it amber is the offence the tone rule exists to end: it
 /// makes a working stack with a long tail look like a stack with a fault.
 ///
 /// [total] is Bazarr's own badge count rather than the length of [items],
@@ -134,8 +134,8 @@ BazarrOverviewSection bazarrWantedSection(
 /// How a history entry reads.
 ///
 /// Green for a subtitle that landed, informational for a match, **neutral for a
-/// removal or a blacklisting** — blacklisting is a choice, not a fault, so no
-/// amber appears in this list for it — and amber only for an event Bazarr
+/// removal or a blacklisting**: blacklisting is a choice, not a fault, so no
+/// amber appears in this list for it, and amber only for an event Bazarr
 /// itself reported as failed.
 StatusTone bazarrHistoryTone(BazarrHistoryItem item) {
   if (item.blacklisted) return StatusTone.neutral;

@@ -63,7 +63,7 @@ class SettingsChoiceRow extends StatelessWidget {
                         label,
                         // The weight change is half of what carries the
                         // selected state (see the class doc), so it has to go
-                        // through `.weight` — `copyWith(fontWeight:)` left
+                        // through `.weight`; `copyWith(fontWeight:)` left
                         // the `wght` axis untouched and rendered both states
                         // at the role's weight.
                         style: theme.textTheme.titleMedium!

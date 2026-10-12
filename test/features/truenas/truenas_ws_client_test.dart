@@ -14,11 +14,11 @@ import '../../test_helpers/fixtures.dart';
 
 /// A loopback JSON-RPC server standing in for TrueNAS middleware.
 ///
-/// Offline and deterministic — it never leaves the machine — but it is a real
+/// Offline and deterministic (it never leaves the machine), but it is a real
 /// socket, which is the only way to exercise a transport bug. It speaks plain
 /// `ws://`: a TLS fixture would put a private key in a public repository. So
 /// the tests that talk to it use [_LoopbackClient], which dials it through the
-/// production upgrade path with only the scheme lowered — and the ones about
+/// production upgrade path with only the scheme lowered, and the ones about
 /// the cleartext refusal use the real client, which must never reach it.
 class _FakeMiddleware {
   _FakeMiddleware._(this._server);
@@ -30,11 +30,11 @@ class _FakeMiddleware {
   /// proof that a client refused to dial.
   int requests = 0;
 
-  /// How many times a client completed the WebSocket upgrade — i.e. how many
+  /// How many times a client completed the WebSocket upgrade, i.e. how many
   /// connections it opened.
   int upgrades = 0;
 
-  /// Every text frame a client sent, verbatim — where an API key would show up.
+  /// Every text frame a client sent, verbatim, where an API key would show up.
   final List<String> frames = [];
 
   /// Methods the server deliberately never answers, simulating a half-open
@@ -155,7 +155,7 @@ class _Redirector {
 /// The real client, dialling the plain-`ws://` fixture.
 ///
 /// Overrides [TrueNasWsClient.dial] and nothing else, and even that only lowers
-/// the scheme before calling the production dialer — so the endpoint
+/// the scheme before calling the production dialer, so the endpoint
 /// resolution, the cleartext refusal, the redirect guard, the login and the
 /// RPC plumbing under test are all the shipping code.
 class _LoopbackClient extends TrueNasWsClient {
@@ -394,7 +394,7 @@ void main() {
 
     test('a redirect on the upgrade is refused, not followed', () async {
       // `dart:io` follows a redirect on the upgrade GET, and the login frame
-      // then goes to whatever answered 101 at the end of the chain — here a
+      // then goes to whatever answered 101 at the end of the chain: here a
       // cleartext socket on another port, after the scheme check had passed.
       final redirector = await _Redirector.start(
         'http://127.0.0.1:${server.port}/api/current',

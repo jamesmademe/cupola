@@ -58,8 +58,8 @@ void main() {
   group('the second signal', () {
     test('a 403 on any write marks the connection read-only', () {
       // The signal that needs no endpoint: the service itself answering the
-      // question the probe asked. It is what gets a service with no probe — or
-      // one whose probe was wrong — to the right banner after one refusal,
+      // question the probe asked. It is what gets a service with no probe, or
+      // one whose probe was wrong, to the right banner after one refusal,
       // instead of letting the user press a dead control all afternoon.
       final container = ProviderContainer();
       addTearDown(container.dispose);

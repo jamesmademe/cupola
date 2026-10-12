@@ -16,7 +16,7 @@ import 'package:cupola/features/stream/domain/stream_semantics.dart';
 /// theory that a connection should be traceable end to end. That layout cannot
 /// ship: `TextScaleMetrics.singleLineChromeMaxScaleFactor` is 1.3 precisely
 /// because "a strip of pills with connectors between them… cannot reflow", and
-/// worse, any `Flexible` distribution ellipsises the longest child first — which
+/// worse, any `Flexible` distribution ellipsises the longest child first, which
 /// here is the transcode *reason*, the one string the surface exists to show. The
 /// layout would have eaten its own focal point. `TorrentTile`, the app's other
 /// live-transfer row, reached the same conclusion and stacks.
@@ -24,7 +24,7 @@ import 'package:cupola/features/stream/domain/stream_semantics.dart';
 /// So the path survives as **vertical reading order** instead:
 ///
 ///  1. what is playing,
-///  2. how it is being delivered, and why — in the delivery's own tone: green
+///  2. how it is being delivered, and why, in the delivery's own tone: green
 ///     while the file is going out untouched, amber once the box is
 ///     re-encoding,
 ///  3. who is watching it, on what, and how far in.
@@ -34,8 +34,8 @@ import 'package:cupola/features/stream/domain/stream_semantics.dart';
 ///
 /// **The description is one node; the controls are not inside it.** The whole
 /// card used to sit under `Semantics(excludeSemantics: true)`, which is right for
-/// the four text lines — read top to bottom they are a comma list with no
-/// structure — and catastrophic for the buttons it also swallowed: the stop
+/// the four text lines (read top to bottom they are a comma list with no
+/// structure) and catastrophic for the buttons it also swallowed: the stop
 /// control was on screen, focusable by a pointer, and completely absent from the
 /// screen reader's traversal. So the exclusion now wraps the *readout* only, and
 /// every action stays its own reachable node with its own name.
@@ -170,7 +170,7 @@ class StreamSessionCard extends StatelessWidget {
 /// A trailing row at the card's foot rather than a glyph tucked beside the
 /// title: three of them do not fit a phone's title line beside a two-line title,
 /// and pinning them there is what forced the old single stop button down to
-/// `VisualDensity.compact` — a 40pt target on a surface whose whole job is to
+/// `VisualDensity.compact`: a 40pt target on a surface whose whole job is to
 /// interrupt someone. Each one keeps `IconButton`'s full 48×48 and carries a
 /// tooltip, which is also its spoken name.
 class _SessionActions extends StatelessWidget {
@@ -277,7 +277,7 @@ class _TitleRow extends StatelessWidget {
 /// How the bytes are being delivered, and what it costs.
 ///
 /// A `Wrap` rather than a `Row`, so the reason can take a second line instead of
-/// eliding — see the class doc on [StreamSessionCard]. The rate sits in the same
+/// eliding; see the class doc on [StreamSessionCard]. The rate sits in the same
 /// wrap so it follows the reason down rather than pinning a column.
 class _CostRow extends StatelessWidget {
   const _CostRow({
@@ -361,7 +361,7 @@ class _ProgressBar extends StatelessWidget {
 /// Bits per second as a short human figure.
 ///
 /// Decimal megabits, because that is the unit every media server, router and ISP
-/// states a stream in — bytes here would be correct and unreadable. Returns null
+/// states a stream in. Bytes here would be correct and unreadable. Returns null
 /// for a null or non-positive input so callers can omit the slot rather than
 /// printing "0 Mbps" for a session whose rate the server simply did not report.
 String? formatStreamBitrate(int? bitsPerSecond) {

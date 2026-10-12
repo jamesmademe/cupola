@@ -9,7 +9,7 @@ import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
 /// The media detail pages' back affordance, in one of two poses.
 ///
 /// [reveal] interpolates between them: `0` sits over backdrop artwork (a plate
-/// floating on the photograph), `1` sits on chrome (no plate — the collapsed
+/// floating on the photograph), `1` sits on chrome (no plate; the collapsed
 /// glass bar is the ground by then). The collapsing hero drives it
 /// continuously; the placeholder and error pages pin it at `1`, because they
 /// have no artwork for a plate to float on.
@@ -25,7 +25,7 @@ import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
 /// did, and the endpoint over artwork was thin:
 ///
 /// * Thin endpoint. `black@0.45` over a *bright* backdrop composites to
-///   `#8C8C8C`, which gives a white glyph 3.35:1 — over WCAG 1.4.11's 3:1 floor
+///   `#8C8C8C`, which gives a white glyph 3.35:1, over WCAG 1.4.11's 3:1 floor
 ///   for a graphical object by a hair, and visibly washed out on a 22pt
 ///   chevron. That is the reported defect: legible over a night sky, near
 ///   invisible over a lit wall.
@@ -34,24 +34,24 @@ import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
 ///   between an inverted pair passes through the point where foreground and
 ///   background luminance are equal, i.e. 1:1. Measured on the old lerp at
 ///   `reveal` 0.5 over a bright backdrop: 2.07:1. No amount of retiming fixes
-///   a crossing — only removing the inversion does.
+///   a crossing: only removing the inversion does.
 ///
 /// So the polarity is fixed for the whole range: the glyph is always
 /// [ColorScheme.onSurface] and the plate is always [ColorScheme.surface], the
 /// one pair the theme guarantees. In dark theme that is visually the pose it
 /// already was (near-black plate, near-white glyph). In light theme the plate
-/// becomes light and the chevron dark — the light theme's own chrome language,
+/// becomes light and the chevron dark: the light theme's own chrome language,
 /// and the same treatment a light-mode map or photo viewer uses over imagery.
 /// It also retires this file's `Colors.black`/`Colors.white` exception: every
 /// colour here now comes from the scheme.
 ///
 /// [plateAlpha] is not a taste value. It is the smallest opacity at which the
-/// plate composited over the *worst possible* artwork — pure white in dark
-/// theme, pure black in light theme, with no credit for the hero's scrim — still
+/// plate composited over the *worst possible* artwork: pure white in dark
+/// theme, pure black in light theme, with no credit for the hero's scrim, still
 /// clears 4.5:1 against `onSurface`. Solving the sRGB relative-luminance
 /// equation for that bound gives 0.518 (light) and 0.579 (dark); 0.62 carries
 /// headroom over both. Ratios below are *measured off the painted pixels* by
-/// `media_detail_back_button_test.dart`, at zero scrim credit — the widget over
+/// `media_detail_back_button_test.dart`, at zero scrim credit: the widget over
 /// a synthetic solid backdrop, nothing else in the stack:
 ///
 /// | theme | artwork  | plate composite | ratio to `onSurface` |
@@ -82,7 +82,7 @@ class MediaDetailBackButton extends StatelessWidget {
   ///
   /// 36 is a *painted* size, deliberately smaller than the target: a 48pt disc
   /// over artwork reads as a button competing with the poster, where a 36pt one
-  /// reads as chrome. The target grows around it instead — see [targetSize] —
+  /// reads as chrome. The target grows around it instead, see [targetSize],
   /// and [gutterAlignedLeftInset] keeps the plate's leading edge on the content
   /// gutter whatever the target does.
   static const double discSize = 36;
@@ -92,8 +92,8 @@ class MediaDetailBackButton extends StatelessWidget {
   /// 48: one cross-platform constant has to satisfy the larger of iOS' 44pt
   /// and Android's 48dp, and the app had been carrying two different answers
   /// (44 here, 48 on the action band) for the same floor. The action band now
-  /// stands above it, at the primary's 52 ([HeaderActionRow.buttonHeight]). Raising it changes nothing that is painted — the plate is
-  /// still [discSize] — only the hit box and, through
+  /// stands above it, at the primary's 52 ([HeaderActionRow.buttonHeight]). Raising it changes nothing that is painted: the plate is
+  /// still [discSize]: only the hit box and, through
   /// [gutterAlignedLeftInset], the inset that keeps the plate on the gutter.
   static const double targetSize = 48;
 
@@ -103,7 +103,7 @@ class MediaDetailBackButton extends StatelessWidget {
   /// `(targetSize - discSize) / 2` inside the target's own box. Deriving the
   /// inset from both constants means [targetSize] can move again without the
   /// chevron drifting off the [AppSpacing.lg] column the hero copy and every
-  /// body slot align to — which is exactly the coupling that made the old 44
+  /// body slot align to: which is exactly the coupling that made the old 44
   /// unraisable.
   static const double gutterAlignedLeftInset =
       AppSpacing.lg - (targetSize - discSize) / 2;
@@ -114,7 +114,7 @@ class MediaDetailBackButton extends StatelessWidget {
       gutterAlignedLeftInset + targetSize + AppSpacing.md;
 
   /// Plate opacity while the plate is the ground. See the class doc for the
-  /// derivation — this is a computed floor, not a taste value.
+  /// derivation: this is a computed floor, not a taste value.
   static const double plateAlpha = 0.62;
 
   /// Where the plate starts handing the ground back to the chrome.
@@ -140,7 +140,7 @@ class MediaDetailBackButton extends StatelessWidget {
     return scheme.surface.withValues(alpha: plateAlpha * (1 - release));
   }
 
-  /// Glyph colour. Deliberately independent of [reveal] — see the class doc:
+  /// Glyph colour. Deliberately independent of [reveal], see the class doc:
   /// an inverting foreground cannot clear AA at every point in the morph.
   static Color glyphColorFor(ColorScheme scheme) => scheme.onSurface;
 
@@ -152,7 +152,7 @@ class MediaDetailBackButton extends StatelessWidget {
       dimension: targetSize,
       // Loosens the constraints so the button can hold its 36pt plate while
       // `MaterialTapTargetSize.padded` grows the *hit box* out to fill this
-      // square. A tight inner `SizedBox(36)` — what this used to be — capped
+      // square. A tight inner `SizedBox(36)`, what this used to be, capped
       // the padded hit box at 36 too, so 8pt of the documented target was
       // decoration: a tap 2pt inside the corner missed the button entirely.
       child: Center(
@@ -165,7 +165,7 @@ class MediaDetailBackButton extends StatelessWidget {
             padding: EdgeInsets.zero,
             // `minimumSize` as well as `fixedSize`: `fixedSize` is clamped
             // *into* the resolved minimum, and `IconButton`'s M3 default
-            // minimum is 48 — so on its own it would paint a 48pt plate (40 on
+            // minimum is 48, so on its own it would paint a 48pt plate (40 on
             // a desktop's compact density). Pinning the density too keeps the
             // plate's leading edge on the content gutter on every platform
             // rather than letting it drift 2pt with `VisualDensity`.

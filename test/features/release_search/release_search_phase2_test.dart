@@ -48,7 +48,7 @@ final _target = ReleaseSearchTarget.season(
 /// native background task may ever carry an API key to.
 const _httpsBase = 'https://sonarr.example.com';
 
-/// The same instance over cleartext — where a redirect can be injected by
+/// The same instance over cleartext, where a redirect can be injected by
 /// anyone on the path, and the native task would replay `X-Api-Key` into it.
 const _httpBase = 'http://sonarr.example.com:8989';
 
@@ -89,7 +89,7 @@ void main() {
         isTrue,
       );
       // macOS stays on the foreground path on purpose: it does not suspend apps,
-      // so there is nothing to survive — and staying on `ApiClient` keeps the
+      // so there is nothing to survive, and staying on `ApiClient` keeps the
       // redirect guard the native path has to give up.
       expect(
         backgroundSearchSupported(platform: TargetPlatform.macOS),
@@ -110,7 +110,7 @@ void main() {
         ),
         ReleaseSearchReach.beyondTheApp,
       );
-      // A pinned origin cuts it off even where the platform could survive —
+      // A pinned origin cuts it off even where the platform could survive:
       // the native task cannot see an in-app trust at all.
       expect(
         reachFor(
@@ -132,7 +132,7 @@ void main() {
         ),
         ReleaseSearchReach.whileOpenTrustedCert,
       );
-      // macOS has nothing to survive regardless of the pin — a platform fact,
+      // macOS has nothing to survive regardless of the pin: a platform fact,
       // not a certificate limitation, so it must not read as one.
       expect(
         reachFor(
@@ -162,7 +162,7 @@ void main() {
         // The order in `reachFor` is the design: when the user has switched the
         // capability off, that is both the true cause and the only one they can
         // lift in a tap. A pinned certificate or a cleartext origin only starts
-        // mattering once the capability is wanted — reporting those first would
+        // mattering once the capability is wanted; reporting those first would
         // send someone to fix an instance over a switch they turned off
         // themselves.
         for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
@@ -190,7 +190,7 @@ void main() {
     test('on desktop the platform still answers, switch or no switch', () {
       // The one reason that outranks the switch. Desktop has no background path
       // to turn on, so naming the setting there would invent a missing
-      // capability — and attach a warning to a risk that does not exist.
+      // capability, and attach a warning to a risk that does not exist.
       for (final enabled in [true, false]) {
         expect(
           reachFor(
@@ -210,7 +210,7 @@ void main() {
       // The one case here that is a security boundary rather than a capability
       // gap. The native task follows redirects with no way to stop it, and
       // every stack under it strips only `Authorization`/`Cookie` across
-      // origins — a custom `X-Api-Key` is replayed to whatever a 302 names. The
+      // origins: a custom `X-Api-Key` is replayed to whatever a 302 names. The
       // attacker who can *inject* that 302 (as opposed to the instance itself,
       // which already holds the key) needs cleartext to do it, so cleartext is
       // exactly where the background path stops.
@@ -308,7 +308,7 @@ void main() {
       // Belt to the reach braces: reach decides this long before here, and this
       // is what makes a future call site that gets it wrong fail closed. The
       // refusal has to happen *before* the task exists, because the plugin
-      // writes the task — headers included — to disk the moment it accepts it.
+      // writes the task (headers included) to disk the moment it accepts it.
       var transmitted = 0;
       final transport = BackgroundReleaseSearchTransport(
         transmit: (task) async {
@@ -377,8 +377,8 @@ void main() {
   });
 
   group("the background task's lifetime", () {
-    // Why any of this matters: the plugin persists the whole task — headers, so
-    // the API key — in plaintext on device, and removes it only when the task
+    // Why any of this matters: the plugin persists the whole task (headers, so
+    // the API key) in plaintext on device, and removes it only when the task
     // reaches a *final* state. A task nobody finalises leaves the credential on
     // disk for as long as the OS keeps the record, which defeats the point of
     // holding it in secure storage. Cancelling is the removal.
@@ -436,7 +436,7 @@ void main() {
     test('cancelling mid-flight cancels the native task', () async {
       // The defect this guards: the transport used to ignore its `CancelToken`
       // entirely, so stopping a search from the sheet left the native task
-      // running — and its persisted copy of the API key on disk — until the OS
+      // running, and its persisted copy of the API key on disk, until the OS
       // felt like ending it.
       final cancelled = <String>[];
       DataTask? enqueued;
@@ -479,7 +479,7 @@ void main() {
         // Nothing native enforces the configured timeout: Android's WorkManager
         // cap is nine minutes and iOS would hold the task, key and all, until the
         // resource timeout an hour later. So the ceiling is enforced here, and
-        // enforcing it *cancels* rather than just walking away — walking away is
+        // enforcing it *cancels* rather than just walking away. Walking away is
         // what leaves the credential on disk.
         final cancelled = <String>[];
         DataTask? enqueued;
@@ -528,8 +528,8 @@ void main() {
       // The only ceiling left while the app is suspended, and therefore the one
       // that bounds how long a task carrying the API key exists and how long the
       // plugin's plaintext task record keeps that header on disk. It has to
-      // clear the longest search the settings screen permits — otherwise the OS
-      // would cut searches the app told the user it would run — while staying
+      // clear the longest search the settings screen permits; otherwise the OS
+      // would cut searches the app told the user it would run, while staying
       // close enough that it is a backstop rather than an hour of residue.
       expect(
         kBackgroundSearchResourceTimeout,
@@ -550,7 +550,7 @@ void main() {
     /// A target already bound to the connection the fixture configures.
     ///
     /// `copyWithService` mints the primary, whose id is the service's own route
-    /// param — so stamping with 'sonarr' names the very instance these tests set
+    /// param, so stamping with 'sonarr' names the very instance these tests set
     /// up, and exercises the per-connection path rather than the unstamped
     /// fallback.
     ReleaseSearchTarget sonarrOn(String instanceId) =>
@@ -563,7 +563,7 @@ void main() {
     Future<ProviderContainer> containerFor(
       String sonarrUrl, {
       TargetPlatform platform = TargetPlatform.android,
-      // Defaults to on because these tests are about the *other* axes — the
+      // Defaults to on because these tests are about the *other* axes: the
       // scheme, the pin, the platform. The switch has its own tests below, and
       // the shipped default is off.
       bool backgroundEnabled = true,
@@ -614,14 +614,14 @@ void main() {
 
     // Where the cleartext instance's redirect guard actually lives. The runner
     // short-circuits every non-backgrounding transport into the arr service, so
-    // the request rides `ApiClient` — guard, pinned adapter and all — and the
+    // the request rides `ApiClient` (guard, pinned adapter and all), and the
     // foreground transport's own `run` is not what protects it.
     test('the in-app path runs through the arr service, not the transport', () {
       final service = _RecordingSonarrService();
       final container = ProviderContainer(
         overrides: [
           sonarrServiceProvider.overrideWithValue(service),
-          // Keyed on the target the runner will actually pass — unstamped
+          // Keyed on the target the runner will actually pass, unstamped
           // here, which is the path a target built outside the entry point
           // takes and the one this test is about.
           releaseSearchTransportProvider(_target).overrideWithValue(
@@ -642,8 +642,8 @@ void main() {
 
     // ── The connection, not the service ──────────────────────────────────
     //
-    // Reach used to be read off `settings.urlFor(service)` — the FIRST instance
-    // — while the request was built and sent by the lens-aware service. These
+    // Reach used to be read off `settings.urlFor(service)`, the FIRST instance
+    // while the request was built and sent by the lens-aware service. These
     // two say that is over, and the first is the security case: the https
     // primary must not lend its scheme to the cleartext second connection and
     // hand its API key to a background task that cannot be told to stop
@@ -752,7 +752,7 @@ void main() {
       'the switch, off, keeps an https instance out of native code entirely',
       () async {
         // The claim the opt-in rests on: with the feature off, nothing is handed
-        // to the OS *at all* — not "handed and cancelled quickly", not "handed
+        // to the OS *at all*: not "handed and cancelled quickly", not "handed
         // without notification". This asserts it at the only place that could
         // enqueue, and then again one layer up at the runner.
         final container = await containerFor(
@@ -809,7 +809,7 @@ void main() {
 
     test('turning the switch on restores the background transport', () async {
       // The other direction, because a gate that cannot be opened is not a
-      // setting. Same container, same instance — only the flag moves.
+      // setting. Same container, same instance; only the flag moves.
       final container = await containerFor(
         _httpsBase,
         backgroundEnabled: false,
@@ -922,7 +922,7 @@ void main() {
     test('a failed task carrying an HTTP code is an HTTP error, not a timeout', () {
       // The shape the plugin actually produces for a non-2xx answer: natively
       // anything but 200–206 becomes `failed`, and the code travels only inside
-      // the TaskException — `responseStatusCode` is serialized solely for
+      // the TaskException: `responseStatusCode` is serialized solely for
       // complete/notFound. Reading the status code alone turned every proxy 504
       // into "timeout", and the backgrounded variant into "stopped when you
       // left Cupola" on the one path built to survive exactly that.
@@ -954,7 +954,7 @@ void main() {
     });
 
     test('a notFound answer is an HTTP 404, headers included', () {
-      // 404 is the one non-2xx the plugin gives its own status — and the only
+      // 404 is the one non-2xx the plugin gives its own status, and the only
       // failed shape that still carries response headers, so the gateway that
       // answered can be named.
       Object? thrown;
@@ -1129,7 +1129,7 @@ void main() {
     test('is stated as nine minutes rather than hidden', () {
       // The library's foreground escape is not wired for this task type, and
       // lifting the cap would cost a Play-restricted permission plus a review
-      // video — so it is accepted and named.
+      // video, so it is accepted and named.
       expect(
         BackgroundReleaseSearchTransport.androidCeiling,
         const Duration(minutes: 9),

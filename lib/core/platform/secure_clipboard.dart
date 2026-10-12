@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 ///
 /// Flutter's [Clipboard] writes a plain clip, and a plain clip is a leak on two
 /// of the three platforms this app ships to: Android 13+ renders a preview of
-/// what was copied — the key in cleartext, on screen, over whatever is in front
-/// of it — and Apple's general pasteboard syncs through Universal Clipboard to
+/// what was copied: the key in cleartext, on screen, over whatever is in front
+/// of it, and Apple's general pasteboard syncs through Universal Clipboard to
 /// every other device signed into the same account. Neither behaviour is
 /// reachable from Dart: the flags that suppress them
 /// (`ClipDescription.EXTRA_IS_SENSITIVE`, `UIPasteboardOptionLocalOnly` and
@@ -49,7 +49,7 @@ abstract final class SecureClipboard {
       });
       return handled ?? false;
     } on MissingPluginException {
-      // No native handler — a platform this app builds for but has not hardened,
+      // No native handler: a platform this app builds for but has not hardened,
       // or a test binding.
       return false;
     } on PlatformException {

@@ -7,7 +7,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_status.dart';
 
-/// The scan verdict at a glance — and the control that acts on it.
+/// The scan verdict at a glance, and the control that acts on it.
 ///
 /// This row used to be four read-only [StatusBadge]es stating counts, while the
 /// two things a user actually wanted to do with those counts lived elsewhere:
@@ -127,7 +127,7 @@ class _FacetChip extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: _minTouchTarget),
             // `widthFactor: 1` is load-bearing, not a tweak: an `Align` (or a
             // `Container` with an `alignment`) expands to the widest constraint
-            // it is given, and inside a `Wrap` that constraint is the full row —
+            // it is given, and inside a `Wrap` that constraint is the full row:
             // so every chip took a line of its own, centred, and the row read as
             // a stack of buttons. With the factor set, the box is as wide as its
             // pill and only its *height* grows to the touch target.
@@ -157,7 +157,7 @@ class _FacetChip extends StatelessWidget {
                       Icon(
                         // Hidden state is carried by a glyph as well as by fill
                         // and colour, so it survives greyscale and colour
-                        // blindness — and so a struck eye, not a missing chip,
+                        // blindness, and so a struck eye, not a missing chip,
                         // is what says "these are out of the list".
                         shown ? _iconFor(facet) : Icons.visibility_off_rounded,
                         size: 14,
@@ -187,7 +187,7 @@ class _FacetChip extends StatelessWidget {
   ///
   /// Deliberately not `statusIconFor(info)`: two of the four facets share the
   /// neutral tone, so a tone-derived icon would give "imported" and "other" the
-  /// same glyph — and these chips are the one place where the four classes have
+  /// same glyph, and these chips are the one place where the four classes have
   /// to be told apart at a glance.
   IconData _iconFor(ManualImportFacet facet) {
     return switch (facet) {

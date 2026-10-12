@@ -60,7 +60,7 @@ class StackScreen extends ConsumerWidget {
       id: 'services.stack',
       maxAge: _staleAfter,
       // The same refresh a re-tap of the tab performs, rather than a second
-      // path to the same invalidations — and silent, because nobody pressed
+      // path to the same invalidations, and silent, because nobody pressed
       // anything.
       onStale: () => ref.triggerNavigationRefresh(NavigationSection.stack),
       child: AmbientScaffold(
@@ -68,8 +68,8 @@ class StackScreen extends ConsumerWidget {
         // like every room with no artwork. The fleet below is seventeen
         // services, and each is named by its mark and its title, never a hue.
         // "Stack", because the crumb and the tab both say Stack and the app
-        // bar is *where you are*. The h1 below is what you are looking at —
-        // the fleet — and the two are different sentences.
+        // bar is *where you are*. The h1 below is what you are looking at:
+        // the fleet. The two are different sentences.
         appBar: GlassAppBar(
           title: const Text('Stack'),
           actions: [
@@ -110,7 +110,7 @@ class StackScreen extends ConsumerWidget {
 /// at instead of where you are, and the fleet *is* the subject here.
 ///
 /// The sentence under it is [StackHealth]'s, counting **connections folded per
-/// service** rather than the lensed summary — so a Radarr with one of its two
+/// service** rather than the lensed summary, so a Radarr with one of its two
 /// connections dark reads as *degraded* rather than inheriting whichever answer
 /// the lens happened to be pointing at.
 class _StackHeadline extends ConsumerWidget {
@@ -148,7 +148,7 @@ class _StackHeadline extends ConsumerWidget {
             const SizedBox(height: 2),
             Text(
               sentence,
-              // Neutral, always — no permanent green. A stack that is entirely
+              // Neutral, always: no permanent green. A stack that is entirely
               // healthy says so in words and spends no colour on it; the tone
               // this page has to spare belongs to the one card that is not.
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -166,14 +166,14 @@ class _StackHeadline extends ConsumerWidget {
 /// until the slowest of it has actually come back.
 ///
 /// `onRefresh` used to be `() async => _invalidateStack(ref)`, whose
-/// future completes on the same microtask — so the indicator retracted while
+/// future completes on the same microtask, so the indicator retracted while
 /// thirteen summaries and three merged lists were still in flight. A control-room
 /// screen that says "done" before it has re-read anything is worse than one with
 /// no refresh: the user reads the stale figure as the fresh one.
 ///
 /// Failures are swallowed rather than propagated. Every source here already
 /// degrades to `[]`/offline and paints its own state; letting one rejection out
-/// would abort `Future.wait` and retract the spinner early — the exact bug being
+/// would abort `Future.wait` and retract the spinner early: the exact bug being
 /// fixed, restored by the unhappy path.
 Future<void> _refreshStack(WidgetRef ref) async {
   _invalidateStack(ref);
@@ -199,11 +199,11 @@ void _invalidateStack(WidgetRef ref) {
     ref.invalidate(serviceKpiProvider(service));
     ref.invalidate(serviceSignalProvider(service));
     // The stack card's two figures. Reduced from the same KPI list, but its own
-    // `autoDispose` family entry — invalidating only the single-figure provider
+    // `autoDispose` family entry; invalidating only the single-figure provider
     // left the cards showing the figures from before the pull.
     ref.invalidate(serviceSignalPairProvider(service));
     // And the fleet's, for the multi-connection cards. Its own family entry
-    // again, and it reads every connection rather than the lens — so a refresh
+    // again, and it reads every connection rather than the lens, so a refresh
     // that stopped at the lens left a folded card stale by N-1 servers.
     ref.invalidate(foldedServiceKpisProvider(service));
     ref.invalidate(foldedServiceSignalPairProvider(service));
@@ -216,7 +216,7 @@ void _invalidateStack(WidgetRef ref) {
   // above rebuilt a wrapper that awaited an answer already in the cache. A pull
   // that redrew every figure and re-asked no server whether it was up.
   ref.invalidate(instanceSummaryProvider);
-  // The library providers the KPI builders read through — and therefore the two
+  // The library providers the KPI builders read through, and therefore the two
   // figures on every stack card. Invalidating `serviceKpiProvider` alone would
   // recompute the same numbers from the same cached libraries, which is a pull
   // that looks like it worked and changes nothing. The recently-added rail no

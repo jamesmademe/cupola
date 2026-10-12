@@ -1,6 +1,6 @@
 # ReelLine
 
-The reel roll: when a line of text changes, only the glyphs that changed roll — the old face drops out of the bottom of its slot as the new one drops in from the top — clipped to the line so nothing paints outside it.
+The reel roll: when a line of text changes, only the glyphs that changed roll; the old face drops out of the bottom of its slot as the new one drops in from the top, clipped to the line so nothing paints outside it.
 
 Hand-written from `lib/core/widgets/reel_line.dart`, `lib/core/widgets/reel_command_button.dart`, the presets in `lib/core/reel_motion.dart`, and the per-slot plan of `reel_text` 0.4.3 (`reel_text_slot_plan.dart`), re-implemented line for line in the card's script.
 
@@ -10,7 +10,7 @@ Presets (all `durationSm` 320ms on `emphasizedCurve` = `Cubic(0.2, 0.8, 0.2, 1)`
 |---|---|---|---|---|---|
 | `figure` (live numbers) | 18ms | 28ms | 0 | yes | `reel_motion.dart:41` |
 | `word` (state words) | 22ms | 34ms | 0 | yes | :58 |
-| `command` (a button's label) | 20ms | 30ms | 0.15 | **no — queues** | :80 |
+| `command` (a button's label) | 20ms | 30ms | 0.15 | **no, queues** | :80 |
 | `waiting` (the busy dots) | 16ms | 24ms | 0 | yes | :104 |
 
 How a roll is planned (the package, ported):

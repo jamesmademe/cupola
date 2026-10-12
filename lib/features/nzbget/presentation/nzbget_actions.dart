@@ -8,14 +8,14 @@ import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 
 /// True when NZBGet answered the call but refused to do the work.
 ///
-/// NZBGet does not signal a rejected command with a JSON-RPC `error` object —
+/// NZBGet does not signal a rejected command with a JSON-RPC `error` object:
 /// it answers HTTP 200 with `{"result": false}` (`editqueue`) or `{"result":
 /// 0}` (`append`). Pausing a group whose NZBID has just left the queue,
 /// deleting an already-removed id, or appending a URL the server declines all
 /// take that path, so the client's own return value is the only evidence a
 /// mutation did not happen.
 ///
-/// Anything else — including the `null` a `Future<void>` method resolves to —
+/// Anything else (including the `null` a `Future<void>` method resolves to)
 /// counts as success, because a method that reports nothing has no failure to
 /// report.
 bool _isRejection(Object? result) {
@@ -31,7 +31,7 @@ bool _isRejection(Object? result) {
 ///
 /// [action] returns `Future<Object?>` rather than `Future<void>` on purpose.
 /// `void` is a top type in Dart, so the old signature silently accepted
-/// `Future<bool>` and `Future<int>` and then discarded their results — this
+/// `Future<bool>` and `Future<int>` and then discarded their results: this
 /// wrapper returned `true` unconditionally and the UI reported "Job paused"
 /// for calls NZBGet had refused. Widening the return type is what lets
 /// [_isRejection] see the answer at all; a genuinely `void` client method still

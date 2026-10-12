@@ -146,7 +146,7 @@ abstract final class WorldConnections {
 
   /// The cabin's Jellyfin, named by the user: in no profile, for a test that
   /// adds it with `ConfigProfile.withConnection` beside the unnamed one at
-  /// home — two of a media server, one of them nobody named.
+  /// home: two of a media server, one of them nobody named.
   static final jellyfinCabin = _api(
     WorldIds.jellyfinCabin,
     ServiceKey.jellyfin,
@@ -156,7 +156,7 @@ abstract final class WorldConnections {
   );
 
   /// The cabin's Seerr, named by the user: in no profile, for a test that
-  /// adds it beside the unnamed one at home — two Seerr, each answering for
+  /// adds it beside the unnamed one at home: two Seerr, each answering for
   /// its own requests.
   static final seerrCabin = _api(
     WorldIds.seerrCabin,
@@ -221,7 +221,7 @@ abstract final class WorldConnections {
   );
 
   // World B, on `tower`: in no profile, for a test that adds one with
-  // `ConfigProfile.withConnection` — the NPM and Unraid read-only cases.
+  // `ConfigProfile.withConnection`: the NPM and Unraid read-only cases.
   static final readarr = _api(
     'readarr',
     ServiceKey.readarr,
@@ -273,7 +273,7 @@ final Map<String, String> _worldPins = {
 };
 
 abstract final class Profiles {
-  /// P1 — Full household (Matt, operator). The canvas default: twelve
+  /// P1: Full household (Matt, operator). The canvas default: twelve
   /// connections, all answering, Radarr and Radarr 4K side by side.
   static final p1 = ConfigProfile(
     id: 'P1',
@@ -333,7 +333,7 @@ abstract final class Profiles {
     trustedCertificates: _worldPins,
   );
 
-  /// P2 — Requester (Anna): her Seerr connection only, signed in with her
+  /// P2: Requester (Anna): her Seerr connection only, signed in with her
   /// own local account (REQUEST, 32).
   ///
   /// The network answers her account as Seerr does: `/auth/local` with her
@@ -354,7 +354,7 @@ abstract final class Profiles {
     seerrRequester: WorldSeerrUsers.annaLocal,
   );
 
-  /// P2-J — Anna through Jellyfin: her Seerr account is the Jellyfin user
+  /// P2-J, Anna through Jellyfin: her Seerr account is the Jellyfin user
   /// Seerr imported, signed in with her Jellyfin username and password
   /// (`/auth/jellyfin`). The server is Seerr 3.5.0, so Jellyfin Quick
   /// Connect is there too.
@@ -373,7 +373,7 @@ abstract final class Profiles {
     seerrRequester: WorldSeerrUsers.annaJellyfin,
   );
 
-  /// P2-P — Anna through Plex: a Seerr set up with Plex (`mediaServerType`
+  /// P2-P, Anna through Plex: a Seerr set up with Plex (`mediaServerType`
   /// 1), and her Plex account, signed in through plex.tv's PIN and
   /// `/auth/plex`. Cupola has no Plex connection.
   static final p2ViaPlex = ConfigProfile(
@@ -391,7 +391,7 @@ abstract final class Profiles {
     seerrRequester: WorldSeerrUsers.annaPlex,
   );
 
-  /// P2+J — Anna with her own Jellyfin sign-in: a non-admin user's token in
+  /// P2+J, Anna with her own Jellyfin sign-in: a non-admin user's token in
   /// the Jellyfin slot, answering as [ConnectionBehaviour.readOnly] (no admin
   /// reads, only her own sessions).
   static final p2WithJellyfin = ConfigProfile(
@@ -411,7 +411,7 @@ abstract final class Profiles {
     seerrRequester: p2.seerrRequester,
   );
 
-  /// P3 — First day (J-HomeFresh): Radarr, Sonarr, Seerr. No download client,
+  /// P3, First day (J-HomeFresh): Radarr, Sonarr, Seerr. No download client,
   /// no media server, no Bazarr, no Prowlarr.
   static final p3 = ConfigProfile(
     id: 'P3',
@@ -443,7 +443,7 @@ abstract final class Profiles {
     ],
   );
 
-  /// P4 — Arr stack without Seerr, Bazarr or a media server, and two
+  /// P4: Arr stack without Seerr, Bazarr or a media server, and two
   /// different download clients.
   static final p4 = ConfigProfile(
     id: 'P4',
@@ -462,7 +462,7 @@ abstract final class Profiles {
     ],
   );
 
-  /// P5 — Sonarr and Radarr known only through Seerr: Cupola has Seerr and
+  /// P5: Sonarr and Radarr known only through Seerr. Cupola has Seerr and
   /// Jellyfin, and Seerr's settings name a Radarr and a Sonarr that answer at
   /// their addresses but have no connection in Cupola.
   static final p5 = ConfigProfile(
@@ -493,7 +493,7 @@ abstract final class Profiles {
     ],
   );
 
-  /// P6 — Two of a kind, Plex instead of Jellyfin: two Radarr, two Sonarr,
+  /// P6, two of a kind (Plex instead of Jellyfin): two Radarr, two Sonarr,
   /// Seerr with a default and a 4K server, Bazarr following Radarr only, a
   /// shared (non-owner) Plex token, qBittorrent and SABnzbd.
   static final p6 = ConfigProfile(
@@ -557,7 +557,7 @@ abstract final class Profiles {
     trustedCertificates: {UrlUtils.certOrigin(WorldHosts.radarr4k)!: 'c' * 64},
   );
 
-  /// P7 — Full household, degraded and away: P1 away from home, Jellyfin and
+  /// P7: Full household, degraded and away. P1 away from home, Jellyfin and
   /// Bazarr not answering, five services home-only, qBittorrent refusing the
   /// sign-in, TrueNAS on a read-only key.
   static final p7 = ConfigProfile(
@@ -596,7 +596,7 @@ abstract final class Profiles {
     trustedCertificates: _worldPins,
   );
 
-  /// P8 — Behind Cloudflare Access: P1 away from home, with Radarr, Sonarr
+  /// P8: Behind Cloudflare Access. P1 away from home, with Radarr, Sonarr
   /// and Seerr behind one Access team (`cupola-home`). Radarr presents a
   /// service token Access lets through; Sonarr presents none; Seerr presents
   /// one Access knows and no Service Auth policy admits.
@@ -649,7 +649,7 @@ abstract final class Profiles {
     trustedCertificates: _worldPins,
   );
 
-  /// P9 — Operator with a friend's Seerr: P1, plus Sara's Seerr, where the
+  /// P9: Operator with a friend's Seerr. P1, plus Sara's Seerr, where the
   /// operator signs in with an account of his own that may only request.
   /// The household's Seerr answers his key; Sara's answers his account.
   static final p9 = ConfigProfile(

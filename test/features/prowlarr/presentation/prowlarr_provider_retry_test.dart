@@ -20,7 +20,7 @@ import '../../../test_helpers/settings_scope.dart';
 
 typedef _Read = (String, ProviderListenable<AsyncValue<Object?>>);
 
-/// Every read provider a Prowlarr screen watches — the sources and every
+/// Every read provider a Prowlarr screen watches: the sources and every
 /// provider derived from one.
 final List<_Read> _reads = [
   ('indexers', prowlarrIndexersProvider),
@@ -55,7 +55,7 @@ final List<_Read> _reads = [
   ('overview recent', prowlarrOverviewRecentProvider),
 ];
 
-/// A source under Riverpod's default policy — the harness's own control.
+/// A source under Riverpod's default policy: the harness's own control.
 final _defaultRetryIndexers = FutureProvider<List<ProwlarrIndexer>>(
   (ref) => ref.watch(prowlarrServiceProvider).getIndexers(),
 );
@@ -190,7 +190,7 @@ void main() {
     tester,
   ) async {
     // A deep link with Prowlarr not set up: the invitation, and no provider
-    // reached — so no failure, and nothing to retry.
+    // reached, so no failure, and nothing to retry.
     final api = _darkProwlarr();
     final settings = await tester.runAsync(() => settingsScopeOverrides());
     await tester.pumpWidget(

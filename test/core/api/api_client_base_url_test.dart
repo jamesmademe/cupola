@@ -8,7 +8,7 @@ void main() {
   group('ApiClient base URL', () {
     test('accepts a scheme-less host instead of throwing', () {
       // Regression: onboarding accepts a bare host, and `BaseOptions.baseUrl`
-      // rejects one with an ArgumentError raised from the constructor — outside
+      // rejects one with an ArgumentError raised from the constructor, outside
       // every caller's try block. The verify button spun forever with nothing
       // on screen to explain it.
       expect(

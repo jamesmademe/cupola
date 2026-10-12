@@ -46,8 +46,8 @@ class SnackBarHelper {
   ///
   /// One message, two registers: the first line says what failed in words the
   /// user can act on, the second carries whatever the service actually said.
-  /// The diagnostic never replaces the sentence — a raw `DioException` is not
-  /// an explanation — and it is dropped entirely when it is empty, so the
+  /// The diagnostic never replaces the sentence: a raw `DioException` is not
+  /// an explanation, and it is dropped entirely when it is empty, so the
   /// snackbar never grows a blank row.
   static String _compose(String message, Object? detail) {
     final demoted = _demote(detail);
@@ -78,14 +78,14 @@ class SnackBarHelper {
   /// prints what the key cannot do with **Update the key**.
   ///
   /// It is a toast and not a dialog because nothing was destroyed and nothing
-  /// needs confirming — the user tapped a control that cannot act, and the
+  /// needs confirming: the user tapped a control that cannot act, and the
   /// answer is an explanation plus a door. A dialog would make them dismiss it.
   ///
   /// Nothing in the app could express this before: every `SnackBar` raised here
   /// was content-only, so a control that refused to act could say *what*
   /// happened and never *what to do about it*, which is the half that matters.
   ///
-  /// Default styling on purpose — this is not an error, and the error variant's
+  /// Default styling on purpose: this is not an error, and the error variant's
   /// toned glyph would make a configuration fact look like a fault.
   static void withAction(
     BuildContext context,
@@ -120,7 +120,7 @@ class SnackBarHelper {
   /// [message]: `'Search failed: $e'` puts a stack-trace fragment where a
   /// sentence belongs, while `error(context, "Could not start a search in
   /// Radarr.", detail: e)` leads with what the user needs and demotes the
-  /// diagnostic to its own line — the same two-register shape `AppErrorState`
+  /// diagnostic to its own line: the same two-register shape `AppErrorState`
   /// uses.
   ///
   /// Pass it as [cause] instead when [message] already says why in the
@@ -128,7 +128,7 @@ class SnackBarHelper {
   /// the glyph takes its tone from it and nothing is printed twice.
   ///
   /// [duration] is for the rare failure that needs longer than the default four
-  /// seconds — a grab that failed after the sheet moved on, say, where the user
+  /// seconds: a grab that failed after the sheet moved on, say, where the user
   /// has to read a sentence they did not expect. Everything else takes the
   /// default; a snackbar that lingers is one the user has to dismiss.
   ///
@@ -138,7 +138,7 @@ class SnackBarHelper {
   /// lives on the glyph, never on a fill behind it. The plate is the one every
   /// toast sits on (`inverse-surface`), and the glyph ([failureIcon] of the
   /// classified [cause] or [detail]) is red only when nothing answered; amber
-  /// for every fault — a refused key, a 5xx, a write the service turned down —
+  /// for every fault: a refused key, a 5xx, a write the service turned down:
   /// and for a toast that carries no cause at all, a form that cannot be saved
   /// or a link nothing can open, because "did not answer" is a claim about a
   /// host and nothing here supports it. The plate used to be `colorScheme.error`

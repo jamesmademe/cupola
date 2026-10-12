@@ -29,7 +29,7 @@ void main() {
     await _pump(tester);
 
     // Identity and the readouts come before any section, and only this tab
-    // carries them — the other two NPM tabs are each a view of one record kind.
+    // carries them. The other two NPM tabs are each a view of one record kind.
     expect(find.byType(ServiceKpiPeek), findsOneWidget);
 
     // What is wrong, then what is being fronted, then what is about to lapse.
@@ -165,7 +165,7 @@ void main() {
       find.widgetWithText(ServiceOverviewRow, 'nginx refused · photos.lan'),
     );
     // Toned, and toned through `statusToneColor` rather than a raw palette
-    // constant — the walk is what keeps amber legible on this surface.
+    // constant: the walk is what keeps amber legible on this surface.
     final colorScheme = Theme.of(
       tester.element(find.byType(NpmOverviewScreen)),
     ).colorScheme;
@@ -178,7 +178,7 @@ void main() {
       ),
     );
     // Never red: red belongs to an NPM that did not answer, and this one
-    // answered — it answered with the error.
+    // answered; it answered with the error.
     expect(row.titleColor, isNot(colorScheme.error));
   });
 
@@ -230,7 +230,7 @@ void main() {
       // `daysUntilExpiry` truncates, so for a full day after a certificate
       // lapses it answers 0. Read as a day count this page would say
       // "1 expiring" on the header while Needs attention said
-      // "Certificate expired" two regions above — one screen stating one fact
+      // "Certificate expired" two regions above: one screen stating one fact
       // at two severities, with the header stating the softer one.
       final certificates = tester.widget<SectionHeader>(
         find.widgetWithText(SectionHeader, 'Certificates'),
@@ -244,13 +244,13 @@ void main() {
     },
   );
 
-  testWidgets('a source that did not answer prints — and never 0', (
+  testWidgets('a source that did not answer prints `—` and never 0', (
     tester,
   ) async {
     await _pump(tester, failHosts: true, failCertificates: true);
 
     // "0 hosts" and "0 faults" over an unanswered question are claims nobody
-    // made — and the reading a user would act on is the opposite one.
+    // made; the reading a user would act on is the opposite one.
     expect(find.text('0'), findsNothing);
     expect(find.text('—'), findsWidgets);
   });
@@ -260,7 +260,7 @@ void main() {
   ) async {
     await _pump(tester, failCertificates: true);
 
-    // The failed regions say so in their own slots — Certificates, and Needs
+    // The failed regions say so in their own slots: Certificates, and Needs
     // attention, which is folded from both documents…
     expect(find.byType(AppErrorState), findsNWidgets(2));
     // …and all three still drew their headings.

@@ -18,13 +18,13 @@ const _regionReachesDescription =
     'Release dates, content ratings and watch providers are all reported for '
     'the region you pick here.';
 
-/// What it does **not** reach — the half that was missing, and the half that
+/// What it does **not** reach: the half that was missing, and the half that
 /// matters.
 ///
 /// Only one of the two looks like a filter and neither is: a region that
 /// changes the dates on a title looks exactly like a region that changes which
 /// titles are listed, so a user who sets this and then sees the same Discover
-/// rows concludes the setting is broken. It is not — region is not a parameter
+/// rows concludes the setting is broken. It is not: region is not a parameter
 /// on those calls at all.
 const _regionDoesNotReachDescription =
     'It does not reach which titles Discover returns: region is not a '

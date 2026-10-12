@@ -2,15 +2,15 @@
 ///
 /// ## Why one region and not two
 ///
-/// The obvious design is two regions — "Needs You" for pending approvals and
-/// "Recent Requests" for the rest — or one region with a toggle between them.
+/// The obvious design is two regions: "Needs You" for pending approvals and
+/// "Recent Requests" for the rest, or one region with a toggle between them.
 /// Both are wrong for the same reason: **pending requests are recent requests.**
 /// They are one dataset from one provider, one a subset of the other. Splitting
 /// them invents a conflict between a set and its own subset, and then resolves it
 /// by hiding one of them.
 ///
-/// A toggle fails for a second reason. On a stack with auto-approvals — a normal
-/// configuration — the pending side is permanently empty, so the control exists
+/// A toggle fails for a second reason. On a stack with auto-approvals (a normal
+/// configuration) the pending side is permanently empty, so the control exists
 /// to be dismissed once and ignored forever. And on a hub where every service
 /// gets one matrix cell, spending a control row on a Seerr-only sub-choice
 /// over-serves one of them at the expense of the rest.
@@ -45,8 +45,8 @@ String servicesRequestsHeaderLabel({required int pending}) {
 /// load-bearing: `displayStatus` lets media availability override request state,
 /// so a request that is still `pendingApproval` reads as "Available" the moment
 /// the media exists on disk. Keying the actionable set off it would silently drop
-/// exactly the approvals that matter most — the ones for media somebody already
-/// has — and no amount of testing against a fresh request would surface it.
+/// exactly the approvals that matter most, the ones for media somebody already
+/// has, and no amount of testing against a fresh request would surface it.
 bool isAwaitingApproval(SeerrRequest request) =>
     request.status == RequestStatus.pendingApproval;
 

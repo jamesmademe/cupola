@@ -1,4 +1,4 @@
-// GENERATED — edit design/tokens/, then run `dart run tool/design_tokens/generate.dart`.
+// GENERATED: edit design/tokens/, then run `dart run tool/design_tokens/generate.dart`.
 //
 // Never edit this file by hand: the test suite regenerates it from the token
 // sets and fails on any difference.

@@ -34,15 +34,15 @@ enum AppThemeMode {
 ///
 /// ## The shape, and why it changed
 ///
-/// This used to be forty-one flat fields — `radarrUrl`, `radarrApiKey`,
-/// `sonarrUrl`, and so on — one pair per service, with a private registry
+/// This used to be forty-one flat fields: `radarrUrl`, `radarrApiKey`,
+/// `sonarrUrl`, and so on: one pair per service, with a private registry
 /// mapping a [ServiceKey] onto the right two. That shape said a service *is* a
 /// connection, and it cannot hold a second Radarr: there is exactly one
 /// `radarrUrl` and nowhere to put the other one.
 ///
 /// So [instances] is now the single source of truth and everything else reads
-/// through it. The flat names survive as **getters** — see the "legacy
-/// projections" section — because a hundred call sites across the app read
+/// through it. The flat names survive as **getters**; see the "legacy
+/// projections" section, because a hundred call sites across the app read
 /// `settings.radarrUrl`, several of them inside Riverpod `select`s where a
 /// stable scalar is the whole point. They resolve to the *first* instance of
 /// their service, which is what they always meant.
@@ -51,7 +51,7 @@ enum AppThemeMode {
 /// cosmetic:
 ///
 /// * [plexClientId] identifies this **install**, not any server. Minted once,
-///   never regenerated, shared by every Plex instance — a second id would
+///   never regenerated, shared by every Plex instance; a second id would
 ///   register a second device against the user's server.
 /// * [trustedCertificates] is keyed by TLS **origin**, not by service or
 ///   instance, per ADR-6: a certificate belongs to the host that presents it,
@@ -62,13 +62,13 @@ class SettingsModel {
   ///
   /// Order is meaning here: the first instance of a service is the one a bare
   /// `/services/radarr` resolves to and the one a write defaults to offering.
-  /// It is **not** identity — ids are stable, so reordering changes which
+  /// It is **not** identity. Ids are stable, so reordering changes which
   /// instance is primary without moving a single stored value.
   final List<ServiceInstance> instances;
 
   /// Opaque per-install identifier sent as `X-Plex-Client-Identifier`.
   ///
-  /// Generated once and then persisted forever — **not** per launch, and not
+  /// Generated once and then persisted forever: **not** per launch, and not
   /// per instance. Plex registers a new "device" against the user's server for
   /// every distinct identifier it sees, so a value regenerated on startup would
   /// litter their admin panel with a permanent row per app launch. Not a
@@ -76,13 +76,13 @@ class SettingsModel {
   final String plexClientId;
 
   /// Trusted self-signed/untrusted TLS certificates (trust-on-first-use),
-  /// keyed by [UrlUtils.certOrigin] rather than by service — a certificate
+  /// keyed by [UrlUtils.certOrigin] rather than by service: a certificate
   /// belongs to the host that presents it, not to any one service reached
   /// through it, so two services behind the same reverse proxy share one
   /// trust decision. Value is the lowercase SHA-256 fingerprint of the
   /// trusted certificate's DER encoding. An origin with no entry gets
-  /// standard certificate verification. Integrity-critical — this is the
-  /// value that says "this exact certificate is the one to trust" — so it is
+  /// standard certificate verification. Integrity-critical: this is the
+  /// value that says "this exact certificate is the one to trust", so it is
   /// kept in secure storage, never in plain `SharedPreferences`.
   final Map<String, String> trustedCertificates;
 
@@ -129,7 +129,7 @@ class SettingsModel {
 
   /// The instance a bare reference to [service] means: the first one.
   ///
-  /// Null when the service has none — which is different from having one that
+  /// Null when the service has none, which is different from having one that
   /// is blank, and the two are told apart by [isServiceConfigured].
   ServiceInstance? primaryOf(ServiceKey service) {
     for (final instance in instances) {
@@ -155,19 +155,19 @@ class SettingsModel {
   /// The per-service counterpart of [configuredInstances], and the list every
   /// surface that *offers a choice* has to use. [instancesOf] includes the slot
   /// a half-finished form is sitting in, which is right for the settings screen
-  /// — the user is looking at it — and wrong everywhere else.
+  /// (the user is looking at it) and wrong everywhere else.
   List<ServiceInstance> configuredInstancesOf(ServiceKey service) => instances
       .where((instance) => instance.service == service && instance.isConfigured)
       .toList(growable: false);
 
-  /// Whether [service] has more than one connection worth reading — the
+  /// Whether [service] has more than one connection worth reading: the
   /// question every surface asks before it decides to show a label at all.
   ///
   /// Counts the **configured** ones, not the slots. Counting slots meant that
   /// starting to add a second connection lit the badge, the app-bar label and
   /// every provenance chip across the app before that connection had an address
-  /// — announcing a fold the user could not yet use, and naming the new slot by
-  /// its id because it had no label yet either.
+  /// (announcing a fold the user could not yet use, and naming the new slot by
+  /// its id because it had no label yet either).
   ///
   /// A Seerr account that signed out still counts: it is one of the
   /// connections, and the lens may rest on it.
@@ -181,7 +181,7 @@ class SettingsModel {
   /// same id, or appended when there is none.
   ///
   /// Appending rather than inserting keeps the user's order intact, and keeps
-  /// the first instance of a service first — which is what makes "primary" a
+  /// the first instance of a service first, which is what makes "primary" a
   /// stable answer across an edit to some other service.
   SettingsModel copyWithInstance(ServiceInstance instance) {
     final updated = List<ServiceInstance>.of(instances);
@@ -199,7 +199,7 @@ class SettingsModel {
   ///
   /// Does **not** touch [trustedCertificates]: a pin belongs to an origin that
   /// another instance may still be reached at, and deciding that is
-  /// [copyWithoutUnusedCertificate]'s job — call it after this, so "still
+  /// [copyWithoutUnusedCertificate]'s job. Call it after this, so "still
   /// configured" describes the state being saved.
   SettingsModel copyWithoutInstance(String id) {
     final updated = instances
@@ -255,7 +255,7 @@ class SettingsModel {
         );
 
     // Nothing worth recording, so record nothing. Without this guard the load
-    // path mints an instance for all seventeen services on every start — it
+    // path mints an instance for all seventeen services on every start. It
     // walks the whole enum writing whatever it found, and finds `''` for the
     // sixteen the user never set up. An instance list that is never empty makes
     // "does this service have one" unanswerable, and persists sixteen blanks
@@ -283,7 +283,7 @@ class SettingsModel {
   /// authenticate with an API key and so have none.
   ///
   /// A credential-authenticated service keeps its password in the generic
-  /// credential slot [apiKeyFor] reads, exactly as the Plex token does — so the
+  /// credential slot [apiKeyFor] reads, exactly as the Plex token does, so the
   /// registry capability is the whole of the decision here, rather than a
   /// second copy of the "is it one of these three" list.
   String passwordFor(ServiceKey service) {
@@ -304,7 +304,7 @@ class SettingsModel {
   ///
   /// The credential-authenticated counterpart to [copyWithService]. Asserts
   /// rather than silently no-ops on an API-key service, because passing one
-  /// here is a programming error — the caller meant [copyWithService], and
+  /// here is a programming error: the caller meant [copyWithService], and
   /// quietly dropping the write is how a credential goes missing.
   SettingsModel copyWithCredentials(
     ServiceKey service, {
@@ -325,7 +325,7 @@ class SettingsModel {
   }
 
   /// Returns a copy with the chosen viewer updated for [service]'s first
-  /// instance. Jellyfin only — see [ServiceKeyExtension.needsViewerSelection].
+  /// instance. Jellyfin only; see [ServiceKeyExtension.needsViewerSelection].
   SettingsModel copyWithViewer(ServiceKey service, String viewerId) {
     return _upsertPrimary(service, viewerId: viewerId);
   }
@@ -336,7 +336,7 @@ class SettingsModel {
   /// The sentence form of [connectionName], which holds the rule every surface
   /// follows: a connection is named **only when there is more than one of its
   /// service to tell apart**. With a single Radarr this is "Radarr" whatever
-  /// label the instance happens to be carrying — and it very often is carrying
+  /// label the instance happens to be carrying, and it very often is carrying
   /// one, because a label derived when a second connection was added outlives
   /// that connection's removal.
   ///
@@ -493,7 +493,7 @@ class SettingsModel {
 
   /// The trusted fingerprint for the TLS origin [rawUrl] belongs to, or null
   /// when nothing is pinned there (or [rawUrl] cannot carry a certificate at
-  /// all — see [UrlUtils.certOrigin]).
+  /// all; see [UrlUtils.certOrigin]).
   String? pinForUrl(String rawUrl) {
     final origin = UrlUtils.certOrigin(rawUrl);
     if (origin == null) return null;
@@ -503,7 +503,7 @@ class SettingsModel {
 
   /// Returns a copy with the trusted fingerprint for [url]'s origin set to
   /// [fingerprint]. Every service sharing that origin is trusted or forgotten
-  /// together — see [servicesSharingOriginOf].
+  /// together; see [servicesSharingOriginOf].
   ///
   /// An empty [fingerprint] **removes** the entry rather than storing an
   /// empty string, which is what makes it "forget" this origin: [pinForUrl]
@@ -531,8 +531,8 @@ class SettingsModel {
   /// Returns a copy that forgets [priorUrl]'s pinned certificate unless some
   /// instance *still configured in this copy* is reached at that origin.
   ///
-  /// The one guard for every path that stops using an address — removing a
-  /// connection, editing a URL to point somewhere else — because all of them
+  /// The one guard for every path that stops using an address: removing a
+  /// connection, editing a URL to point somewhere else, because all of them
   /// need the same answer and getting it wrong is a security bug in both
   /// directions. Forgetting unconditionally breaks Radarr's trust in the
   /// reverse proxy when Sonarr is removed from behind it; never forgetting
@@ -559,7 +559,7 @@ class SettingsModel {
   }
 
   /// Every configured instance whose saved URL resolves to the same TLS origin
-  /// as [rawUrl] — the set one trust decision on that origin actually covers.
+  /// as [rawUrl]: the set one trust decision on that origin actually covers.
   List<ServiceInstance> instancesSharingOriginOf(String rawUrl) {
     final origin = UrlUtils.certOrigin(rawUrl);
     if (origin == null) return const [];
@@ -593,7 +593,7 @@ class SettingsModel {
   // instance of each service. Around a hundred call sites use them, several
   // inside Riverpod `select`s where the point is a stable scalar, and rewriting
   // all of them to `urlFor(ServiceKey.radarr)` would be churn with no reader
-  // served. New code should reach for [instancesOf] or [primaryOf] — these say
+  // served. New code should reach for [instancesOf] or [primaryOf]; these say
   // "the first one" without being able to say anything else.
 
   String get seerrUrl => urlFor(ServiceKey.seerr);
@@ -615,7 +615,7 @@ class SettingsModel {
   /// The Nginx Proxy Manager account's email address.
   ///
   /// Held in the generic username slot because that is structurally what it is
-  /// — the non-secret half of a credential pair — but NPM calls it an email and
+  /// (the non-secret half of a credential pair), but NPM calls it an email and
   /// so does the field, via [ServiceKeyExtension.usernameLabel]. Typing a bare
   /// username into `POST /api/tokens` is rejected, so labelling it "Username"
   /// would have been an invitation to fail the login.
@@ -650,7 +650,7 @@ class SettingsModel {
   /// watched this". Resume positions, next-up and unplayed filters are all
   /// user-scoped, so the library has to be entered through a person chosen from
   /// `/Users`. Plex has no equivalent field because its token *is* the user and
-  /// `/library/*` takes no impersonation parameter — that asymmetry is a real
+  /// `/library/*` takes no impersonation parameter. That asymmetry is a real
   /// property of the two APIs, not a gap here.
   String get jellyfinUserId => primaryOf(ServiceKey.jellyfin)?.viewerId ?? '';
   String get plexUrl => urlFor(ServiceKey.plex);

@@ -5,8 +5,8 @@ import 'package:cupola/core/network/connection_failure.dart';
 /// Translates a grab-release error into a user-friendly message.
 ///
 /// Three causes an arr reports in its own words keep a sentence of their own
-/// — an indexer that timed out behind the arr (a 504), a release already in
-/// the library or queue, a full disk — and a 500, which the arrs answer for a
+/// (an indexer that timed out behind the arr (a 504), a release already in
+/// the library or queue, a full disk) and a 500, which the arrs answer for a
 /// release that is already downloading. Everything else reads the
 /// classification, so a refused key is a refusal and only silence says the
 /// server did not answer. Never a status code, never the exception's text.

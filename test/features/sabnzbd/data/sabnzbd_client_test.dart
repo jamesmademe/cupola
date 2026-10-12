@@ -65,9 +65,9 @@ void main() {
 
     test('a bare {"status": false} is a failure, not a silent success', () {
       // Regression: the guard used to require BOTH `status == false` AND a
-      // non-null `error`, so SABnzbd's bare refusal — what it answers for a
+      // non-null `error`, so SABnzbd's bare refusal (what it answers for a
       // queue command against an nzo_id that left the queue between the poll
-      // and the tap — fell through as success and the UI reported "Job
+      // and the tap) fell through as success and the UI reported "Job
       // removed" for work the server never did.
       final adapter = CapturingHttpAdapter(response: {'status': false});
       final client = _client(adapter);
@@ -102,7 +102,7 @@ void main() {
 
     test('a rejected API key is reported as unauthorized, not unreachable', () {
       // SABnzbd answers 200 for a bad key, so the reason comes from the
-      // message — this is what lets onboarding say "key rejected".
+      // message: this is what lets onboarding say "key rejected".
       final adapter = CapturingHttpAdapter(
         response: {'status': false, 'error': 'API Key Incorrect'},
       );

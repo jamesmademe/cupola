@@ -12,8 +12,8 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 ///
 /// The important distinction is that [isDesktopShell] asks about the
 /// **platform** first and the width only second. A 720pt desktop window still
-/// gets the window chrome, the rail and the deck — it just gets their compact
-/// variants — while a 900pt iPad must never grow a window strip it has no
+/// gets the window chrome, the rail and the deck; it just gets their compact
+/// variants, while a 900pt iPad must never grow a window strip it has no
 /// window for. Only below the compact artboard does a desktop window give the
 /// shell up, and then for the phone's layout, drawn for exactly that measure.
 /// Width alone cannot tell those two apart, and the shell that tried ended up
@@ -26,7 +26,7 @@ abstract final class AppBreakpoints {
   /// bottom bar to a side rail.
   ///
   /// 840 rather than 600, and the reason has changed shape. It was 840 because
-  /// at 600 a phone on its side — roughly 850pt on a modern iPhone — also got
+  /// at 600 a phone on its side (roughly 850pt on a modern iPhone) also got
   /// the rail, replacing a thumb-reachable bottom bar on a device held in one
   /// hand. The phone is portrait-only now (The Portrait Rule, DESIGN.md) and
   /// tops out near 440pt, so it can no longer cross either number and the
@@ -34,7 +34,7 @@ abstract final class AppBreakpoints {
   ///
   /// The number stays, on the other half of its justification: 840 is
   /// Material's expanded-window breakpoint, which is where a touch surface
-  /// stops being one-handed — a tablet, an unfolded foldable. Tablets are a
+  /// stops being one-handed: a tablet, an unfolded foldable. Tablets are a
   /// supported layout now: the rail here, and from [touchSplit] a title
   /// opened beside the page it came from.
   static const double touchRail = DesignTokens.breakpointTouchRail;
@@ -56,8 +56,8 @@ abstract final class AppBreakpoints {
   /// Width below which the desktop shell uses its compact variants.
   ///
   /// The two drawn desktop sizes are 1440 and 720; this sits between them,
-  /// nearer the top, because the things that collapse — the sidebar's names,
-  /// the TrueNAS section list, a second results column — all stop
+  /// nearer the top, because the things that collapse: the sidebar's names,
+  /// the TrueNAS section list, a second results column; all stop
   /// fitting well before the window is halved. Below it the shell keeps every
   /// part it had and shows fewer items in each, never smaller ones.
   static const double desktopCompact = DesignTokens.breakpointDesktopCompact;
@@ -67,8 +67,8 @@ abstract final class AppBreakpoints {
   ///
   /// Decision 46, in one number: **the compact frame is not a narrow one.** The
   /// gate is the window's *shape*, not its width. 720x450 is 1.6:1 and gets the
-  /// two-column arrangement exactly as 1440x900 does — the drawn compact frame
-  /// puts the certificate beside the form at 308pt columns — while the phone, at
+  /// two-column arrangement exactly as 1440x900 does: the drawn compact frame
+  /// puts the certificate beside the form at 308pt columns, while the phone, at
   /// 390x844, is the only portrait frame in the flow and the only one that
   /// stacks and scrolls.
   ///
@@ -77,8 +77,8 @@ abstract final class AppBreakpoints {
   /// and a window dragged to nearly square has no room for a second column
   /// whatever its orientation says.
   ///
-  /// It sits here rather than in the onboarding feature — where it was born,
-  /// with a comment saying it belonged here — because it is a size class like
+  /// It sits here rather than in the onboarding feature, where it was born,
+  /// with a comment saying it belonged here, because it is a size class like
   /// [touchRail] and [desktopCompact], not a fact about onboarding: any screen
   /// whose two-column arrangement is governed by shape rather than measure asks
   /// this same question. It is *not* a width, which is the whole point:
@@ -130,7 +130,7 @@ abstract final class AppBreakpoints {
   /// at: below it the deck has already given up its glyph bands and the
   /// inspector is already closed, so there is nothing left to collapse. Rather
   /// than stopping the window there, a narrower one gets the layout drawn for
-  /// that measure — the phone's, bottom bar and all — under a bare drag strip
+  /// that measure (the phone's, bottom bar and all) under a bare drag strip
   /// that keeps the OS window buttons. The window stays frameless either way.
   static const double desktopMobile = DesignTokens.breakpointDesktopMobile;
 
@@ -144,7 +144,7 @@ abstract final class AppBreakpoints {
   /// Whether this build runs in a window it manages itself.
   ///
   /// Answers on the platform, so it is a constant per build: it decides who
-  /// owns the window — frameless strip, caption buttons, drag regions — never
+  /// owns the window: frameless strip, caption buttons, drag regions; never
   /// which layout paints inside it. For that ask [isDesktopShell].
   ///
   /// [defaultTargetPlatform] rather than `Platform.isMacOS`, and the difference
@@ -161,8 +161,8 @@ abstract final class AppBreakpoints {
 
   /// Whether [context]'s window draws the desktop shell: chrome, rail, deck.
   ///
-  /// The platform first, then the width. A 900pt iPad never qualifies — it has
-  /// no window to put a caption bar on — while a desktop window dragged under
+  /// The platform first, then the width. A 900pt iPad never qualifies; it has
+  /// no window to put a caption bar on, while a desktop window dragged under
   /// [desktopMobile] stops qualifying and gets the phone layout. A resize may
   /// cross it all day: the branch navigators are keyed globally, so their
   /// stacks survive the swap between shells.

@@ -172,7 +172,7 @@ const double _serviceTabTopPadding =
 ///
 /// Android's default here was [ZoomPageTransitionsBuilder], and on device it
 /// was the tab switch's whole stutter: every switch spent 5–8 frames at
-/// 30–38ms of raster scaling and cross-fading two full opaque screens — the
+/// 30–38ms of raster scaling and cross-fading two full opaque screens: the
 /// same cost on every switch, so not shader warm-up. Tabs are siblings, not a
 /// hierarchy; a fade is what Material prescribes for top-level destinations,
 /// and it costs one blend per frame instead of the Zoom's layered scale.
@@ -196,9 +196,9 @@ Page<void> _tabPage(GoRouterState state, Widget child, {LocalKey? key}) =>
 /// route repeats. `state.pageKey` stays the page key, so go_router's page
 /// identity is unchanged.
 ///
-/// Routes whose page is *not* plain — the ones that return a redirect page for
+/// Routes whose page is *not* plain: the ones that return a redirect page for
 /// bad params ([_libraryDetailPage], [_manualImportPage])
-/// or that swap between `builder` and `pageBuilder` — keep their long form.
+/// or that swap between `builder` and `pageBuilder`: they keep their long form.
 GoRoute _page(
   String path,
   Widget Function(GoRouterState state) child, {
@@ -350,7 +350,7 @@ Page<void> _libraryDetailPage<T>(
   final item = RouteUtils.safeExtra<T>(state);
   final heroTag = state.uri.queryParameters['heroTag'] ?? '${heroPrefix}_$id';
   // Null when the link did not name one, which is every link that predates a
-  // service being able to have two — see `ServiceRoutes` for why this rides in
+  // service being able to have two: see `ServiceRoutes` for why this rides in
   // the query rather than in a path segment or in `extra`.
   return RouteUtils.cupertinoPage(
     key: state.pageKey,
@@ -473,13 +473,13 @@ String _toDiscover(Uri uri, String base) {
 /// Seerr: one shell, one branch per tab.
 ///
 /// [_radarrRoutes] carries the reasoning for every structural choice and none
-/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// of it is Radarr's: the nesting inside the Dashboard branch, the
 /// redirect-only node whose guard is on the full location, the childless
 /// compatibility tails, the wildcard that throws.
 ///
 /// What is Seerr's own is the *number* of those tails. It shipped more link
-/// shapes than any other service — three see-alls, a genre tree, two media
-/// details, a person and a collection — and every one of them hung off the
+/// shapes than any other service: three see-alls, a genre tree, two media
+/// details, a person and a collection, and every one of them hung off the
 /// service root, because the service root **was** the Discover page. Then they
 /// hung off its Discover tab; now Discover is a tab of the app, and each old
 /// spelling keeps a tail that rewrites to the Discover tab in a single hop,
@@ -585,7 +585,7 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
 /// The pre-tab-model `/movies` tree, which now exists only to redirect.
 ///
 /// Radarr itself lives in [_radarrRoutes]. This kept its `:id` child so the
-/// redirect can carry a deep link's own parameters across in ONE hop —
+/// redirect can carry a deep link's own parameters across in ONE hop:
 /// `/movies/42?heroTag=x` lands directly on the film inside the Library tab
 /// rather than bouncing through the service root and losing where it was going.
 GoRoute _moviesRoutes({required String path}) {
@@ -623,7 +623,7 @@ GoRoute _moviesRoutes({required String path}) {
 /// Radarr: one shell, one branch per tab.
 ///
 /// **Nested inside the Dashboard branch, not mounted beside it.** Everything
-/// the app shell owns — the nav bar, the Portal, the whole desktop chrome —
+/// the app shell owns (the nav bar, the Portal, the whole desktop chrome):
 /// hangs off the page the four-branch shell builds. A sibling shell at root
 /// would replace that page, so opening a service would take the app's own
 /// navigation away with it.
@@ -673,7 +673,7 @@ RouteBase _radarrRoutes() {
                 service: service,
                 // The band is drawn above every branch navigator, so a pushed
                 // page cannot cover it the way it covers the tab bar. It hides
-                // itself instead — the film brings its own back control.
+                // itself instead: the film brings its own back control.
                 showAppBar: isServiceTabRoot(service, state.uri.path),
                 child: navigationShell,
               ),
@@ -695,7 +695,7 @@ RouteBase _radarrRoutes() {
 /// Branch order is `tabsFor(ServiceKey.radarr)` and nothing else, because the
 /// bar is generated from the same list: an index that named a different branch
 /// would light one tab and show another. The wildcard throws rather than
-/// quietly rendering a placeholder — a seventh tab added to that table with no
+/// quietly rendering a placeholder: a seventh tab added to that table with no
 /// case here is a bar and a router disagreeing, and that has to fail loudly.
 GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
   ServiceTab.overview => _titledTab(
@@ -716,7 +716,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
     routes: [
       // The detail, now INSIDE the Library branch. Pushing it keeps the branch,
       // so leaving Radarr for another app tab and coming back returns to the
-      // film — and the Hero still flies, because source and destination are in
+      // film, and the Hero still flies, because source and destination are in
       // one Navigator.
       GoRoute(
         path: 'movie/:id',
@@ -792,7 +792,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
 /// The pre-tab-model `/series` tree, which now exists only to redirect.
 ///
 /// Sonarr itself lives in [_sonarrRoutes]. Like `/movies` this keeps its `:id`
-/// child so a deep link crosses in ONE hop — `/series/55?heroTag=x` lands on
+/// child so a deep link crosses in ONE hop: `/series/55?heroTag=x` lands on
 /// the show inside the Library tab rather than bouncing through the service
 /// root and losing where it was going.
 GoRoute _seriesRoutes({required String path}) {
@@ -900,7 +900,7 @@ RouteBase _sonarrRoutes() {
 ///
 /// Branch order is `tabsFor(ServiceKey.sonarr)` and nothing else, because the
 /// bar is generated from the same list and taps it by index. The wildcard
-/// throws rather than quietly rendering a placeholder — a seventh tab added to
+/// throws rather than quietly rendering a placeholder: a seventh tab added to
 /// that table with no case here is a bar and a router disagreeing.
 GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
   ServiceTab.overview => _titledTab(
@@ -921,7 +921,7 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
     routes: [
       // The show, now INSIDE the Library branch. Pushing it keeps the branch,
       // so leaving Sonarr for another app tab and coming back returns to the
-      // show — and the Hero still flies, because source and destination are in
+      // show, and the Hero still flies, because source and destination are in
       // one Navigator.
       GoRoute(
         path: 'series/:id',
@@ -1034,9 +1034,9 @@ GoRoute _musicRoutes({required String path}) {
 
 /// Lidarr: the third of the four \*arr on one shell and one bar.
 ///
-/// [_radarrRoutes] carries the reasoning for every structural choice here — the
+/// [_radarrRoutes] carries the reasoning for every structural choice here: the
 /// nesting inside the Dashboard branch, the redirect-only node, the guard on
-/// the full location, the childless tails — and [_sonarrRoutes] is the same
+/// the full location, the childless tails, and [_sonarrRoutes] is the same
 /// function with another record's name in it. That sameness is the feature.
 RouteBase _lidarrRoutes() {
   const service = ServiceKey.lidarr;
@@ -1176,7 +1176,7 @@ GoRoute _lidarrBranchRoot(ServiceTab tab) => switch (tab) {
 /// qBittorrent: the first download client on one shell and one bar.
 ///
 /// [_radarrRoutes] carries the reasoning for every structural choice and none of
-/// it is Radarr's — the nesting inside the Dashboard branch, the redirect-only
+/// it is Radarr's: the nesting inside the Dashboard branch, the redirect-only
 /// node whose guard is on the full location, the childless compatibility tail.
 ///
 /// Two things are qBittorrent's own. The torrent list was the *whole* service,
@@ -1281,12 +1281,12 @@ GoRoute _qbittorrentBranchRoot(ServiceTab tab) => switch (tab) {
 /// Bazarr: one shell, one branch per tab.
 ///
 /// [_radarrRoutes] carries the reasoning for every structural choice and none
-/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// of it is Radarr's: the nesting inside the Dashboard branch, the
 /// redirect-only node whose guard is on the full location, the childless
 /// compatibility tails, the wildcard that throws.
 ///
 /// Two things are Bazarr's own. Its bar names the **record types** rather than
-/// a Library — Series and Movies are two destinations (decision 22) — so the
+/// a Library: Series and Movies are two destinations (decision 22), so the
 /// two-tab `BazarrLibraryScreen` split in half and the detail spelling is
 /// `<tab>/:id`, which is why the series detail did not have to move at all.
 /// And what was the service home, `BazarrScreen`, is superseded by
@@ -1380,7 +1380,7 @@ GoRoute _bazarrBranchRoot(ServiceTab tab) => switch (tab) {
   // No `heroTag` on either: the Bazarr lead is a figure plate, not a poster, so
   // there is no source counterpart on a Bazarr row to fly from and an orphan
   // flight would fade in from nothing. Both routes still accept the query
-  // param — global search builds one for every service uniformly — and nothing
+  // param: global search builds one for every service uniformly, and nothing
   // reads it.
   ServiceTab.series => _page(
     tab.segment,
@@ -1454,7 +1454,7 @@ GoRoute _bazarrBranchRoot(ServiceTab tab) => switch (tab) {
 /// Dockge: one shell, one branch per tab.
 ///
 /// [_radarrRoutes] carries the reasoning for every structural choice and none
-/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// of it is Radarr's: the nesting inside the Dashboard branch, the
 /// redirect-only node whose guard is on the full location, the childless
 /// compatibility tails, the wildcard that throws.
 ///
@@ -1463,7 +1463,7 @@ GoRoute _bazarrBranchRoot(ServiceTab tab) => switch (tab) {
 /// **The agent lens is on the band, not on the bar** (decision 41). An agent is
 /// not a *place*: it is which Dockge the rows on screen came off, which is what
 /// the connection lens means everywhere else in the app. So it rides as the
-/// band's `trailingAction` exactly as qBittorrent's transfer controls do —
+/// band's `trailingAction` exactly as qBittorrent's transfer controls do:
 /// above every tab, because it qualifies all of them. It also gets it drawn at
 /// all: `DockgeScreen` put it in an app bar the service home has been hiding
 /// since this service was hosted, so the control has been in the tree and
@@ -1488,8 +1488,8 @@ RouteBase _dockgeRoutes() {
       // cannot shadow `stacks/stack/:name` inside the shell below.
       //
       // The editor is declared before the detail it hangs under. Neither can
-      // match the other's location — a childless route matches its own depth
-      // and nothing longer — but the pair reads as one rule in that order, and
+      // match the other's location: a childless route matches its own depth
+      // and nothing longer, but the pair reads as one rule in that order, and
       // the order is free.
       GoRoute(
         path: 'stack/:name/edit',
@@ -1572,7 +1572,7 @@ GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
       //
       // A blank name falls back to the tab this page was pushed from, not to
       // the app home: the branch is where the user still is. Dockge stack names
-      // are free-form strings — a Compose project directory name — so there is
+      // are free-form strings (a Compose project directory name), so there is
       // no `safeIntParam` to run, and emptiness is the whole of what can be
       // checked.
       _page(
@@ -1618,7 +1618,7 @@ String? _rejectBlankDockgeStackName(
 /// Prowlarr: one shell, one branch per tab.
 ///
 /// [_radarrRoutes] carries the reasoning for every structural choice and none
-/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// of it is Radarr's: the nesting inside the Dashboard branch, the
 /// redirect-only node whose guard is on the full location, the childless
 /// compatibility tails, the wildcard that throws.
 ///
@@ -1812,13 +1812,13 @@ RouteBase _readarrRoutes() {
 /// The route at the root of one Readarr tab.
 ///
 /// Readarr's Overview is `ReadarrOverviewScreen`, the page written against the
-/// board rather than the pre-tab-model home the model first borrowed — and that
+/// board rather than the pre-tab-model home the model first borrowed, and that
 /// home has since been retired, taking nothing with it: its author preview is
 /// the Library tab in full, and the two regions the notes record as lost
-/// (`Coming up`, `Recently added`) are the board's — that home never drew
+/// (`Coming up`, `Recently added`) are the board's: that home never drew
 /// either of them, at any point in its history. The
-/// Overview draws only the regions the client can fill — the queue's faults,
-/// the library's backlog, where the books are filed, what happened today — and
+/// Overview draws only the regions the client can fill: the queue's faults,
+/// the library's backlog, where the books are filed, what happened today, and
 /// leaves out the two the board asks for and `ReadarrService` cannot answer.
 GoRoute _readarrBranchRoot(ServiceTab tab) => switch (tab) {
   ServiceTab.overview => _page(
@@ -1959,8 +1959,8 @@ GoRoute _sabnzbdBranchRoot(ServiceTab tab) => switch (tab) {
       child: SabnzbdOverviewScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
-  // `SabnzbdScreen` is still the whole queue page — the readouts above it now
-  // have their own home on Overview — so Queue takes it unsplit.
+  // `SabnzbdScreen` is still the whole queue page: the readouts above it now
+  // have their own home on Overview, so Queue takes it unsplit.
   ServiceTab.queue => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -1997,8 +1997,8 @@ GoRoute _sabnzbdBranchRoot(ServiceTab tab) => switch (tab) {
 ///
 /// [_radarrRoutes] carries the reasoning for the shape and [_qbittorrentRoutes]
 /// for what a download client does with it. Like Transmission and SABnzbd it
-/// needs no compatibility tail — a group is an expanding row, never a pushed
-/// page — and its five tabs are the widest bar of the four because the daemon
+/// needs no compatibility tail: a group is an expanding row, never a pushed
+/// page, and its five tabs are the widest bar of the four because the daemon
 /// keeps feeds and a log as first-class things the others do not have.
 RouteBase _nzbgetRoutes() {
   const service = ServiceKey.nzbget;
@@ -2036,7 +2036,7 @@ RouteBase _nzbgetRoutes() {
 /// The route at the root of one NZBGet tab.
 ///
 /// Branch order is `tabsFor(ServiceKey.nzbget)` and nothing else, and the
-/// wildcard throws for the reason it throws everywhere else in this file — here
+/// wildcard throws for the reason it throws everywhere else in this file: here
 /// over five cases rather than three, which is exactly when a hand-kept list
 /// starts drifting.
 GoRoute _nzbgetBranchRoot(ServiceTab tab) => switch (tab) {
@@ -2090,7 +2090,7 @@ GoRoute _nzbgetBranchRoot(ServiceTab tab) => switch (tab) {
 /// Unraid: one shell, one branch per tab.
 ///
 /// [_radarrRoutes] carries the reasoning for every structural choice and none
-/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// of it is Radarr's: the nesting inside the Dashboard branch, the
 /// redirect-only node whose guard is on the full location, the wildcard that
 /// throws.
 ///
@@ -2308,7 +2308,7 @@ GoRoute _transmissionBranchRoot(ServiceTab tab) => switch (tab) {
 /// Nginx Proxy Manager: one shell, one branch per tab.
 ///
 /// [_radarrRoutes] carries the reasoning for every structural choice and none
-/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// of it is Radarr's: the nesting inside the Dashboard branch, the
 /// redirect-only node whose guard is on the full location, the wildcard that
 /// throws. Like Unraid it needs **no compatibility tail**: the only path it
 /// ever shipped is its bare root.
@@ -2432,7 +2432,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
 ///
 /// A switch returning the four constants rather than interpolating them from
 /// [ServiceKey.routeParam] and [ServiceTab.segment]: the constants have to stay
-/// `const` — an enum instance's field is not a compile-time constant in Dart —
+/// `const`: an enum instance's field is not a compile-time constant in Dart:
 /// and an earlier attempt at composing a path here shipped one containing a
 /// literal dollar sign that no analyzer could see. The wildcard throws because
 /// this file has exactly two media servers and a third arriving silently is
@@ -2457,15 +2457,15 @@ _streamPaths(ServiceKey service) => switch (service) {
 /// Jellyfin and Plex: one shell each, one branch per tab, one builder for both.
 ///
 /// [_radarrRoutes] carries the reasoning for every structural choice and none of
-/// it is Radarr's — the nesting inside the Dashboard branch, the redirect-only
+/// it is Radarr's: the nesting inside the Dashboard branch, the redirect-only
 /// node whose guard is on the full location, the childless compatibility tails,
 /// the wildcard that throws.
 ///
 /// **One function for two services, because the screens are one family.** Every
 /// Stream surface is written against `StreamServerClient` and takes the service
 /// as a parameter, so there is nothing per-service to fork here. The two bars
-/// are genuinely different — Jellyfin has Users, Devices, Tasks and Activity;
-/// Plex has On deck, Activities, Devices and Playlists — and that difference
+/// are genuinely different: Jellyfin has Users, Devices, Tasks and Activity;
+/// Plex has On deck, Activities, Devices and Playlists, and that difference
 /// lives in `tabsFor`, which this reads. Forking the routes to express it would
 /// put the same list in two places and let them drift.
 ///
@@ -2474,7 +2474,7 @@ _streamPaths(ServiceKey service) => switch (service) {
 /// and `library/:id` and `item/:id` hanging off the service root because a
 /// one-page service had nowhere else to hang them. The libraries are the
 /// Libraries tab, the sessions belong to the Overview the next pass builds, and
-/// both details moved **inside** the Libraries branch — the move Radarr's film
+/// both details moved **inside** the Libraries branch: the move Radarr's film
 /// made into Library, for the same two reasons: leaving the service for another
 /// app tab and coming back returns to the item, and the poster's Hero still
 /// flies because the grid it left and the page it lands on share one Navigator.
@@ -2492,9 +2492,9 @@ RouteBase _streamRoutes(ServiceKey service) {
       // prefix hit with no complete match as no match at all, so `item/:id`
       // here cannot shadow `libraries/item/:id` inside the shell below.
       //
-      // Both are spellings the app shipped — `ServiceRoutes.jellyfinItem` built
+      // Both are spellings the app shipped: `ServiceRoutes.jellyfinItem` built
       // `/dashboard/jellyfin/item/<guid>` for every poster tile, every search
-      // result and the availability slot on a Radarr or Sonarr detail — and
+      // result and the availability slot on a Radarr or Sonarr detail, and
       // both are also the second hop of the `/services/...` rewrite. No id
       // validation: the canonical routes inside the branch own it, and doing it
       // twice is two places to get it wrong.
@@ -2546,7 +2546,7 @@ RouteBase _streamRoutes(ServiceKey service) {
 /// table with no case here is a bar and a router disagreeing.
 ///
 /// Overview and Libraries are real on both servers, and `StreamOverviewScreen`
-/// is mounted twice from one class — the same shape every other screen in that
+/// is mounted twice from one class: the same shape every other screen in that
 /// folder has, where the only per-service input is the [ServiceKey] and the
 /// difference between the two servers lives in what their clients can answer.
 ///
@@ -2587,7 +2587,7 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
         //
         // Ids travel as path segments rather than through `_libraryDetailPage`,
         // whose `RouteUtils.safeIntParam` cannot represent a Jellyfin GUID or a
-        // Plex `ratingKey` — both opaque strings that only often look numeric.
+        // Plex `ratingKey`: both opaque strings that only often look numeric.
         // They are guarded for emptiness rather than dereferenced with `!` or
         // defaulted to `''`.
         _page(
@@ -2640,8 +2640,8 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
 ///
 /// The screen is resolved **here**, not inside the page builder: this one arm
 /// accepts the union of seven tabs across two services, so a pair that is on
-/// neither bar — `(plex, users)`, or a stream tab added to `serviceTabs` before
-/// its screen exists — would otherwise build a perfectly valid route and throw
+/// neither bar: `(plex, users)`, or a stream tab added to `serviceTabs` before
+/// its screen exists, would otherwise build a perfectly valid route and throw
 /// `UnsupportedError` only when the user taps it. Every other branch root fails
 /// while the router is being built, which is what makes a bar and a router
 /// disagreeing loud at startup and in every test that constructs one. See
@@ -2862,7 +2862,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       ..._mediaRoutes(),
       // Every mount takes its segment from `ServiceKey.routeParam` rather than
       // repeating the literal. Sixteen of these were spelled out by hand and
-      // one — `npm`, the single segment that is *not* the enum name — was not,
+      // one: `npm`, the single segment that is *not* the enum name, was not,
       // which is exactly the asymmetry that makes a hand-spelled table worth
       // deleting: the one path a typo would break was the only one guarded.
       _seerrRoutes(),
@@ -2990,7 +2990,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       // `builder` it was: that form gave this route a Material page while every
       // other settings destination got `RouteUtils.cupertinoPage`, so the one
       // section owned by another feature was also the one that transitioned
-      // differently and lost the rail. Nothing else about the route changes —
+      // differently and lost the rail. Nothing else about the route changes:
       // same path, same screen, same location in the rail's `sections` list.
       _page(
         'background-search',
@@ -3070,8 +3070,8 @@ String _legacyActivityTarget(GoRouterState state) =>
       _ => ServiceRoutes.activity,
     };
 
-/// Rewrites a location from where the stack used to live — `/dashboard…`
-/// while it was the first tab, `/services…` before that — onto `/stack…`, in
+/// Rewrites a location from where the stack used to live: `/dashboard…`
+/// while it was the first tab, `/services…` before that, onto `/stack…`, in
 /// one hop with the query intact.
 ///
 /// Returns null for anything else, so the redirect callback can fall through.
@@ -3150,8 +3150,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       // moved thirty-four routes and every detail tail under them, and
       // re-declaring each one as a legacy twin would double the surface that
       // has to stay in sync for the rest of the app's life. A prefix swap
-      // keeps the whole subtree — `/services/radarr/movie/42?heroTag=…`
-      // included — and preserves the query, which is where the instance lens
+      // keeps the whole subtree: `/services/radarr/movie/42?heroTag=…`
+      // included, and preserves the query, which is where the instance lens
       // travels.
       final legacy = _rewriteLegacyStackPath(state.uri);
       if (legacy != null) return legacy;
@@ -3192,7 +3192,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // drawn over it) and it belongs to no tab: it is reached from a service
       // page, from a queue item, from a review screen. Left inside a branch it
       // would be a page on that tab's stack, so its flow state and its
-      // two-second command poll would survive a switch away from it — the exact
+      // two-second command poll would survive a switch away from it: the exact
       // leak this architecture exists to remove. At root it unmounts when left.
       //
       // Every entry point uses `push`, and must keep doing so: a `go` here would
@@ -3252,7 +3252,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // The retired top-level locations, kept so old deep links land somewhere.
       // Every path they match resolves to a redirect into `/services/...`, so
-      // their builders are unreachable — they exist only to give the matcher
+      // their builders are unreachable; they exist only to give the matcher
       // something to match before the redirect runs.
       //
       // At root because under a `StatefulShellRoute` there is no shell level to

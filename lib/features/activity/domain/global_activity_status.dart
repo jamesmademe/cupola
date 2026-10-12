@@ -4,7 +4,7 @@
 /// *category* rather than by state: a `switch` on the row's kind gave every
 /// history record the success green and every queue record the service accent.
 /// A `downloadFailed` event therefore rendered the word "Failed" inside a green
-/// pill, and a failed download was chromatically identical to a healthy one —
+/// pill, and a failed download was chromatically identical to a healthy one:
 /// while the per-service tiles, which had their own separate derivation, got the
 /// same events right. Two screens in one feature disagreed about the colour of
 /// one event.
@@ -79,13 +79,13 @@ MediaStatusInfo resolveQueueDisplayStatus(Map<String, dynamic> item) {
 ///
 /// Two shapes of the same request for help. `importBlocked` is the current
 /// \*arrs' own word for it. An `importPending` record that also carries a
-/// warning is how the older forks — Sonarr v3, Lidarr, Readarr — say the same
+/// warning is how the older forks (Sonarr v3, Lidarr, Readarr) say the same
 /// thing ("Unable to Import Automatically", "No files found are eligible for
 /// import"): the file is on disk and the service will not place it on its own.
 ///
 /// Neither clears by waiting, which is why neither is *importing*. The Activity
 /// readout used to count both as progress, so eighteen rows each reading
-/// "Import blocked" sat under a header that said "18 importing" — a fault
+/// "Import blocked" sat under a header that said "18 importing": a fault
 /// summarised as good news. The Dashboard reads the same rule, so one record
 /// cannot be a decision on one tab and progress on the other.
 bool queueNeedsManualImport({
@@ -98,7 +98,7 @@ bool queueNeedsManualImport({
 /// `1 needs a manual import`, `18 need a manual import`.
 ///
 /// The one phrase for [queueNeedsManualImport], shared by the Activity readout
-/// and the Dashboard so the two surfaces name the fault in the same words — and
+/// and the Dashboard so the two surfaces name the fault in the same words, and
 /// name it by its remedy, which is the verb on the row.
 ///
 /// [floor] when the rows it counts are only the ones a queue walk read before
@@ -122,7 +122,7 @@ String needsManualImportClause(
 /// Resolves a history record from its `eventType`.
 ///
 /// History describes something that already happened, so there is no live
-/// availability or pipeline to derive a tone from — hence [
+/// availability or pipeline to derive a tone from, hence [
 /// MediaStatusInfo.toneOverride]. The severity mapping is the point of this
 /// function: an import is a success, a failed download is a *fault*, and a
 /// grab, a deletion or a rename is a record of something that worked.
@@ -135,7 +135,7 @@ MediaStatusInfo resolveHistoryStatus(Map<String, dynamic> item) {
     glyph: historyEventGlyph(eventType),
     // Only the faults carry one. A failed grab or a failed import is the one
     // history row a user has to act on, and until now it said "Failed" and
-    // nothing else — the service's own sentence was sitting in the record,
+    // nothing else: the service's own sentence was sitting in the record,
     // unread, while the queue rows one tab away printed theirs. A `grabbed`
     // row is gated out rather than filtered: a reason under a neutral label
     // reads as a problem that is not there.
@@ -146,7 +146,7 @@ MediaStatusInfo resolveHistoryStatus(Map<String, dynamic> item) {
 /// The service's own explanation for a failed history record.
 ///
 /// \*arr files it under `data`, not at the top level where the queue keeps it,
-/// so the queue's [arrQueueWarningMessage] cannot be reused — this is the read
+/// so the queue's [arrQueueWarningMessage] cannot be reused: this is the read
 /// the `act` annotation names, and nothing in the app performed it. The
 /// top-level key is still checked second because Lidarr answers with a flat
 /// `message` on some events.
@@ -178,17 +178,17 @@ String? historyFilePath(Map<String, dynamic> item) {
 /// **The table is the union of the forks' vocabularies, not Radarr's.** Each
 /// \*arr names the event after the entity it writes a record for, so an import
 /// is `downloadFolderImported` on Radarr and Sonarr and `bookFileImported` on
-/// Readarr — and an event this table does not name falls through to
+/// Readarr, and an event this table does not name falls through to
 /// [humanizeCamelCase] and [StatusTone.neutral], which is the right answer for
 /// an event nobody has classified and the wrong one for a fork's most common
 /// row. A per-screen override table is how that gap used to be patched, and it
 /// puts two spellings of one event on two tabs of one service.
 ///
 /// **This table is the only derivation of this vocabulary.** It had been
-/// re-derived independently three times — here, in a private switch in
+/// re-derived independently three times: here, in a private switch in
 /// `lidarr_overview_provider.dart`, and in `readarrEventStyle` in
 /// `readarr_tiles.dart`, whose default arm shouted the raw camel-case event
-/// name — and the three disagreed about `trackFileImported`,
+/// name, and the three disagreed about `trackFileImported`,
 /// `albumImportIncomplete`, `bookFileRenamed` and `grabbed`. Both overrides are
 /// gone: anything needing a label, a tone or a glyph for an `eventType` reads
 /// [historyEventLabel], [historyEventTone] or [historyEventGlyph]. A screen
@@ -245,29 +245,29 @@ StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
     'downloadImported' ||
     // Readarr spells its own import. It writes one record per *book file*,
     // under names no other fork uses, so before these arms existed the most
-    // common row on a book history — a completed import, the one event on the
-    // page that is unambiguously good news — fell through to
+    // common row on a book history (a completed import, the one event on the
+    // page that is unambiguously good news) fell through to
     // `humanizeCamelCase` and came out as a neutral "Book File Imported".
     // `authorFolderImported` is the same event on an older Readarr.
     'bookFileImported' ||
     'authorFolderImported' ||
     // Lidarr spells its own import, and writes one record per *track file*.
     // The same gap, one fork over: before this arm the most common row on a
-    // music history — a completed import, the one event on the page that is
-    // unambiguously good news — came out a neutral "Track File Imported".
+    // music history (a completed import, the one event on the page that is
+    // unambiguously good news) came out a neutral "Track File Imported".
     'trackFileImported' => ('Imported', StatusTone.success),
     // Faults, and therefore amber. Red is reserved for a connection that did
-    // not answer — a failed grab means the service answered and told us so.
+    // not answer. A failed grab means the service answered and told us so.
     'downloadFailed' => ('Failed', StatusTone.warning),
     'importFailed' => ('Import failed', StatusTone.warning),
     // The forks' own import faults, and the failure each library actually
     // suffers: the book went in with files missing, the album with tracks
-    // missing. Amber for the same reason as the two above — the service
+    // missing. Amber for the same reason as the two above: the service
     // answered and told us so.
     'bookImportIncomplete' ||
     'albumImportIncomplete' => ('Import incomplete', StatusTone.warning),
     // Deliberately not an error, and no longer sharing `importFailed`'s wording.
-    // `downloadIgnored` is a choice somebody made — the \*arr was told to leave
+    // `downloadIgnored` is a choice somebody made: the \*arr was told to leave
     // this release alone. Rendering it as a red "Import failed" sent the user
     // looking for a fault that never happened.
     'downloadIgnored' => ('Ignored', StatusTone.neutral),
@@ -289,7 +289,7 @@ StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
   };
 }
 
-/// A blocked release — and deliberately not toned.
+/// A blocked release, and deliberately not toned.
 ///
 /// The user actively rejected this release, so the blocklist working is the
 /// system obeying an instruction. Red said "a thing went wrong" about the one
@@ -303,11 +303,11 @@ MediaStatusInfo resolveBlocklistStatus(Map<String, dynamic> item) {
   );
 }
 
-/// Resolves a Wanted row — a missing item or one below the quality cutoff.
+/// Resolves a Wanted row: a missing item or one below the quality cutoff.
 ///
 /// Every row here is backlog, so every row here is neutral. In the Wanted
 /// bucket being missing is the *definition* of membership, not news about it:
-/// toning the rows at all — red once, then amber and blue — meant the page
+/// toning the rows at all, red once, then amber and blue, meant the page
 /// shouted its own title back at the reader in colour, and left nothing for the
 /// one row that is genuinely stuck.
 ///
@@ -347,8 +347,8 @@ MediaStatusInfo resolveWantedStatus(
 
 /// Resolves a Seerr request onto the same vocabulary as everything else.
 ///
-/// Seerr's own wording is preserved via [MediaStatusInfo.labelOverride] — it is
-/// the language the user sees in Seerr itself — while the tone comes from the
+/// Seerr's own wording is preserved via [MediaStatusInfo.labelOverride]: it is
+/// the language the user sees in Seerr itself, while the tone comes from the
 /// request's display kind.
 ///
 /// It reads the request's own state first (`lifecycleStatus`), the test the
@@ -357,7 +357,7 @@ MediaStatusInfo resolveWantedStatus(
 /// for approval for a title already on disk read "Available", in green,
 /// beside its own Approve.
 ///
-/// `pending` is blue — queued, waiting its turn — like every other thing in
+/// `pending` is blue: queued, waiting its turn, like every other thing in
 /// the app that is in line and not broken. It used to be amber on the argument
 /// that it waits on a *human*, but amber is the fault arm and a request awaiting
 /// approval is not a fault: painting it amber put the alarm colour on the
@@ -376,7 +376,7 @@ MediaStatusInfo resolveRequestStatus(SeerrRequest request) {
     SeerrRequestDisplayKind.pending => StatusTone.info,
     // Seerr answered; it just answered no. A declined, blocklisted or
     // deleted request is a closed decision, and a failed one is a fault the
-    // service reported — neither is a connection that did not answer.
+    // service reported. Neither is a connection that did not answer.
     SeerrRequestDisplayKind.failed => StatusTone.warning,
     SeerrRequestDisplayKind.declined ||
     SeerrRequestDisplayKind.blocklisted ||

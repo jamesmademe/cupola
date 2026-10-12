@@ -1,7 +1,7 @@
 /// The profiles as values: what each one configures, where its lens rests, and
 /// that the table in the config inventory is what the code holds.
 ///
-/// Nothing here touches the network — `profile_network_test.dart` does that.
+/// Nothing here touches the network; `profile_network_test.dart` does that.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +30,7 @@ void main() {
           );
         }
         // The first of each service is its primary, on the id whose storage
-        // keys predate multi-instance — the shape a real install has.
+        // keys predate multi-instance: the shape a real install has.
         for (final service in ServiceKey.values) {
           final first = settings.primaryOf(service);
           if (first != null) expect(first.id, service.routeParam);

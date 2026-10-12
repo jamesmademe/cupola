@@ -22,7 +22,7 @@ double _contrast(Color foreground, Color background) {
 /// surface, not the accent on its own.
 ///
 /// Measuring against the accent alone is the mistake that makes this class of bug
-/// invisible — it passes combinations that fail on screen.
+/// invisible: it passes combinations that fail on screen.
 Color _tintOverSurface(Color accent, double alpha, Color surface) =>
     Color.alphaBlend(accent.withValues(alpha: alpha), surface);
 
@@ -54,7 +54,7 @@ void main() {
     test('a label asked of the lamp is the room\'s primary ink', () {
       // The brand book: a selected or emphasised label is ink, never a hue. Every service
       // paints the lamp now, so walking the lamp's grey would have set every
-      // such label in a dim cool grey — below the dark room's tertiary ink.
+      // such label in a dim cool grey, below the dark room's tertiary ink.
       for (final (surface, alpha, ink) in const [
         (
           AppColors.surfaceDark,
@@ -138,8 +138,8 @@ void main() {
   group('the monochrome registry', () {
     test('every service paints the lamp', () {
       // Principle 3 of the brand book: colour is information. `ServiceKey.accent` is what the
-      // interface paints for a service — its room light, its glow, its walked
-      // labels — and it is the neutral lamp for all seventeen.
+      // interface paints for a service: its room light, its glow, its walked
+      // labels, and it is the neutral lamp for all seventeen.
       for (final service in ServiceKey.values) {
         expect(service.accent, AppColors.lamp, reason: service.name);
         expect(serviceThemeFor(service).accent, AppColors.lamp);

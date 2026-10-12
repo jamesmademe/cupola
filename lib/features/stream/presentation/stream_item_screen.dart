@@ -20,7 +20,7 @@ import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.d
 /// `BaseItemDto` and a Plex `Metadata` element describe all of those with the same
 /// fields, which is a real structural difference from the arr side: Radarr, Sonarr
 /// and Lidarr each needed their own model and their own detail screen. So this is a
-/// single recursive route — a show lists its seasons, a season lists its episodes,
+/// single recursive route: a show lists its seasons, a season lists its episodes,
 /// and each of those pushes this same screen again.
 class StreamItemScreen extends ConsumerWidget {
   const StreamItemScreen({
@@ -36,7 +36,7 @@ class StreamItemScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Checked before the item provider is read, not after. This page is now a
     // route inside the Libraries branch and a deep link can land on it with the
-    // server never set up — and `jellyfinItemProvider` / `plexItemProvider`
+    // server never set up, and `jellyfinItemProvider` / `plexItemProvider`
     // carry no `retry: noProviderRetry`, so the "not configured" throw would be
     // a *failed* provider retrying on a backoff that no waiting resolves.
     // Letting `AsyncValueWidget` catch the throw draws the same pixels and
@@ -172,7 +172,7 @@ class _StateRow extends StatelessWidget {
     );
   }
 
-  /// Runtime from milliseconds — the unit `StreamItem` normalises to, because the
+  /// Runtime from milliseconds: the unit `StreamItem` normalises to, because the
   /// two servers disagree natively (Jellyfin counts .NET ticks, Plex milliseconds
   /// for duration but epoch seconds for dates).
   static String? _runtimeLabel(int? ms) {
@@ -186,7 +186,7 @@ class _StateRow extends StatelessWidget {
 ///
 /// **Named "Open in …", never "Play".** Cupola does not decode video, and once a
 /// resume position has been shown on this very page a button labelled Play promises
-/// playback this app cannot deliver — the tap would land the user on another app's
+/// playback this app cannot deliver: the tap would land the user on another app's
 /// home screen having lost the position they were just looking at. Naming the door
 /// makes it an honest door.
 ///
@@ -271,7 +271,7 @@ class _HandoffButton extends ConsumerWidget {
 /// Seasons, episodes or tracks.
 ///
 /// Rendered as the same poster grid the library browse uses, so a season inside a
-/// show looks like what it is — one more thing you can enter — rather than as a
+/// show looks like what it is (one more thing you can enter) rather than as a
 /// list row that happens to navigate.
 class _Children extends ConsumerWidget {
   const _Children({required this.service, required this.itemId});

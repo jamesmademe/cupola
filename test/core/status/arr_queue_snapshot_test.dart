@@ -61,7 +61,7 @@ void main() {
     });
 
     test('the client status wins while the item is still with the client', () {
-      // A queued item also carries `trackedDownloadState: downloading` — that
+      // A queued item also carries `trackedDownloadState: downloading`. That
       // field means "still with the download client", not "bytes are moving".
       // Reading it as Downloading was wrong and the recorded payloads caught it.
       final queued = ArrQueueEntry.fromQueueItem({
@@ -175,7 +175,7 @@ void main() {
       // The regression this exists for: one episode blocked by a dead download
       // client and one merely queued reported "Queued", because
       // `clientUnavailable` was `paused` at salience 0 and the queued record
-      // outranked it — taking the reason for the outage down with it.
+      // outranked it, taking the reason for the outage down with it.
       final snapshot = ArrQueueSnapshot.fromQueueItems([
         {'seriesId': 1, 'status': 'queued'},
         {'seriesId': 1, 'status': 'downloadClientUnavailable'},
@@ -195,7 +195,7 @@ void main() {
 
     test('a stalled transfer does not report itself as downloading', () {
       // The \*arr services have no `stalled` status; they say it in prose. Before
-      // this, the row read "Downloading" — the opposite of the truth — for the
+      // this, the row read "Downloading", the opposite of the truth, for the
       // most common reason anyone opens Activity.
       final entry = ArrQueueEntry.fromQueueItem({
         'status': 'downloading',

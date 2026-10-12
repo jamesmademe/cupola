@@ -73,7 +73,7 @@ void main() {
     // only this class assembles. Radarr behind a proxy that normalises a
     // trailing slash answers `POST /api/v3/command` with a 302, and the replay
     // used to inherit the `content-length` Dio had stamped on the original
-    // request — a GET promising a body it no longer had, which `dart:io`
+    // request: a GET promising a body it no longer had, which `dart:io`
     // refuses with `HttpException: Content size below specified contentLength`.
     test(
       'follows a same-origin 302 on a POST without a stale length',
@@ -101,7 +101,7 @@ void main() {
 
     test('a 304 fails instead of arriving as an empty success', () async {
       // Nothing in `lib/` sends a conditional validator, so a 304 here means a
-      // non-conforming proxy — but delivering it as a 200-shaped success left
+      // non-conforming proxy, but delivering it as a 200-shaped success left
       // callers doing `response.data['results'] as List` on an empty body.
       final adapter = _RedirectThenOkAdapter(status: 304);
       final client = _clientOn(adapter);

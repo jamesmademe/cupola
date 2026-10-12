@@ -21,11 +21,11 @@ import 'package:cupola/features/settings/domain/unread_secret.dart';
 /// Built on [AppEmptyState] rather than as its own layout, because a service you
 /// have not set up is a normal daily condition, not a fault: the app is meant to
 /// have more integrations than anybody runs at once. It used to paint a
-/// 64pt settings glyph in `colorScheme.error` — alarm chrome for a state the user
-/// created on purpose by not filling in a form — and `AppEmptyState`'s own doc
+/// 64pt settings glyph in `colorScheme.error`: alarm chrome for a state the user
+/// created on purpose by not filling in a form, and `AppEmptyState`'s own doc
 /// already named this placeholder as one of the states it exists to unify.
 class NotConfiguredPlaceholder extends StatelessWidget {
-  /// The generic form, for callers that know only the service's display name —
+  /// The generic form, for callers that know only the service's display name:
   /// notably [AsyncValueWidget] and [MediaDetailPlaceholderView], which reach
   /// this state by string-matching a `<Service> not configured` throw and so
   /// never hold a [ServiceKey]. The name is resolved back to its service, so
@@ -56,7 +56,7 @@ class NotConfiguredPlaceholder extends StatelessWidget {
   final ServiceKey? service;
 
   /// The service this names: the key it was given, or the one whose title
-  /// the generic form was handed — `AsyncValueWidget` passes the name its
+  /// the generic form was handed: `AsyncValueWidget` passes the name its
   /// `<Service> not configured` throw carried.
   ServiceKey? get _resolved {
     final key = service;
@@ -174,7 +174,7 @@ class NotConfiguredPlaceholder extends StatelessWidget {
       // "Credentials" rather than "the URL and API Key": four of the thirteen
       // services authenticate with a WebUI login and have no API key to paste, so
       // naming one told a third of the roster to look for a field that is not
-      // there. The "Please" went with it — the UI is not asking a favour.
+      // there. The "Please" went with it: the UI is not asking a favour.
       message: "Add its address and credentials in Settings.",
       // `Set up X`, to the service's own setup form: the one place every
       // way in goes. Only a name that is no service keeps the Settings root.

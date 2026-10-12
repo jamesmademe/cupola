@@ -24,8 +24,8 @@ void main() {
   /// A moment that is always today and always in the past, whatever hour the
   /// suite runs at.
   ///
-  /// The screen reads the real clock — `sabnzbdOverviewHistoryProvider` calls
-  /// `DateTime.now()` — so a row placed a flat hour before `now` lands on
+  /// The screen reads the real clock: `sabnzbdOverviewHistoryProvider` calls
+  /// `DateTime.now()`, so a row placed a flat hour before `now` lands on
   /// *yesterday* between 00:00 and 00:59, gets dropped by the window rule, and
   /// turns this file red for one hour out of every twenty-four on whoever's
   /// machine happens to run it then. Pinned to the start of the day instead
@@ -121,7 +121,7 @@ void main() {
     tester,
   ) async {
     // The header is spoken as "History, <subtitle>", and an em dash there is
-    // heard as nothing at all — the one place on this page where a listener
+    // heard as nothing at all: the one place on this page where a listener
     // gets less than a viewer, who at least sees the error state below it.
     await _pump(tester, historyFails: true);
 
@@ -132,7 +132,7 @@ void main() {
     // silence says "did not answer".
     expect(subtitles.last, 'did not complete');
     // The em dash still belongs to the readout band, where `ServiceKpi`
-    // speaks it as "unavailable" — never to a header a reader hears as a title
+    // speaks it as "unavailable", never to a header a reader hears as a title
     // and a piece of punctuation.
     expect(subtitles, isNot(contains('—')));
   });
@@ -149,7 +149,7 @@ void main() {
         ),
       );
 
-      // Stated, because pausing is the user's own decision — the one fact the
+      // Stated, because pausing is the user's own decision: the one fact the
       // readout band cannot show now that Speed reads a legitimate 0 B/s.
       expect(find.text('1 job · 1.0\u00A0GB · stopped'), findsOneWidget);
     },
@@ -190,7 +190,7 @@ void main() {
     );
 
     // The relative phrase is whatever the real clock makes of `earlierToday()`
-    // — "1 h ago" most of the day, minutes just after midnight — so the
+    // ("1 h ago" most of the day, minutes just after midnight), so the
     // assertion pins the sentence and leaves that one part open rather than
     // pinning an hour the suite cannot control.
     expect(
@@ -315,7 +315,7 @@ void main() {
     expect(find.byType(SectionHeader), findsNothing);
     // And nothing reached a provider: `sabnzbdClientProvider` throws when the
     // service is not configured, and a FutureProvider that throws is a *failed*
-    // provider — Riverpod then schedules a backoff retry for a condition no
+    // provider: Riverpod then schedules a backoff retry for a condition no
     // waiting changes, which surfaces here as a pending timer.
     expect(queueReads, 0);
     expect(historyReads, 0);
@@ -397,8 +397,8 @@ List<Override> _overrides({
     onQueueRead?.call();
     return queue;
   }),
-  // The Overview asks for its own history page — a hundred records, not the
-  // twenty `sabnzbdHistoryProvider` takes — because it counts a day.
+  // The Overview asks for its own history page: a hundred records, not the
+  // twenty `sabnzbdHistoryProvider` takes, because it counts a day.
   sabnzbdOverviewHistoryPageProvider.overrideWith((ref) async {
     onHistoryRead?.call();
     if (historyFails) throw Exception('history failed');

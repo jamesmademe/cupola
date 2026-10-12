@@ -17,11 +17,11 @@ import 'package:cupola/features/import/presentation/manual_import_review_rows.da
 import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Station 3 — Track: the running `ManualImport` command as an instrument
+/// Station 3 (Track): the running `ManualImport` command as an instrument
 /// panel.
 ///
-/// The \*arr command is aggregate — the services never report per-file
-/// results — so this screen deliberately renders one command status as truth
+/// The \*arr command is aggregate: the services never report per-file
+/// results, so this screen deliberately renders one command status as truth
 /// and points at Activity → History for the per-file verdicts, instead of
 /// painting a green check on every row the moment the command completes.
 class ManualImportProgressScreen extends ConsumerStatefulWidget {
@@ -53,7 +53,7 @@ class _ManualImportProgressScreenState
         service: widget.service,
         // Station 3 is Track, and the page's title is the flow's, not the
         // station's: "Import Progress" named the same act as the button that
-        // got here, and left this page — where the files are already moving —
+        // got here, and left this page (where the files are already moving),
         // without a name of its own.
         title: manualImportTitle,
         subtitle:
@@ -390,7 +390,7 @@ class _SubmittedFileRow extends StatelessWidget {
 
 /// The failed leaf is the only one with two decisions in it.
 ///
-/// A completed command leaves one thing to do — go and look at what it did — so
+/// A completed command leaves one thing to do: go and look at what it did, so
 /// it gets `Done` alone. A failed one leaves two, and they are not the same: the
 /// files are still where they were, so the batch can be sent again as-is, or the
 /// user can walk back to Review because it was the batch that was wrong. Both

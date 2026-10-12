@@ -224,10 +224,10 @@ class _StackQuickActions extends ConsumerWidget {
             icon: const Icon(Icons.stop_rounded),
             // Not red. Red on this canvas means a connection that did not
             // answer, and this is a button offering to stop something that is
-            // running fine — the confirm below is where the weight belongs.
+            // running fine: the confirm below is where the weight belongs.
             color: colorScheme.onSurfaceVariant,
             // Confirmed first: these buttons sit on a scrolling list of live
-            // production stacks, and a mis-tap took one down with no warning —
+            // production stacks, and a mis-tap took one down with no warning,
             // while deleting a movie, a far smaller consequence, already asked.
             onPressed: () => _confirmThenRun(
               context,

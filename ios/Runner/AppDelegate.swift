@@ -31,7 +31,7 @@ import UserNotifications
 /// The general pasteboard syncs through Universal Clipboard, so a plain copy of
 /// an API key hands it to every other device signed into the same account.
 /// `localOnly` is what keeps it on this one and `expirationDate` is what stops
-/// it lingering there; neither is reachable from Flutter's clipboard plumbing —
+/// it lingering there; neither is reachable from Flutter's clipboard plumbing:
 /// hence this channel. Dart falls back to a plain copy whenever `copySecret`
 /// answers false, so nothing here can break the copy button.
 enum SecureClipboardChannel {
@@ -81,7 +81,7 @@ enum SecureClipboardChannel {
 ///
 /// Every service Cupola exists to manage lives on the user's own network, and
 /// since iOS 14 the first connection to one raises a permission alert. The
-/// connection that raised it fails — silently, as "no route to host" — so
+/// connection that raised it fails, silently, as "no route to host", so
 /// without this channel a first-run test reports an unreachable server while the
 /// alert asking to make it reachable is still on screen. Dart calls `resolve`
 /// only *after* such a failure, which is what makes it safe: the alert is
@@ -124,7 +124,7 @@ enum LocalNetworkAccessChannel {
   /// One probe answers every waiter, which is what keeps the ten services
   /// onboarding tests in parallel from each standing up their own Bonjour
   /// listener to learn the same fact. Coalescing lives here rather than in Dart
-  /// because this side can also *cancel* — a shared future on the Dart side is a
+  /// because this side can also *cancel*; a shared future on the Dart side is a
   /// promise nothing completes once the caller that owned it is gone. A waiter
   /// that arrives late inherits the running probe's deadline rather than
   /// extending it; the verdict is the same either way.
@@ -178,7 +178,7 @@ private final class LocalNetworkProbe {
   ///
   /// Measured rather than guessed: a cold Bonjour registration and discovery on an
   /// already-granted machine took 0.97s, so the obvious ~1s threshold sits right
-  /// on top of it. The asymmetry decides the rest — reading a fast human as
+  /// on top of it. The asymmetry decides the rest: reading a fast human as
   /// `granted` costs them one tap on Test, while reading a slow round trip as
   /// `just_granted` re-runs a doomed connection in full.
   private static let humanDelay: TimeInterval = 2.5
@@ -244,7 +244,7 @@ private final class LocalNetworkProbe {
     browser.start(queue: queue)
     self.browser = browser
 
-    // The alert can sit unanswered forever — the user may have put the phone
+    // The alert can sit unanswered forever; the user may have put the phone
     // down. `unknown` claims nothing, so Dart reports the connection failure it
     // already had.
     queue.asyncAfter(deadline: .now() + timeout) { [weak self] in
@@ -268,8 +268,8 @@ private final class LocalNetworkProbe {
   /// Only the mDNS refusal counts, and deliberately not a POSIX `EACCES`/`EPERM`
   /// alongside it: a sandbox that may browse but not advertise fails the same way,
   /// and reading that as a refusal would tell a user whose permission is switched
-  /// on to go and switch it on. Missing a refusal costs the old behaviour — the
-  /// plain connection failure — while inventing one sends the user somewhere there
+  /// on to go and switch it on. Missing a refusal costs the old behaviour; the
+  /// plain connection failure, while inventing one sends the user somewhere there
   /// is nothing to fix.
   private static func isPolicyDenied(_ error: NWError) -> Bool {
     if case .dns(let code) = error { return code == policyDenied }

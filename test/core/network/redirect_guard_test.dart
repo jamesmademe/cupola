@@ -207,7 +207,7 @@ void main() {
     // *original* `RequestOptions` while encoding the body, so replaying those
     // headers on a body-less GET sent a request that still promised N bytes.
     // `dart:io` answers that with `HttpException: Content size below specified
-    // contentLength` — i.e. the legitimate same-origin redirect this whole
+    // contentLength`, i.e. the legitimate same-origin redirect this whole
     // interceptor exists to follow failed with an opaque transport error.
     for (final status in const [301, 302, 303]) {
       test('a $status that drops the body drops its entity headers', () async {
@@ -223,7 +223,7 @@ void main() {
         expect(
           _hasHeader(adapter.seenHeaders.first, 'content-length'),
           isTrue,
-          reason: 'Dio stamps it on the original POST — that is the premise',
+          reason: 'Dio stamps it on the original POST: that is the premise',
         );
         expect(adapter.seenMethods.last, 'GET');
         expect(
@@ -310,7 +310,7 @@ void main() {
 
   group('a refused redirect keeps its explanation', () {
     // `ServiceDiagnosis` keeps only the enum, so a refusal classified as
-    // `unknown` reached the user as "Could not verify the instance" — the one
+    // `unknown` reached the user as "Could not verify the instance": the one
     // message that names the actual cause was thrown away. `redirected` is its
     // own cause rather than a borrowed `notFound`, because the thing to fix is
     // the proxy, not the address in the form.
@@ -386,7 +386,7 @@ void main() {
       }
     });
 
-    // 300/304/305/306 never reach the interceptor — `allowRedirectStatus`
+    // 300/304/305/306 never reach the interceptor: `allowRedirectStatus`
     // rejects them, so Dio throws before the chain runs and there is no
     // `RedirectRefused` to read a verdict off. The status code has to carry it.
     test('a 3xx nobody follows is still a redirect', () async {

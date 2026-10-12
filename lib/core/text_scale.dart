@@ -8,7 +8,7 @@ import 'package:flutter/widgets.dart';
 /// reading size the constant fits; at an accessibility size the label overflows
 /// and Flutter paints its overflow stripe over the content.
 ///
-/// Rather than remove the constants — the image half genuinely is fixed — grow
+/// Rather than remove the constants: the image half genuinely is fixed, grow
 /// the box by exactly the amount the text grew.
 class TextScaleMetrics {
   TextScaleMetrics._();
@@ -25,7 +25,7 @@ class TextScaleMetrics {
   /// A strip of pills with connectors between them, or a bar of destinations,
   /// cannot reflow: past a point the only options are to clip or to elide, and
   /// eliding a two-word label destroys it. So this kind of chrome follows the
-  /// reading size to 1.3× and stops — the value the floating navigation bar has
+  /// reading size to 1.3× and stops: the value the floating navigation bar has
   /// always used, promoted to a token now that the import station bar needs the
   /// same guarantee.
   static const double singleLineChromeMaxScaleFactor = 1.3;

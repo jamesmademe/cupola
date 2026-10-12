@@ -42,7 +42,7 @@ class DiscoverCastList extends StatelessWidget {
   static const double _railBaseHeight = 135;
 
   /// The growing half of [_railBaseHeight]: up to four lines of `labelSmall`
-  /// (11pt at 1.22 leading) — the actor's name and their character, each
+  /// (11pt at 1.22 leading): the actor's name and their character, each
   /// allowed a second line so `Edward Norton` and `Robert Paulson` are read
   /// whole rather than cut.
   static const double _labelBlockHeight = 54;
@@ -89,7 +89,7 @@ class _CastTile extends StatelessWidget {
         ? 'https://image.tmdb.org/t/p/w185$profilePath'
         : null;
     final tappable = member.id > 0;
-    // One tile per person is an invariant of the list this widget is given —
+    // One tile per person is an invariant of the list this widget is given:
     // `DiscoverDetailViewModel` dedupes the credits by person id precisely so
     // this tag stays unique. TMDB bills one entry per *role*, so a dual-role
     // actor arrives twice and two Heroes with one tag assert on the next push.

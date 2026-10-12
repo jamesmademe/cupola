@@ -55,7 +55,7 @@ void main() {
         foldServiceState(total: 1, offline: 0, faulted: 0, checking: 1),
         StackServiceState.checking,
       );
-      // Half answered: the service answers, so it is not "checking" as a whole —
+      // Half answered: the service answers, so it is not "checking" as a whole,
       // but nothing has failed either.
       expect(
         foldServiceState(total: 2, offline: 0, faulted: 0, checking: 1),
@@ -151,7 +151,7 @@ void main() {
       expect(health.sentence, '1 of 2 answering · 1 fault · 1 did not answer');
     });
 
-    test('a clear stack says only the headline — no permanent green', () {
+    test('a clear stack says only the headline: no permanent green', () {
       final health = stackHealthFrom(
         states: const [StackServiceState.answering],
         registrySize: 1,
@@ -173,7 +173,7 @@ void main() {
     test('a probe in flight is never a fault', () {
       // The one assertion that keeps the cold open honest: while answers are
       // still coming in the stack is *not* wrong, so nothing on this sentence
-      // may read as a fault — `allClear` stays true and the only thing said is
+      // may read as a fault: `allClear` stays true and the only thing said is
       // that somebody is being asked.
       final health = stackHealthFrom(
         states: const [StackServiceState.answering, StackServiceState.checking],
@@ -191,8 +191,8 @@ void main() {
   ///
   /// The Dashboard header counts [StackHealth.unreachable]; the alert band, the
   /// inspector card and the drained sections name
-  /// [unreachableServicesProvider]. Those used to be two derivations — the count
-  /// folded every connection, the names asked the *lens* — so one surface could
+  /// [unreachableServicesProvider]. Those used to be two derivations: the count
+  /// folded every connection, the names asked the *lens*, so one surface could
   /// call a service answering while the line below it said it did not answer.
   group('the names behind the count', () {
     ProviderContainer containerWith(

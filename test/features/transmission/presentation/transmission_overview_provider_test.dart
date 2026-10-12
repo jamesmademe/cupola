@@ -41,14 +41,14 @@ TransmissionTorrent _torrent({
     'errorString': errorString,
     'labels': labels,
     'doneDate': doneDate,
-    // Null-aware, so a null fixture omits the KEY — which is what makes
+    // Null-aware, so a null fixture omits the KEY, which is what makes
     // `fromJson` fall back to the `-1` "no ratio" sentinel rather than to 0.
     'uploadRatio': ?uploadRatio,
   });
 }
 
 /// Transmission reports `doneDate` in epoch **seconds**, so every fixture has to
-/// divide — the one conversion a "finished today" rule gets wrong silently.
+/// divide: the one conversion a "finished today" rule gets wrong silently.
 int _epochSeconds(DateTime when) => when.millisecondsSinceEpoch ~/ 1000;
 
 /// A [TransmissionClient] that answers from a script instead of a daemon.
@@ -123,7 +123,7 @@ void main() {
     });
 
     test('a tracker warning is not a fault', () {
-      // `error: 1` is Transmission's tracker *warning* — an announce hiccup on
+      // `error: 1` is Transmission's tracker *warning*: an announce hiccup on
       // an otherwise healthy torrent. Ranking it with the broken ones would put
       // routine noise at the top of the region forever.
       final warned = _torrent(status: 4, error: 1, errorString: 'announce');
@@ -355,7 +355,7 @@ void main() {
   });
 
   group('the Finished today tone', () {
-    // The region reads the app's one mapping of Transmission's eight states —
+    // The region reads the app's one mapping of Transmission's eight states:
     // `transmissionTorrentTone`, exercised state by state in
     // test/features/transmission/domain/transmission_tone_test.dart. What these
     // check is that this region reaches for it, because it used to carry a
@@ -428,7 +428,7 @@ void main() {
 
     test('a torrent that never finished is not 1 January 1970', () {
       // `doneDate: 0` is Transmission's "never", and left unguarded it parses
-      // to the epoch — which on any day but one is simply "not today", so the
+      // to the epoch, which on any day but one is simply "not today", so the
       // bug hides until someone reads the list on a slow day.
       final items = transmissionFinishedToday([
         _torrent(id: 1, doneDate: 0),
@@ -608,7 +608,7 @@ void main() {
 
     test('a full disk says so instead of reading as silence', () async {
       // The defect: `freeSpace` collapsed a missing key to 0 and the provider
-      // folded every 0 back to null to recover the missing case — so the one
+      // folded every 0 back to null to recover the missing case, so the one
       // reading a user needs before starting a grab rendered as an em dash,
       // indistinguishable from a daemon that said nothing.
       final container = _container(
@@ -648,7 +648,7 @@ void main() {
         transmissionSessionFactsProvider.future,
       );
       final free = facts.firstWhere((f) => f.label == 'Free space');
-      // The row names the path it measured, and which directory that is — the
+      // The row names the path it measured, and which directory that is: the
       // figure and its subject have to be the same volume, or the row answers
       // the wrong question while looking right.
       expect(free.detail, '/mnt/fast/incomplete · incomplete directory');
@@ -694,7 +694,7 @@ void main() {
         transmissionSessionFactsProvider.future,
       );
 
-      // Three good rows survive the fourth call failing — taking the region
+      // Three good rows survive the fourth call failing, taking the region
       // down to report a missing figure is the trade the em-dash rule refuses.
       expect(facts.map((f) => f.label), [
         'Slow mode',

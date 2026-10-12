@@ -16,7 +16,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// resources, sync profiles and tags.
 ///
 /// Each row carries a live count so the screen says what is configured without
-/// being opened — a Prowlarr with no app connected is the single most common
+/// being opened: a Prowlarr with no app connected is the single most common
 /// reason indexers never reach Radarr/Sonarr.
 class ProwlarrSettingsScreen extends ConsumerWidget {
   const ProwlarrSettingsScreen({super.key});

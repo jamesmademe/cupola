@@ -14,7 +14,7 @@ class RadarrMovie {
   /// Radarr's own url-safe key for the movie (`dune-438631`).
   ///
   /// Read for exactly one reason: adding. Every other screen has a library
-  /// entry already, and Radarr keys a *new* one on this — an add posted
+  /// entry already, and Radarr keys a *new* one on this: an add posted
   /// without it is rejected. It comes down on the `movie/lookup` row, so the
   /// only cost of carrying it is this field.
   final String titleSlug;
@@ -40,7 +40,7 @@ class RadarrMovie {
   final String? added;
   final String? minimumAvailability;
 
-  /// Radarr's own verdict on whether the movie can be grabbed yet — it already
+  /// Radarr's own verdict on whether the movie can be grabbed yet: it already
   /// weighs [minimumAvailability] against the release dates, so prefer it over
   /// re-deriving availability from [status].
   final bool? isAvailable;

@@ -34,13 +34,13 @@ final sonarrServiceForProvider = Provider.family<SonarrService, String>((
 ) {
   // The lens's own connection resolves to [sonarrServiceProvider] rather than to
   // a second client for the same server. Without this the app kept two live
-  // `Dio`s pointed at one address whenever anything asked by id — and any
+  // `Dio`s pointed at one address whenever anything asked by id, and any
   // override of the plain provider, which is how every test supplies a fake,
   // was quietly bypassed on the path that names a connection.
   //
   // `read`, deliberately, and this is the load-bearing part. Watching the lens
-  // would rebuild EVERY entry of this family whenever the lens moved — entries
-  // for connections that did not change — and `watchApiClient` closes the
+  // would rebuild EVERY entry of this family whenever the lens moved, entries
+  // for connections that did not change, and `watchApiClient` closes the
   // outgoing client on dispose. A release search running against the seedbox
   // would have its `Dio` shut under it because the user tapped a badge on
   // another screen. The cost of reading is that an entry minted before the lens
@@ -87,7 +87,7 @@ class SonarrService with ArrActivityMixin {
   /// The degrading read: `fetchAllItems` swallows everything, which is the
   /// right shape only for a join that can go on without the library
   /// ([getSeriesByTvdbId]), and the wrong one for the wall or anything that
-  /// *counts* — an unreachable server and an empty library arrive as the same
+  /// *counts*: an unreachable server and an empty library arrive as the same
   /// value. Those use [getSeriesOrThrow].
   Future<List<SonarrSeries>> getSeries() async {
     return fetchAllItems('series', SonarrSeries.fromJson);
@@ -97,7 +97,7 @@ class SonarrService with ArrActivityMixin {
   ///
   /// A Sonarr that is unreachable, mis-keyed or 500-ing resolves [getSeries]
   /// *successfully* with an empty list, and every figure derived from that
-  /// printed a confident zero — the Overview's "next 7 days · 0 series" over
+  /// printed a confident zero: the Overview's "next 7 days · 0 series" over
   /// "Nothing airing this week", directly under an identity band whose own
   /// probe already read Unreachable. Two contradictory claims on one screenful,
   /// and the confident one was fabricated. A figure whose source did not answer
@@ -134,11 +134,11 @@ class SonarrService with ArrActivityMixin {
 
   /// On the **page** primitive, not on `getHistory`.
   ///
-  /// `getHistory` delegates to this, so both spellings pick the parameters up —
+  /// `getHistory` delegates to this, so both spellings pick the parameters up,
   /// but only this way round. Hung off `getHistory` instead, as they were, a
   /// caller that reached for `getHistoryPage` (the one that carries the
   /// envelope's total, and therefore the only one a count may be derived from)
-  /// got records with no embedded `series` and no embedded `episode` — and on
+  /// got records with no embedded `series` and no embedded `episode`, and on
   /// Sonarr those are the whole row: a history record on its own names a season
   /// and episode number against a series id, so without them the row has
   /// nothing to print but the id.
@@ -295,7 +295,7 @@ class SonarrService with ArrActivityMixin {
   /// Searches for series by term using the lookup API.
   ///
   /// [cancelToken] aborts the request once the search that asked for it has
-  /// been superseded — see [ArrActivityMixin.lookupItems], which owns the
+  /// been superseded: see [ArrActivityMixin.lookupItems], which owns the
   /// empty-term guard, the isolate mapping and the degrade-to-`[]` rule the
   /// three arr lookups share.
   Future<List<SonarrSeries>> lookupSeries(
@@ -312,15 +312,15 @@ class SonarrService with ArrActivityMixin {
     );
   }
 
-  /// Adds [series] — a `series/lookup` row — to this Sonarr's library.
+  /// Adds [series] (a `series/lookup` row) to this Sonarr's library.
   ///
   /// The seasons travel back untouched: Sonarr builds the library entry from
   /// them, and an add that drops them lands a series with no seasons to
   /// monitor. `addOptions.searchForMissingEpisodes` is the half that makes
   /// this an add rather than a bookmark.
   ///
-  /// [monitored] decides both halves at once — the series flag and
-  /// `addOptions.monitor` — because a series that is not monitored with every
+  /// [monitored] decides both halves at once: the series flag and
+  /// `addOptions.monitor`, because a series that is not monitored with every
   /// episode monitored is a contradiction Sonarr resolves by grabbing nothing,
   /// having first queued a search sweep for the lot.
   ///
@@ -407,15 +407,15 @@ class SonarrService with ArrActivityMixin {
   /// and profile writes use: Sonarr's series endpoint takes the whole resource
   /// and silently resets any field left out, so the body has to be the record
   /// it just returned with one key changed. This is not a variant of
-  /// `updateItemProfile` that could be folded into it — that helper is shared
+  /// `updateItemProfile` that could be folded into it: that helper is shared
   /// by four services whose resources have a `qualityProfileId`, and
   /// `seriesType` exists on Sonarr alone.
   ///
   /// [seriesType] is a `SonarrSeriesType.wireValue`, never a UI label: Sonarr
   /// matches the string exactly and answers 400 to "Anime".
   ///
-  /// Throws on failure. This is a user action with a visible outcome — the
-  /// field's whole point is that it changes what imports — so a silent
+  /// Throws on failure. This is a user action with a visible outcome: the
+  /// field's whole point is that it changes what imports, so a silent
   /// degrade would leave the row showing the old value as if it were the new
   /// one.
   Future<void> updateSeriesType(int seriesId, String seriesType) async {

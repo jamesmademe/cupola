@@ -16,14 +16,14 @@
 ///
 /// Jellyfin is deliberately not one of them. Its slot can hold a non-admin
 /// user's token, but every session control Cupola draws is on a session that
-/// token may control — a non-admin is only ever *shown* sessions it owns — so
+/// token may control: a non-admin is only ever *shown* sessions it owns, so
 /// a gate there would dim controls that work. See `jellyfin_client.dart`.
 ///
 /// So each of the three owes the same three steps:
 ///
 ///  1. probe the credential **once per credential** and remember the answer
 ///     (`connectionCapabilityProvider`);
-///  2. draw a [CapabilityBanner] naming what this credential cannot do — blue,
+///  2. draw a [CapabilityBanner] naming what this credential cannot do (blue),
 ///     because a read-only key is a configuration fact and not a fault;
 ///  3. render every write **dimmed but tappable**, never hidden and never
 ///     `Semantics(enabled: false)`, so a screen reader still reaches it and
@@ -32,14 +32,14 @@
 /// ## Why it is keyed by connection and not by service
 ///
 /// The same service can be read-write on one instance and read-only on
-/// another — a TrueNAS with a full key at home and a friend's box behind a
+/// another: a TrueNAS with a full key at home and a friend's box behind a
 /// read-only token are both "TrueNAS". Keying the cache on [ServiceKey] would
 /// let one connection's answer govern the other, which is worse than not
 /// probing at all: it would dim controls that work and enable controls that
 /// cannot. The key is the connection id, which is stable by construction.
 ///
-/// The probes themselves are not here. Each belongs to its own feature — the
-/// endpoint, the field and the failure shape are service knowledge — and this
+/// The probes themselves are not here. Each belongs to its own feature; the
+/// endpoint, the field and the failure shape are service knowledge, and this
 /// file only defines what an answer looks like and remembers what the app
 /// learned by acting.
 library;
@@ -55,7 +55,7 @@ enum CapabilityScope {
   /// The probe answered, and the credential may write.
   readWrite,
 
-  /// The credential may only read — **or** the probe itself failed.
+  /// The credential may only read, **or** the probe itself failed.
   ///
   /// Those two collapse into one state deliberately. A probe that errors, times
   /// out or returns something unparseable has told us nothing, and the only
@@ -66,7 +66,7 @@ enum CapabilityScope {
   /// Settings; a false read-write costs them a stopped container that never
   /// stopped.
   ///
-  /// The two are told apart only where they must be said differently — see
+  /// The two are told apart only where they must be said differently: see
   /// [CapabilityBasis].
   readOnly,
 
@@ -76,7 +76,7 @@ enum CapabilityScope {
   /// The probe runs on connect and lands in well under a second; dimming every
   /// write on the page for that window, and un-dimming them a frame later,
   /// would make a healthy connection look broken on every cold open. So
-  /// [canWrite] is true here and the banner stays hidden — the window is the
+  /// [canWrite] is true here and the banner stays hidden; the window is the
   /// one moment where a refusal is a cheaper answer than a flicker, and the
   /// refusal path writes [readOnly] back the first time it happens.
   unknown;
@@ -94,7 +94,7 @@ enum CapabilityScope {
 
 /// Why a scope is what it is.
 ///
-/// Gating treats every restricted basis the same — a control is dimmed or it is
+/// Gating treats every restricted basis the same: a control is dimmed or it is
 /// not. The banner does not: "the service said this account is view-only" and
 /// "Cupola could not ask" are different facts, need different sentences and
 /// different actions (a new credential against *Check again*), and a banner
@@ -112,8 +112,8 @@ enum CapabilityBasis {
   refused,
 }
 
-/// One connection's answer: the scope, why, and — for services that scope per
-/// resource — which resources it covers.
+/// One connection's answer: the scope, why, and for services that scope per
+/// resource, which resources it covers.
 @immutable
 class CapabilityGrant {
   /// The service answered and the credential may write everything.
@@ -141,7 +141,7 @@ class CapabilityGrant {
       basis = CapabilityBasis.refused,
       writable = null;
 
-  /// Nothing has answered yet — or the connection has no scoped credential to
+  /// Nothing has answered yet, or the connection has no scoped credential to
   /// ask about. Live, for the reason [CapabilityScope.unknown] gives.
   const CapabilityGrant.unknown()
     : scope = CapabilityScope.unknown,
@@ -151,8 +151,8 @@ class CapabilityGrant {
   /// Some resources writable, the rest read-only: NPM's per-resource
   /// permissions, Unraid's per-resource actions, TrueNAS's roles.
   ///
-  /// The connection as a whole reads as writable — something on it can be
-  /// changed — and [scopeFor] answers per resource.
+  /// The connection as a whole reads as writable: something on it can be
+  /// changed, and [scopeFor] answers per resource.
   const CapabilityGrant.partial(Set<String> this.writable)
     : scope = CapabilityScope.readWrite,
       basis = CapabilityBasis.answered;
@@ -164,7 +164,7 @@ class CapabilityGrant {
   /// every resource.
   final Set<String>? writable;
 
-  /// The scope of one [resource]. Null asks about the connection as a whole —
+  /// The scope of one [resource]. Null asks about the connection as a whole:
   /// an NPM band that shows only when *everything* is restricted.
   ///
   /// A [partial] grant answers read-only for a resource it does not name. That
@@ -208,13 +208,13 @@ class CapabilityGrant {
 ///
 /// Only two things write it: a permission refusal on a write
 /// ([CapabilityScopeNotifier.markReadOnly]) and a test injecting a state. Probe
-/// answers do not go in here — they live in `connectionCapabilityProvider` and
+/// answers do not go in here; they live in `connectionCapabilityProvider` and
 /// are merged at read time by [capabilityGrantForProvider], which keeps one
 /// provider from writing another during its build.
 ///
 /// A plain in-memory notifier rather than something persisted. A scope is a
 /// fact about a credential that the user can change from outside the app at
-/// any moment — issuing a new token is the whole point of the banner's action —
+/// any moment: issuing a new token is the whole point of the banner's action:
 /// and a persisted "read-only" would survive the fix and keep the controls
 /// dimmed after the user had already corrected it.
 final capabilityScopeProvider =
@@ -241,7 +241,7 @@ final capabilityGrantForProvider = Provider.family<CapabilityGrant, String>((
   final probe = ref.watch(connectionCapabilityProvider(connectionId));
   return probe.when(
     data: (grant) => grant,
-    // A timing state, and it stays live — see [CapabilityScope.unknown].
+    // A timing state, and it stays live: see [CapabilityScope.unknown].
     loading: () => const CapabilityGrant.unknown(),
     // Every probe already folds its own failures into `unanswered`; this is
     // the belt to that brace, for a probe that throws anyway.

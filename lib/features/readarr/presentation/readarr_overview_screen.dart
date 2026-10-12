@@ -13,8 +13,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Readarr's service home.
 ///
-/// Overview alone carries the identity block and the readouts — every other tab
-/// is a view of one kind of record — and then the regions the client can
+/// Overview alone carries the identity block and the readouts: every other tab
+/// is a view of one kind of record, and then the regions the client can
 /// actually fill, in the order the board draws them.
 ///
 /// **Two of the board's five regions are not here, and their absence is the
@@ -22,7 +22,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// wants `GET /api/v1/book`; `ReadarrService` calls neither, and an author
 /// carries no release date and no cover, so neither could be derived from what
 /// is loaded. Drawing them empty would print `0 releases` and `Nothing added
-/// yet` over questions nobody asked the server — a promise the app cannot keep.
+/// yet` over questions nobody asked the server: a promise the app cannot keep.
 /// `readarr_overview_provider.dart` carries the long form of the reasoning.
 ///
 /// What is left is real: the queue's faults, the library's backlog, where the
@@ -43,7 +43,7 @@ class ReadarrOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -54,7 +54,7 @@ class ReadarrOverviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Before any provider, never after: `readarrServiceProvider` throws for a
     // Readarr that was never set up, and a `FutureProvider` that throws is a
-    // *failed* provider — Riverpod schedules a retry with backoff for a
+    // *failed* provider: Riverpod schedules a retry with backoff for a
     // condition no amount of waiting changes, which surfaces in tests as a
     // pending timer and on device as a request loop against nothing.
     final configured = ref.watch(
@@ -100,7 +100,7 @@ class _OverviewBody extends ConsumerWidget {
         // And the queue behind the rail's fourth figure. `serviceKpiProvider`
         // is autoDispose; `readarrQueueProvider` is not, so invalidating only
         // the derived provider redrew the same cached count for the life of the
-        // scope — `Queue` frozen while Authors, Books and Missing moved.
+        // scope: `Queue` frozen while Authors, Books and Missing moved.
         ref.invalidate(readarrQueueProvider);
         ref.invalidate(readarrQueueRecordsProvider);
         ref.invalidate(readarrBelowCutoffProvider);
@@ -157,8 +157,8 @@ class _NeedsAttentionSection extends ConsumerWidget {
       // "—" while the queue and the library are loading or after either failed:
       // a "0" printed over an unanswered question is a claim nobody made.
       subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
-      // No link: these rows belong to different tabs — Queue for a stalled
-      // import, Wanted for the backlog — and a single destination would have to
+      // No link: these rows belong to different tabs: Queue for a stalled
+      // import, Wanted for the backlog, and a single destination would have to
       // lie about one of the two.
       child: AsyncValueWidget<List<ReadarrAttentionItem>>(
         value: items,
@@ -176,7 +176,7 @@ class _NeedsAttentionSection extends ConsumerWidget {
         // The resting case, and it has to be reachable: every row here is
         // derived from a condition that can clear, so a Readarr with a quiet
         // queue and a complete library says so rather than badging a standing
-        // 1. A resting state wears no alarm chrome — nothing is wrong, and
+        // 1. A resting state wears no alarm chrome: nothing is wrong, and
         // saying so is not an error state.
         emptyBuilder: const ServiceOverviewEmpty(
           icon: Icons.check_circle_outline_rounded,
@@ -220,14 +220,14 @@ class _AttentionRow extends StatelessWidget {
 
 /// Where Readarr files books, and how much room is left.
 ///
-/// The board draws a meter here — `160 GB used · 16% of 1 TB` — and this draws
+/// The board draws a meter here (`160 GB used · 16% of 1 TB`) and this draws
 /// only the free figure, because `/rootfolder` carries `freeSpace` and no
 /// total. A percentage needs a denominator, and the denominator lives behind
 /// `/api/v1/diskspace`, which the client does not call. One true figure rather
 /// than a bar whose length would be invented.
 ///
 /// The mobile board drops this region entirely, and it is here anyway: it was
-/// dropped for room, competing against Coming up and Recently added — and on
+/// dropped for room, competing against Coming up and Recently added; and on
 /// this screen neither of those exists to compete with.
 class _RootFolderSection extends ConsumerWidget {
   const _RootFolderSection();
@@ -239,7 +239,7 @@ class _RootFolderSection extends ConsumerWidget {
     // Riverpod retained the value it had, and `AsyncValueWidget` below draws
     // exactly that retained list at full ink under the unreachable band. Read
     // through `asData` the header went silent about the folders the section
-    // under it was still drawing — a server that stopped answering took the
+    // under it was still drawing: a server that stopped answering took the
     // count with it and left the rows. Same test the widget itself applies.
     final count = folders.hasValue ? folders.requireValue.length : 0;
 
@@ -250,7 +250,7 @@ class _RootFolderSection extends ConsumerWidget {
       // that the title's singular does not cover the whole story.
       subtitle: count > 1 ? '$count folders' : null,
       // The board's link is "Manage →", which opens the service's own settings
-      // page rather than one of its tabs — and `ServiceTab` has no settings
+      // page rather than one of its tabs, and `ServiceTab` has no settings
       // member because settings is not a tab. No link, rather than a link that
       // lands somewhere else.
       child: AsyncValueWidget<List<ReadarrRootFolder>>(

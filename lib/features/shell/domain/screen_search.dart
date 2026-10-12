@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/legacy.dart';
 /// `⌘F` means "search *this* screen", and only the screen knows whether it has
 /// a field to search with. A registry rather than a tree walk: hunting for the
 /// first `EditableText` under the content would find a rename dialog's field, a
-/// YAML editor, or the filter of a collapsed section — all of them wrong, and
+/// YAML editor, or the filter of a collapsed section: all of them wrong, and
 /// wrong in a way that only shows up in the one layout nobody tested.
 final screenSearchFocusProvider = StateProvider<FocusNode?>((ref) => null);
 
@@ -38,7 +38,7 @@ class _ScreenSearchTargetState extends ConsumerState<ScreenSearchTarget> {
   /// The registry itself, held rather than re-read on the way out.
   ///
   /// `ref` is a `BuildContext` in disguise, and Riverpod throws outright the
-  /// moment it is touched after the element leaves the tree — which is exactly
+  /// moment it is touched after the element leaves the tree, which is exactly
   /// where deregistration has to happen. Its own error text prescribes this:
   /// keep the provider's state in a field of the State. Safe to hold because
   /// `screenSearchFocusProvider` is a root, non-autoDispose provider, so the
@@ -51,7 +51,7 @@ class _ScreenSearchTargetState extends ConsumerState<ScreenSearchTarget> {
   /// ours?" can no longer be answered by the node alone. A screen whose element
   /// is rebuilt into a new position re-registers *the same node* from a new
   /// State before the old State's deferred clear runs, and a clear keyed on the
-  /// node would then quietly kill a live field — ⌘F dead with nothing on screen
+  /// node would then quietly kill a live field: ⌘F dead with nothing on screen
   /// to say so. The serial asks the question that actually matters: has anyone
   /// registered since we did.
   static int _registrationSerial = 0;
@@ -98,7 +98,7 @@ class _ScreenSearchTargetState extends ConsumerState<ScreenSearchTarget> {
     final ours = widget.focusNode;
     final registration = _ourRegistration;
     // Deferred, and not merely moved off `ref`: dispose runs inside the build
-    // owner's state lock, and Riverpod refuses a provider write there outright —
+    // owner's state lock, and Riverpod refuses a provider write there outright:
     // the same refusal that covers build, initState and didChangeDependencies.
     // Reading the notifier here throws for a second reason on top of that: `ref`
     // is a BuildContext, and by dispose it has been deactivated. This branch ran

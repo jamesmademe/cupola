@@ -5,8 +5,8 @@ import 'package:cupola/core/status/media_status.dart';
 /// The brand book's lexicon (`design/system/README.md`, *Words*) as code, so
 /// a screen reaches for the state rather than spelling it. The tone is the
 /// one the word carries under the tone rule, and null for a word that carries
-/// no state. The failure words — `Did not answer`, `Radarr answered but
-/// refused the key` and the rest — are the classification's
+/// no state. The failure words: `Did not answer`, `Radarr answered but
+/// refused the key` and the rest are the classification's
 /// (`failureLabel`, `failureHeadline` in `core/network/connection_failure.dart`),
 /// which spells [StateWord.didNotAnswer] from here.
 ///
@@ -279,7 +279,7 @@ abstract final class Lexicon {
   static const onDigital = 'on digital';
   static const onDisc = 'on disc';
 
-  /// The way into a service's setup form — the one verb every "not set up"
+  /// The way into a service's setup form: the one verb every "not set up"
   /// row, button and toast carries: `Set up Plex`.
   static String setUp(String service) => 'Set up $service';
 
@@ -303,8 +303,8 @@ abstract final class Lexicon {
         '${names(all.map((number) => '$number'))}';
   }
 
-  /// A label as it reads inside a sentence or after a count — `Refused the
-  /// key` → `refused the key` — leaving an acronym alone (`API not at this
+  /// A label as it reads inside a sentence or after a count: `Refused the
+  /// key` → `refused the key`, leaving an acronym alone (`API not at this
   /// address`).
   static String inline(String label) {
     if (label.length < 2) return label.toLowerCase();

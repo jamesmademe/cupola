@@ -6,13 +6,13 @@ Rendered from `lib/core/theme.dart` (`filledButtonTheme`, `outlinedButtonTheme`,
 
 ## Variants
 
-- **Filled** — `primary` fill (the ink: `#F7F6F2` dark, `#16151A` light), `on-primary` label in the row role (15 / 600), `radius-control` (14), padding `space-md` × `space-lg`, 44 high at minimum. One per surface.
-- **Primary** — a page's one primary action, full width (`AppTheme.primaryButtonStyle`): the filled ink button at `size.button-l` 52, growing with its label, `radius.button` (16) continuous, ringed when focused. A sheet's submit (*Submit request*, *Add torrent*), a station's next step; the detail band's promoted verb takes the same height and radius (`HeaderActionRow`). A button in a row or a dialog stays the medium filled one.
-- **Outlined** — the ghost button: `fill-control` (white at 8% dark, ink at 8% light) with a 1px `line-edge` side, `on-surface` label, same radius, padding and label. Secondary actions beside a filled one.
-- **Floating** — `FloatingActionButton` and `.extended` take the ink button's colours from the theme: `primary` fill, `on-primary` glyph and label, Material's own shape and size. A screen's one floating action is its primary, so it is never filled with a service's colour (the TrueNAS consoles used to fill theirs with TrueNAS blue).
-- **Text** — `primary` label in `label-large` 600, no container. Recovery verbs (*Retry*, *Refresh*) and cross-service links (*Open in qBittorrent*).
-- **Remedy** — the one fill a fault gets: an amber fault's remedy (*Paste the key again*, *Check the address*, or *Retry* where retrying is the fix) in `tone.amber-fill` under `tone.amber-ink` (`remedyFillStyle` in `lib/core/widgets/failure_remedy.dart`), the theme's radius and label, 44 high at standard density. `compact: true` is the fault line's control: 56 wide at minimum, padding `space-md`. Retry beside a red line is never this: it is the ghost (outlined) in a centred state and text in ink on a line. `test/core/widgets/failure_remedy_test.dart` measures the ink on the fill in both rooms.
-- **Gated** — any of the three handed through `CrossServiceAction.builder` or `CapabilityGatedAction.builder`: the label and glyph drain to 38%, the container, border and target stay at full strength, and the button stays pressable. A tap raises the toast whose action is the fix.
+- **Filled**: `primary` fill (the ink: `#F7F6F2` dark, `#16151A` light), `on-primary` label in the row role (15 / 600), `radius-control` (14), padding `space-md` × `space-lg`, 44 high at minimum. One per surface.
+- **Primary**: a page's one primary action, full width (`AppTheme.primaryButtonStyle`): the filled ink button at `size.button-l` 52, growing with its label, `radius.button` (16) continuous, ringed when focused. A sheet's submit (*Submit request*, *Add torrent*), a station's next step; the detail band's promoted verb takes the same height and radius (`HeaderActionRow`). A button in a row or a dialog stays the medium filled one.
+- **Outlined** (the ghost button): `fill-control` (white at 8% dark, ink at 8% light) with a 1px `line-edge` side, `on-surface` label, same radius, padding and label. Secondary actions beside a filled one.
+- **Floating** (`FloatingActionButton` and `.extended` take the ink button's colours from the theme): `primary` fill, `on-primary` glyph and label, Material's own shape and size. A screen's one floating action is its primary, so it is never filled with a service's colour (the TrueNAS consoles used to fill theirs with TrueNAS blue).
+- **Text**: `primary` label in `label-large` 600, no container. Recovery verbs (*Retry*, *Refresh*) and cross-service links (*Open in qBittorrent*).
+- **Remedy** (the one fill a fault gets): an amber fault's remedy (*Paste the key again*, *Check the address*, or *Retry* where retrying is the fix) in `tone.amber-fill` under `tone.amber-ink` (`remedyFillStyle` in `lib/core/widgets/failure_remedy.dart`), the theme's radius and label, 44 high at standard density. `compact: true` is the fault line's control: 56 wide at minimum, padding `space-md`. Retry beside a red line is never this: it is the ghost (outlined) in a centred state and text in ink on a line. `test/core/widgets/failure_remedy_test.dart` measures the ink on the fill in both rooms.
+- **Gated** (any of the three handed through `CrossServiceAction.builder` or `CapabilityGatedAction.builder`): the label and glyph drain to 38%, the container, border and target stay at full strength, and the button stays pressable. A tap raises the toast whose action is the fix.
 
 ## Focus
 
@@ -25,7 +25,7 @@ The theme sets a 44 minimum height (`size.button-m`); the padding is `space-md` 
 | Platform | Filled | Outlined | Text | Tap target |
 | --- | --- | --- | --- | --- |
 | iOS, Android | 44 | 44 | 44 | padded to 48 (`MaterialTapTargetSize.padded`) |
-| macOS, Windows, Linux | 44 | 44 | 44 | the painted box (targets shrink-wrap on a desktop) — 38 is the floor for a pointer-only control |
+| macOS, Windows, Linux | 44 | 44 | 44 | the painted box (targets shrink-wrap on a desktop): 38 is the floor for a pointer-only control |
 
 ## The consumer provides
 
@@ -51,10 +51,10 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 
 ## Do / don't
 
-- Do keep a 44pt minimum target wherever a finger can reach; never add `VisualDensity.compact` — it silently cancels `minimumSize`.
+- Do keep a 44pt minimum target wherever a finger can reach; never add `VisualDensity.compact`: it silently cancels `minimumSize`.
 - Don't use a red fill, not even for a delete: red means unreachable and nothing else. A destructive button is the theme's own, and its label says what it does (see AppDialog).
 - Don't paint a recovery verb in `error`.
 - Don't use a full-radius pill for a button: controls take the 14dp radius.
 - Don't put a second filled button on the same surface.
 - Don't give anything but a fault's remedy the amber fill, and never fill a Retry that sits beside silence.
-- Don't pass `onPressed: null` to express "not available here" — gate it instead.
+- Don't pass `onPressed: null` to express "not available here"; gate it instead.

@@ -28,7 +28,7 @@ void main() {
     expect(classifyHistoryEvent('downloadIgnored'), ArrImportOutcome.other);
   });
 
-  test('everything else is other — never guessed into the rail', () {
+  test('everything else is other: never guessed into the rail', () {
     expect(classifyHistoryEvent('grabbed'), ArrImportOutcome.other);
     expect(classifyHistoryEvent('movieFileRenamed'), ArrImportOutcome.other);
     // A future \*arr inventing an event must not silently become an import in a

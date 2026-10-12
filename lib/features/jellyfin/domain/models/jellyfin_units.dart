@@ -3,7 +3,7 @@
 /// produces a plausible-looking wrong number rather than an error.
 ///
 ///  * every `*Ticks` field (`RunTimeTicks`, `PositionTicks`,
-///    `PlaybackPositionTicks`) is a .NET tick — 100 nanoseconds;
+///    `PlaybackPositionTicks`) is a .NET tick, 100 nanoseconds;
 ///  * `TranscodingInfo.Bitrate` is bits per second;
 ///  * `PlayedPercentage` / `CompletionPercentage` are 0–100 doubles, not 0–1;
 ///  * `/Sessions?activeWithinSeconds` is plain seconds.
@@ -20,7 +20,7 @@ library;
 /// One .NET tick is 100 ns, so a millisecond is 10 000 ticks.
 const int kJellyfinTicksPerMillisecond = 10000;
 
-/// 10 000 000 — `TimeSpan.TicksPerSecond`. Kept even though the app converts to
+/// 10 000 000 (`TimeSpan.TicksPerSecond`). Kept even though the app converts to
 /// milliseconds, because it is the constant every Jellyfin discussion quotes and
 /// its absence is what makes `/ 10000` look like a typo.
 const int kJellyfinTicksPerSecond = 10000000;
@@ -50,7 +50,7 @@ int? jellyfinTicks(Object? raw) {
 /// a large tick count comes back through a gateway that round-trips the JSON
 /// through a floating-point type and then quotes it. `Infinity` and `NaN` parse as
 /// doubles but have no integer value at all, so the finiteness check is not
-/// optional — `double.infinity.toInt()` throws.
+/// optional: `double.infinity.toInt()` throws.
 int? _intFromText(String raw) {
   final text = raw.trim();
   final asInt = int.tryParse(text);
@@ -66,7 +66,7 @@ int? _intFromText(String raw) {
 /// runtime label, and neither wants a float artefact.
 ///
 /// [zeroAsNull] exists because Jellyfin overloads zero as "unknown" in two
-/// places — `RunTimeTicks: 0` on an item whose media has not been probed, and
+/// places: `RunTimeTicks: 0` on an item whose media has not been probed, and
 /// `PlaybackPositionTicks: 0` on an item that was never started. Both must
 /// arrive as `null` so the UI shows no runtime and no resume bar, instead of
 /// "0 min" and a progress bar pinned at the left edge.
@@ -80,7 +80,7 @@ int? jellyfinMillisecondsFromTicks(Object? raw, {bool zeroAsNull = false}) {
 
 /// Progress as a 0–1 fraction from a position and a runtime, both in ticks.
 ///
-/// Returns null when either side is missing or the runtime is zero — a live TV
+/// Returns null when either side is missing or the runtime is zero: a live TV
 /// channel reports a position against no runtime at all, and dividing by it
 /// would put `Infinity` into a progress bar.
 double? jellyfinFractionFromTicks({
@@ -121,7 +121,7 @@ double? jellyfinFractionFromPercent(Object? raw) {
   return (value / 100).clamp(0.0, 1.0);
 }
 
-/// Bits per second, straight through — named so a caller cannot mistake it for
+/// Bits per second, straight through, named so a caller cannot mistake it for
 /// the bytes-per-second the download clients report.
 ///
 /// `TranscodingInfo.Bitrate` and `MediaSource.Bitrate` are both already bits/s;

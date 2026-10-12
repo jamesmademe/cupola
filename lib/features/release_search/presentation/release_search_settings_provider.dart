@@ -21,7 +21,7 @@ class ReleaseSearchSettings {
   final Duration timeout;
 
   /// Off until the user asks for it. Turning it on is also the only moment
-  /// notification permission is requested — asking at launch, before they have
+  /// notification permission is requested: asking at launch, before they have
   /// expressed any interest, is exactly the pattern this avoids.
   final bool notifyOnFinish;
 
@@ -29,14 +29,14 @@ class ReleaseSearchSettings {
   ///
   /// **Off by default, and that is a privacy decision rather than a
   /// conservative one.** Background execution means the OS runs the request on
-  /// Cupola's behalf, which it can only do by writing the request — the arr
-  /// admin API key in its headers included — to system storage for the life of
+  /// Cupola's behalf, which it can only do by writing the request, the arr
+  /// admin API key in its headers included, to system storage for the life of
   /// the task. No amount of Dart care avoids that: it is the price of the
   /// capability, not a defect of the library. So the capability is opt-in, and
   /// the trade-off is stated where the switch is.
   ///
   /// What this flag does **not** gate is the plugin's initialisation. See
-  /// `configureBackgroundSearch` — the same call that would be skipped is the
+  /// `configureBackgroundSearch`: the same call that would be skipped is the
   /// one that purges the records a previous session left behind, so skipping it
   /// would turn switching this off into a privacy regression.
   final bool backgroundEnabled;
@@ -59,7 +59,7 @@ class ReleaseSearchSettings {
   ///
   /// The timeout stops at **ten** minutes rather than fifteen on purpose: the
   /// background library's own iOS ceiling is fifteen and is fixed at startup, so
-  /// letting the user reach it would let the two meet — and a timeout that
+  /// letting the user reach it would let the two meet, and a timeout that
   /// coincides with the transport's own gives two different failures the same
   /// elapsed, which is exactly the ambiguity the verdicts exist to remove.
   static const minConcurrency = 1;
@@ -132,9 +132,9 @@ class ReleaseSearchSettingsNotifier extends Notifier<ReleaseSearchSettings> {
     _persistBool(_notifyKey, value);
   }
 
-  /// Records the choice only. **Everything that has to happen around it —
+  /// Records the choice only. **Everything that has to happen around it:
   /// cancelling the searches already in flight, then pruning the records they
-  /// leave behind — lives in [BackgroundSearchSwitch], because the order is
+  /// leave behind, lives in [BackgroundSearchSwitch], because the order is
   /// load-bearing** and a setter nobody can see the sequence in is where that
   /// order goes to die.
   void setBackgroundEnabled(bool value) {

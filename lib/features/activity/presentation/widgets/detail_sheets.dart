@@ -360,7 +360,7 @@ class _SectionFieldContent extends StatelessWidget {
         children: [
           // Deliberately *not* the eyebrow style. A detail sheet is twenty-odd
           // field labels in a scrolling list, and uppercase tracking on all of
-          // them is the "eyebrow everywhere" noise the eyebrow exists to avoid —
+          // them is the "eyebrow everywhere" noise the eyebrow exists to avoid:
           // it earns its emphasis by being rare. The eyebrow belongs on a KPI
           // value or a section kicker, not on every row of a data dump.
           Text(

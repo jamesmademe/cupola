@@ -5,8 +5,8 @@
 /// what finished today, what is transferring and the fault on a stalled
 /// torrent are all projections of the one list `transmissionTorrentsProvider`
 /// holds, so the whole page costs the two calls the service dashboard was
-/// making anyway — `session-stats` for the rail and `torrent-get` for the list
-/// — plus `session-get` for the daemon's own settings.
+/// making anyway (`session-stats` for the rail and `torrent-get` for the list),
+/// plus `session-get` for the daemon's own settings.
 ///
 /// The one genuinely extra call is `free-space`, and it is extra because
 /// Transmission will not volunteer it: the path has to come out of
@@ -21,8 +21,8 @@
 /// The designed Session region draws a peer-port test, a blocklist size with an
 /// Update control, and the seed-ratio/idle/encryption triple. None of the three
 /// is reachable: `TransmissionSession` keeps ten of the sixty keys
-/// `session-get` returns — no `peer-port`, `blocklist-size`, `seedRatioLimit`,
-/// `idle-seeding-limit` or `encryption` — and `TransmissionClient` calls
+/// `session-get` returns: no `peer-port`, `blocklist-size`, `seedRatioLimit`,
+/// `idle-seeding-limit` or `encryption`, and `TransmissionClient` calls
 /// neither `port-test` nor `blocklist-update`. So the region draws the four
 /// facts the daemon *did* report and says nothing about the three it did not,
 /// rather than printing a zero-rule blocklist or a port state nobody tested.
@@ -61,14 +61,14 @@ const int transmissionFinishedTodayLimit = 3;
 /// about throughput: something the daemon has stopped making progress on comes
 /// before something that is working, because only the first needs a person.
 /// Within a rank the daemon's own [TransmissionTorrent.queuePosition] decides,
-/// which is the order the user arranged in Transmission itself — inventing a
+/// which is the order the user arranged in Transmission itself. Inventing a
 /// second ordering on top of theirs is how a queue stops being a queue.
 ///
 /// Returned as an int rather than an enum because it exists only to be sorted
 /// on; nothing downstream asks a row which band it landed in.
 int transmissionFocusRank(TransmissionTorrent torrent) {
   // A blocking error or a stall. `warning` is the daemon's own test for both,
-  // and it deliberately excludes a tracker *warning* — an announce hiccup on an
+  // and it deliberately excludes a tracker *warning*, an announce hiccup on an
   // otherwise healthy torrent is not a fault.
   if (torrent.warning != null) return 0;
   // Bytes are meant to be coming in: downloading, checking, or queued for
@@ -141,7 +141,7 @@ class TransmissionLabelTally {
   final int count;
 
   /// The row as a sentence. The visible row is a word and a bare numeral, which
-  /// read aloud in sequence is "movies ten" — a phrase, not a fact.
+  /// read aloud in sequence is "movies ten": a phrase, not a fact.
   String get spoken =>
       joinSpokenParts([label, count == 1 ? '1 torrent' : '$count torrents']);
 
@@ -167,7 +167,7 @@ class TransmissionLabelTally {
 /// Transmission accepts them, and a row with no word in it cannot be read
 /// aloud or tapped with any meaning.
 ///
-/// Ties break alphabetically so the order is stable between two polls — a
+/// Ties break alphabetically so the order is stable between two polls. A
 /// `Map`'s insertion order would otherwise reshuffle the region whenever the
 /// queue did.
 List<TransmissionLabelTally> transmissionLabelTallies(
@@ -214,7 +214,7 @@ class TransmissionSessionFact {
     this.tone = StatusTone.neutral,
   });
 
-  /// The setting's name — `Slow mode`, `Download limit`.
+  /// The setting's name: `Slow mode`, `Download limit`.
   final String label;
 
   /// Its value, already rendered. `—` when the daemon did not answer.
@@ -225,18 +225,18 @@ class TransmissionSessionFact {
 
   final IconData icon;
 
-  /// How the value reads. Neutral for every setting at rest — **none of these
+  /// How the value reads. Neutral for every setting at rest: **none of these
   /// is ever a fault**, which is the trap this region walks past: a throttle
   /// the user switched on themselves painted amber turns a deliberate choice
   /// into an alarm.
   final StatusTone tone;
 
-  /// The row's first line — `Download limit · Not limited`.
+  /// The row's first line: `Download limit · Not limited`.
   ///
   /// Label and value together, and **not** in the row's trailing slot, which is
   /// capped at 132pt with `maxLines: 1` because it was shaped for Prowlarr's
-  /// digit figures. Every value in this region is prose — `Not limited`,
-  /// `Stopped (0 KB/s)` — and at an accessibility reading size that cap holds
+  /// digit figures. Every value in this region is prose: `Not limited`,
+  /// `Stopped (0 KB/s)`, and at an accessibility reading size that cap holds
   /// about seven characters, so the row's entire content would ellipsise away
   /// and leave `Download limit …` saying nothing. The board agrees: its Session
   /// rows read `Peer port 51413` and `Blocklist · 342 k rules` on the title
@@ -255,7 +255,7 @@ class TransmissionSessionFact {
 /// preferences window should see the same number they typed there.
 ///
 /// A limit that is switched off reads `Not limited` rather than its stored
-/// value — Transmission keeps the number while the flag is false, so printing
+/// value: Transmission keeps the number while the flag is false, so printing
 /// it would claim a ceiling that is not in force.
 String transmissionLimitLabel(int kbPerSec, {required bool enabled}) {
   if (!enabled) return 'Not limited';
@@ -271,7 +271,7 @@ String transmissionLimitLabel(int kbPerSec, {required bool enabled}) {
 ///
 /// [freeSpaceBytes] is null when the free-space call was never made or came
 /// back unusable; it renders `—` and not `0 B`, because "the disk is full" and
-/// "nobody asked" are opposite readings of the same glyph — and `0 B` is
+/// "nobody asked" are opposite readings of the same glyph, and `0 B` is
 /// reserved for the first, which the client now reports as a measurement
 /// rather than folding into silence.
 List<TransmissionSessionFact> transmissionSessionFacts(
@@ -324,7 +324,7 @@ List<TransmissionSessionFact> transmissionSessionFacts(
       // The path is the point, and it has to be the path that was *measured*.
       // Every path in this API belongs to the *daemon's* filesystem, so
       // `/downloads` in a container is not the user's `/downloads`; and when
-      // an incomplete directory is in force it — not `download-dir` — is the
+      // an incomplete directory is in force it, not `download-dir`, is the
       // volume a running grab fills, so the row names that one and says which
       // it is.
       detail: measuredDir.isEmpty
@@ -346,13 +346,13 @@ List<TransmissionSessionFact> transmissionSessionFacts(
 /// Two calls, in order, because Transmission will not answer the second without
 /// the first: `free-space` takes a path and the only path the app knows is the
 /// one `session-get` reports. Which path that is, is
-/// [TransmissionSession.activeDownloadDir]'s answer and not `download-dir`'s —
-/// a daemon with an incomplete directory in force is not touching
+/// [TransmissionSession.activeDownloadDir]'s answer and not `download-dir`'s.
+/// A daemon with an incomplete directory in force is not touching
 /// `download-dir` until the grab finishes.
 ///
 /// **Null rather than a throw.** A daemon that answers `session-get` and
-/// refuses `free-space` — an unreadable path, a relocated volume, an older
-/// build — has still told us everything else in the region, and taking three
+/// refuses `free-space` (an unreadable path, a relocated volume, an older
+/// build) has still told us everything else in the region, and taking three
 /// good rows down to report a missing fourth is the trade the em-dash rule
 /// exists to refuse.
 ///
@@ -377,7 +377,7 @@ final transmissionFreeSpaceProvider = FutureProvider.autoDispose<int?>((
 /// The Session region.
 ///
 /// Derived from [transmissionSessionProvider], which carries
-/// `retry: noProviderRetry` — so this does too, and the derivation propagates
+/// `retry: noProviderRetry`, so this does too, and the derivation propagates
 /// the source's behaviour rather than quietly changing it: left on the default,
 /// the section sat on its skeleton through the backoff after the source had
 /// already failed. The screen gates on
@@ -425,7 +425,7 @@ class TransmissionFinishedItem {
 /// the reason the region is headed `today`: a heading is a promise, and a
 /// torrent that finished at 23:50 last night is not today's news however recent
 /// it feels. Transmission reports `doneDate` as epoch **seconds**, and `0` when
-/// it never finished — unguarded that renders as 1 January 1970, which is how a
+/// it never finished: unguarded that renders as 1 January 1970, which is how a
 /// "finished today" list fills up with torrents that never did.
 ///
 /// Sorted newest first, capped at [limit].
@@ -454,8 +454,8 @@ List<TransmissionFinishedItem> transmissionFinishedToday(
         detail: joinDisplayParts([
           // The size on disk, not what is left: nothing is left.
           formatSize(torrent.totalSize),
-          // The app's one vocabulary for an age — `just now`, `14 min ago`,
-          // `2 h ago` — so this row compares with every other aged figure in
+          // The app's one vocabulary for an age: `just now`, `14 min ago`,
+          // `2 h ago`, so this row compares with every other aged figure in
           // the app instead of inventing a fourth phrasing.
           formatSampleAge(doneAt, now: now),
           // The daemon's own sentence when it has one, its plain status
@@ -470,7 +470,7 @@ List<TransmissionFinishedItem> transmissionFinishedToday(
         // The app's one reading of Transmission's eight states, shared with the
         // queue plate two regions above. It used to be a second switch here
         // that guarded `warning` and `stopped` and fell through to green for
-        // everything else — so a torrent queued to seed, one being re-verified
+        // everything else, so a torrent queued to seed, one being re-verified
         // and one whose status code this app has no name for all drew a green
         // dot beside a detail line saying otherwise, while the same torrent
         // was a neutral chip in Transferring. Green is never a fallthrough.

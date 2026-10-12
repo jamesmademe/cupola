@@ -15,13 +15,13 @@ final musicSearchQueryProvider = StateProvider<String>((ref) => '');
 ///
 /// Returns null when query is empty, otherwise returns lookup results.
 ///
-/// The lookup carries a [CancelToken] cancelled on dispose — see
+/// The lookup carries a [CancelToken] cancelled on dispose. See
 /// `moviesSearchResultsProvider` for why the superseded round has to stop.
 final musicSearchResultsProvider = FutureProvider<List<LidarrArtist>?>((
   ref,
 ) async {
   final query = ref.watch(musicSearchQueryProvider);
-  // `watch`, not `read` — see `moviesSearchResultsProvider`.
+  // `watch`, not `read`. See `moviesSearchResultsProvider`.
   final service = ref.watch(lidarrServiceProvider);
   final cancelToken = CancelToken();
   ref.onDispose(cancelToken.cancel);

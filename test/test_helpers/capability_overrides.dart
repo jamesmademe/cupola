@@ -8,7 +8,7 @@ import 'package:cupola/core/capability/connection_capability.dart';
 /// A screen of Unraid, TrueNAS or NPM mounts gated controls, and each of them
 /// asks `connectionCapabilityProvider` about its connection. Without this the
 /// probe reaches the screen's fake client for a method the fake may not
-/// implement, fails, and folds to `unanswered` — every write on the page dims
+/// implement, fails, and folds to `unanswered`: every write on the page dims
 /// and the test passes or fails for a reason it is not about.
 ///
 /// A connection [grants] does not name answers [CapabilityGrant.unknown]:

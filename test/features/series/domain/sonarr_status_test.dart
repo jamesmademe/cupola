@@ -20,7 +20,7 @@ void main() {
     });
 
     test('a continuing series holding every aired episode is available', () {
-      // `episodeCount` counts aired, monitored episodes — a running show must
+      // `episodeCount` counts aired, monitored episodes; a running show must
       // not be stuck at `partial` forever just because more will air later.
       expect(
         sonarrSeriesAvailability(
@@ -83,7 +83,7 @@ void main() {
     });
 
     test('a missing episode count is unknown, not "Not released"', () {
-      // Read as `0`, a series with no files was "nothing aired yet" — a claim
+      // Read as `0`, a series with no files was "nothing aired yet": a claim
       // about the schedule from a figure Sonarr never sent.
       expect(
         sonarrSeriesAvailability(

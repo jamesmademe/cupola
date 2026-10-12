@@ -17,7 +17,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 ///
 /// Radarr's, Sonarr's and Lidarr's detail screens ran three byte-for-byte
 /// copies of these handlers, differing only in the service name, the subject
-/// noun and which service method to call — so the confirmation wording, the
+/// noun and which service method to call, so the confirmation wording, the
 /// haptics, the `mounted` guards and the busy-flag bookkeeping drifted three
 /// ways every time one of them was touched. They are stated once here.
 ///
@@ -60,7 +60,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
 
   /// Flips the monitored flag, invalidating [invalidate] on success.
   ///
-  /// [subject] is the noun the service tracks — `movie`, `series`, `artist`.
+  /// [subject] is the noun the service tracks: `movie`, `series`, `artist`.
   Future<void> setMonitored({
     required BuildContext context,
     required String serviceName,
@@ -101,8 +101,8 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
   /// transition and its consequence.
   ///
   /// This used to fire straight off a tap in the icon row, which made a
-  /// server-side write with real cost — an *arr can start hunting upgrades for
-  /// the whole title the moment the profile lands — the one action on the page
+  /// server-side write with real cost: an *arr can start hunting upgrades for
+  /// the whole title the moment the profile lands: the one action on the page
   /// with no confirmation and no way back. An Undo would be a lie here: putting
   /// the old profile back does not recall searches that are already queued on
   /// the user's connection, so the recoverable moment is *before* the write.
@@ -174,7 +174,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
     final result = await showDeleteMediaDialog(
       context: context,
       // The dialog builds "Delete <title>?" as its heading, which sits above
-      // the scrollable content in an AlertDialog — so a 200-character release
+      // the scrollable content in an AlertDialog, so a 200-character release
       // name pushes the two checkboxes and both buttons off the screen. Capped
       // here, where the untrusted string enters.
       title: truncateTitle(title),
@@ -213,7 +213,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
   ///
   /// [successMessage] is the whole sentence: the three services search
   /// different scopes ("this movie", "every monitored episode", "every
-  /// monitored album"), so only the shape — `"<Service> is searching <what>"` —
+  /// monitored album"), so only the shape: `"<Service> is searching <what>"`:
   /// is shared, not the words.
   Future<void> triggerSearch({
     required BuildContext context,

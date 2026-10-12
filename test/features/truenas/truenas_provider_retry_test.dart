@@ -20,7 +20,7 @@ import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/virt/truenas_virt_providers.dart';
 
 /// A NAS that went dark: every call fails the way an unreachable host fails,
-/// and every attempt is counted — a retry is an attempt.
+/// and every attempt is counted: a retry is an attempt.
 class _DarkNas extends TrueNasWsClient {
   _DarkNas() : super(baseUrl: 'https://nas.local', apiKey: 'k');
 
@@ -75,7 +75,7 @@ final List<_Source> _sources = [
   ('app', truenasAppProvider('plex')),
 ];
 
-/// The same read with Riverpod's default policy — the harness's own control.
+/// The same read with Riverpod's default policy: the harness's own control.
 final _defaultRetryPools = FutureProvider.autoDispose((ref) async {
   ref.watch(truenasClientProvider);
   return ref.watch(truenasStorageApiProvider).getPools();

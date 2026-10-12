@@ -45,7 +45,7 @@ void main() {
           continue;
         }
 
-        // Exactly one, never both and never neither — otherwise an item is
+        // Exactly one, never both and never neither; otherwise an item is
         // either double-counted or invisible under every chip but `All`.
         expect(underAvailable ^ underMissing, isTrue, reason: '$availability');
       }
@@ -398,7 +398,7 @@ void main() {
             'Available Item' => const MediaStatusInfo(
               availability: MediaAvailability.available,
             ),
-            // Nothing on disk *and* in the queue — the case that used to be
+            // Nothing on disk *and* in the queue: the case that used to be
             // flattened to "Missing".
             _ => const MediaStatusInfo(
               availability: MediaAvailability.missing,
@@ -781,7 +781,7 @@ void main() {
 
       expect(find.byType(ClipOval), findsWidgets);
       // A circle has no corner to hold a dot without covering the face, so the
-      // completeness is in the caption instead — and the caption is what the
+      // completeness is in the caption instead, and the caption is what the
       // screen reader was already given.
       expect(find.byType(StatusBadge), findsNothing);
       expect(find.text('6 albums \u00b7 complete'), findsWidgets);
@@ -816,7 +816,7 @@ void main() {
       tester,
     ) async {
       // The wall used to pin a 96pt tile and then clamp away the spacing it
-      // had computed to absorb the slack, so every row ended in dead space —
+      // had computed to absorb the slack, so every row ended in dead space:
       // 46pt of it at phone width. The boards are `repeat(N, minmax(0, 1fr))`.
       await _pumpBrowseWall(tester, const Size(390, 900));
 
@@ -849,7 +849,7 @@ void main() {
           .reduce((a, b) => a > b ? a : b);
       expect(widest, greaterThan(3));
 
-      // And the column count it chose is one every tile clears the floor at —
+      // And the column count it chose is one every tile clears the floor at:
       // the rule is fewer tiles, never smaller ones.
       for (final rect in rows.values.expand((row) => row)) {
         expect(
@@ -862,7 +862,7 @@ void main() {
 
   group('the browse wall is built as it scrolls', () {
     // The wall used to be one list item per section, each a `Wrap` of every
-    // tile in it — lazy across sections only. Any order but Title A–Z is ONE
+    // tile in it, lazy across sections only. Any order but Title A–Z is ONE
     // section, so a 2 000-title library built 2 000 tiles, and started 2 000
     // poster loads, the moment the wall appeared.
     testWidgets('a 2 000-title run builds a screenful, not the library', (

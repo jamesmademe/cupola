@@ -56,7 +56,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    // A failing indexer is the canonical amber fault of this app — Prowlarr
+    // A failing indexer is the canonical amber fault of this app: Prowlarr
     // answered and told us which of its indexers did not. Red would claim
     // Prowlarr itself is unreachable.
     final statusColor = failing

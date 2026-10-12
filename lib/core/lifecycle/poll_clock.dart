@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 ///
 /// A gated poller is `autoDispose`: leaving its page destroys it, and with it any
 /// memory of when it last ran. Without this, coming back would either refetch
-/// instantly — wasteful on a two-second glance at another tab — or wait out a
+/// instantly: wasteful on a two-second glance at another tab, or wait out a
 /// whole interval, which is stale after a two-minute absence. The clock is what
 /// lets a poller tell those two cases apart.
 ///
@@ -30,7 +30,7 @@ class PollClock {
   ///
   /// A poller that has never run gets a whole interval, not zero. The page that
   /// starts it has just loaded the data it displays, so an immediate first tick
-  /// would be a second request for what is already on screen — waste of exactly
+  /// would be a second request for what is already on screen: waste of exactly
   /// the kind the gate exists to prevent, and on the most expensive frame of the
   /// page's life. Catching up is for a *return*, where the data on screen is
   /// genuinely old.
@@ -41,7 +41,7 @@ class PollClock {
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
-  /// Whether [id] has ever ticked — the signal a stale-on-return check reads.
+  /// Whether [id] has ever ticked: the signal a stale-on-return check reads.
   bool hasRun(String id) => _last.containsKey(id);
 
   @visibleForTesting

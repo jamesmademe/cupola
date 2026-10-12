@@ -129,7 +129,7 @@ class ManualImportFrame extends StatelessWidget {
 /// Sentence case, and the same string on Locate, Review and Track: the flow has
 /// one name, and the station bar underneath says which part of it you are in.
 /// Three separate Title Case titles made a single task read as three
-/// destinations — in the app bar, and in a browser's back list.
+/// destinations: in the app bar, and in a browser's back list.
 const manualImportTitle = 'Manual import';
 
 /// The names of the three import stations, in order.
@@ -144,8 +144,8 @@ const manualImportStations = ['Locate', 'Review', 'Track'];
 ///
 /// One pill per station: the active one takes the service accent as a soft
 /// tint (the same selected-affordance vocabulary as the nav pill), finished
-/// ones get a small check, upcoming ones recede. Spoken as a single node —
-/// "Step 2 of 3: Review" — because three pills and two connectors are one fact.
+/// ones get a small check, upcoming ones recede. Spoken as a single node:
+/// "Step 2 of 3: Review", because three pills and two connectors are one fact.
 class ImportStationBar extends StatelessWidget {
   final ServiceKey service;
   final List<String> stations;
@@ -176,7 +176,7 @@ class ImportStationBar extends StatelessWidget {
           'Step ${activeIndex + 1} of ${stations.length}: '
           '${stations[activeIndex]}',
       // Compact chrome that must stay one line, so it follows the reading size
-      // only to 1.3× — the same clamp DESIGN.md pins on the floating nav bar,
+      // only to 1.3×, the same clamp DESIGN.md pins on the floating nav bar,
       // and for the same reason: three pills and two connectors cannot reflow.
       child: MediaQuery.withClampedTextScaling(
         maxScaleFactor: TextScaleMetrics.singleLineChromeMaxScaleFactor,
@@ -229,7 +229,7 @@ class ImportStationBar extends StatelessWidget {
                       children: [
                         // A check once the station is behind you, its number
                         // until then. Without the number the bar said where you
-                        // were but not how far in — three equal words, and no
+                        // were but not how far in: three equal words, and no
                         // way to tell "Review" the second of three from
                         // "Review" the last thing left to do.
                         if (index < activeIndex) ...[
@@ -421,7 +421,7 @@ class ImportPrimaryButton extends StatelessWidget {
 /// commits, and a second filled button next to it would make leaving look like
 /// a decision of the same weight. The app-bar chevron does the same job, but it
 /// is at the far end of a page whose only other control is pinned to the
-/// bottom — on a phone that is the whole screen away from the thumb.
+/// bottom: on a phone that is the whole screen away from the thumb.
 class ImportSecondaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -451,8 +451,8 @@ class ImportSecondaryButton extends StatelessWidget {
 
 /// A dim line above a station's primary action.
 ///
-/// For the sentence that would change the decision the button is about to make
-/// — never for a status, which belongs on the row it describes.
+/// For the sentence that would change the decision the button is about to make,
+/// never for a status, which belongs on the row it describes.
 class ImportFooterNote extends StatelessWidget {
   final String text;
   final IconData icon;
@@ -496,14 +496,14 @@ class ImportFooterNote extends StatelessWidget {
 /// What the import button is about to spend, in words, above the button.
 ///
 /// `3 of 5 selected · 1 re-import · 1 needs an identity · 39.9 GB`. The button
-/// itself can only carry the count; this line carries the shape of the scan —
+/// itself can only carry the count; this line carries the shape of the scan:
 /// how much of it is ticked, how much of it is a replacement rather than a new
 /// file, how much of it is still waiting for an identity, and how many bytes
 /// are about to move on the user's own disk.
 ///
 /// The denominator is the files this service could take: ready, unmatched, and
 /// the ones it already holds. The unimportable remainder of a real downloads
-/// folder — artwork, playlists, NFOs, dozens of them — is deliberately outside
+/// folder (artwork, playlists, NFOs, dozens of them) is deliberately outside
 /// it, because a line reading "3 of 61 selected" describes a problem the user
 /// does not have.
 ///
@@ -534,7 +534,7 @@ String manualImportSelectionSummary({
 /// Pure so the sentence can be asserted without a dialog. It names how the
 /// service will take the files ([mode]), how many of them replace a file the
 /// library already has ([reimports]), and that the service cannot take it
-/// back — Sonarr and Radarr have no undo for an import, and a Move has already
+/// back: Sonarr and Radarr have no undo for an import, and a Move has already
 /// relocated the source by the time anything could be undone.
 String manualImportConfirmMessage({
   required ServiceKey service,
@@ -601,7 +601,7 @@ class ManualImportReviewFooter extends ConsumerWidget {
   /// Ticked files the current filter is keeping off screen.
   ///
   /// The button spends the whole selection, and the scan preselects every ready
-  /// file — so narrowing to one series and clearing it leaves a button that
+  /// file, so narrowing to one series and clearing it leaves a button that
   /// imports precisely what the user is not looking at. The count stays whole
   /// (that is what will be sent); the line above it says how much of it is out
   /// of sight.
@@ -763,7 +763,7 @@ class ManualImportReviewFooter extends ConsumerWidget {
   }
 }
 
-/// Auto / Move / Copy — how the service should take the files.
+/// Auto / Move / Copy: how the service should take the files.
 class _ImportModeMenu extends ConsumerWidget {
   final ServiceKey service;
 

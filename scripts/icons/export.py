@@ -2,7 +2,7 @@
 """Render the icon masters into every platform target, in place.
 
 Driven by `scripts/generate_icons.sh --write`; not meant to be run bare. All
-geometry and colour live in `masters.py` — this file only decides which master
+geometry and colour live in `masters.py`; this file only decides which master
 goes where, at what size, and with which alpha policy.
 
 Appearance mapping
@@ -19,7 +19,7 @@ Apple switches through the Icon Composer bundle's own light and dark layer
 groups, and neither platform has an `.appiconset` any more: actool reads none once
 the target's app icon is an Icon Composer bundle, so both were dead weight that
 read as live. What each platform falls back to on a system too old to recompose a
-`.icon` differs. macOS reads `cupola_icon_legacy.icns`, which this file writes —
+`.icon` differs. macOS reads `cupola_icon_legacy.icns`, which this file writes:
 see `write_icns`. iOS reads two PNGs actool derives from the `.icon` itself,
 naming them in the Info.plist; nothing here can add to that set, so iOS keeps a
 thinner fallback than macOS by Apple's choice rather than ours.
@@ -82,7 +82,7 @@ APPLE_LAYERS = {
 # Transparency is load-bearing only where something else composites the asset:
 # Apple's layer groups, Android's adaptive foreground and themed icon, and the
 # in-app mark that sits over the app's own surface. Everywhere else the alpha
-# channel is dead weight — and on Apple's 1024 marketing slot it is a submission
+# channel is dead weight, and on Apple's 1024 marketing slot it is a submission
 # blocker.
 ALPHA_KEEPERS = (
     "cupola_icon.icon/Assets/",
@@ -170,7 +170,7 @@ class Exporter:
 
         macOS 26 renders `cupola_icon.icon` out of the compiled asset catalogue.
         Nothing older can read that asset, so it falls back to the `.icns` named by
-        CFBundleIconFile — and the one actool derives from a `.icon` carries four
+        CFBundleIconFile, and the one actool derives from a `.icon` carries four
         elements only (16, 16@2x, 128, 128@2x), leaving a Dock on macOS 15 to
         upscale a 256px image into a 512px slot. This is the full set, and the
         target's `Complete the legacy .icns` build phase drops it over actool's.
@@ -178,7 +178,7 @@ class Exporter:
         An `.appiconset` cannot do this job: actool ignores one entirely once the
         target's app icon is an Icon Composer bundle.
 
-        Alpha is load-bearing here — the shape's corners are the transparency.
+        Alpha is load-bearing here: the shape's corners are the transparency.
         """
         payload = b""
         for code, size in MACOS_ICNS.items():
@@ -274,7 +274,7 @@ class Exporter:
         self.write_ico("windows/runner/resources/app_icon.ico", (16, 32, 48, 64, 128, 256))
 
     def in_app(self):
-        """The mark drawn inside ServiceRing — transparent, over the app surface."""
+        """The mark drawn inside ServiceRing: transparent, over the app surface."""
         self.emit("mark", 1024, "assets/brand/cupola_mark.png")
 
 

@@ -12,8 +12,8 @@
 /// The precision is deliberately thrown away. A dashboard polls on a timer, so
 /// a live-to-the-second age is a number that changes under the reader's eye and
 /// forces a repaint of the whole band every second for information nobody acts
-/// on. What the operator needs from an age is one of three judgements — *this
-/// is current*, *this is minutes old*, *this is stale enough to distrust* — and
+/// on. What the operator needs from an age is one of three judgements: *this
+/// is current*, *this is minutes old*, *this is stale enough to distrust*, and
 /// three buckets carry all three. Under a minute the answer is "just now",
 /// because the difference between four seconds and fifty is not a difference
 /// anyone makes a decision on.
@@ -29,8 +29,8 @@ import 'package:cupola/core/utils/unit_space.dart';
 /// `N h ago`.
 ///
 /// [now] is injectable so a test can state an age instead of sleeping for one.
-/// A timestamp in the future — a host whose clock runs ahead, which self-hosted
-/// stacks produce constantly — clamps to `just now` rather than printing a
+/// A timestamp in the future: a host whose clock runs ahead, which self-hosted
+/// stacks produce constantly; clamps to `just now` rather than printing a
 /// negative minute count.
 String formatSampleAge(DateTime sampledAt, {DateTime? now}) {
   return formatDurationAge((now ?? DateTime.now()).difference(sampledAt));

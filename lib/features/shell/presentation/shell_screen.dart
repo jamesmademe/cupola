@@ -79,7 +79,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   ///
   /// Held by identity rather than by value: [ActiveInstancesNotifier] hands out
   /// a fresh `Map` on every `select`, and never otherwise, so `identical` is
-  /// exactly the question "did somebody move a lens since the last frame" — and
+  /// exactly the question "did somebody move a lens since the last frame", and
   /// it costs no comparison of seventeen entries to ask it.
   Map<ServiceKey, String>? _lastLenses;
   Timer? _demoTimer;
@@ -107,7 +107,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     );
   }
 
-  /// Back, while the Portal is up, means "put the page back" — never "leave
+  /// Back, while the Portal is up, means "put the page back", never "leave
   /// the page".
   ///
   /// A listener on the router's back dispatcher rather than a `PopScope`, and
@@ -135,7 +135,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   ///
   /// Dispatched by hand, in the navigators' own currency, because a `PopScope`
   /// on the shell's route would report *its* answer on the way back down too
-  /// — "nothing to pop" — over a branch that still has a room pushed, and back
+  /// ("nothing to pop") over a branch that still has a room pushed, and back
   /// would then leave the app from the room. On close this restores exactly
   /// what the navigators would say. A no-op on every other platform.
   void _reportBackOwnership() {
@@ -148,7 +148,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   }
 
   /// Whether this window draws the Portal: the phone layout, bottom bar and
-  /// all — the branch [build] reaches after the desktop shell and the rail.
+  /// all, the branch [build] reaches after the desktop shell and the rail.
   ///
   /// Both halves, because each alone is wrong somewhere: a desktop window
   /// between the compact artboard (720) and the rail (840) is narrower than
@@ -198,13 +198,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   @override
   Widget build(BuildContext context) {
     // Straight off the shell, which is the authority: with four stacks the
-    // location and the visible branch can disagree — an imperative push from
+    // location and the visible branch can disagree: an imperative push from
     // another tab lands on this branch while the path reads like somebody
-    // else's — and it is the branch that the bar must agree with.
+    // else's, and it is the branch that the bar must agree with.
     //
     // The branch is a [NavTab]; the bar shows the tabs of the person the shell
     // is drawn for ([NavTab.barFor]), so the bar's selection is where that
-    // tab sits in it — none, in Settings, which has no place in the bar.
+    // tab sits in it: none, in Settings, which has no place in the bar.
     final currentTab = NavTab.values[widget.navigationShell.currentIndex];
     final audience = ref.watch(shellAudienceProvider);
     final barTabs = NavTab.barFor(audience);
@@ -232,7 +232,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // that decides the Portal closes because its content moved, and the badge
     // sheet can move a lens too.
     //
-    // The path comparison stays on the FULL path — never weaken it to the
+    // The path comparison stays on the FULL path; never weaken it to the
     // service's routeParam. A hook keyed on the service alone would hold the
     // Portal open across `/dashboard/radarr` → `/dashboard/radarr/movie/12`.
     //
@@ -241,7 +241,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // `PortalDismissScope`, because a tap that navigates to the path it is
     // already on without moving the lens moves neither of the two inputs below
     // and is invisible from here. Do not answer that case by widening these
-    // conditions — the question this hook asks ("has the content under the card
+    // conditions. The question this hook asks ("has the content under the card
     // moved, so is the snapshot dead?") is a different one, and it is right.
     final location = GoRouterState.of(context).uri.path;
     final lenses = ref.watch(activeInstancesProvider);
@@ -278,7 +278,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // Built once, above the layout branch, and handed to whichever navigation
     // this window is wide enough for. The rail used to build its own bare
     // `NavigationRailDestination`s, which is how it ended up as the one surface
-    // where a finished search never showed a badge — the channel that has to
+    // where a finished search never showed a badge: the channel that has to
     // keep working when notifications are denied, off, or missed.
     final searchesWaiting = ref.watch(unseenReleaseSearchCountProvider);
     final destinations = barTabs
@@ -289,14 +289,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
     // Outside the branch, so it wraps *both* layouts and survives a resize.
     // Inside the phone branch it was two bugs at once: on macOS and tablet
-    // nothing ever observed the app lifecycle — `appInForegroundProvider` stayed
+    // nothing ever observed the app lifecycle: `appInForegroundProvider` stayed
     // permanently true, `noteBackgrounded()` never fired (so a search the OS
     // killed was blamed on the network instead of on leaving the app) and
-    // `refreshWindows()` never ran on resume — and dragging a window across
+    // `refreshWindows()` never ran on resume, and dragging a window across
     // 840pt mounted or unmounted the observer mid-session.
     // The window shell, whole, above the touch branches. It is not a third
     // layout of the same shell: it has a chrome strip, a deck and an inspector
-    // that no touch build has, and it reaches the branch navigator unmodified —
+    // that no touch build has, and it reaches the branch navigator unmodified;
     // so every screen inside it is still the same screen the phone shows.
     if (AppBreakpoints.isDesktopShell(context)) {
       return ReleaseSearchLifecycle(
@@ -324,8 +324,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                   // side the camera housing and the rounded corner sit on the
                   // leading edge, and the rail was laid out underneath them.
                   // The content keeps its own insets. Only tablets reach this
-                  // branch on touch — the phone is portrait-only and never
-                  // 840pt wide — but tablets still rotate, so the inset is
+                  // branch on touch: the phone is portrait-only and never
+                  // 840pt wide, but tablets still rotate, so the inset is
                   // real.
                   SafeArea(
                     right: false,
@@ -380,7 +380,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                       // The Portal is a cover the route system cannot see: it
                       // freezes the page's pixels while leaving its timers
                       // running. Scoping the stage tells whatever polls under
-                      // there to stop — see `PageCoverageScope`.
+                      // there to stop; see `PageCoverageScope`.
                       PageCoverageScope(
                         covering: _portal.covering,
                         child: Stack(
@@ -435,7 +435,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     HapticFeedback.selectionClick();
 
     // A tab tap with the Portal open always closes it; landing on the tab is
-    // the rest of the answer. A re-tap on the current tab then stops there —
+    // the rest of the answer. A re-tap on the current tab then stops there:
     // "take me back where I was" must not also fire a refresh.
     final portalWasOpen = _portal.isOpenOrEngaged;
     if (portalWasOpen) _portal.closeFromUi();
@@ -465,8 +465,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       final section = _refreshSectionFor(tab);
       if (section != null) {
         ref.triggerNavigationRefresh(section);
-        // A re-tap refresh changes nothing on screen — no spinner, no route
-        // change, no focus move — so for a screen-reader user it is otherwise
+        // A re-tap refresh changes nothing on screen: no spinner, no route
+        // change, no focus move, so for a screen-reader user it is otherwise
         // indistinguishable from a no-op. Start only: the shell never learns
         // when the invalidated providers settle, so there is no completion to
         // announce.
@@ -517,7 +517,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   /// The screen reader's way into the Portal: an action on the Stack tab.
   ///
   /// A reader cannot perform the drag, so the bar offers the same way in as a
-  /// custom action — *Actions available: Open the Portal*. On the Stack tab
+  /// custom action: *Actions available: Open the Portal*. On the Stack tab
   /// because that is where the services are: every room is inside it, so it is
   /// also the tab that is selected whenever a service is on screen. Offered in
   /// every mode the phone bar is in, not only under a screen reader: Voice
@@ -538,7 +538,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
   FloatingNavDestination _destinationFor(NavTab tab, int searchesWaiting) {
     // Only Activity carries a count, and only for finished searches nobody has
-    // opened — the channel that has to keep working when notifications are
+    // opened: the channel that has to keep working when notifications are
     // denied, off, or missed.
     final badge = tab == NavTab.activity ? searchesWaiting : 0;
     return FloatingNavDestination(
@@ -557,7 +557,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 }
 
 /// Escape while the Portal is up. Disabled otherwise, so the key goes on to
-/// clear a field or close a dialog exactly as it did before — a disabled action
+/// clear a field or close a dialog exactly as it did before: a disabled action
 /// is skipped by the dispatcher instead of swallowing the key.
 ///
 /// Reads the controller at key time rather than a flag captured at build: the

@@ -399,7 +399,7 @@ void main() {
       final requests = await service.getRequests();
 
       // The second page answered nothing, but the first page's requests are
-      // still reported — truncation beats blanking the whole list.
+      // still reported: truncation beats blanking the whole list.
       expect(requests, hasLength(50));
       // And the list says so. The total is still the server's 60, not the 50
       // that arrived: a count taken from the length was short by the lost
@@ -453,7 +453,7 @@ void main() {
           'posterPath': '/hydrated.jpg',
         },
         // Second refresh: same request page again, but the details call below
-        // is never made — the response queue would run dry and the fake would
+        // is never made: the response queue would run dry and the fake would
         // fall back to getResponseData, which is null.
         {
           'results': [
@@ -524,8 +524,8 @@ void main() {
 
     // Deliberately the opposite of what this asserted before. Swallowing the
     // failure into `[]` made "this Seerr is unreachable" and "this Seerr has no
-    // requests" the same answer, and /activity now shows several Seerrs at once
-    // — it has to be able to say which one did not answer, and to leave the
+    // requests" the same answer, and /activity now shows several Seerrs at once.
+    // It has to be able to say which one did not answer, and to leave the
     // others' lists alone while it does.
     test('throws when the first page does not come back', () async {
       client.getException = Exception('offline');

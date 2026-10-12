@@ -105,7 +105,7 @@ void main() {
     // build rather than a screenshot somebody happens to look at. Backlog is
     // the arm this codebase got wrong for a year: `missing` was `error`, which
     // meant the resting state of every \*arr was painted in the alarm colour.
-    test('backlog is neutral — missing is not an emergency', () {
+    test('backlog is neutral: missing is not an emergency', () {
       for (final availability in [
         MediaAvailability.missing,
         MediaAvailability.upgradable,
@@ -376,7 +376,7 @@ void main() {
 
     test('spells out a warning carried only by the tone colour', () {
       // hasWarning replaced a "… (Warning)" text suffix, so since then nothing
-      // writes it down — the amber tone is the whole signal.
+      // writes it down; the amber tone is the whole signal.
       const info = MediaStatusInfo(
         availability: MediaAvailability.available,
         hasWarning: true,

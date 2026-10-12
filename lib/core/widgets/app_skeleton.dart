@@ -37,7 +37,7 @@ class AppSkeleton {
   /// The default tracks the real row it stands in for: an activity tile is an
   /// icon well beside a title, a subtitle, a status badge and sometimes a
   /// progress bar, which lands near 104pt with its 8pt gap. At the previous 72pt
-  /// the content visibly jumped on settle — the one thing a skeleton exists to
+  /// the content visibly jumped on settle: the one thing a skeleton exists to
   /// prevent.
   static Widget listRows({int count = 5, double rowHeight = 104}) {
     return ShimmerList(itemCount: count, itemHeight: rowHeight);

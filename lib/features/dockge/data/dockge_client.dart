@@ -56,7 +56,7 @@ class DockgeTerminalOutput {
 
 /// Socket.IO client for a single Dockge instance.
 ///
-/// Dockge exposes no REST API — everything goes over Socket.IO (v4). Commands
+/// Dockge exposes no REST API: everything goes over Socket.IO (v4). Commands
 /// are wrapped in an `agent` envelope (`emit("agent", endpoint, event, ...)`)
 /// so the same protocol works for both the local instance and remote agents;
 /// this client targets a single direct instance, so [_endpoint] is always the
@@ -190,8 +190,8 @@ class DockgeClient {
   }) async {
     // Bound to the endpoint *Cupola* resolved, not to the URI socket_io hands
     // back. That URI is re-parsed from a string socket_io built, and its
-    // `Transport._port()` omits the port whenever it equals the scheme default
-    // — after which `Uri.port` is **0**, because Dart maps a default port for
+    // `Transport._port()` omits the port whenever it equals the scheme default,
+    // after which `Uri.port` is **0**, because Dart maps a default port for
     // `http`/`https` but not for `ws`/`wss`. The handshake still happens on
     // 443, so `pinnedCertificateIsTrusted` compared 443 against 0 and refused
     // a fingerprint that matched exactly: every Dockge behind a reverse proxy
@@ -281,7 +281,7 @@ class DockgeClient {
       if (!_hasCredentials) {
         // Auth-disabled instances answer `autoLogin` almost immediately. If that
         // has not arrived shortly after connect, the server wants credentials we
-        // do not have — report that instead of letting the connection time out,
+        // do not have. Report that instead of letting the connection time out,
         // which surfaced as "check the address" and sent the user looking for a
         // network fault rather than filling in the login fields.
         Timer(_autoLoginGrace, () {
@@ -347,7 +347,7 @@ class DockgeClient {
     });
     socket.on('stackStatusList', _onStackStatusList);
     // Dockge pushes these at the top level rather than inside the `agent`
-    // envelope — the envelope is for commands *to* an agent, and this is the
+    // envelope: the envelope is for commands *to* an agent, and this is the
     // hub describing itself. Both shapes are tolerated anyway (see
     // `_onAgentEvent`), because an instance without the multi-agent feature
     // sends neither and must still work.
@@ -385,7 +385,7 @@ class DockgeClient {
     });
 
     // Only surface a connection error once reconnection is definitively
-    // exhausted — intermediate retries must not error out the stream, or the
+    // exhausted: intermediate retries must not error out the stream, or the
     // UI would flap between error and data on every transient drop.
     socket.onReconnectFailed((_) {
       _authed = false;
@@ -654,14 +654,14 @@ class DockgeClient {
   /// Refuses to write an empty compose file over a stack that already exists.
   ///
   /// Dockge takes the YAML it is handed as the new truth for the stack, so a
-  /// blank string is not a no-op — it is `docker-compose.yaml` replaced by
+  /// blank string is not a no-op: it is `docker-compose.yaml` replaced by
   /// nothing, and for `deployStack` it is that followed by a `compose up` on the
   /// result. The editor screen produced exactly that whenever it rendered before
   /// its detail fetch resolved, so the guard belongs here as well: this is the
   /// call that destroys the file, and any future caller inherits the protection
   /// rather than having to remember it.
   ///
-  /// `isAdd` is the exemption, not an oversight — creating a stack from a blank
+  /// `isAdd` is the exemption, not an oversight: creating a stack from a blank
   /// editor overwrites nothing.
   void _refuseEmptyCompose(
     String composeYAML, {
@@ -700,7 +700,7 @@ class DockgeClient {
   ///
   /// A genuine credential rejection throws a [DockgeException] carrying
   /// `unauthorized`, so a `false` here means only that the socket dropped
-  /// between authenticating and returning — a connection problem, not a wrong
+  /// between authenticating and returning: a connection problem, not a wrong
   /// password.
   Future<bool> ping() async {
     await ensureConnected();

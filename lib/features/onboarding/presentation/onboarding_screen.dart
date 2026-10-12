@@ -28,8 +28,8 @@ import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 /// First run, in four beats: the claim, the choice, one service at a time, and
 /// what it actually achieved.
 ///
-/// The flow's length is the user's — two fixed beats plus one page per chosen
-/// service plus the close — which is why progress is the ring closing rather
+/// The flow's length is the user's: two fixed beats plus one page per chosen
+/// service plus the close, which is why progress is the ring closing rather
 /// than a fixed bar of segments.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({
@@ -38,7 +38,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
     this.localNetworkProbe = probeLocalNetworkAccess,
   });
 
-  /// Injectable so a widget test can stay off a real socket — see
+  /// Injectable so a widget test can stay off a real socket: see
   /// [CertificateProber].
   final CertificateProber certificateProber;
 
@@ -112,19 +112,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   final Map<String, ({ServiceKey from, CloudflareServiceToken token})>
   _passedTokens = {};
 
-  /// The verbatim sentence a failure carried, for the few that carry one — see
+  /// The verbatim sentence a failure carried, for the few that carry one: see
   /// `ServiceDiagnosis.detail`. Kept beside [_reason] rather than folded into it
   /// so the walk renders the same words the settings screen does.
   final Map<ServiceKey, String?> _failureDetail = {};
 
-  /// The version each service named while its test ran — see
+  /// The version each service named while its test ran: see
   /// `ServiceDiagnosis.serverVersion`. Beside [_failureDetail] for the same
   /// reason: the walk prints what the settings screen prints.
   final Map<ServiceKey, String?> _serverVersion = {};
   final Map<ServiceKey, bool> _verifying = {};
 
   /// Self-signed fingerprints the user chose to trust, persisted on save
-  /// (ADR-6) — one per service's *origin*, so two services typed at the same
+  /// (ADR-6): one per service's *origin*, so two services typed at the same
   /// host:port share the value a save later stores under one key.
   ///
   /// Never read directly: go through [_pinFor], which is what ties an entry to
@@ -145,7 +145,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// A certificate probe the last test ran into, waiting for the user to
   /// trust it inside the step rather than in a dialog that lands on top of
   /// the failure. Carries whether this origin already had a *different* pin
-  /// (ADR-6) — that is a certificate change, not a first trust, and the card
+  /// (ADR-6): that is a certificate change, not a first trust, and the card
   /// escalates rather than offering it as routine.
   final Map<ServiceKey, UntrustedCertificateProbe> _pendingCert = {};
 
@@ -162,7 +162,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   void initState() {
     super.initState();
     // Resume, rather than restart. Saving happens as the walk proceeds, so an
-    // interrupted setup leaves settings on disk that this screen must show —
+    // interrupted setup leaves settings on disk that this screen must show:
     // otherwise finishing a second time writes empty fields over a real
     // configuration.
     final settings = ref.read(currentSettingsProvider);
@@ -227,7 +227,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── The walk ──────────────────────────────────────────────────────────────
 
-  /// Chosen services in registry order — the same order the ring draws.
+  /// Chosen services in registry order, the same order the ring draws.
   List<ServiceKey> get _walk =>
       ServiceRing.order.where(_picked.contains).toList(growable: false);
 
@@ -265,7 +265,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   ///
   /// The gate on [_certFingerprint]: a pin only applies while the address still
   /// resolves to the origin the user accepted the certificate for. Retyping the
-  /// old address brings its pin back, which is right — the trust decision was
+  /// old address brings its pin back, which is right: the trust decision was
   /// about that host and still holds.
   String? _pinFor(ServiceKey k) {
     final pin = _certFingerprint[k];
@@ -288,7 +288,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _status[k] == null || _verifiedAgainst[k] != _fingerprintOf(k);
 
   /// Every service in this walk whose typed address shares [service]'s TLS
-  /// origin — the set a trust decision on it actually covers, computed from
+  /// origin: the set a trust decision on it actually covers, computed from
   /// the in-progress form fields rather than saved settings, since several
   /// services can be typed in the same walk before anything is saved.
   List<ServiceKey> _servicesSharingOrigin(ServiceKey service) {
@@ -306,8 +306,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // The address is never filled in on arrival. The walk used to carry the
   // previous service's host over on this one's default port, which assumed one
-  // box answering on bare ports. Behind a reverse proxy — one subdomain per
-  // service, TLS on 443 — that guess was wrong every time and had to be
+  // box answering on bare ports. Behind a reverse proxy, one subdomain per
+  // service on TLS 443: that guess was wrong every time and had to be
   // deleted before typing the real one. The port chip below ([_suggestPort])
   // still offers the same guess, as a tap the user chooses to make.
 
@@ -419,7 +419,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     if (_accessForm[service]!.currentState?.validate() == false) return;
     setState(() => _liftCredentials(service));
     // The test's outcome is a sentence under the form, and the button rolls to
-    // `Next service` when it succeeds — both of them behind the keyboard while
+    // `Next service` when it succeeds, both of them behind the keyboard while
     // it is up. Dismissed here rather than in each caller, so the button, the
     // return key and the retest after trusting a certificate all agree.
     FocusManager.instance.primaryFocus?.unfocus();
@@ -442,7 +442,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // is what makes the local-network gate an onboarding problem before it is a
     // settings one: on iOS the very act of dialling a LAN address raises the
     // permission alert, and the connection racing it fails. Going through the
-    // gate means the alert is *waited on* rather than raced — allow it and the
+    // gate means the alert is *waited on* rather than raced: allow it and the
     // test simply runs again, deny it and the step says so instead of blaming
     // the address the user just typed.
     final access = _accessCtrl[service]!.access;
@@ -470,7 +470,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // A TLS failure resolves *in the step*: probe for the certificate and let
     // the card offer to trust it. Probing after the server rejected a key is
     // a wasted round trip that can only return null. Every service can reach
-    // this since ADR-6 — there is no pinning-capability gate left to check.
+    // this since ADR-6: there is no pinning-capability gate left to check.
     UntrustedCertificateProbe? certProbe;
     if (result.status == ServiceConnectionStatus.disconnected &&
         certProbeWorthwhile(result.reason)) {
@@ -538,7 +538,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     if (probe == null) return;
     // Recorded against the address the certificate was actually presented by,
     // so a later edit of that address drops the pin rather than carrying it to
-    // a host that never presented it — see [_certOriginOf].
+    // a host that never presented it: see [_certOriginOf].
     final origin = UrlUtils.certOrigin(_urlCtrl[service]!.text);
     if (origin == null) return;
     setState(() {
@@ -567,7 +567,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// Additive on purpose: a service the user skipped, left half-filled, or
   /// unpicked is not written at all. It used to be written *blank*, which
   /// deleted the saved address and the secure credential of a service that was
-  /// working — reachable from the settings screen's "Revisit onboarding", which
+  /// working, reachable from the settings screen's "Revisit onboarding", which
   /// promises in as many words that nothing about your services is changed or
   /// removed, and from "Skip for now" on the very first beat. Removing a
   /// connection is a deliberate, confirmed action and lives in the settings
@@ -616,7 +616,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     }
 
     // Trust-map bookkeeping runs as its own pass, once every service's final
-    // URL is known — an abandoned address's pin is only forgotten when no
+    // URL is known: an abandoned address's pin is only forgotten when no
     // configured service still reaches its origin, and that can only be
     // answered after the loop above has settled every URL, including services
     // later than `k` in registry order.
@@ -650,7 +650,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     }
   }
 
-  /// Marks onboarding complete — triggers the router redirect to /services.
+  /// Marks onboarding complete; the router redirect to /services follows from it.
   Future<void> _finish() async {
     HapticFeedback.mediumImpact();
     try {
@@ -681,14 +681,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // therefore rode along: the close arrived with half of it covered by keys
     // belonging to a form that was no longer on screen, and anything typed went
     // into that invisible field. Unfocusing here rather than in each caller is
-    // the point — every way out of a step, forward, back, skip or fix, comes
+    // the point: every way out of a step, forward, back, skip or fix, comes
     // through this method.
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _page = page);
     // Reduce Motion removes the slide rather than shortening it, the same way
     // the ring's entrance is removed: the beat is simply the next one. This is
-    // the flow's most frequent movement — every Continue, Skip, Back and Next
-    // goes through here — so leaving it running was most of what "the whole
+    // the flow's most frequent movement: every Continue, Skip, Back and Next
+    // goes through here, so leaving it running was most of what "the whole
     // flow must be completable without one tween" was still failing on.
     if (MediaQuery.disableAnimationsOf(context)) {
       _pageController.jumpToPage(page);
@@ -770,11 +770,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   // ── Build ─────────────────────────────────────────────────────────────────
 
   /// The ring's size in its **full** register, given the height the column
-  /// actually has — or zero, which is the signal to try the compact one.
+  /// actually has (zero is the signal to try the compact one).
   ///
   /// Two preferred sizes, not four: the door and the close are about the whole
   /// stack, so the instrument is the subject there; picking and configuring are
-  /// about one service at a time, so it steps down to leave the form room — but
+  /// about one service at a time, so it steps down to leave the form room; but
   /// it is the *same* ring resizing, never a second one.
   ///
   /// [available] is what keeps it honest. The ring takes what is left after the
@@ -796,7 +796,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final spare = available - reserved;
 
     // Below its own floor a ring is a smudge rather than an instrument. This is
-    // not the ring leaving, though — it is the point where the compact register
+    // not the ring leaving, though: it is the point where the compact register
     // takes over.
     if (spare < _ringFloor) return 0;
     return spare < wanted ? spare : wanted;
@@ -806,7 +806,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// beside the step's eyebrow.
   ///
   /// The full register asks for whatever the beat leaves over, and with a
-  /// software keyboard up that is nothing — a 6.1" phone keeps about 420pt of
+  /// software keyboard up that is nothing: a 6.1" phone keeps about 420pt of
   /// column and the beat's own content wants more than that on its own, so the
   /// ring came out at zero on every phone rather than merely smaller. The
   /// compact register does not compete: it *replaces* the subject line's row
@@ -814,8 +814,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// screen rather than from its leftovers, and the form still ends up with
   /// roughly 100pt more than it had.
   ///
-  /// Returns zero only in the genuine squeeze — an accessibility reading size on
-  /// a small phone — where even a medallion would eat the one field the user is
+  /// Returns zero only in the genuine squeeze: an accessibility reading size on
+  /// a small phone, where even a medallion would eat the one field the user is
   /// typing into. The caller falls back to the full register's answer there,
   /// which is the ring standing down and the subject line staying whole.
   double _compactRingDiameter(BuildContext context, double available) {
@@ -825,7 +825,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
     // One labelled field with its help line, the pinned actions, and the beat's
     // own gutters. Far less than [_contentFloor] because the fields below the
-    // focused one are allowed to be scrolled to — the return key walks the form
+    // focused one are allowed to be scrolled to: the return key walks the form
     // one field at a time, so the header only has to leave room for the field
     // under the cursor.
     final room = available - _compactContentFloor * scale.clamp(1.0, 2.0);
@@ -838,8 +838,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   /// Height the beat's own content wants before the ring is served: subject
-  /// line, two fields with labels, and the action block. Deliberately generous
-  /// — erring here costs a smaller ring, while erring the other way costs a
+  /// line, two fields with labels, and the action block. Deliberately generous.
+  /// Erring here costs a smaller ring, while erring the other way costs a
   /// clipped field, which is the defect this whole arrangement exists to fix.
   static const double _contentFloor = 450;
 
@@ -861,7 +861,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// The ring's nodes keep an absolute radius while the mark scales with the
   /// diameter, so shrinking the ring closes the gap between the two: 49pt of air
   /// at 190, 32pt at 132, 24pt at the floor. Giving the mark proportionally less
-  /// buys that air back — at 132 the gap returns to ~38pt — and the nodes stay
+  /// buys that air back (at 132 the gap returns to ~38pt) and the nodes stay
   /// the thing the eye reads first, which is the whole point of a dial.
   static const double _compactMarkFraction = 0.34;
 
@@ -885,7 +885,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // The room the walk happens in: lit by the neutral lamp throughout. Null on
     // the door, the pick and the close, where `AmbientBackground`'s own default
     // is the lamp; per service in between, where the service's accent is the
-    // lamp too — so the light holds steady while the page and the ring move,
+    // lamp too, so the light holds steady while the page and the ring move,
     // and the service being set up is named by its mark and its form, never by
     // a colour.
     //
@@ -936,7 +936,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                             compact = diameter > 0;
                           }
                           // Side by side, the ring stops being a header and becomes
-                          // the thing the step is about — the instrument at the size
+                          // the thing the step is about: the instrument at the size
                           // DESIGN.md protects it at, beside the form. It also removes
                           // the reason the ring ever had to collapse: there is no
                           // competition for vertical space in a landscape window, so
@@ -959,7 +959,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                             compact = false;
                           }
 
-                          // Where the ring settles, and — under Reduce Motion — where
+                          // Where the ring settles, and, under Reduce Motion, where
                           // it simply *is*. Both tweens below are removed rather than
                           // shortened for the reason the entrance is: an instrument
                           // that rescales itself every time the keyboard opens is the
@@ -990,8 +990,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                               );
 
                           // The step itself: its subject and the pager. One list, two
-                          // arrangements — stacked under the ring on a phone, beside it in a
-                          // window — so neither layout can grow a step the other does not have.
+                          // arrangements: stacked under the ring on a phone, beside it in a
+                          // window, so neither layout can grow a step the other does not have.
                           final steps = <Widget>[
                             // The step's subject, hoisted for the same reason the ring is:
                             // a `PageView` builds one element per page, so a headline held

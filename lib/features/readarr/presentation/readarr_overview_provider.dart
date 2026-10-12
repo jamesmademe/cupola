@@ -5,9 +5,9 @@
 /// `ReadarrService` does not call and no model in `lib/features/readarr`
 /// represents, so they are absent rather than faked:
 ///
-///  * **Coming up** needs `GET /api/v1/calendar`. Unlike Radarr — where the
+///  * **Coming up** needs `GET /api/v1/calendar`. Unlike Radarr, where the
 ///    three release dates already ride on every library row, so its window is a
-///    filter over data in hand — Readarr's library entity is the *author*, and
+///    filter over data in hand. Readarr's library entity is the *author*, and
 ///    an author carries no release date at all. There is nothing client-side to
 ///    filter.
 ///  * **Recently added** needs `GET /api/v1/book`. `ReadarrAuthor` is the only
@@ -20,7 +20,7 @@
 /// from `ArrActivityMixin`.
 ///
 /// Every windowing rule lives in a top-level pure function taking an explicit
-/// `now`, so the boundaries are unit-testable without a clock or a container —
+/// `now`, so the boundaries are unit-testable without a clock or a container,
 /// the same shape `radarr_overview_provider.dart` established.
 library;
 
@@ -67,13 +67,13 @@ const int readarrBacklogPageSize = 20;
 /// artist and has **no book arm**, so on a Readarr record every one of its four
 /// lookups misses and it answers null. Local rather than a fifth arm added to
 /// `lib/core/utils/arr_activity_display.dart`, which is outside this change's
-/// paths — see `found`.
+/// paths: see `found`.
 ///
 /// Book before author because the book is the subject: `Import failed ·
 /// Orbital` is the sentence the board writes, and "Import failed · Samantha
 /// Harvey" would name the wrong noun. `sourceTitle`/`title` last, because the
 /// raw release name (`Orbital.2023.RETAIL.EPUB-XYZ`) is what the record carries
-/// when the server could not match it to anything — true, and the least
+/// when the server could not match it to anything: true, and the least
 /// readable of the three.
 String readarrRecordTitle(Map<String, dynamic> record) {
   return stringOrNull(mapOrNull(record['book'])?['title']) ??
@@ -94,7 +94,7 @@ enum ReadarrAttentionKind {
   /// Readarr grabbed the release and could not move it into the library.
   importFailed(StatusTone.warning, Icons.file_download_off_rounded),
 
-  /// The transfer is not moving. A fault — the user did not ask for this.
+  /// The transfer is not moving. A fault: the user did not ask for this.
   stalled(StatusTone.warning, Icons.sync_problem_rounded),
 
   /// Monitored books with no file on disk. Backlog, so neutral: nothing is
@@ -115,7 +115,7 @@ enum ReadarrAttentionKind {
 /// One row of Needs attention: what happened, to what, and when.
 ///
 /// The per-row cross-service action the board draws ("Manual import", "Search
-/// all") is deliberately absent — both are `POST /api/v1/command` writes the
+/// all") is deliberately absent: both are `POST /api/v1/command` writes the
 /// client does not make, and a button that cannot do the thing it names is
 /// worse than no button.
 @immutable
@@ -139,27 +139,27 @@ class ReadarrAttentionItem {
   IconData get icon => kind.icon;
 
   /// The row as a sentence, with the dots the layout uses turned back into
-  /// commas — `·` is decoration, and a screen reader either names it or drops
+  /// commas: `·` is decoration, and a screen reader either names it or drops
   /// it depending on the user's punctuation setting.
   String get spoken =>
       joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
 }
 
 // There is no standing "upstream is archived" row here, and its absence is
-// deliberate. It was a constant — derived from nothing, confirmed by no request
-// and clearable by none — pushed onto the head of this list on every load, so
+// deliberate. It was a constant: derived from nothing, confirmed by no request
+// and clearable by none, pushed onto the head of this list on every load, so
 // the section's count could never read below 1 and the resting state
 // ("Nothing needs you") was unreachable by construction. A permanent,
 // undismissable row inside a section named for things that need you teaches the
 // user to stop reading the count, which is the one part of the section visible
 // without scrolling. The board (`HomeReadarr.dc.html`) draws no such row. The
-// fact itself is true and is stated where a fact about the service belongs —
-// `readarr_service.dart` and `service_tab.dart` — not in the fault list.
+// fact itself is true and is stated where a fact about the service belongs:
+// `readarr_service.dart` and `service_tab.dart`, not in the fault list.
 
 /// Reads the faults out of a page of **raw** `/queue` records.
 ///
 /// Raw, because `ArrQueueSnapshot` folds a queue down to one entry per media id
-/// and keeps neither the release title nor `added` — and these rows are
+/// and keeps neither the release title nor `added`, and these rows are
 /// entirely made of those two.
 ///
 /// Stalled is tested before import: a transfer that is not moving has not
@@ -205,15 +205,15 @@ List<ReadarrAttentionItem> readarrQueueFaults(
   return List.unmodifiable(items);
 }
 
-/// The backlog row — books with no file — or null when there is none.
+/// The backlog row (books with no file), or null when there is none.
 ///
 /// **Derived from the author list, not from `wanted/missing`, and that is a
 /// deliberate choice about agreement rather than about accuracy.** The KPI rail
 /// two inches above this row prints `Missing` from exactly this arithmetic
 /// (`service_kpi_provider.dart`, `_readarrKpis`); asking `wanted/missing` for
 /// its envelope total would put a second, differently-derived figure under the
-/// same word on the same screen — monitored-filtered on one side and not on the
-/// other — and two numbers that disagree teach the user to trust neither.
+/// same word on the same screen: monitored-filtered on one side and not on the
+/// other, and two numbers that disagree teach the user to trust neither.
 ///
 /// The sums are taken before the clamp, not after, for the same reason: it is
 /// the rail's arithmetic character for character, so the two figures cannot
@@ -247,7 +247,7 @@ ReadarrAttentionItem? readarrMissingBooksItem(List<ReadarrAuthor> authors) {
   );
 }
 
-/// The upgrade backlog row — books on disk below the quality cutoff — or null
+/// The upgrade backlog row (books on disk below the quality cutoff), or null
 /// when there is none.
 ///
 /// Takes the **envelope total**, never `records.length`: `wanted/cutoff`
@@ -261,7 +261,7 @@ ReadarrAttentionItem? readarrMissingBooksItem(List<ReadarrAuthor> authors) {
 /// readable today, Readarr is merely still looking for a better copy. The
 /// board's detail names the formats (`epub wanted, have azw3`), which needs a
 /// per-book read the envelope cannot give without claiming one row's formats
-/// speak for the rest — so the row states the standing fact instead.
+/// speak for the rest, so the row states the standing fact instead.
 ReadarrAttentionItem? readarrBelowCutoffItem(int? total) {
   if (total == null || total <= 0) return null;
   return ReadarrAttentionItem(
@@ -292,7 +292,7 @@ bool _isImportFault(Map<String, dynamic> record) {
   }
   // The canonical "Unable to Import Automatically" arrives as a pending import
   // carrying a status message, which is how an \*arr says a human has to look
-  // at it — see `arrQueueSeverity`.
+  // at it: see `arrQueueSeverity`.
   return state == 'importpending' &&
       arrQueueSeverity(record) != ArrQueueSeverity.ok;
 }
@@ -314,7 +314,7 @@ final readarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
 /// The upgrade backlog, on its own so it cannot take the faults down with it.
 ///
 /// `getCutoffPage` swallows a fork that does not serve `wanted/cutoff` into a
-/// null total, but a server that answers with a 500 still throws — and the
+/// null total, but a server that answers with a 500 still throws, and the
 /// faults above are the subject of this section, so a cutoff endpoint that
 /// failed reports no row rather than replacing a broken import with an error
 /// slot.
@@ -334,7 +334,7 @@ final readarrBelowCutoffProvider =
 ///
 /// The order is the board's, and it is an order of decision: what needs a
 /// decision before what is merely outstanding. Within the backlog, missing
-/// before below-cutoff — a book with no file at all outranks one that is merely
+/// before below-cutoff: a book with no file at all outranks one that is merely
 /// the wrong format, which is the order the board draws too.
 ///
 /// `retry: noProviderRetry` because [readarrAuthorsProvider] carries it: a
@@ -358,8 +358,8 @@ final readarrNeedsAttentionProvider =
 /// A library root and how much room is left on it.
 ///
 /// [freeBytes] is nullable and never defaulted to zero: a root folder resource
-/// that did not carry `freeSpace` — an older build, a path the server cannot
-/// stat — has told us nothing about the disk, and `0 B free` is an alarm about
+/// that did not carry `freeSpace` (an older build, a path the server cannot
+/// stat) has told us nothing about the disk, and `0 B free` is an alarm about
 /// a disk nobody measured.
 @immutable
 class ReadarrRootFolder {
@@ -426,7 +426,7 @@ class ReadarrHistoryEntry {
   /// The book.
   final String title;
 
-  /// What happened to it, in the shared history vocabulary — `Imported`,
+  /// What happened to it, in the shared history vocabulary: `Imported`,
   /// `Grabbed`, `Failed`.
   final String event;
 
@@ -444,13 +444,13 @@ class ReadarrHistoryEntry {
 /// The records from today, newest first, capped at [limit].
 ///
 /// "Today" is the local calendar day of [now]. A record from 23:50 yesterday is
-/// out even though it is twenty minutes old — the section is headed `today`,
+/// out even though it is twenty minutes old. The section is headed `today`,
 /// and a heading is a promise.
 ///
 /// Takes raw records rather than `ReadarrHistoryItem`, which
 /// `ReadarrService.getRecentHistory` maps: that model keeps id, eventType,
 /// sourceTitle, date and author and drops the book title, the quality and the
-/// size — which is three of the four things a row on this board prints.
+/// size, which is three of the four things a row on this board prints.
 List<ReadarrHistoryEntry> readarrHistoryToday(
   List<dynamic> records, {
   required DateTime now,
@@ -476,8 +476,8 @@ List<ReadarrHistoryEntry> readarrHistoryToday(
     // (`bookFileImported`, `bookImportIncomplete`, `bookFileRetagged`), and
     // those spellings now live in `global_activity_status.dart` beside
     // Radarr's and Sonarr's. A private switch here would have kept the rows
-    // honest on this one screen while the Activity feed — reading the same
-    // records through the same table — still drew a completed import grey.
+    // honest on this one screen while the Activity feed, reading the same
+    // records through the same table: still drew a completed import grey.
     final (event, tone) = historyEventDisplay(eventType);
     entries.add(
       ReadarrHistoryEntry(
@@ -521,7 +521,7 @@ DateTime? _parseLocal(String? raw) {
   return parsed?.toLocal();
 }
 
-/// `epub`, `mobi` — Readarr's quality names are formats, which is why the row
+/// `epub`, `mobi`: Readarr's quality names are formats, which is why the row
 /// reads `epub · 2.1 MB` where Radarr's reads `Bluray-1080p · 8.4 GB`.
 String? _qualityName(dynamic value) {
   final quality = mapOrNull(value);

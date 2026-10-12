@@ -6,7 +6,7 @@
 /// `daily` expects a date, `anime` expects an absolute episode number.
 ///
 /// Pure Dart, in `domain/`, because both the picker and the write need the same
-/// three values and the wire strings are Sonarr's, not ours — a fourth value
+/// three values and the wire strings are Sonarr's, not ours: a fourth value
 /// arriving from a server we have not seen must not crash the detail page, so
 /// [fromWire] answers null rather than throwing and the row falls back to
 /// printing whatever Sonarr said.
@@ -27,7 +27,7 @@ enum SonarrSeriesType {
     SonarrSeriesType.anime => 'Anime',
   };
 
-  /// What choosing this actually changes — the picker prints it under the
+  /// What choosing this actually changes: the picker prints it under the
   /// label, because "Anime" on its own tells a first-time user nothing about
   /// why their episodes are not importing.
   String get description => switch (this) {

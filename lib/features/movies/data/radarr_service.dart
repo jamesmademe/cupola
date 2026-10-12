@@ -30,13 +30,13 @@ final radarrServiceForProvider = Provider.family<RadarrService, String>((
 ) {
   // The lens's own connection resolves to [radarrServiceProvider] rather than to
   // a second client for the same server. Without this the app kept two live
-  // `Dio`s pointed at one address whenever anything asked by id — and any
+  // `Dio`s pointed at one address whenever anything asked by id, and any
   // override of the plain provider, which is how every test supplies a fake,
   // was quietly bypassed on the path that names a connection.
   //
   // `read`, deliberately, and this is the load-bearing part. Watching the lens
-  // would rebuild EVERY entry of this family whenever the lens moved — entries
-  // for connections that did not change — and `watchApiClient` closes the
+  // would rebuild EVERY entry of this family whenever the lens moved, entries
+  // for connections that did not change, and `watchApiClient` closes the
   // outgoing client on dispose. A release search running against the seedbox
   // would have its `Dio` shut under it because the user tapped a badge on
   // another screen. The cost of reading is that an entry minted before the lens
@@ -76,7 +76,7 @@ class RadarrService with ArrActivityMixin {
   /// Fetches all movies from Radarr, answering `[]` when it cannot be read.
   ///
   /// The degrading read, for joins that can go on without the library
-  /// ([getMovieByTmdbId]). The wall and every *figure* use [getMoviesOrThrow] —
+  /// ([getMovieByTmdbId]). The wall and every *figure* use [getMoviesOrThrow];
   /// see the note there, and on `fetchAllItems`, for why the two differ.
   Future<List<RadarrMovie>> getMovies() async {
     return fetchAllItems('movie', RadarrMovie.fromJson);
@@ -86,7 +86,7 @@ class RadarrService with ArrActivityMixin {
   ///
   /// See [fetchAllItemsOrThrow]. A Radarr that is unreachable, mis-keyed or
   /// 500-ing resolves [getMovies] *successfully* with an empty list, and the
-  /// KPI rail printed `Movies 0 · Monitored 0 · Missing 0` off it — three
+  /// KPI rail printed `Movies 0 · Monitored 0 · Missing 0` off it: three
   /// fabrications on the first screen the app opens, each contradicting the
   /// identity band above them.
   Future<List<RadarrMovie>> getMoviesOrThrow() async {
@@ -116,7 +116,7 @@ class RadarrService with ArrActivityMixin {
 
   /// On the **page** primitive, not on `getHistory`.
   ///
-  /// `getHistory` delegates to this, so both spellings pick the parameter up —
+  /// `getHistory` delegates to this, so both spellings pick the parameter up,
   /// but only this way round. Hung off `getHistory` instead, as it was, a caller
   /// that reached for `getHistoryPage` (the one that carries the envelope's
   /// total, and therefore the only one a count may be derived from) got records
@@ -178,7 +178,7 @@ class RadarrService with ArrActivityMixin {
   /// Searches for movies by term using the lookup API.
   ///
   /// [cancelToken] aborts the request once the search that asked for it has
-  /// been superseded — see [ArrActivityMixin.lookupItems], which owns the
+  /// been superseded. See [ArrActivityMixin.lookupItems], which owns the
   /// empty-term guard, the isolate mapping and the degrade-to-`[]` rule the
   /// three arr lookups share.
   Future<List<RadarrMovie>> lookupMovies(
@@ -195,13 +195,13 @@ class RadarrService with ArrActivityMixin {
     );
   }
 
-  /// Adds [movie] — a `movie/lookup` row — to this Radarr's library.
+  /// Adds [movie] (a `movie/lookup` row) to this Radarr's library.
   ///
   /// [movie] is posted back very nearly as it arrived: Radarr builds the
   /// library entry from the metadata it proxied, and the three fields the user
   /// chose ([qualityProfileId], [rootFolderPath], [monitored]) are what turn a
   /// lookup row into one. `addOptions.searchForMovie` is the half that makes
-  /// this an add rather than a bookmark — without it the movie is tracked and
+  /// this an add rather than a bookmark: without it the movie is tracked and
   /// nothing is ever grabbed.
   ///
   /// [minimumAvailability] defaults to whatever the lookup row carried, which

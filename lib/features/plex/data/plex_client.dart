@@ -27,7 +27,7 @@ const String kPlexProduct = 'Cupola';
 /// Sent as `X-Plex-Version`.
 ///
 /// It used to track `pubspec.yaml`'s `version:` *by hand*, and by the time
-/// anyone looked it said 0.8.0 against a pubspec at 1.0.0 — so every Plex
+/// anyone looked it said 0.8.0 against a pubspec at 1.0.0; so every Plex
 /// server in the world had Cupola filed under a version it stopped being two
 /// releases ago. It now reads [kAppVersion], which is the one const the app
 /// prints for itself and which a test measures against the pubspec.
@@ -50,7 +50,7 @@ const String kPlexTerminationReason = 'Stopped from Cupola';
 ///
 /// [StreamServerClient.imageFor] offers a width only, and `/photo/:/transcode`
 /// requires both dimensions. With `minSize=1` Plex fits the image inside the box
-/// preserving its own aspect, so this is a bounding height rather than a crop —
+/// preserving its own aspect, so this is a bounding height rather than a crop:
 /// 2:3 is the poster ratio every library in the app already lays out to.
 const double _kPosterHeightRatio = 3 / 2;
 
@@ -59,7 +59,7 @@ const int kPlexLibraryPageSize = 50;
 
 /// Rows per hub for `/hubs/search`.
 ///
-/// **Per hub, not in total** — Plex's own default is 3, which is too few to tell
+/// **Per hub, not in total**: Plex's own default is 3, which is too few to tell
 /// "one match" from "the band was truncated", and a search that returns six
 /// bands of 12 is still a page a person reads rather than pages.
 const int kPlexSearchHubLimit = 12;
@@ -91,8 +91,8 @@ const int _kPlexTokenExpiredStatus = 498;
 /// Plex answers XML unless `Accept: application/json` reaches it, so naming XML
 /// is the whole point of the message: the two things the user can act on are the
 /// address and whatever sits between here and it rewriting the header. Shared so
-/// the two places that detect it — a body `jsonDecode` refuses, and a body Dio's
-/// own transformer refused before this file ever saw it — say the same thing.
+/// the two places that detect it: a body `jsonDecode` refuses, and a body Dio's
+/// own transformer refused before this file ever saw it. Say the same thing.
 /// The third case, a body that visibly starts with `<`, gets its own wording
 /// because there the XML is not a guess.
 const String kPlexNotJsonMessage =
@@ -102,7 +102,7 @@ const String kPlexNotJsonMessage =
 
 /// Row count above which a `Metadata` array is mapped off the main isolate.
 ///
-/// Below it the isolate spawn costs more than the mapping does — a season of
+/// Below it the isolate spawn costs more than the mapping does: a season of
 /// episodes or a hub row is a handful of objects, while a `titleSort` page of a
 /// film library is hundreds, each with nested `Media`/`Part`/`Stream` arrays.
 const int _kIsolateMappingThreshold = 50;
@@ -110,7 +110,7 @@ const int _kIsolateMappingThreshold = 50;
 /// Error thrown by [PlexClient].
 ///
 /// Carries [reason] so onboarding can distinguish an unreachable box from a
-/// rejected token, and [tokenIssue] so it can distinguish *which* token problem —
+/// rejected token, and [tokenIssue] so it can distinguish *which* token problem:
 /// a 401 asks for a fresh paste, whereas a JWT can never be made to work here at
 /// all and the user needs different advice.
 class PlexException implements Exception, HasFailureReason, HasFailureCause {
@@ -145,8 +145,8 @@ class PlexException implements Exception, HasFailureReason, HasFailureCause {
 /// user pasted an address for: `/identity` for reachability, `/` for the
 /// capability sheet, `/status/sessions` for live playback, `/library/*` for the
 /// collection. That constraint is what shapes the two visible asymmetries with
-/// Jellyfin — [getViewers] returns exactly one person, and [verifyCredential]
-/// refuses a JWT outright instead of refreshing it — because both would
+/// Jellyfin: [getViewers] returns exactly one person, and [verifyCredential]
+/// refuses a JWT outright instead of refreshing it, because both would
 /// otherwise require a plex.tv round trip.
 ///
 /// Transport is [ApiClient.authenticatedBy] rather than a bespoke `Dio`, which
@@ -197,14 +197,14 @@ class PlexClient implements StreamServerClient {
   /// Section id → kind, filled by [getLibraries].
   ///
   /// A lens has to know whether a section holds films or shows before it can be
-  /// expressed as a filter — `unwatched=1` is the movie form and
+  /// expressed as a filter: `unwatched=1` is the movie form and
   /// `show.unwatchedLeaves=1` the show form, and sending the wrong one returns
   /// the whole library instead of an error. Caching the answer keeps a browse
   /// from re-reading `/library/sections` on every page.
   final Map<String, StreamLibraryKind> _sectionKinds = {};
 
-  /// Lets a test attach a stubbed transport while leaving the header building —
-  /// the part most worth asserting on — under test.
+  /// Lets a test attach a stubbed transport while leaving the header building,
+  /// the part most worth asserting on, under test.
   @visibleForTesting
   ApiClient get api => _api;
 
@@ -213,7 +213,7 @@ class PlexClient implements StreamServerClient {
   /// `X-Plex-Client-Identifier` is the one that matters operationally: Plex
   /// registers a new device row per distinct value, so it comes from persisted
   /// settings rather than being minted here. `Accept: application/json` is
-  /// supplied by [ApiClient] and is mandatory — the API answers XML by default,
+  /// supplied by [ApiClient] and is mandatory: the API answers XML by default,
   /// and every parse in this file would fail on it.
   Map<String, String> _headers() {
     return {
@@ -232,7 +232,7 @@ class PlexClient implements StreamServerClient {
   /// Headers that authenticate an artwork request.
   ///
   /// The token stays in a header so it never reaches `CachedNetworkImage`'s
-  /// cache key, which is the resolved URL — a token in the query string would be
+  /// cache key, which is the resolved URL: a token in the query string would be
   /// written to the on-disk cache index and invalidate every cached poster the
   /// day the user rotates it.
   Map<String, String> get _imageHeaders => {
@@ -247,7 +247,7 @@ class PlexClient implements StreamServerClient {
   /// throws on anything it cannot encode, so a non-ASCII device name would turn
   /// every request into a `FormatException` rather than a connection error. And
   /// dropping CR/LF closes header injection on the two values that come from
-  /// outside this file — the pasted token and the persisted client id.
+  /// outside this file: the pasted token and the persisted client id.
   static String _asciiHeader(String value) {
     final buffer = StringBuffer();
     for (final rune in value.runes) {
@@ -404,7 +404,7 @@ class PlexClient implements StreamServerClient {
   // Reachability and credential
   // ---------------------------------------------------------------------------
 
-  /// `GET /identity` — the only Plex endpoint that needs no credential.
+  /// `GET /identity`, the only Plex endpoint that needs no credential.
   ///
   /// Using it means "the box is down" and "the token is wrong" can never arrive
   /// as the same error: this answers 200 for a valid address regardless of the
@@ -432,8 +432,8 @@ class PlexClient implements StreamServerClient {
   ///
   /// [probeVersion] reads `/identity`, which answers anyone, so a Plex with a
   /// wrong token read as answering while every screen behind it failed.
-  /// `GET /` is the cheapest authenticated read: it 401s on a bad token —
-  /// thrown as unauthorized — and carries the version.
+  /// `GET /` is the cheapest authenticated read: it 401s on a bad token:
+  /// thrown as unauthorized, and carries the version.
   Future<String?> checkCredentialAndVersion() async {
     _assertUsableToken();
     return PlexServerCapabilities.fromMediaContainer(
@@ -441,7 +441,7 @@ class PlexClient implements StreamServerClient {
     ).version;
   }
 
-  /// Whether the token is accepted, via `GET /` — which 401s on a bad one.
+  /// Whether the token is accepted, via `GET /`, which 401s on a bad one.
   ///
   /// Returns false only for an actual refusal. A timeout or a DNS failure
   /// rethrows, because answering "the credential is wrong" to an unreachable
@@ -459,7 +459,7 @@ class PlexClient implements StreamServerClient {
     }
   }
 
-  /// `GET /` — friendly name, version, and the Plex Pass flag that decides
+  /// `GET /`: friendly name, version, and the Plex Pass flag that decides
   /// whether stopping a stream is even offered.
   ///
   /// Throws on a remote failure. It used to answer null for any failure, and
@@ -500,7 +500,7 @@ class PlexClient implements StreamServerClient {
       cancelToken: cancelToken,
     );
     // An idle Plex server sends `{"size": 0}` with **no `Metadata` key at
-    // all** — not an empty array, the way Jellyfin does. `container['Metadata']
+    // all**, not an empty array, the way Jellyfin does. `container['Metadata']
     // as List` throws here, and this is the single most common shape trap in
     // the API because the happy path never exercises it.
     final metadata = container['Metadata'];
@@ -528,7 +528,7 @@ class PlexClient implements StreamServerClient {
   /// `Player.machineIdentifier` sit on the same object and both produce a 404,
   /// which is why [plexSessionFromJson] reads only the first.
   ///
-  /// A write action, so failures surface — and they are surfaced *specifically*,
+  /// A write action, so failures surface, and they are surfaced *specifically*,
   /// because Plex's two error codes here mean the opposite of what they usually
   /// do: 401 documents "the server does not have the feature enabled" (a Plex
   /// Pass gate, not a bad token) and 403 documents "sessionId is empty" (not a
@@ -570,7 +570,7 @@ class PlexClient implements StreamServerClient {
     if (error.error is AccessGatewayAnswer) return _mapDioError(error);
     final status = error.response?.statusCode;
     if (status == 401) {
-      // The session list just answered with this same token, so it reads —
+      // The session list just answered with this same token, so it reads,
       // but a 401 here has more than one cause and the reply does not say
       // which. Termination needs Plex Pass on the server *and* the server
       // owner's token: a home, managed or shared user's token reads sessions
@@ -646,7 +646,7 @@ class PlexClient implements StreamServerClient {
     return libraries;
   }
 
-  /// Queues a scan. `GET`, not `POST` — Plex's refresh is a GET.
+  /// Queues a scan. `GET`, not `POST`: Plex's refresh is a GET.
   @override
   Future<void> refreshLibrary(String libraryId) async {
     _assertUsableToken();
@@ -660,7 +660,7 @@ class PlexClient implements StreamServerClient {
   /// How many items a section holds, without downloading any of them.
   ///
   /// `X-Plex-Container-Size=0` returns a page of nothing alongside the
-  /// `totalSize` — the cheapest count Plex offers. Kept off [getLibraries]
+  /// `totalSize`, the cheapest count Plex offers. Kept off [getLibraries]
   /// deliberately: doing it there would turn one request into one-per-section on
   /// every dashboard load, which is why `StreamLibrary.itemCount` arrives null
   /// and this is opt-in. Nothing in `lib/` called it until the pushed Libraries
@@ -757,11 +757,11 @@ class PlexClient implements StreamServerClient {
   /// response "might include a different number of items than requested", so a
   /// pager has to advance by `MediaContainer.offset + size` and stop at
   /// `totalSize` rather than by the page size it asked for. Returning only a
-  /// `List` — as the shared interface must, since Jellyfin reports its totals
-  /// differently — throws exactly the numbers a pager needs away.
+  /// `List`, as the shared interface must, since Jellyfin reports its totals
+  /// differently: throws exactly the numbers a pager needs away.
   ///
   /// Null rather than `PlexPage.empty()` on failure, because an empty page and
-  /// a failed request are the two things a browse must never conflate — see
+  /// a failed request are the two things a browse must never conflate: see
   /// [StreamLibraryPage]. [getLibraryItems] still flattens both to `[]`, which
   /// is the read-path convention for every caller that only wants rows.
   Future<PlexPage<StreamItem>?> getLibraryItemsPage({
@@ -865,7 +865,7 @@ class PlexClient implements StreamServerClient {
     CancelToken? cancelToken,
   }) async {
     // Plex indexes external ids as `Guid[]` entries and filters on them through
-    // `?guid=`, one value at a time — unlike Jellyfin's comma-delimited OR. So
+    // `?guid=`, one value at a time, unlike Jellyfin's comma-delimited OR. So
     // this tries each id in turn, cheapest identifier first: TMDB is what Radarr
     // carries and what Plex's Movie agent writes.
     final guids = <String>[
@@ -882,7 +882,7 @@ class PlexClient implements StreamServerClient {
       year: year,
     );
 
-    // A hit is only a hit once the item's own `Guid[]` agrees — see
+    // A hit is only a hit once the item's own `Guid[]` agrees: see
     // `stream_external_match.dart`. A server that does not honour `?guid=`
     // answers 200 with the whole library rather than an error, and a server that
     // does can still hand back a film for a show's TMDB number, so neither the
@@ -945,10 +945,10 @@ class PlexClient implements StreamServerClient {
         : const StreamExternalLookup.notInLibrary();
   }
 
-  /// How many rows one `?guid=` probe reads — see [findByExternalId].
+  /// How many rows one `?guid=` probe reads: see [findByExternalId].
   static const int _kExternalMatchCandidates = 10;
 
-  /// `GET /library/metadata/{ratingKey}/children` — show → seasons, season →
+  /// `GET /library/metadata/{ratingKey}/children`: show → seasons, season →
   /// episodes, album → tracks.
   ///
   /// Reads `Metadata` and falls back to `Directory`: current builds return
@@ -988,7 +988,7 @@ class PlexClient implements StreamServerClient {
   /// The household members whose watch state can be read: exactly one, always.
   ///
   /// This is not a stub. `GET /accounts` would list every Plex Home user, and
-  /// offering them as pickable viewers would be a lie — `/library/*` takes no
+  /// offering them as pickable viewers would be a lie: `/library/*` takes no
   /// impersonation parameter, so every lens would still answer for the token's
   /// owner while the UI claimed otherwise. Reading another member's state
   /// requires their token, and tokens come only from plex.tv, which this client
@@ -1057,14 +1057,14 @@ class PlexClient implements StreamServerClient {
   Future<List<StreamViewer>> getViewers() async {
     final capabilities = await getCapabilities();
     // **`friendlyName` is not a fallback here, and used to be one.**
-    // `friendlyName` is what the owner called the *box* — "tower", "basement
-    // NAS" — so a server not linked to plex.tv produced a viewer named after a
+    // `friendlyName` is what the owner called the *box*: "tower", "basement
+    // NAS". So a server not linked to plex.tv produced a viewer named after a
     // machine, which reads as a household member who does not exist. Decision 16
     // is that no Plex surface may claim a viewer it cannot name; an unnamed
     // owner is still the owner, so the entry stays and says so.
     final name = capabilities.myPlexUsername ?? kPlexOwnerFallbackName;
     // 'me' rather than an account id: there is no endpoint that says which
-    // account a token belongs to, and the value is never sent anywhere — every
+    // account a token belongs to, and the value is never sent anywhere: every
     // read is already scoped to this token.
     return [StreamViewer(id: 'me', name: name)];
   }
@@ -1073,7 +1073,7 @@ class PlexClient implements StreamServerClient {
   // Hubs
   // ---------------------------------------------------------------------------
 
-  /// `GET /hubs/continueWatching` — in-progress playback across every library.
+  /// `GET /hubs/continueWatching`: in-progress playback across every library.
   ///
   /// Hub responses are where a no-plex.tv client leaks: Plex mixes *provider*
   /// rows into the same arrays as local ones, with absolute plex.tv keys and
@@ -1108,23 +1108,23 @@ class PlexClient implements StreamServerClient {
     return plexPlaylistsFromJson(container['Metadata']);
   }
 
-  /// `GET /hubs/search` — the library search, in the server's own bands.
+  /// `GET /hubs/search`: the library search, in the server's own bands.
   ///
   /// **The hubs are the answer and are handed back whole.** Plex has already
   /// grouped the hits and ranked both the hubs and the rows inside them, using a
-  /// relevance model this client cannot reproduce; flattening that — which is
-  /// what this method used to do — threw away the grouping and then left the
+  /// relevance model this client cannot reproduce; flattening that, which is
+  /// what this method used to do: threw away the grouping and then left the
   /// page with a flat list it had no way to band. The order is rendered as
   /// given, and an empty hub survives as an empty group so the strip can draw
   /// its zero pill (see [StreamSearchGroup]).
   ///
   /// Every hit here is the **owner's** own: the token is one user, so no result
   /// may carry another viewer's watch mark (decision 16). Nothing extra is done
-  /// to enforce that — `/hubs/search` simply has no other perspective to offer.
+  /// to enforce that: `/hubs/search` simply has no other perspective to offer.
   ///
   /// `limit` is per hub and Plex's own default is 3, so it is always sent
-  /// explicitly. `includeExternalMedia=0` asks Plex not to mix its catalogue in
-  /// — belt to [plexIsServerItem]'s braces, since the parameter is advisory and
+  /// explicitly. `includeExternalMedia=0` asks Plex to leave its catalogue out.
+  /// Belt to [plexIsServerItem]'s braces, since the parameter is advisory and
   /// the provider rows still arrive on some builds.
   @override
   Future<List<StreamSearchGroup>> search(
@@ -1161,7 +1161,7 @@ class PlexClient implements StreamServerClient {
   ///
   /// The proxy's inner `url=` parameter is the part that needs care: Plex's own
   /// documentation says that if that URL needs a token, the token has to be a
-  /// query parameter on it — a header cannot reach it. This client only ever
+  /// query parameter on it: a header cannot reach it. This client only ever
   /// passes a **relative** inner url, which the server resolves internally under
   /// the outer request's own authentication, so no token enters a query string.
   /// If an absolute inner url were ever required, the correct credential for it
@@ -1249,7 +1249,7 @@ class PlexClient implements StreamServerClient {
       // Plex has no separate "continue" and "next up" endpoints. `onDeck` is
       // both at once: part-watched items carry a `viewOffset`, and the next
       // unwatched episode of a finished season does not. Splitting on that is
-      // what keeps the two lenses from being the same list twice — and it is
+      // what keeps the two lenses from being the same list twice, and it is
       // done after mapping, so a page can legitimately return fewer rows than
       // asked for. `PlexPage.size` stays the server's figure so the pager still
       // advances correctly.
@@ -1278,7 +1278,7 @@ class PlexClient implements StreamServerClient {
             'type': ?type,
             // The filter is spelled differently per section type, and sending
             // the wrong spelling returns the *whole* library rather than an
-            // error — a silently wrong lens. A show is unplayed when it has
+            // error: a silently wrong lens. A show is unplayed when it has
             // unwatched leaves, not when the show object itself is unwatched.
             if (kind == StreamLibraryKind.shows)
               'show.unwatchedLeaves': 1
@@ -1316,7 +1316,7 @@ class PlexClient implements StreamServerClient {
   ///
   /// **`static` is load-bearing.** The mapping entry point is a top-level pure
   /// function and the closure captures only the decoded list, but a closure
-  /// written inside an *instance* method can drag `this` into its context — and
+  /// written inside an *instance* method can drag `this` into its context, and
   /// `this` holds an `ApiClient`, which is not sendable. `Isolate.run` would then
   /// throw at the boundary, and because every read path here degrades on error
   /// the failure would surface as a silently empty library rather than as a
@@ -1336,7 +1336,7 @@ class PlexClient implements StreamServerClient {
 
   /// Flattens `Hub[] → Metadata[]`, keeping hub order.
   ///
-  /// For the surfaces that genuinely want one list — Continue watching is one
+  /// For the surfaces that genuinely want one list: Continue watching is one
   /// hub's worth of rows however the server wrapped it. A *search* must not come
   /// through here: see [_groupsFromHubs].
   List<StreamItem> _itemsFromHubs(Map<String, dynamic> container) {
@@ -1356,7 +1356,7 @@ class PlexClient implements StreamServerClient {
   /// `Hub[]` kept as bands, in the order the server ranked them.
   ///
   /// The hub's own `title` is what the band prints. Deriving a word from the
-  /// hub's `type` instead would quietly rename the server's own vocabulary — a
+  /// hub's `type` instead would quietly rename the server's own vocabulary: a
   /// Plex hub is titled "Movies", "Shows", "Episodes", "Actors" by the server
   /// that owns the library, and a localised server titles them in its language.
   ///
@@ -1384,7 +1384,7 @@ class PlexClient implements StreamServerClient {
       final map = hub.cast<String, dynamic>();
       final title = plexString(map['title']);
       // A hub with no title is one this client cannot label, and an unlabelled
-      // band on a strip of pills is worse than its rows being absent — the pill
+      // band on a strip of pills is worse than its rows being absent: the pill
       // would say nothing at all. Its rows are not smuggled into a neighbour.
       if (title == null || title.isEmpty) continue;
       groups.add(

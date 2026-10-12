@@ -6,7 +6,7 @@ import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 DockgeClient _client() => DockgeClient(baseUrl: 'https://dockge.lan');
 
 void main() {
-  group('the agent lens — decision 41', () {
+  group('the agent lens: decision 41', () {
     test('a fresh client is pointed at the hub', () {
       // The empty endpoint is Dockge's own name for "the instance you logged
       // in to", and it is what the `agent` envelope carries for it.

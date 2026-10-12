@@ -8,13 +8,13 @@ import 'package:cupola/core/theme.dart';
 
 /// The posterless hero lead: the page's own figure, standing in the poster slot.
 ///
-/// Pass it as `MediaDetailPosterRow.posterCard` — the slot keeps its exact
+/// Pass it as `MediaDetailPosterRow.posterCard`: the slot keeps its exact
 /// 82x123 footprint, so every collapse invariant that depends on the lead's
 /// height (`_posterExitFactor`'s clearance math, the staged intervals, the bar
 /// reveal) is untouched.
 ///
 /// Bazarr has no poster and no backdrop *by definition*, so its hero was 236pt
-/// of gradient framing an absence — a fake poster rendering a film reel above
+/// of gradient framing an absence: a fake poster rendering a film reel above
 /// the only question the page answers. This makes the band *contain* the answer:
 /// `12` over the label `Missing`.
 ///
@@ -22,7 +22,7 @@ import 'package:cupola/core/theme.dart';
 /// words, and a screen reader does not need it twice.
 ///
 /// `headlineSmall` and not `displaySmall`: at the hero band's 1.6x clamp that is
-/// 38.4pt, plus a 17.6pt label and a 4pt gap — 60pt inside a 123pt box, with
+/// 38.4pt, plus a 17.6pt label and a 4pt gap: 60pt inside a 123pt box, with
 /// room to spare. The whole row already lays out on
 /// `MediaDetailHeaderMetrics.heroTextScaler`, so it cannot exceed that.
 class MediaDetailFigurePlate extends StatelessWidget {
@@ -50,7 +50,7 @@ class MediaDetailFigurePlate extends StatelessWidget {
     return ExcludeSemantics(
       child: DecoratedBox(
         // Two boxes, not one: a `BoxDecoration` carrying both a `color` and a
-        // `gradient` paints only the gradient — the base tone is silently
+        // `gradient` paints only the gradient, and the base tone is silently
         // dropped and the plate comes out transparent.
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHigh,

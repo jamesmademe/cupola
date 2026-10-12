@@ -12,7 +12,7 @@ Map<String, dynamic>? mapOrNull(dynamic value) {
 /// object.
 ///
 /// `jsonDecode` hands back `List<dynamic>`, and a single malformed element must
-/// not take the whole page down — a browse that degrades to `[]` is the
+/// not take the whole page down: a browse that degrades to `[]` is the
 /// convention, but a browse that drops one row and renders the other 49 is
 /// better still. A non-list [raw] (null, an error envelope, an unwrapped map)
 /// yields `const []`.

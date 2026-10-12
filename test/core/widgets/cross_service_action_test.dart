@@ -52,7 +52,7 @@ void main() {
         ),
       );
 
-      // Reachable, named, still a button, still enabled, still tappable — the
+      // Reachable, named, still a button, still enabled, still tappable: the
       // five things the two previous implementations took away between them.
       expect(
         tester.getSemantics(find.byType(CrossServiceAction)),
@@ -211,7 +211,7 @@ void main() {
         ),
       );
       addTearDown(container.dispose);
-      // The probe answers on connect, before the page builds — recorded here
+      // The probe answers on connect, before the page builds, and is recorded here
       // rather than from a Consumer, which would be writing to a provider
       // during a build.
       container
@@ -303,7 +303,7 @@ void main() {
       ).colorScheme;
       final glyph = tester.widget<Icon>(find.byType(Icon)).color;
 
-      // A credential that may only read is a configuration fact, not a fault —
+      // A credential that may only read is a configuration fact, not a fault;
       // amber or red would send the user hunting for breakage that is not there.
       expect(glyph, isNot(scheme.error));
       for (final decorated in tester.widgetList<DecoratedBox>(

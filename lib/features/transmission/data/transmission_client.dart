@@ -12,7 +12,7 @@ import 'package:cupola/features/transmission/domain/models/transmission_models.d
 /// credentials from a host this device is not allowed to talk to.
 ///
 /// [message] is always either a static sentence written here or a string
-/// Transmission itself returned in the RPC `result` field — never an
+/// Transmission itself returned in the RPC `result` field, never an
 /// interpolated `DioException`, request URI or credential. That is the contract
 /// that keeps a password out of `AppErrorState`, which renders `toString()`
 /// verbatim.
@@ -38,7 +38,7 @@ class TransmissionException
   final ServiceFailureReason reason;
 
   /// The daemon read the request and answered it with a `result` other than
-  /// `"success"` — "invalid or corrupt torrent file", "http error 404". The
+  /// `"success"`: "invalid or corrupt torrent file", "http error 404". The
   /// request arrived and was refused, which is a different fact from one that
   /// never arrived or whose answer never came back, and [message] is the
   /// daemon's own words.
@@ -64,7 +64,7 @@ class TransmissionException
 /// method names, where `result` carries the arguments object and failures come
 /// back as an `error` object instead. It is the future, but it exists only on
 /// 4.1+, while the legacy protocol is understood by every release from 2.x
-/// through 4.1.x — deprecated there, but answered. One dialect that works
+/// through 4.1.x (deprecated there, but answered). One dialect that works
 /// against every daemon a user might have beats two code paths chosen by a
 /// version probe, and switching later is a change to [_unwrap] and the method
 /// names, not to anything above them.
@@ -72,8 +72,8 @@ class TransmissionException
 /// **2. The CSRF handshake, and its hard hourly cutover.** Transmission answers
 /// an unknown or stale `X-Transmission-Session-Id` with **409**, carrying the
 /// correct id in the response headers. The id lives one hour
-/// (`SessionIdDurationSec`) and is regenerated on daemon restart, and — this is
-/// the part that is easy to get wrong — **there is no grace window**.
+/// (`SessionIdDurationSec`) and is regenerated on daemon restart. This is
+/// the part that is easy to get wrong: **there is no grace window**.
 /// `tr_session_id` keeps a `previous_value_`, but `test_session_id()` compares
 /// against the current id only; the old value exists purely to hold the
 /// previous lockfile open for same-machine detection. The rotation is performed
@@ -96,7 +96,7 @@ class TransmissionException
 /// later call fails immediately and locally.
 ///
 /// Basic credentials are base64, i.e. cleartext-equivalent, and are re-sent on
-/// **every** request — so a scheme-less URL defaults to HTTPS
+/// **every** request, so a scheme-less URL defaults to HTTPS
 /// ([UrlUtils.normalizeBaseUrl]) and redirects are followed by hand
 /// ([SameOriginRedirectInterceptor]). The latter is not optional here:
 /// `dart:io` copies `Authorization` on a redirect from a subdomain to its parent
@@ -105,7 +105,7 @@ class TransmissionException
 class TransmissionClient {
   /// [certFingerprint], when non-empty, is a self-signed certificate the user
   /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
-  /// when [dio] is injected — a caller supplying its own transport owns its TLS
+  /// when [dio] is injected: a caller supplying its own transport owns its TLS
   /// behaviour too.
   TransmissionClient({
     required String url,
@@ -118,8 +118,8 @@ class TransmissionClient {
        rpcPath = resolveRpcPath(url),
        rpcUrl = resolveRpcUrl(url) {
     // Redirects are followed by hand so the Basic credential is never replayed
-    // to a host the user did not configure — `dart:io` copies `Authorization`
-    // from a subdomain to its parent domain — and so a 303 cannot downgrade
+    // to a host the user did not configure: `dart:io` copies `Authorization`
+    // from a subdomain to its parent domain, and so a 303 cannot downgrade
     // this POST to a GET, which Transmission answers with 405.
     //
     // The transport is rooted at the **origin**, never at [baseUrl]: the path
@@ -149,9 +149,9 @@ class TransmissionClient {
   /// looks unreachable, so the address field accepts any of the three forms
   /// people actually have:
   ///
-  /// * `https://nas.local:9091` — no path, so the default is appended.
-  /// * `https://nas.local/tr` — a relocated `rpc-url`, so `/rpc` is appended.
-  /// * `https://nas.local/tr/rpc` — the endpoint itself, used verbatim.
+  /// * `https://nas.local:9091`: no path, so the default is appended.
+  /// * `https://nas.local/tr`: a relocated `rpc-url`, so `/rpc` is appended.
+  /// * `https://nas.local/tr/rpc`: the endpoint itself, used verbatim.
   ///
   /// Plus the one people paste most often without meaning to: the address bar
   /// of the Web UI, `https://nas.local:9091/transmission/web/`. Transmission
@@ -187,7 +187,7 @@ class TransmissionClient {
   /// The full RPC endpoint for [rawUrl]: its origin plus [resolveRpcPath].
   ///
   /// Posted as an absolute URL so the endpoint is independent of whatever
-  /// `baseUrl` the transport carries — Dio ignores `baseUrl` for a path that
+  /// `baseUrl` the transport carries. Dio ignores `baseUrl` for a path that
   /// starts with a scheme. That is what makes the path appear exactly once
   /// whether the client built its own Dio or was handed one.
   static String resolveRpcUrl(String rawUrl) {
@@ -208,15 +208,15 @@ class TransmissionClient {
     ).toString();
   }
 
-  /// The configured address, normalized ([UrlUtils.normalizeBaseUrl]) — the
+  /// The configured address, normalized ([UrlUtils.normalizeBaseUrl]), the
   /// identity of this connection, path included. It is **not** the transport's
   /// base: see the constructor.
   final String baseUrl;
 
-  /// The resolved RPC endpoint path — see [resolveRpcPath].
+  /// The resolved RPC endpoint path; see [resolveRpcPath].
   final String rpcPath;
 
-  /// The absolute RPC endpoint every call is posted to — see [resolveRpcUrl].
+  /// The absolute RPC endpoint every call is posted to; see [resolveRpcUrl].
   final String rpcUrl;
 
   final String? username;
@@ -259,8 +259,8 @@ class TransmissionClient {
 
   /// Performs one RPC call and returns its `arguments` object.
   ///
-  /// The only path to the server. Everything that makes this API unusual —
-  /// the 409 handshake, the 200-means-nothing rule, the terminal 401 — is
+  /// The only path to the server. Everything that makes this API unusual
+  /// (the 409 handshake, the 200-means-nothing rule, the terminal 401) is
   /// handled here exactly once, so no method below can forget any of it.
   Future<Map<String, dynamic>> _call(
     String method, [
@@ -329,7 +329,7 @@ class TransmissionClient {
     }
     switch (status) {
       case 401:
-        // Terminal, and it must stay terminal — see [_credentialsRejected].
+        // Terminal, and it must stay terminal; see [_credentialsRejected].
         _credentialsRejected = true;
         return const TransmissionException(
           'Transmission rejected the username or password.',
@@ -363,7 +363,7 @@ class TransmissionClient {
         );
       default:
         // A body that could not be decoded means the address is answering with
-        // something that is not this API — the Web UI itself, or a reverse
+        // something that is not this API: the Web UI itself, or a reverse
         // proxy's landing page served with a JSON content type. [_unwrap]
         // catches the same case when Dio hands the body over as a string, but
         // when the content type claims JSON, Dio throws while decoding and
@@ -397,7 +397,7 @@ class TransmissionClient {
   Map<String, dynamic> _unwrap(dynamic data) {
     if (data is! Map) {
       // A 200 carrying HTML means the address points at something that is not
-      // the RPC endpoint — a proxy landing page, or the Web UI itself.
+      // the RPC endpoint: a proxy landing page, or the Web UI itself.
       throw const TransmissionException(
         'The Transmission RPC API did not answer at this address. Check the '
         'URL, port and base path.',
@@ -432,7 +432,7 @@ class TransmissionClient {
     return TransmissionSession.fromJson(await _call('session-get'));
   }
 
-  /// Aggregate counters — speeds and torrent counts — without listing anything.
+  /// Aggregate counters (speeds and torrent counts) without listing anything.
   Future<TransmissionStats> stats() async {
     return TransmissionStats.fromJson(await _call('session-stats'));
   }
@@ -510,7 +510,7 @@ class TransmissionClient {
   /// **Nullable, and zero is kept.** Collapsing an absent or non-numeric
   /// `size-bytes` to `0` made "the daemon did not answer" and "the disk is
   /// full" the same int, and the only way to recover the first was for the
-  /// caller to discard the second — which threw away precisely the reading a
+  /// caller to discard the second, which threw away precisely the reading a
   /// user needs before starting a grab. A negative value is silence too:
   /// `size-bytes` is documented as a count of free bytes, so a daemon that
   /// answers below zero is saying it could not measure, not that the volume
@@ -530,7 +530,7 @@ class TransmissionClient {
   /// The dangerous shape in this API is an **absent** `ids` key: the spec says
   /// all torrents are used when it is omitted, so a write assembled with
   /// `if (ids.isNotEmpty) 'ids': ids` silently escalates an empty selection into
-  /// "every torrent you own" — and with [removeTorrents]' `deleteLocalData` that
+  /// "every torrent you own", and with [removeTorrents]' `deleteLocalData` that
   /// erases the library and its files.
   ///
   /// An empty *array* is in fact safe (the server's loop runs zero times and
@@ -556,7 +556,7 @@ class TransmissionClient {
     await _call('torrent-stop', _idsArgument(ids));
   }
 
-  /// Re-checks local data. Returns as soon as the daemon accepts the request —
+  /// Re-checks local data. Returns as soon as the daemon accepts the request:
   /// the verify itself runs for minutes to hours, so progress must be read from
   /// `recheckProgress` rather than inferred from this completing.
   Future<void> verify(List<String> ids) async {
@@ -570,7 +570,7 @@ class TransmissionClient {
   /// Removes torrents, optionally deleting their downloaded files.
   ///
   /// [deleteLocalData] is the only genuinely destructive call in this client and
-  /// it is irreversible — Transmission unlinks the files, nothing goes to a
+  /// it is irreversible: Transmission unlinks the files, nothing goes to a
   /// trash. The UI must confirm it explicitly and separately from removal.
   Future<void> removeTorrents(
     List<String> ids, {
@@ -639,7 +639,7 @@ class TransmissionClient {
 
   /// Replaces the labels on the selected torrents.
   ///
-  /// `labels` arrived in Transmission 3.00 — **rpc-version 16** — and arrived
+  /// `labels` arrived in Transmission 3.00 (**rpc-version 16**) and arrived
   /// on both halves of the protocol at once: the revision that puts `labels`
   /// on `torrent-get` is the one that accepts it on `torrent-set`. So a daemon
   /// whose torrents report labels can assign them, and there is no version
@@ -708,7 +708,7 @@ class TransmissionClient {
     await _call(move.method, _idsArgument(ids));
   }
 
-  /// Turns the alternative ("turtle") speed limits on or off — Transmission's
+  /// Turns the alternative ("turtle") speed limits on or off; Transmission's
   /// nearest equivalent to a global pause that does not stop every torrent.
   Future<void> setAltSpeedEnabled(bool enabled) async {
     await _call('session-set', {'alt-speed-enabled': enabled});

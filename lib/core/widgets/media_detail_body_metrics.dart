@@ -6,7 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 ///
 /// The hero is deliberately excluded: a backdrop is art and stays full-bleed.
 /// Everything below it reads as one column, and on a resizable macOS window that
-/// column has to stop growing — an overview paragraph running 1400pt wide is not
+/// column has to stop growing: an overview paragraph running 1400pt wide is not
 /// a wide layout, it is an unreadable one.
 class MediaDetailMetrics {
   MediaDetailMetrics._();
@@ -28,7 +28,7 @@ class MediaDetailMetrics {
 
   /// Width of the desktop side track.
   ///
-  /// 380, which is what every `Detail*.dc.html` board draws — all nine are
+  /// 380, which is what every `Detail*.dc.html` board draws; all nine are
   /// `grid-template-columns: minmax(0, 1fr) 380px`. It was 300, as a bare local
   /// inside the two-track emitter, and 300 is below the measure the side track's
   /// content is drawn at: a Details grid whose value column has to hold

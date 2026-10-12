@@ -30,12 +30,12 @@ enum BazarrLibraryKind {
   final String label;
 }
 
-/// One half of the Bazarr library — every series, or every film.
+/// One half of the Bazarr library: every series, or every film.
 ///
 /// **It used to be both**, under a two-tab `TabBar` of its own at
 /// `/dashboard/bazarr/library`. Bazarr's bar draws Series and Movies as
 /// separate destinations (decision 22), so that inner bar became a second
-/// row of tabs directly under the service's own — two bars answering the same
+/// row of tabs directly under the service's own: two bars answering the same
 /// question. The split is what removes it; `library` still resolves, as a
 /// redirect onto Series.
 ///
@@ -43,14 +43,14 @@ enum BazarrLibraryKind {
 /// `lib/core/widgets/AGENTS.md`: a call site says which half it wants in the
 /// constructor name, and there is no third value to handle.
 class BazarrLibraryScreen extends ConsumerWidget {
-  /// The series half — Bazarr's Series tab.
+  /// The series half: Bazarr's Series tab.
   const BazarrLibraryScreen.series({
     super.key,
     this.showAppBar = true,
     this.topPadding = 0,
   }) : kind = BazarrLibraryKind.series;
 
-  /// The film half — Bazarr's Movies tab.
+  /// The film half: Bazarr's Movies tab.
   const BazarrLibraryScreen.movies({
     super.key,
     this.showAppBar = true,

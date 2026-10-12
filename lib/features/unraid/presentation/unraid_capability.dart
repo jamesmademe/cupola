@@ -3,7 +3,7 @@
 /// Cupola writes two Unraid resources: VMs (start, stop, resume) and
 /// notifications (archive). An `ADMIN` key writes both. Any other key writes a
 /// resource only if its **explicit** permissions grant an `_ANY` write action
-/// on it — the roles `VIEWER`, `CONNECT` and `GUEST` imply none. A write the
+/// on it: the roles `VIEWER`, `CONNECT` and `GUEST` imply none. A write the
 /// key may not make is refused as a GraphQL `FORBIDDEN` error on HTTP 200.
 library;
 

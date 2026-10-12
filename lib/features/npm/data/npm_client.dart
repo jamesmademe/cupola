@@ -9,7 +9,7 @@ import 'package:cupola/features/npm/domain/models/npm_models.dart';
 /// Error thrown by [NpmClient].
 ///
 /// [message] is always a static sentence written here or one of Nginx Proxy
-/// Manager's own fixed error strings — **never** an interpolated response body.
+/// Manager's own fixed error strings: **never** an interpolated response body.
 /// That rule is load-bearing rather than stylistic: the login response carries
 /// the bearer token, and `AppErrorState` renders `toString()` verbatim, so
 /// `throw NpmException('Login failed: ${response.data}')` would put a working
@@ -39,8 +39,8 @@ class NpmException
   /// NPM answered **403**: the token is valid and this account may not do that.
   ///
   /// Separate from [reason] because NPM folds three different problems onto
-  /// `unauthorized` — a wrong password (400), an expired token (400) and a
-  /// permission refusal (403) — and only the third says anything about what
+  /// `unauthorized`: a wrong password (400), an expired token (400) and a
+  /// permission refusal (403), and only the third says anything about what
   /// this account is allowed to change. Decision 34 turns a refusal into a
   /// standing state for the connection, so the one that must not be mistaken
   /// for the other two needs its own flag rather than a message match.
@@ -60,7 +60,7 @@ class NpmException
 ///
 /// Defence in depth for the one thing that must never be rendered. Nothing in
 /// this client interpolates a response body today, but a server that echoes a
-/// token in a 4xx — or a future edit that gets careless — is caught here rather
+/// token in a 4xx, or a future edit that gets careless, is caught here rather
 /// than on the user's screen. Modelled on `redactSabnzbdSecrets`.
 String redactJwt(String input) {
   return input.replaceAll(
@@ -78,7 +78,7 @@ String redactJwt(String input) {
 /// the OS keychain like every other credential in this app; the token lives
 /// **in memory only and is never persisted**, because a value that expires in a
 /// day gains nothing from surviving a relaunch and would only add a secret with
-/// no revocation story — NPM has no revocation list, so an issued token stays
+/// no revocation story: NPM has no revocation list, so an issued token stays
 /// valid until `exp` even after the password changes.
 ///
 /// **NPM never returns 401.** Its whole auth ladder has to be learned:
@@ -94,7 +94,7 @@ String redactJwt(String input) {
 /// A client written to the usual "401 means credentials" rule misdiagnoses
 /// every one of those, and a stored garbage token looks like a server outage.
 ///
-/// **There is also no rate limiting** — none, anywhere in NPM. Nothing on the
+/// **There is also no rate limiting**: none, anywhere in NPM. Nothing on the
 /// server protects the user's password from a retry storm, so the back-off is
 /// this client's job: [_credentialsRejected] makes a refused login stick, and
 /// [_authInFlight] collapses concurrent logins into one.
@@ -103,8 +103,8 @@ class NpmClient {
   /// explicitly trusted for this origin (trust-on-first-use, ADR-6).
   ///
   /// This matters more here than for most services: NPM is usually the thing
-  /// *terminating* everyone else's TLS, so the hardened setup — proxying its
-  /// own admin UI behind a certificate — is very often an internal CA or a
+  /// *terminating* everyone else's TLS, so the hardened setup (proxying its
+  /// own admin UI behind a certificate) is very often an internal CA or a
   /// self-signed certificate.
   NpmClient({
     required String url,
@@ -114,8 +114,8 @@ class NpmClient {
     String? certFingerprint,
     Map<String, String> accessHeaders = const {},
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url) {
-    // Redirects are followed by hand so the bearer token — which *is* the
-    // account, with no scoping and no revocation — is never replayed to a host
+    // Redirects are followed by hand so the bearer token (which *is* the
+    // account, with no scoping and no revocation) is never replayed to a host
     // the user did not configure. Required for a second reason too: `GET /api`
     // without the trailing slash is a 302 to `/api/`, and that redirect has to
     // reach the interceptor rather than be rejected as a bad response.
@@ -147,7 +147,7 @@ class NpmClient {
   DateTime? _tokenExpiry;
 
   /// Collapses concurrent logins into one. Five polls hitting an expired token
-  /// at once must mint one token, not five — NPM has no rate limiting, and five
+  /// at once must mint one token, not five. NPM has no rate limiting, and five
   /// parallel attempts on a wrong password is a retry storm against the user's
   /// own account.
   Future<void>? _authInFlight;
@@ -174,7 +174,7 @@ class NpmClient {
     return DateTime.now().isBefore(expiry);
   }
 
-  /// `GET /api/` — the unauthenticated health document.
+  /// `GET /api/`: the unauthenticated health document.
   ///
   /// The trailing slash is not optional: the admin nginx config answers
   /// `GET /api` with a 302 to `/api/`.
@@ -185,7 +185,7 @@ class NpmClient {
       authenticated: false,
     );
     final info = NpmServerInfo.fromJson(data);
-    // A 200 alone proves nothing here — the admin port serves a single-page app
+    // A 200 alone proves nothing here: the admin port serves a single-page app
     // through `try_files … /index.html`, so a wrong port or an entirely
     // different web server also answers 200 with HTML. Only this JSON does.
     if (!info.isHealthy) {
@@ -243,11 +243,11 @@ class NpmClient {
         .toList(growable: false);
   }
 
-  /// `GET /api/users/me` — the account behind the token, and what it may do.
+  /// `GET /api/users/me`: the account behind the token, and what it may do.
   ///
   /// Decision 34's whole basis: NPM carries the role on the user record, so the
   /// UI can dim what this account cannot do *before* a write is attempted
-  /// rather than after a 403. `expand=permissions` is not optional — without it
+  /// rather than after a 403. `expand=permissions` is not optional: without it
   /// the record comes back with no permission map at all, which is
   /// indistinguishable from an account that may do nothing.
   ///
@@ -331,7 +331,7 @@ class NpmClient {
   /// Switches a proxy host on or off.
   ///
   /// Returns the host as it stands *after* the write, re-read rather than
-  /// assumed. NPM answers a bare JSON `true` here — not an object — and that
+  /// assumed. NPM answers a bare JSON `true` here, not an object, and that
   /// `true` only means the database row changed: `nginx -t` runs afterwards,
   /// and a configuration that fails to load merely sets `meta.nginx_online`
   /// false. Reporting success from the status code alone would tell the user a
@@ -352,13 +352,13 @@ class NpmClient {
   /// Sends **only** the three fields being changed, and that is a contract
   /// rather than an economy: NPM's `PUT` body schema is
   /// `additionalProperties: false` over an allow-list, so handing back an
-  /// object read from `GET` — with its `id`, `created_on`, `owner`,
-  /// `certificate` — is rejected outright as a validation error. The patch is
+  /// object read from `GET`, with its `id`, `created_on`, `owner`,
+  /// `certificate`, is rejected outright as a validation error. The patch is
   /// built from scratch.
   ///
   /// `certificate_id` is deliberately not writable through this method. A
   /// falsy value cascades: NPM clears `ssl_forced` and `http2_support`, which
-  /// clears `hsts_enabled`, which clears `hsts_subdomains` — four settings
+  /// clears `hsts_enabled`, which clears `hsts_subdomains`: four settings
   /// wiped by one field. And the string `"new"` is a legal value that makes NPM
   /// go and request a real Let's Encrypt certificate. Neither belongs behind a
   /// port-number field on a phone.
@@ -398,14 +398,14 @@ class NpmClient {
   /// the host's `server` section and reloads nginx. If it does not parse, the
   /// hostname stops answering and stays down until someone comes back and fixes
   /// it. Cupola does not parse Nginx and cannot tell the user a line is wrong
-  /// before they save — which is why the call site asks for the domain to be
+  /// before they save, which is why the call site asks for the domain to be
   /// typed rather than tapped.
   ///
   /// Save and reload are **one call**; there is no separate reload endpoint and
   /// no dry run. The verdict comes from re-reading the host: a refused block
   /// leaves `meta.nginx_online` false and NPM's own `nginx: [emerg] …` line in
   /// `meta.nginx_err`, which is what the editor prints, unedited. A null return
-  /// means the write went through but the re-read did not — the caller must not
+  /// means the write went through but the re-read did not. The caller must not
   /// report that as a failed save, because the block is on disk either way.
   ///
   /// Only the one field, for the reason [updateProxyForward] spells out: NPM's
@@ -418,7 +418,7 @@ class NpmClient {
     await _request<dynamic>(
       'PUT',
       '/api/nginx/proxy-hosts/$id',
-      // Sent exactly as typed, including an empty string — which is how a block
+      // Sent exactly as typed, including an empty string, which is how a block
       // is *removed*, and a legitimate thing to want. No trimming: leading
       // whitespace inside a `location` body is the user's formatting, and
       // trailing whitespace has never broken an nginx directive.
@@ -432,7 +432,7 @@ class NpmClient {
   /// **Only ever from an explicit, confirmed user action.** This call talks to
   /// Let's Encrypt, so a retry loop, a pull-to-refresh binding or a background
   /// sync can burn the account's ACME rate limits and get the user's domain
-  /// temporarily refused — a failure that outlasts the app session and that
+  /// temporarily refused: a failure that outlasts the app session and that
   /// they cannot fix from here.
   Future<void> renewCertificate(int id) async {
     // NPM leaks a stack trace on any path containing `nginx/certificates`
@@ -490,7 +490,7 @@ class NpmClient {
         // gets, and one day is plenty for something re-minted from a stored
         // password.
         data: {'identity': identity!.trim(), 'secret': secret!},
-        // The login must never be re-driven by the auth retry — that is how a
+        // The login must never be re-driven by the auth retry: that is how a
         // 400 on this very call would recurse.
         options: Options(extra: const {_skipAuthRetry: true}),
       );
@@ -564,7 +564,7 @@ class NpmClient {
           method: method,
           headers: {
             if (authenticated && _token != null)
-              // Header only, never a query parameter — a token in a URL ends up
+              // Header only, never a query parameter: a token in a URL ends up
               // in `HttpException`'s `uri = …` text and in the server's access
               // log. NPM's own parser is a literal split on a space and accepts
               // nothing but `Bearer <token>`.
@@ -574,7 +574,7 @@ class NpmClient {
         ),
       );
     } on DioException catch (e) {
-      // An expired token is a 400 carrying a specific sentence — not a 401, and
+      // An expired token is a 400 carrying a specific sentence, not a 401, and
       // indistinguishable by status code from a wrong password. Retry exactly
       // once, and only when this request has not already been retried.
       if (!retried && authenticated && _looksExpired(e)) {
@@ -604,7 +604,7 @@ class NpmClient {
   /// Whether this failure is specifically "the token has expired".
   ///
   /// Matched on the message because NPM gives a wrong password and an expired
-  /// token the same 400. Reading the body is safe here — it is compared, never
+  /// token the same 400. Reading the body is safe here: it is compared, never
   /// interpolated into anything user-visible.
   bool _looksExpired(DioException e) {
     if (e.response?.statusCode != 400) return false;
@@ -644,7 +644,7 @@ class NpmClient {
         );
       case 403:
         // 403 means both "no token" and "this account may not do that", and
-        // the two are indistinguishable from the status alone — so the message
+        // the two are indistinguishable from the status alone, so the message
         // names the likelier cause without asserting it.
         return const NpmException(
           'This Nginx Proxy Manager account is not allowed to do that. A '
@@ -660,7 +660,7 @@ class NpmClient {
           reason: ServiceFailureReason.notFound,
         );
       case 500:
-        // A malformed or bad-signature token is a 500, not a 401 — so a stored
+        // A malformed or bad-signature token is a 500, not a 401, so a stored
         // token gone bad looks exactly like a server outage. Dropping it here
         // means the next call re-mints instead of failing forever.
         _token = null;

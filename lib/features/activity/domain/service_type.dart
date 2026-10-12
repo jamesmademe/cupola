@@ -23,7 +23,7 @@ extension ServiceTypeDisplay on ServiceType {
   ///
   /// Activity is grouped by *what* rather than by *which server*, which is why
   /// two Radarr fall into one Movies tab on their own. That is the right
-  /// grouping — but it means the screen cannot say which connection it is
+  /// grouping, but it means the screen cannot say which connection it is
   /// showing unless it can name one, and this is the name.
   ServiceKey get service => switch (this) {
     ServiceType.movies => ServiceKey.radarr,

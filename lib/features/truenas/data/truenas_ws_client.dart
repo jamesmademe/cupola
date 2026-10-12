@@ -51,7 +51,7 @@ class TrueNasException
 }
 
 /// The server answered this call with a JSON-RPC `error` frame: the socket is
-/// alive and the middleware refused *this* request — invalid params, a missing
+/// alive and the middleware refused *this* request: invalid params, a missing
 /// role, a method this build lacks.
 ///
 /// Distinct from the transport's own failures (a refused dial, a timeout, a
@@ -76,7 +76,7 @@ class TrueNasClientClosed extends TrueNasException
 ///
 /// TrueNAS 25.04 and later revoke, server side and on sight, an API key that
 /// logs in over an insecure transport. So `ws://` does not merely expose the
-/// key on the wire — the first attempt destroys it, and the user finds out
+/// key on the wire: the first attempt destroys it, and the user finds out
 /// only when the next app reports it invalid. [TrueNasWsClient] therefore
 /// never opens a cleartext socket at all: this is raised while the endpoint is
 /// being resolved, before any connection, so no byte leaves the device.
@@ -84,7 +84,7 @@ class TrueNasClientClosed extends TrueNasException
 /// Reported as [ServiceFailureReason.insecureTransport]: amber rather than red
 /// (nothing failed to answer, nothing was dialled), and neither the certificate
 /// probe nor the local-network probe runs after it (`certProbeWorthwhile`,
-/// `localNetworkCouldExplain`) — both would dial the very address this refused
+/// `localNetworkCouldExplain`); both would dial the very address this refused
 /// to dial. What the user reads is [failureDetail], which
 /// `ServiceDiagnosis.messageFor` prints in place of the generic copy, and which
 /// `TrueNasAsyncBody` gives a well of its own.
@@ -100,7 +100,7 @@ class TrueNasInsecureTransportException extends TrueNasException
   // `TrueNasAsyncBody` string-match that phrase to mean "no address saved".
   static const _headline = 'TrueNAS needs an https:// address.';
 
-  /// Why, and what to do — the part a surface that already states the
+  /// Why, and what to do: the part a surface that already states the
   /// headline in its own title prints beneath it.
   static const explanation =
       'TrueNAS 25.04 and later revoke an API key that arrives over http://, '
@@ -117,8 +117,8 @@ class TrueNasInsecureTransportException extends TrueNasException
 ///
 /// `dart:io` follows a redirect on the upgrade GET like on any other, carrying
 /// the WebSocket headers along, and whatever answers `101` at the end of the
-/// chain gets the socket. The API key is not in that request — it is the first
-/// frame *after* the upgrade — so the redirect alone leaks nothing; the frame
+/// chain gets the socket. The API key is not in that request: it is the first
+/// frame *after* the upgrade, so the redirect alone leaks nothing; the frame
 /// does. A `Location: http://…` would put `auth.login_with_api_key` on a
 /// cleartext socket after the scheme check had passed, and a `Location` on
 /// another host would hand that host the key outright. The Dio clients refuse
@@ -153,7 +153,7 @@ class _NoRedirectUpgradeClient implements HttpClient {
 /// `message` made every failure read "Method call error"; the `data.reason` is
 /// the sentence, and `errname` says what kind of failure it was:
 ///
-///  * `EACCES` (errno 13) is a role refusal — **unless** the reason says the
+///  * `EACCES` (errno 13) is a role refusal, **unless** the reason says the
 ///    session expired, which reuses the errno and is a login problem;
 ///  * `EPERM` (errno 1) from a `service.*` method is the second, in-body check
 ///    those methods make for the service being changed, and is a refusal too.
@@ -226,7 +226,7 @@ class TrueNasWsClient {
   Completer<void>? _connecting;
   final Map<int, Completer<dynamic>> _pending = {};
 
-  /// When the socket last delivered a frame — the liveness signal the call
+  /// When the socket last delivered a frame: the liveness signal the call
   /// timeout uses to decide whether the connection is worth keeping.
   DateTime? _lastMessageAt;
 
@@ -264,8 +264,8 @@ class TrueNasWsClient {
 
   /// Opens the upgraded WebSocket for [endpoint] over the pinned [client].
   ///
-  /// Overridable for the loopback tests alone. They cannot speak TLS — a
-  /// certificate fixture would put a private key in a public repository — so
+  /// Overridable for the loopback tests alone. They cannot speak TLS: a
+  /// certificate fixture would put a private key in a public repository, so
   /// their override dials the same wrapper over `ws://` on 127.0.0.1, while
   /// everything before this call, the cleartext refusal above all, runs exactly
   /// as it does in production. Never override it anywhere else.
@@ -345,14 +345,14 @@ class TrueNasWsClient {
       _socket = null;
       // Never `await` this: a socket that failed to authenticate may also be
       // half-open, and a close handshake that never lands would leave
-      // `_connecting` pending forever — wedging every later call.
+      // `_connecting` pending forever, wedging every later call.
       if (socket != null) _closeQuietly(socket);
       httpClient.close(force: true);
       _httpClient = null;
       // A dial cut short by [close] is the client closing, not TrueNAS.
       if (_closed) throw const TrueNasClientClosed();
       if (e is TrueNasException) rethrow;
-      // A refused upgrade carries the status the server answered with — a
+      // A refused upgrade carries the status the server answered with: a
       // redirect this client will not follow, a 404 from a SCALE build without
       // `/api/current`, a 502 from the proxy in front. The server answered, so
       // "unknown" (drawn as unreachable) was the wrong verdict for all three.
@@ -476,8 +476,8 @@ class TrueNasWsClient {
             // A call that never came back means one of two things. If the socket
             // answered *something* inside the timeout window it is alive and merely
             // slow, so only this call fails. If it has gone completely silent it is
-            // almost certainly half-open — a suspend or a Wi-Fi→cellular handoff
-            // drops the TCP connection without ever delivering `onDone`/`onError` —
+            // almost certainly half-open: a suspend or a Wi-Fi→cellular handoff
+            // drops the TCP connection without ever delivering `onDone`/`onError`,
             // and leaving `_socket`/`_authed` set would wedge `_ensureConnected` on
             // a dead socket for the rest of the app session, with every poll tick
             // stacking another doomed timeout. Drop it so the next call reconnects.
@@ -506,7 +506,7 @@ class TrueNasWsClient {
   /// still in flight with [error].
   ///
   /// [socket] identifies the connection the failure belongs to: a late
-  /// `onDone`/`onError` — or a timeout — from a socket that has already been
+  /// `onDone`/`onError`, or a timeout, from a socket that has already been
   /// replaced must not null out its successor or fail the successor's calls.
   void _dropConnection(WebSocket socket, Object error) {
     if (!identical(_socket, socket)) {

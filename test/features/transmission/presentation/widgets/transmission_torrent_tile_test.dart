@@ -57,7 +57,7 @@ Future<DownloadQueueTile> _plateFor(
 void main() {
   group('TransmissionTorrentTile', () {
     // The migration itself: Transmission was the last client still drawing its
-    // own row. A fourth private copy is what the shared plate exists to stop —
+    // own row. A fourth private copy is what the shared plate exists to stop,
     // and only mounting it catches the Material assertion that blanked the
     // qBittorrent list when its copy passed `shape` and `borderRadius` together.
     testWidgets('draws on the shared plate, without tripping an assertion', (
@@ -70,7 +70,7 @@ void main() {
     });
 
     // The tone rule, on the state where it is least intuitive. Red in this app
-    // means exactly one thing — a connection that did not answer — and a
+    // means exactly one thing: a connection that did not answer, and a
     // torrent the daemon reports as stalled or errored is the opposite of
     // that: it answered, and what it said is that this transfer is stuck. That
     // is a fault, and faults are amber.
@@ -117,7 +117,7 @@ void main() {
 
     // "No progress" and "zero progress" are different facts. A queued torrent
     // has not started, and a 0% bar under it reads as a transfer that is stuck
-    // rather than one that has not begun — so the plate is handed null and
+    // rather than one that has not begun, so the plate is handed null and
     // draws nothing, instead of the row deciding by omitting a widget.
     testWidgets('a torrent with nothing to show gets no bar', (tester) async {
       expect((await _plateFor(tester, _torrent(status: 3))).progress, isNull);
@@ -139,7 +139,7 @@ void main() {
     });
 
     // The rates are the only figures on the row whose meaning is carried by a
-    // glyph, and screen readers disagree about arrows — some skip them, some
+    // glyph, and screen readers disagree about arrows: some skip them, some
     // name the character. Neither reading is "downloading at".
     testWidgets('the transfer arrows are spelt out for a screen reader', (
       tester,
@@ -160,7 +160,7 @@ void main() {
     });
 
     // The commands stay a slot the screen fills, and the plate keeps them on the
-    // screen reader's path — the row publishes one container with the menu as an
+    // screen reader's path: the row publishes one container with the menu as an
     // explicit child, never an `ExcludeSemantics` that would drop it.
     testWidgets('the row menu reaches the screen reader', (tester) async {
       final handle = tester.ensureSemantics();
@@ -175,8 +175,8 @@ void main() {
       );
 
       // A node of its own, inside the row's labelled container. If the plate
-      // ever reached for `ExcludeSemantics` — or the row published no container
-      // and merged everything — this would resolve to an ancestor with no
+      // ever reached for `ExcludeSemantics`, or the row published no container
+      // and merged everything, this would resolve to an ancestor with no
       // tooltip, and the only per-torrent commands in the app would be
       // unreachable without sight.
       expect(

@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The tone rule's red arm, held on the controls: **red means unreachable and
-/// nothing else — a destructive action is never red.** It is a neutral control
+/// nothing else, a destructive action is never red.** It is a neutral control
 /// whose verb says exactly what will happen, and if it cannot be undone, one
 /// neutral sentence says so.
 ///
-/// Until 2026-09-30 the app carried an exception — "red on an action means
-/// irreversible" — and used both styles at once: some deletes confirmed with a
+/// Until 2026-09-30 the app carried an exception: "red on an action means
+/// irreversible", and used both styles at once: some deletes confirmed with a
 /// red fill, a red glyph and a red *cannot be undone* banner, others in the
 /// theme's own fill, and a few red buttons opened neutral dialogs. The exception
 /// is gone, and these scans keep it gone. They are source scans because the
@@ -88,8 +88,8 @@ void main() {
   });
 
   test('no delete control is red', () {
-    // The glyph a delete wears, and every colour argument near it — an
-    // `Icon(color:)`, an `IconButton(color:)`, a `foregroundColor:` — read to
+    // The glyph a delete wears, and every colour argument near it: an
+    // `Icon(color:)`, an `IconButton(color:)`, a `foregroundColor:`, read to
     // the end of its own expression. A status nearby (a *Deleted* badge's
     // glyph mapping) names no colour argument and is left alone.
     final glyph = RegExp(r'Icons\.delete\w*');
@@ -133,8 +133,8 @@ void main() {
   });
 
   test('every confirm label names what will happen', () {
-    // A verb and its object — *Delete job*, *Take down*, *Remove from Radarr*
-    // — never a bare verb, and never one of the words that say nothing.
+    // A verb and its object (*Delete job*, *Take down*, *Remove from Radarr*)
+    // is never a bare verb, and never one of the words that say nothing.
     const vague = {
       'confirm',
       'ok',
@@ -203,8 +203,8 @@ void main() {
       offenders,
       isEmpty,
       reason:
-          'A confirm label names the action and its object — "Delete job", '
-          '"Remove from Radarr", "Stop playback" — so the button says what the '
+          'A confirm label names the action and its object: "Delete job", '
+          '"Remove from Radarr", "Stop playback"; so the button says what the '
           'tap does without the title above it.',
     );
   });

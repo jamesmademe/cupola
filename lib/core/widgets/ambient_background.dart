@@ -4,8 +4,8 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/theme.dart';
 
-/// Paints the app's ambient background — an opaque base surface with soft accent
-/// radial glows — behind [child], full-bleed.
+/// Paints the app's ambient background: an opaque base surface with soft accent
+/// radial glows, behind [child], full-bleed.
 ///
 /// Because the base is opaque, this can sit directly behind a transparent
 /// [Scaffold] (and a transparent/glass app bar) so the gradient reads
@@ -15,7 +15,7 @@ import 'package:cupola/core/theme.dart';
 /// through the transparent app bar, the gradient shows through.
 ///
 /// [accent] is the room's light. With none the room is lit by the neutral lamp
-/// ([AppColors.lamp]), the light of a room with no artwork — and a service's
+/// ([AppColors.lamp]), the light of a room with no artwork, and a service's
 /// room is lit by it too, since `ServiceKey.accent` is the lamp for every
 /// service: the room takes its light from the content, never from the service.
 /// Never the primary ink: in the dark room that is near-white, and a white
@@ -23,12 +23,12 @@ import 'package:cupola/core/theme.dart';
 ///
 /// **The accent drifts, it does not cut.** A change to [accent] is animated over
 /// [AppAnimation.durationMd] on the standard curve, which is the same clock the
-/// page transition and the onboarding ring's resize run on — three instruments,
+/// page transition and the onboarding ring's resize run on: three instruments,
 /// one beat. Swapping the glow instantly while the other two travel is what made
 /// a change of subject read as a repaint instead of a move. The onboarding walk
 /// had already worked this out and carried a private `_AmbientRoom` wrapper to
-/// get it; the tween belongs here, where every other caller — a service
-/// dashboard switching services, most obviously — inherits it rather than
+/// get it; the tween belongs here, where every other caller (a service
+/// dashboard switching services, most obviously) inherits it rather than
 /// re-implementing it.
 class AmbientBackground extends StatelessWidget {
   final Widget child;
@@ -50,7 +50,7 @@ class AmbientBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     // Resolved *before* the tween, not inside its builder. [accent] is nullable
-    // and `ColorTween` asserts on a null `end` — `Color? lerp` is fine with a
+    // and `ColorTween` asserts on a null `end`: `Color? lerp` is fine with a
     // null *begin* (it fades up from transparent) but a null end has nothing to
     // travel to. Naming the fallback here is also what makes a screen drift out
     // of and back into the lamp rather than cutting at the edges of a lit

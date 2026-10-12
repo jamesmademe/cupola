@@ -29,7 +29,7 @@ import 'package:cupola/features/stream/presentation/widgets/stream_activity_sect
 
 import '../../test_helpers/settings_scope.dart';
 
-/// A media server that refuses every connection, through the real clients —
+/// A media server that refuses every connection, through the real clients:
 /// so what is under test is the whole path from the socket to the pixels.
 class _Refused implements HttpClientAdapter {
   @override

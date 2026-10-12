@@ -40,7 +40,7 @@ void main() {
           .map((header) => header.title),
       ['History', 'Queue'],
     );
-    // Absent rather than stubbed — the client has no `config`, no `listfeeds`
+    // Absent rather than stubbed: the client has no `config`, no `listfeeds`
     // and no `log`.
     expect(find.text('Servers'), findsNothing);
     expect(find.text('Feeds'), findsNothing);
@@ -145,7 +145,7 @@ void main() {
     expect(_subtitleOf(tester, 'Queue'), '1 downloading');
   });
 
-  testWidgets('a history that did not answer reads — and never 0 completed', (
+  testWidgets('a history that did not answer reads `—` and never 0 completed', (
     tester,
   ) async {
     await _pump(tester, failHistory: true);
@@ -178,13 +178,13 @@ void main() {
     expect(find.text('Nothing in the queue'), findsOneWidget);
   });
 
-  testWidgets('a refresh does not print — over the rows it is still drawing', (
+  testWidgets('a refresh does not print `—` over the rows it is still drawing', (
     tester,
   ) async {
     // `AsyncValueWidget` keeps the last readout at full ink under the fault
     // band, so the header above it must read the retained value too. With
     // `asData?.value` this says "today · —" over a row stating the very figure
-    // it claims not to know — on every pull-to-refresh, and for as long as the
+    // it claims not to know, on every pull-to-refresh, and for as long as the
     // box stays off the network.
     await _pump(
       tester,
@@ -285,7 +285,7 @@ Future<void> _pump(
         ),
         // NZBGet's reachability probe builds its own `NzbgetClient` rather than
         // going through `serviceStatusClientFactoryProvider`, so the summary is
-        // overridden directly — the alternative is a real socket in a unit
+        // overridden directly: the alternative is a real socket in a unit
         // test.
         serviceSummaryProvider.overrideWith(
           (ref, service) async => ServiceSummary(
@@ -307,7 +307,7 @@ Future<void> _pump(
         nzbgetQueueProvider.overrideWith((ref) async => queue),
         nzbgetHistoryProvider.overrideWith((ref) async {
           if (failHistory) throw Exception('history failed');
-          // Answers once, then refuses — the shape of a box that drops off the
+          // Answers once, then refuses: the shape of a box that drops off the
           // network between the first load and a pull-to-refresh.
           if (historyFailsOnRefetch && historyCalls++ > 0) {
             throw Exception('history failed');

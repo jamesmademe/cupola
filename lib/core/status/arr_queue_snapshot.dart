@@ -22,12 +22,12 @@ class ArrQueueEntry {
   /// How badly the \*arr says this record is doing.
   ///
   /// Replaces a `bool hasWarning`, which could not tell a service-reported
-  /// `error` from a `warning` — see [ArrQueueSeverity].
+  /// `error` from a `warning`; see [ArrQueueSeverity].
   final ArrQueueSeverity severity;
 
   final String? detail;
 
-  /// Set when the raw status carries more information than [pipeline] can — an
+  /// Set when the raw status carries more information than [pipeline] can, an
   /// unrecognised status keeps its own humanised wording instead of being
   /// flattened to "Queued".
   ///
@@ -83,7 +83,7 @@ class ArrQueueEntry {
   /// because a queued item also carries `trackedDownloadState: downloading`.
   ///
   /// Returns null when the record represents work that is already finished
-  /// (`imported`) or deliberately skipped (`ignored`) — those must not mask the
+  /// (`imported`) or deliberately skipped (`ignored`); those must not mask the
   /// real availability of the item.
   ///
   /// Any unrecognised state still yields a non-null entry (defaulting to
@@ -130,7 +130,7 @@ class ArrQueueEntry {
   /// There is no `stalled` value in an \*arr's `status` field: the services
   /// report a stall in prose, via `errorMessage` or `statusMessages`, and their
   /// own web UIs read it back out the same way. Text matching is therefore the
-  /// only signal available, so it is deliberately narrow — if the upstream
+  /// only signal available, so it is deliberately narrow: if the upstream
   /// wording changes this returns false and the record degrades to the previous
   /// behaviour (`downloading`, carrying a warning) rather than mislabelling a
   /// healthy transfer.
@@ -173,7 +173,7 @@ class ArrQueueEntry {
     }
 
     // `trackedDownloadState: downloading` only means "still with the download
-    // client" — a queued or paused item carries it too, so it must NOT be read
+    // client", a queued or paused item carries it too, so it must NOT be read
     // as "bytes are moving". The client `status` is what decides that, matching
     // what the *arr's own UI shows.
     final isWithClient = trackedState == 'downloading';
@@ -193,7 +193,7 @@ class ArrQueueEntry {
         label: null,
       ),
       // `warning` is one of the \*arr status values, not an unknown string, and
-      // it used to fall through to the branch below — which turned a record the
+      // it used to fall through to the branch below, which turned a record the
       // service had flagged into the word "Warning" sitting in a "Queued" row.
       'warning' => (
         pipeline: isStalled
@@ -358,9 +358,9 @@ class ArrQueueSnapshot {
   ///
   /// The whole point of a *snapshot* is that it stops being true, and nothing
   /// in the app could previously say when it had. A queue polls on a timer, and
-  /// when the poll stops coming back — the service is answering but its queue
+  /// when the poll stops coming back: the service is answering but its queue
   /// endpoint is not, or the timer was suspended with the app in the
-  /// background — the rows keep their progress bars and keep looking live.
+  /// background: the rows keep their progress bars and keep looking live.
   /// A bar that is not advancing must not look like one that is, so surfaces
   /// trade the time-left for this age and the page raises
   /// `FaultBand.stale` once it is older than its own poll interval.
@@ -460,7 +460,7 @@ String queueReadingAge(ArrQueueSnapshot queue, {DateTime? now}) {
 /// Collapses several queue records onto one media item.
 ///
 /// The highest-[MediaPipeline.salience] state becomes the headline, and the
-/// reported progress is the mean across the records sharing it — a series with
+/// reported progress is the mean across the records sharing it: a series with
 /// two episodes at 20% and 80% reads 50%, not 80%.
 class _EntryAccumulator {
   MediaPipeline pipeline;
@@ -488,7 +488,7 @@ class _EntryAccumulator {
       // `_detail` follows the headline for the same reason `_label` does: both
       // describe *the state being reported*. Taking it from whichever record
       // happened to arrive first let a row headline "Downloading" and then print
-      // the error message belonging to a different episode — the label was reset
+      // the error message belonging to a different episode: the label was reset
       // when the headline changed and the detail was not.
       _detail ??= entry.detail;
       // The last of the headline's transfers to finish: the item is done

@@ -155,7 +155,7 @@ void main() {
   ) async {
     await _pump(tester);
 
-    // `ServiceOverviewRow.trailing` is 132pt wide, one line, ellipsised —
+    // `ServiceOverviewRow.trailing` is 132pt wide, one line, ellipsised:
     // shaped for Prowlarr's `298 queries`. Every value in this region is a
     // phrase, and at 3× reading size that slot holds about seven characters,
     // so `Not limited` would ellipsise to nothing while being the row's whole
@@ -384,10 +384,10 @@ Future<void> _pump(
           }),
         ),
         // Overridden rather than left to derive, because the real one reaches
-        // for `transmissionClientProvider` — which in a test has no daemon to
-        // ask and, unconfigured, throws. The chain itself — session-get before
+        // for `transmissionClientProvider`, which in a test has no daemon to
+        // ask and, unconfigured, throws. The chain itself (session-get before
         // free-space, the empty path that is never asked, the refusal that
-        // costs one figure, the zero that is silence — is driven through a
+        // costs one figure, the zero that is silence) is driven through a
         // real container over a scripted client in
         // transmission_overview_provider_test.dart, so overriding it here
         // stubs a tested fetch rather than hiding an untested one.

@@ -85,7 +85,7 @@ void main() {
       expect(ratings, hasLength(1));
       expect(ratings.single.icon, 'TVDB');
       // The badge, not the vote count. `name` is what a score is looked up by,
-      // and it used to hold "145000 voti" — Italian, in an English-only app,
+      // and it used to hold "145000 voti": Italian, in an English-only app,
       // where a source name belongs.
       expect(ratings.single.name, 'TVDB');
       expect(ratings.single.votes, 145000);

@@ -31,7 +31,7 @@ component vocabulary; the ladder follows.
 
 Beyond the format's simple types the generator reads two composites:
 
-- `typography` — `{fontFamily, fontSize, lineHeight, fontWeight, fontWidth,
+- `typography`: `{fontFamily, fontSize, lineHeight, fontWeight, fontWidth,
   letterSpacing}`. `fontFamily` may alias a `fontFamily` token; `lineHeight` is
   a length (divided by the size), a multiple or a percentage; `fontWeight` is
   any `wght` value from 1 to 1000; `fontWidth` is the `wdth` axis in percent;
@@ -40,7 +40,7 @@ Beyond the format's simple types the generator reads two composites:
   token becomes one constant per property (`…FontFamily`, `…FontSize`,
   `…LineHeight` as a multiple, `…FontWeight`, `…Wght` for the exact axis value,
   `…FontWidth`, `…LetterSpacing` in pixels).
-- `cubicBezier` — four numbers, or the CSS forms (`cubic-bezier(…)`, `ease`,
+- `cubicBezier`: four numbers, or the CSS forms (`cubic-bezier(…)`, `ease`,
   `linear`, `ease-in`, `ease-out`, `ease-in-out`). It becomes a Flutter
   `Cubic`.
 

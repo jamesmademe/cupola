@@ -16,12 +16,12 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 /// The connection well every TrueNAS section reads its failures through.
 ///
 /// Until this existed, no screen under `features/truenas/presentation/` used
-/// [AsyncValueWidget], [NotConfiguredPlaceholder] or [ServiceOfflineState] —
+/// [AsyncValueWidget], [NotConfiguredPlaceholder] or [ServiceOfflineState];
 /// twenty-three call sites hand-rolled `.when(error: AppErrorState)` instead.
 /// That is not a styling difference. `truenasClientProvider` throws
 /// `TrueNasException('TrueNAS not configured')` *before* it opens a socket, so
 /// a NAS nobody had set up rendered as a generic red failure card with a Retry
-/// button that could never succeed — retrying a form that has not been filled
+/// button that could never succeed: retrying a form that has not been filled
 /// in. Every other service in the app answered the same condition with an
 /// invitation to Settings.
 ///
@@ -42,7 +42,7 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 ///    that says TrueNAS needs an https:// address and offers the remedy,
 ///    `Change the address`, which opens its connection form. Amber: it is a
 ///    fault with one fix, in the form. It has no Retry, because retrying the
-///    same address can only be refused again — the client never dials it.
+///    same address can only be refused again: the client never dials it.
 ///  * **the connection failed on the way** ([ServiceFailureReason.unreachable],
 ///    [ServiceFailureReason.timeout], [ServiceFailureReason.tls],
 ///    [ServiceFailureReason.localNetworkBlocked]) →
@@ -53,8 +53,8 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 ///    (`Check the certificate`) ahead of Retry. All four used to draw the plain
 ///    "TrueNAS did not answer" leaf. Only with nothing retained: over a last
 ///    readout, [AsyncValueWidget] keeps it under its fault band.
-///  * anything else — a rejected API key, a method this SCALE build does not
-///    have, a malformed payload — goes to [AsyncValueWidget] and its
+///  * anything else: a rejected API key, a method this SCALE build does not
+///    have, or a malformed payload, goes to [AsyncValueWidget] and its
 ///    [AppErrorState], which leads with the remedy where the form holds one
 ///    (`Paste the key again`) and with Retry where retrying can work.
 ///
@@ -72,8 +72,8 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
     this.loadingLabel,
   }) : _inline = false;
 
-  /// A panel *within* a section body — the snapshot list under a dataset, the
-  /// five task families on Data protection — which already sits inside a scroll
+  /// A panel *within* a section body: the snapshot list under a dataset, the
+  /// five task families on Data protection, which already sits inside a scroll
   /// view and must not nest a second [RefreshIndicator] or a full-page well.
   const TrueNasAsyncBody.inline({
     super.key,
@@ -207,7 +207,7 @@ class _NeedsHttps extends StatelessWidget {
     final remedy = FailureRemedy.forReason(ServiceKey.truenas, _reason)!;
     return AppEmptyState(
       icon: Icons.no_encryption_outlined,
-      // A fault the user can fix, so the tone rule's amber — never red, which
+      // A fault the user can fix, so the tone rule's amber, never red, which
       // is kept for a host that did not answer; this one was never asked.
       accentColor: statusToneColor(colorScheme, failureTone(_reason)),
       title: failureHeadline(_reason, subject: ServiceKey.truenas.title),

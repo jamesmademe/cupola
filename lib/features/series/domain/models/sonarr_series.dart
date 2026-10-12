@@ -13,7 +13,7 @@ class SonarrSeries {
   /// Sonarr's own url-safe key for the series (`severance`).
   ///
   /// Read for exactly one reason: adding. See [RadarrMovie.titleSlug] for the
-  /// same note — a `series/lookup` row carries it, and an add posted without
+  /// same note: a `series/lookup` row carries it, and an add posted without
   /// it is rejected.
   final String titleSlug;
   final String status;
@@ -40,7 +40,7 @@ class SonarrSeries {
   ///
   /// Read for exactly one surface: the Overview's week window. Sonarr puts this
   /// on `SeriesResource` itself, so it costs nothing beyond the `series` call
-  /// the library already makes — and it is the **only** forward-looking date the
+  /// the library already makes, and it is the **only** forward-looking date the
   /// app can reach, because `GET /api/v3/calendar` is not a call this client
   /// makes. It is one instant per series rather than a list of episodes: a
   /// series airing twice in one week reports the earlier of the two and says
@@ -48,7 +48,7 @@ class SonarrSeries {
   /// *series* and never claims to count episodes.
   ///
   /// Null both when nothing is scheduled and when the server never sent the
-  /// field at all — see `sonarrCanReportAirings`, which is what keeps those two
+  /// field at all: see `sonarrCanReportAirings`, which is what keeps those two
   /// from collapsing into a confident "nothing airing this week".
   final String? nextAiring;
 

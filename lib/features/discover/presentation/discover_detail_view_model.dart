@@ -300,8 +300,8 @@ int _movieReleasePriority(int type) {
 /// duplicate tile. The characters are merged so the extra role is not lost.
 ///
 /// Dedupe runs *before* the cap, so a duplicated credit no longer costs the
-/// twentieth actor their place. Entries with no usable id (0) cannot collide —
-/// the rail does not make them tappable and builds no Hero for them — so they
+/// twentieth actor their place. Entries with no usable id (0) cannot collide:
+/// the rail does not make them tappable and builds no Hero for them, so they
 /// are kept as-is.
 List<DiscoverCastMember> _takeCast(List<Map<String, dynamic>> cast) {
   final members = <DiscoverCastMember>[];

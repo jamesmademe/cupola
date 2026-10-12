@@ -22,7 +22,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The first tab of Prowlarr's service home.
 ///
 /// Prowlarr is the odd one among the download services: its work is the
-/// **indexer table** — who answers, how fast, and who is failing — rather than
+/// **indexer table** (who answers, how fast, and who is failing) rather than
 /// a queue. Two rules hold over the whole page:
 ///
 ///  * **faults are amber, not red.** Red stays for a Prowlarr that does not
@@ -37,8 +37,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// [topPadding] instead.
 ///
 /// The Apps region the desktop board draws is **absent rather than stubbed**:
-/// its rows are per-application sync state — "synced 12 min ago", "sync failed
-/// · API key rejected" — and `GET /api/v1/applications` carries no sync
+/// its rows are per-application sync state: "synced 12 min ago", "sync failed
+/// · API key rejected", and `GET /api/v1/applications` carries no sync
 /// timestamp and no per-app failure, so those rows could only be invented.
 class ProwlarrOverviewScreen extends ConsumerWidget {
   const ProwlarrOverviewScreen({

@@ -14,8 +14,8 @@ import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 /// Read the header of the fixture before trusting this too far: it is written
 /// from the published schema reference rather than captured, so what the two
 /// tests below prove is that the client and the fixture agree. That is worth
-/// having — a GraphQL server rejects the whole document over one unknown
-/// field, so a selection nobody wrote down takes an entire tab down — but it
+/// having: a GraphQL server rejects the whole document over one unknown
+/// field, so a selection nobody wrote down takes an entire tab down, but it
 /// is not evidence about the real server.
 void main() {
   group('Unraid GraphQL SDL contract', () {
@@ -86,7 +86,7 @@ void main() {
     // selects that nobody ever declared. Five of those (`allocator`,
     // `splitLevel`, `floor`, `cow`, `color`) once shipped in the `shares`
     // selection past a green suite, and a GraphQL server answers an unknown
-    // field by rejecting the whole document — so the Shares tab would have
+    // field by rejecting the whole document, so the Shares tab would have
     // been dead on the first real instance, not merely missing five values.
     test('every field the client selects is declared in the schema', () {
       final declared = _identifiers(sdl);
@@ -117,7 +117,7 @@ Set<String> _identifiers(String source) => RegExp(
 /// The operation header is dropped except for its variable *types*: an
 /// operation name (`VmAction`) is ours to choose and means nothing to the
 /// schema, while `NotificationFilter!` is a contract. Variable references
-/// (`$id`) are dropped for the same reason — the name belongs to the document.
+/// (`$id`) are dropped for the same reason: the name belongs to the document.
 Set<String> _selectedNames(String document) {
   final header = RegExp(
     r'^\s*(query|mutation)\s+(\w*)\s*(\(([^)]*)\))?\s*',

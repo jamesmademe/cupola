@@ -194,7 +194,7 @@ void main() {
       tester,
     ) async {
       // The defect: `MediaQuery.sizeOf` is the whole window, and on a desktop
-      // shell the grid is nothing like the whole window — a 1920pt frame with a
+      // shell the grid is nothing like the whole window: a 1920pt frame with a
       // rail and an open inspector leaves this widget about 500pt, and
       // measuring the window answered fourteen columns of 24pt posters.
       tester.view.physicalSize = const Size(1920, 1200);

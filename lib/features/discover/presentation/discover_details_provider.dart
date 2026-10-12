@@ -38,7 +38,7 @@ final seerrNumberingProvider = FutureProvider.autoDispose<SeerrNumbering?>(
 /// Person (cast/crew) details for the Person page.
 ///
 /// Fails when Seerr did not answer or answered with a failure, and resolves
-/// to an empty person only when Seerr answered that it has none — so the page
+/// to an empty person only when Seerr answered that it has none, so the page
 /// can say "Seerr answered, but it has no record of them" and mean it.
 /// `noProviderRetry`, so the failure reaches the page at once; Retry is there.
 final personDetailProvider = FutureProvider.autoDispose

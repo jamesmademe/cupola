@@ -56,8 +56,8 @@ void main() {
       // Each \*arr names the event after the entity it writes a record for, and
       // Readarr writes one record per **book file**. Before these arms existed
       // every one of them fell through to `humanizeCamelCase` and neutral, so
-      // the most common row on a book history — a completed import, the one
-      // event on the page that is unambiguously good news — read as a grey
+      // the most common row on a book history: a completed import, the one
+      // event on the page that is unambiguously good news, read as a grey
       // "Book File Imported", and `bookImportIncomplete`, the failure a book
       // library actually suffers, read as backlog rather than as a fault.
       final imported = resolveHistoryStatus(const {
@@ -112,8 +112,8 @@ void main() {
     test("Lidarr's own spellings are in the table, not in one screen", () {
       // The same gap Readarr's arms closed, one fork over. Lidarr writes one
       // record per **track file**, under names no other fork uses, so
-      // `trackFileImported` — the most common row on a music history, and the
-      // one event on the page that is unambiguously good news — fell through to
+      // `trackFileImported`: the most common row on a music history, and the
+      // one event on the page that is unambiguously good news, fell through to
       // `humanizeCamelCase` and came out a neutral "Track File Imported", while
       // `albumImportIncomplete`, a genuine fault, drew as backlog grey.
       //
@@ -323,8 +323,8 @@ void main() {
   group('resolveWantedStatus', () {
     test('every row in the bucket is untoned backlog', () {
       // Being missing is the *definition* of membership in this bucket, not
-      // news about it. Colouring the rows at all — red once, then amber and
-      // blue — made the page shout its own title back in colour and left
+      // news about it. Colouring the rows at all (red once, then amber and
+      // blue) made the page shout its own title back in colour and left
       // nothing for the one row that is genuinely stuck.
       final missing = resolveWantedStatus(const {}, isCutoff: false);
       expect(missing.label, 'Missing');
@@ -389,7 +389,7 @@ void main() {
 
     test('a declined request is a closed decision, not a fault', () {
       // Seerr answered; it just answered no. Nothing is broken and nothing is
-      // waiting — the word carries the whole fact.
+      // waiting: the word carries the whole fact.
       final status = resolveRequestStatus(requestWith(RequestStatus.declined));
 
       expect(status.tone, StatusTone.neutral);

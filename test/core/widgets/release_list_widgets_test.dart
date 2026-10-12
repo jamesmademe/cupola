@@ -364,7 +364,7 @@ void main() {
       expect(find.text('500\u00A0B'), findsOneWidget);
 
       // One decimal on every rung above bytes, from the shared
-      // formatter — the row used to carry its own ladder that printed one
+      // formatter; the row used to carry its own ladder that printed one
       // decimal at KB/MB, two at GB, and never reached TB at all.
       await _pumpReleaseItem(tester, release: buildRelease(size: 1536));
       expect(find.text('1.5\u00A0KB'), findsOneWidget);
@@ -459,12 +459,12 @@ Future<void> _expandRelease(WidgetTester tester) async {
 /// The tone a grab button is *supposed* to paint, resolved exactly as the
 /// widget resolves it. Pinning the raw palette constant instead made these
 /// tests assert a hex rather than a meaning, so they failed the moment the
-/// tones started being walked for contrast — which is a change they should
+/// tones started being walked for contrast, which is a change they should
 /// never have been able to see.
 ///
 /// The glyph is a label on its own 14% wash over the row's card
 /// (`surfaceContainerHigh`), so that composite is the ground it is walked
-/// against — not the scaffold.
+/// against, not the scaffold.
 Color _expectedTone(WidgetTester tester, StatusTone tone) {
   final context = tester.element(find.byType(ReleaseListItem).first);
   final scheme = Theme.of(context).colorScheme;

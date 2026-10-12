@@ -12,7 +12,7 @@ import '../../../test_helpers/profiles/profiles.dart';
 /// The Reporting page used to read every failure as an empty answer: the
 /// reporting API caught the batch, fell back graph by graph, caught those too
 /// and returned `[]`, so a TrueNAS that was down drew "No reporting data
-/// available." — a statement about the server's graphs that nobody made.
+/// available.": a statement about the server's graphs that nobody made.
 void main() {
   const empty = 'No reporting data available.';
 
@@ -56,7 +56,7 @@ void main() {
     await harness.settle(tester);
 
     expect(find.text(empty), findsNothing);
-    // The server answered, so this is the fault leaf with its reason — never
+    // The server answered, so this is the fault leaf with its reason, never
     // the red "did not answer" well.
     expect(find.byType(AppErrorState), findsOneWidget);
     expect(find.byType(ServiceOfflineState), findsNothing);

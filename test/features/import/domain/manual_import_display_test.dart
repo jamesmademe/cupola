@@ -202,8 +202,8 @@ void main() {
     test('the episode code comes from the matched episode, not the file', () {
       // The \*arr payload carries both: a top-level `seasonNumber` parsed out of
       // the release name, and the matched library episode records. They can
-      // disagree — an absolute-numbered anime file parses as season 1 while the
-      // matched episode is season 3 — and the chip must show the match.
+      // disagree (an absolute-numbered anime file parses as season 1 while the
+      // matched episode is season 3), and the chip must show the match.
       final identity = manualImportIdentityFor(
         ServiceKey.sonarr,
         _item({

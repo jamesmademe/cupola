@@ -115,7 +115,7 @@ void main() {
   test('the next row on the same section can still be added', () async {
     // This entry is keyed on the CONNECTION, not on the item, and outlives the
     // sheet by however long autoDispose takes. Adding one row and immediately
-    // opening the next one in the same section therefore reuses this state — so
+    // opening the next one in the same section therefore reuses this state, so
     // a submit that leaves `isSubmitting` set hands the second sheet a dead Add
     // button with nothing on screen to explain it.
     final away = _FakeSonarr(profileId: 9, rootFolder: '/away/tv');
@@ -182,7 +182,7 @@ void main() {
       // "Bazarr", not "Bazarr · Away": there is one Bazarr in this model, and a
       // connection is named only when there is a second to tell it apart from.
       // The label on the fixture is left over from a sibling this test does not
-      // configure — exactly the state `SettingsModel.connectionTitle` exists to
+      // configure: exactly the state `SettingsModel.connectionTitle` exists to
       // read past, since a real one is left behind by removing that sibling.
       // Nothing was sent, and nothing claims a server went silent: an error
       // nobody can attribute is amber, in the classified words.
@@ -226,8 +226,8 @@ void main() {
 
     expect(error, "Could not add Severance to Sonarr · Away.");
     final state = container.read(arrAddFormProvider(args));
-    // A refusal, in words — not an exception caught by the handler that exists
-    // for a server saying no — and nothing was posted to either connection.
+    // A refusal, in words, not an exception caught by the handler that exists
+    // for a server saying no, and nothing was posted to either connection.
     expect(state.errorDetail, 'the form is not filled in');
     expect(state.isSubmitting, isFalse);
     expect(away.added, isEmpty);

@@ -14,7 +14,7 @@ import 'package:cupola/core/status/media_status.dart';
 /// A service's headline metric, already reduced to something paintable.
 ///
 /// Exactly one of these per cell. It answers "what is this service doing right
-/// now", which is a different question from "is it reachable" — the summary
+/// now", which is a different question from "is it reachable": the summary
 /// answers that.
 @immutable
 class ServiceSignal {
@@ -23,7 +23,7 @@ class ServiceSignal {
   ///
   /// Empty when [value] is itself a state word: SABnzbd's paused queue arrives
   /// as the KPI `Status: Paused`, and the cell paints value-then-label, so
-  /// carrying the label would print "Paused status" — a column header for a
+  /// carrying the label would print "Paused status": a column header for a
   /// table this surface does not have.
   ///
   /// Not uppercased, and no longer set in the eyebrow style: casing is the
@@ -60,7 +60,7 @@ class ServiceSignal {
   /// incoming`.
   ///
   /// Capitalised because it opens a clause of its own after the reachability
-  /// word, and reduced to the bare [value] when there is no label — "Paused"
+  /// word, and reduced to the bare [value] when there is no label: "Paused"
   /// is already the whole fact. A floor is said as one: `Queue at least 200`.
   String get spoken {
     final figure = Lexicon.spokenFigure(value);
@@ -74,7 +74,7 @@ class ServiceSignal {
 /// A KPI label is written for the per-service peek, where four of them sit in a
 /// row and read as column headings. The matrix uses one of them as a phrase
 /// beside its figure, in a grid of up to thirteen cells whose other possible
-/// live line is the word "Offline" — and that context breaks three of them:
+/// live line is the word "Offline", and that context breaks three of them:
 ///
 ///  * **`Download`** is the download *rate* (it was `Down`, which on a
 ///    reachability instrument read `2.4 MB/s down`: the service is down).
@@ -91,7 +91,7 @@ class ServiceSignal {
 ///    word, so the label is dropped entirely rather than printed after it.
 ///
 /// Everything else keeps the service's own vocabulary lower-cased, including
-/// terms the audience genuinely knows — Bazarr's `Wanted`, Docker's `Exited`.
+/// terms the audience genuinely knows: Bazarr's `Wanted`, Docker's `Exited`.
 /// Plain-languaging those would flatten terminology, not clarify it.
 const Map<String, String> _matrixLabelOverrides = {
   'Download': 'incoming',
@@ -101,7 +101,7 @@ const Map<String, String> _matrixLabelOverrides = {
   // `Streams` is a fine column heading on a four-KPI peek and a poor phrase
   // beside a figure: "2 streams" describes a plural noun the user never thinks
   // in, where "2 streaming" states what the server is doing. It also stays
-  // correct at one — "1 streaming" needs no depluralisation, which is why the
+  // correct at one: "1 streaming" needs no depluralisation, which is why the
   // gerund is chosen over `stream`.
   'Streams': 'streaming',
 };
@@ -113,16 +113,16 @@ const Set<String> _invariantLabels = {'series'};
 ///
 /// The choice is not a table in this file, and deliberately so. Every KPI
 /// builder in `service_kpi_provider.dart` already marks its own noteworthy
-/// metric by giving it a non-null [ServiceKpi.tone] — `_backlogIf(missing > 0)`,
+/// metric by giving it a non-null [ServiceKpi.tone]: `_backlogIf(missing > 0)`,
 /// `_faultIf(activeAlerts > 0)`, `_faultIf(exited > 0)`, and so on. That flag is
 /// the domain's own judgment about its own data, written next to the code that
-/// computes it — and since it is a [StatusTone] rather than a colour, it also
+/// computes it, and since it is a [StatusTone] rather than a colour, it also
 /// says *what kind* of judgment.
 ///
 /// This file used to re-derive that second half by matching the KPI's label
 /// against two sets of strings, with everything unmatched falling through to
-/// amber. It was wrong in both directions at once — `Exited` resolved to red
-/// and `Missing` to amber — and it was wrong in a way no type could catch,
+/// amber. It was wrong in both directions at once: `Exited` resolved to red
+/// and `Missing` to amber, and it was wrong in a way no type could catch,
 /// because a service whose builder was added later simply inherited the
 /// fallthrough. Reading the tone the builder set is the whole fix.
 ///
@@ -148,7 +148,7 @@ ServiceSignal? resolveServiceSignal(List<ServiceKpi> kpis) =>
 /// wrong with it. It chose the fault, so a healthy stack's cards all read as
 /// bare totals and a stack with a backlog stopped saying how large it was.
 ///
-/// [secondary] is null for a service with one KPI to its name — qBittorrent at
+/// [secondary] is null for a service with one KPI to its name: qBittorrent at
 /// `12.4 MB/s incoming` has nothing to put on a second line, and the card keeps
 /// its height rather than reserving a slot for an absence.
 @immutable
@@ -168,7 +168,7 @@ class ServiceSignalPair {
 /// written down rather than reduced to its first element: **flagged KPIs first,
 /// in the builder's own order, then the rest in the builder's own order.** The
 /// primary is therefore exactly what the single-figure card showed, which is
-/// what makes this an addition rather than a change — and the secondary is the
+/// what makes this an addition rather than a change, and the secondary is the
 /// next thing the builder thought worth computing.
 ///
 /// Each figure keeps *its own* tone. A Radarr with a backlog shows a neutral
@@ -206,8 +206,8 @@ ServiceSignal _signalFrom(ServiceKpi kpi) => ServiceSignal(
 /// A KPI label as the matrix says it: rewritten where needed, lower case, and
 /// agreeing in number with its own figure.
 ///
-/// The plural rule is deliberately mechanical — drop a trailing `s` when the
-/// figure parses as exactly 1 — because it has to hold for every service in the
+/// The plural rule is deliberately mechanical: drop a trailing `s` when the
+/// figure parses as exactly 1, because it has to hold for every service in the
 /// registry, including ones added later. `1 alerts` and `1 stacks` were both
 /// live before it. A figure that is not a bare integer (`2.4 MB/s`, `85%`,
 /// `4/6`, `Paused`) parses to null and is left alone, which is correct: those

@@ -218,7 +218,9 @@ void main() {
     expect(find.byType(ServiceOverviewEmpty), findsNothing);
   });
 
-  testWidgets('a push that never arrived reads — and never 0', (tester) async {
+  testWidgets('a push that never arrived reads `—` and never 0', (
+    tester,
+  ) async {
     await _pump(tester, failStacks: true);
 
     // A "0" over an unanswered question claims every stack is up, which is the
@@ -261,7 +263,7 @@ void main() {
   testWidgets('one Dockge instance draws no Agents section', (tester) async {
     await _pump(tester);
 
-    // The same guard the app-bar lens keeps: a picker — or a list — offering
+    // The same guard the app-bar lens keeps: a picker (or a list) offering
     // one choice teaches the user there is a decision to make when there is not.
     expect(find.text('Agents'), findsNothing);
   });
@@ -286,7 +288,7 @@ void main() {
     // here would be two controls fighting over one piece of state.
     expect(agentsHeader.onTap, isNull);
 
-    // And the stack census names the instance it was counted on — the client
+    // And the stack census names the instance it was counted on: the client
     // holds one agent's stacks at a time, so a bare "2 stacks" here would state
     // a subset as the deployment's total.
     final stacksHeader = tester.widget<SectionHeader>(
@@ -310,7 +312,7 @@ void main() {
     // `_dockgeKpis` fills the rail two regions above with Stacks / Running /
     // Stopped / Inactive off this same push. A subtitle spelling them again is
     // the same four figures twice in one screenful, wrapping to three lines
-    // beside the "Stacks →" link — so on a single-instance Dockge with
+    // beside the "Stacks →" link, so on a single-instance Dockge with
     // nothing truncated the header has nothing to add and says nothing.
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Stacks'),
@@ -419,7 +421,7 @@ Future<void> _pump(
       // two pushes carry `retry: noProviderRetry`, because re-reading an error
       // a stream is still holding cannot change the answer and only leaves a
       // pending timer behind. If one of them ever loses it, the failing-source
-      // tests below stop settling — which is the point of taking this out.
+      // tests below stop settling, which is the point of taking this out.
       overrides: [
         currentSettingsProvider.overrideWith(
           (ref) => configured

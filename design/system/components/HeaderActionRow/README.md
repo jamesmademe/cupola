@@ -12,18 +12,18 @@ Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `Act
 
 ## Styles
 
-- **Primary** (`expandedButtonStyle`): a `FilledButton.icon`, the ink button: `primary` fill with the label and 18pt glyph in `on-primary`, on every service — the promoted verb is never the service's colour. The theme's button text (the row role, 15 / 600), horizontal padding `AppSpacing.md`, `minimumSize` 52 high and never `fixedSize`, so a label that no longer fits grows the button instead of breaking mid-word. The expanded styles pin `VisualDensity.standard`, so on a desktop they stay 52 beside the 52pt discs instead of losing 8 to compact density. The label wraps to two lines under the 1.6× reading-size clamp (`TextScaleMetrics.clampedScalerOf`).
+- **Primary** (`expandedButtonStyle`): a `FilledButton.icon`, the ink button: `primary` fill with the label and 18pt glyph in `on-primary`, on every service, the promoted verb is never the service's colour. The theme's button text (the row role, 15 / 600), horizontal padding `AppSpacing.md`, `minimumSize` 52 high and never `fixedSize`, so a label that no longer fits grows the button instead of breaking mid-word. The expanded styles pin `VisualDensity.standard`, so on a desktop they stay 52 beside the 52pt discs instead of losing 8 to compact density. The label wraps to two lines under the 1.6× reading-size clamp (`TextScaleMetrics.clampedScalerOf`).
 - **Disc** (`tonalIconButtonStyle`): an `OutlinedButton` fixed at 52 × 52, `onSurface` at 6%, a 1px `outlineVariant` side, 18pt glyph in `onSurfaceVariant`. `iconOnlyButtonStyle` is the filled equivalent, an ink square.
 - **Tonal** (`tonalExpandedButtonStyle`): the disc's fill and side on a labelled button 48 high with `AppSpacing.md` padding; the band narrows that to `AppSpacing.sm` and drops the glyph so two labels fit a phone row.
 - **Consequence**: `bodySmall` in `onSurfaceVariant`, up to three lines, `AppSpacing.sm` under the row. When nothing is promoted and nothing is surfaced, the sentence takes the `expanded` slot itself.
 
 ## ActionStateGlyph
 
-Idle icon (18pt) → busy spinner (16pt, 2pt stroke, this control's work only) → confirmed `check_rounded`, the theme's success green (`tertiary`) walked through `ServiceTheme.onTint` against the fill it sits on. The host holds the check for `AppAnimation.confirmationHold` (1600 ms). Faces cross-fade with a 0.7 → 1 scale over `AppAnimation.durationSm` (320 ms); with Reduce Motion they swap. While a band is busy the host passes `onPressed: null`, so the primary and its discs take Material's disabled colours and stay in place — nothing reflows under the thumb.
+Idle icon (18pt) → busy spinner (16pt, 2pt stroke, this control's work only) → confirmed `check_rounded`, the theme's success green (`tertiary`) walked through `ServiceTheme.onTint` against the fill it sits on. The host holds the check for `AppAnimation.confirmationHold` (1600 ms). Faces cross-fade with a 0.7 → 1 scale over `AppAnimation.durationSm` (320 ms); with Reduce Motion they swap. While a band is busy the host passes `onPressed: null`, so the primary and its discs take Material's disabled colours and stay in place; nothing reflows under the thumb.
 
 ## Rungs
 
-A primary takes one visible secondary (Interactive search first) plus `more_horiz`; a withheld primary frees both slots as labelled tonal buttons. Delete is never visible — sheet only.
+A primary takes one visible secondary (Interactive search first) plus `more_horiz`; a withheld primary frees both slots as labelled tonal buttons. Delete is never visible: sheet only.
 
 ## Semantics
 

@@ -99,7 +99,7 @@ class _TaskTile extends ConsumerWidget {
       (task.poolName?.isNotEmpty ?? false);
 
   Future<void> _run(BuildContext context, WidgetRef ref) async {
-    // A scrub reads every block in the pool — worth a confirmation, unlike the
+    // A scrub reads every block in the pool: worth a confirmation, unlike the
     // cheap per-task runs.
     if (task.kind == TrueNasTaskKind.scrub) {
       final result = await showAppConfirmDialog(

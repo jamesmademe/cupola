@@ -29,7 +29,7 @@ bool parseBool(dynamic v) {
   return s == 'true' || s == '1';
 }
 
-/// Size rendering for qBittorrent — and, through this file, for Transmission,
+/// Size rendering for qBittorrent, and, through this file, for Transmission,
 /// NPM and the TrueNAS screens.
 ///
 /// The ladder itself is [formatBytes]; all this adds is qB's sentinel.
@@ -87,7 +87,7 @@ String formatLimit(int bytesPerSecond) {
 /// Local-time `YYYY-MM-DD HH:MM` rendering of a Unix epoch in seconds.
 ///
 /// Returns `'—'` for `seconds <= 0` (covers both 0 = "never" and qB's -1
-/// sentinels). No `intl` dependency — pads with `padLeft` instead.
+/// sentinels). No `intl` dependency: pads with `padLeft` instead.
 String formatEpochDate(int seconds) {
   if (seconds <= 0) return '—';
   final dt = DateTime.fromMillisecondsSinceEpoch(seconds * 1000).toLocal();

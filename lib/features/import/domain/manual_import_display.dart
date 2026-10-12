@@ -8,7 +8,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Deliberately generous: this list only decides how a row is **presented**,
 /// never what gets sent to the service, and a file classified as "other" is
 /// still fully fixable and importable if the user opens it. So the cost of a
-/// miss is one extra tap, while the win is large — a Sonarr scan of a mixed
+/// miss is one extra tap, while the win is large: a Sonarr scan of a mixed
 /// downloads folder otherwise files playlists and music alongside genuine
 /// unmatched episodes, and the "needs attention" count stops meaning anything.
 const _videoExtensions = {
@@ -87,7 +87,7 @@ List<String> _titleTokens(String value) => value
 /// The text a guessed identity is checked against: the release folder and the
 /// file's own name.
 ///
-/// Never the whole absolute path — a scan root like `/media/The Matrix/` would
+/// Never the whole absolute path: a scan root like `/media/The Matrix/` would
 /// otherwise vouch for every file under it, which is exactly the failure mode
 /// the check exists to prevent.
 String _nameContext(ManualImportItem item) {
@@ -100,7 +100,7 @@ String _nameContext(ManualImportItem item) {
 ///
 /// **The guard on guessing an identity the user never chose.** A launch from a
 /// movie/series/artist page carries that title into the scan, and without this
-/// the only thing tying it to a file was the file extension — so browsing to a
+/// the only thing tying it to a file was the file extension, so browsing to a
 /// shared downloads root and scanning wrote "Target Movie" onto every
 /// unidentified rip in it, one "Select all ready files" from importing a
 /// stranger's film under the wrong title and moving it into the wrong library
@@ -148,7 +148,7 @@ String manualImportUnsupportedReason(
 
 /// The title a file is grouped under: its matched media, or "Unmatched".
 ///
-/// Grouping is what makes a 400-file scan workable — the user thinks in shows
+/// Grouping is what makes a 400-file scan workable: the user thinks in shows
 /// and albums, not in filenames, so "select every Boruto file" has to be one
 /// gesture rather than forty.
 String manualImportGroupTitle(ServiceKey service, ManualImportItem item) {
@@ -168,9 +168,9 @@ String manualImportGroupTitle(ServiceKey service, ManualImportItem item) {
 ///
 /// The verification question on the Review screen is always "did the service
 /// guess right?", and answering it means comparing the parsed identity against
-/// the filename. So the pieces are kept separate — a short [code] the eye can
+/// the filename. So the pieces are kept separate: a short [code] the eye can
 /// match against the filename's `S02E01`, the [title] of the episode/album, and
-/// the technical [quality] — instead of being mashed into one truncated line
+/// the technical [quality], instead of being mashed into one truncated line
 /// where the episode code is the first thing to disappear.
 class ManualImportIdentity {
   /// Short positional code: `S2 E1`, a release year, a track number.
@@ -252,8 +252,8 @@ String? _trackCode(List<Map<String, dynamic>> tracks) {
 
 /// Does this file match the user's filter text?
 ///
-/// Searches everything the row shows — matched title, positional code, episode
-/// or album name, and the filename — so typing "boruto" finds the files
+/// Searches everything the row shows: matched title, positional code, episode
+/// or album name, and the filename, so typing "boruto" finds the files
 /// whether the service recognised them or not.
 bool manualImportMatchesQuery(
   ServiceKey service,

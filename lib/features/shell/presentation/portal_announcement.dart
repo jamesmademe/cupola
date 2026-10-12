@@ -1,8 +1,8 @@
 /// What the Portal says when it opens.
 ///
 /// One sentence, once: how many services its floor holds and how many of them
-/// are in a fault. A screen reader never needs the drag — the tab bar carries an
-/// action that opens the Portal — and an open Portal that says nothing leaves
+/// are in a fault. A screen reader never needs the drag: the tab bar carries an
+/// action that opens the Portal, and an open Portal that says nothing leaves
 /// the reader on the tab it just activated, with no word that a floor of
 /// services is now in front of it.
 ///
@@ -30,7 +30,7 @@ class PortalFloorCensus {
   });
 
   /// Cells on the floor: one per configured connection, as the picker draws
-  /// them — so two Radarr connections are two.
+  /// them, so two Radarr connections are two.
   final int services;
 
   /// Cells the floor draws in a fault: a connection that did not answer (the
@@ -41,7 +41,7 @@ class PortalFloorCensus {
   final int faults;
 
   /// Cells whose probe has not come back. Not a fault, and never counted as
-  /// one — but while any is out, "none with a fault" is not yet true.
+  /// one, but while any is out, "none with a fault" is not yet true.
   final int checking;
 }
 
@@ -85,7 +85,7 @@ final portalFloorCensusProvider = Provider<PortalFloorCensus>((ref) {
 /// `Portal open. 12 services, 3 with a fault.`
 ///
 /// A count and a verb, in the lexicon's words: *checking* is said as checking,
-/// and "none with a fault" is said only once every probe has answered — a
+/// and "none with a fault" is said only once every probe has answered. A
 /// sentence that asserts a clean floor while probes are still out is the zero
 /// that should have been a dash.
 String portalOpenedAnnouncement(PortalFloorCensus census) {

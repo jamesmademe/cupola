@@ -2,7 +2,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// "SABnzbd and Unraid" — a list of service names a sentence can hold.
+/// "SABnzbd and Unraid": a list of service names a sentence can hold.
 ///
 /// One rule in one place: the summary card joins service names in three
 /// different contexts (a fault, the ones still to set up, the ones a search
@@ -20,8 +20,8 @@ String joinServiceNames(List<ServiceKey> services) => switch (services.length) {
 
 /// Every service that shares one connection state, and the state itself.
 ///
-/// The grouping is the point. Seventeen services with one cause — the VPN is
-/// down, the host is asleep — is one fact, and seventeen rows saying
+/// The grouping is the point. Seventeen services with one cause (the VPN is
+/// down, the host is asleep) is one fact, and seventeen rows saying
 /// "Unreachable" is that fact repeated until it stops being read. Grouped by
 /// the vocabulary's own label, the same screen says "SABnzbd and Unraid ·
 /// Unreachable" and "Bazarr · API key rejected", which is two facts and two
@@ -43,8 +43,8 @@ class ConnectionGroup {
 /// [describeConnection] and nothing else.
 ///
 /// Pure, and takes the already-described states rather than the providers that
-/// produce them, so the rule — which counts are printed, which tone the summary
-/// takes, how failures group — can be tested without a widget or a container.
+/// produce them, so the rule (which counts are printed, which tone the summary
+/// takes, how failures group) can be tested without a widget or a container.
 class ConnectionsReadout {
   ConnectionsReadout._({
     required this.registrySize,
@@ -55,7 +55,7 @@ class ConnectionsReadout {
     required this.notSetUp,
   });
 
-  /// Folds [states] — one entry per **configured** service, in registry order —
+  /// Folds [states]: one entry per **configured** service, in registry order,
   /// into the readout.
   ///
   /// [notSetUp] is passed rather than derived because "not set up" is not a
@@ -106,7 +106,7 @@ class ConnectionsReadout {
     );
   }
 
-  /// Every service Cupola knows how to talk to — the denominator the count chip
+  /// Every service Cupola knows how to talk to: the denominator the count chip
   /// and this summary both print, so "16 of 17" means the same thing on both.
   final int registrySize;
 
@@ -139,7 +139,7 @@ class ConnectionsReadout {
   /// **The worst tone among the failures, never a boolean.** It used to be
   /// "any failure at all ⇒ red", which painted a stack whose only complaint is
   /// a rejected API key in the colour this system reserves for *nothing
-  /// answered* — sending the user to check cables over a wrong key that the
+  /// answered*, sending the user to check cables over a wrong key that the
   /// form two taps away would have fixed.
   StatusTone get tone {
     if (faults.any((group) => group.presentation.tone == StatusTone.error)) {

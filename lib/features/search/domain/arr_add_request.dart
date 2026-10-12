@@ -7,7 +7,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// The connection is baked in rather than chosen, and that is the whole shape
 /// of this feature. The global search fans out one section per connection, so
-/// by the time a finger lands on a row the server is already decided — the user
+/// by the time a finger lands on a row the server is already decided: the user
 /// picked it by choosing which section to touch. The add sheet therefore has no
 /// server picker (Seerr's does, because Seerr's servers are a registry of its
 /// own that no part of the row knows about); it only has to *say* which one it
@@ -17,7 +17,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// without an add of its own is a compile error rather than a plus that opens
 /// a sheet which cannot post anything.
 sealed class ArrAddRequest {
-  /// The connection that listed the row — never the lens.
+  /// The connection that listed the row: never the lens.
   final String instanceId;
 
   const ArrAddRequest({required this.instanceId});

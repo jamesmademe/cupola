@@ -16,7 +16,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Runs an [NpmClient] mutation with the shared plumbing.
 ///
 /// [NpmException.message] is always a static sentence or one of NPM's own fixed
-/// strings — the client never interpolates a response body — so the `$e` below
+/// strings: the client never interpolates a response body, so the `$e` below
 /// cannot carry the bearer token or the password. That is the whole reason the
 /// client is strict about it: this line is where it would otherwise surface.
 ///
@@ -51,7 +51,7 @@ Future<bool> runNpmAction(
     // probe, and a refusal on any write marks the connection too. It reads
     // `forbidden` rather than the reason because NPM folds a wrong password and
     // an expired token onto the same `unauthorized` verdict, and neither of
-    // those says anything about what this account may change — dimming the
+    // those says anything about what this account may change: dimming the
     // whole screen over a mistyped password would be a lie with a long tail.
     final refused = markCapabilityRefusal(ref, capability, e);
     for (final provider in invalidate) {
@@ -78,8 +78,8 @@ Future<bool> runNpmAction(
 /// down", which is a different question and the one that actually goes wrong on
 /// a small screen.
 ///
-/// The dialog itself is the shared [showAppTypedConfirmDialog] — neutral, with
-/// the verb carrying the weight — which the TrueNAS power card reads too.
+/// The dialog itself is the shared [showAppTypedConfirmDialog], neutral, with
+/// the verb carrying the weight, which the TrueNAS power card reads too.
 Future<bool> confirmByTyping(
   BuildContext context, {
   required String title,

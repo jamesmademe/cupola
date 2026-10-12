@@ -203,7 +203,7 @@ void main() {
 }
 
 /// Records the token of every lookup and, with a [gate], parks the request so
-/// the first round is genuinely still in flight when the second arrives —
+/// the first round is genuinely still in flight when the second arrives,
 /// which is the only state in which cancelling means anything.
 class _GateRadarrService extends FakeRadarrService {
   _GateRadarrService({this.gate, this.fails = false});

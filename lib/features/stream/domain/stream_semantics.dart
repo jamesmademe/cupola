@@ -5,8 +5,8 @@
 /// that drift.
 ///
 /// The Stream board needs this more than most screens do. A session card paints
-/// three stacked lines whose *visual* order is chosen for scanning — the title
-/// first, because that is what the eye looks for — while the useful spoken order
+/// three stacked lines whose *visual* order is chosen for scanning: the title
+/// first, because that is what the eye looks for, while the useful spoken order
 /// is different: who, then what, then the thing you would act on. Reading the card
 /// top to bottom aloud produces a comma list with no structure, which is the exact
 /// failure `serviceMatrixCellValue` already documents for the matrix cell.
@@ -72,7 +72,7 @@ String streamSessionValue({
 
 /// The board's own state, when nobody is watching.
 ///
-/// Used **both** on screen and by the screen reader — one string, because this is
+/// Used **both** on screen and by the screen reader: one string, because this is
 /// a state and not a failure, and a visible "Nothing playing" beside a spoken
 /// "error" would be two different bug reports. Deliberately not phrased as an
 /// absence of content ("No sessions found"): the server is answering, and an idle
@@ -82,7 +82,7 @@ const String streamIdleMessage = 'Nobody is watching right now';
 /// What one library row announces.
 ///
 /// [lastScannedLabel] is null on Jellyfin, which exposes no per-library scan
-/// timestamp — only a global scheduled task. The row simply omits it rather than
+/// timestamp: only a global scheduled task. The row simply omits it rather than
 /// speaking "unknown", which would imply the server was asked and declined.
 ///
 /// **No item count, on the Overview or in its spoken form** (decision 21): the
@@ -104,7 +104,7 @@ String streamLibraryValue({
 ///
 /// [scanningName] names the library when exactly one is scanning, because that
 /// is the case worth pointing at. Several at once is a full rescan and gets a
-/// count instead — naming the first would imply the others are idle.
+/// count instead; naming the first would imply the others are idle.
 String streamLibrariesSummary({
   required int total,
   required String? scanningName,
@@ -122,7 +122,7 @@ String streamLibrariesSummary({
 ///
 /// Names the person and the title, because this is the one Stream action that
 /// interrupts another human being in the house. Both servers only *dispatch* a
-/// stop — the client may ignore it — so the copy promises to ask, not to succeed.
+/// stop; the client may ignore it, so the copy promises to ask, not to succeed.
 String streamStopSessionPrompt({
   required String userName,
   required String title,
@@ -131,7 +131,7 @@ String streamStopSessionPrompt({
 /// What the lens chips announce on a library browse.
 ///
 /// The visible label is a short chip ("Continue", "A–Z"); spoken, it needs the
-/// noun back — "Continue" alone on a row of five chips does not say what it
+/// noun back: "Continue" alone on a row of five chips does not say what it
 /// continues, and "A–Z" is read character by character by both screen readers.
 String streamLensLabel(String lensLabel) => switch (lensLabel) {
   'Continue' => 'Continue watching',

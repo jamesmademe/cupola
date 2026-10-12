@@ -17,8 +17,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Dockge's service home.
 ///
-/// Overview alone carries the identity block and the readouts — Stacks is a
-/// view of one kind of record and Terminal is a console — and then two
+/// Overview alone carries the identity block and the readouts: Stacks is a
+/// view of one kind of record and Terminal is a console, and then two
 /// regions: the stacks, running ones by name and the rest summed by state, and
 /// which instances this login can reach. The stacks region ends in a link
 /// named exactly like the tab it jumps to.
@@ -29,9 +29,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// region's own error.
 ///
 /// **It draws neither the app bar nor the tab bar.** `ServiceHomeScreen` owns
-/// the first — including the agent lens, which is an app-bar control and not a
+/// the first, including the agent lens, which is an app-bar control and not a
 /// tab (decision 41), and which this page must therefore never grow a second
-/// copy of — and `ServiceTabScaffold` owns the second. Both float above this
+/// copy of, and `ServiceTabScaffold` owns the second. Both float above this
 /// page as glass bands so the ambient gradient reads continuously behind them;
 /// this screen reserves the room with [topPadding] instead.
 ///
@@ -40,7 +40,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Dockge speaks Socket.IO and not REST, and its `stackList` push is a name, an
 /// integer status, tags, a compose filename and an endpoint. Four things the
 /// board draws have no source in that protocol, and each is **absent rather
-/// than stubbed** — a section given a fake zero is worse than a section that
+/// than stubbed**: a section given a fake zero is worse than a section that
 /// was never promised:
 ///
 ///  * **`Updates 3 · images newer` and the `Update all 3` button.** Dockge has
@@ -49,7 +49,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///    cannot be computed and a button that cannot know what it would pull are
 ///    both promises this app cannot keep.
 ///  * **`34 containers` beside the running count.** Container counts come from
-///    `serviceStatusList`, which is **per stack** — one socket round trip each.
+///    `serviceStatusList`, which is **per stack**: one socket round trip each.
 ///    Fanning twelve of them out to fill one readout would be expensive, and
 ///    fanning out only the five the preview draws and printing the sum as a
 ///    total would be a figure counted inside a capped sample and then stated as
@@ -70,7 +70,7 @@ class DockgeOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -83,7 +83,7 @@ class DockgeOverviewScreen extends ConsumerWidget {
     // `Dockge not configured`, and letting `AsyncValueWidget` catch that throw
     // would draw the same pixels while leaving failed providers behind it, each
     // scheduling a retry with backoff for a condition no amount of waiting
-    // changes — a pending timer in tests and a battery cost on device. It is
+    // changes: a pending timer in tests and a battery cost on device. It is
     // the same order `DockgeAgentLensButton` keeps, and for the same reason.
     final configured = ref.watch(
       currentSettingsProvider.select(
@@ -176,7 +176,7 @@ class _StacksSection extends ConsumerWidget {
         loadingLabel: 'Loading the stacks',
         // The **source**, not the fold. Invalidating this fold alone would
         // rebuild it against the `AsyncError` the stream is still holding and
-        // hand back the same failure without a round trip — and the stream,
+        // hand back the same failure without a round trip, and the stream,
         // watched by the census as well, is never disposed and so never
         // re-subscribes on its own. Invalidating it is what reconnects; the
         // folds follow it down.
@@ -202,7 +202,7 @@ class _StacksSection extends ConsumerWidget {
     );
   }
 
-  /// What the readout rail cannot say — and nothing it already has.
+  /// What the readout rail cannot say, and nothing it already has.
   ///
   /// `_dockgeKpis` fills the `ServiceKpiPeek` two regions above this one with
   /// Stacks / Running / Stopped / Inactive, off this same push. A subtitle
@@ -215,13 +215,13 @@ class _StacksSection extends ConsumerWidget {
   ///
   ///  * **which Dockge these figures came off**, when there is more than one to
   ///    have come off. The client holds exactly one agent's stacks at a time,
-  ///    so the rail's own `12` is per agent too — this is the clause that keeps
+  ///    so the rail's own `12` is per agent too. This is the clause that keeps
   ///    it from reading as the deployment's total.
   ///  * **how much of the running list the five rows below leave out**, which
   ///    is a fact about this preview and exists nowhere else on the page.
   ///
-  /// Null when neither applies — a single-instance Dockge with nothing
-  /// truncated — because a header with nothing to add says nothing. There is no
+  /// Null when neither applies: a single-instance Dockge with nothing
+  /// truncated, because a header with nothing to add says nothing. There is no
   /// em dash either: an em dash stands in for a figure whose source did not
   /// answer, and this line no longer states a figure to stand in for.
   static String? _subtitle(
@@ -326,14 +326,14 @@ class _IdleRow extends StatelessWidget {
 /// `DockgeAgentLensButton` keeps and deliberately the same rule: most Dockge
 /// installs are a single instance, and a section listing "local" teaches the
 /// user there is a decision to make when there is not. It is also why the
-/// section has no link — the picker is the app-bar lens, and a second one here
+/// section has no link: the picker is the app-bar lens, and a second one here
 /// would be two controls fighting over one piece of state.
 ///
 /// That missing link is why [dockgeAgentRows] is **uncapped**, and the two facts
 /// are one decision. Every other region on this page ends in a tab that holds
 /// the rest of its list; this one ends nowhere, so a row this section does not
 /// draw is a row the app never mentions. With no cap, the header's figures are
-/// counted over exactly what is on screen — which is the whole list — instead of
+/// counted over exactly what is on screen, which is the whole list, instead of
 /// stating a sample's own length as the deployment's total.
 class _AgentsSection extends ConsumerWidget {
   const _AgentsSection();
@@ -347,7 +347,7 @@ class _AgentsSection extends ConsumerWidget {
     // the failure of a feature the user may not have.
     if (rows == null || rows.length < 2) return const SizedBox.shrink();
 
-    // Counted over `rows`, which is every agent the push carried — see the
+    // Counted over `rows`, which is every agent the push carried. See the
     // class doc. Red is the one tone that means "did not answer", so this is
     // the offline count and not a roll-up of everything that is not green:
     // `connecting` has not failed yet.
@@ -409,7 +409,7 @@ class _AgentDot extends StatelessWidget {
       decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
     );
 
-    // The same 16pt box and the same optical centre either way — the ring eats
+    // The same 16pt box and the same optical centre either way: the ring eats
     // the inset it needs out of the padding rather than growing the box, so the
     // row's text does not step sideways when the lens moves.
     return Container(
@@ -433,7 +433,7 @@ class _AgentDot extends StatelessWidget {
 /// Local to this feature rather than added to `ServiceOverviewSection`'s family
 /// in `lib/core/widgets/`: the shared row is inert by design, and three sibling
 /// agents are writing against that file today. A tappable variant belongs
-/// there eventually — this is the shape it should take.
+/// there eventually: this is the shape it should take.
 ///
 /// Three things are load-bearing:
 ///
@@ -443,7 +443,7 @@ class _AgentDot extends StatelessWidget {
 ///    `excludeChildSemantics` silences the row's own container underneath so
 ///    the sentence is announced once rather than twice.
 ///  * **`GoRouter.maybeOf`, not `context.push`.** An Overview is legitimately
-///    built outside a router — a widget test, a preview — and there the row
+///    built outside a router (a widget test, a preview), and there the row
 ///    simply does not act rather than throwing. It is the reasoning
 ///    `ServiceOverviewSection`'s own tab link already uses for
 ///    `StatefulNavigationShell.maybeOf`.

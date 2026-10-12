@@ -119,7 +119,7 @@ void main() {
       ]);
 
       // Dockge dates nothing. An item that cannot be placed honestly loses to
-      // one that can — it must not inherit "just now" and outrank a real age.
+      // one that can: it must not inherit "just now" and outrank a real age.
       expect(ranked.map((d) => d.title), ['dated', 'undated']);
     });
 
@@ -329,7 +329,7 @@ void main() {
         ),
         'Open in qBittorrent',
       );
-      // No target named — the row still offers the act rather than going blank.
+      // No target named: the row still offers the act rather than going blank.
       expect(
         decisionActionLabel(DecisionKind.stalledDownload),
         'Open in client',
@@ -348,7 +348,7 @@ void main() {
     });
 
     test('a blocked import names its remedy, not the client', () {
-      // APP-04: filed as a stall, it said "Open in qBittorrent" — the one
+      // APP-04: filed as a stall, it said "Open in qBittorrent", the one
       // place that cannot import a file already on disk.
       expect(
         decisionActionLabel(

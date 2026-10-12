@@ -59,7 +59,7 @@ enum TrueNasVirtKind {
 ///
 /// The other half of decision 36: **Incus instances only**. This screen used to
 /// also list legacy KVM VMs out of `vm.query` and route their lifecycle calls to
-/// the `vm.*` RPCs — and, because those VMs do not need an Incus storage pool,
+/// the `vm.*` RPCs. And, because those VMs do not need an Incus storage pool,
 /// the VM door deliberately *bypassed* the readiness gate, so it was the one
 /// place in the console that could show instances the rest of the section could
 /// not act on. TrueNAS 25.04 is this client's minimum anyway (the JSON-RPC
@@ -163,8 +163,8 @@ class _VirtPane extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final parsed = version.asData?.value;
-    // Fail open on an unparseable version string — the same rule
-    // `TrueNasVersion.isVersionSupported` states — but never on a parsed one
+    // Fail open on an unparseable version string: the same rule
+    // `TrueNasVersion.isVersionSupported` states, but never on a parsed one
     // that is genuinely older: `virt.*` does not exist before 25.04 and every
     // control on this page would throw "method not found".
     if (parsed != null && !parsed.isSupported) {
@@ -258,7 +258,7 @@ class _ExperimentalNote extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    // Amber, because "experimental" is TrueNAS warning about its own feature —
+    // Amber, because "experimental" is TrueNAS warning about its own feature:
     // a fault it is pre-announcing. The tint is a container, so the ink walks
     // for contrast against the tint rather than against the page.
     final tone = statusToneColor(colorScheme, StatusTone.warning);

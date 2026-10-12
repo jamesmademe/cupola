@@ -169,7 +169,7 @@ void main() {
 
     final payload = client.lastPostData as Map<String, dynamic>;
     expect(client.lastPostPath, '/api/v1/indexer');
-    // An add carries no id — that is what turns a definition into an indexer.
+    // An add carries no id: that is what turns a definition into an indexer.
     expect(payload.containsKey('id'), isFalse);
     expect(payload['name'], 'My Tracker');
     expect(payload['enable'], isTrue);

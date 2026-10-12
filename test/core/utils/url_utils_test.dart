@@ -43,7 +43,7 @@ void main() {
     group('normalizeBaseUrl', () {
       test('qualifies a scheme-less host with https', () {
         // Dio's `baseUrl` setter throws ArgumentError on a bare host, and both
-        // address fields accept one — so this is what keeps a plausible address
+        // address fields accept one, so this is what keeps a plausible address
         // from wedging its caller.
         expect(
           UrlUtils.normalizeBaseUrl('192.168.1.10:7878'),
@@ -195,8 +195,8 @@ void main() {
         );
       });
 
-      // `Uri.tryParse` is far looser than DNS — it reports `hello!world` and
-      // `a,b.com` as hosts — so free text used to sail through the form and
+      // `Uri.tryParse` is far looser than DNS: it reports `hello!world` and
+      // `a,b.com` as hosts, so free text used to sail through the form and
       // come back as "couldn't reach it", sending the user hunting for a
       // network fault that was never there.
       test('rejects free text that cannot be a host', () {
@@ -243,7 +243,7 @@ void main() {
       });
 
       // `Uri.host` percent-encodes anything non-ASCII, and `%` is not in any
-      // host's alphabet — so a character rule applied to the raw host rejected
+      // host's alphabet, so a character rule applied to the raw host rejected
       // every internationalised name and told the user their address was
       // malformed. It is the same class of input as the single-label and
       // underscore hosts the rule deliberately keeps.

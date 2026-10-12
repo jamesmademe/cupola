@@ -57,7 +57,7 @@ class MainActivity : FlutterActivity() {
      * Drops WorkManager's records of jobs that have already finished.
      *
      * A background release search is a `DataTask`, which the downloader plugin
-     * always runs through WorkManager — so the whole task, headers and the arr
+    * always runs through WorkManager, so the whole task, headers and the arr
      * admin API key with them, is stored as the job's `inputData` in
      * WorkManager's own database. That row outlives the search: the automatic
      * pruning has a **one-day** threshold and runs only when the database next
@@ -66,7 +66,7 @@ class MainActivity : FlutterActivity() {
      * "until the next launch".
      *
      * Two reasons it is safe to be this blunt. It only ever touches jobs in a
-     * terminal state — running work is untouched — and Cupola uses neither
+    * terminal state (running work is untouched), and Cupola uses neither
      * pause/resume nor `doRescheduleKilledTasks`, so there is no finished record
      * anything here still needs. It also does the plugin a favour: with the work
      * list empty, the plugin's own check for an orphaned `taskMap` becomes true
@@ -80,7 +80,7 @@ class MainActivity : FlutterActivity() {
             WorkManager.getInstance(applicationContext).pruneWork()
             true
         } catch (e: IllegalStateException) {
-            // WorkManager was never initialised in this process — nothing has
+           // WorkManager was never initialised in this process. Nothing has
             // been enqueued, so there is nothing to prune either. Dart treats
             // false as "not done" and simply tries again next launch.
             false
@@ -93,7 +93,7 @@ class MainActivity : FlutterActivity() {
      * Local Network Protections put LAN traffic behind [ACCESS_LOCAL_NETWORK],
      * and a denial does not look like one at the socket: TCP connections simply
      * time out, so a connection test blames the address the user typed. Dart asks
-     * only after such a failure, which is why requesting here is not an ambush —
+    * only after such a failure, which is why requesting here is not an ambush:
      * the user has just tapped "Test connection" and is watching.
      *
      * `just_granted` is exact rather than inferred on this platform: reaching the
@@ -111,7 +111,7 @@ class MainActivity : FlutterActivity() {
         }
         // One dialog answers every caller. Onboarding tests each configured
         // service in parallel, and Android delivers a single result per request
-        // code — a second request would strand the first caller for good.
+       // code: a second request would strand the first caller for good.
         pendingLocalNetwork.add(result)
         if (pendingLocalNetwork.size == 1) {
             requestPermissions(arrayOf(ACCESS_LOCAL_NETWORK), LOCAL_NETWORK_REQUEST)
@@ -126,7 +126,7 @@ class MainActivity : FlutterActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != LOCAL_NETWORK_REQUEST) return
         val verdict = when {
-            // Dismissed without answering — Android reports that as an empty
+           // Dismissed without answering. Android reports that as an empty
             // array. Claiming a denial here would name the wrong cause.
             grantResults.isEmpty() -> UNKNOWN
             grantResults[0] == PackageManager.PERMISSION_GRANTED -> JUST_GRANTED
@@ -142,7 +142,7 @@ class MainActivity : FlutterActivity() {
      *
      * Both halves matter. Below Android 17 nothing enforces it, and an app that
      * targets less than 37 keeps the implicit local-network access that
-     * `INTERNET` has always carried — so on every shipping build today this
+    * `INTERNET` has always carried, so on every shipping build today this
      * returns false and the whole path stays dormant. It lights up on its own the
      * day `targetSdk` reaches 37, which is exactly when a silent timeout would
      * otherwise start looking like a broken server.
@@ -172,7 +172,7 @@ class MainActivity : FlutterActivity() {
      * From Android 13 the system shows a preview of every copy, which for a
      * credential means rendering it in cleartext over whatever is on screen.
      * `EXTRA_IS_SENSITIVE` is what suppresses that preview, and it is only
-     * reachable through [ClipDescription.setExtras] — Flutter's own clipboard
+    * reachable through [ClipDescription.setExtras]. Flutter's own clipboard
      * plumbing never sets it.
      *
      * Returns false rather than throwing when there is no clipboard service, so

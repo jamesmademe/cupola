@@ -11,12 +11,12 @@ import 'package:cupola/core/utils/percent_format.dart';
 
 /// What the service currently holds on disk.
 enum MediaAvailability {
-  /// The service is not tracking this item at all — nothing requested, nothing
+  /// The service is not tracking this item at all: nothing requested, nothing
   /// added to the library. The badge doubles as an invitation to add it, which
   /// is why it carries the accent tone rather than a state tone.
   notTracked,
 
-  /// Not released / not aired yet — nothing is wrong, nothing is expected.
+  /// Not released / not aired yet: nothing is wrong, nothing is expected.
   unavailable,
 
   /// Expected to exist, but nothing is on disk.
@@ -40,12 +40,12 @@ enum MediaAvailability {
 
 /// What the download/import pipeline is doing right now, if anything.
 ///
-/// Ordered loosely by lifecycle; [salience] — not the declaration order — is
+/// Ordered loosely by lifecycle; [salience] (not the declaration order) is
 /// what decides which entry wins when several map to the same media item.
 ///
 /// Three of these states exist because the pipeline's *problems* used not to be
 /// expressible. A stalled download arrived as `downloading` plus a warning flag,
-/// so the row read "Downloading" — the opposite of the truth — for the single
+/// so the row read "Downloading", the opposite of the truth, for the single
 /// most common reason a user opens Activity at all. An unreachable download
 /// client was flattened onto [paused] with a label riding alongside it, so the
 /// merge below could and did discard it. And `importBlocked`, which needs a
@@ -65,7 +65,7 @@ enum MediaPipeline {
   /// How strongly this state should win when several queue entries collapse
   /// onto one media item (a series with three episodes in flight, say).
   ///
-  /// The ranking is **gravity** — how badly this state wants the user — not
+  /// The ranking is **gravity** (how badly this state wants the user), not
   /// lifecycle position. That distinction is the fix for a real bug: when
   /// `clientUnavailable` was expressed as [paused], it inherited the *lowest*
   /// salience in the enum, so a series with one episode blocked by a dead
@@ -75,7 +75,7 @@ enum MediaPipeline {
   /// Within the healthy states the original rule still holds: `downloading`
   /// outranks the benign waiting states because "something is happening" is the
   /// more useful headline. That is why `importPending` sits *below* it while
-  /// `importBlocked` sits above — one is a wait, the other is a request for
+  /// `importBlocked` sits above: one is a wait, the other is a request for
   /// help.
   int get salience => switch (this) {
     MediaPipeline.failed => 8,
@@ -119,7 +119,7 @@ enum StatusTone { primary, success, warning, info, error, neutral }
 /// The glyph for those rows used to be derived from the tone, which worked only
 /// while every event that needed its own picture also had its own colour. It
 /// does not survive the tone rule: `Grabbed`, `Deleted`, `Ignored`, `Renamed`
-/// and `Blocked` are all correctly *neutral* — none of them is damage — and a
+/// and `Blocked` are all correctly *neutral*: none of them is damage, and a
 /// tone-keyed switch can only answer one glyph for the five of them, which is
 /// why the neutral arm was a question mark on the most common row in Activity.
 ///
@@ -138,7 +138,7 @@ enum StatusGlyph {
 
 /// A fully resolved media status, ready to render.
 ///
-/// Built by the per-service resolvers in each feature's `domain/` layer — never
+/// Built by the per-service resolvers in each feature's `domain/` layer, never
 /// assembled inside a widget, so grids, detail pages and Activity cannot drift
 /// apart the way they did when each had its own derivation.
 class MediaStatusInfo {
@@ -165,12 +165,12 @@ class MediaStatusInfo {
 
   /// Overrides the derived [tone] for states the two axes cannot express.
   ///
-  /// The availability/pipeline pair describes a *thing* — what is on disk and
+  /// The availability/pipeline pair describes a *thing*: what is on disk and
   /// what is moving. Some rows instead describe an *event* that already
   /// happened: a history record's `downloadFailed` or `movieFileDeleted` has no
   /// current availability and no live pipeline, yet it very much has a severity.
   /// Without this, mapping those onto whichever availability produced the right
-  /// colour meant lying about the item's state to get the tone right — and
+  /// colour meant lying about the item's state to get the tone right, and
   /// picking the tone locally instead is exactly how a failed import came to
   /// render in the success green.
   ///
@@ -207,13 +207,13 @@ class MediaStatusInfo {
   /// True when this item's [progress] is worth drawing and reading out.
   ///
   /// Wider than [isActive] by exactly one state: a stalled transfer is not
-  /// moving, but "Stalled at 43%" is materially more useful than "Stalled" —
+  /// moving, but "Stalled at 43%" is materially more useful than "Stalled":
   /// the frozen figure is how the user judges whether to wait or to blocklist
   /// and search again. Everything [isActive] excludes stays excluded: a queued
   /// item carries a progress value that is deliberately not drawn.
   bool get showsProgress => isActive || pipeline == MediaPipeline.stalled;
 
-  /// True when the item is in the pipeline at all — the guard that keeps a
+  /// True when the item is in the pipeline at all: the guard that keeps a
   /// queued item from ever rendering as `Missing`.
   bool get isInPipeline => pipeline != null;
 
@@ -237,7 +237,7 @@ class MediaStatusInfo {
   ///
   /// [label] alone drops the two things a badge shows without ever writing them
   /// down: the percentage drawn as a progress ring, and the warning carried by
-  /// the tone colour — [hasWarning] is what replaced the old "… (Warning)" text
+  /// the tone colour: [hasWarning] is what replaced the old "… (Warning)" text
   /// suffix, so since then nothing spells it out. A sighted user reads both off
   /// the badge; a screen reader has to be told.
   String get semanticLabel {
@@ -271,7 +271,7 @@ class MediaStatusInfo {
   StatusTone get tone {
     final base = toneOverride ?? _baseTone;
     // A warning must never downgrade an error, but it should always surface on
-    // an otherwise calm tone — this is what replaced the old "… (Warning)"
+    // an otherwise calm tone: this is what replaced the old "… (Warning)"
     // text suffix.
     if (hasWarning && base != StatusTone.error) return StatusTone.warning;
     return base;
@@ -279,14 +279,14 @@ class MediaStatusInfo {
 
   /// The tone rule, in one place, in the five arms the design settles on:
   ///
-  /// - **green** — available or complete;
-  /// - **amber** — a *fault*: failing, stalled, errored, stopped unexpectedly,
+  /// - **green**: available or complete;
+  /// - **amber** (a *fault*): failing, stalled, errored, stopped unexpectedly,
   ///   expiring. Something that should be moving and is not;
-  /// - **red** — unreachable, and nothing else. A connection that did not
+  /// - **red**: unreachable, and nothing else. A connection that did not
   ///   answer;
-  /// - **blue** — queued or informational. Work that is waiting its turn, or a
+  /// - **blue**: queued or informational. Work that is waiting its turn, or a
   ///   fact about the item;
-  /// - **neutral** — *backlog*. Missing, wanted, cutoff unmet, not aired,
+  /// - **neutral**: *backlog*. Missing, wanted, cutoff unmet, not aired,
   ///   deliberately paused, deleted.
   ///
   /// The last arm is the one the code used to get backwards, and it is the one
@@ -303,13 +303,13 @@ class MediaStatusInfo {
         // Waiting its turn is information, not a fault: the queue is working
         // exactly as intended and the row is reporting its position in it.
         MediaPipeline.queued || MediaPipeline.importPending => StatusTone.info,
-        // The user pressed pause. Nothing is wrong, so nothing is toned — the
+        // The user pressed pause. Nothing is wrong, so nothing is toned; the
         // same reading that keeps a deliberately stopped container neutral.
         MediaPipeline.paused => StatusTone.neutral,
         // Stuck, and waiting on the user rather than on the network.
         MediaPipeline.stalled ||
         MediaPipeline.importBlocked => StatusTone.warning,
-        // A grab or an import the service itself reports as failed — the
+        // A grab or an import the service itself reports as failed: the
         // canonical amber fault.
         MediaPipeline.failed => StatusTone.warning,
         // The download client is unreachable, so nothing in the queue can

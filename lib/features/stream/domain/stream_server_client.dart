@@ -2,9 +2,9 @@
 ///
 /// The dashboard, the library browse and the item detail are written against this
 /// and never against Jellyfin or Plex directly, so the two implementations can
-/// keep their genuinely different mechanics — ticks against milliseconds, one
+/// keep their genuinely different mechanics: ticks against milliseconds, one
 /// `PlayMethod` against three independent `*Decision` fields, an impersonating
-/// admin key against a single-perspective token — without leaking either into a
+/// admin key against a single-perspective token, without leaking either into a
 /// widget.
 ///
 /// Errors follow the project convention: a missing configuration throws
@@ -15,7 +15,7 @@
 /// Reads come in two kinds, and which kind a read is decides whether it may
 /// degrade. **A read that is the whole of a surface throws**: [getSessions]
 /// and [getLibraries] are each the only thing their board has to show, so a
-/// swallowed failure there is not a quieter page, it is a false one — "Nobody
+/// swallowed failure there is not a quieter page, it is a false one: "Nobody
 /// is watching right now" about a server nobody could ask. **A read that fills
 /// one slot of a page otherwise drawn** may degrade to `[]`/`null`: a count
 /// beside a card, a search group, the item a detail link resolves to. A
@@ -51,7 +51,7 @@ typedef StreamWatched = ({StreamItem item, DateTime playedAt});
 /// A record rather than a bare URL because the credential must stay in a header
 /// wherever it can. `ImageUtils.extractPosterUrl` can only emit `X-Api-Key`, and
 /// putting a token in the query string leaks it into `CachedNetworkImage`'s cache
-/// key — which is also the reason Plex's `/photo/:/transcode` proxy is only used
+/// key, which is also the reason Plex's `/photo/:/transcode` proxy is only used
 /// where its `url=` parameter genuinely forces the issue, and then with a
 /// 48-hour delegation token rather than the user's own.
 typedef StreamImageSource = ({String url, Map<String, String>? headers});
@@ -61,13 +61,13 @@ abstract interface class StreamServerClient {
   ///
   /// Deliberately the endpoint that does not *require* a credential on either
   /// server (`/System/Info/Public`, `/identity`), so that "the box is down" and
-  /// "the token is wrong" cannot arrive as the same error — the single most
+  /// "the token is wrong" cannot arrive as the same error: the single most
   /// common Stream misconfiguration, and the one a generic timeout hides.
   ///
   /// Note the precise claim: not that no credential is *sent*. Both clients set
   /// their auth header in `BaseOptions`, so it travels here too. What makes the
-  /// separation hold is the server side — Jellyfin marks the endpoint
-  /// `[AllowAnonymous]`, so a rejected token cannot turn this into a failure —
+  /// separation hold is the server side: Jellyfin marks the endpoint
+  /// `[AllowAnonymous]`, so a rejected token cannot turn this into a failure,
   /// and [verifyCredential] is the call that answers the credential question.
   Future<String?> probeVersion();
 
@@ -82,7 +82,7 @@ abstract interface class StreamServerClient {
 
   /// Stop one playback.
   ///
-  /// Both servers only *dispatch* this — Jellyfin returns 204 meaning "sent to
+  /// Both servers only *dispatch* this: Jellyfin returns 204 meaning "sent to
   /// the client", which may ignore it, and Plex returns an empty body. Callers
   /// must re-read [getSessions] to confirm rather than trusting the status code.
   Future<void> stopSession(String sessionId);
@@ -105,8 +105,8 @@ abstract interface class StreamServerClient {
   /// pushed Libraries page and not to the Overview rows: the card renders
   /// complete without it and the number lands afterwards.
   ///
-  /// Counted in whatever unit the library browses in — series for a TV library,
-  /// not episodes — so the card cannot show a figure the grid then contradicts.
+  /// Counted in whatever unit the library browses in: series for a TV library,
+  /// not episodes, so the card cannot show a figure the grid then contradicts.
   ///
   /// Null on failure, per the read convention, and the caller prints "—" rather
   /// than 0: a count that could not be read is not a count of nothing.
@@ -123,8 +123,8 @@ abstract interface class StreamServerClient {
   /// ordered, so the page renders the order it is given rather than imposing
   /// one. See [StreamSearchGroup] for why an empty group survives.
   ///
-  /// [limit]'s unit genuinely differs — it is a total on Jellyfin and per hub on
-  /// Plex — which is why it has no shared default: null asks each client for the
+  /// [limit]'s unit genuinely differs: it is a total on Jellyfin and per hub on
+  /// Plex, which is why it has no shared default: null asks each client for the
   /// number that suits its own endpoint.
   ///
   /// **Throws when the server did not answer or answered with a failure**, so
@@ -146,7 +146,7 @@ abstract interface class StreamServerClient {
   /// the project's convention is that list and search fetches are cancellable,
   /// and both clients had independently widened their overrides to add it. Left
   /// off here, every provider that wanted cancellation had to depend on the
-  /// concrete `JellyfinClient` or `PlexClient` — which forfeits the one thing
+  /// concrete `JellyfinClient` or `PlexClient`, which forfeits the one thing
   /// this interface exists for.
   Future<List<StreamItem>> getLibraryItems({
     required String libraryId,
@@ -162,7 +162,7 @@ abstract interface class StreamServerClient {
   /// **What a paged browse must call.** [getLibraryItems] throws the rows away
   /// from around the rows: it cannot say whether an empty result means the
   /// library is empty, the request failed, or this particular page happened to
-  /// be filtered down to nothing — and each of those needs a different thing on
+  /// be filtered down to nothing, and each of those needs a different thing on
   /// screen. See [StreamLibraryPage] for the two false claims that came out of
   /// collapsing them.
   ///
@@ -179,8 +179,8 @@ abstract interface class StreamServerClient {
   });
 
   // Deliberately no `hasViewer` here. "A per-viewer lens has no subject" is
-  // already carried by [StreamLibraryPage.needsViewer] — per request, where the
-  // browse actually needs it — so a second, connection-wide spelling of the same
+  // already carried by [StreamLibraryPage.needsViewer], per request, where the
+  // browse actually needs it, so a second, connection-wide spelling of the same
   // fact bought nothing and forced every implementer and test fake to declare a
   // member no caller read.
 
@@ -224,20 +224,20 @@ abstract interface class StreamServerClient {
   /// (Jellyfin as `ProviderIds`, Plex as `Guid[]` entries like `tmdb://1234`).
   ///
   /// Returns null when the item is not there or when the server is too old to
-  /// filter by provider id — both are "we cannot say it is watchable", and the
+  /// filter by provider id. Both are "we cannot say it is watchable", and the
   /// caller renders nothing rather than a wrong claim.
   ///
   /// **The answer is checked, never taken on trust.** An implementation returns
   /// only a row that `streamExternalMatchScore` accepts against these same
-  /// arguments — the item's *own* reported ids agreeing with the ones asked
-  /// about, and [kind] (or, without it, "a film or a show") — and the
+  /// arguments: the item's *own* reported ids agreeing with the ones asked
+  /// about, and [kind] (or, without it, "a film or a show"), and the
   /// best-supported one when several do. The server returning a row is not
   /// evidence it matched: one that ignores the filter answers 200 with the start
   /// of the whole library. [title] and [year] only settle a row whose ids cannot
   /// be compared at all; they are never a search key.
   ///
   /// A missing viewer is **not** one of those cases. It costs the *watch state*
-  /// — the slot reads "Ready to watch" instead of "34 min in" — but presence and
+  /// (the slot reads "Ready to watch" instead of "34 min in"), but presence and
   /// a route to open the item are still facts, and they are the media server's
   /// facts rather than a restatement of the arr's: the arr knows a file is on
   /// disk, the server knows it is in the library and playable. Refusing to
@@ -255,11 +255,11 @@ abstract interface class StreamServerClient {
   /// [findByExternalId], with its nothings told apart: the verified item, "not
   /// in the library" (the server answered with no rows), or "not verified"
   /// (rows came back and none is this title). **Throws when the server did not
-  /// answer or answered with a failure** — that is neither of the other two,
+  /// answer or answered with a failure**, that is neither of the other two,
   /// and the availability slot says it in its own words.
   ///
   /// The same checking contract as [findByExternalId], which is this with every
-  /// nothing — and every failure — flattened to null.
+  /// nothing, and every failure, flattened to null.
   Future<StreamExternalLookup> lookupByExternalId({
     String? tmdbId,
     String? tvdbId,
@@ -285,7 +285,7 @@ abstract interface class StreamServerClient {
 
   /// Household members whose watch state can be read.
   ///
-  /// Returns a single-entry list on Plex — see [StreamLibraryLens.isPerViewer].
+  /// Returns a single-entry list on Plex; see [StreamLibraryLens.isPerViewer].
   /// Throws on a remote failure: an empty list is a server with nobody on it.
   Future<List<StreamViewer>> getViewers();
 
@@ -294,9 +294,9 @@ abstract interface class StreamServerClient {
   /// **Synchronous, and that is a requirement rather than an optimisation.** A
   /// poster grid calls this once per tile during `build`; a `Future` would force
   /// every cell through a `FutureBuilder` and hand the grid a frame of empty boxes
-  /// on every scroll. Both servers can answer it by string manipulation alone —
+  /// on every scroll. Both servers can answer it by string manipulation alone:
   /// Jellyfin composes `/Items/{id}/Images/Primary`, Plex either resolves a
-  /// relative key or builds a `/photo/:/transcode` URL — so nothing here needs a
+  /// relative key or builds a `/photo/:/transcode` URL, so nothing here needs a
   /// round trip. If a future server ever does (a signed URL, say), it belongs
   /// behind a cache the client owns, not in this signature.
   StreamImageSource? imageFor(String posterPath, {int? width});

@@ -49,7 +49,7 @@ Future<void> _start() async {
     final settingsService = SettingsService(prefs, secureSettingsStore);
 
     // Unconditional, including for a user who has background search switched
-    // off — it is also what purges the records the last session left behind.
+    // off. It is also what purges the records the last session left behind.
     // See its own doc.
     await configureBackgroundSearch();
 
@@ -115,7 +115,7 @@ const Map<String, String> bundledFontLicenses = {
 /// from [LicenseRegistry].
 ///
 /// The registry only knows about licences declared in package metadata, and a
-/// font dropped into `assets/` has none — so the one obligation the OFL puts on
+/// font dropped into `assets/` has none, so the one obligation the OFL puts on
 /// a binary that bundles the font, that its licence travel with it, would go
 /// unmet in every shipped build. Registered before `runApp` because the
 /// registry is read lazily and the callback must already be there when the
@@ -173,7 +173,7 @@ class CupolaApp extends ConsumerWidget {
     ref.watch(seerrAccountKeeperProvider);
 
     // Keeps `CertTrustRegistry` in sync for the leaf image widgets that
-    // cannot watch a provider themselves — see its doc for why. The `read`
+    // cannot watch a provider themselves; see its doc for why. The `read`
     // populates the snapshot before the first poster ever asks (`listen`
     // alone only fires on a *change*); `listen`, registered every build per
     // the standard `ref.listen` idiom, keeps it current after that.
@@ -210,7 +210,7 @@ class CupolaApp extends ConsumerWidget {
       //
       // - A line box shorter than the glyph's ink lets the ink escape it. The
       //   display face needs its full 1.20em (Onest 1.275em) to contain an
-      //   accented capital, so at 1.0 the acute on `Ý` pokes out the top — and
+      //   accented capital, so at 1.0 the acute on `Ý` pokes out the top, and
       //   media titles arrive from TMDB in every language. Inside anything that
       //   clips (the detail hero clips by design) that is a shaved accent.
       // - Extra leading below the last line is padding nobody asked for, and it

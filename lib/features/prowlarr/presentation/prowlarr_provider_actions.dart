@@ -16,7 +16,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Write flows for the field-driven Prowlarr resources: apps, download clients,
 /// notifications and indexer proxies. Indexers have their own flows in
-/// `prowlarr_indexer_actions.dart` — they carry enough extra state (priority,
+/// `prowlarr_indexer_actions.dart`: they carry enough extra state (priority,
 /// sync profile, bulk editing) to be worth their own file.
 
 List<ProviderOrFamily> _invalidations(ProwlarrProviderKind kind) => [

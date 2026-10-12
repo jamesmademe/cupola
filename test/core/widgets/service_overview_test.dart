@@ -30,7 +30,7 @@ void main() {
         // The one feature Prowlarr's private copy had that the other three
         // lacked, and the reason it exists: an unconstrained figure beside an
         // `Expanded` title is a right-edge overflow at an accessibility reading
-        // size, and a row that throws is worse than a figure that ellipsises —
+        // size, and a row that throws is worse than a figure that ellipsises:
         // the whole value is still in the sentence a screen reader hears.
         await tester.pumpWidget(
           _host(

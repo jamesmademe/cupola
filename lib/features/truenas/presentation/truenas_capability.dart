@@ -101,11 +101,11 @@ const trueNasCapabilityCopy = CapabilityCopy(
 String trueNasBlockedMessage(String verbPhrase) =>
     'This TrueNAS key can\'t $verbPhrase.';
 
-/// The connection the TrueNAS pages read through, read once — for action code.
+/// The connection the TrueNAS pages read through, read once: for action code.
 String readTrueNasConnectionId(WidgetRef ref) =>
     ref.read(activeInstanceProvider(ServiceKey.truenas))?.id ?? '';
 
-/// Whether a TrueNAS write on [area] may go ahead — the menu-item and in-flow
+/// Whether a TrueNAS write on [area] may go ahead: the menu-item and in-flow
 /// counterpart of the gated widgets. Raises the toast and returns false when
 /// it may not.
 bool trueNasWriteAllowed(
@@ -145,7 +145,7 @@ Widget trueNasGatedIcon({
   onTap: onTap,
 );
 
-/// A button TrueNAS write gated on [area] — see
+/// A button TrueNAS write gated on [area]; see
 /// [CapabilityGatedAction.builder].
 Widget trueNasGatedButton({
   required WidgetRef ref,

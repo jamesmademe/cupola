@@ -16,7 +16,7 @@ void main() {
     });
 
     test('a dead tracker is amber, never red', () {
-      // Red claims the client never replied. qB replied — with the news that
+      // Red claims the client never replied. qB replied, with the news that
       // the tracker is down, which is a fault on a server that is plainly
       // alive. Same reading a stalled torrent gets one tab away.
       expect(trackerStatusTone(4), StatusTone.warning);

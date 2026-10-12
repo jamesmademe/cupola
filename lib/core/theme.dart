@@ -11,7 +11,7 @@ import 'package:cupola/core/widgets/themed_system_bars.dart';
 /// forget. The three bundled families are each one variable file registered
 /// once, and Flutter resolves `fontWeight` against that single face without
 /// touching an axis, so a bare [TextStyle] renders the file's default instance
-/// whatever it asks for — for Bricolage Grotesque that instance is 96pt
+/// whatever it asks for; for Bricolage Grotesque that instance is 96pt
 /// ExtraBold at full width. See [AppTheme.variations].
 TextStyle _role({
   Color? color,
@@ -54,7 +54,7 @@ extension CupolaTextStyle on TextStyle {
   ///
   /// Each bundled family is a single variable face. Flutter resolves
   /// `fontWeight: FontWeight.w600` against that one face, finds it, and never
-  /// touches the axis — so the glyphs stay at the default instance and the only
+  /// touches the axis, so the glyphs stay at the default instance and the only
   /// difference is whatever synthetic emboldening Skia decides to add.
   ///
   /// Only `wght` moves: the width and the optical size a display role set are
@@ -73,8 +73,8 @@ extension CupolaTextStyle on TextStyle {
 
   /// Locks digits to a single advance width.
   ///
-  /// The Tabular Rule: anything that updates in place — a transfer rate, a
-  /// percentage, a queue count — jitters as it counts with proportional digits.
+  /// The Tabular Rule: anything that updates in place (a transfer rate, a
+  /// percentage, a queue count) jitters as it counts with proportional digits.
   /// All three families carry `tnum`.
   TextStyle get tabular =>
       copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
@@ -85,7 +85,7 @@ extension CupolaTextStyle on TextStyle {
   /// clock or a count stays in the text face and takes [tabular] there.
   /// `test/core/theme/mono_face_guard_test.dart` lists every use and why.
   ///
-  /// Keeps the size, colour and line height it already had — a fingerprint or a
+  /// Keeps the size, colour and line height it already had: a fingerprint or a
   /// log line still belongs to the role it was set in, it just needs columns
   /// that line up. It takes the mono role's own drawing: `wght` 450 (or the
   /// style's weight, if that was heavier) and the mono role's tracking in em,
@@ -126,7 +126,7 @@ class AppColors {
   // Registry data (`ServiceKey.brandAccent`), never paint: the interface paints
   // every service with the [lamp] (`ServiceKey.accent`), and a service's mark,
   // tab, room and buttons are monochrome. Outside this class and the registry
-  // they may be read only where a colour is the information itself — see
+  // they may be read only where a colour is the information itself: see
   // `test/core/theme/monochrome_accent_test.dart`.
   static const Color seerr = DesignTokens.colorServiceSeerr;
   static const Color radarr = DesignTokens.colorServiceRadarr;
@@ -146,7 +146,7 @@ class AppColors {
   static const Color jellyfin =
       DesignTokens.colorServiceJellyfin; // Jellyfin purple
 
-  /// Transmission crimson — the brand's red family, walked off its own hex for
+  /// Transmission crimson: the brand's red family, walked off its own hex for
   /// the same reason [plex] is walked off Plex gold.
   ///
   /// Transmission's mark is a plain red that lands ΔE 5.3 from [readarr]: two
@@ -156,7 +156,7 @@ class AppColors {
   /// Transmission red while clearing ΔE 10.8 from Readarr.
   static const Color transmission = DesignTokens.colorServiceTransmission;
 
-  /// Nginx Proxy Manager vermilion — the brand value, used unchanged.
+  /// Nginx Proxy Manager vermilion: the brand value, used unchanged.
   ///
   /// Unlike [transmission] and [plex] this one needed no adjustment: it sits
   /// ΔE 9.2 from [prowlarr]'s orange, because it is a *red*-orange and the
@@ -164,7 +164,7 @@ class AppColors {
   static const Color nginxProxyManager =
       DesignTokens.colorServiceNginxProxyManager;
 
-  /// Plex bronze — deliberately **not** Plex's brand gold `#E5A00D`.
+  /// Plex bronze: deliberately **not** Plex's brand gold `#E5A00D`.
   ///
   /// In CIE Lab brand gold sits ΔE 5 from [sabnzbd], so the 8pt source dot on
   /// the merged Recently Added rail could not tell a Plex item from a SABnzbd
@@ -212,8 +212,8 @@ class AppColors {
   // === PLATE (artwork stand-ins) ===
   //
   // The one region of the app that does **not** follow the theme. A plate
-  // stands in for artwork — a poster that has not loaded, an album with no
-  // cover, the letterboxed well a backdrop sits in — and artwork is not
+  // stands in for artwork: a poster that has not loaded, an album with no
+  // cover, the letterboxed well a backdrop sits in, and artwork is not
   // palette. A missing poster rendered as a white rectangle on the light theme
   // does not read as "art that is not here yet", it reads as a hole in the
   // layout; and the instant the real image arrives the well flips from white to
@@ -273,12 +273,12 @@ class AppColors {
   static const Color successContainer =
       DesignTokens.colorStatusSuccessContainer;
 
-  /// The fault tone — a yellow amber, and deliberately not Radarr's amber-500.
+  /// The fault tone: a yellow amber, and deliberately not Radarr's amber-500.
   ///
   /// The tone rule rests on amber meaning "something is wrong", so a fault chip
   /// and a service accent that cannot be told apart would break it on every
   /// Radarr surface. Measured in CIE Lab this value sits ΔE2000 11.6 (12° of
-  /// LCh hue) from [radarr] and 7.4 from [sabnzbd] — near enough that the
+  /// LCh hue) from [radarr] and 7.4 from [sabnzbd]: near enough that the
   /// accents left the interface altogether: nothing but a fault is amber.
   static const Color warning = DesignTokens.colorStatusWarning;
   static const Color error = DesignTokens.colorStatusError;
@@ -294,8 +294,8 @@ class AppColors {
   /// room's on-ink, the label of the ink button.
   ///
   /// The same value [ServiceTheme.foregroundOn] returns. It is a constant here
-  /// rather than a call so `theme.dart` stays a leaf — importing
-  /// `service_theme.dart` would pull a feature file into the palette — and
+  /// rather than a call so `theme.dart` stays a leaf: importing
+  /// `service_theme.dart` would pull a feature file into the palette, and
   /// `theme_test.dart` re-measures every use of it against `foregroundOn`, so
   /// the constant cannot quietly become the wrong answer.
   static const Color inkOnBright = DesignTokens.colorInkOnBright;
@@ -306,8 +306,8 @@ class AppColors {
 ///
 /// The colour scheme carries the opaque steps and the inks flattened on the
 /// ground, which is what the contrast machinery measures. This carries the
-/// room as drawn — translucent lines, fills and inks that sit on whatever step
-/// they land on — for the surfaces built on it.
+/// room as drawn: translucent lines, fills and inks that sit on whatever step
+/// they land on, for the surfaces built on it.
 @immutable
 class CupolaRoom extends ThemeExtension<CupolaRoom> {
   const CupolaRoom({
@@ -575,7 +575,7 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
   });
 
   /// The bundle for [context]'s theme, falling back to [defaults] when the
-  /// extension is absent — which happens in any widget test that pumps a bare
+  /// extension is absent, which happens in any widget test that pumps a bare
   /// `MaterialApp`.
   ///
   /// The fallback is why this is worth a helper: without it every call site
@@ -835,7 +835,7 @@ abstract final class AppType {
     DesignTokens.typeRoleCaptionLetterSpacing,
   );
 
-  /// Tab labels, poster marks — the floor: Onest 11/14, 600.
+  /// Tab labels, poster marks (the floor: Onest 11/14, 600).
   static final TextStyle micro = _type(
     DesignTokens.typeRoleMicroFontFamily,
     DesignTokens.typeRoleMicroFontFamilyFallback,
@@ -937,10 +937,10 @@ class AppTheme {
   // of them from a plain `TextStyle`, and it does not apply an optical size by
   // itself, so every role names each axis its face has.
 
-  /// Lower bound of Bricolage's optical-size axis — the text drawing.
+  /// Lower bound of Bricolage's optical-size axis: the text drawing.
   static const double _opticalSizeMin = 12;
 
-  /// Upper bound of Bricolage's optical-size axis — the poster drawing.
+  /// Upper bound of Bricolage's optical-size axis: the poster drawing.
   static const double _opticalSizeMax = 96;
 
   /// The optical size display type should be *drawn* at for text rendered at
@@ -972,13 +972,13 @@ class AppTheme {
   /// They exist because the alternative is what the codebase actually had:
   /// thirty-nine bare `TextStyle(fontSize: …)` literals, mostly across the
   /// desktop shell. A bare `TextStyle` is not a smaller version of a ramp role,
-  /// it is a *different* style — it never reaches the `wght` axis, so every
+  /// it is a *different* style; it never reaches the `wght` axis, so every
   /// one of those weights rendered at the face's default instance.
   ///
   /// Each still takes a [Brightness], which the type no longer reads (tracking
   /// is the same in both rooms); the parameter is kept so the call sites stand.
   ///
-  /// **Subtitle** — a service's own name in its app bar: the section role.
+  /// **Subtitle**: a service's own name in its app bar: the section role.
   static TextStyle subtitle(Brightness brightness) => _slot(
     DesignTokens.typeTitleSubtitleFontFamily,
     DesignTokens.typeTitleSubtitleFontFamilyFallback,
@@ -990,7 +990,7 @@ class AppTheme {
     DesignTokens.typeTitleSubtitleLetterSpacing,
   );
 
-  /// **Panel header** — an `h2` inside a page: a Dockge stack, an NPM host, a
+  /// **Panel header**: an `h2` inside a page: a Dockge stack, an NPM host, a
   /// TrueNAS console section. The section role.
   static TextStyle panelHeader(Brightness brightness) => _slot(
     DesignTokens.typeTitlePanelHeaderFontFamily,
@@ -1003,7 +1003,7 @@ class AppTheme {
     DesignTokens.typeTitlePanelHeaderLetterSpacing,
   );
 
-  /// **Row title** (600, 15) — the primary line of a list row that is a *name*
+  /// **Row title** (600, 15): the primary line of a list row that is a *name*
   /// rather than a sentence: a device, a now-playing session, a proxy host.
   static TextStyle rowTitle(Brightness brightness) => _slot(
     DesignTokens.typeTitleRowTitleFontFamily,
@@ -1016,7 +1016,7 @@ class AppTheme {
     DesignTokens.typeTitleRowTitleLetterSpacing,
   );
 
-  /// **Data** (500, 13) — the answer in a row: the title of an attention item,
+  /// **Data** (500, 13): the answer in a row: the title of an attention item,
   /// a queue entry, a table cell. The meta role.
   ///
   /// It sits *above* Label on purpose. The thing that needs a human must never
@@ -1155,7 +1155,7 @@ class AppTheme {
     );
 
     // The fault tone, as a field's refusal draws it: a field that answered
-    // and refused is a fault, amber — red is reserved for unreachable.
+    // and refused is a fault, amber; red is reserved for unreachable.
     final Color fault = room.toneAmber;
 
     return ThemeData(
@@ -1286,7 +1286,7 @@ class AppTheme {
       ),
 
       // FloatingActionButton: the ink button. A screen's one floating action is
-      // its primary, and the primary is ink — never a service's colour, which
+      // its primary, and the primary is ink, never a service's colour, which
       // is what the four TrueNAS consoles used to fill theirs with.
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.primary,

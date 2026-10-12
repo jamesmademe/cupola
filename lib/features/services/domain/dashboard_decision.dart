@@ -2,8 +2,8 @@
 ///
 /// ## Why one list and not six
 ///
-/// The screen used to carry a Requests region — one kind, one service, its own
-/// header, its own empty state — and nothing at all for the other five. So a
+/// The screen used to carry a Requests region: one kind, one service, its own
+/// header, its own empty state, and nothing at all for the other five. So a
 /// stalled torrent, a failing indexer and an expiring certificate had no place to
 /// be *asked about*: each was a number on a card somewhere, and the user had to
 /// know to go looking. A region per kind would have made six regions that are
@@ -17,7 +17,7 @@
 ///  * **faults before backlog.** A stalled download, a failing indexer, an
 ///    expiring certificate and a failed import are things that were meant to be
 ///    working and are not. A pending request is somebody
-///    politely waiting — it is *backlog*, the same category as 34 missing films,
+///    politely waiting: it is *backlog*, the same category as 34 missing films,
 ///    and the tone rule files backlog under neutral. It still belongs in this
 ///    region (it needs a decision, which is the whole criterion) and it belongs
 ///    under the faults.
@@ -28,7 +28,7 @@
 ///    honestly loses to one that can.
 ///
 /// Nothing in here fetches. The provider merges what the page has already
-/// loaded — see `dashboardDecisionsProvider`.
+/// loaded: see `dashboardDecisionsProvider`.
 library;
 
 import 'package:cupola/core/status/lexicon.dart';
@@ -39,7 +39,7 @@ import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-/// Where decisions come from — each one read on its own.
+/// Where decisions come from: each one read on its own.
 ///
 /// One read per source rather than one read of all of them, because the region
 /// is only as fast as what it waits for: Dockge publishes its stack list over a
@@ -93,8 +93,8 @@ enum DecisionSource {
   final List<ServiceKey> services;
 }
 
-/// What the region shows. Three different things used to read the same —
-/// nothing at all — and only one of them is "nothing needs you".
+/// What the region shows. Three different things used to read the same:
+/// nothing at all, and only one of them is "nothing needs you".
 enum DecisionsRegion {
   /// Nothing to show yet and a source still out: a skeleton, because absence
   /// would claim nothing is waiting before anyone has said so.
@@ -135,7 +135,7 @@ enum DecisionKind {
   /// A download that has stopped moving. Action: open it in its client.
   stalledDownload,
 
-  /// A download an \*arr has finished and will not import on its own — a
+  /// A download an \*arr has finished and will not import on its own: a
   /// queue record in `importBlocked`, or the older forks' `importPending`
   /// with a warning. Action: manual import.
   ///
@@ -175,7 +175,7 @@ enum DecisionKind {
 }
 
 extension DecisionKindRank on DecisionKind {
-  /// Whether this kind is a fault — something that was working and stopped.
+  /// Whether this kind is a fault: something that was working and stopped.
   ///
   /// The tone rule's first arm, stated once here rather than re-derived at every
   /// row: faults are amber, backlog is neutral, and red is left to a connection
@@ -236,7 +236,7 @@ class DashboardDecision {
   /// other kind, whose control is the kind's own.
   final String? remedy;
 
-  /// Unique within its kind — used for the row's key and for nothing else.
+  /// Unique within its kind: used for the row's key and for nothing else.
   final String id;
 
   /// Which service raised it. Owns the row's glyph and its accent.
@@ -263,7 +263,7 @@ class DashboardDecision {
   /// A stalled qBittorrent transfer surfaced by Radarr is the specimen: the row
   /// belongs to Radarr and the control opens qBittorrent. When this service is
   /// not configured the control is drawn dimmed but stays tappable, keeps its
-  /// target and gains a hint — never `Semantics(enabled: false)`, which would
+  /// target and gains a hint: never `Semantics(enabled: false)`, which would
   /// take the fact off the screen reader's path along with the control.
   final ServiceKey? requiresService;
 
@@ -285,7 +285,7 @@ class DashboardDecision {
   final int count;
 
   /// The connection the row was read from, and the one an action that opens
-  /// a flow bound to one — the import wizard, Approve — is bound to. Empty
+  /// a flow bound to one (the import wizard, Approve) is bound to. Empty
   /// means "whatever the lens is on".
   final String instanceId;
 
@@ -346,8 +346,8 @@ class DashboardDecision {
 
 /// Whether [kind] folds into one row when several share a remedy.
 ///
-/// Only the kinds whose control is a *jump* — to the client, to the import
-/// wizard — can: the jump is the same for every item in the group. Test, Start
+/// Only the kinds whose control is a *jump* (to the client, to the import
+/// wizard) can: the jump is the same for every item in the group. Test, Start
 /// and Approve act on one indexer, one stack, one request, and a grouped row
 /// would have nothing to call them on.
 bool _groups(DecisionKind kind) => switch (kind) {
@@ -365,7 +365,7 @@ bool _groups(DecisionKind kind) => switch (kind) {
 ///
 /// Identical means the same kind, raised by the same service on the same
 /// connection, with the same remedy target. Eighteen blocked imports on one
-/// Sonarr are one decision — go and import them — and drawing them as eighteen
+/// Sonarr are one decision: go and import them, and drawing them as eighteen
 /// rows spent the phone's three slots on the first three of them while saying
 /// nothing about the other fifteen.
 ///
@@ -461,7 +461,7 @@ DashboardDecision _groupOf(List<DashboardDecision> members) {
 String _groupTitle(DecisionKind kind, int count) => switch (kind) {
   DecisionKind.importBlocked => needsManualImportClause(count),
   DecisionKind.stalledDownload => '$count stuck downloads',
-  // Never grouped — see [_groups]. Named anyway so the switch stays total.
+  // Never grouped: see [_groups]. Named anyway so the switch stays total.
   DecisionKind.failedImport => '$count failed imports',
   DecisionKind.storageAlert => '$count storage alerts',
   DecisionKind.connectionFault => '$count connections with a fault',
@@ -471,7 +471,7 @@ String _groupTitle(DecisionKind kind, int count) => switch (kind) {
   DecisionKind.pendingRequest => '$count requests waiting for approval',
 };
 
-/// `Shogun, The Bear and 16 more` — the first two names, and how many others.
+/// `Shogun, The Bear and 16 more`: the first two names, and how many others.
 String _titlesSummary(List<String> titles) {
   final distinct = <String>[];
   for (final title in titles) {
@@ -482,7 +482,7 @@ String _titlesSummary(List<String> titles) {
 }
 
 /// How many items the region stands for, grouped rows counted by their
-/// members. What "See all" and the eyebrow print — the number of rows is a
+/// members. What "See all" and the eyebrow print: the number of rows is a
 /// layout fact, not a count of anything.
 int decisionItemCount(List<DashboardDecision> decisions) =>
     decisions.fold(0, (sum, decision) => sum + decision.count);
@@ -491,7 +491,7 @@ int decisionItemCount(List<DashboardDecision> decisions) =>
 ///
 /// Stable by construction: the sort is decorated with the source index, because
 /// `List.sort` is not stable and several undated items would otherwise
-/// come back in a different order on each build — which reads on screen as rows
+/// come back in a different order on each build, which reads on screen as rows
 /// shuffling for no reason.
 List<DashboardDecision> rankDecisions(
   List<DashboardDecision> decisions, {
@@ -530,7 +530,7 @@ List<DashboardDecision> rankDecisions(
 /// How many rows the region shows, by size class.
 ///
 /// Three numbers rather than a formula: the cap is a judgment about how much
-/// triage fits above the stack, not a function of pixels. Pure — it takes the
+/// triage fits above the stack, not a function of pixels. Pure: it takes the
 /// two facts a breakpoint would give it rather than a `BuildContext`, so the
 /// rule is testable without pumping a widget.
 int decisionCapFor({required bool desktopShell, required bool compact}) {
@@ -608,7 +608,7 @@ String decisionActionLabel(
   // says Renew. Not "Open in Nginx Proxy Manager": the row's own detail
   // names the service, and the long name pushed the control off a phone row.
   DecisionKind.expiringCertificate => renewable ? 'Renew' : 'Open certificates',
-  // Two controls, not one — see the row.
+  // Two controls, not one: see the row.
   DecisionKind.pendingRequest => 'Approve',
 };
 

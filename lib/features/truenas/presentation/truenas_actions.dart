@@ -14,7 +14,7 @@ import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
 /// via `SnackBarHelper`.
 ///
 /// A thin alias over [runServiceAction], which the whole app shares; kept as a
-/// named entry point because every TrueNAS action flow reads through it — and
+/// named entry point because every TrueNAS action flow reads through it, and
 /// that is what wires the refusal path once for every TrueNAS write: an
 /// EACCES from the middleware marks the connection the pages read through as
 /// read-only and raises the refusal toast instead of a failure.
@@ -46,14 +46,14 @@ Future<bool> runTrueNasAction(
 /// [runTrueNasAction] awaits the call before it says anything, which is right
 /// for every write in the app except two. `system.shutdown` and `system.reboot`
 /// are executed by tearing down the middleware that would have answered them:
-/// the socket dies mid-call, so the awaited future resolves — if it resolves at
-/// all — to a connection error. On that path the *only* reachable outcome is
+/// the socket dies mid-call, so the awaited future resolves (if it resolves at
+/// all) to a connection error. On that path the *only* reachable outcome is
 /// the red "could not shut down" snack, printed while the NAS is shutting down
 /// perfectly well.
 ///
 /// So this one does not await. It fires, drops the future (with a catch, or a
 /// dead socket would raise an unhandled async error in the zone), and reports
-/// immediately — in the present tense, because "shutting down" is the only
+/// immediately, in the present tense, because "shutting down" is the only
 /// thing anyone here can honestly claim. Nothing invalidates: every provider
 /// behind this screen is about to be unreachable, and re-fetching them would
 /// only race the shutdown to an error card.

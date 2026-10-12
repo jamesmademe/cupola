@@ -221,7 +221,7 @@ class ManualImportItem {
   ///
   /// Always prefer this over [name] for anything the user reads as "the file".
   /// [name] is whatever the service chose to put in its `name` field, and the
-  /// \*arrs put the basename **without** the extension there — so a UI line
+  /// \*arrs put the basename **without** the extension there, so a UI line
   /// built on [name] silently means "basename minus extension" for a real
   /// service and "basename with extension" whenever the field is absent and the
   /// [path] fallback kicks in. One label cannot mean two things.
@@ -246,8 +246,8 @@ class ManualImportItem {
 
   /// The service says this file is a sample.
   ///
-  /// A sample is fully matched — the \*arrs identify it exactly like the real
-  /// rip it sits next to — so it satisfies every requirement the import payload
+  /// A sample is fully matched, the \*arrs identify it exactly like the real
+  /// rip it sits next to, so it satisfies every requirement the import payload
   /// has and arrived preselected. "Import 4 files" was really five, and the
   /// fifth was a 42 MB trailer the service would have moved into the library
   /// under the feature's name. It stays visible, keeps its match and stays
@@ -275,7 +275,7 @@ class ManualImportItem {
   /// Whether this file, already in the library, can be handed over again.
   ///
   /// The deliberate exception to [isSelectable]. Review lists imported files
-  /// inline — the answer to "did I already take this one?" — and a file the
+  /// inline, the answer to "did I already take this one?", and a file the
   /// service already holds is still a file the user may want it to take again:
   /// a better rip of an episode that is already on disk is exactly the scene
   /// manual import exists for. It still needs a complete identity, which is
@@ -285,7 +285,7 @@ class ManualImportItem {
     return isAlreadyImported && !hasBlockingRequirementsFor(service);
   }
 
-  /// Whether this file may enter the import selection at all — freshly matched
+  /// Whether this file may enter the import selection at all: freshly matched
   /// or deliberately sent again.
   bool isSubmittableFor(ServiceKey service) {
     return isReadyForImportFor(service) || isReimportableFor(service);

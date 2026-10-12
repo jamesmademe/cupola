@@ -5,7 +5,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/desktop_content_well.dart';
 
 /// A near-transparent app-bar surface that lets the page's ambient gradient
-/// read continuously behind it — no opaque strip and no hairline border that
+/// read continuously behind it: no opaque strip and no hairline border that
 /// would visually "cut" the gradient.
 ///
 /// Instead of a flat translucent fill it paints a soft top-anchored scrim that
@@ -13,7 +13,7 @@ import 'package:cupola/core/widgets/desktop_content_well.dart';
 /// keep icons and text legible where list content scrolls beneath, while the
 /// lower edge blends seamlessly into the background.
 ///
-/// Deliberately does NOT use a [BackdropFilter] blur — a real backdrop blur
+/// Deliberately does NOT use a [BackdropFilter] blur: a real backdrop blur
 /// re-rasterises everything behind it every frame, which visibly janks scroll
 /// on screens whose content scrolls under the app bar. The gradient scrim gives
 /// the same legibility protection at zero per-frame cost.

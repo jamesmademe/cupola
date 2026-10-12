@@ -43,8 +43,8 @@ import 'package:cupola/core/utils/arr_model_helpers.dart';
 
 /// The first tab of Radarr's service home.
 ///
-/// Overview alone carries the identity block and the readouts — every other tab
-/// is a view of one kind of record — and then five sections in the order the
+/// Overview alone carries the identity block and the readouts: every other tab
+/// is a view of one kind of record, and then five sections in the order the
 /// board draws them: what is coming, what needs a decision, what arrived, what
 /// happened today. Each section ends in a link named exactly like the tab it
 /// jumps to.
@@ -64,7 +64,7 @@ class RadarrOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -109,13 +109,13 @@ class _OverviewBody extends ConsumerWidget {
         // The library itself, not only the three readings of it. Coming up,
         // Recently added and all four figures on the rail fall out of
         // `moviesProvider`, which is a plain `FutureProvider` fetched once for
-        // the life of the app — so invalidating only the derived trio re-ran
+        // the life of the app, so invalidating only the derived trio re-ran
         // the window functions against the same cached list with a new clock
         // and re-read the rail off the same cached list again. A pull that
         // refetched nothing: a film that landed, one that was added or a
         // release date that moved never appeared.
         ref.invalidate(moviesProvider);
-        // The Overview's own throwing read of it — see
+        // The Overview's own throwing read of it. See
         // `radarrOverviewMoviesProvider`.
         ref.invalidate(radarrOverviewMoviesProvider);
         // And the rail's own non-swallowing read of it. See
@@ -313,7 +313,7 @@ class _AttentionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // Through the tone rule, never a raw `AppColors.*`: amber is a fault, and
-    // a backlog row — films below the cutoff — is neutral by construction.
+    // a backlog row (films below the cutoff) is neutral by construction.
     final tone = statusToneColor(
       colorScheme,
       item.tone,
@@ -376,7 +376,7 @@ class _PosterRail extends ConsumerWidget {
     final instance = ref.watch(activeInstanceProvider(ServiceKey.radarr));
 
     return SizedBox(
-      // 138pt poster, the gap, and two label lines — grown by the reading size
+      // 138pt poster, the gap, and two label lines, grown by the reading size
       // so the captions are not clipped at an accessibility text size.
       height: TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
       // The box grew by the *clamped* scale, so the text has to be laid out at

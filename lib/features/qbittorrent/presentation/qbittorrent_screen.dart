@@ -38,7 +38,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
     // the `qBittorrent not configured` exception on the way out. The rendering
     // was right and the work was not: a `FutureProvider` that throws is a
     // provider that failed, so Riverpod's default retry scheduled a backoff for
-    // a condition no amount of waiting changes — a connection is configured in
+    // a condition no amount of waiting changes: a connection is configured in
     // Settings or it is not. Reaching the placeholder without asking is the
     // same screen for none of the timers.
     final settings = ref.watch(currentSettingsProvider);
@@ -53,7 +53,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
 
     // Poll only while this page is the page on screen. Replaces an observer of
     // its own that paused on app background: that covered one of the four ways
-    // this list stops being read, and missed the three the shell now reports —
+    // this list stops being read, and missed the three the shell now reports:
     // another tab showing, a torrent's detail pushed on top, the Portal open
     // over it.
     ref.watchWhileLive(context, torrentPollingProvider);

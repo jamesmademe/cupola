@@ -53,8 +53,8 @@ void main() {
       'the history page asks for them too, and so does getHistory',
       () async {
         // Hung off `getHistory` instead, a caller reaching for `getHistoryPage`
-        // — the one carrying the envelope's total, and therefore the only one a
-        // count may be derived from — would get records with no embedded book.
+        // (the one carrying the envelope's total, and therefore the only one a
+        // count may be derived from) would get records with no embedded book.
         final client = FakeApiClient()..getResponseData = const <dynamic>[];
         final service = ReadarrService(client);
 

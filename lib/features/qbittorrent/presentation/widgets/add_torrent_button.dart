@@ -12,7 +12,7 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.da
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// qBittorrent's accent as ink on the header it sits in, walked against that
-/// header's surface — the lit band on a desktop window, the plain surface on a
+/// header's surface: the lit band on a desktop window, the plain surface on a
 /// phone. The raw accent is measured nowhere.
 Color qbittorrentBarInk(BuildContext context) => ServiceTheme.onTint(
   ServiceKey.qbittorrent.accent,

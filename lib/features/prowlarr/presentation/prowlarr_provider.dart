@@ -119,7 +119,7 @@ bool _readsLens(Ref ref, String instanceId) =>
 /// work, and a self-hoster reads them that way: "did anything break today".
 /// This provider used to call `getIndexerStats()` with no window at all, so
 /// every one of those figures was an all-time total that had been climbing
-/// since the indexer was added — a number that can only go up is not a
+/// since the indexer was added: a number that can only go up is not a
 /// readout, and a Fails count that never returns to zero is not a fault
 /// signal. The client has accepted `startDate`/`endDate` all along.
 const prowlarrStatsWindow = Duration(hours: 24);

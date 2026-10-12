@@ -2,8 +2,8 @@ import 'package:cupola/core/utils/episode_code.dart';
 
 /// One season of a Sonarr series.
 ///
-/// Sonarr returns seasons nested inside the series payload, so they arrived —
-/// and were rendered — as raw `dynamic` maps: the season pill read
+/// Sonarr returns seasons nested inside the series payload, so they arrived,
+/// and were rendered as raw `dynamic` maps: the season pill read
 /// `season['seasonNumber']` while the panel beside it read
 /// `season['statistics']['episodeFileCount']`, with nothing to stop the two
 /// halves of one control disagreeing about the shape they were handed. This is
@@ -15,7 +15,7 @@ class SonarrSeason {
   /// Episodes Sonarr expects to hold: aired and monitored ones only.
   ///
   /// Deliberately not [totalEpisodeCount], which counts unaired episodes and
-  /// would leave any currently-airing season permanently `partial` — the same
+  /// would leave any currently-airing season permanently `partial`: the same
   /// distinction `SonarrSeries.episodeCount` documents at series level.
   ///
   /// The three counts are null when Sonarr did not send them, never 0. Each
@@ -98,7 +98,7 @@ class SonarrSeason {
     return List<SonarrSeason>.unmodifiable(seasons);
   }
 
-  /// Ascending by season number, with specials last — they are an appendix, not
+  /// Ascending by season number, with specials last: they are an appendix, not
   /// season zero.
   static int compare(SonarrSeason left, SonarrSeason right) {
     if (left.isSpecials != right.isSpecials) return left.isSpecials ? 1 : -1;

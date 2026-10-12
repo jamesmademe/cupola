@@ -36,7 +36,7 @@ ReadarrService _readarrService(Ref ref, {required String? instanceId}) {
 /// All authors in the library, with a failed fetch allowed to reach the caller.
 ///
 /// It read `getAuthors`, which swallows its own failure into `[]`, so a dark
-/// Readarr drew "No authors in the library yet." — and the error branch the
+/// Readarr drew "No authors in the library yet." and the error branch the
 /// Library tab already had could never be reached. The list is the whole
 /// library in one request, so there is nothing partial to show beside a
 /// failure. `noProviderRetry` for the reason `moviesProvider` gives: the rail
@@ -67,7 +67,7 @@ final readarrAuthorsForProvider =
 /// Current download queue, with a failed fetch allowed to reach the caller.
 ///
 /// It used to catch everything and answer `const []`, so a Readarr whose queue
-/// endpoint was down read **`Queue 0`** on the rail — an idle downloader rather
+/// endpoint was down read **`Queue 0`** on the rail: an idle downloader rather
 /// than an unread one, and indistinguishable from a queue that had just
 /// drained. The reason given for swallowing was that a queue error must not
 /// hide the rest of the KPI rail, which was true and is now answered properly:
@@ -77,7 +77,7 @@ final readarrAuthorsForProvider =
 ///
 /// `retry: noProviderRetry` comes with the throw and is not optional: its
 /// reader awaits `.future` inside a `catch`, and Riverpod's default retry would
-/// hold that `catch` for ten backed-off attempts before letting it run — the
+/// hold that `catch` for ten backed-off attempts before letting it run: the
 /// rail stuck in its skeleton for some forty seconds instead of printing the em
 /// dash. See `lib/core/providers/provider_retry.dart`.
 ///

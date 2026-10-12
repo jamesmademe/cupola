@@ -22,7 +22,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The series ids Sonarr reports under `wanted/cutoff`.
 ///
 /// Sonarr answers that route with *episodes*, not series, so the fold is over
-/// `seriesId` and a series with nine episodes below cutoff is one id — which is
+/// `seriesId` and a series with nine episodes below cutoff is one id, which is
 /// exactly what a library chip over series needs, and is why this cannot be the
 /// same provider Radarr uses.
 ///
@@ -110,7 +110,7 @@ class SeriesScreen extends ConsumerWidget {
         MediaBrowseSort<SonarrSeries>.year((series) => series.year),
         MediaBrowseSort<SonarrSeries>.size(
           // `statistics` is absent on a freshly added series, which is a zero
-          // on disk and not an unknown — the series genuinely has no files yet.
+          // on disk and not an unknown: the series genuinely has no files yet.
           (series) => switch (series.statistics?['sizeOnDisk']) {
             final int bytes => bytes,
             final num bytes => bytes.toInt(),

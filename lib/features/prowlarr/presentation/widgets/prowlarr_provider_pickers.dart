@@ -14,7 +14,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Per-indexer download client, the advanced setting of the web UI's edit
 /// modal.
 ///
-/// Renders nothing when Prowlarr has no client of the indexer's protocol —
+/// Renders nothing when Prowlarr has no client of the indexer's protocol:
 /// there would be nothing to choose but "Any", which is already the default.
 class ProwlarrDownloadClientField extends ConsumerWidget {
   const ProwlarrDownloadClientField({
@@ -68,7 +68,7 @@ class ProwlarrDownloadClientField extends ConsumerWidget {
   }
 }
 
-/// Sync profile (`appProfileId`) for one indexer — the search/RSS settings
+/// Sync profile (`appProfileId`) for one indexer, the search/RSS settings
 /// Prowlarr pushes to its apps.
 ///
 /// Renders nothing until the profiles have loaded, so the form never shows a
@@ -114,7 +114,7 @@ class ProwlarrSyncProfileField extends ConsumerWidget {
 /// Picks an implementation to add for [kind], from `<kind>/schema`.
 ///
 /// Returns the chosen schema resource, or null. These lists are short (tens of
-/// entries) so a search field is enough — unlike the indexer schema, which has
+/// entries) so a search field is enough; unlike the indexer schema, which has
 /// its own dedicated sheet with protocol/privacy/category filters.
 Future<ProwlarrProviderResource?> showProwlarrImplementationPicker({
   required BuildContext context,

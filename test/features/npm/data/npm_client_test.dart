@@ -63,7 +63,7 @@ void main() {
       addTearDown(plain.close);
       addTearDown(pinned.close);
 
-      // The bearer token *is* the account — no scoping, no revocation — so a
+      // The bearer token *is* the account: no scoping, no revocation, so a
       // cross-origin redirect must never carry it.
       expect(
         plain.dio.interceptors.whereType<SameOriginRedirectInterceptor>(),
@@ -83,7 +83,7 @@ void main() {
       expect(info.isHealthy, isTrue);
       // `GET /api` without the slash is a 302; asking for `/api/` skips it.
       expect(adapter.lastRequest.uri.path, '/api/');
-      // Unauthenticated — no login round trip is spent on reachability.
+      // Unauthenticated: no login round trip is spent on reachability.
       expect(adapter.callCount, 1);
       expect(adapter.lastRequest.headers.containsKey('Authorization'), isFalse);
     });
@@ -300,7 +300,7 @@ void main() {
       expect(call.uri.path, '/api/users/me');
       // Without `expand=permissions` the record comes back with no permission
       // map at all, which is indistinguishable from an account that may do
-      // nothing — and the UI would dim everything for an admin.
+      // nothing, and the UI would dim everything for an admin.
       expect(call.uri.queryParameters['expand'], 'permissions');
       expect(account.isAdmin, isFalse);
       expect(account.isViewOnly, isTrue);
@@ -517,7 +517,7 @@ void main() {
     });
 
     test('a 500 drops the token so the next call re-mints', () async {
-      // A malformed token is a 500 in NPM, not a 401 — so a token gone bad
+      // A malformed token is a 500 in NPM, not a 401, so a token gone bad
       // would otherwise look like a permanent server outage.
       final adapter = ScriptedHttpAdapter([
         _token,
@@ -537,7 +537,7 @@ void main() {
   group('writes', () {
     test('a forward change sends only the three changed keys', () async {
       // NPM's PUT body is `additionalProperties: false`, so round-tripping an
-      // object read from GET is rejected outright — and `meta` or
+      // object read from GET is rejected outright, and `meta` or
       // `certificate_id` slipping in would wipe TLS settings or trigger a real
       // Let's Encrypt request.
       final adapter = ScriptedHttpAdapter([

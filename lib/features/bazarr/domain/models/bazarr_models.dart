@@ -45,7 +45,7 @@ List<BazarrSubtitleLanguage> parseBazarrSubtitleLanguages(dynamic value) {
 ///
 /// One entry per language and flavour: Bazarr lists one row per *file*, so an
 /// embedded English track and an external `.en.srt` are two rows that say one
-/// thing — English is there.
+/// thing: English is there.
 List<BazarrSubtitleLanguage> parseBazarrPresentSubtitles(dynamic value) {
   final seen = <String>{};
   return [
@@ -115,7 +115,7 @@ class BazarrMovie {
   final bool monitored;
   final List<BazarrSubtitleLanguage> missingLanguages;
 
-  /// The languages already on disk — see [parseBazarrPresentSubtitles].
+  /// The languages already on disk: see [parseBazarrPresentSubtitles].
   final List<BazarrSubtitleLanguage> presentLanguages;
   final int? profileId;
   final List<String> tags;
@@ -167,7 +167,7 @@ class BazarrEpisode {
   final int episode;
   final String? title;
 
-  /// The languages already on disk — see [parseBazarrPresentSubtitles].
+  /// The languages already on disk: see [parseBazarrPresentSubtitles].
   final List<BazarrSubtitleLanguage> presentLanguages;
   final List<BazarrSubtitleLanguage> missingLanguages;
 
@@ -198,7 +198,7 @@ class BazarrWantedItem {
   final int? season;
   final List<BazarrSubtitleLanguage> missingLanguages;
 
-  /// The languages already on disk — see [parseBazarrPresentSubtitles].
+  /// The languages already on disk: see [parseBazarrPresentSubtitles].
   final List<BazarrSubtitleLanguage> presentLanguages;
   final int? sonarrSeriesId;
   final int? sonarrEpisodeId;

@@ -135,9 +135,9 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
   @override
   Widget build(BuildContext context) {
     // Checked **before** the detail provider is read, and it decides whether
-    // it is read at all: this editor is reachable by deep link — the pre-tab
+    // it is read at all: this editor is reachable by deep link, the pre-tab
     // `/dashboard/dockge/stack/:name/edit` and `/dashboard/dockge/new` both
-    // still rewrite onto it — so it can be the first Dockge thing the app
+    // still rewrite onto it, so it can be the first Dockge thing the app
     // builds on an install that was never set up, and `dockgeClientProvider`
     // throws there. A provider that throws is a failed provider scheduling a
     // retry with backoff for a condition no waiting changes.
@@ -297,7 +297,7 @@ class _CodeField extends StatelessWidget {
       //
       // The colour is pinned to the dark-theme foreground because the panel
       // below it is pinned dark in *both* themes. Left theme-derived, this field
-      // resolved to light-theme `onSurface` (#111827) on a #0A0B11 fill —
+      // resolved to light-theme `onSurface` (#111827) on a #0A0B11 fill:
       // **1.11:1**, i.e. a compose editor whose contents were invisible in light
       // mode. Against the same fill the dark tone measures 17.55:1.
       style: Theme.of(context).textTheme.bodySmall!.mono.copyWith(

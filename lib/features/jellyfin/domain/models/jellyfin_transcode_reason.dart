@@ -4,7 +4,7 @@
 /// This is the focal moment of the whole Stream surface: both web UIs bury the
 /// reason a box is burning CPU, and `StreamSession.transcodeReasons` exists to
 /// put it on screen. So the strings below are deliberately *not* prettified enum
-/// names — `VideoCodecNotSupported` tells you nothing you could not read off the
+/// names: `VideoCodecNotSupported` tells you nothing you could not read off the
 /// wire, whereas "Client cannot decode this video codec" names the thing the
 /// user can change (the client, or the file).
 ///
@@ -13,7 +13,7 @@
 ///
 /// The list covers every `TranscodeReason` documented for 10.10 and 10.11,
 /// including the flag 10.11 added (`VideoCodecTagNotSupported`). An unrecognised
-/// value — a newer server, or a build with a patched enum — falls back to
+/// value (a newer server, or a build with a patched enum) falls back to
 /// [jellyfinHumanisedEnumName] rather than being dropped: an unexplained
 /// transcode is worse than an awkwardly worded one.
 library;

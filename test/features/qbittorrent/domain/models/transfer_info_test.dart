@@ -37,7 +37,7 @@ void main() {
     // qB's WebUI mixes JSON true, 1 and "true" for the same flag across builds
     // and endpoints, which is why `parseBool` exists. A strict `== true` reads
     // every one of these as "alternative limits off" and tells the user the
-    // throttle is not on while it is — so they throttle again.
+    // throttle is not on while it is, so they throttle again.
     test('altSpeedEnabled accepts every boolean spelling qB sends', () {
       Map<String, dynamic> payload(dynamic alt) => {
         'dl_info_speed': 0,

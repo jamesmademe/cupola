@@ -9,7 +9,7 @@ import 'package:cupola/core/widgets/media_metadata_line.dart';
 /// Renders on the ambient text scaler by design: its host `MediaDetailPosterRow`
 /// installs `MediaDetailHeaderMetrics.heroTextScaler`, the clamp the hero band
 /// was grown by. Do not render this outside that band without installing the
-/// same clamp — the band clips from the top, so an unclamped stack loses the
+/// same clamp: the band clips from the top, so an unclamped stack loses the
 /// status badge above it with no overflow stripe to show for it.
 class MediaDetailHeroSummary extends StatelessWidget {
   final String title;
@@ -36,7 +36,7 @@ class MediaDetailHeroSummary extends StatelessWidget {
           // Marked a heading for the same reason the collapsed bar's title is
           // (`_CollapsedBarContent` in media_detail_view.dart): this string is
           // the page's name, and the two poses hand off to each other on a
-          // single `ExcludeSemantics` threshold — so if only one of them carried
+          // single `ExcludeSemantics` threshold, so if only one of them carried
           // `header: true` the heading rotor would appear and disappear with the
           // scroll position. Same widget shape as the bar's, deliberately.
           Semantics(

@@ -12,7 +12,7 @@ import '../../test_helpers/copy_scan.dart';
 /// punctuation: the dash is the placeholder of a figure nobody could read, and
 /// only that.
 ///
-/// A source scan because the regression is one plausible string in a diff —
+/// A source scan because the regression is one plausible string in a diff:
 /// "Offline" reads as a fine label until the next screen says "Did not
 /// answer" about the same server. The words live in `core/status/lexicon.dart`
 /// and in the failure classification (`core/network/connection_failure.dart`);
@@ -23,12 +23,12 @@ import '../../test_helpers/copy_scan.dart';
 /// copy), and adjacent literals joined as Dart joins them, so a sentence
 /// wrapped across lines is read whole. What it leaves alone, because none of it is read by a person:
 ///
-///  * a literal matched against a wire value — after `==`, `!=` or `case`, as
+///  * a literal matched against a wire value: after `==`, `!=` or `case`, as
 ///    a `switch` pattern (followed by `=>` or `||`), a map key or case label
 ///    (followed straight by `:`), an index (`json['IsPaused']`), or the
 ///    argument of `contains`/`startsWith`/`endsWith`;
 ///  * raw strings, which are patterns;
-///  * a literal with no space in it that carries `/`, `-` or `_` — an API
+///  * a literal with no space in it that carries `/`, `-` or `_`: an API
 ///    path (`/api/v2/torrents/reannounce`), an RPC method
 ///    (`torrent-reannounce`), a key;
 ///  * directives (`import`, `export`, `part`).
@@ -102,12 +102,12 @@ void main() {
   group('the em dash matcher', () {
     test('catches a dash between two words or two holes', () {
       for (final prose in [
-        'Saved — Radarr',
-        '$copyHole — $copyHole',
-        'Radarr did not answer — Retry',
-        'Radarr—Sonarr',
-        '10—20',
-        '($copyHole) — $copyHole',
+        'Saved \u2014 Radarr',
+        '$copyHole \u2014 $copyHole',
+        'Radarr did not answer \u2014 Retry',
+        'Radarr\u2014Sonarr',
+        '10\u201420',
+        '($copyHole) \u2014 $copyHole',
       ]) {
         expect(_emDashAsPunctuation(prose), isTrue, reason: prose);
       }
@@ -115,14 +115,14 @@ void main() {
 
     test('lets the placeholder of a figure through', () {
       for (final prose in [
-        '—',
-        '— in the queue',
-        '— / 24',
-        '—s',
-        'today · —',
-        'Queue: —',
-        '↓ — ↑ —',
-        '$copyHole · — free',
+        '\u2014',
+        '\u2014 in the queue',
+        '\u2014 / 24',
+        '\u2014s',
+        'today · \u2014',
+        'Queue: \u2014',
+        '↓ \u2014 ↑ \u2014',
+        '$copyHole · \u2014 free',
         // The en dash is the range's, and not this guard's business.
         'S2 E4–E5',
       ]) {
@@ -133,17 +133,17 @@ void main() {
     test('a planted literal fails through the same lexer, a comment does '
         'not', () {
       const planted =
-          "final a = 'Saved — Radarr';\n"
-          r"final b = '${first.title} — ${second.title}';"
+          "final a = 'Saved \u2014 Radarr';\n"
+          "final b = '\${first.title} \u2014 \${second.title}';"
           '\n'
-          '// A comment — not copy.\n'
-          "final c = count == null ? '—' : '\$count in the queue';\n"
-          "final d = '— in the queue';\n";
+          '// A comment \u2014 not copy.\n'
+          "final c = count == null ? '\u2014' : '\$count in the queue';\n"
+          "final d = '\u2014 in the queue';\n";
       final caught = [
         for (final literal in copyOf('lib/zz_planted.dart', planted))
           if (_emDashAsPunctuation(literal.prose)) literal.prose,
       ];
-      expect(caught, ['Saved — Radarr', '$copyHole — $copyHole']);
+      expect(caught, ['Saved \u2014 Radarr', '$copyHole \u2014 $copyHole']);
     });
   });
 
@@ -608,15 +608,21 @@ bool _isNotConfiguredMarker(String prose) {
       ServiceKey.values.any((service) => service.title == subject);
 }
 
-/// Whether [prose] uses the em dash as punctuation: a word, a figure or an
-/// interpolation on either side of it (`Saved — Radarr`, `∅ — ∅`, `10—20`).
+/// Whether [prose] uses the em dash (U+2014) as punctuation: a word, a figure
+/// or an interpolation on either side of it (`Saved \u2014 Radarr`,
+/// `∅ \u2014 ∅`, `10\u201420`).
 ///
 /// The dash that stays is the placeholder of a figure nobody could read, and
 /// that one always has an edge or a separator beside it rather than a word on
-/// both sides: alone (`—`), opening the phrase it counts (`— in the queue`,
-/// `— / 24`, `—s`) or closing one (`today · —`, `Queue: —`).
+/// both sides: alone (`\u2014`), opening the phrase it counts
+/// (`\u2014 in the queue`, `\u2014 / 24`, `\u2014s`) or closing one
+/// (`today · \u2014`, `Queue: \u2014`).
 bool _emDashAsPunctuation(String prose) {
-  for (var i = prose.indexOf('—'); i >= 0; i = prose.indexOf('—', i + 1)) {
+  for (
+    var i = prose.indexOf('\u2014');
+    i >= 0;
+    i = prose.indexOf('\u2014', i + 1)
+  ) {
     final before = prose.substring(0, i).trimRight();
     final after = prose.substring(i + 1).trimLeft();
     if (before.isEmpty || after.isEmpty) continue;

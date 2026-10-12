@@ -19,7 +19,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 ///
 /// Feed it an [AsyncValue] of KPIs; it renders a shimmer rail while loading and
 /// collapses to nothing on error or when there are no metrics (KPIs are
-/// supplementary — they should never show an error state of their own).
+/// supplementary, so they should never show an error state of their own).
 class ServiceKpiPeek extends StatelessWidget {
   final AsyncValue<List<ServiceKpi>> kpis;
 
@@ -68,8 +68,8 @@ class ServiceKpiPeek extends StatelessWidget {
         children: List.generate(4, (_) => const _KpiSkeletonCard()),
       ),
       error: (error, _) {
-        // A service that was never set up is answered by the page below —
-        // `NotConfiguredPlaceholder` — and a rail of em dashes over it would
+        // A service that was never set up is answered by the page below:
+        // `NotConfiguredPlaceholder`, and a rail of em dashes over it would
         // read as a fault to go and fix rather than a service nobody
         // configured. Matched on the string the app throws everywhere for it;
         // see `AsyncValueWidget`.
@@ -79,7 +79,7 @@ class ServiceKpiPeek extends StatelessWidget {
         // Everything else: the figures could not be read, and *that* is the
         // readout. Collapsing to nothing here made "no figures" and "no rail"
         // the same pixels, so a reader had no way to tell a service with
-        // nothing to report from one that could not be asked — the same
+        // nothing to report from one that could not be asked, the same
         // fabrication as a confident zero, told by omission.
         return _rail(
           context: context,
@@ -129,7 +129,7 @@ class ServiceKpiPeek extends StatelessWidget {
       height: height,
       // The grown box and the clamped scaler are one mechanism. [boxHeight]
       // stops growing at `TextScaleMetrics.defaultMaxScaleFactor`, so the cards
-      // have to *paint* at that same ceiling — otherwise the rail is frozen at
+      // have to *paint* at that same ceiling, otherwise the rail is frozen at
       // 1.6x while the text keeps growing, which measured a real
       // `RenderFlex overflowed by 32 pixels` at a 3.0x reading size on every
       // service dashboard.
@@ -203,7 +203,7 @@ class _KpiCard extends StatelessWidget {
               Icon(kpi.icon, size: 14, color: accent),
               const SizedBox(width: AppSpacing.xs),
               // The instrument readout, and the one number on a dashboard that
-              // is worth watching change — a library total ticking up after an
+              // is worth watching change: a library total ticking up after an
               // import, a queue count draining. Safe to roll because the card is
               // `minWidth`, not a fixed width, inside a horizontally scrolling
               // rail: a wider value makes the card wider instead of overflowing,
@@ -230,7 +230,7 @@ class _KpiCard extends StatelessWidget {
             // two lines tall by construction, and a card that grew a third
             // would overflow every sibling at an accessibility reading size.
             // When the source did not answer, *why* is the more useful of the
-            // two — the glyph and the surrounding cards already say which
+            // two. The glyph and the surrounding cards already say which
             // figure this is.
             kpi.note ?? kpi.label,
             maxLines: 1,

@@ -21,7 +21,7 @@ import 'package:cupola/features/search/presentation/global_search_provider.dart'
 /// The deck, open: one field, everything behind it.
 ///
 /// Descends *from* the window's strip rather than appearing over the middle of the
-/// window, so it reads as the same object expanding — which is the desktop
+/// window, so it reads as the same object expanding, which is the desktop
 /// counterpart of the phone's Portal, where the screen recedes into a card and
 /// the floor rises beneath it. Same idea, different room: a pointer does not
 /// need the gesture, so the panel keeps the gesture's *meaning* (the switcher
@@ -88,7 +88,7 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
 
   /// Enter: go there. Alt-Enter: send it to the inspector instead.
   ///
-  /// The second one is the whole reason the panel bothers with a keyboard map —
+  /// The second one is the whole reason the panel bothers with a keyboard map:
   /// looking something up without losing the page you were on is what a second
   /// column is *for*.
   void _open(CommandDeckEntry entry, {bool inInspector = false}) {
@@ -465,8 +465,8 @@ class _DeckFooter extends ConsumerWidget {
 
 /// The descent: 200ms, from behind the strip, and never a bounce.
 ///
-/// The panel is a *revealed* object, not an arriving one — it was always
-/// attached to the deck — so it slides out of the strip's own edge and fades
+/// The panel is a *revealed* object, not an arriving one. It was always
+/// attached to the deck, so it slides out of the strip's own edge and fades
 /// only enough to hide the first few pixels of travel.
 class CommandDeckTransition extends StatelessWidget {
   const CommandDeckTransition({

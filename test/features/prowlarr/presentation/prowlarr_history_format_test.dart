@@ -26,7 +26,7 @@ void main() {
       group('on $name', () {
         test('a refused query is amber, never red', () {
           // Red belongs to a Prowlarr that did not answer. This one answered
-          // and named which of its indexers refused — the canonical amber
+          // and named which of its indexers refused: the canonical amber
           // fault of the whole app.
           final style = prowlarrEventStyle(
             _item(eventType: 'indexerQuery', successful: false),

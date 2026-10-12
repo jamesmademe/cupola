@@ -46,7 +46,7 @@ class TrueNasHubScreen extends ConsumerWidget {
       accent: ServiceKey.truenas.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('TrueNAS')) : null,
       // No `TrueNasConsoleShell` here, deliberately. The rail IS this page's
-      // Sections grid — the same nine doors — so drawing it beside them put the
+      // Sections grid (the same nine doors), so drawing it beside them put the
       // list on screen twice, once as a 232pt column and once as the content.
       // Every *section* screen keeps the rail; the hub is the one route that
       // does not.
@@ -182,7 +182,7 @@ class _SectionTile extends StatelessWidget {
 
 /// The one state every other service in the app already drew with the shared
 /// placeholder. This used to be a bespoke `AppEmptyState` whose button went to
-/// TrueNAS's settings page — right destination, wrong widget: the copy drifted
+/// TrueNAS's settings page (right destination, wrong widget): the copy drifted
 /// ("Add your TrueNAS URL and API key to see system status") from the sentence
 /// the other twelve services print, and it was the only place this condition
 /// was described rather than named.

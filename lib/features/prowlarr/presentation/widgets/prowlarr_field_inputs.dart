@@ -10,10 +10,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Inputs generated from a Prowlarr provider's `fields` array.
 ///
-/// Every field-driven resource — indexers, apps, download clients,
-/// notifications, indexer proxies — describes its settings through the same
+/// Every field-driven resource (indexers, apps, download clients,
+/// notifications, indexer proxies) describes its settings through the same
 /// shape, so the whole form body is one widget ([ProwlarrFieldsSection]) shared
-/// by the indexer form and the generic provider form — as is the outcome those
+/// by the indexer form and the generic provider form, as is the outcome those
 /// sheets report back ([ProwlarrFormOutcome]).
 
 /// What the user did with a provider form sheet.
@@ -26,7 +26,7 @@ enum ProwlarrFormOutcome { cancelled, saved, deleteRequested }
 /// Normalises a field's incoming value to what its input will show.
 ///
 /// Prowlarr sends a select's value as a bare number *or* as a string, and a
-/// definition can carry a value that is no longer among its options — the
+/// definition can carry a value that is no longer among its options: the
 /// dropdown falls back to the first option there, so the seed has to agree with
 /// it or the form would display one option and save another. Checkboxes get the
 /// same treatment for string booleans.
@@ -45,7 +45,7 @@ dynamic prowlarrSeedFieldValue(ProwlarrField field) {
   return field.value;
 }
 
-/// Seeds an edit map for every field of [fields], hidden ones included — a
+/// Seeds an edit map for every field of [fields], hidden ones included: a
 /// hidden value (Cardigann's `definitionFile`) must survive the save.
 Map<String, dynamic> prowlarrSeedFieldValues(List<ProwlarrField> fields) {
   return {
@@ -150,7 +150,7 @@ class ProwlarrFieldInput extends StatelessWidget {
     if (field.isSelect) {
       return DropdownButtonFormField<int>(
         // Seeded (and normalised) by the form state, so the value is always one
-        // of the options below — a stray one would make the dropdown assert.
+        // of the options below: a stray one would make the dropdown assert.
         initialValue: value is int ? value : field.selectOptions.first.value,
         isExpanded: true,
         decoration: InputDecoration(
@@ -329,8 +329,8 @@ class ProwlarrMessageBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // Prowlarr's own severity word, mapped onto the app's tones rather than
-    // onto the palette. Its `error` is still a fault it is telling us about —
-    // "this indexer needs FlareSolverr" — not a Prowlarr that stopped
+    // onto the palette. Its `error` is still a fault it is telling us about.
+    // "this indexer needs FlareSolverr". It is not a Prowlarr that stopped
     // answering, so both severities land on amber and red stays reserved.
     final accent = switch ((type ?? '').toLowerCase()) {
       'error' || 'warning' => statusToneColor(colorScheme, StatusTone.warning),

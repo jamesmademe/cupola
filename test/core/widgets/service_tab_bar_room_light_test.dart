@@ -106,7 +106,7 @@ void main() {
       for (final service in [ServiceKey.radarr, ServiceKey.sonarr]) {
         testWidgets('${service.name}, $themeName: the band is the lamp at '
             '0.12 over the surface, with a bloom at its foot', (tester) async {
-          // A service room has no artwork, so it is lit by the neutral lamp —
+          // A service room has no artwork, so it is lit by the neutral lamp;
           // the same light for every service, never the service's colour.
           expect(service.accent, AppColors.lamp);
           await _pump(tester, theme: theme, service: service);
@@ -264,7 +264,7 @@ void main() {
 
       testWidgets('$themeName: the selected tab is the strong-fill pill under '
           'the primary ink, for every tabbed service', (tester) async {
-        // The brand book: never the service's colour — the pill of the phone's bar and the
+        // The brand book: never the service's colour. The pill of the phone's bar and the
         // desktop rail, on every service. It replaced a 2px rule in the
         // service's accent, which had to be solved against the bloom under it.
         for (final service in _tabbed) {
@@ -305,7 +305,7 @@ void main() {
             matching: find.byType(Text),
           ),
         );
-        // The pill is the service's accent — the lamp — at 0.15 over the band.
+        // The pill is the service's accent, the lamp, at 0.15 over the band.
         final pill = Color.alphaBlend(
           ServiceKey.radarr.accent.withValues(alpha: 0.15),
           ServiceTabBar.headerSurfaceOf(theme.colorScheme, ServiceKey.radarr),
@@ -341,7 +341,7 @@ void main() {
         }
       });
 
-      testWidgets('$themeName: the phone bar is unlit — no band, no bloom, '
+      testWidgets('$themeName: the phone bar is unlit: no band, no bloom, '
           'and its selected label the primary ink', (tester) async {
         await _pump(
           tester,

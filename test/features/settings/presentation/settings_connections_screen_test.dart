@@ -90,7 +90,7 @@ void main() {
       tester,
     ) async {
       // Removal moved onto the service screen, so a row here has exactly one
-      // job and one target — it used to carry a delete button immediately left
+      // job and one target. It used to carry a delete button immediately left
       // of the chevron that opened the screen.
       await _pumpConnectionsScreen(tester);
 
@@ -135,7 +135,7 @@ void main() {
       // The screen is called Connections and had no way of showing that a
       // service had two: one row, the first connection's host, and a counter
       // that quite correctly counts services. Nothing on it revealed the
-      // second Radarr — the one screen in the app that did not know.
+      // second Radarr, the one screen in the app that did not know.
       await _pumpConnectionsScreen(
         tester,
         settings:

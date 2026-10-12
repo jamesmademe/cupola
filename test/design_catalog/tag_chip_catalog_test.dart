@@ -46,7 +46,7 @@ void main() {
         ),
       ),
       CatalogScene(
-        'TagChip(surface:) · the ground the chip lands on measures its ink — '
+        'TagChip(surface:) · the ground the chip lands on measures its ink: '
         'a card container here, not the page surface',
         (_) => SizedBox(
           width: 220,

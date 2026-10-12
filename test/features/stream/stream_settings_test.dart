@@ -56,7 +56,7 @@ void main() {
       expect(loaded.plexUrl, 'https://plex.local:32400');
       expect(loaded.plexToken, 'plex-device-token');
       // `apiKeyFor` is what every generic caller uses, so the token has to answer
-      // to it — the same way qBittorrent's password does.
+      // to it, the same way qBittorrent's password does.
       expect(loaded.apiKeyFor(ServiceKey.plex), 'plex-device-token');
       expect(loaded.isServiceConfigured(ServiceKey.plex), isTrue);
     });
@@ -83,7 +83,7 @@ void main() {
 
       // The danger is real and specific: every `SettingsModel()` default carries
       // an empty `plexClientId`, so a save that honoured an incoming empty value
-      // would wipe it — and the next load would mint a new one, registering a
+      // would wipe it, and the next load would mint a new one, registering a
       // fresh "device" on the user's Plex server on every such save.
       await service.saveSettings(settingsWith(radarrUrl: 'http://r'));
 

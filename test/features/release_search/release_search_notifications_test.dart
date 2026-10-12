@@ -34,7 +34,7 @@ const _res = 'android/app/src/main/res';
 void main() {
   // The small icon was `@mipmap/ic_launcher`: a full-colour icon Android masks
   // into a white blob, and a resource this app has not had since its icons were
-  // regenerated — so the plugin refused to initialise and nothing ever posted.
+  // regenerated, so the plugin refused to initialise and nothing ever posted.
   group('the Android small icon', () {
     test('is the one handed to the plugin, and it exists', () async {
       final plugin = _RecordingPlugin();

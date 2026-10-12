@@ -183,7 +183,7 @@ class _ScriptedRadarr extends FakeRadarrService {
   _ScriptedRadarr({this.libraryFailure});
 
   /// What the library endpoint fails with, while the rest of the server
-  /// answers — or null for a library that loads. A real failure, so the app's
+  /// answers, or null for a library that loads. A real failure, so the app's
   /// own classification decides the tone: a bare `Exception` is a failure
   /// nobody can attribute, and would paint amber where the scene means red.
   final Object? libraryFailure;

@@ -70,7 +70,7 @@ void main() {
       expect(find.text('This certificate has changed'), findsOneWidget);
       expect(find.text('Untrusted certificate'), findsNothing);
       expect(find.text('Previously trusted'), findsOneWidget);
-      // Both fingerprints render, uppercased and colon-grouped — the
+      // Both fingerprints render, uppercased and colon-grouped: the
       // previously-trusted one and the one presented now must both be
       // visible for the user to actually compare them.
       expect(find.textContaining('11:AA:22:BB'), findsOneWidget);
@@ -80,7 +80,7 @@ void main() {
     // ── The escalation belongs to the rotation, and to nothing else ───────
     //
     // The shield was painted `scheme.error` in both states, so a routine first
-    // trust looked exactly as dangerous as a changed fingerprint — and when
+    // trust looked exactly as dangerous as a changed fingerprint, and when
     // both look alarming, the one that matters stops standing out.
     testWidgets('the shield is neutral on a first trust and red on a change', (
       tester,

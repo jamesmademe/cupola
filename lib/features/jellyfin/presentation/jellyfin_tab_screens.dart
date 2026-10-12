@@ -111,7 +111,7 @@ class JellyfinTasksScreen extends ConsumerWidget {
 ///
 /// Jellyfin's historical `/System/ActivityLog/Entries` endpoint is not present
 /// in the client contract. This tab therefore renders the real activity Cupola
-/// can operate today — live sessions — through the existing Stream shell.
+/// can operate today (live sessions) through the existing Stream shell.
 class JellyfinActivityScreen extends ConsumerWidget {
   const JellyfinActivityScreen({super.key, this.topPadding = 0});
 

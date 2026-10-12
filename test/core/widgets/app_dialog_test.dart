@@ -6,7 +6,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 
-/// Every ink the dialog paints — text, glyphs (an `Icon` is a `RichText` too)
+/// Every ink the dialog paints: text, glyphs (an `Icon` is a `RichText` too)
 /// and the fill of every `Material`, which is where a button's background
 /// lands.
 List<Color> _inksIn(WidgetTester tester) {
@@ -35,7 +35,7 @@ List<Color> _inksIn(WidgetTester tester) {
 /// Red in every form the app knows how to paint it: the scheme's error and
 /// error container, the palette constant, and the tone's walked inks on the
 /// dialog and on the 10% wash the old danger note sat on. (`onError` and
-/// `onErrorContainer` are inks *for* red grounds — white in dark — so they are
+/// `onErrorContainer` are inks *for* red grounds (white in dark), so they are
 /// not red themselves and would only match the dialog's own label ink.)
 Set<Color> _reds(ThemeData theme) {
   final scheme = theme.colorScheme;

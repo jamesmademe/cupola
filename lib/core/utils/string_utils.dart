@@ -6,7 +6,7 @@ import 'package:cupola/core/utils/duration_format.dart';
 ///
 /// This is the *dense-row* date voice: the activity feed pairs it with a clock
 /// time and sorts by it, where a fixed-width sortable form reads better than a
-/// prose one. It is deliberately **not** the detail-page voice — see
+/// prose one. It is deliberately **not** the detail-page voice; see
 /// [formatMediumDate].
 String formatIsoDate(String isoDate) {
   try {
@@ -32,7 +32,7 @@ const List<String> _shortMonthNames = [
   'Dec',
 ];
 
-/// Formats an ISO-8601 date as `Jul 17, 2026` — the one date voice every media
+/// Formats an ISO-8601 date as `Jul 17, 2026`: the one date voice every media
 /// detail page speaks.
 ///
 /// The drift this exists to end was visible two taps apart: a Radarr movie
@@ -150,7 +150,7 @@ String formatClockTime(DateTime time) {
 ///
 /// A dense child row states its facts in a dot-separated line built from a
 /// `List<String>`: there is no cell to leave blank, so a date the service did
-/// not send — or sent in a shape no one can read — has to disappear from the
+/// not send (or sent in a shape no one can read) has to disappear from the
 /// line entirely rather than print raw JSON at the user. The prose form itself
 /// is [formatMediumDate]'s, so a row and the Details grid above it cannot
 /// disagree about what a date looks like.
@@ -183,7 +183,7 @@ String formatRuntimeMinutes(int minutes) {
 /// no `maxLines`, and an `AlertDialog` title sits *above* the scrollable
 /// content, so a long title grows the header until the buttons leave the
 /// viewport. A user cannot shorten their own library, and a 200-character title
-/// is a normal thing for an anime release or a documentary series to have — so
+/// is a normal thing for an anime release or a documentary series to have; so
 /// the caller shortens the string rather than trusting the layout to cope.
 ///
 /// Cuts on a word boundary where there is one within reach, so the tail reads
@@ -240,7 +240,7 @@ String humanizeCamelCase(String value) {
   ].join(' ');
 }
 
-/// `1 device` / `3 devices` — a count and its noun, pluralised the naive way.
+/// `1 device` / `3 devices`: a count and its noun, pluralised the naive way.
 ///
 /// Naive on purpose: every noun it is given is an English API noun the app
 /// chose itself (device, user, item, playlist), never a translated or

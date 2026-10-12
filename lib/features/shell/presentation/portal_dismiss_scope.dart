@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 /// How a widget on the Portal's floor says "the user acted on me".
 ///
-/// The Portal already closes when the content under its card moves — that hook
+/// The Portal already closes when the content under its card moves. That hook
 /// lives in `ShellScreen` and is *reactive*, which is exactly right for what it
 /// watches. It cannot, however, answer for an action that moves nothing: a
 /// picker cell for the connection the lens is already pointing at, tapped from
@@ -31,8 +31,8 @@ class PortalDismissScope extends InheritedWidget {
   final VoidCallback onDismiss;
 
   /// The dismisser above [context], or null when this widget is not on a
-  /// dismissable layer — which is the ordinary case: the same matrix renders on
-  /// the Dashboard, where there is nothing to close.
+  /// dismissable layer (which is the ordinary case: the same matrix renders on
+  /// the Dashboard, where there is nothing to close).
   static VoidCallback? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<PortalDismissScope>()
       ?.onDismiss;

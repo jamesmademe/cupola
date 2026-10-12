@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 ///
 /// It read `getMovies`, which swallows every failure into `[]`, so a Radarr
 /// that was down resolved this *successfully* and the wall said "No items
-/// found" — a library that exists and is empty, the opposite of what happened.
+/// found", a library that exists and is empty, the opposite of what happened.
 /// The wall is the whole library in one request: there is no partial answer
 /// to show beside a failed one, so the failure is what it has to show.
 ///

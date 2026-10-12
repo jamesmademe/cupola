@@ -4,7 +4,7 @@ import 'package:cupola/core/utils/url_utils.dart';
 /// Represents the reachability state of a configured service.
 ///
 /// *Why* a service is disconnected lives in `ServiceDiagnosis` alongside this,
-/// in `service_verification.dart` — this enum answers only "is it up".
+/// in `service_verification.dart`: this enum answers only "is it up".
 enum ServiceConnectionStatus {
   notConfigured,
   checking,
@@ -18,8 +18,8 @@ enum ServiceConnectionStatus {
 /// [rotated] is the one field that changes how the caller must present this:
 /// true means this origin already had a *different* pin, so the certificate
 /// presented today is not the one the user trusted before. That is the
-/// shape a real interception would take, and it must read as an escalation —
-/// never as a routine first-time trust prompt — see ADR-6.
+/// shape a real interception would take, and it must read as an escalation,
+/// never as a routine first-time trust prompt (see ADR-6).
 typedef UntrustedCertificateProbe = ({
   ServerCertificate certificate,
   bool rotated,
@@ -30,8 +30,8 @@ typedef UntrustedCertificateProbe = ({
 /// to the real function.
 ///
 /// Exists because under ADR-6 *every* disconnected, probe-worthy failure
-/// reaches this — not just the rare TrueNAS/Dockge case ADR-5 confined it
-/// to — and the probe opens a real [SecureSocket], which `flutter_test`
+/// reaches this, not just the rare TrueNAS/Dockge case ADR-5 confined it
+/// to, and the probe opens a real [SecureSocket], which `flutter_test`
 /// cannot intercept the way it does an `HttpClient` (the framework's own
 /// warning about raw sockets is not idle: this is exactly the socket it
 /// means). A widget test now needs a fake here to stay offline and
@@ -64,12 +64,12 @@ Future<UntrustedCertificateProbe?> probeUntrustedCertificate(
     if (cert == null) return null;
     final pin = pinnedFingerprint.trim().toLowerCase();
     if (cert.fingerprint.toLowerCase() == pin) {
-      // Already pinned — the failure is something else.
+      // Already pinned: the failure is something else.
       return null;
     }
     return (certificate: cert, rotated: pin.isNotEmpty);
   } catch (_) {
-    // Server unreachable / DNS / refused — a genuine disconnect, not a cert
+    // Server unreachable / DNS / refused: a genuine disconnect, not a cert
     // trust problem.
     return null;
   }
@@ -78,7 +78,7 @@ Future<UntrustedCertificateProbe?> probeUntrustedCertificate(
 /// Resolves [rawUrl] to the host/port a TLS probe or a pinned client should
 /// connect to, or null when it cannot carry a certificate at all.
 ///
-/// Thin wrapper around [UrlUtils.certOrigin] — that is the single place the
+/// Thin wrapper around [UrlUtils.certOrigin]. That is the single place the
 /// scheme/default-port rule lives; this just unpacks its canonical
 /// `https://host:port` string back into the parts a socket call needs.
 ({String host, int port})? tlsEndpointFor(String rawUrl) {

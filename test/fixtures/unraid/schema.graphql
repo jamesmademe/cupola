@@ -5,7 +5,7 @@
 # **This file is documentation, not a capture, and the distinction is the whole
 # value of the test.** Unraid is the one service in the stack that has never
 # been run against a real instance, so every type below was written from the
-# published schema reference — which means the contract test proves that the
+# published schema reference, which means the contract test proves that the
 # client and this file agree with each other, and nothing more. That is not
 # nothing: a GraphQL server rejects the whole document over one unknown field,
 # so a selection nobody wrote down here takes a whole tab down, and the test

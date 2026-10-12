@@ -13,7 +13,7 @@ void main() {
   group('BazarrWantedScreen when Bazarr is not configured', () {
     // Wanted is deep-linkable, so it is reachable with Bazarr unconfigured
     // without ever passing the stack. It used to answer with a bare
-    // sentence — no icon, no button, no route — while the stack one screen
+    // sentence (no icon, no button, no route) while the stack one screen
     // over offered the shared placeholder and its deep link.
     testWidgets('renders the shared placeholder rather than a private notice', (
       tester,

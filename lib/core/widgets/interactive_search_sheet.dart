@@ -29,13 +29,13 @@ export 'package:cupola/core/utils/release_utils.dart' show ReleaseSortType;
 /// inference. It is right for a callback that only ever grabs, and wrong for one
 /// that may decide not to: the release-search sheet asks *"Search again for this
 /// release?"* once the service has dropped the release list, and both of that
-/// prompt's non-grab outcomes — cancelling it, or accepting and starting a fresh
-/// search — return normally. Cancelling used to close the sheet and claim a
+/// prompt's non-grab outcomes (cancelling it, or accepting and starting a fresh
+/// search) return normally. Cancelling used to close the sheet and claim a
 /// download had started.
 ///
 /// It rides the error channel because that is where "no grab happened" already
 /// lives: the callback's return type is `Future<void>`, so a throw is the only
-/// thing it can say. Unlike a real failure it is silent — the row stops
+/// thing it can say. Unlike a real failure it is silent: the row stops
 /// spinning, the sheet stays open, and no snackbar is shown, because a caller
 /// that abandons a grab has just shown the user why.
 class ReleaseGrabAbandoned implements Exception {
@@ -50,7 +50,7 @@ class InteractiveSearchSheet extends StatefulWidget {
   final List<dynamic> releases;
   final String title;
 
-  /// Grabs the release. Returning normally means it was grabbed — the sheet
+  /// Grabs the release. Returning normally means it was grabbed: the sheet
   /// closes and reports a started download on exactly that. A callback that can
   /// decide *not* to grab must say so by throwing [ReleaseGrabAbandoned];
   /// anything else it throws is reported as a failure.
@@ -161,7 +161,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
 
   /// Facets that depend on [InteractiveSearchSheet.releases] alone.
   ///
-  /// The filter field is undebounced, so every keystroke rebuilds this sheet —
+  /// The filter field is undebounced, so every keystroke rebuilds this sheet,
   /// and a Prowlarr fan-out routinely returns a couple of thousand releases.
   /// None of these three can change while the list does not, so they are
   /// derived once per list rather than three more O(n) passes per character.
@@ -170,7 +170,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
   late int _approvedCount;
 
   /// Memoised [filterAndSortReleases] result and the inputs it was computed
-  /// from. A rebuild that changed none of them — a grab starting or finishing —
+  /// from. A rebuild that changed none of them (a grab starting or finishing)
   /// reuses it instead of re-filtering and re-sorting the whole list.
   _ReleaseFilterKey? _filterKey;
   List<dynamic>? _filtered;
@@ -259,7 +259,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
           sortType: _sortType,
           sortAscending: _sortAscending,
           onSortChanged: (type) => setState(() {
-            // Re-selecting the active sort flips its direction — one gesture
+            // Re-selecting the active sort flips its direction: one gesture
             // for both "sort by" and "which way".
             if (type == _sortType) {
               _sortAscending = !_sortAscending;
@@ -336,7 +336,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
   /// [rowContext] is the list row's element, and it is deliberately *not* what
   /// the outcome is reported through. The toolbar stays live during a grab, so
   /// a filter or query that empties the list mid-flight swaps the `ListView`
-  /// for `_EmptyReleases` and deactivates that row — while the request, and the
+  /// for `_EmptyReleases` and deactivates that row, while the request, and the
   /// sheet, carry on. Reporting through it meant a **successful** grab silently
   /// skipped both the pop and the confirmation and simply re-armed every button:
   /// the download had started, nothing on screen said so, and tapping the same
@@ -382,7 +382,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
       // `context` is still valid and the helper's own `Theme.of(context)` would
       // not be. It is the theme's toast, like every other: a grab starting is
       // not a state with a tone, and the primary ink it used to be painted in
-      // is the toast's own label colour in the dark room — white on white.
+      // is the toast's own label colour in the dark room: white on white.
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
       messenger.showSnackBar(const SnackBar(content: Text('Download started')));
@@ -393,7 +393,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
       if (!mounted) return;
       // Re-armed rather than popped: the sheet is where the user retries, and
       // the failure has to be reported even when the row it started from is
-      // gone — the busy state is the State's, not the row's.
+      // gone: the busy state is the State's, not the row's.
       setState(() => _grabbingGuid = null);
       SnackBarHelper.error(
         context,
@@ -841,7 +841,7 @@ class _IndexerChip extends StatelessWidget {
 /// A scrollable, not a `Center`: every branch of a sheet body has to be attached
 /// to the controller [AppBottomSheet.showScrollable] hands in, or the sheet
 /// stops answering drag-to-resize and flick-to-close the moment a filter empties
-/// the list — the same rule `music_albums_list.dart` states for its own loading
+/// the list: the same rule `music_albums_list.dart` states for its own loading
 /// and error branches.
 class _EmptyReleases extends StatelessWidget {
   final bool hasActiveFilters;
@@ -887,8 +887,8 @@ class _EmptyReleases extends StatelessWidget {
 ///
 /// A release search is the one arr call that legitimately runs for minutes, so
 /// this is an instrument rather than a spinner. The elapsed readout appears only
-/// once the search crosses [readoutAfter] — a clock on a search that answers in
-/// two seconds is noise — and Cancel makes the exit explicit rather than leaving
+/// once the search crosses [readoutAfter]: a clock on a search that answers in
+/// two seconds is noise, and Cancel makes the exit explicit rather than leaving
 /// it to be discovered by dismissing the sheet.
 ///
 /// There is deliberately no percentage: the server reports no per-indexer

@@ -38,7 +38,7 @@ void main() {
       // headline is plain type now: this beat already carries seventeen
       // accents, one per chip and one per lit node, and a headline in an
       // eighteenth taught the eye to read colour as decoration. The accented
-      // headline stays where it means something — the door and the close.
+      // headline stays where it means something: the door and the close.
       expect(find.text('Pick your services'), findsOneWidget);
 
       await _tap(tester, 'Continue');
@@ -99,7 +99,7 @@ void main() {
       // read "RADARR · 1 OF 17" and now reads the compound form decision 47
       // leaves as the flow's only counter: the beat *and* the service, because
       // the ring already says how far in and cannot say which one. The service
-      // name moved to the glyph tile beside it — and to the spoken label, since
+      // name moved to the glyph tile beside it, and to the spoken label, since
       // in the compact register neither the tile nor the headline is on screen.
       final first = ServiceRing.order.first;
       expect(
@@ -168,7 +168,7 @@ void main() {
       await _tap(tester, 'Test connection');
 
       // Under test the transport refuses every request, so the outcome is a
-      // failure — reported as a sentence rather than a badge saying UNREACHABLE.
+      // failure, reported as a sentence rather than a badge saying UNREACHABLE.
       expect(_button('Test connection'), findsOneWidget);
       expect(find.text('Skip Sonarr'), findsOneWidget);
     });
@@ -248,7 +248,7 @@ void main() {
       await _tap(tester, 'Continue with 1');
       await _fill(tester, url: 'sonarr.lan:8989', key: 'abcdef1234567890');
 
-      // Straight past the walk — Test was never pressed. Pumped in stages so the
+      // Straight past the walk. Test was never pressed. Pumped in stages so the
       // automatic checks finish while the page transition is still in flight,
       // which is the window where a reveal that walks up into the pager used to
       // drag it back and pin setup mid-flow.
@@ -366,7 +366,7 @@ void main() {
       );
       await _tap(tester, 'Set up my stack');
 
-      // Sonarr arrives already picked — finishing a second time must not blank a
+      // Sonarr arrives already picked: finishing a second time must not blank a
       // real configuration.
       expect(_button('Continue with 1'), findsOneWidget);
       await _tap(tester, 'Continue with 1');
@@ -558,7 +558,7 @@ void main() {
       final saved = container.read(settingsProvider);
       expect(saved.sonarrUrl, 'https://sonarr.lan:8989');
       expect(saved.sonarrApiKey, 'abcdef1234567890');
-      // The credential half too — it lives in secure storage, so losing it is
+      // The credential half too. It lives in secure storage, so losing it is
       // the one thing the user cannot undo from memory.
       expect(saved.qbittorrentUrl, 'https://qb.lan:8080');
       expect(saved.qbittorrentUsername, 'admin');
@@ -588,7 +588,7 @@ void main() {
     // The pin is seeded from the *saved* URL on resume and `_save` writes every
     // ready service, not just the one on screen. Without tying the fingerprint
     // to the origin it was accepted for, editing an address carried the old
-    // host's certificate onto the new one — and because a pin is keyed by
+    // host's certificate onto the new one, and because a pin is keyed by
     // origin alone, that bogus entry then failed closed for every service later
     // pointed at that host, with no trust prompt to explain it.
     testWidgets('editing an address does not move its certificate pin', (
@@ -626,7 +626,7 @@ void main() {
 
       final saved = container.read(settingsProvider);
       expect(saved.sonarrUrl, 'https://other.lan:8989');
-      // The new host never presented a certificate here, so it has no pin —
+      // The new host never presented a certificate here, so it has no pin;
       // and the abandoned one is forgotten rather than relocated.
       expect(saved.pinForUrl('https://other.lan:8989'), isNull);
       expect(saved.trustedCertificates, isEmpty);
@@ -660,7 +660,7 @@ void main() {
       tester,
     ) async {
       // The brand book: a room with no artwork is lit by the neutral lamp, and a service's
-      // room is no exception — the service being set up is named by its mark
+      // room is no exception: the service being set up is named by its mark
       // and its form, never by a colour. The room used to take the service's
       // accent during the walk and the brand primary either side of it (the
       // primary is the ink now, which would have lit the room white).
@@ -669,8 +669,8 @@ void main() {
 
       // Read off the gradient the room actually paints, not off the argument it
       // was handed. `AmbientBackground` resolves its own fallback and tweens the
-      // accent now — the drift used to live in a private `_AmbientRoom` wrapper
-      // here — so the constructor argument is null on the beats that want the
+      // accent now; the drift used to live in a private `_AmbientRoom` wrapper
+      // here, so the constructor argument is null on the beats that want the
       // brand glow, and asserting on it would be asserting on the plumbing
       // rather than on the rule.
       Color roomAccent() {
@@ -708,7 +708,7 @@ void main() {
       tester,
     ) async {
       // The instruction used to exist only as the *outcome* of pressing Test on
-      // an empty form — the answer to a question the user had already had to
+      // an empty form: the answer to a question the user had already had to
       // guess. It is the step's standing subtitle now.
       await _pumpOnboarding(tester);
       await _tap(tester, 'Set up my stack');
@@ -757,8 +757,8 @@ void main() {
       await _tap(tester, 'Continue with 1');
     }
 
-    /// Raises the keyboard the way the platform does — after the field has
-    /// focus, by shrinking the view — rather than pumping a screen that was
+    /// Raises the keyboard the way the platform does, after the field has
+    /// focus, by shrinking the view, rather than pumping a screen that was
     /// already short. Pumping it up front would test a state the user never
     /// reaches, since the beats before the walk have nothing to type into.
     Future<void> raiseKeyboard(WidgetTester tester) async {
@@ -788,7 +788,7 @@ void main() {
 
       // The defect this replaces: the full register asks for whatever the beat
       // leaves over, and with a software keyboard up that is nothing on every
-      // phone — so the instrument was not merely smaller, it was gone for the
+      // phone, so the instrument was not merely smaller, it was gone for the
       // whole time the user was typing.
       expect(find.byType(ServiceRing), findsOneWidget);
       final after = tester.widget<ServiceRing>(find.byType(ServiceRing));
@@ -828,8 +828,8 @@ void main() {
 
       await raiseKeyboard(tester);
 
-      // The orientation survives the register change — which service, how far in
-      // — and says it exactly once, because a duplicated eyebrow is two steps to
+      // The orientation survives the register change: which service, how far in
+      // and says it exactly once, because a duplicated eyebrow is two steps to
       // a screen reader. It is the compound counter now (decision 47), so the
       // *spoken* form is what still carries the service: in this register the
       // glyph tile and the headline are both gone, and a counter alone would
@@ -872,7 +872,7 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
 
-      // The last field ends the form by running the test — and the test takes
+      // The last field ends the form by running the test, and the test takes
       // the keyboard with it, so the outcome and the pinned actions are what
       // comes back rather than a verdict answered behind the keys.
       expect(tester.widget<TextField>(apiKey).focusNode?.hasFocus, isFalse);
@@ -894,7 +894,7 @@ void main() {
       final rect = tester.getRect(field);
 
       expect(rect.height, greaterThan(0));
-      // The whole control, not just its top edge — a field cut off at the
+      // The whole control, not just its top edge: a field cut off at the
       // baseline is what the screenshots showed.
       expect(
         rect.bottom,
@@ -1022,8 +1022,8 @@ Finder _button(String label) => find.widgetWithText(FilledButton, label);
 
 /// Matches a line by its *spoken* value rather than its painted one.
 ///
-/// A rolled line carries the two separately — an eyebrow is uppercased for the
-/// eye and expanded for the ear — and where it settles depends on the renderer:
+/// A rolled line carries the two separately (an eyebrow is uppercased for the
+/// eye and expanded for the ear), and where it settles depends on the renderer:
 /// `ReelText.semanticsLabel` while it rolls, `Text.semanticsLabel` once Reduce
 /// Motion has replaced the roll with plain text. `findLine` reads the first and
 /// this reads the second, which is the one every test in this file that pumps
@@ -1035,7 +1035,7 @@ Finder _spokenLine(String label) => find.byWidgetPredicate(
 /// Matches a [Semantics] widget by its declared label.
 ///
 /// Read off the widget rather than the semantics tree so the harness needs no
-/// [SemanticsHandle] — `ensureSemantics`' handle is verified as disposed before
+/// [SemanticsHandle]: `ensureSemantics`' handle is verified as disposed before
 /// `addTearDown` callbacks run, so the idiomatic pairing fails every test.
 Finder _semantics(String label) => find.byWidgetPredicate(
   (widget) => widget is Semantics && widget.properties.label == label,
@@ -1065,7 +1065,7 @@ Future<void> _tap(
 /// Pumps a handful of real frames.
 ///
 /// With the sweep running there is no settled state, so motion-on cases advance
-/// the clock in steps instead of waiting for one — and a single long pump is not
+/// the clock in steps instead of waiting for one, and a single long pump is not
 /// enough, because a pager builds the arriving page over more than one frame.
 Future<void> _advanceFrames(WidgetTester tester) async {
   for (var i = 0; i < 8; i++) {
@@ -1102,7 +1102,7 @@ Future<void> _fill(
 ///
 /// The hand-written literal this replaces silently stopped covering the whole
 /// ring the moment a service was added, and the case it feeds is precisely "does
-/// the longest possible walk still fit a phone" — so it has to grow with the
+/// the longest possible walk still fit a phone", so it has to grow with the
 /// registry or it stops testing what it claims to.
 SettingsModel _fullConfiguration() {
   var settings = const SettingsModel();
@@ -1128,7 +1128,7 @@ Future<ProviderContainer> _pumpOnboarding(
   bool reduceMotion = true,
 }) async {
   // Tall enough that no beat needs scrolling, so a tap never has to reach past
-  // the fold — see [_tap] for why scrolling is the thing to avoid here. Width is
+  // the fold. See [_tap] for why scrolling is the thing to avoid here. Width is
   // irrelevant past `onboardingMaxWidth`.
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = viewport ?? const Size(800, 2400);
@@ -1139,7 +1139,7 @@ Future<ProviderContainer> _pumpOnboarding(
   final secureStore = FakeSecureSettingsStore();
 
   // An explicit container, so a case can read back what the walk actually saved
-  // — the difference between "walked past" and "deleted" is invisible on screen.
+  // (the difference between "walked past" and "deleted" is invisible on screen).
   final container = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
@@ -1188,8 +1188,8 @@ Future<ProviderContainer> _pumpOnboarding(
 /// The default certificate prober for every test in this file.
 ///
 /// Under ADR-6 the real [probeUntrustedCertificate] opens a live
-/// [SecureSocket] for *any* disconnected, probe-worthy failure — no longer
-/// just the rare TrueNAS/Dockge case ADR-5 confined it to — and none of
+/// [SecureSocket] for *any* disconnected, probe-worthy failure, no longer
+/// just the rare TrueNAS/Dockge case ADR-5 confined it to, and none of
 /// these tests point at a real TLS host, so a `.lan`/scheme-less address
 /// that fails at the fake `ApiClient` layer would otherwise reach a real
 /// socket `flutter_test` cannot intercept or fake, hanging the test on a

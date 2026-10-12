@@ -12,7 +12,7 @@ import '../../test_helpers/settings_scope.dart';
 
 void main() {
   /// Mounts the screen for [platform]. Null means "ask the host", which under
-  /// test is a desktop — the case the status row answers.
+  /// test is a desktop: the case the status row answers.
   Future<ProviderContainer> pumpScreen(
     WidgetTester tester, {
     TargetPlatform? platform,
@@ -200,7 +200,7 @@ void main() {
     testWidgets('the grab window is stated whichever mode is on', (
       tester,
     ) async {
-      // Sonarr's own limit, true of the feature rather than of the mode — so
+      // Sonarr's own limit, true of the feature rather than of the mode, so
       // the switch must not take it away.
       await pumpScreen(tester, platform: TargetPlatform.iOS);
       expect(find.textContaining('30 minutes'), findsOneWidget);
@@ -285,7 +285,7 @@ void main() {
       );
     });
 
-    testWidgets('the stepper settings still work — they govern the foreground '
+    testWidgets('the stepper settings still work: they govern the foreground '
         'path too', (tester) async {
       // The reason this screen is not simply disabled wholesale: concurrency
       // and the timeout apply to a search that runs in the app as well.
@@ -310,7 +310,7 @@ void main() {
       );
     });
 
-    testWidgets('notifications stay available — the app is simply running', (
+    testWidgets('notifications stay available: the app is simply running', (
       tester,
     ) async {
       await pumpScreen(tester);

@@ -75,7 +75,7 @@ void main() {
     test('one date anywhere proves the server answers', () {
       final week = sonarrAiringWeek([
         _series(id: 1, status: 'continuing'),
-        // Outside the window, so it draws no row — but it settles the question
+        // Outside the window, so it draws no row, but it settles the question
         // of whether this server reports airings at all.
         _series(id: 2, status: 'continuing', nextAiring: _at(now, 30, 21)),
       ], now: now);
@@ -473,8 +473,8 @@ void main() {
     test(
       'a failed fetch stays a failure instead of becoming an empty library',
       () {
-        // The defect this provider exists for. `getSeries` — the read
-        // `seriesProvider` makes, and what this fake still answers — degrades to
+        // The defect this provider exists for. `getSeries`, the read
+        // `seriesProvider` makes, and what this fake still answers, degrades to
         // `[]`, so an unreachable Sonarr resolved the week *successfully* and the
         // header printed "0 series" over "Nothing airing this week". The window
         // function cannot tell those apart; only the fetch can.
@@ -497,7 +497,7 @@ void main() {
       final week = await container.read(sonarrAiringWeekProvider.future);
 
       expect(week.entries, isEmpty);
-      // Nothing could still air, so silence means nothing airs — and the
+      // Nothing could still air, so silence means nothing airs, and the
       // section is allowed to say so.
       expect(week.canReport, isTrue);
     });
@@ -543,7 +543,7 @@ ProviderContainer _container(SonarrService service) {
 /// Extends the shared fake rather than editing it: every other test that builds
 /// a `FakeSonarrService` keeps the empty defaults it relies on. The two backlog
 /// getters are overridden at the **page** level, because the total is the whole
-/// point — the fake's record-only defaults answer `total: null`, which is the
+/// point: the fake's record-only defaults answer `total: null`, which is the
 /// "nobody said" case rather than a figure.
 class _ScriptedSonarr extends FakeSonarrService {
   _ScriptedSonarr({
@@ -622,7 +622,7 @@ SonarrSeries _series({
 );
 
 /// Local-time ISO, so the window's local calendar days are what the test is
-/// actually exercising — a `Z` suffix would move the boundary by the runner's
+/// actually exercising: a `Z` suffix would move the boundary by the runner's
 /// offset and make the assertion pass or fail by timezone.
 String _at(DateTime now, int dayOffset, int hour, [int minute = 0]) => DateTime(
   now.year,

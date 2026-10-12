@@ -116,7 +116,7 @@ void main() {
     expect(find.text('EN'), findsNothing);
     expect(find.text('Missing en'), findsOneWidget);
     expect(find.text('Details'), findsOneWidget);
-    // The missing count is stated once in words, in the hero's chip slot — the
+    // The missing count is stated once in words, in the hero's chip slot: the
     // figure plate beside it is the same fact as a glanceable numeral and is
     // silent to assistive technology.
     expect(find.text('2 missing'), findsOneWidget);

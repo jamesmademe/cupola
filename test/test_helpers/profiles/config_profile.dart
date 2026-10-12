@@ -14,24 +14,24 @@ import 'world.dart';
 /// Declared on each profile so a test can ask "which profiles exercise the b
 /// case" rather than hard-coding a list that drifts from the table.
 enum ConfigCase {
-  /// a — not set up in Cupola, and unknown to anything else.
+  /// a: not set up in Cupola, and unknown to anything else.
   notSetUp('a'),
 
-  /// b — not set up in Cupola, but known through another service (Seerr's
+  /// b: not set up in Cupola, but known through another service (Seerr's
   /// settings know a Radarr that Cupola has no connection to).
   knownThroughAnother('b'),
 
-  /// c — set up, and did not answer.
+  /// c: set up, and did not answer.
   didNotAnswer('c'),
 
-  /// d — answered, but not allowed: a refused or read-only credential, or the
-  /// Seerr requester.
+  /// d: answered but not allowed (a refused or read-only credential, or the
+  /// Seerr requester).
   notAllowed('d'),
 
-  /// e — more than one connection of one service.
+  /// e: more than one connection of one service.
   severalInstances('e'),
 
-  /// f — the media server has an item, but its match is not verified.
+  /// f: the media server has an item, but its match is not verified.
   matchNotVerified('f');
 
   const ConfigCase(this.mark);
@@ -42,8 +42,8 @@ enum ConfigCase {
 
 /// How one connection behaves on the fake network.
 ///
-/// Each value is mapped onto what the real client would see on the wire —
-/// a refused socket, a 401, qBittorrent's `Fails.`, a proxy's web page — so
+/// Each value is mapped onto what the real client would see on the wire:
+/// a refused socket, a 401, qBittorrent's `Fails.`, a proxy's web page, so
 /// the app's own classification code (`classifyConnectionFailure`, the qB
 /// login reader, the capability probes) is what turns it into a verdict.
 /// Nothing here hands the app a pre-classified error.
@@ -224,7 +224,7 @@ enum PlainBehaviour implements ConnectionBehaviour {
   answers,
 
   /// The host refuses the connection: `SocketException('Connection refused')`
-  /// at dial time, which Dio reports as `connectionError` — a dead host.
+  /// at dial time, which Dio reports as `connectionError`: a dead host.
   didNotAnswer,
 
   /// The host never completes the handshake: `SocketException('Connection
@@ -236,8 +236,8 @@ enum PlainBehaviour implements ConnectionBehaviour {
 
   /// The server answers and refuses the credential, each service in its own
   /// way (401, 403, qBittorrent's `200 Fails.`, SABnzbd's `status: false`,
-  /// TrueNAS's `false` login). Its unauthenticated routes — the Jellyfin, Plex,
-  /// NPM and Seerr status probes — still answer, as they do live.
+  /// TrueNAS's `false` login). Its unauthenticated routes (the Jellyfin, Plex,
+  /// NPM and Seerr status probes) still answer, as they do live.
   refusesKey,
 
   /// The credential may read and not write.
@@ -246,7 +246,7 @@ enum PlainBehaviour implements ConnectionBehaviour {
   /// `me`) the probe answers read-only. Jellyfin and Plex answer as a
   /// non-admin / non-owner token: their admin reads are refused too. Every
   /// other service has one admin key, so read-only there means only "a write
-  /// is refused with 403" — the generic failure path the legend describes.
+  /// is refused with 403", the generic failure path the legend describes.
   readOnly,
 
   /// Something other than the service answers every HTTP request with `200`
@@ -487,7 +487,7 @@ class ProfileConnection {
 }
 
 /// A Radarr or Sonarr that Seerr's own settings know, whether or not Cupola
-/// has a connection to it — the raw material of the b case.
+/// has a connection to it, the raw material of the b case.
 ///
 /// It is served twice by the fake Seerr, in the two shapes Seerr itself uses:
 /// `GET /api/v1/settings/{radarr,sonarr}` (the admin view, address and key
@@ -747,8 +747,8 @@ class SeerrRelease {
 ///
 /// A value, never a harness: [settings] is plain data, and turning a profile
 /// into overrides and a fake network is `ProfileHarness`'s job. That split is
-/// what lets a test derive a variant — P7 with qBittorrent answering, P6 with
-/// the lens on the 4K Radarr — without rebuilding either.
+/// what lets a test derive a variant: P7 with qBittorrent answering, P6 with
+/// the lens on the 4K Radarr, without rebuilding either.
 class ConfigProfile {
   const ConfigProfile({
     required this.id,
@@ -791,7 +791,7 @@ class ConfigProfile {
   final List<SeerrKnownServer> seerrKnows;
 
   /// Titles (world title keys) the media server holds under an id that does
-  /// not match the arr's — case f. The fake Jellyfin and Plex carry them with
+  /// not match the arr's (case f). The fake Jellyfin and Plex carry them with
   /// a different TMDB id, so `streamExternalMatchScore` rejects the item.
   final Set<String> unverifiedMatches;
 
@@ -867,7 +867,7 @@ class ConfigProfile {
   bool has(ServiceKey service) => connections.any((c) => c.service == service);
 
   /// The connection the lens rests on for [service], or null when the
-  /// profile has none — resolved the way `activeInstanceProvider` resolves it.
+  /// profile has none, resolved the way `activeInstanceProvider` resolves it.
   ServiceInstance? lensOn(ServiceKey service) {
     final all = connectionsOf(service);
     if (all.isEmpty) return null;
@@ -906,7 +906,7 @@ class ConfigProfile {
     );
   }
 
-  /// A copy with [connection] added after the others — a World-B service
+  /// A copy with [connection] added after the others, a World-B service
   /// for the read-only cases only Unraid and NPM can show, say. Replaces a
   /// connection with the same id.
   ConfigProfile withConnection(ProfileConnection connection) => _copy(
@@ -1018,7 +1018,7 @@ class ConfigProfile {
     );
   }
 
-  /// A copy without any connection of [service] — its a case.
+  /// A copy without any connection of [service]: its a case.
   ConfigProfile without(ServiceKey service) => _copy(
     connections: [
       for (final c in connections)

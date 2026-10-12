@@ -108,7 +108,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
                 _InfoCard(indexer: indexer),
                 const SizedBox(height: AppSpacing.sm),
                 // The window, said out loud. These four figures are scoped to
-                // `prowlarrStatsWindow` — an unlabelled "Queries 4812" reads as
+                // `prowlarrStatsWindow`: an unlabelled "Queries 4812" reads as
                 // a lifetime total and tells a self-hoster nothing about today.
                 _SectionLabel(text: 'Last 24 hours'),
                 _StatsSection(indexerId: indexerId),
@@ -226,8 +226,8 @@ class _StatusBanner extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             // A tonal card, not an alarm. The fill and border were the raw
-            // `AppColors.warning` at 0.1 and 0.4 — the chrome the app reserves
-            // for a service that did not answer — around a fact Prowlarr
+            // `AppColors.warning` at 0.1 and 0.4: the chrome the app reserves
+            // for a service that did not answer, around a fact Prowlarr
             // answered perfectly well: one of its indexers is failing. The
             // icon and the ink carry the tone; the container stays quiet.
             decoration: BoxDecoration(
@@ -244,7 +244,7 @@ class _StatusBanner extends ConsumerWidget {
                     colorScheme,
                     StatusTone.warning,
                     // The tone lands on an elevated container, not on the page
-                    // ground — only this caller knows that.
+                    // ground. Only this caller knows that.
                     surface: colorScheme.surfaceContainerHighest,
                   ),
                 ),
@@ -362,7 +362,7 @@ class _StatsSection extends ConsumerWidget {
     return statAsync.maybeWhen(
       data: (stat) {
         if (stat == null) {
-          // Prowlarr answered and this indexer was simply not in the window —
+          // Prowlarr answered and this indexer was simply not in the window:
           // a real reading of zero activity, not a figure the app is missing.
           return const Padding(
             padding: EdgeInsets.symmetric(

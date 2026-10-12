@@ -18,7 +18,7 @@ import 'seerr_sessions.dart';
 /// household member's own session.
 ///
 /// Its settings know the Radarr and Sonarr servers the profile lists in
-/// `seerrKnows` — whether or not Cupola has a connection to them, which is
+/// `seerrKnows`, whether or not Cupola has a connection to them, which is
 /// the whole of the b case.
 ///
 /// Who is calling, the sign-in routes, the sessions and the CSRF guard are in
@@ -103,7 +103,7 @@ class SeerrFake extends ServiceFake {
   ];
 
   /// What Seerr knows of each title: `(status, status4k)`, Seerr's media
-  /// status — 1 unknown, 2 pending, 3 processing, 4 partially available,
+  /// status: 1 unknown, 2 pending, 3 processing, 4 partially available,
   /// 5 available. Null for a title Seerr has no media row for.
   static (int, int)? _mediaStatus(WorldTitle t) => switch (t.key) {
     'spriteFright' || 'bigBuckBunny' => (3, 1),
@@ -1035,7 +1035,7 @@ class SeerrFake extends ServiceFake {
 
 /// Jellyfin with three users; the operator is "this is me".
 ///
-/// [ConnectionBehaviour.readOnly] models a non-admin user's token — the P2+J
+/// [ConnectionBehaviour.readOnly] models a non-admin user's token: the P2+J
 /// variant, Anna signing in with her own account: admin reads (other users,
 /// devices, tasks, the activity log, the full system info) are refused, and
 /// only her own sessions are listed.
@@ -1363,7 +1363,7 @@ class JellyfinFake extends ServiceFake {
     if (term.isNotEmpty) return t.title.toLowerCase().contains(term);
     if (ids == null || ids.isEmpty) return true;
     // Jellyfin matches any of the listed provider ids; the fake answers with
-    // the item whatever id it holds, so the app's own check decides — which
+    // the item whatever id it holds, so the app's own check decides, which
     // is what case f needs.
     return ids.contains('${t.tmdbId}') ||
         (t.imdbId != null && ids.contains(t.imdbId!)) ||
@@ -1376,7 +1376,7 @@ class JellyfinFake extends ServiceFake {
 /// Plex, owner token by default.
 ///
 /// [ConnectionBehaviour.readOnly] models a shared, non-owner token (P6):
-/// `/status/sessions` — what Stop needs — is refused, the library reads.
+/// `/status/sessions` (what Stop needs) is refused, the library reads.
 class PlexFake extends ServiceFake {
   const PlexFake();
 

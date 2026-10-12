@@ -139,7 +139,7 @@ void main() {
 
   group('ServiceOfflineState.failure', () {
     testWidgets('a server that did not answer: red, its address, Retry and '
-        'Settings — and no exception text', (tester) async {
+        'Settings, and no exception text', (tester) async {
       await _pump(
         tester,
         ServiceOfflineState.failure(

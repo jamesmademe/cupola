@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>NavPillTransition — preview</title>
+<title>NavPillTransition: preview</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
 </head>
 <body>
@@ -101,7 +101,7 @@
     });
     paint(true);
   }
-  /* Monochrome: the primary ink on the pill, the secondary ink off it — the same in every section. */
+  /* Monochrome: the primary ink on the pill, the secondary ink off it; the same in every section. */
   function itemColor(i, sel) { return sel ? 'var(--on-surface)' : 'var(--on-surface-variant)'; }
   function swapIcon(it, i, sel, instant) {
     /* AnimatedSwitcher(durationSm), keyed by isSelected: the old glyph fades out as the new fades in. */

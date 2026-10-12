@@ -209,7 +209,7 @@ void main() {
     // from `moviesProvider`, which is not autoDispose and so is fetched once
     // for the life of the app. Invalidating only the derived providers re-ran
     // the window functions against that same cached list with a new
-    // `DateTime.now()` — a pull that recomputed and fetched nothing, so a film
+    // `DateTime.now()`: a pull that recomputed and fetched nothing, so a film
     // that landed, one that was added or a release date that moved never
     // appeared.
     final service = _scripted(movies: [_movie(id: 1)]) as _ScriptedRadarr;
@@ -412,8 +412,8 @@ class _ScriptedRadarr extends FakeRadarrService {
 
   /// How many times the queue was actually fetched.
   ///
-  /// Two independent readers ask for it — the Needs attention section and the
-  /// snapshot behind the rail's `Queued` figure — and only one of them was
+  /// Two independent readers ask for it: the Needs attention section and the
+  /// snapshot behind the rail's `Queued` figure, and only one of them was
   /// autoDispose, so this separates a pull that refetched the queue from one
   /// that re-read a session-old snapshot.
   int queueCalls = 0;
@@ -444,7 +444,7 @@ class _ScriptedRadarr extends FakeRadarrService {
 /// A Radarr whose queue answers once and then stops.
 ///
 /// The wire shape of a server that was reachable when the page loaded and is
-/// not when the user pulls — the only way to get an `AsyncError` that carries a
+/// not when the user pulls: the only way to get an `AsyncError` that carries a
 /// retained value.
 class _FlakyQueueRadarr extends _ScriptedRadarr {
   _FlakyQueueRadarr({super.queue});

@@ -70,7 +70,7 @@ class _IndexerFormState extends ConsumerState<_IndexerForm> {
   late int _downloadClientId;
   late List<int> _tags;
 
-  /// Edited field values by field name, seeded from every field — including the
+  /// Edited field values by field name, seeded from every field, including the
   /// hidden ones (Cardigann's `definitionFile`), which must survive the save.
   late final Map<String, dynamic> _values;
 

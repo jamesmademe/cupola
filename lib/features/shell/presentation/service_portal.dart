@@ -1,5 +1,5 @@
 /// The Portal: drag the nav bar upward and the current screen recedes into a
-/// card, revealing the real service matrix underneath — tap a card to travel.
+/// card, revealing the real service matrix underneath. Tap a card to travel.
 ///
 /// ## The gesture, end to end
 ///
@@ -17,7 +17,7 @@
 ///
 /// If the finger retreats after triggering, the bar rises slowly to meet it
 /// and re-grabs the moment the finger returns to the height the bar had
-/// reached — continuity, not a jump cut.
+/// reached: continuity, not a jump cut.
 ///
 /// ## Why the numbers are literals and not [AppAnimation] tokens
 ///
@@ -30,7 +30,7 @@
 ///
 /// The card's bottom edge is a *linear* function of the portal's `t`, so the
 /// pixels the mappings ask for are the pixels on screen. Easing belongs to the
-/// finger while dragging and to the spring after release — never to the map.
+/// finger while dragging and to the spring after release, never to the map.
 /// (The first mock routed `t` through an easing curve and the "calm
 /// anticipation" became a 2pt whisper nobody could see.)
 library;
@@ -93,7 +93,7 @@ abstract final class PortalPhysics {
   /// The bar easing home after the trigger, finger still down.
   static const Duration barHome = Duration(milliseconds: 260);
 
-  /// The bar's release spring-back — same duration and curve as the bar's own
+  /// The bar's release spring-back: same duration and curve as the bar's own
   /// aesthetic rubber band, so the two reads are one material.
   static const Duration barSpringBack = Duration(milliseconds: 500);
 }
@@ -127,8 +127,8 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   ///
   /// Taken on the first frame the Portal leaves 0 and dropped when it is back
   /// at exactly 0 ([_onPortalTick]); nothing takes it again while the Portal is
-  /// up. A route or lens change under the card does not clear it — on purpose,
-  /// see [handleRouteChanged] — so a closing card still shows the page it
+  /// up. A route or lens change under the card does not clear it, on purpose,
+  /// see [handleRouteChanged], so a closing card still shows the page it
   /// lifted.
   final SnapshotController snapshot = SnapshotController();
 
@@ -154,8 +154,8 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   double screenHeight = 800;
 
   /// Fired when the Portal commits to opening: a release past the safe zone,
-  /// or [openFromUi]. The shell uses it to reset the coach mark's need-counter —
-  /// using the Portal is the proof the hint is no longer needed — and to say,
+  /// or [openFromUi]. The shell uses it to reset the coach mark's need-counter:
+  /// using the Portal is the proof the hint is no longer needed, and to say,
   /// once, what the floor holds.
   VoidCallback? onOpened;
 
@@ -166,8 +166,8 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   /// to update a texture. Pages read this through `PageCoverageScope` and stop.
   ///
   /// A boolean derived from [portal] rather than the animation itself, because
-  /// what depends on it must rebuild when the Portal opens and when it closes —
-  /// twice — and not on each of the 400ms of frames in between. Assigning an
+  /// what depends on it must rebuild when the Portal opens and when it closes,
+  /// twice, and not on each of the 400ms of frames in between. Assigning an
   /// unchanged value to a [ValueNotifier] does not notify, so the debounce is
   /// the notifier's own.
   final ValueNotifier<bool> covering = ValueNotifier<bool>(false);
@@ -178,7 +178,7 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   bool get isOpenOrEngaged => _engaged || portal.value > 0.05;
 
   /// Fully at rest: closed, no finger, nothing moving. The one state the demo
-  /// bounce may play from — and so the one a caller checks before counting the
+  /// bounce may play from, and so the one a caller checks before counting the
   /// demo as shown.
   bool get isIdle =>
       !_engaged && !_closing && !portal.isAnimating && portal.value == 0;
@@ -234,7 +234,7 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
     _stopBarAnim();
     _blend.stop();
     // The finger has taken the Portal back, so whatever the last spring was
-    // aiming at is no longer what is happening — and [closeFromUi] must arm
+    // aiming at is no longer what is happening, and [closeFromUi] must arm
     // again for the release this drag ends in.
     _springTarget = null;
     _closing = portal.value > 0.5;
@@ -363,8 +363,8 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
 
   /// Open without a finger: the tab bar's accessibility action.
   ///
-  /// The same commit a release past the safe zone makes — [onOpened], then the
-  /// release spring from rest — with no haptic, because there was no gesture
+  /// The same commit a release past the safe zone makes: [onOpened], then the
+  /// release spring from rest, with no haptic, because there was no gesture
   /// for it to confirm. A no-op while the finger owns the Portal and while it is
   /// already open or opening, so a second activation cannot restart the spring.
   void openFromUi() {
@@ -383,11 +383,11 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   ///
   /// Idempotent on purpose, and that is load-bearing since the floor's cells
   /// started closing on the act: choosing a cell that also moves the lens asks
-  /// for the close twice — once from the cell, once from the shell's route hook
+  /// for the close twice: once from the cell, once from the shell's route hook
   /// a frame later. A second [_springTo] would restart the spring from wherever
   /// the first had reached with zero velocity, which is a visible hitch
   /// two-thirds of the way home. So a close already under way is left to
-  /// finish; anything that takes the Portal back — a new drag — clears the flag
+  /// finish; anything that takes the Portal back, a new drag, clears the flag
   /// and this arms again.
   void closeFromUi() {
     if (_springTarget == 0 && !_engaged && !_closing) return;
@@ -405,7 +405,7 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   /// still showing the FROZEN departure screen; the new route mounts and runs
   /// its page transition unseen beneath the veil; at t == 0 the snapshot
   /// switches itself off ([_onPortalTick]) and the destination is simply
-  /// there. Deliberately NO `snapshot.clear()` here — dropping the veil at
+  /// there. Deliberately NO `snapshot.clear()` here: dropping the veil at
   /// tap time exposed the route transition mid-flight under a closing card,
   /// which read as one jerky cut.
   void handleRouteChanged() {
@@ -429,7 +429,7 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
           ),
         )
         .whenComplete(() {
-          // A spring stops within an epsilon of its target, never ON it — and
+          // A spring stops within an epsilon of its target, never ON it, and
           // both AbsorbPointer and snapshotting gate on t == 0 exactly. Left
           // at 0.004, the whole app would sit behind an invisible absorber.
           // Skipped if something else took over (a new drag, a new spring).
@@ -561,7 +561,7 @@ class _PortalFloor extends StatelessWidget {
     final visibility = ((t - 0.08) / 0.5).clamp(0.0, 1.0);
     // The spacer tracks the card's LIVE bottom edge, not its resting spot:
     // while the Portal opens or closes the panel therefore always sits below
-    // the card — the veil can only cross it when the USER scrolls. This is
+    // the card: the veil can only cross it when the USER scrolls. This is
     // also the floor's entrance (it emerges from under the card's edge), so
     // no separate parallax is needed.
     final h = controller.screenHeight;
@@ -588,8 +588,8 @@ class _PortalFloor extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // The stretch above the matrix — where the receded card
-                  // shows through — is a real child, not padding: a tap there
+                  // The stretch above the matrix, where the receded card
+                  // shows through, is a real child, not padding: a tap there
                   // goes back, a drag there scrolls. (The scrollable is opaque
                   // to hits, so the card's own tap can't be reached anymore.)
                   //
@@ -612,7 +612,7 @@ class _PortalFloor extends StatelessWidget {
                   // and a near-opaque surface fill that scroll WITH the
                   // cells, so when the list travels over the frozen card it
                   // brings its own contrast along. Deliberately no backdrop
-                  // blur — this panel scrolls every frame.
+                  // blur: this panel scrolls every frame.
                   Container(
                     height: 56,
                     decoration: BoxDecoration(
@@ -639,7 +639,7 @@ class _PortalFloor extends StatelessWidget {
                     // Wrapped so a cell can close the Portal on the ACT of
                     // being tapped. The shell's route hook closes it when the
                     // content under the card moves, which is a different
-                    // question and misses the tap that moves nothing — see
+                    // question and misses the tap that moves nothing; see
                     // [PortalDismissScope].
                     child: PortalDismissScope(
                       onDismiss: controller.closeFromUi,
@@ -676,7 +676,7 @@ class _PortalCard extends StatelessWidget {
     final h = controller.screenHeight;
     final finalBottom =
         PortalPhysics.cardTopInset + h * PortalPhysics.cardScale;
-    // Linear on purpose — see the library doc.
+    // Linear on purpose; see the library doc.
     final top = PortalPhysics.cardTopInset * t;
     final bottom = h - t * (h - finalBottom);
     final scale = ((bottom - top) / h).clamp(PortalPhysics.cardScale, 1.0);
@@ -724,7 +724,7 @@ class _PortalCard extends StatelessWidget {
                 mode: SnapshotMode.permissive,
                 // Inert to the reader as it is to the finger. The card is a
                 // frozen picture of the page, and a screen reader walking into
-                // it would read a page it cannot act on — and, once a cell has
+                // it would read a page it cannot act on, and, once a cell has
                 // been chosen, the new route mounting unseen beneath it.
                 child: ExcludeSemantics(
                   excluding: t > 0,

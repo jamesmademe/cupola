@@ -16,7 +16,7 @@ import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 ///
 /// The two controls in the app that end the session they are issued from, and
 /// the only two nothing in Cupola can undo: once the host is down, the app
-/// cannot wake it — only the physical power button or IPMI can. That asymmetry
+/// cannot wake it. Only the physical power button or IPMI can. That asymmetry
 /// is what the confirm has to carry, and why it asks for the hostname typed out
 /// rather than a Yes: a tap is reversible muscle memory, a hostname is not
 /// something you supply by accident on a scrolling page.
@@ -30,8 +30,8 @@ class TrueNasPowerCard extends ConsumerWidget {
     final info = ref.watch(truenasSystemInfoProvider);
     // The hostname is what the confirm asks to be typed, so without it there is
     // nothing to type and the card cannot promise its own guard. It draws
-    // anyway — "—" rather than 0 or a blank, the same rule every unanswered
-    // figure follows — and falls back to the service's own name as the phrase.
+    // anyway: "—" rather than 0 or a blank, the same rule every unanswered
+    // figure follows, and falls back to the service's own name as the phrase.
     final hostname = info.asData?.value?.hostname;
 
     return AppCard.surfaceOutlined(

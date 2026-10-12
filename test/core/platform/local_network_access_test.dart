@@ -9,7 +9,7 @@ import 'package:cupola/core/platform/local_network_access.dart';
 /// The contract with the host side of the local-network permission.
 ///
 /// Two properties matter more than the mapping itself. The probe must never ask
-/// the OS about an address that is not on the local network — asking is what puts
+/// the OS about an address that is not on the local network: asking is what puts
 /// a permission alert on screen, and doing that because a public server timed out
 /// would be a worse bug than the one this exists to fix. And nothing here may
 /// throw: a permission check that can break a connection test is worse than no
@@ -79,7 +79,7 @@ void main() {
       // verdict outlives the user revoking the permission in Settings; sharing
       // one in-flight future means a widget tree disposed mid-probe leaves every
       // later caller in the process awaiting a promise nothing will ever
-      // complete. The host coalesces concurrent probes instead — it can answer
+      // complete. The host coalesces concurrent probes instead: it can answer
       // every waiter at once and cancel its own listener.
       var calls = 0;
       answerWith((_) async {
@@ -133,7 +133,7 @@ void main() {
 
     test('a host that never answers claims nothing', () async {
       // Not a hypothetical: a channel with nothing listening does not fail, it
-      // stays silent — which is exactly what a binding with no mock handler does.
+      // stays silent, which is exactly what a binding with no mock handler does.
       // A permission check that can hang is a connection test that never
       // finishes, so the deadline is enforced here as well as by the host.
       answerWith((_) => Completer<Object?>().future);

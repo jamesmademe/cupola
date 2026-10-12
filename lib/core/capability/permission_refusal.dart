@@ -3,8 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 
 /// An exception that knows whether it was a **permission refusal on an
-/// authenticated call** — the credential worked and the service declined this
-/// particular change — as opposed to a bad password or a dead token.
+/// authenticated call**: the credential worked and the service declined this
+/// particular change, as opposed to a bad password or a dead token.
 ///
 /// Deliberately not `ServiceFailureReason.unauthorized`. The connection tests
 /// fold 401 and 403 together, which is right for "does this connect" and wrong

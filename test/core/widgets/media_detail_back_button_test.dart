@@ -20,7 +20,7 @@ const _kDarkArtwork = Color(0xFF000000);
 
 /// WCAG 2.x AA for text. Deliberately stricter than 1.4.11's 3:1 floor for a
 /// graphical object: the chevron is a thin stroke over unknown photography, and
-/// the reported defect ("washes out over a lit wall") measured 3.35:1 — i.e. it
+/// the reported defect ("washes out over a lit wall") measured 3.35:1, i.e. it
 /// was *passing* 1.4.11 and still unusable.
 const _kMinRatio = 4.5;
 
@@ -73,7 +73,7 @@ Widget _probeApp({
         ? AppTheme.darkTheme()
         : AppTheme.lightTheme(),
     // `MaterialApp` wraps its child in an `AnimatedTheme`, so re-pumping with a
-    // different theme inside one test *interpolates* for 200ms — a single
+    // different theme inside one test *interpolates* for 200ms. A single
     // `pump()` then samples pixels from the previous theme and the assertion
     // silently measures the wrong scheme.
     themeAnimationDuration: Duration.zero,
@@ -102,7 +102,7 @@ Widget _probeApp({
 /// edge cannot be mistaken for either the glyph or the plate.
 ///
 /// Measuring painted extremes rather than the analytic pair is deliberately the
-/// stricter test — antialiasing on a 22pt chevron can only pull the two closer
+/// stricter test. Antialiasing on a 22pt chevron can only pull the two closer
 /// together than the colours the widget asked for.
 Future<double> _paintedContrast(WidgetTester tester) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(
@@ -162,7 +162,7 @@ void main() {
           // Torn down between cases on purpose. Re-pumping a differently-themed
           // tree over the same elements leaves `ButtonStyleButton`'s own
           // `animationDuration` mid-flight, and one `pump()` then samples a
-          // light plate carrying the *previous* theme's glyph — which measured
+          // light plate carrying the *previous* theme's glyph, which measured
           // 1.05:1 and looked like a real failure.
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pumpWidget(
@@ -280,7 +280,7 @@ void main() {
 
     test('release only once the hero scrim can take over the ground', () {
       // `plateReleaseStart` is derived from the hero's own phase curves, and the
-      // hero is frozen — so this locks the coupling instead of the number. If
+      // hero is frozen, so this locks the coupling instead of the number. If
       // `barReveal`'s interval or `scrimDepth`'s ramp is ever retuned, this fails
       // and forces the release point to be re-derived rather than left stale.
       var releaseT = 1.0;

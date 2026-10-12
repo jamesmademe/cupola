@@ -94,7 +94,7 @@ void main() {
       tester,
     ) async {
       // `PressableScale` owns the semantics node in this mode, so everything
-      // `AppCard` would have published itself has to reach it — the hint was
+      // `AppCard` would have published itself has to reach it: the hint was
       // the piece with nowhere to go until `PressableScale` grew one.
       await tester.pumpWidget(
         host(

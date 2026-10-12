@@ -20,7 +20,7 @@ import 'package:cupola/features/settings/presentation/widgets/test_all_connectio
 ///
 /// This is the one place a service's setup lives. The settings home used to
 /// list configured services with their status while a second screen listed all
-/// thirteen with a delete button and no status — two doors to the same room,
+/// thirteen with a delete button and no status: two doors to the same room,
 /// neither of them complete.
 class SettingsConnectionsScreen extends ConsumerWidget {
   const SettingsConnectionsScreen({super.key});
@@ -62,7 +62,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
                 // The count and the command share the trailing slot: the chip
                 // says how much "all" is, and the button is the only way to
                 // re-ask without opening seventeen forms. `.action` is what
-                // keeps the button reachable — the plain header silences its
+                // keeps the button reachable; the plain header silences its
                 // own subtree, which would have left a nested control unnamed.
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -111,7 +111,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
                 ),
               ),
             // Omitted rather than shown empty: trust is per origin, so an
-            // origin can outlive every service that once used it — but with
+            // origin can outlive every service that once used it, but with
             // nothing ever trusted there is nothing this row could find.
             if (settings.trustedCertificates.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.xl),
@@ -172,7 +172,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
   }
 }
 
-/// The number of connected services, sized as a label rather than a figure —
+/// The number of connected services, sized as a label rather than a figure:
 /// it qualifies the heading, it is not a readout in its own right.
 class _CountChip extends StatelessWidget {
   const _CountChip({required this.count});

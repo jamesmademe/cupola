@@ -181,7 +181,7 @@ class SeerrIssue {
 
   /// **From the record, never from the query that fetched it.** This used to
   /// read the `SeerrIssueFilter`, which meant the "All" tab painted every row
-  /// amber — resolved issues included — and reported the whole list as
+  /// amber, resolved issues included, and reported the whole list as
   /// faulting. Amber is a fault (the tone rule); a resolved issue is a
   /// completed thing and reads green.
   StatusTone get tone => isResolved ? StatusTone.success : StatusTone.warning;

@@ -30,7 +30,7 @@ final manualImportServiceProvider =
 ///
 /// The whole wizard belongs to a *connection*, not to a screen: it browses one
 /// server's filesystem, matches against one server's library and moves files
-/// into it — and the lens can move while a scan is in flight. Modelled on
+/// into it, and the lens can move while a scan is in flight. Modelled on
 /// [radarrServiceForProvider], including the two parts of it that are
 /// load-bearing.
 ///
@@ -40,8 +40,8 @@ final manualImportServiceProvider =
 /// bypassed by the path that names a connection.
 ///
 /// `read` of the lens, deliberately. Watching it would rebuild every entry of
-/// this family whenever the lens moved — entries for connections that did not
-/// change — and `watchApiClient` closes the outgoing client on dispose, so a
+/// this family whenever the lens moved, entries for connections that did not
+/// change, and `watchApiClient` closes the outgoing client on dispose, so a
 /// scan of the seedbox would have its `Dio` shut under it because the user
 /// tapped a badge on another screen.
 final manualImportServiceForProvider =
@@ -100,7 +100,7 @@ class ManualImportService {
   ///
   /// [filterExistingFiles] is the service's own switch for hiding files it has
   /// already taken into the library. Left on, a file that was imported earlier
-  /// simply never comes back — which is usually what you want, and is also why
+  /// simply never comes back, which is usually what you want, and is also why
   /// "is this one already imported?" had no visible answer. Turn it off to have
   /// the service report them, flagged with the library file they belong to.
   Future<List<ManualImportItem>> getManualImportItems({
@@ -115,7 +115,7 @@ class ManualImportService {
         if (service == ServiceKey.lidarr) 'replaceExistingFiles': false,
       },
       // The server walks the folder, parses each release name and probes every
-      // file with MediaInfo before it answers — minutes, not seconds.
+      // file with MediaInfo before it answers: minutes, not seconds.
       receiveTimeout: kSlowScanReceiveTimeout,
     );
     return jsonObjects(response.data, ManualImportItem.fromJson);
@@ -260,8 +260,8 @@ class ManualImportService {
   /// [replaceExistingFiles] is Lidarr's own switch for "this batch may overwrite
   /// tracks I already have", and it is the flag a deliberate re-import needs:
   /// without it Lidarr keeps what it holds and the command quietly does nothing.
-  /// Radarr and Sonarr decide per file instead — Sonarr from the `episodeFileId`
-  /// carried in the file body, Radarr from its own import decision — so the flag
+  /// Radarr and Sonarr decide per file instead: Sonarr from the `episodeFileId`
+  /// carried in the file body, Radarr from its own import decision, so the flag
   /// stays out of their payloads.
   Future<ManualImportCommandStatus> startManualImport(
     List<ManualImportItem> files, {

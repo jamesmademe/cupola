@@ -5,7 +5,7 @@ import 'package:cupola/core/app_breakpoints.dart';
 /// Centres a screen's content in a reading-width well on a desktop window, and
 /// gets out of the way everywhere else.
 ///
-/// A dashboard stretched across a 27-inch display is not more information — it
+/// A dashboard stretched across a 27-inch display is not more information: it
 /// is the same information with the reading line broken and the eye travelling
 /// twice as far between a label and its figure. So the content stops growing at
 /// a measured width and centres in whatever the rail and the inspector leave.

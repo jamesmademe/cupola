@@ -3,8 +3,8 @@
 ///
 /// The probe used to catch every error and report `offline`, so a refused key
 /// read red "did not answer"; and four probes could not see a refused key at
-/// all — SABnzbd's `mode=version`, and the anonymous status routes of
-/// Jellyfin, Plex and Nginx Proxy Manager — so a wrong key read as answering.
+/// all: SABnzbd's `mode=version`, and the anonymous status routes of
+/// Jellyfin, Plex and Nginx Proxy Manager, so a wrong key read as answering.
 library;
 
 import 'package:flutter/material.dart';

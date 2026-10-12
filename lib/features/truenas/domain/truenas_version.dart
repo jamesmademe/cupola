@@ -33,7 +33,7 @@ class TrueNasVersion implements Comparable<TrueNasVersion> {
   bool get isSupported => this >= const TrueNasVersion(25, 4);
 
   /// Whether [rawVersion] parses to a supported version. Returns true when the
-  /// version cannot be parsed (fail open — avoid blocking on odd strings).
+  /// version cannot be parsed (fail open; avoid blocking on odd strings).
   static bool isVersionSupported(String? rawVersion) {
     final parsed = parse(rawVersion);
     return parsed == null || parsed.isSupported;

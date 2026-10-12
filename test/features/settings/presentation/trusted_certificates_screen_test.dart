@@ -45,7 +45,7 @@ void main() {
     });
 
     testWidgets(
-      'an orphaned pin — every service that used it is gone — still shows',
+      'an orphaned pin: every service that used it is gone, still shows',
       (tester) async {
         // The whole reason this screen exists: forgetting the last service on
         // an origin must not make the pin unreachable.

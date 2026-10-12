@@ -19,7 +19,7 @@ void main() {
       );
     });
 
-    test('keeps the server order — the first reason is the primary one', () {
+    test('keeps the server order: the first reason is the primary one', () {
       expect(
         jellyfinTranscodeReasonPhrases([
           'ContainerNotSupported',

@@ -9,7 +9,7 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.d
 /// explicit `now`, so every boundary below is exercised without a clock, a
 /// container or a pump.
 void main() {
-  group('sabnzbdStatusTone — the five-arm rule on SABnzbd\'s own words', () {
+  group('sabnzbdStatusTone: the five-arm rule on SABnzbd\'s own words', () {
     test('a paused job is neutral, never amber', () {
       // The single most common way the tone rule is broken. Pausing is the
       // user obeying nobody but themselves; amber would put it in the same
@@ -23,7 +23,7 @@ void main() {
     });
 
     test('repairing is post-processing, not a fault', () {
-      // par2 rebuilding broken articles is the recovery working — the same run
+      // par2 rebuilding broken articles is the recovery working: the same run
       // as verifying and extracting, which this switch has always called blue.
       // Amber would invent a failure in the History header, which counts every
       // amber row as one, and push the real failure down the failed-first list.
@@ -89,7 +89,7 @@ void main() {
     });
 
     test('a queue with more than a day left is not read as an hour', () {
-      // The three-field assumption reads `1:04:00:00` as 1h 4m — and a
+      // The three-field assumption reads `1:04:00:00` as 1h 4m, and a
       // multi-day queue is exactly the one whose ETA the user came for.
       expect(
         sabnzbdParseTimeLeft('1:04:00:00'),
@@ -131,7 +131,7 @@ void main() {
     });
   });
 
-  group('sabnzbdOverviewReadouts — the em-dash rule', () {
+  group('sabnzbdOverviewReadouts: the em-dash rule', () {
     ServiceKpi eta(SabnzbdQueue queue) =>
         sabnzbdOverviewReadouts(queue).firstWhere((kpi) => kpi.label == 'ETA');
 
@@ -145,7 +145,7 @@ void main() {
 
     test('a paused queue reads an em dash, not 0 min', () {
       // SABnzbd freezes `timeleft` at whatever it last was, so the string is
-      // there and the estimate behind it is not. `0 min` — or a stale 7 — reads
+      // there and the estimate behind it is not. `0 min`, or a stale 7, reads
       // as "about to finish" on a queue that is not moving at all.
       final kpi = eta(
         _queue(
@@ -343,7 +343,7 @@ void main() {
     });
 
     test('a queued job shows 0% and no invented estimate', () {
-      // 0% is a percentage the server answered — "not started" — so it prints.
+      // 0% is a percentage the server answered, "not started", so it prints.
       // The ETA does not: a queued job has none, and a dash inside a dotted
       // line reads as a value that failed to load rather than one that was
       // never claimed.
@@ -482,7 +482,7 @@ void main() {
 
     test('a page that never reached yesterday states a floor, not a day', () {
       // Every record the server returned is today's and the page came back
-      // full: there is no way to know what fell off the end — including a
+      // full: there is no way to know what fell off the end, including a
       // failure this section exists to lift, which is why the header must not
       // state these counts as the day.
       final section = sabnzbdHistoryToday(
@@ -570,7 +570,7 @@ void main() {
 
     test('a job par2 is repairing is not counted as a failure', () {
       // Repair is the recovery working. Counted as a failure it would make the
-      // header read `1 failed` on a day when nothing broke — and on the day
+      // header read `1 failed` on a day when nothing broke, and on the day
       // something does, put the real failure second.
       final section = sabnzbdHistoryToday([
         _history(

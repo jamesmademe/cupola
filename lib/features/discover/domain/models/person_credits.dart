@@ -26,10 +26,10 @@ class PersonCredit {
   /// Who they played. Cast credits only.
   final String? character;
 
-  /// TMDB's job — `Director`, `Screenplay`, `Producer`. Crew credits only.
+  /// TMDB's job: `Director`, `Screenplay`, `Producer`. Crew credits only.
   final String? job;
 
-  /// TMDB's department — `Directing`, `Writing`, `Production`. Crew only.
+  /// TMDB's department: `Directing`, `Writing`, `Production`. Crew only.
   final String? department;
 
   /// TMDB's genres for the title: a talk show (10767) is how a person page

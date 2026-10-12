@@ -38,7 +38,7 @@ const _secondSeerr = ServiceInstance(
 /// actually mounted, and while the migration was in flight the gap between the
 /// two was its remaining work.
 ///
-/// **The gap is closed** — all sixteen are mounted — so the list is now tied to
+/// **The gap is closed**: all sixteen are mounted, so the list is now tied to
 /// the map by its own case below, and what it guards has changed with it. A
 /// hand-kept list that silently covered eight of thirteen is exactly how these
 /// invariants stopped being asserted for five services that had landed: every
@@ -81,7 +81,7 @@ const List<ServiceKey> _tabbedServices = [
 /// nothing.
 ///
 /// Spelled as the route paths the router declares, so this reads as the tree
-/// does — `':id'` where the tab's own segment already names the record type,
+/// does: `':id'` where the tab's own segment already names the record type,
 /// `'<record>/:id'` where it does not.
 const List<({ServiceKey service, ServiceTab tab, String path})>
 _tabDetailPaths = [
@@ -90,7 +90,7 @@ _tabDetailPaths = [
   (service: ServiceKey.lidarr, tab: ServiceTab.library, path: 'artist/:id'),
   (service: ServiceKey.readarr, tab: ServiceTab.library, path: 'author/:id'),
   // Bazarr's bar names the record types themselves, so the detail is `:id`
-  // under the tab rather than `<record>/:id` under it — `series/series/42`
+  // under the tab rather than `<record>/:id` under it: `series/series/42`
   // would be a stutter nobody would type.
   (service: ServiceKey.bazarr, tab: ServiceTab.series, path: ':id'),
   (service: ServiceKey.bazarr, tab: ServiceTab.movies, path: ':id'),
@@ -132,9 +132,9 @@ const List<String> _mediaPaths = [
 /// these is a list of rows that expand in place or a service whose read layer
 /// has no second document to open:
 ///
-///  * Seerr — its catalogue is the Discover tab of the app now;
-///  * Transmission, SABnzbd, NZBGet — a queue slot is one row that expands;
-///  * Unraid, NPM — both were one page, and the split produced sections rather
+///  * Seerr: its catalogue is the Discover tab of the app now;
+///  * Transmission, SABnzbd, NZBGet: a queue slot is one row that expands;
+///  * Unraid, NPM: both were one page, and the split produced sections rather
 ///    than pages.
 const List<ServiceKey> _servicesWithoutTabDetails = [
   // Seerr's see-alls, person and collection went with Discover to the app's
@@ -214,8 +214,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         // Reduce Motion, for the reason `router_test` states: a destination here
-        // owns a continuous animation — the service ring sweeps forever by
-        // design — so with motion on `pumpAndSettle` waits for a frame that
+        // owns a continuous animation: the service ring sweeps forever by
+        // design, so with motion on `pumpAndSettle` waits for a frame that
         // never stops coming. It also skips the branch cross-fade, which these
         // cases are not about.
         child: MaterialApp.router(
@@ -340,7 +340,7 @@ void main() {
         hasLength(1),
         reason:
             'A second shell beside the app one would replace the page the nav '
-            'bar, the Portal and the whole desktop chrome hang off — opening a '
+            'bar, the Portal and the whole desktop chrome hang off; opening a '
             'service would take the app\'s own navigation away with it.',
       );
       // Found only by walking down through the Stack branch, which is the
@@ -358,7 +358,7 @@ void main() {
       // The list used to be a subset on purpose, and while the migration was in
       // flight that was right. It is a tie now: every case in this group loops
       // over it, so a service mounted but not listed is a service whose branch
-      // order and nesting nothing here checks — which is exactly what happened
+      // order and nesting nothing here checks, which is exactly what happened
       // to five of them in one day.
       expect(
         _tabbedServices.toSet(),
@@ -376,7 +376,7 @@ void main() {
 
       // The two tables below partition the same sixteen. Without this, a
       // service with a detail nobody listed and a service with no detail at all
-      // look identical — both simply absent.
+      // look identical: both simply absent.
       expect({
         ..._tabDetailPaths.map((entry) => entry.service),
         ..._servicesWithoutTabDetails,
@@ -489,7 +489,7 @@ void main() {
           isFalse,
           reason:
               'Preloading builds a tab, and everything it fetches, before the '
-              'user has asked for it — the opposite of the rule that only the '
+              'user has asked for it: the opposite of the rule that only the '
               'page on screen may spend anything.',
         );
       }

@@ -68,15 +68,15 @@ List<String> releaseRejectionReasons(dynamic release) {
 /// Whether the *Arr decision engine approved this release.
 ///
 /// The single definition of "approved" in the app. It used to be spelled three
-/// different ways — the filter chip dropped only releases with rejections, the
+/// different ways: the filter chip dropped only releases with rejections, the
 /// summary counted the same, but the row's badge required `approved == true`.
 /// A release with `approved: false` and no rejections therefore passed the
 /// "Approved only" filter, was counted as approved, and still rendered an amber
 /// "Not approved" badge.
 ///
 /// A release is approved when it carries no rejections *and* the engine did not
-/// mark it unapproved. When the payload omits `approved` entirely — not the case
-/// for Radarr/Sonarr v3, but cheap to tolerate — the absence of rejections is
+/// mark it unapproved. When the payload omits `approved` entirely; not the case
+/// for Radarr/Sonarr v3, but cheap to tolerate: the absence of rejections is
 /// taken as approval so the filter cannot silently empty the list.
 bool releaseIsApproved(dynamic release) {
   if (releaseIsRejected(release)) return false;
@@ -184,7 +184,7 @@ Set<String> extractAvailableIndexers(List<dynamic> releases) {
 ///
 /// Delegates to the shared [formatBytes] ladder. This used to be its own
 /// fifth copy of the byte formatter, with a per-rung precision (one decimal at
-/// KB and MB, two at GB) and no rung above GB — so a 2 TiB season pack printed
+/// KB and MB, two at GB) and no rung above GB, so a 2 TiB season pack printed
 /// as `2048.00 GB`. One decimal, so two releases of 4.3 and 4.4 GB read apart.
 ///
 /// Examples:

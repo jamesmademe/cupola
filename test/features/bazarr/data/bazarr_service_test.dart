@@ -385,7 +385,7 @@ void main() {
       await service.searchLibrary('du');
 
       // Bazarr has no search endpoint, so each query used to pull both lists in
-      // full — up to 1000 records per debounced keystroke pause.
+      // full: up to 1000 records per debounced keystroke pause.
       expect(client.getCallCount, 2);
     });
 
@@ -415,8 +415,8 @@ void main() {
         cancelToken: cancelToken,
       );
 
-      // Cancelling cannot abort the download — it is shared with whatever query
-      // comes next (see `_libraryIndex`) — so the snapshot still lands and the
+      // Cancelling cannot abort the download; it is shared with whatever query
+      // comes next (see `_libraryIndex`), so the snapshot still lands and the
       // successor reads it without a second round trip.
       expect(hits, isEmpty);
       expect(client.getCallCount, 2);

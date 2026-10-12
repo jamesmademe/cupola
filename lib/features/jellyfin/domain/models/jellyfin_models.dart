@@ -2,8 +2,8 @@
 /// DTOs before they are reduced to the shared Stream models.
 ///
 /// `PublicSystemInfo`, `UserDto` and `VirtualFolderInfo` each carry fields the
-/// Stream contract has no room for but the app still reasons about — the server
-/// name, whether a user is disabled, a library's physical locations — so they get
+/// Stream contract has no room for but the app still reasons about: the server
+/// name, whether a user is disabled, a library's physical locations, so they get
 /// a thin typed layer instead of being read out of raw maps at the call site.
 /// Everything else on the wire is a `BaseItemDto` and goes straight through
 /// `jellyfin_item_mapper.dart`.
@@ -39,7 +39,7 @@ enum JellyfinCredentialKind {
   bool get lacksAdministrator => this == JellyfinCredentialKind.user;
 }
 
-/// `GET /System/Info/Public` — the one endpoint that takes no credential.
+/// `GET /System/Info/Public`: the one endpoint that takes no credential.
 ///
 /// Answering this proves the box is up and the base URL points at a Jellyfin,
 /// which is what lets the app tell "server down" apart from "token rejected"
@@ -74,7 +74,7 @@ class JellyfinPublicSystemInfo {
   bool get isJellyfin => version != null;
 }
 
-/// `GET /Users` — one household member.
+/// `GET /Users`: one household member.
 ///
 /// This endpoint is the *only* way to obtain a user id for this integration: an
 /// API key authenticates as Administrator with an **empty** `UserId` claim, so
@@ -115,7 +115,7 @@ class JellyfinUserDto {
   StreamViewer toStreamViewer() => StreamViewer(id: id, name: name);
 }
 
-/// `GET /Library/VirtualFolders` — one library.
+/// `GET /Library/VirtualFolders`: one library.
 @immutable
 class JellyfinVirtualFolder {
   const JellyfinVirtualFolder({
@@ -127,7 +127,7 @@ class JellyfinVirtualFolder {
     required this.refreshStatus,
   });
 
-  /// `ItemId` — the `CollectionFolder`'s own id.
+  /// `ItemId`: the `CollectionFolder`'s own id.
   ///
   /// Not `Id` and not the folder's name: this is the value `/Items?parentId=`
   /// scopes on and the `{itemId}` that `POST /Items/{itemId}/Refresh` rescans, so
@@ -171,7 +171,7 @@ class JellyfinVirtualFolder {
 
   /// Statuses that mean "no scan is running".
   ///
-  /// Matched case-insensitively and by exclusion — the set of terminal statuses
+  /// Matched case-insensitively and by exclusion: the set of terminal statuses
   /// is small and stable, whereas the set of in-progress ones has grown across
   /// releases, so treating an unknown status as "refreshing" fails in the
   /// direction that merely shows a spinner one refresh too long.
@@ -240,7 +240,7 @@ DateTime? _parseDate(Object? raw) {
   return DateTime.tryParse(value);
 }
 
-/// Top-level entry points for `Isolate.run` — a closure would capture the
+/// Top-level entry points for `Isolate.run`: a closure would capture the
 /// enclosing service and fail to send.
 List<JellyfinUserDto> jellyfinUsersFromJson(Object? raw) =>
     jsonObjects(raw, JellyfinUserDto.fromJson);
@@ -324,7 +324,7 @@ class JellyfinScheduledTask {
 
 /// The device rows, already out of their `Items` envelope.
 ///
-/// Shaped like every other mapper in this file — rows in, models out — so it
+/// Shaped like every other mapper in this file (rows in, models out), so it
 /// stays pure and top-level-safe for `Isolate.run`. `JellyfinClient.getDevices`
 /// strips the envelope before calling it, and did so already: unwrapping in
 /// both places left one response shape with two owners.

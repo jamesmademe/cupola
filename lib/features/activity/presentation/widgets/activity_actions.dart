@@ -25,13 +25,13 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// problem it surfaced was to leave and open the service's web UI. These close
 /// that loop.
 ///
-/// Each one confirms first — neutrally, with a verb that says what will happen,
-/// never in red, which means unreachable and nothing else — reports the outcome, and bumps [activityRefreshVersionProvider] so every
+/// Each one confirms first, neutrally, with a verb that says what will happen,
+/// never in red, which means unreachable and nothing else. It reports the outcome, and bumps [activityRefreshVersionProvider] so every
 /// bucket re-reads rather than leaving a removed row on screen.
 ///
 /// ## Every write takes the connection it acts on
 ///
-/// These used to resolve the service through the **lens** — whichever Radarr
+/// These used to resolve the service through the **lens**: whichever Radarr
 /// the user last looked at. That was correct only while the feed showed one
 /// server. Now that /activity merges every connection, the lens and the row are
 /// different facts, and \*arr record ids are per server: each one numbers its
@@ -43,7 +43,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// The same is true of the two request actions, for the same reason in Seerr's
 /// vocabulary: a request id is per instance, so approving id 42 through the
-/// lens approves a different person's request on a different server — and
+/// lens approves a different person's request on a different server, and
 /// reports success. They resolve through `seerrServiceForProvider`.
 class ActivityActions {
   ActivityActions._();

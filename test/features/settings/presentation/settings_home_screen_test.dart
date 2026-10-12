@@ -40,7 +40,7 @@ void main() {
     ) async {
       // It used to say "No services set up yet", which answers "is anything
       // set up" and not "how much of the stack is". The denominator is every
-      // service Cupola can talk to — the same number the count chip on the
+      // service Cupola can talk to, the same number the count chip on the
       // connections list prints, read from the registry rather than typed.
       await _pumpSettingsHome(tester);
 
@@ -150,7 +150,7 @@ void main() {
       testWidgets('a promoted service speaks its connection state', (
         tester,
       ) async {
-        // The indicator is a bare glyph — a cloud, a key, a spinner — so
+        // The indicator is a bare glyph (a cloud, a key, a spinner), so
         // without a label for it the connection state is simply unreadable:
         // the subtitle beside it is only the host.
         await _pumpSettingsHome(
@@ -166,7 +166,7 @@ void main() {
         );
 
         // The summary groups by state, so the row names the services and the
-        // state and leaves the host to the connections list — but the state
+        // state and leaves the host to the connections list, but the state
         // itself is still spoken, because on screen it is carried by a glyph
         // and a tint and nothing else.
         expect(

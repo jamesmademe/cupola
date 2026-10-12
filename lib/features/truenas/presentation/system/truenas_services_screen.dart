@@ -126,8 +126,8 @@ class _ServiceTile extends ConsumerWidget {
               icon: Icon(
                 item.enabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
                 size: 18,
-                // Autostart on is a *setting*, not a fault — amber said
-                // something was wrong with a service configured correctly —
+                // Autostart on is a *setting*, not a fault. Amber said
+                // something was wrong with a service configured correctly,
                 // and not a health signal either, so not green: "on" is the
                 // primary ink, the way a switch that is on is ink.
                 color: item.enabled

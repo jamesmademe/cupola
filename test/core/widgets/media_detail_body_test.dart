@@ -259,7 +259,7 @@ void main() {
     });
 
     // The widget took no accent, so Show more / Show less drew in the theme's
-    // indigo on every service page — a Seerr-coloured verb in Sonarr's room.
+    // indigo on every service page: a Seerr-coloured verb in Sonarr's room.
     testWidgets('Show more draws in the page accent, walked for its ground', (
       tester,
     ) async {

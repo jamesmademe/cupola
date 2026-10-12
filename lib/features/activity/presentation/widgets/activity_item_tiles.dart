@@ -81,7 +81,7 @@ class QueueItemTile extends StatelessWidget {
                     if (subtitle != null) _SubtitleText(text: subtitle),
                     const SizedBox(height: AppSpacing.sm),
                     // The badge carries the label, the state icon and the
-                    // percentage in tabular figures — the percentage used to be
+                    // percentage in tabular figures. The percentage used to be
                     // concatenated into a subtitle string, so it re-flowed the
                     // line every time it ticked.
                     StatusBadge(info: resolvedStatus),
@@ -319,7 +319,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final accent = item.service.accent;
     final raw = item.raw;
-    // One colour for the whole row's state — badge, warning text and progress
+    // One colour for the whole row's state: badge, warning text and progress
     // bar all read from the resolved tone rather than from the row's category.
     final toneColor = statusToneColor(colorScheme, item.status.tone);
     final canSearch =
@@ -344,7 +344,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
     // Same row, two shapes. A phone gets a card, because a card is what a finger
     // aims at; a window gets a table row, because a pointer is precise and a
     // 1140pt column of 96pt cards wastes the one thing a window has. Everything
-    // else — the actions, the tap target, the badges, the tones — is computed
+    // else (the actions, the tap target, the badges, the tones) is computed
     // above and shared, so the table can never drift into being a second,
     // poorer row with its own bugs.
     final onOpen = switch (item.kind) {
@@ -368,10 +368,10 @@ class GlobalActivityItemTile extends ConsumerWidget {
               : _RowActionsMenu(item: item, actions: writeActions));
 
     // A window gets the table at every width its shell has, not only above
-    // 1100 — under 720 it has the phone's shell, and the phone's cards. The
+    // 1100: under 720 it has the phone's shell, and the phone's cards. The
     // gate used to be `isDesktopShell && width >= desktopCompact`, so dragging
     // a desktop window narrower than 1100 swapped the whole list for phone
-    // cards — a different information architecture at a size the user reached
+    // cards: a different information architecture at a size the user reached
     // by moving a mouse. The size-class rule is the opposite: below the compact
     // breakpoint the shell keeps every part it had and shows fewer items in
     // each, never smaller ones. So the row stays a row and sheds cells.
@@ -406,13 +406,13 @@ class GlobalActivityItemTile extends ConsumerWidget {
       ),
       child: AppCard.outlined(
         // Request rows used to be styled exactly like every other card and then
-        // swallow the tap — `raw` is never set for them, so `onTap` resolved to
+        // swallow the tap: `raw` is never set for them, so `onTap` resolved to
         // null while the affordance stayed. They now go where requests are
         // actually managed instead of promising a detail that does not exist.
         //
         // `push`, emphatically not `go`. `/activity/:type` is a root-navigator
         // route *outside* the ShellRoute, so it carries no bottom nav bar of its
-        // own — and `go` replaces the stack rather than pushing onto it, so
+        // own, and `go` replaces the stack rather than pushing onto it, so
         // `Navigator.canPop()` was false and the app bar had no back entry to
         // imply a leading button from. The result was a dead end: no nav bar, no
         // back, nothing but the requests list. `push` keeps the return path.
@@ -481,15 +481,15 @@ class GlobalActivityItemTile extends ConsumerWidget {
                       // The resolved status, rendered by the shared badge. The
                       // service is deliberately no longer a chip here: when the
                       // feed is grouped its section header already names the
-                      // service, and when it is filtered the user chose it — so
+                      // service, and when it is filtered the user chose it, so
                       // the chip was restating known information on every row,
                       // in the same 11pt weight as the status it competed with.
                       // The icon well, with the service's mark, still carries
-                      // the identity — by shape, the well is the lamp.
+                      // the identity: by shape, the well is the lamp.
                       StatusBadge(info: item.status),
                       // Which server this row came off. On the row rather than
                       // on the group header, because the header groups by
-                      // *service* and two connections interleave inside it —
+                      // *service* and two connections interleave inside it:
                       // the one place the search sections do not have to say
                       // it, since one leg there is one server. Empty, and so
                       // absent, whenever the service has a single connection.
@@ -500,7 +500,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
                       ),
                       // When each event happened. `sortDate` was already being
                       // parsed to order the feed but never shown, which left the
-                      // History list unable to answer its own question — several
+                      // History list unable to answer its own question: several
                       // rows for one title, no way to tell which came first.
                       // Plain text rather than a pill: it is context, not
                       // another label to scan.
@@ -610,7 +610,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
   /// all, so it has none here: it is answered by its own pair, see
   /// [_answersRequest].
   ///
-  /// [canManualImport] gates the manual-import fast path — see the switch.
+  /// [canManualImport] gates the manual-import fast path; see the switch.
   List<_RowAction> _writeActions({required bool canManualImport}) {
     if (item.recordId == null) return const [];
     if (!item.serviceType.supportsArrActivity) return const [];
@@ -631,7 +631,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
       // still actionable, and it gets exactly one way out.
       //
       // **Never Blocklist.** Blocklisting from history is a different endpoint
-      // from the queue's — `POST /api/{v}/history/failed/{id}` — and no client
+      // from the queue's (`POST /api/{v}/history/failed/{id}`), and no client
       // method calls it. Offering the item anyway would put a control on the
       // row that cannot fire; offering the *queue's* blocklist would send the
       // history record's id to an endpoint that indexes the queue, which is a
@@ -712,7 +712,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
       // `showWantedInteractiveSearch` caps whatever it is handed.
       title: item.title,
       // A release search runs on the server that listed the row. Stamped here
-      // rather than left to `showReleaseSearch`, which falls back to the lens —
+      // rather than left to `showReleaseSearch`, which falls back to the lens:
       // right for a screen that shows one connection, wrong for a feed that
       // merges several.
       instanceId: item.instanceId,
@@ -757,14 +757,14 @@ enum _RowAction {
 ///
 /// Deliberately dumb: it closes the sheet and hands the choice back to whoever
 /// opened it, rather than running the mutation itself. Running it here was the
-/// bug — the button popped the sheet and then called the action with the
+/// bug: the button popped the sheet and then called the action with the
 /// *sheet's own* context. `showAppConfirmDialog` still opened (its navigator is
 /// captured synchronously), but by the time the user confirmed, the sheet route
 /// was disposed, so every `if (!context.mounted) return;` guard in
-/// [ActivityActions] short-circuited and the request was never sent — no
+/// [ActivityActions] short-circuited and the request was never sent: no
 /// mutation, no snackbar, no error. Remove, blocklist-and-retry, un-blocklist
 /// and approve/decline were all silently inert from this surface, while the row
-/// overflow menu — which passes the tile's context — kept working and hid it.
+/// overflow menu, which passes the tile's context, kept working and hid it.
 class _SheetActions extends StatelessWidget {
   final List<_RowAction> actions;
 
@@ -807,7 +807,7 @@ class _SheetActions extends StatelessWidget {
   }
 }
 
-/// The per-row action menu — the thing that turns Activity from a feed into
+/// The per-row action menu: the thing that turns Activity from a feed into
 /// something you can operate.
 class _RowActionsMenu extends ConsumerWidget {
   final GlobalActivityItem item;
@@ -834,8 +834,8 @@ class _RowActionsMenu extends ConsumerWidget {
 
 /// The row's actions as menu items, built once for both doors.
 ///
-/// Two doors on a desktop window — the visible `⋮` button and a right-click on
-/// the row — and exactly one list behind them. That is the binding rule for the
+/// Two doors on a desktop window: the visible `⋮` button and a right-click on
+/// the row, and exactly one list behind them. That is the binding rule for the
 /// whole desktop layer: hover and right-click are accelerators, so every item
 /// here is also reachable from a control that is simply *there*, and a phone
 /// loses nothing by having no pointer.
@@ -858,7 +858,7 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
             // 3 popup is capped at 280pt and "Remove from blocklist" plus
             // its glyph and gutter wants 326, so the row overflowed by 70
             // and painted the debug stripe over the menu. Wrapping rather
-            // than ellipsising — a menu item that reads "Remove from
+            // than ellipsising: a menu item that reads "Remove from
             // blockli…" is worse than one that takes two lines.
             Flexible(child: Text(action.label)),
           ],
@@ -870,7 +870,7 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
 /// Dispatches one [_RowAction] against [item].
 ///
 /// Top-level rather than a method on the menu, because the detail sheet needs
-/// the same dispatch driven by a context that is *not* the sheet's — see
+/// the same dispatch driven by a context that is *not* the sheet's; see
 /// [_SheetActions]. [context] and [ref] must therefore belong to something that
 /// outlives any modal the action opens.
 ///
@@ -882,7 +882,7 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
 ///
 /// The `?i=` is the navigation half of the per-connection routing. /activity
 /// merges every configured Seerr, so a row can belong to a server the lens is
-/// not on — and the destination resolves its list, and every write on it, from
+/// not on, and the destination resolves its list, and every write on it, from
 /// the lens unless it is told otherwise. Without this, tapping a row from the
 /// second Seerr opened the first Seerr's requests: the defect moved rather than
 /// closed.
@@ -890,8 +890,8 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
 /// This route carried an `?i=` once before and it was removed in review,
 /// correctly, because nothing read it. Activity's Requests reads it now.
 ///
-/// Omitted when the row names no connection — a single-Seerr stack, or a
-/// fixture predating the merge — so the ordinary link stays the ordinary link.
+/// Omitted when the row names no connection (a single-Seerr stack, or a
+/// fixture predating the merge), so the ordinary link stays the ordinary link.
 String _requestsLocation(String instanceId) =>
     ServiceRoutes.activityRequestsOf(instanceId);
 
@@ -942,7 +942,7 @@ void openManualImportFrom(BuildContext context, GlobalActivityItem item) {
 /// The path a manual import is seeded from, per kind.
 ///
 /// `outputPath` on a queue record is where the download client is writing.
-/// `data.droppedPath` on a failed history record is where it gave up — the
+/// `data.droppedPath` on a failed history record is where it gave up: the
 /// folder full of files the \*arr could not place, and the only thing that makes
 /// "Manual import" from history mean anything. Neither was read on the history
 /// side until now, which is why that row carried no actions at all.
@@ -1024,7 +1024,7 @@ class _TileShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       // One card rhythm for the whole feature. This used to be `sm` top *and*
-      // bottom — 16pt between cards — while `GlobalActivityItemTile` used 0/`sm`
+      // bottom (16pt between cards) while `GlobalActivityItemTile` used 0/`sm`
       // for 8pt, so the same conceptual row had two different densities
       // depending on which screen you opened. 8pt is the denser of the two,
       // which is the right call for an operational list.
@@ -1268,12 +1268,12 @@ abstract final class _ActivityTableMetrics {
 /// because annotation 5 collapsed the four figure columns into one cell: a
 /// header naming SPEED over a cell that can never contain a speed is a promise
 /// the data cannot keep. The words that survive are the ones each cell actually
-/// holds — and `DETAILS` rather than a measurement noun, because the same cell
+/// holds, and `DETAILS` rather than a measurement noun, because the same cell
 /// carries a size on a queue row and nothing at all on a wanted one.
 ///
 /// The status badge gets no label and no cell. It is the one part of the row
 /// whose width is its own content, so a header word over it would sit at a
-/// different place on every row — and a badge already prints the word a header
+/// different place on every row, and a badge already prints the word a header
 /// would repeat.
 ///
 /// Absent below the compact breakpoint, where the cells it labels are absent
@@ -1334,7 +1334,7 @@ class ActivityTableHeader extends StatelessWidget {
 /// separate `size`, `done`, `speed` and `left` columns; `GlobalActivityItem`
 /// has no such fields and \*arr reports no transfer rate on a queue record at
 /// all, so the measurements arrive pre-formatted in [GlobalActivityItem.figures]
-/// and stay in one tabular cell, in the text face — still a column that lines
+/// and stay in one tabular cell, in the text face. Still a column that lines
 /// up down the page. That cell used to be fed `subtitle`, which is prose: the table was
 /// right-aligning a release filename in a numeric column.
 class _DesktopActivityRow extends ConsumerStatefulWidget {
@@ -1357,13 +1357,13 @@ class _DesktopActivityRow extends ConsumerStatefulWidget {
   final VoidCallback? onOpen;
 
   /// The row's own actions. Always shown, never revealed only on hover: the
-  /// phone has no hover, so nothing may be reachable that way alone — hover
+  /// phone has no hover, so nothing may be reachable that way alone. Hover
   /// here brightens the row and lifts one action out of the menu it is already
   /// in, which is an accelerator rather than a door.
   final Widget? trailing;
 
   /// Offered again on a right-click. The same list the `⋮` button shows, from
-  /// the same place — see [_rowActionMenuItems].
+  /// the same place; see [_rowActionMenuItems].
   final List<_RowAction> actions;
 
   /// The pair that answers the row's request, when it is one that waits: the
@@ -1376,7 +1376,7 @@ class _DesktopActivityRow extends ConsumerStatefulWidget {
   /// The row keeps its identity, its title, its status, its connection and
   /// its controls, and sheds the two cells that only pay for themselves when
   /// there is room: the figures and the relative time. Fewer parts, not
-  /// smaller ones — and emphatically not the phone card, which is a different
+  /// smaller ones, and emphatically not the phone card, which is a different
   /// shape for a different input device. The connection badge is not one of
   /// them: two connections of a service interleave in one group, and a row
   /// that drops its name cannot say which server it is about.
@@ -1412,7 +1412,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
   /// The one action the hovered row lifts out of its own menu.
   ///
   /// The first non-destructive item, which is the rescue verb on every kind
-  /// that has one — `Manual import` on a stuck download, `Blocklist and search`
+  /// that has one: `Manual import` on a stuck download, `Blocklist and search`
   /// on a failed grab. Destructive actions are never promoted: a Remove that
   /// appears under the pointer on hover is a control the user did not ask to
   /// have within reach.
@@ -1430,7 +1430,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
     final item = widget.item;
     final progress = item.progress;
     final dim = CupolaThemeColors.of(context).dimText;
-    // The release name, the episode code, the artist — prose, and the one thing
+    // The release name, the episode code, the artist: prose, and the one thing
     // the desktop row lost when the figures cell stopped carrying it. It is the
     // fallback rather than a second line: a row with a fault has one thing to
     // say and the fault is it.
@@ -1442,7 +1442,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
       // The row was a bare `GestureDetector`: no focus node, so it was off the
       // keyboard's path entirely and could not draw the 2px ring the Components
       // sheet declares and calls never-removed. Enabled only when the row opens
-      // something — a focus stop that does nothing on Enter is a dead step in
+      // something: a focus stop that does nothing on Enter is a dead step in
       // the tab order.
       //
       // The semantics stay on the `GestureDetector` below, which contributes
@@ -1553,7 +1553,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
               // The badges sit between the title and the fixed cells, not
               // inside them. A `StatusBadge` is as wide as its longest word, so
               // anything to its left was pushed a different distance on every
-              // row — which is how a column that exists to line up down the
+              // row, which is how a column that exists to line up down the
               // page ended up ragged. Everything right of here is fixed-width,
               // so the figures, the time and the `⋮` are the same three
               // vertical rules on every row and under the header.
@@ -1568,7 +1568,7 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
               ],
               if (!widget.compact) ...[
                 const SizedBox(width: AppSpacing.md),
-                // The measurements, in one tabular cell — never four sortable
+                // The measurements, in one tabular cell, never four sortable
                 // columns, which would need four fields the record does not
                 // have and a comparator each. Figures, so the text face.
                 SizedBox(

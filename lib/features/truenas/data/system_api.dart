@@ -88,7 +88,7 @@ class TrueNasSystemApi extends TrueNasApiBase {
   // request dies before any reply can come back: the future either hangs until
   // the socket's own error closes it or completes with a connection error, and
   // in both cases the outcome is indistinguishable from the call never landing.
-  // Callers must not await them — see `runTrueNasDetachedAction` — and must not
+  // Callers must not await them; see `runTrueNasDetachedAction`, and must not
   // report "done", only "shutting down".
   //
   // `reason` is required from SCALE 25.04 (this client's floor); it is what

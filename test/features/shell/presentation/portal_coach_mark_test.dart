@@ -16,8 +16,8 @@ class _CountingController extends ServicePortalController {
   Future<void> playDemoBounce() async => bounces++;
 }
 
-/// Pumps the coach mark hidden, then earns it the way the app does — enough
-/// manual journeys — and runs the arrival part of the way in.
+/// Pumps the coach mark hidden, then earns it the way the app does, enough
+/// manual journeys, and runs the arrival part of the way in.
 ///
 /// Returns the pill's vertical slide, in its own heights, part of the way
 /// through the arrival.

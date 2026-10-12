@@ -12,7 +12,7 @@ import 'package:cupola/core/utils/string_utils.dart';
 /// Joins the non-empty parts with the comma both screen readers read as a short
 /// pause.
 ///
-/// Delegates to [joinDisplayParts] — the same trimming and empty-dropping the
+/// Delegates to [joinDisplayParts]: the same trimming and empty-dropping the
 /// visible strings already get, with a separator meant for the ear rather than
 /// the eye. A part that arrives as a visible figure (`62%`) is spelled out
 /// (`62 percent`) on the way: units are words in anything a screen reader says.
@@ -28,8 +28,8 @@ String spokenFromDotted(String visual) => joinSpokenParts(visual.split('·'));
 
 /// What one cell in the stack matrix announces after its service name.
 ///
-/// Reachability first because it gates everything else, then the live signal —
-/// the reason the cell is worth reading — then the host to disambiguate two
+/// Reachability first because it gates everything else, then the live signal:
+/// the reason the cell is worth reading, then the host to disambiguate two
 /// instances of the same service.
 ///
 /// [signalSpoken] arrives already phrased as `label value` ("Missing 12") rather
@@ -39,7 +39,7 @@ String spokenFromDotted(String visual) => joinSpokenParts(visual.split('·'));
 /// ("2.4 MB/s Down"). It is null while the KPI is still resolving, and on an
 /// unreachable service that has no signal to report.
 /// [secondarySpoken] is the card's second figure, which exists for the same
-/// reason the first does and is spoken in the same breath — a screen-reader user
+/// reason the first does and is spoken in the same breath: a screen-reader user
 /// who hears only "34 missing" has been told the fault and not the scale.
 ///
 /// [instanceLabel] is the `×2` the card draws for a multi-connection service,
@@ -59,7 +59,7 @@ String serviceMatrixCellValue({
   host,
 ]);
 
-/// `two connections` — the spoken form of the card's `×N` chip.
+/// `two connections`: the spoken form of the card's `×N` chip.
 String serviceInstanceCountLabel(int count) {
   if (count <= 1) return '';
   final word = switch (count) {
@@ -71,7 +71,7 @@ String serviceInstanceCountLabel(int count) {
   return '$word connections';
 }
 
-/// The cell for a service nobody has set up: `Readarr — Not set up · Add it`.
+/// The cell for a service nobody has set up: `Readarr: Not set up · Add it`.
 ///
 /// An unconfigured service is a **cell in the band**, not a footnote under the
 /// matrix. The footnote it replaces was dismissible, which meant the stack could
@@ -100,8 +100,8 @@ String servicesStackHeaderValue({
 
 /// A domain band's permanent health line: `4 of 5 clean · Bazarr degraded`.
 ///
-/// Permanent, where the line it replaces appeared only while the band was folded
-/// — so retiring the fold would have deleted the one place a band said anything
+/// Permanent, where the line it replaces appeared only while the band was folded,
+/// so retiring the fold would have deleted the one place a band said anything
 /// about itself. `clean` counts the services in the band that are answering and
 /// have nothing flagged; the qualifiers name the ones that do, at most two,
 /// because a band header is not a list. [notSetUp] is said after them, never
@@ -145,7 +145,7 @@ String decisionRowSpokenValue({
 ///
 /// Names the outage rather than the gesture: the row holds a Retry and a
 /// dismiss, and "Dismiss" alone leaves a screen-reader user to guess which of
-/// the two they are on — where one re-checks the connection and the other
+/// the two they are on: where one re-checks the connection and the other
 /// hides the notice.
 String servicesDismissAlertLabel(List<String> offlineServiceTitles) =>
     'Dismiss: ${servicesAlertBandMessage(offlineServiceTitles)}';
@@ -170,7 +170,7 @@ String serviceDomainBandValue({required int serviceCount}) {
 /// visible list and a spoken count that disagree would each be a different bug
 /// report.
 ///
-/// Names at most [maxNamed] services and folds the rest into "and n others" — a
+/// Names at most [maxNamed] services and folds the rest into "and n others": a
 /// stack where nine services are down would otherwise produce a band taller than
 /// the grid it is warning about.
 ///
@@ -226,7 +226,7 @@ String servicesDidNotAnswer(
 /// It is the consequence, which is the part the first sentence leaves the reader
 /// to work out: a dark SABnzbd does not just fail to answer, it takes its share
 /// of every figure on this page with it. The phone prints the first sentence
-/// only — there is one line of room, and the name of the service is the half
+/// only: there is one line of room, and the name of the service is the half
 /// that cannot be dropped.
 const String servicesAlertBandDetail =
     'Anything they hold is missing from this page.';
@@ -249,7 +249,7 @@ String servicesRetryLabel(int count) => count == 2 ? 'Retry both' : 'Retry';
 ///
 /// Cross-service sections could not say this at all before. They degrade to `[]`
 /// per source, so an unreachable Radarr and an empty library arrived identically
-/// and both printed the empty copy — sending the user to look for missing media
+/// and both printed the empty copy: sending the user to look for missing media
 /// when the answer was a missing connection. Naming *which* sources are dark is
 /// what makes it safe for a merged rail; the old design could only blame a
 /// single declared service, so it stayed silent instead.
@@ -263,12 +263,12 @@ String servicesSectionOfflineMessage(List<String> offlineServiceTitles) =>
 /// in sibling subtrees; here they are one field.
 ///
 /// [percent] is null when the client reports no progress, and is simply absent
-/// then — the row paints nothing in that slot either, and the section is already
+/// then, the row paints nothing in that slot either, and the section is already
 /// headed "Downloading".
 ///
 /// [warning] is the client's own message ("Download stalled", "Not an upgrade"),
 /// spoken in full. It used to be a bool that produced the bare word "Warning",
-/// which named that something was wrong without saying what — while the actual
+/// which named that something was wrong without saying what, while the actual
 /// reason sat unused in the model. The visible pill is still a scan marker
 /// because there is no room for a sentence in it; the reason lives one tap away
 /// on `/activity`, and now also in the ear.

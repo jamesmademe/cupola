@@ -383,7 +383,7 @@ void main() {
     });
 
     test('connectionsFormatted shows denominator only when limit > 0', () {
-      // qB uses 0 to mean "no connection limit" — suppress the denominator
+      // qB uses 0 to mean "no connection limit"; suppress the denominator
       // to avoid a misleading `5 / 0` row.
       expect(
         build(nbConnections: 5, nbConnectionsLimit: 0).connectionsFormatted,
@@ -399,7 +399,7 @@ void main() {
       );
     });
 
-    test('reannounceFormatted shows — for non-positive, <N> s otherwise', () {
+    test('reannounceFormatted shows `—` for non-positive, <N> s otherwise', () {
       // Reannounce is the countdown until the next tracker announce; qB
       // uses 0 (or -1) for "never" / "not applicable".
       expect(build(reannounceSeconds: 0).reannounceFormatted, '—');

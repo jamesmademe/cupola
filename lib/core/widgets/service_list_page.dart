@@ -17,16 +17,16 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Every service tab that reads a list wants exactly this shape: the ambient
 /// scaffold in the service's accent, `AsyncValueWidget` over the provider, the
 /// shared empty page, a shimmer at the right row height, and pull-to-refresh
-/// over a separated list. Three copies of it were written in one pass — Plex's,
-/// Jellyfin's and NZBGet's — differing only in which [ServiceKey] supplied the
+/// over a separated list. Three copies of it were written in one pass: Plex's,
+/// Jellyfin's and NZBGet's, differing only in which [ServiceKey] supplied the
 /// accent, which is the point at which it belongs here instead. The next tab to
 /// land gets the skeleton row height, the nav-bar clearance and the stagger for
 /// free, and a change to any of those is made once.
 class ServiceListPage<T> extends StatelessWidget {
   /// A list with a summary line above it.
   ///
-  /// The line is the list's own claim about itself — `12 devices`, `3 of 8
-  /// enabled` — so it scrolls with the rows rather than floating over them.
+  /// The line is the list's own claim about itself: `12 devices`, `3 of 8
+  /// enabled`, so it scrolls with the rows rather than floating over them.
   const ServiceListPage({
     super.key,
     required this.service,
@@ -85,13 +85,13 @@ class ServiceListPage<T> extends StatelessWidget {
   /// reachable when the list is **empty** or has **failed**, which is exactly
   /// when a control living in the data branch has disappeared. A tab whose
   /// filter vanishes on the empty state leaves the reader with nothing to do
-  /// but go back — and the filter they need is the one that would have found
+  /// but go back, and the filter they need is the one that would have found
   /// records. It does not scroll away with the rows for the same reason.
   final Widget? header;
 
   /// A band above the rows, inside the list, in the data state only.
   ///
-  /// For a claim about the records themselves — a partially fetched page, a
+  /// For a claim about the records themselves: a partially fetched page, a
   /// capability the answer was missing. It scrolls with them because it
   /// qualifies them; [header] does not, because it acts on them.
   final Widget? banner;
@@ -131,7 +131,7 @@ class ServiceListPage<T> extends StatelessWidget {
       skeleton: ListRowsShimmer(count: 6, rowHeight: skeletonRowHeight),
       data: (items) => RefreshIndicator(
         // `onRetry` invalidates the provider, and `AsyncValueWidget` is
-        // watching it — so the rows are replaced when the answer arrives.
+        // watching it, so the rows are replaced when the answer arrives.
         // The indicator only has to stay down until the request is away.
         onRefresh: () async => onRetry(),
         child: ListView.separated(

@@ -13,7 +13,7 @@ import 'package:cupola/features/settings/presentation/widgets/settings_master_de
 import '../../test_helpers/settings_scope.dart';
 
 /// Background search is a section of the settings rail, and it was the one
-/// destination in that list not wrapped in [SettingsMasterDetail] — a bare
+/// destination in that list not wrapped in [SettingsMasterDetail]: a bare
 /// `GoRoute` with a `builder` where its six siblings are `_page`s. On a desktop
 /// window that meant selecting Background search made the rail *disappear*: the
 /// one control that got you here was the one control the page then hid.

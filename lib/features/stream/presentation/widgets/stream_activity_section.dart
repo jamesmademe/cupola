@@ -26,12 +26,12 @@ import 'package:cupola/features/stream/presentation/widgets/stream_session_card.
 ///
 /// `Now` used to hold one record type, and its own comment explained that the
 /// single sub-segment existed only because a one-entry bucket renders no pill row
-/// at all — while the pills that survived elsewhere had to "express a record type
+/// at all, while the pills that survived elsewhere had to "express a record type
 /// no service filter can reach". An outbound playback is exactly that: downloads
 /// are bytes coming in, sessions are bytes going out, and no amount of filtering
 /// the arr services reaches one from the other.
 ///
-/// It carries its own type rather than becoming a `GlobalActivityItem` — see
+/// It carries its own type rather than becoming a `GlobalActivityItem`; see
 /// [streamActivityProvider] for the 27 exhaustive switches that decision avoids.
 class StreamActivitySection extends ConsumerWidget {
   const StreamActivitySection({super.key, required this.bottomPadding});
@@ -81,7 +81,7 @@ class StreamActivitySection extends ConsumerWidget {
             instance,
     ];
 
-    // Every configured server dark. With one connection that is its own leaf —
+    // Every configured server dark. With one connection that is its own leaf:
     // the cause, its address, Settings; with several, the plain-words error
     // state names them together. Counted by connection: two Jellyfin both
     // dark are two servers, not one.
@@ -142,7 +142,7 @@ class StreamActivitySection extends ConsumerWidget {
               child: StreamSessionCard(
                 session: row.session,
                 // Each row takes its own server's accent, the way a download row
-                // carries its client's — the lamp, for every service, which the
+                // carries its client's: the lamp, for every service, which the
                 // row resolves to the room's ink: which server a session is on,
                 // the row says in words.
                 accent: row.service.accent,
@@ -234,7 +234,7 @@ class StreamActivitySection extends ConsumerWidget {
 /// Nobody watching.
 ///
 /// Reuses the board's own sentence so the two surfaces cannot disagree about the
-/// same fact, and states an unreachable source by name when there is one —
+/// same fact, and states an unreachable source by name when there is one;
 /// otherwise a dark server and a quiet house look identical.
 ///
 /// When every server is a Plex whose sessions only its owner sees, the notes
@@ -395,7 +395,7 @@ class _FailureLine extends StatelessWidget {
 /// No media server configured yet.
 ///
 /// The sub-segment is still offered, because hiding a record type until it is
-/// configured is how a feature becomes undiscoverable — so this names the way in
+/// configured is how a feature becomes undiscoverable, so this names the way in
 /// rather than reporting an absence.
 class _NoStreamService extends StatelessWidget {
   const _NoStreamService({required this.bottomPadding});
@@ -418,7 +418,7 @@ class _NoStreamService extends StatelessWidget {
           message:
               'Set one up to see who is watching what, and why the box is '
               'working for it.',
-          // One `Set up X` per server, each to its own setup form — the
+          // One `Set up X` per server, each to its own setup form: the
           // Dashboard this used to open left the user to find it.
           action: Wrap(
             alignment: WrapAlignment.center,

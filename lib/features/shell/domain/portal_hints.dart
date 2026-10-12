@@ -2,12 +2,12 @@
 ///
 /// Settings → Hints carries **one row per feature that teaches itself**, not
 /// one per mechanism: the demo bounce and the coach mark are two beats of a
-/// single lesson — "the Portal opens with a swipe up" — so they answer to a
+/// single lesson ("the Portal opens with a swipe up"), so they answer to a
 /// single switch, named after the feature. When another feature earns hints
 /// it gets its own row and its own switch; nothing here is shared.
 ///
 /// The contract, in one line: the × on the coach mark is that same switch.
-/// Settings turns it back on — and it stays on until the × is pressed again.
+/// Settings turns it back on, and it stays on until the × is pressed again.
 /// Turning it back on also re-arms the one-shot demo, so re-enabling replays
 /// the whole lesson rather than half of it. Using the Portal flips nothing:
 /// it only resets the coach's need-counter, so the tip retires while the
@@ -25,7 +25,7 @@ class PortalHintsState {
     required this.manualJourneys,
   });
 
-  /// The single switch — Settings → Hints → Portal, and the coach mark's ×.
+  /// The single switch: Settings → Hints → Portal, and the coach mark's ×.
   final bool enabled;
 
   /// The one-shot demo has already played in the current enable-cycle.
@@ -68,7 +68,7 @@ class PortalHintsNotifier extends Notifier<PortalHintsState> {
   @override
   PortalHintsState build() {
     // Guarded so screens still render if SharedPreferences isn't provided
-    // (lightweight widget/router tests) — same contract as recent searches.
+    // (lightweight widget/router tests): same contract as recent searches.
     try {
       final prefs = ref.watch(sharedPreferencesProvider);
       return PortalHintsState(
@@ -122,7 +122,7 @@ class PortalHintsNotifier extends Notifier<PortalHintsState> {
       prefs.setBool(_demoShownKey, state.demoShown);
       prefs.setInt(_journeysKey, state.manualJourneys);
     } catch (_) {
-      // No persistence available (tests) — in-memory state still updates.
+      // No persistence available (tests): in-memory state still updates.
     }
   }
 }

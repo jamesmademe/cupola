@@ -8,7 +8,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// counts in the filter row, which rows the list builds, and what a filter chip
 /// hides. While each of those carried its own booleans, "hide the imported
 /// ones" lived in the app bar and "collapse the other ones" lived in a section
-/// header — two controls, two mental models, for one question: what am I
+/// header; two controls, two mental models, for one question: what am I
 /// looking at?
 enum ManualImportFacet { ready, attention, imported, other }
 
@@ -40,8 +40,8 @@ MediaStatusInfo manualImportFacetStatus(ManualImportFacet facet, int count) {
 
 /// The same count as one spoken phrase.
 ///
-/// The painted chip is a fragment sized for a pill — "1 needs a match", "3
-/// imported" — and read out verbatim it produces "1 needs a match files". A
+/// The painted chip is a fragment sized for a pill: "1 needs a match", "3
+/// imported", and read out verbatim it produces "1 needs a match files". A
 /// screen reader gets the sentence instead; the eye keeps the fragment.
 String manualImportFacetSpokenLabel(ManualImportFacet facet, int count) {
   final files = count == 1 ? '1 file' : '$count files';
@@ -61,7 +61,7 @@ String manualImportFacetSpokenLabel(ManualImportFacet facet, int count) {
 /// whole surface:
 ///
 /// - **Imported** (neutral, on disk): the service already has this file. Not an
-///   error and not a problem — but the row is still a control, because the user
+///   error and not a problem, but the row is still a control, because the user
 ///   may want it taken again.
 /// - **Re-import** (info): an imported file the user ticked to send anyway.
 ///   [reimportSelected] is what distinguishes it, and it is a distinct status
@@ -71,10 +71,10 @@ String manualImportFacetSpokenLabel(ManualImportFacet facet, int count) {
 ///   the service also reported a metadata rejection the tone escalates to
 ///   warning via [MediaStatusInfo.hasWarning] while the label stays honest.
 /// - **Sample** (neutral): matched, and the service says it is a sample. Shown,
-///   tickable, and never preselected — see [ManualImportItem.isSample].
+///   tickable, and never preselected; see [ManualImportItem.isSample].
 /// - **No match** (warning): the service permanently rejected the file's
 ///   identity; it cannot import until the user assigns one.
-/// - **Needs match** (warning): unmatched, but nothing permanent — assigning
+/// - **Needs match** (warning): unmatched, but nothing permanent: assigning
 ///   an identity clears it.
 MediaStatusInfo manualImportItemStatus(
   ServiceKey service,
@@ -100,7 +100,7 @@ MediaStatusInfo manualImportItemStatus(
 
   if (item.isReadyForImportFor(service)) {
     // Checked before Ready, because a sample is fully matched and would
-    // otherwise read "Ready" next to an unticked box — a row that contradicts
+    // otherwise read "Ready" next to an unticked box, a row that contradicts
     // itself. Neutral: the file is backlog the user may still choose to take,
     // not a fault the service is reporting.
     if (item.isSample) {
@@ -124,7 +124,7 @@ MediaStatusInfo manualImportItemStatus(
     return MediaStatusInfo(
       labelOverride: 'No match',
       // Amber, not red. Red is reserved for a connection that did not answer;
-      // this one answered, and what it said is that it cannot name the file —
+      // this one answered, and what it said is that it cannot name the file:
       // a fault the user can clear by assigning an identity. It used to paint
       // red while the *same* affordance, one row below, painted amber for an
       // unmatched file with no rejection attached: two tones, one fix sheet,
@@ -143,7 +143,7 @@ MediaStatusInfo manualImportItemStatus(
 
 /// Resolves an \*arr `ManualImport` command's state for the Track screen.
 ///
-/// The command is aggregate — the services do not report per-file results — so
+/// The command is aggregate: the services do not report per-file results, so
 /// this is deliberately the only status the Track screen renders as truth.
 MediaStatusInfo manualImportCommandStatus(ManualImportCommandStatus command) {
   final (label, tone) = switch (command.status) {

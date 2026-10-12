@@ -1,5 +1,5 @@
 /// Formatting for elapsed durations that are shown to the user and updated in
-/// place — a release search's clock today, and the background job cards that will
+/// place: a release search's clock today, and the background job cards that will
 /// read the same value later.
 ///
 /// Two forms rather than one, because a screen reader cannot read `1:12`: the
@@ -12,7 +12,7 @@ library;
 
 import 'package:cupola/core/utils/unit_space.dart';
 
-/// Formats [elapsed] as `m:ss` — `0:07`, `1:12`, `12:04`.
+/// Formats [elapsed] as `m:ss`: `0:07`, `1:12`, `12:04`.
 ///
 /// Minutes are not zero-padded: this is a stopwatch, not a timestamp, and a
 /// leading zero on the minutes reads as a clock time.
@@ -72,7 +72,7 @@ String formatTimeSpan(Duration span, {bool seconds = false}) {
 /// Formats a remaining window: `29 min`, `4 min 30 s`, `0 s`.
 ///
 /// Always carries a unit, at every magnitude. A bare `4:30` in the same slot as
-/// an elapsed clock is indistinguishable from one — and these two numbers mean
+/// an elapsed clock is indistinguishable from one, and these two numbers mean
 /// opposite things, so the unit is what keeps them apart. Seconds show under ten
 /// minutes, where the countdown is read to the second.
 String formatWindowRemaining(Duration remaining) =>

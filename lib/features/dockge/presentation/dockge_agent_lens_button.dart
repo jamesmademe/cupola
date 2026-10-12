@@ -13,7 +13,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The agent picker, as the app-bar connection lens (decision 41).
 ///
 /// Dockge's agents are not a tab and never were: an agent is not a *place* in
-/// this app, it is which Dockge the rows on screen came off — the same thing the
+/// this app, it is which Dockge the rows on screen came off: the same thing the
 /// connection lens means everywhere else. So it sits in the app bar, beside the
 /// title, and everything below it follows.
 ///
@@ -32,7 +32,7 @@ class DockgeAgentLensButton extends ConsumerWidget {
     // above every Dockge tab, including on an install that has never been set
     // up, and `dockgeClientProvider` throws there. A provider that throws is a
     // failed provider scheduling a retry with backoff for a condition no
-    // waiting changes — and a picker offering a choice between connections that
+    // waiting changes, and a picker offering a choice between connections that
     // do not exist has nothing to say anyway.
     final configured = ref
         .watch(currentSettingsProvider)
@@ -45,7 +45,7 @@ class DockgeAgentLensButton extends ConsumerWidget {
     final selectedEndpoint = ref.watch(dockgeSelectedAgentProvider);
     final selected = agents.firstWhere(
       (a) => a.endpoint == selectedEndpoint,
-      // The lens can outlive the agent it points at — Dockge drops a removed
+      // The lens can outlive the agent it points at. Dockge drops a removed
       // agent from the next `agentList`. Falling back to the hub is the one
       // choice that is always reachable.
       orElse: () => DockgeAgent.local,

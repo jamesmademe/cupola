@@ -8,7 +8,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The ring gives up size as the reading size grows, so the copy beside it never
-/// loses room — the Column Floor Rule applied to a diagram instead of a grid.
+/// loses room: the Column Floor Rule applied to a diagram instead of a grid.
 double serviceRingDiameter(
   BuildContext context, {
   required double preferred,
@@ -26,7 +26,7 @@ enum ServiceRingState {
   /// Not chosen. A dim dot, the smallest thing on the ring.
   unlit,
 
-  /// Chosen but not yet reached — the primary ink, held back.
+  /// Chosen but not yet reached: the primary ink, held back.
   picked,
 
   /// Answering. The full primary ink, a halo of the lamp, and a spoke drawn in
@@ -44,12 +44,12 @@ enum ServiceRingState {
 ///
 /// **Monochrome.** The surface is about every service at once, and the room
 /// has no colour of its own: a lit node is the primary ink and its halo and
-/// spoke are the lamp, the same for every service — which service a node is,
+/// spoke are the lamp, the same for every service. Which service a node is,
 /// the chip under the ring says in words. Nothing on the ring borrows a status
 /// tone either.
 ///
-/// **The ring animates itself.** Every visual a node can carry — radius, colour,
-/// glow, collar, the length of its spoke — interpolates from whatever it was
+/// **The ring animates itself.** Every visual a node can carry: radius, colour,
+/// glow, collar, the length of its spoke, interpolates from whatever it was
 /// showing to whatever it should show, so a service lighting up or draining is a
 /// move rather than a cut. The caller changes [states] and nothing else. That is
 /// also what lets one instance live *above* a pager and survive navigation
@@ -70,7 +70,7 @@ class ServiceRing extends StatefulWidget {
   /// The mark's share of the ring when the ring is the subject of the screen.
   ///
   /// Named so a caller that wants a different proportion can say what it is
-  /// departing *from* — see [markFraction].
+  /// departing *from*. See [markFraction].
   static const double defaultMarkFraction = 0.42;
 
   /// Per-service node state. A service absent from the map is
@@ -91,7 +91,7 @@ class ServiceRing extends StatefulWidget {
   /// Wears a collar and a glow while it is the service being configured.
   ///
   /// It is *marked*, not positioned. Parking the active node at noon was tried
-  /// and it fights the sweep — the dial turns, so the node parked at the top
+  /// and it fights the sweep: the dial turns, so the node parked at the top
   /// drifts off it within a second, and the two rotations read as a bug rather
   /// than as either intention. The collar and the halo carry the job instead.
   final ServiceKey? activeService;
@@ -100,7 +100,7 @@ class ServiceRing extends StatefulWidget {
   ///
   /// Ambient motion is otherwise against the house rule, and this is the one
   /// carve-out: the ring is an instrument dial, one revolution takes 96 seconds
-  /// — slower than anything else the app moves — it exists only where the ring
+  /// (slower than anything else the app moves) it exists only where the ring
   /// is the subject of the screen, and Reduce Motion stops it dead.
   final bool spin;
 
@@ -297,8 +297,8 @@ class _RingFrame {
     // a graphic drawn out of `outlineVariant` and `surfaceContainerHigh`
     // measures 1.16:1 and 1.03:1 on `surface-light`, because the light ladder's
     // steps are deliberately close together. `onSurfaceVariant` at a
-    // per-brightness alpha gives both themes the same perceptual weight instead
-    // — the hairline lands near 1.8:1 in each, and an unlit dot clears the 3:1
+    // per-brightness alpha gives both themes the same perceptual weight.
+    // The hairline lands near 1.8:1 in each, and an unlit dot clears the 3:1
     // non-text floor in each (3.9:1 dark, 4.6:1 light) where one shared 55%
     // measured 1.9:1 on white.
     final unlit = scheme.onSurfaceVariant.withValues(
@@ -308,7 +308,7 @@ class _RingFrame {
     final glowAlpha = isDark ? 0.34 : 0.42;
     final spokeAlpha = isDark ? 0.55 : 0.70;
     // Monochrome, like the rest of the room: a lit node is the primary ink,
-    // and only its halo and spoke are light — the lamp, which is what every
+    // and only its halo and spoke are light: the lamp, which is what every
     // service paints (`ServiceKey.accent`). Which service a node is, the chip
     // below it says in words; a hue per node made the dial a legend with
     // nothing to decode.
@@ -424,7 +424,7 @@ class _NodeVisual {
       );
 }
 
-/// The product mark — the Cupola from above: six lit window panes around the
+/// The product mark (the Cupola from above): six lit window panes around the
 /// central circular window. The ring's own nodes orbit it, so the mark supplies
 /// the structure and never a second ring.
 class _Mark extends StatelessWidget {
@@ -519,7 +519,7 @@ class _ServiceRingPainter extends CustomPainter {
         ..strokeWidth = 1
         ..color = frame.track,
     );
-    // One tick where each domain arc begins — what makes the circle read as a
+    // One tick where each domain arc begins, what makes the circle read as a
     // four-sector dial rather than a wreath.
     for (final angle in _RingGeometry.domainStarts) {
       final a = angle + _rotation;
@@ -627,13 +627,13 @@ class _ServiceRingPainter extends CustomPainter {
 }
 
 /// The punchline, and the reason it is here rather than inlined in onboarding:
-/// the claim is meant to be *shared* — the same two lines in the same two inks
+/// the claim is meant to be *shared*: the same two lines in the same two inks
 /// carry the dashboard's empty state, so the door prints a claim rather than
 /// owning one.
 ///
 /// It used to assert that the empty state already did; it does not. That screen
 /// still prints a headline of its own, and swapping it belongs to the dashboard
-/// rather than here — a doc that describes an intention as a fact is worse than
+/// rather than here: a doc that describes an intention as a fact is worse than
 /// no doc, because it is the one place a reader would check before changing
 /// either side.
 ///
@@ -645,7 +645,7 @@ class _ServiceRingPainter extends CustomPainter {
 class OnePunchline extends StatelessWidget {
   const OnePunchline({super.key, this.style});
 
-  /// Defaults to `displayMedium` — the ramp's own step between a heading and a
+  /// Defaults to `displayMedium`, the ramp's own step between a heading and a
   /// hero line. Pass a smaller role where the claim is a caption, not the door.
   ///
   /// The weight comes from the role and is not forced here, so the door reads

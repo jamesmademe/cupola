@@ -22,7 +22,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import '../test_helpers/settings_scope.dart';
 import 'catalog.dart';
 
-/// Room the service band and the tab bar take above a tab's content — the
+/// Room the service band and the tab bar take above a tab's content: the
 /// router's `_serviceTabTopPadding`.
 const _tabTop = kToolbarHeight + ServiceTabBar.height;
 
@@ -165,7 +165,7 @@ void main() {
       CatalogScene(
         'AmbientBackground alone · no accent, Radarr, Sonarr, Jellyfin · the '
         'same neutral lamp in every room: two radials, top left and bottom '
-        'right, same strength — the fallback is the lamp, never the ink',
+        'right, same strength: the fallback is the lamp, never the ink',
         (_) => Wrap(
           spacing: 12,
           children: [

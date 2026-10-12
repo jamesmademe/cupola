@@ -68,7 +68,7 @@ class ContentCard extends StatelessWidget {
 
           // Shadow ink behind the badge, so it stays legible over bright
           // artwork. Painted across the whole card and fading to nothing
-          // well inside it — never in a box the size of the badge: that box
+          // well inside it, never in a box the size of the badge: that box
           // clipped the radial while it was still a third of its strength,
           // which drew a hard-edged grey rectangle around the badge wherever
           // the ground was not dark artwork (a placeholder, a light poster).
@@ -140,7 +140,7 @@ class ContentCard extends StatelessWidget {
     );
   }
 
-  // The plate, not the theme — the same well as MediaPosterCard's fallback.
+  // The plate, not the theme: the same well as MediaPosterCard's fallback.
   // This rectangle stands in for artwork, and a grid tile is the source of the
   // Hero flight into a detail page whose poster is a MediaPosterCard: painted
   // `surfaceContainer` it was a white tile in light theme that turned into a

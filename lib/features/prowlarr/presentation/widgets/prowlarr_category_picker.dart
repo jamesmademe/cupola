@@ -14,7 +14,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Only the top level is offered, as in the web UI: a selection of "Movies"
 /// should match an indexer that advertises `2040` without asking the user to
-/// enumerate every child id — [prowlarrExpandCategories] does that expansion.
+/// enumerate every child id: [prowlarrExpandCategories] does that expansion.
 Future<Set<int>?> showProwlarrCategoryPicker({
   required BuildContext context,
   required Set<int> selected,

@@ -4,7 +4,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 void main() {
-  group('the console rail — decision 36', () {
+  group('the console rail: decision 36', () {
     test('nine doors, not ten', () {
       expect(trueNasSections, hasLength(9));
     });
@@ -18,7 +18,7 @@ void main() {
 
     test('that one door still owns both of the old paths', () {
       // Until `router.dart` collapses them into one `virtualization?kind=`
-      // route, a `/vms` deep link has to light the Virtualization row — before
+      // route, a `/vms` deep link has to light the Virtualization row; before
       // this, it lit nothing at all.
       final virt = trueNasSections.singleWhere(
         (s) => s.title == 'Virtualization',
@@ -63,7 +63,7 @@ void main() {
     test('a ZFS id with slashes survives the round trip', () {
       // ZFS ids are paths (`tank/media/movies`). As a path *segment* the route
       // would split into three and match nothing, which is why the detail takes
-      // a query parameter — and why a future tidy-up to `/detail/:id` must fail
+      // a query parameter, and why a future tidy-up to `/detail/:id` must fail
       // here rather than in the field.
       final link = ServiceRoutes.truenasDataset('tank/media/movies');
 

@@ -59,7 +59,7 @@ void main() {
         find.text('The request to Radarr did not complete'),
         findsOneWidget,
       );
-      // The diagnostics stay on screen — a self-hoster can act on them — just
+      // The diagnostics stay on screen, where a self-hoster can act on them, just
       // not as the opening line.
       // The exception's own words never reach the screen, and a failure
       // nobody can attribute adds no sentence that repeats the headline.
@@ -168,34 +168,35 @@ void main() {
       expect(find.text('Retry'), findsNothing);
     });
 
-    testWidgets('wears glass chrome over an accent-lit room, not a flat strip', (
-      tester,
-    ) async {
-      const accent = Color(0xFFF59E0B);
-      await tester.pumpWidget(
-        _wrap(
-          MediaDetailPlaceholderView.error(
-            error: Exception('boom'),
-            serviceName: 'Radarr',
-            accent: accent,
+    testWidgets(
+      'wears glass chrome over an accent-lit room, not a flat strip',
+      (tester) async {
+        const accent = Color(0xFFF59E0B);
+        await tester.pumpWidget(
+          _wrap(
+            MediaDetailPlaceholderView.error(
+              error: Exception('boom'),
+              serviceName: 'Radarr',
+              accent: accent,
+            ),
           ),
-        ),
-      );
+        );
 
-      // The room is lit by the service's own accent, like the loaded page.
-      final ambient = tester.widget<AmbientBackground>(
-        find.byType(AmbientBackground),
-      );
-      expect(ambient.accent, accent);
+        // The room is lit by the service's own accent, like the loaded page.
+        final ambient = tester.widget<AmbientBackground>(
+          find.byType(AmbientBackground),
+        );
+        expect(ambient.accent, accent);
 
-      // The bar is a gradient scrim, never an opaque surface strip — and never
-      // a BackdropFilter (No-Blur-Under-Scroll).
-      expect(find.byType(GlassAppBar), findsOneWidget);
-      expect(find.byType(GlassSurface), findsOneWidget);
-      expect(find.byType(BackdropFilter), findsNothing);
-      final appBar = tester.widget<AppBar>(find.byType(AppBar));
-      expect(appBar.backgroundColor, Colors.transparent);
-    });
+        // The bar is a gradient scrim, never an opaque surface strip, and never
+        // a BackdropFilter (No-Blur-Under-Scroll).
+        expect(find.byType(GlassAppBar), findsOneWidget);
+        expect(find.byType(GlassSurface), findsOneWidget);
+        expect(find.byType(BackdropFilter), findsNothing);
+        final appBar = tester.widget<AppBar>(find.byType(AppBar));
+        expect(appBar.backgroundColor, Colors.transparent);
+      },
+    );
 
     testWidgets('back button carries the tooltip and pops', (tester) async {
       await tester.pumpWidget(
@@ -247,7 +248,7 @@ void main() {
       );
 
       // The back button's own square is the target, and it is a real hit box
-      // rather than a padded-out decoration — see media_detail_back_button_test.
+      // rather than a padded-out decoration; see media_detail_back_button_test.
       // >= rather than == : inside a `GlassAppBar` the leading slot arrives
       // tightly constrained to 56, so the button's square is stretched to fill
       // it. On the hero, where it is `Positioned`, it is exactly 44.

@@ -17,7 +17,7 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// stopped answering.**
 ///
 /// This widget used to call `value.when(...)`, the one shape of the Riverpod
-/// API that cannot see a retained value — so an `AsyncError` carrying the
+/// API that cannot see a retained value, so an `AsyncError` carrying the
 /// previous data routed straight to a red leaf, and the readout the user opened
 /// the app to look at was discarded at the widget boundary, after the state
 /// layer had gone to the trouble of keeping it.
@@ -107,7 +107,7 @@ void main() {
 
   testWidgets('the retained readout is not dimmed', (tester) async {
     // Rule 3 of the failure grammar: dimming means *not configured* everywhere
-    // else on this canvas, and the two states need opposite answers — "go set
+    // else on this canvas, and the two states need opposite answers: "go set
     // this up" against "this is what it said last".
     await _pump(tester, _failedOver('tank DEGRADED 78%'));
 
@@ -189,7 +189,7 @@ void main() {
 
   testWidgets('"not configured" still wins over everything', (tester) async {
     // A service with no URL saved is not an outage and must never get the
-    // outage band — the answer there is "go set this up".
+    // outage band. The answer there is "go set this up".
     final failed = _failedOver(
       'stale',
       error: Exception('TrueNAS not configured'),
@@ -266,7 +266,7 @@ void main() {
     );
 
     /// Unmounts the tree and disposes the container, which cancels the retry
-    /// timer Riverpod still has pending — or the test ends on a live timer.
+    /// timer Riverpod still has pending, or the test ends on a live timer.
     Future<void> unmount(WidgetTester tester) async {
       await tester.pumpWidget(const SizedBox.shrink());
       container.dispose();

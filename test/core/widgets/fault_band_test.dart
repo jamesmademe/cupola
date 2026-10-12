@@ -11,7 +11,7 @@ import 'package:cupola/core/widgets/fault_band.dart';
 /// The three rules the design settles on are the whole of this widget, and they
 /// are all invisible to a screenshot: a fill that should not be there, a tone
 /// on the wrong element, a control that reads as disabled. So they are checked
-/// as resolved semantics and resolved colours — never a hex, never a pixel.
+/// as resolved semantics and resolved colours, never a hex, never a pixel.
 Future<void> _pump(WidgetTester tester, Widget band) {
   return tester.pumpWidget(
     MaterialApp(
@@ -34,7 +34,7 @@ Color _verbColour(WidgetTester tester, String label) {
 }
 
 void main() {
-  group('rule 1 — presence is the signal', () {
+  group('rule 1: presence is the signal', () {
     testWidgets('no band paints a fill or a border', (tester) async {
       // The band used to be a card: a tinted fill behind an error-tone stroke.
       // In a stack where something is down most Tuesdays, that is alarm chrome
@@ -96,7 +96,7 @@ void main() {
     });
   });
 
-  group('rule 2 — the recovery verb is never the fault tone', () {
+  group('rule 2: the recovery verb is never the fault tone', () {
     testWidgets('Retry and Settings are the brand, not the alarm', (
       tester,
     ) async {
@@ -235,7 +235,7 @@ void main() {
 
     testWidgets('stale offers no dismiss and no second action', (tester) async {
       // A stale reading is a property of the data, still true the instant after
-      // it is acknowledged — a dismiss would only teach the user to hide it.
+      // it is acknowledged, and a dismiss would only teach the user to hide it.
       await _pump(
         tester,
         FaultBand.stale(
@@ -278,7 +278,7 @@ void main() {
         ),
       );
 
-      // One node for the sentence — not a glyph, three text fragments and two
+      // One node for the sentence, rather than a glyph, three text fragments and two
       // buttons that a listener has to reassemble.
       expect(
         find.bySemanticsLabel(RegExp('TrueNAS has not answered for 6 minutes')),

@@ -96,7 +96,7 @@ class _TransmissionLabelsScreenState
               )
               .toList(growable: false);
     final rpcVersion = session.asData?.value.rpcVersion;
-    // **16, not 17.** `labels` arrived in Transmission 3.00 — rpc-version 16 —
+    // **16, not 17.** `labels` arrived in Transmission 3.00 (rpc-version 16)
     // on both halves of the protocol at once: the same revision that puts
     // `labels` on `torrent-get` accepts it on `torrent-set`. Gating the editor
     // at 17 withheld it from every 3.x daemon while the rows beside the button
@@ -115,7 +115,7 @@ class _TransmissionLabelsScreenState
       // the whole of `transmissionTorrentsProvider` and the default filter is
       // "All", so on a seedbox this section is one or two thousand outlined
       // cards. Inside a plain `ListView` they are every one built and laid out
-      // per rebuild — and `setState` fires on every pill tap. The headers stay
+      // per rebuild, and `setState` fires on every pill tap. The headers stay
       // eager because there are six of them; only the rows go lazy.
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -1146,7 +1146,7 @@ String _displayEncryption(String value) {
 /// A figure the daemon reported, or an em dash when it did not report one.
 ///
 /// **Zero is a value, not an absence.** `session-get` on an old daemon simply
-/// omits fields it does not know, and `parseInt` used to answer that with 0 —
+/// omits fields it does not know, and `parseInt` used to answer that with 0;
 /// so "Cache size 0 MB" was indistinguishable from a cache the user had
 /// switched off, and both were stated as fact.
 String _figure(num? value, {String? unit}) {

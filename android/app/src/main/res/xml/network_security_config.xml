@@ -6,7 +6,7 @@
 
     It cannot be narrowed here. Android's `domain` matching works on DNS name
     suffixes, so RFC-1918 ranges (192.168/16, 10/8, 172.16/12) are not
-    expressible — listing them one address at a time is not workable.
+   expressible: listing them one address at a time is not workable.
 
     The restriction therefore lives in the app, where the host is actually
     known: UrlUtils.cleartextWarning() flags an `http://` URL pointing at a

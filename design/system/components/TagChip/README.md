@@ -1,13 +1,13 @@
 # TagChip
 
-Metadata pills — counts, qualities and genres. Pills are metadata, never controls.
+Metadata pills: counts, qualities and genres. Pills are metadata, never controls.
 
 Rendered from `lib/core/widgets/tag_chip.dart` by `test/design_catalog/tag_chip_catalog_test.dart`.
 
 ## Variants
 
-- **TagChip** — the tone (default `primary`, usually the service's accent — the lamp, so the chip is a neutral wash under the primary ink) at 12% with a 28% border, `radius-full`, padding `space-xs` × `space-sm`, label `label-small` 600, optional 14px leading icon. The label and icon are the tone walked against its own 12% wash over the ground the chip sits on (`ServiceTheme.onTint`, tint 0.12); the wash and hairline keep the raw tone.
-- **GenreChip** — neutral: `surface-container`, 1px `outline-variant`, `on-surface-variant` label at 500, padding `space-xs` × `space-md`.
+- **TagChip**: the tone (default `primary`, usually the service's accent: the lamp, so the chip is a neutral wash under the primary ink) at 12% with a 28% border, `radius-full`, padding `space-xs` × `space-sm`, label `label-small` 600, optional 14px leading icon. The label and icon are the tone walked against its own 12% wash over the ground the chip sits on (`ServiceTheme.onTint`, tint 0.12); the wash and hairline keep the raw tone.
+- **GenreChip** (neutral): `surface-container`, 1px `outline-variant`, `on-surface-variant` label at 500, padding `space-xs` × `space-md`.
 
 ## The consumer provides
 
@@ -28,5 +28,5 @@ Each sheet is drawn in the dark and the light room.
 ## Do / don't
 
 - Do pass the ground the chip lands on so its ink is measured against it.
-- Don't make a pill tappable — an interactive pill is a `SelectionPills` choice, and a row of choices keeps its corner in both states: selection is carried by fill and ink, never by the corner.
+- Don't make a pill tappable; an interactive pill is a `SelectionPills` choice, and a row of choices keeps its corner in both states: selection is carried by fill and ink, never by the corner.
 - Don't colour a chip with a status tone unless it states that status.

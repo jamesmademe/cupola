@@ -22,13 +22,13 @@ const _rowMargin = EdgeInsets.fromLTRB(
 /// A filename that keeps both ends legible.
 ///
 /// A release filename carries its identity at the front and its evidence at the
-/// back — `Boruto.S01E12.1080p.WEB-DL.x264-GROUP.mkv`. A trailing ellipsis
+/// back: `Boruto.S01E12.1080p.WEB-DL.x264-GROUP.mkv`. A trailing ellipsis
 /// deletes exactly the half that answers "is this the right file?", so the
 /// elision is moved to the middle and both ends survive.
 ///
 /// The split point is measured rather than guessed. A fixed character budget
 /// would be wrong at every reading size but one, and pinning the tail in a
-/// `Row` overflows the moment the tail alone outgrows the row — which is how
+/// `Row` overflows the moment the tail alone outgrows the row, which is how
 /// the first version painted overflow stripes at accessibility text sizes.
 class FilenameText extends StatelessWidget {
   final String filename;
@@ -38,7 +38,7 @@ class FilenameText extends StatelessWidget {
   ///
   /// Kept short on purpose. Quality, language and size already have a line of
   /// their own on these rows, so the filename's remaining job is to confirm the
-  /// title and episode code — which live at the front — and the tail only needs
+  /// title and episode code, which live at the front, and the tail only needs
   /// to prove which file this is.
   static const _tailLength = 10;
 
@@ -127,7 +127,7 @@ class FilenameText extends StatelessWidget {
   }
 }
 
-/// A short positional code — `S2 E1`, a year, a track number.
+/// A short positional code: `S2 E1`, a year, a track number.
 class IdentityCodeChip extends StatelessWidget {
   final String code;
   final Color accent;
@@ -315,24 +315,24 @@ class ReadyGroupHeader extends StatelessWidget {
 
 /// A matched file, arranged so the match can be checked at a glance.
 ///
-/// The row answers one question — did the service guess right? — so it puts the
+/// The row answers one question (did the service guess right?), so it puts the
 /// parsed identity directly above the filename it was parsed from, and never
 /// lets a trailing ellipsis eat either one.
 ///
 /// It adapts to its surroundings. Under a group header the matched title is
 /// already overhead, so the row leads with the positional code and the episode
-/// name. Standing alone (a movie, a one-file group) it carries the title itself
-/// — repeating a header that is not there would be as bad as omitting one.
+/// name. Alone (a movie, a one-file group) it carries the title itself:
+/// repeating a header that is not there would be as bad as omitting one.
 ///
 /// Two variants, because a scan holds two kinds of matched file and the list
 /// interleaves them: [MatchedFileRow.ready] for one waiting to be imported and
 /// [MatchedFileRow.imported] for one the service already holds. The imported
-/// form deliberately does **not** live in a section of its own — S01E05 already
+/// form deliberately does **not** live in a section of its own: S01E05 already
 /// in the library belongs beside S01E06 in broadcast order, where the gap it
 /// explains actually is. It reads as handled rather than pending through four
 /// channels, only one of which is colour: the card steps down the surface
 /// ladder, its hairline softens, its title takes the secondary ink, and its
-/// badge says "Imported". Its checkbox still works — ticking one is how you ask
+/// badge says "Imported". Its checkbox still works: ticking one is how you ask
 /// for a better rip to replace what is on disk.
 class MatchedFileRow extends StatelessWidget {
   final ServiceKey service;
@@ -344,7 +344,7 @@ class MatchedFileRow extends StatelessWidget {
 
   final bool selected;
 
-  /// Null when this file cannot enter the selection at all — an imported file
+  /// Null when this file cannot enter the selection at all: an imported file
   /// whose payload no longer carries a usable identity, which the service would
   /// reject outright.
   final ValueChanged<bool>? onSelectedChanged;
@@ -406,20 +406,20 @@ class MatchedFileRow extends StatelessWidget {
 
     // The row has exactly three lines and each one has exactly one job:
     //
-    //  1. the matched identity — code chip plus matched names, never anything
+    //  1. the matched identity: code chip plus matched names, never anything
     //     parsed out of the filename;
     //  2. the raw filename, and only ever the raw filename;
     //  3. the technical facts.
     //
     // The earlier version moved the filename to line 3 whenever there was no
     // group header above, and promoted it to the title when there was no child
-    // name to show — so "the second line" meant the episode title on some rows
+    // name to show, so "the second line" meant the episode title on some rows
     // and the file on others, which is precisely what makes a match hard to
     // check at a glance.
     //
     // Under a group header the series/artist is already stated above, so the
     // line leads with the matched child (episode or album). Standing alone it
-    // carries both, joined — both halves are matched values.
+    // carries both, joined: both halves are matched values.
     final matchedLine = underGroupHeader
         ? (identity.title ?? groupTitle)
         : [groupTitle, if (identity.title != null) identity.title!].join(' · ');
@@ -438,7 +438,7 @@ class MatchedFileRow extends StatelessWidget {
           AppSpacing.sm,
           AppSpacing.sm,
         ),
-        // An imported row sits one step *down* the ladder — the same move
+        // An imported row sits one step *down* the ladder, the same move
         // DESIGN.md uses for an unlit service cell, and the reason it reads as
         // handled without borrowing a status colour it has no business wearing.
         backgroundColor: reimporting
@@ -508,7 +508,7 @@ class MatchedFileRow extends StatelessWidget {
                             matchedLine,
                             // One line, always. A wrapping title pushed the two
                             // lines below it down and left the status badge
-                            // floating against nothing — the card's whole
+                            // floating against nothing: the card's whole
                             // geometry came apart on any episode name longer
                             // than the row. Every line of this row is now
                             // exactly one line, so a group of them reads as a
@@ -572,7 +572,7 @@ class MatchedFileRow extends StatelessWidget {
 
 /// A one-line consequence, tinted by its tone and stated in words.
 ///
-/// [_RowNote.warning] carries the service's own caveat — a tone-only warning on
+/// [_RowNote.warning] carries the service's own caveat: a tone-only warning on
 /// the badge told the user something was off and nothing about what, while the
 /// reason sat in the payload the whole time. [_RowNote.info] carries what a
 /// choice the user just made is going to do.
@@ -732,7 +732,7 @@ class AttentionFileRow extends StatelessWidget {
   }
 }
 
-/// A file of a kind this service does not import — still openable, so a
+/// A file of a kind this service does not import, still openable, so a
 /// misjudged extension costs one tap rather than the capability.
 class OtherFileRow extends StatelessWidget {
   final ServiceKey service;
@@ -795,7 +795,7 @@ class OtherFileRow extends StatelessWidget {
 ///
 /// Deliberately not selectable. It exists so the list can account for a file
 /// that vanished from "Ready to import" without the user wondering where it
-/// went — and so the screen never offers to submit the same file twice, which
+/// went, and so the screen never offers to submit the same file twice, which
 /// used to queue a duplicate import mid-flight and fail outright once the
 /// service had already moved the file into the library.
 class InFlightFileRow extends StatelessWidget {

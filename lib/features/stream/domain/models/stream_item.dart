@@ -1,4 +1,4 @@
-/// One item anywhere in a media server's tree — film, show, season, episode,
+/// One item anywhere in a media server's tree: film, show, season, episode,
 /// album or track.
 ///
 /// **One type for every depth, on purpose.** A Jellyfin `BaseItemDto` and a Plex
@@ -59,14 +59,14 @@ enum StreamLibraryLens {
   /// definition: an alphabetical wall of a library is the same wall whoever is
   /// looking. Jellyfin's `/Items?parentId=…&sortBy=SortName` takes `userId` as
   /// strictly optional and only loses `UserData` without it, so scoping A–Z to a
-  /// viewer made the client refuse the request before making it — and told a user
+  /// viewer made the client refuse the request before making it, and told a user
   /// who had connected a server but not yet chosen a household member that their
   /// library was empty, which is the one thing it demonstrably was not.
   bool get isPerViewer =>
       this != StreamLibraryLens.recentlyAdded && this != StreamLibraryLens.all;
 }
 
-/// The external database ids a media server holds for one item — the other half
+/// The external database ids a media server holds for one item: the other half
 /// of the join with the arrs, which know a title by the same ids.
 ///
 /// Read from the item itself (Jellyfin's `ProviderIds`, Plex's `Guid[]`), never
@@ -151,7 +151,7 @@ class StreamVideo {
 
 @immutable
 class StreamItem {
-  /// Opaque server id — a Jellyfin GUID or a Plex `ratingKey`.
+  /// Opaque server id: a Jellyfin GUID or a Plex `ratingKey`.
   final String id;
 
   final String title;
@@ -191,7 +191,7 @@ class StreamItem {
   final int? unplayedChildCount;
 
   /// The TMDB / TVDB / IMDb ids the server holds for this item, when the
-  /// request asked for them — see [StreamExternalIds]. Empty is "not reported",
+  /// request asked for them; see [StreamExternalIds]. Empty is "not reported",
   /// never "has none". The browse reads ask too: a movie with a TMDB id opens
   /// on its own page (`MediaKey.ofStreamItem`).
   final StreamExternalIds externalIds;

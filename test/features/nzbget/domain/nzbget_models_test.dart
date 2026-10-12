@@ -36,7 +36,7 @@ void main() {
     test('a job whose remaining size nobody reported has no progress', () {
       // The defect: with no `RemainingSizeMB` and no Hi/Lo pair, a 0 default
       // made `(file - 0) / file` == 1, so a job the server said nothing about
-      // drew a full bar and read `100%` — a percentage nobody computed,
+      // drew a full bar and read `100%`: a percentage nobody computed,
       // presented as finished.
       final group = NzbgetGroup.fromJson({
         'NZBID': 7,

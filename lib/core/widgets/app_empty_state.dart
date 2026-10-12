@@ -14,7 +14,7 @@ import 'package:cupola/core/theme.dart';
 /// - [AppEmptyState] (full): screen-centred, larger, for whole pages.
 /// - [AppEmptyState.compact]: centred but smaller, for carousels/sections.
 /// - [AppEmptyState.inline]: one left-aligned line beside a small glyph, for
-///   the *expected* absence — a panel whose source simply does not model this
+///   the *expected* absence: a panel whose source simply does not model this
 ///   data. A ceremonial icon well and a centred headline read as a failure;
 ///   when nothing went wrong, the note should cost a row, not a screenful.
 class AppEmptyState extends StatelessWidget {
@@ -87,8 +87,8 @@ class AppEmptyState extends StatelessWidget {
                 ? accent.withValues(alpha: 0.14)
                 : colorScheme.surfaceContainerHigh,
           ),
-          // The glyph sits on a 14% wash of its own accent, so the composite —
-          // not the accent — is what it has to be legible against.
+          // The glyph sits on a 14% wash of its own accent, so the composite (
+          // not the accent) is what it has to be legible against.
           child: Icon(
             icon,
             size: iconSize,
@@ -129,14 +129,14 @@ class AppEmptyState extends StatelessWidget {
     // Deliberately not scrollable, and deliberately `mainAxisSize.min`: this is
     // a leaf, and it is the page that knows whether there is a viewport to
     // scroll. At an accessibility reading size a 72pt icon well, a wrapped
-    // title, a two-line message and a 40pt button can clear a short phone —
+    // title, a two-line message and a 40pt button can clear a short phone:
     // a full-page caller must therefore put this inside a scroll view whose
     // `minHeight` is the viewport, which keeps it centred while it fits and lets
     // it grow past that. `DashboardScreen` is the worked example.
     //
     // Owning the viewport here instead was tried and is wrong: a `LayoutBuilder`
     // cannot report intrinsic dimensions, so it breaks every caller that
-    // measures them — `SliverFillRemaining` among them.
+    // measures them: `SliverFillRemaining` among them.
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(
@@ -151,7 +151,7 @@ class AppEmptyState extends StatelessWidget {
 
 /// An [AppEmptyState] that owns the viewport, for a caller that *is* the page.
 ///
-/// [AppEmptyState] is deliberately not scrollable — see the note in its build —
+/// [AppEmptyState] is deliberately not scrollable; see the note in its build:
 /// and says that a full-page caller must therefore give it a scroll view whose
 /// `minHeight` is the viewport. This is that sentence as a widget, because three
 /// callers had the sentence and none had the scroll view: an error message long

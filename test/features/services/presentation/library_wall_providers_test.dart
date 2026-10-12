@@ -21,13 +21,13 @@ FakeApiClient _dark() =>
         reason: 'Connection refused',
       );
 
-/// The library walls — Radarr, Sonarr, Lidarr, and Readarr's author list.
+/// The library walls: Radarr, Sonarr, Lidarr, and Readarr's author list.
 ///
 /// Each read went through `fetchAllItems`, which swallows every failure into
 /// `[]`, so a server that was down resolved the wall *successfully* and it said
 /// "No items found": a library that exists and is empty, the opposite of what
-/// happened. A wall is the whole library in one request — there is no partial
-/// answer to show beside the failure — so the failure has to reach it.
+/// happened. A wall is the whole library in one request, so there is no partial
+/// answer to show beside the failure, so the failure has to reach it.
 void main() {
   final walls =
       <
@@ -72,8 +72,8 @@ void main() {
 
       await expectLater(
         // Settles at once: under the default retry the wall sat on a spinner
-        // for the better part of a minute while the KPI peek above it — which
-        // reads the same library with `noProviderRetry` — already said "—".
+        // for the better part of a minute while the KPI peek above it, which
+        // reads the same library with `noProviderRetry`, and already said "—".
         wall.read(container).timeout(const Duration(milliseconds: 300)),
         throwsA(isA<DioException>()),
       );

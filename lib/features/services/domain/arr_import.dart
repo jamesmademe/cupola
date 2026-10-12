@@ -3,13 +3,13 @@
 /// Two regions read the same page of history and ask it different questions:
 /// *Recently added* asks what landed, and *Needs a decision* asks what did not.
 /// Classifying the `eventType` once, here, is what keeps those two from
-/// disagreeing about the same record — and keeps the vocabulary out of a widget,
+/// disagreeing about the same record, and keeps the vocabulary out of a widget,
 /// where the answer would be a switch nobody can test without pumping a frame.
 ///
 /// ## The fetch, and where it deviates from the brief
 ///
-/// The settled policy is **one history read per arr** — the same read the old
-/// "Finished today" band already owed — with the poster URL arriving inside the
+/// The settled policy is **one history read per arr**: the same read the old
+/// "Finished today" band already owed, with the poster URL arriving inside the
 /// records, so nothing extra is fetched when the page opens. That part stands.
 ///
 /// The `eventType=downloadFolderImported` filter in the brief does **not**, and
@@ -33,7 +33,7 @@ enum ArrImportOutcome {
   /// A grab or an import failed. A **fault**, which is amber, and a decision.
   failed,
 
-  /// Everything else — grabbed, renamed, deleted, ignored. Not this region's
+  /// Everything else (grabbed, renamed, deleted, ignored). Not this region's
   /// business, and deliberately not counted in its eyebrow either.
   other,
 }

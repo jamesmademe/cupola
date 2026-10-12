@@ -98,8 +98,8 @@ class _ScriptableAdapter implements HttpClientAdapter {
   }
 }
 
-/// Answers the login with `200 Fails.` — qBittorrent ≤ 5.0's way of saying the
-/// credentials are wrong — and 200 for anything else.
+/// Answers the login with `200 Fails.`, qBittorrent ≤ 5.0's way of saying the
+/// credentials are wrong, and 200 for anything else.
 class _LoginFailsAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
 
@@ -236,7 +236,7 @@ void main() {
     });
 
     // The WebUI rejects a request whose Referer/Origin does not match the host
-    // it is served from, so these have to be the *normalised* URL — the raw
+    // it is served from, so these have to be the *normalised* URL. The raw
     // scheme-less string would produce `Referer: localhost:8080`.
     test('sends Referer and Origin as the normalised base URL', () async {
       final adapter = _MockAdapter(response: 'v4.6.5');
@@ -301,7 +301,7 @@ void main() {
 
     test('returns true on 204 with empty body (qBittorrent 5.1+)', () async {
       // Observed against qBittorrent v5.2.3: a successful login answers
-      // 204 No Content and sets the SID cookie — there is no "Ok." body.
+      // 204 No Content and sets the SID cookie; there is no "Ok." body.
       final adapter = _ScriptableAdapter(script: [204]);
       final c = _client(adapter, user: 'admin', pw: 'adminadmin');
       expect(await c.authenticate(), isTrue);
@@ -357,7 +357,7 @@ void main() {
         // 2nd call: data fetch → 403 (session rejected).
         // 3rd call: login (forced by interceptor) → 200 Ok.
         // 4th call: data retry → 403 → surfaced.
-        // No further calls — the interceptor must stop after one retry.
+        // No further calls: the interceptor must stop after one retry.
         final adapter = _ScriptableAdapter(script: [200, 403, 200, 403, 403]);
         final c = _client(adapter, user: 'admin', pw: 'adminadmin');
 
@@ -469,7 +469,7 @@ void main() {
     test('a 403 on the login itself stops everything after one attempt', () {
       // qBittorrent's login route answers 403 for one reason: the address is
       // banned. This used to press on to the data call and re-authenticate
-      // from the interceptor — two logins per call against a WebUI that had
+      // from the interceptor: two logins per call against a WebUI that had
       // already said no. Now the first 403 is held and nothing else is sent.
       final adapter = _ScriptableAdapter(script: [403, 403, 403, 403]);
       final c = _client(adapter, user: 'admin', pw: 'wrong');

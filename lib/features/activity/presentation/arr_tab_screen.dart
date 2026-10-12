@@ -210,8 +210,8 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
 
     final service = ref.read(resolvedArrServiceProvider(widget.serviceType));
 
-    // Sonarr's Wanted list is episodes, and a flat wall of them is unreadable
-    // — which series, which season, how many. The grouped rendering is the
+    // Sonarr's Wanted list is episodes, and a flat wall of them is unreadable:
+    // which series, which season, how many. The grouped rendering is the
     // same one `/activity` uses.
     if (widget.mode == ArrTabMode.wanted &&
         widget.serviceType == ServiceType.series) {
@@ -256,7 +256,7 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
     // Lazy, deliberately. `_load` goes through `_fetchAllPages`, which will
     // hand back up to 12,500 history records (250 a page, 50 pages), and a
     // `Column` of them inside a `ListView` has no viewport culling: every row
-    // was built *and laid out* on the first frame, across nine live routes —
+    // was built *and laid out* on the first frame, across nine live routes:
     // Radarr, Sonarr and Lidarr times queue, wanted and history. The pills ride
     // as row zero so the list stays one scrollable rather than a header glued
     // above a second one.

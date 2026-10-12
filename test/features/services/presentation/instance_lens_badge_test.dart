@@ -56,7 +56,7 @@ Future<void> _pump(
       child: MaterialApp(
         theme: AppTheme.darkTheme(),
         // Mirrors how `_ServiceDashboardAppBar` composes it: a bare Row inside
-        // a glass band. Deliberately *not* a Material `AppBar` — that merges
+        // a glass band. Deliberately *not* a Material `AppBar`, which merges
         // its title's semantics into one node, which would hide the badge's own
         // label behind the service name and make this harness disagree with the
         // screen it is standing in for.
@@ -175,9 +175,9 @@ void main() {
     // Jellyfin, Plex and TrueNAS used to be exempt: their clients were built
     // from the flat first-instance projections, so a badge there would have
     // changed its own label and nothing else. All three go through
-    // `watchTransport` now — including Jellyfin's chosen viewer, which is read
-    // off the resolved instance rather than off `settings.jellyfinUserId` —
-    // so the badge is honest and the exemption is gone.
+    // `watchTransport` now, including Jellyfin's chosen viewer, which is read
+    // off the resolved instance rather than off `settings.jellyfinUserId`,
+    // and the badge is honest and the exemption is gone.
     await _pump(
       tester,
       service: ServiceKey.jellyfin,
@@ -237,7 +237,7 @@ void main() {
 
     expect(find.text('HD'), findsOneWidget);
     // `select` persists, so offering this row is offering to point the whole
-    // app at nothing — and to have it come back up that way tomorrow.
+    // app at nothing, and to have it come back up that way tomorrow.
     expect(find.text('Half done'), findsNothing);
     expect(find.text('2 connections. Pick the one to read.'), findsNothing);
     expect(find.text('Two connections. Pick the one to read.'), findsOneWidget);
@@ -262,7 +262,7 @@ void main() {
 
   testWidgets('the service name yields before the badge does', (tester) async {
     // "Nginx Proxy Manager" is the longest title in the registry, and this is
-    // the case that used to overflow the Row outright — the title had no
+    // the case that used to overflow the Row outright; the title had no
     // Flexible, no maxLines and no overflow, and the text scaler is opt-in per
     // call site rather than global.
     const npm = ServiceInstance(

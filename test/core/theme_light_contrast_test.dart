@@ -12,7 +12,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// because every check in the suite measured against `colorScheme.surface` and
 /// the app paints text on four different light surfaces. A token verified on
 /// one ground says nothing about the other three, and the two that were below
-/// AA were below it on exactly the grounds nobody measured — the chip fill and
+/// AA were below it on exactly the grounds nobody measured: the chip fill and
 /// the input fill.
 ///
 /// So every assertion here is a cross product: each ink against **all** the
@@ -30,7 +30,7 @@ double _contrast(Color a, Color b) {
 /// WCAG AA for body text.
 const _aa = 4.5;
 
-/// WCAG AA for a graphical object — a glyph, a pip, a bar — with no text of the
+/// WCAG AA for a graphical object (a glyph, a pip, a bar), with no text of the
 /// same colour beside it.
 const _aaNonText = 3.0;
 
@@ -92,8 +92,8 @@ void main() {
                   surface: surfaceEntry.value,
                   tintAlpha: alpha,
                 );
-                // The ground is the composite the label is really drawn on —
-                // the tone's own wash over the surface — not the surface alone.
+                // The ground is the composite the label is really drawn on:
+                // the tone's own wash over the surface, not the surface alone.
                 // Measuring against the surface is what passed combinations
                 // that failed on screen.
                 final ground = Color.alphaBlend(
@@ -116,7 +116,7 @@ void main() {
   test('a tone fill keeps its own byte and is never walked', () {
     // The other half of the rule, and the one that stops the fix from draining
     // the colour out of the app: only ink walks. A fill is a surface and owes
-    // nothing on its own — what it owes is measured by whatever sits on it,
+    // nothing on its own. What it owes is measured by whatever sits on it,
     // which the group above checks.
     //
     // Each room fills with its own tone bytes: the day room's deep ones on
@@ -141,7 +141,7 @@ void main() {
     for (final service in ServiceKey.values) {
       test('${service.name} through onTint on the hardest light ground', () {
         // `surfaceContainerHigh` is the ground the design walks against in both
-        // themes — the lightest card on light, the lightest card on dark. What
+        // themes: the lightest card on light, the lightest card on dark. What
         // a service paints is the lamp now, and a label asked of the lamp is
         // the room's ink, so this holds for every service by construction.
         final ground = light.surfaceContainerHigh;
@@ -160,7 +160,7 @@ void main() {
         // Measured, not assumed: 15 of the 17 brand colours are under AA as raw
         // ink on the lightest light card, and 6 are under even the 3:1 a bare
         // glyph owes. They are registry data now and no longer painted, but
-        // they stay the fixture that proves the walk walks — the tones still
+        // they stay the fixture that proves the walk walks; the tones still
         // go through it on paper, and it is why "it looks fine on my machine"
         // was never evidence: every one of these passes comfortably in dark.
         //
@@ -196,7 +196,7 @@ void main() {
   test('a recovery verb is never painted in the fault tone', () {
     // Rule 2 of the failure grammar, as a token fact: the colour the bands hand
     // their buttons must not be the colour they hand their glyphs. Stated here
-    // rather than in a widget test because it is a property of the palette —
+    // rather than in a widget test because it is a property of the palette:
     // if these two ever converge, every band in the app breaks the rule at
     // once and no rendering test would obviously catch it.
     expect(
@@ -212,7 +212,7 @@ void main() {
   test('the plate palette is the same in both themes', () {
     // Artwork is not palette. A poster stand-in that follows the theme flips
     // from a white rectangle to a dark photograph the instant the image lands,
-    // which is the flash the plate tokens exist to prevent — so they are
+    // which is the flash the plate tokens exist to prevent, so they are
     // constants, and a brightness-dependent plate is the regression.
     expect(AppColors.plateSurface, AppColors.surfaceContainerHighDark);
     expect(AppColors.plateWell, AppColors.surfaceContainerLowestDark);

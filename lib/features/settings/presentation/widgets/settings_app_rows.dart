@@ -18,8 +18,8 @@ import 'package:cupola/features/settings/presentation/widgets/donation_sheet.dar
 /// onboarding, Reset app data.
 ///
 /// **One set, two layouts.** They lived only in the phone index
-/// (`SettingsHomeScreen`), so on a window wide enough for the rail — where
-/// `/settings` is the summary pane and every other row became a rail section —
+/// (`SettingsHomeScreen`), so on a window wide enough for the rail, where
+/// `/settings` is the summary pane and every other row became a rail section:
 /// the licence page, the feedback address, the donation sheet, the onboarding
 /// replay and Reset had no door at all. None of them is a page, so none belongs
 /// on the rail; the pane shows them as cards in its own grammar, and both
@@ -28,7 +28,7 @@ import 'package:cupola/features/settings/presentation/widgets/donation_sheet.dar
 final Uri _githubUri = Uri.parse('https://github.com/matthw-labs/seekarr');
 final Uri _feedbackUri = Uri(scheme: 'mailto', path: 'matthw.labs@gmail.com');
 
-/// GitHub, Send feedback, Support development, Licenses & trademarks — the
+/// GitHub, Send feedback, Support development, Licenses & trademarks: the
 /// four rows of the About group, in that order. The requester's group has no
 /// GitHub: source, issues and releases are for whoever runs the app's
 /// servers, and she asks for movies.
@@ -70,7 +70,7 @@ List<Widget> settingsAboutRows(
     ),
     // The only way into the licence page. `main.dart` registers each bundled
     // font's OFL with the registry, and the OFL's one condition on a bundling
-    // binary is that its text travels with it — which it did not, in any
+    // binary is that its text travels with it, which it did not, in any
     // build, while nothing in the app opened the page.
     SettingsCard.grouped(
       leading: const Icon(Icons.gavel_rounded),
@@ -123,7 +123,7 @@ class SettingsRevisitOnboardingRow extends ConsumerWidget {
   }
 }
 
-/// Clears every service, credential and preference — behind its confirmation,
+/// Clears every service, credential and preference, behind its confirmation,
 /// on both layouts.
 class SettingsResetAppDataRow extends ConsumerWidget {
   const SettingsResetAppDataRow({super.key});
@@ -171,7 +171,7 @@ Future<void> _openDonation(BuildContext context) async {
       icon: Icons.favorite_rounded,
       builder: (_) => const DonationSheet(),
     );
-    // Sheet returned true when IAP products aren't available — open Ko-fi.
+    // Sheet returned true when IAP products aren't available: open Ko-fi.
     if (useFallback == true && context.mounted) {
       final launched = await DonationService.launchKofi();
       if (!launched && context.mounted) {

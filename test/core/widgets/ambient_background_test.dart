@@ -38,8 +38,8 @@ Future<void> _pump(
 
 void main() {
   group('AmbientBackground', () {
-    // The room is one of three instruments that answer a change of subject —
-    // the page slides, the ring rotates, the glow becomes the new colour — and
+    // The room is one of three instruments that answer a change of subject:
+    // the page slides, the ring rotates, the glow becomes the new colour, and
     // cutting the glow while the other two travel is what made the change read
     // as a repaint instead of a move.
     testWidgets('drifts to a new accent instead of cutting to it', (
@@ -89,11 +89,11 @@ void main() {
     // The trap this fix had to step around: `accent` is nullable and
     // `ColorTween` asserts on a null `end`, so the brand fallback has to be
     // resolved *before* the tween rather than inside it. A null accent must
-    // still paint — it is the default on three of the four onboarding beats and
+    // still paint: it is the default on three of the four onboarding beats and
     // on every screen that has no service of its own.
     testWidgets('a null accent falls back to the neutral lamp', (tester) async {
       // Never the primary: that is the ink now, near-white in the dark room,
-      // and a white wash reads as fog — which is what the Portal's bare
+      // and a white wash reads as fog, which is what the Portal's bare
       // `AmbientBackground()` painted until the fallback moved to the lamp.
       await _pump(tester, accent: null);
       await tester.pumpAndSettle();
@@ -107,7 +107,7 @@ void main() {
     });
 
     // Drifting out of and back into the lamp, rather than cutting at the
-    // edges of a lit stretch — the same fallback, on the way back.
+    // edges of a lit stretch: the same fallback, on the way back.
     testWidgets('drifts back out to the lamp when the accent clears', (
       tester,
     ) async {

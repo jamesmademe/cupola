@@ -55,7 +55,7 @@ void main() {
 
     test('a half-filled slot is not a connection the UI may offer', () {
       // The state between "Add another Radarr" and typing an address. It is a
-      // real entry in the list — the settings form is looking at it — and it is
+      // real entry in the list, the settings form is looking at it, and it is
       // not something any other surface may count, name or point a lens at.
       final adding = SettingsModel(
         instances: [
@@ -337,7 +337,7 @@ void main() {
       // somewhere else entirely, so asking "what URL does Radarr have" answers
       // with an origin that has nothing to do with this pin. The second
       // instance is the last thing behind the proxy, and it is invisible to
-      // that question. The old code forgot the certificate here — and the next
+      // that question. The old code forgot the certificate here, and the next
       // service pointed at the proxy would have silently inherited the trust,
       // because pins are keyed by origin and nothing would prompt again.
       final settings = SettingsModel(
@@ -379,7 +379,7 @@ void main() {
       // A label outlives what made it necessary: adding a second Radarr derives
       // a name for the first, and removing the second leaves that name behind.
       // Every badge and chip goes quiet again because they all ask
-      // `hasMultipleInstances` first — `displayTitle` does not, so a sentence
+      // `hasMultipleInstances` first; `displayTitle` does not, so a sentence
       // built straight off it announced "Radarr \u00b7 7878" for the only Radarr
       // there is.
       final lone = SettingsModel(

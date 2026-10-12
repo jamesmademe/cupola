@@ -47,7 +47,7 @@ enum MediaBrowseFilter {
   inQueue,
 
   /// On disk, but not at the quality the profile asks for. Its own chip rather
-  /// than a shade of Missing: the file is there, so nothing is absent — what is
+  /// than a shade of Missing: the file is there, so nothing is absent. What is
   /// outstanding is an upgrade, and the operator who wants one is not the
   /// operator hunting a gap.
   cutoffUnmet,
@@ -62,8 +62,8 @@ enum MediaBrowseFilter {
 /// Three buckets rather than two predicates, and that is the whole point: a pair
 /// of independent predicates is how [MediaAvailability.unknown] and
 /// [MediaAvailability.deleted] came to match *neither* Available nor Missing, so
-/// a freshly added Sonarr series — `sonarrSeriesAvailability` returns `unknown`
-/// whenever the server omits `statistics` — was visible under `All` and under
+/// a freshly added Sonarr series (`sonarrSeriesAvailability` returns `unknown`
+/// whenever the server omits `statistics`), was visible under `All` and under
 /// nothing else. A bucket is exhaustive over [MediaAvailability] by
 /// construction, so a state added later cannot silently fall out of the library.
 enum MediaBrowseBucket {
@@ -73,7 +73,7 @@ enum MediaBrowseBucket {
   /// Something the user can act on is not on disk.
   gap,
 
-  /// Not out yet — the one state that deliberately answers to no chip but
+  /// Not out yet: the one state that deliberately answers to no chip but
   /// `All`, because an unreleased title is not a gap anyone can close.
   unreleased,
 }
@@ -90,7 +90,7 @@ MediaBrowseBucket mediaBrowseBucketOf(MediaStatusInfo? status) {
     MediaAvailability.available ||
     MediaAvailability.upgradable ||
     // Partial counts as on disk: part of it genuinely is, and the page shows
-    // the count. It is deliberately not also a gap — a title cannot answer to
+    // the count. It is deliberately not also a gap: a title cannot answer to
     // two chips or the two lists stop being a partition.
     MediaAvailability.partial => MediaBrowseBucket.onDisk,
     MediaAvailability.missing ||
@@ -110,7 +110,7 @@ MediaBrowseBucket mediaBrowseBucketOf(MediaStatusInfo? status) {
 ///
 /// [belowCutoff] is the one fact the status cannot carry: whether *this* item
 /// is in the service's own `wanted/cutoff` set. It arrives as a plain bool so
-/// this function stays a function of its arguments — the caller owns the id
+/// this function stays a function of its arguments: the caller owns the id
 /// set and the lookup, and a screen with no cutoff source passes `false` and
 /// does not offer the chip at all.
 bool mediaBrowseFilterMatches(
@@ -139,8 +139,8 @@ bool mediaBrowseFilterMatches(
 /// What the browse wall draws an item as.
 ///
 /// Not a style flag: a poster and an artist portrait are different claims. A
-/// 2:3 crop of a band photograph is a worse lie than a circle — it invents a
-/// poster that does not exist and crops a face to do it — so Lidarr's wall is
+/// 2:3 crop of a band photograph is a worse lie than a circle: it invents a
+/// poster that does not exist and crops a face to do it, so Lidarr's wall is
 /// circular and says so here rather than tuning a radius at the call site.
 enum MediaBrowseTileShape {
   /// The 2:3 poster, with the status dot painted over its lower-left corner.
@@ -154,7 +154,7 @@ enum MediaBrowseTileShape {
 
 /// One order the browse wall can be read in.
 ///
-/// A sort is a label, a comparator and a claim about headings — not an enum the
+/// A sort is a label, a comparator and a claim about headings, not an enum the
 /// scaffold switches on, because the scaffold is generic over `T` and cannot
 /// read a release date or a file size. Each service declares the orders its own
 /// model can actually answer, which is also why there is no dead `Size` entry on
@@ -170,7 +170,7 @@ class MediaBrowseSort<T> {
   ///
   /// They belong over exactly one: an alphabetical wall is what a letter
   /// heading describes. Over a date-added order the same headings are a lie
-  /// told once per section — `LidarrArtists` says so in the board itself
+  /// told once per section: `LidarrArtists` says so in the board itself
   /// ("letter headings appear only in Name A–Z sort") and `RadarrLibrary`,
   /// sorted by date added, draws none.
   final bool lettered;
@@ -186,7 +186,7 @@ class MediaBrowseSort<T> {
   /// The arrs hand `added` back as an ISO string. Parsing it rather than
   /// comparing the strings is not pedantry: a server that answers a local
   /// offset sorts wrongly under a string compare, and a row the server never
-  /// dated sorts *first* under one — the loudest position in the list for the
+  /// dated sorts *first* under one, the loudest position in the list for the
   /// item we know least about.
   factory MediaBrowseSort.dateAdded(String? Function(T item) addedOf) {
     return MediaBrowseSort<T>(
@@ -202,7 +202,7 @@ class MediaBrowseSort<T> {
     );
   }
 
-  /// Largest first. A zero is an honest answer here — nothing on disk — so it
+  /// Largest first. A zero is an honest answer here (nothing on disk), so it
   /// sorts to the bottom rather than being held out.
   factory MediaBrowseSort.size(int Function(T item) bytesOf) {
     return MediaBrowseSort<T>(
@@ -254,8 +254,8 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   final String serviceName;
 
   /// Whose library this is. When set, a load that failed with nothing to keep
-  /// is that service's `ServiceOfflineState.failure` — the cause in plain
-  /// words, its address and a way to its connection form — rather than the
+  /// is that service's `ServiceOfflineState.failure`: the cause in plain
+  /// words, its address and a way to its connection form, rather than the
   /// generic error state, which can name no address and no form.
   final ServiceKey? service;
   final Color? accentColor;
@@ -291,7 +291,7 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   /// always first and always the default.
   final List<MediaBrowseSort<T>> sorts;
 
-  /// What a tile is drawn as — see [MediaBrowseTileShape].
+  /// What a tile is drawn as: see [MediaBrowseTileShape].
   final MediaBrowseTileShape tileShape;
 
   /// The ids the service reported under `wanted/cutoff`, or null when this
@@ -345,20 +345,20 @@ class _MediaBrowseScaffoldState<T>
     extends ConsumerState<MediaBrowseScaffold<T>> {
   MediaBrowseFilter _selectedFilter = MediaBrowseFilter.all;
 
-  /// Index into [_sortOptions]. Zero — Title A–Z — is the default order on
+  /// Index into [_sortOptions]. Zero (Title A–Z) is the default order on
   /// every service, which is also the only order the wall had before.
   int _sortIndex = 0;
 
   /// The library list the cached order was computed from, and that order.
   ///
   /// The comparator does not read [_selectedFilter], so the sort is invariant
-  /// across a chip tap and across every other rebuild of this element — of
+  /// across a chip tap and across every other rebuild of this element, of
   /// which the soft keyboard alone produces one per frame. [FutureProvider]
   /// hands back the same `List` instance until it is invalidated, so identity
   /// is a sound key; the filter itself still runs on every build.
   ///
   /// It is *not* invariant across a sort change, so the chosen order is part of
-  /// the key too — without it, picking a new sort would hand back the old one.
+  /// the key too: without it, picking a new sort would hand back the old one.
   List<T>? _sortedSource;
   List<T>? _sorted;
   int? _sortedUnder;
@@ -405,7 +405,7 @@ class _MediaBrowseScaffoldState<T>
 
   /// The chips this screen can honestly offer.
   ///
-  /// Cutoff unmet is conditional on a source — see
+  /// Cutoff unmet is conditional on a source; see
   /// [MediaBrowseScaffold.cutoffUnmetIds]. Unmonitored never is: `monitored`
   /// rides on every resolved status already, so the chip cannot be wrong.
   List<MediaBrowseFilter> get _filterOptions => [
@@ -440,7 +440,7 @@ class _MediaBrowseScaffoldState<T>
     return AmbientScaffold(
       accent: widget.accentColor,
       // The token, not a number tuned against it. This used to be 1160, argued
-      // as "eight 130pt posters and their gaps" — an off-token well chosen to
+      // as "eight 130pt posters and their gaps", an off-token well chosen to
       // make a gap-blind column calculation come out right. Both halves of that
       // are gone: `MediaGrid.columnsFor` now resolves the count from the
       // constraints it is actually handed and accounts for the gaps, so the
@@ -653,12 +653,12 @@ class _MediaBrowseScaffoldState<T>
 
     // **Built a row at a time, as the rows scroll in.** This used to be one
     // `ListView` item per section with every tile of the section in a `Wrap`,
-    // which is lazy only across sections — and any order but Title A–Z is ONE
+    // which is lazy only across sections, and any order but Title A–Z is ONE
     // section, so a 2 000-title library built 2 000 tiles and started 2 000
     // poster loads the moment the wall appeared. A `SliverGrid` is not the
     // answer either: it gives every cell one fixed extent, and a tile's height
-    // is its own content — the caption lines grow with the reading size and an
-    // empty subtitle takes no line — so a grid would clip at 2x or leave air
+    // is its own content: the caption lines grow with the reading size and an
+    // empty subtitle takes no line, so a grid would clip at 2x or leave air
     // under a caption-less row. What the `Wrap` drew is kept exactly: a run is
     // a top-aligned `Row` as tall as its tallest tile, `gridGap` between
     // columns and `space-lg` between rows, `space-xl` after a section's last
@@ -683,8 +683,8 @@ class _MediaBrowseScaffoldState<T>
               // One column math for the whole app, and the tiles fill the row
               // they are given.
               //
-              // This used to pin a 96pt tile — under the 130pt floor every
-              // other grid is held to — and then compute a spacing to
+              // This used to pin a 96pt tile, under the 130pt floor every
+              // other grid is held to, and then compute a spacing to
               // distribute the leftover, only to `.clamp(0, gridGap)` that
               // spacing away again. The slack it had just measured came back
               // as a ragged right edge: at 390pt, three 96pt tiles and two
@@ -722,8 +722,8 @@ class _MediaBrowseScaffoldState<T>
 
   /// The wall flattened into headings and rows for [columns] across.
   ///
-  /// Cheap on purpose — a few integers per row, no widget and no extractor
-  /// call — because it runs over the whole library whenever the width changes.
+  /// Cheap on purpose: a few integers per row, no widget and no extractor
+  /// call, because it runs over the whole library whenever the width changes.
   /// Everything that costs anything is deferred to [_buildBrowseEntry], which
   /// runs only for the rows on or near the screen.
   static List<_BrowseEntry> _browseEntries(
@@ -733,8 +733,8 @@ class _MediaBrowseScaffoldState<T>
     final entries = <_BrowseEntry>[];
     for (var sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
       final section = sections[sectionIndex];
-      // The section's key rides on its first entry — the heading, or the first
-      // row of an unheaded run — so a section is still findable by the key it
+      // The section's key rides on its first entry: the heading, or the first
+      // row of an unheaded run, so a section is still findable by the key it
       // has always had, and still only once it has been built.
       final sectionKey = ValueKey<String>(
         'media-browse-section-${section.label.isEmpty ? 'flat' : section.label}',
@@ -881,7 +881,7 @@ class _MediaBrowseScaffoldState<T>
         .toList(growable: false);
   }
 
-  /// [items] in display order, computed once per (library list, chosen order) —
+  /// [items] in display order, computed once per (library list, chosen order),
   /// see [_sortedSource]. The result is never mutated afterwards.
   List<T> _sortedItems(List<T> items) {
     final cached = _sorted;
@@ -946,7 +946,7 @@ class _MediaBrowseScaffoldState<T>
   }
 }
 
-/// One run of the visible list, `[start, end)`, under one heading — or under
+/// One run of the visible list, `[start, end)`, under one heading or under
 /// none, when [label] is empty.
 ///
 /// Indices rather than a copy of the items: the rows are cut from the same
@@ -1065,7 +1065,7 @@ class _MediaBrowseFilterChips extends StatelessWidget {
 
 /// `Sort · <label>`, opening the orders this service declared.
 ///
-/// One order is not a choice, so the control is only built when there are two —
+/// One order is not a choice, so the control is only built when there are two:
 /// a menu whose every opening shows the same single item is a control that
 /// cannot fail and cannot help either.
 class _MediaBrowseSortControl extends StatelessWidget {
@@ -1098,7 +1098,7 @@ class _MediaBrowseSortControl extends StatelessWidget {
       child: Semantics(
         hint: 'Sorted by $label',
         child: Container(
-          // 44, and no `VisualDensity.compact` anywhere near it — compact
+          // 44, and no `VisualDensity.compact` anywhere near it, since compact
           // silently overrides a declared minimum and lands the real target at
           // 40.
           constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
@@ -1222,7 +1222,7 @@ class _BrowsePosterTile extends StatelessWidget {
   Widget _artwork(BuildContext context) {
     if (isCircle) {
       // Square, so the circle is a circle at any column count, and
-      // `MediaPosterCard.circular` brings its own Hero — the rectangular path
+      // `MediaPosterCard.circular` brings its own Hero; the rectangular path
       // has to supply one because `ContentCard` does not.
       //
       // No status dot: a circle has no corner to hold one without overlapping
@@ -1276,8 +1276,8 @@ class _BrowsePosterTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    // The status is painted inside the excluded subtree — or, on the circular
-    // shape, not painted at all — so it has to be spoken here or it is lost
+    // The status is painted inside the excluded subtree, or, on the circular
+    // shape, not painted at all, so it has to be spoken here or it is lost
     // entirely.
     final spokenValue = joinDisplayParts([
       subtitle,

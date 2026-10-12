@@ -47,8 +47,8 @@ void searchEverythingFor(WidgetRef ref, String query) {
 
 /// Bumped to run the query already in the field again, without touching it.
 ///
-/// ⌘R and re-tapping the Discover tab are opposite commands — one re-runs,
-/// the other clears — and they used to share one channel,
+/// ⌘R and re-tapping the Discover tab are opposite commands: one re-runs,
+/// the other clears, and they used to share one channel,
 /// `navigationRefreshProvider(NavigationSection.discover)`, whose only listener
 /// cleared the query. So ⌘R silently erased what the user had typed. This is
 /// the other half of that split: the window's Refresh command bumps this, the
@@ -59,7 +59,7 @@ final globalSearchRerunProvider = StateProvider<int>((ref) => 0);
 ///
 /// Five services with one connection each was a `Future.wait` over five. With
 /// several connections each it is a fan-out over as many as the user has
-/// configured, all against home servers on one link — so it is bounded. Four
+/// configured, all against home servers on one link, so it is bounded. Four
 /// rather than the release search's two: these are cheap lookups, and an arr is
 /// not rate-limited against its owner the way an indexer is.
 const _maxLegsInFlight = 4;
@@ -70,7 +70,7 @@ const _maxLegsInFlight = 4;
 /// word against a bounded promise. Without one a lane inherits the transport's
 /// 15 s receive timeout (`redirect_guard._receiveTimeout`), which means the
 /// lane's verdict and the socket's arrive together and the screen can never say
-/// *the query* timed out — only that something, somewhere, gave up.
+/// *the query* timed out: only that something, somewhere, gave up.
 ///
 /// Ten seconds: above the slowest cold `movie/lookup` through a metadata proxy,
 /// and under the transport's so this verdict always lands first and always
@@ -108,8 +108,8 @@ const _catalogSources = {
 /// answer as two sections. That is what makes the fan-out cheap to read: a
 /// section is one server, so nothing has to be reconciled between them, and
 /// "which of my libraries has it" is answered by where the row is rather than
-/// by a chip on it. It is also what removes the deduplication problem entirely
-/// — two instances never meet in one list, so Lidarr and Bazarr having no
+/// by a chip on it. It is also what removes the deduplication problem entirely.
+/// Two instances never meet in one list, so Lidarr and Bazarr having no
 /// external id stops mattering.
 ///
 /// The query is deliberately *not* watched here: the list of servers to ask
@@ -118,8 +118,8 @@ const _catalogSources = {
 /// the screen is drawing.
 final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
   // The connections this fans out to, as one comparable scalar. Not the whole
-  // model — a theme toggle would abort the user's in-flight search and start it
-  // again — and not a `List`, which compares by identity and would never
+  // model: a theme toggle would abort the user's in-flight search and start it
+  // again, and not a `List`, which compares by identity and would never
   // settle. Every field that decides which server is reached is in here, so a
   // connection edited mid-search re-runs and nothing else does.
   ref.watch(
@@ -159,8 +159,8 @@ final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
           )
       else
         // One leg, on the lens. Seerr, Bazarr, Jellyfin and Plex have no way
-        // to open a named connection from a row — see
-        // `ServiceKeyExtension.searchesPerConnection` — and two sections with
+        // to open a named connection from a row: see
+        // `ServiceKeyExtension.searchesPerConnection`, and two sections with
         // identical contents under two different names is a worse answer than
         // the one section they had before. The section still says which of
         // the user's connections it asked, once there are two: an unlabelled
@@ -182,7 +182,7 @@ final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
 /// such thing as a half-answered screen: one configured-but-switched-off server
 /// held every other section behind its timeout, a lane could not shimmer while
 /// its neighbour showed rows, and Retry had nothing to invalidate that was not
-/// the entire page. A family gives all three away for free — a lane's state is
+/// the entire page. A family gives all three away for free: a lane's state is
 /// its own provider's state, and Retry is
 /// `ref.invalidate(globalSearchLegProvider(leg))`.
 ///
@@ -199,7 +199,7 @@ final globalSearchLegProvider = FutureProvider.autoDispose
       // One token per leg per round. Riverpod disposes this build before it
       // starts the next one, so the moment a keystroke supersedes the query the
       // request still in flight for the old one is aborted rather than run to
-      // completion — a dozen servers answering a question nobody is asking.
+      // completion, a dozen servers answering a question nobody is asking.
       final cancelToken = CancelToken();
       ref.onDispose(cancelToken.cancel);
 
@@ -242,7 +242,7 @@ final globalSearchLanesProvider =
 /// Re-runs every lane against the query already in the field.
 ///
 /// A loop over per-leg invalidations rather than one invalidate of a page-wide
-/// provider, because there is no page-wide provider any more — and because the
+/// provider, because there is no page-wide provider any more, and because the
 /// lanes that have already answered redraw from their own new round rather than
 /// all collapsing to one shimmer.
 void rerunGlobalSearch(WidgetRef ref) {
@@ -269,8 +269,8 @@ GlobalSearchServiceResults _laneOf(
   }
   final lane = value.asData?.value;
   if (lane != null) return lane;
-  // The leg swallows its own failures, so this is only reachable if one escapes
-  // — and a lane that cannot say why it stopped still has to say that it did.
+  // The leg swallows its own failures, so this is reachable only if one escapes;
+  // and a lane that cannot say why it stopped still has to say that it did.
   return GlobalSearchServiceResults.fault(leg, value.error);
 }
 
@@ -278,7 +278,7 @@ GlobalSearchServiceResults _laneOf(
 ///
 /// Alive for the app rather than per round on purpose. An `autoDispose` pool is
 /// torn down and rebuilt in the gap between two rounds, which resets the
-/// counter while the previous round's four requests are still on the wire — so
+/// counter while the previous round's four requests are still on the wire, so
 /// the bound the fan-out advertises would quietly double exactly when the user
 /// is typing fastest. It holds two integers and a queue of completers; nothing
 /// in it is worth disposing.
@@ -389,7 +389,7 @@ Future<GlobalSearchServiceResults> _runLeg(
       cancelToken: cancelToken,
     ),
     // Unreachable while `globalSearchLegsProvider` builds its legs out of
-    // `globalSearchServices` — and spelled out rather than folded into a
+    // `globalSearchServices`, and spelled out rather than folded into a
     // catch-all for exactly that reason. Bazarr used to sit on the `_` arm, so
     // adding a service to the fan-out without giving it an arm silently ran the
     // new lane against Bazarr's library and labelled the rows with the new
@@ -409,7 +409,7 @@ Future<GlobalSearchServiceResults> _runLeg(
 /// The groups are concatenated **in the order they arrive and never re-sorted**.
 /// Plex ranks both its hubs and the rows inside them with a relevance model this
 /// app cannot reproduce, and Jellyfin's bands come back in the declared order
-/// with the server's own relevance preserved inside each — so imposing an order
+/// with the server's own relevance preserved inside each, so imposing an order
 /// here would be replacing an answer with a guess. The band's name rides along
 /// as the row's tag, because a lane heading names the *connection* and would
 /// otherwise be the only thing on screen saying what kind of hit this is.
@@ -417,7 +417,7 @@ Future<GlobalSearchServiceResults> _runLeg(
 /// Empty bands are dropped on the way in, and that is not a contradiction of
 /// [StreamSearchGroup]'s "an empty group is a result": a zero pill is something
 /// the service's own search page draws from the group list, and this lane has no
-/// strip to draw it on — one flat list of rows under one heading. The
+/// strip to draw it on: one flat list of rows under one heading. The
 /// distinction it *does* keep is the one that matters here, below.
 Future<GlobalSearchServiceResults> _loadStreamLeg({
   required SearchLeg leg,
@@ -456,7 +456,7 @@ Future<GlobalSearchServiceResults> _loadLeg<T>({
       onTimeout: () {
         // Let go of the socket as well as of the wait. Without this the request
         // runs on to the transport's own 15 s deadline holding a pool slot the
-        // lanes behind it are queued for — the lane would say "did not answer
+        // lanes behind it are queued for: the lane would say "did not answer
         // in time" while still being the reason nothing else could ask.
         cancelToken.cancel();
         throw TimeoutException('$_laneDeadline search deadline', _laneDeadline);
@@ -469,7 +469,7 @@ Future<GlobalSearchServiceResults> _loadLeg<T>({
   } catch (error) {
     // Classified rather than stored raw: the lane's tone, its word and whether
     // it offers a Retry all come from the reason, and `classifyConnectionFailure`
-    // is the app's single answer to "why did that fail" — see the tone argument
+    // is the app's single answer to "why did that fail": see the tone argument
     // on `GlobalSearchServiceResults.fault`.
     return GlobalSearchServiceResults.fault(leg, error);
   }
@@ -482,12 +482,12 @@ Future<GlobalSearchServiceResults> _loadLeg<T>({
 /// * [kind], because Bazarr and Seerr can each return a movie and a series
 ///   carrying the same id;
 /// * the **connection**, because the same film is in both Radarr and the same
-///   id names different films on each — with one section per connection, both
+///   id names different films on each: with one section per connection, both
 ///   are on screen at once;
 /// * the **position**, because a lookup result that is not in the library has
 ///   `id == 0` (the code uses `id > 0` as the library test), so two unowned
 ///   films in one section produced the identical tag. Two Heroes with one tag
-///   on the same screen is an assert in debug, which is to say a crash — and it
+///   on the same screen is an assert in debug, which is to say a crash, and it
 ///   has been true since before instances existed. Nothing caught it because
 ///   the search screen has never been opened on a device.
 ///
@@ -501,7 +501,7 @@ String _heroTag(ServiceInstance instance, String kind, int id, int index) =>
 /// One string, and a deliberately modest one. The lookup endpoints every arr
 /// leg calls (`movie/lookup`, `series/lookup`, `artist/lookup`) are metadata
 /// proxies: they answer from TMDB/TVDB/MusicBrainz and stamp the **library id**
-/// onto anything the server recognises as its own — nothing else. `hasFile` is
+/// onto anything the server recognises as its own, nothing else. `hasFile` is
 /// left false on every row, and `statistics` (Sonarr's episode counts,
 /// Lidarr's track counts) is attached by the library controllers, never by the
 /// lookup ones. Reading a badge off those fields is reading a fact about the
@@ -509,7 +509,7 @@ String _heroTag(ServiceInstance instance, String kind, int id, int index) =>
 /// *Missing* in search while its own detail page said *Available, 1 file*.
 ///
 /// So the honest pair is "in library" against nothing at all, and the third
-/// state the badge used to imply — in the library but without the file — is
+/// state the badge used to imply, in the library but without the file, is
 /// simply not knowable here. `hasFile` is not consulted even as an optimistic
 /// upgrade: it would put two different words on two rows in the same state
 /// depending on which Radarr answered, and a row that says nothing is a
@@ -598,8 +598,8 @@ GlobalSearchResult _radarrResult(
     apiKey: instance.credential,
   );
   final heroTag = _heroTag(instance, 'movie', item.id, index);
-  // `id > 0` is the library test the rest of the file already uses — see
-  // `_heroTag` — and the only one this payload supports. See [_inLibraryTag].
+  // `id > 0` is the library test the rest of the file already uses: see
+  // `_heroTag`, and the only one this payload supports. See [_inLibraryTag].
   final inLibrary = item.id > 0;
   return GlobalSearchResult(
     service: ServiceKey.radarr,
@@ -619,7 +619,7 @@ GlobalSearchResult _radarrResult(
     // The connection that listed it. A row in the Away section adds to Away,
     // whatever the lens is pointing at.
     // No TMDB id, no add: the id is what Radarr keys the new entry on, and it
-    // is also what `libraryKey` remembers the add under — so a row without one
+    // is also what `libraryKey` remembers the add under, so a row without one
     // would both fail on the server and share `…:0` with every other row in the
     // same state, flipping them all to owned when any one of them was added.
     // The same shape as the Hero-tag collision that `_heroTag` documents.
@@ -657,7 +657,7 @@ GlobalSearchResult _sonarrResult(
     apiKey: instance.credential,
   );
   final heroTag = _heroTag(instance, 'series', item.id, index);
-  // `status` stays: it is the *series'* own state — continuing, ended — which
+  // `status` stays. It is the *series'* own state, continuing or ended, which
   // comes from the metadata and is therefore populated on a lookup row. It has
   // never said anything about this library, which is the gap [_inLibraryTag]
   // fills. `hasFiles` is the field that would have lied here, and it is
@@ -682,7 +682,7 @@ GlobalSearchResult _sonarrResult(
       tvdbId: item.tvdbId > 0 ? item.tvdbId : null,
     ),
     year: item.year > 0 ? item.year : null,
-    // No TVDB id, no add — and Sonarr really does return such rows, for shows
+    // No TVDB id, no add; and Sonarr really does return such rows, for shows
     // it can only match on TMDB. See the note in `_radarrResult`.
     addRequest: inLibrary || item.tvdbId <= 0
         ? null
@@ -728,7 +728,7 @@ GlobalSearchResult _streamResult(
   int index,
 ) {
   final path = item.posterPath;
-  // The client owns the credential, so it — and not this file — turns a
+  // The client owns the credential, so it, and not this file, turns a
   // relative key into something loadable. Null when the item carries no
   // artwork, which reads as "does not fly" the same way a Bazarr row does.
   final image = path == null || path.isEmpty
@@ -739,8 +739,8 @@ GlobalSearchResult _streamResult(
   return GlobalSearchResult(
     service: instance.service,
     // Nothing reads this on a stream row, and there is nothing honest to put in
-    // it: a media server's id is an opaque string — a Jellyfin GUID, a Plex
-    // `ratingKey` — that does not fit an int. The real id travels where it is
+    // it. A media server's id is an opaque string, a Jellyfin GUID, a Plex
+    // `ratingKey`, which does not fit an int. The real id travels where it is
     // actually used, in the route and in the hero tag, and the tag's position
     // tiebreak is what keeps two zero-id rows from colliding.
     id: 0,
@@ -752,7 +752,7 @@ GlobalSearchResult _streamResult(
     imageUrl: image?.url ?? '',
     imageHeaders: image?.headers,
     // The band the server put this hit in, verbatim. Deriving a word from
-    // `kind` instead would rename the server's own vocabulary — and a localised
+    // `kind` instead would rename the server's own vocabulary, and a localised
     // Plex titles its hubs in its own language.
     tags: [group.label],
     kind: switch (item.kind) {

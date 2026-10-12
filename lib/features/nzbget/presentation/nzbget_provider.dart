@@ -19,8 +19,8 @@ final nzbgetClientProvider = Provider<NzbgetClient>((ref) {
 /// NZBGet client for an explicitly named connection.
 ///
 /// Empty and active ids collapse to the ordinary lens-bound provider. Other
-/// ids create one client that remains alive — including its request counter
-/// and Dio transport — until Riverpod disposes this family entry.
+/// ids create one client that remains alive, including its request counter
+/// and Dio transport, until Riverpod disposes this family entry.
 final nzbgetClientForProvider = Provider.family<NzbgetClient, String>((
   ref,
   instanceId,

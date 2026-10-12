@@ -21,10 +21,10 @@ import '../../../test_helpers/fake_secure_settings_store.dart';
 /// ⌘R, on the one tab where it used to mean nothing.
 ///
 /// `_refreshAll` mapped [NavTab.settings] to `null` and stopped there, so the
-/// shortcut was a deliberate no-op on a quarter of the app — and it stayed one
+/// shortcut was a deliberate no-op on a quarter of the app, and it stayed one
 /// after Settings grew a real "Test all" command, which meant the window strip's
 /// own Refresh-all chip advertised a shortcut that did nothing on the pane where
-/// it is most wanted. The two are one sentence — *ask every server again* — and
+/// it is most wanted. The two are one sentence (*ask every server again*), and
 /// the point of this test is that they stay one sentence rather than drifting
 /// into two implementations that disagree about what "every" covers.
 void main() {

@@ -28,7 +28,7 @@ void main() {
     test('a tab takes its own label, not a title-cased segment', () {
       // The defect this file exists for. Nothing knew `vms` or `rss`, so the
       // crumb title-cased the segment and printed `Vms` and `Rss` next to bars
-      // that say VMs and RSS — two surfaces naming one place two ways, in the
+      // that say VMs and RSS: two surfaces naming one place two ways, in the
       // same window, one above the other.
       expect(labels('/stack/unraid/vms').last, 'VMs');
       expect(labels('/stack/qbittorrent/rss').last, 'RSS');

@@ -19,8 +19,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Sync profiles (`appprofile`): the search and RSS settings Prowlarr pushes to
 /// its apps, picked per indexer.
 ///
-/// These are typed rather than field-driven — four properties, no `fields`
-/// array — so they get a small hand-written form instead of the generated one.
+/// These are typed rather than field-driven: four properties, no `fields`
+/// array, so they get a small hand-written form instead of the generated one.
 class ProwlarrAppProfilesScreen extends ConsumerWidget {
   const ProwlarrAppProfilesScreen({super.key});
 

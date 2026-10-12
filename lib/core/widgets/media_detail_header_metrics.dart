@@ -27,18 +27,18 @@ class MediaDetailHeaderMetrics {
   /// at.
   ///
   /// [expandedHeight] buys room for this much text growth and [heroTextScaler]
-  /// paints the copy on the same ceiling — one constant, so the two cannot
+  /// paints the copy on the same ceiling: one constant, so the two cannot
   /// drift apart again. A box grown at one clamp and painted at another is
   /// normally an overflow stripe; here it was worse than a stripe, because the
   /// hero's copy is bottom-anchored inside the header's `ClipRect`, so the
-  /// excess was cut silently off the *top* — and the top of that stack is the
+  /// excess was cut silently off the *top*, and the top of that stack is the
   /// status badge, the one thing this surface exists to answer.
   static const double heroMaxScaleFactor =
       TextScaleMetrics.defaultMaxScaleFactor;
 
   /// Text scaler for the expanded hero's copy, clamped to [heroMaxScaleFactor].
   ///
-  /// Past the ceiling the title ellipsises — it is capped at two lines — rather
+  /// Past the ceiling the title ellipsises (it is capped at two lines) rather
   /// than pushing the badge up out of the header.
   static TextScaler heroTextScaler(BuildContext context) =>
       TextScaleMetrics.clampedScalerOf(
@@ -50,7 +50,7 @@ class MediaDetailHeaderMetrics {
   /// badge (23) + 4 + two title lines (50) + 4 + the metadata line (20) + 8 +
   /// two runs of genre/tag chips (23 + 4 + 23) = 159.
   ///
-  /// Measured, not estimated — and the chip row is budgeted on purpose. The
+  /// Measured, not estimated, and the chip row is budgeted on purpose. The
   /// cheaper fix was to drop the chips above a reading threshold, and it is
   /// wrong here: the hero's tag slot is not uniformly a duplicate of the body.
   /// Radarr/Sonarr/Seerr do repeat their genres further down, but Lidarr passes
@@ -61,8 +61,8 @@ class MediaDetailHeaderMetrics {
   ///
   /// Two chip runs is the phone case at the default size; the third run a long
   /// genre name buys at 1.6x still clears, because the box grows by
-  /// `(s - 1) x 159` while the copy grows by `(s - 1) x 143` — the four gaps
-  /// between the runs do not scale — on top of the 61pt of slack the base
+  /// `(s - 1) x 159` while the copy grows by `(s - 1) x 143`; the four gaps
+  /// between the runs do not scale, on top of the 61pt of slack the base
   /// height already carries over this stack.
   static const double _heroTextHeight = 159.0;
 
@@ -108,7 +108,7 @@ class MediaDetailHeaderMetrics {
 /// A curve applied to a scroll-driven `t` is a remap of the user's own finger
 /// position, not an animation: there is no animator and no clock, so these
 /// stages do NOT need to check Reduce Motion. What Reduce Motion suppresses is
-/// only motion that is independent of the finger — the parallax translation,
+/// only motion that is independent of the finger: the parallax translation,
 /// the overscroll stretch, and the poster scale, which read as the scene
 /// moving on its own. Those getters flatten when [reduceMotion] is set; the
 /// scrim, bar reveal and glow keep working because they are the functional
@@ -131,7 +131,7 @@ class MediaDetailHeroPhase {
   /// The glass bar materialises well before the poster is fully gone.
   double get barReveal => Curves.easeOutCubic.transform(_seg(t, 0.62, 0.92));
 
-  /// Poster shrink while collapsing. Decorative — flat under Reduce Motion.
+  /// Poster shrink while collapsing. Decorative: flat under Reduce Motion.
   double get posterScale =>
       reduceMotion ? 1 : lerpDouble(1.0, 0.86, _seg(t, 0.20, 0.90))!;
 

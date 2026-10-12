@@ -122,7 +122,7 @@ enum DockgeStackLifecycle { stop, restart, update, down }
 ///
 /// Neutral, like every confirmation: red means unreachable and nothing else.
 /// The Stacks list row's Stop used to confirm in red and the stack page's in
-/// the theme's fill — the same command drawn two ways — until both came here.
+/// the theme's fill, the same command drawn two ways, until both came here.
 Future<bool> confirmDockgeLifecycle(
   BuildContext context,
   DockgeStackLifecycle verb,

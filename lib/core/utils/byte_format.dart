@@ -1,10 +1,10 @@
 /// One place where a byte count becomes a string.
 ///
-/// Five call sites independently grew their own copy of this — SABnzbd's
+/// Five call sites independently grew their own copy of this: SABnzbd's
 /// `_formatMb`/`_formatBytes`/`speedLabel`, NZBGet's `formatNzbgetRate`/
 /// `formatNzbgetMb`, qBittorrent's `formatSize`/`formatSpeed` (also used by
 /// Transmission, NPM and every TrueNAS screen) and Interactive Search's
-/// `formatReleaseSize` — with different unit ladders and different precision
+/// `formatReleaseSize`, with different unit ladders and different precision
 /// rules, so the same 1.46 GiB rendered as `1.5 GB` on one dashboard and
 /// `1500 MB` on another. Later the shared ladder itself kept two precisions (two
 /// significant digits for glances, three for comparisons), and the same file
@@ -66,12 +66,12 @@ String formatBytes(num bytes) => _format(bytes.toDouble(), '');
 String formatBytesPerSecond(num bytesPerSecond) =>
     _format(bytesPerSecond.toDouble(), '/s');
 
-/// Renders a size reported in whole megabytes — SABnzbd's `mbleft`/`mb` and
+/// Renders a size reported in whole megabytes: SABnzbd's `mbleft`/`mb` and
 /// NZBGet's `*SizeMB` fields, which is how both APIs report queue sizes.
 String formatMegabytes(num megabytes) =>
     formatBytes(megabytes.toDouble() * _kib * _kib);
 
-/// Renders a rate reported in kilobytes per second — SABnzbd's `kbpersec`.
+/// Renders a rate reported in kilobytes per second: SABnzbd's `kbpersec`.
 String formatKilobytesPerSecond(num kilobytesPerSecond) =>
     formatBytesPerSecond(kilobytesPerSecond.toDouble() * _kib);
 
@@ -118,7 +118,7 @@ String _format(double value, String suffix) {
     final text = unit == 0 ? value.toStringAsFixed(0) : _scaled(value);
     // Rounding can push a value back over the promotion threshold (1023.96 KB
     // renders as "1024"), so the check reads the *rendered* number, not the
-    // raw one — otherwise the string contradicts its own unit.
+    // raw one, otherwise the string contradicts its own unit.
     if (unit == _units.length - 1 || double.parse(text) < _kib) {
       return (unit: unit, text: text);
     }

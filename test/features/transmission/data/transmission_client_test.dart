@@ -96,7 +96,7 @@ void main() {
   // full path happens to come out right: the client stored the configured path
   // in the transport's `baseUrl` *and* in `rpcPath`, and Dio concatenates the
   // two, so `https://nas/tr` went on the wire as `/tr/tr/rpc`. These build the
-  // client through its real constructor — the transport it makes for itself —
+  // client through its real constructor (the transport it makes for itself),
   // and only swap the socket underneath.
   group('RPC endpoint on the wire', () {
     Future<Uri> endpointFor(String url) async {
@@ -372,7 +372,7 @@ void main() {
 
     test('a second 409 fails instead of looping forever', () async {
       // The id rotates hourly with **no grace window**, so this path is hit in
-      // normal operation — and retrying without a usable id is the classic way
+      // normal operation, and retrying without a usable id is the classic way
       // clients against this API hang.
       final adapter = ScriptedHttpAdapter([
         const ScriptedReply(
@@ -478,7 +478,7 @@ void main() {
     test('every write sends an ids key, and an empty selection throws', () async {
       // An **absent** `ids` means "all torrents" to this API, so a write
       // assembled with `if (ids.isNotEmpty)` would escalate an empty selection
-      // into the whole library — with `delete-local-data` that is the files too.
+      // into the whole library: with `delete-local-data` that is the files too.
       final adapter = ScriptedHttpAdapter([_ok(const {})]);
       final client = TransmissionClient(
         url: 'https://nas.local:9091',

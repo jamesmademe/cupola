@@ -70,14 +70,14 @@ void main() {
       onPressed: () => ran = true,
     );
 
-    // Still on screen, still named — hiding the control would hide the fact.
+    // Still on screen, still named: hiding the control would hide the fact.
     final button = find.widgetWithText(TextButton, 'Renew');
     expect(button, findsOneWidget);
     // Still tappable: `onPressed: null` would take it off the screen reader's
     // path as well as off the pointer's, which is the whole point of the rule.
     expect(tester.widget<TextButton>(button).onPressed, isNotNull);
 
-    // The node a screen reader lands on — the one carrying the tap — has to be
+    // The node a screen reader lands on, the one carrying the tap, has to be
     // the node carrying the hint. A `Semantics(hint:)` wrapped *around* the
     // button lands on a second, non-actionable parent node, and the reader
     // never speaks the reason.

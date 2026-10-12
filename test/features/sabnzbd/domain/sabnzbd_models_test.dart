@@ -5,12 +5,12 @@ import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 /// The queue slot's two sizes.
 ///
 /// A row that prints only `mbleft` reads the same sentence a third of the way
-/// through a job as it does at the end, so `mb` — the total `mode=queue`
-/// already carries beside it — is parsed and printed with it. The rules below
+/// through a job as it does at the end, so `mb` (the total `mode=queue`
+/// already carries beside it) is parsed and printed with it. The rules below
 /// are the ones that keep the second figure honest: it is absent rather than
 /// zero, and the clause goes away whole rather than wearing a dash.
 void main() {
-  group('SabnzbdQueueSlot — the total beside the remainder', () {
+  group('SabnzbdQueueSlot: the total beside the remainder', () {
     test('parses `mb` from the same payload `mbleft` comes from', () {
       final slot = SabnzbdQueueSlot.fromJson(const {
         'nzo_id': 'SABnzbd_nzo_abc',

@@ -3,8 +3,8 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 
 /// Motion.
 ///
-/// One ease carries almost everything — `Cubic(0.2, 0.8, 0.2, 1)`, a fast start
-/// and a long settle — and the durations are named for what moves. The older
+/// One ease carries almost everything: `Cubic(0.2, 0.8, 0.2, 1)`, a fast start
+/// and a long settle, and the durations are named for what moves. The older
 /// ladder ([durationXs] … [durationXl]) resolves onto the role each step stood
 /// for. Every animation has its Reduce Motion answer, written beside the role
 /// in `design/tokens/core.json`.

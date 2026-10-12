@@ -10,8 +10,8 @@ import 'package:cupola/core/providers/provider_retry.dart';
 
 /// The request history of the Seerr the lens is on.
 ///
-/// Still the right provider for every surface that shows **one** Seerr —
-/// Discover, the services dashboard, the KPI strip — and the one the whole
+/// Still the right provider for every surface that shows **one** Seerr:
+/// Discover, the services dashboard, the KPI strip, and the one the whole
 /// suite overrides to supply a fake. /activity, which merges every configured
 /// connection, reaches for [requestsForProvider] instead.
 final requestsProvider = FutureProvider<List<SeerrRequest>>((ref) async {
@@ -39,7 +39,7 @@ final seerrUsersProvider =
 /// carries the id has to carry the connection with it.
 ///
 /// The lens's own id collapses back onto [requestsProvider] rather than
-/// fetching the same server twice — and, as with the service families, that
+/// fetching the same server twice, and, as with the service families, that
 /// collapse is what keeps an override of the plain provider from being bypassed
 /// by the path that names a connection. `read` of the lens for the reason
 /// `seerrServiceForProvider` documents at length: watching it would re-fetch
@@ -130,7 +130,7 @@ bool holdsEveryRequest(List<SeerrRequest> requests) => switch (requests) {
 
 /// The Seerr home's first region: what is waiting on a decision.
 ///
-/// Derived from [requestsProvider] rather than fetched again — one request list
+/// Derived from [requestsProvider] rather than fetched again: one request list
 /// per Seerr per refresh, and the KPI readout, the hub region and this section
 /// all read the same one.
 ///
@@ -145,7 +145,7 @@ bool holdsEveryRequest(List<SeerrRequest> requests) => switch (requests) {
 /// `noProviderRetry` for the same reason [requestsProvider] carries it, one step
 /// further down: the source has already settled on its first failure, so the ten
 /// backed-off re-runs Riverpod would otherwise do here cannot reach the server
-/// again — they only hold this section in its loading state for the best part of
+/// again, they only hold this section in its loading state for the best part of
 /// a minute before showing the same error. The retry that matters is the one on
 /// the card the section draws, which the user presses.
 final seerrDecisionsProvider = FutureProvider<SeerrDecisions>((ref) async {

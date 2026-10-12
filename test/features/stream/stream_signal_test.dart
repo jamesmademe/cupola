@@ -38,23 +38,20 @@ List<ServiceKpi> streamKpis({required int streams, required int transcodes}) =>
 
 void main() {
   group('the Stream matrix cell has exactly three readings', () {
-    test(
-      'idle is neutral and still live — "0 streams", not a library total',
-      () {
-        final signal = resolveServiceSignal(
-          streamKpis(streams: 0, transcodes: 0),
-        );
+    test('idle is neutral and still live: "0 streams", not a library total', () {
+      final signal = resolveServiceSignal(
+        streamKpis(streams: 0, transcodes: 0),
+      );
 
-        expect(signal, isNotNull);
-        expect(signal!.value, '0');
-        expect(signal.label, 'streaming');
-        // Neutral means "nothing is asking for you", which is the truth about an
-        // idle media server. It must NOT fall through to the library count: a
-        // library total is the least live figure on a control-room screen.
-        expect(signal.tone, StatusTone.neutral);
-        expect(signal.needsAttention, isFalse);
-      },
-    );
+      expect(signal, isNotNull);
+      expect(signal!.value, '0');
+      expect(signal.label, 'streaming');
+      // Neutral means "nothing is asking for you", which is the truth about an
+      // idle media server. It must NOT fall through to the library count: a
+      // library total is the least live figure on a control-room screen.
+      expect(signal.tone, StatusTone.neutral);
+      expect(signal.needsAttention, isFalse);
+    });
 
     test('someone watching reads as activity, not as a fault', () {
       final signal = resolveServiceSignal(
@@ -76,7 +73,7 @@ void main() {
       )!;
 
       // `resolveServiceSignal` takes the FIRST flagged KPI, and `Streams` comes
-      // first in the list — so this only works because the builder stops flagging
+      // first in the list, so this only works because the builder stops flagging
       // `Streams` while anything is transcoding. Precedence lives in the flag, not
       // in the shared resolver.
       expect(signal.value, '1');
@@ -128,7 +125,7 @@ void main() {
       'deviceLabel': 'Chrome on Windows',
     };
 
-    test('leads with the person, then the cost — not the visual order', () {
+    test('leads with the person, then the cost, not the visual order', () {
       final spoken = streamSessionValue(
         userName: base['userName']!,
         title: base['title']!,

@@ -48,7 +48,7 @@ MediaAvailability sonarrSeriesAvailability(SonarrSeries series) {
 /// Resolves the status of one season.
 ///
 /// The season header used to signal monitoring with a green bookmark while the
-/// rows beneath it signalled `hasFile` with an indigo dot — two vocabularies for
+/// rows beneath it signalled `hasFile` with an indigo dot: two vocabularies for
 /// related facts, neither of them written down anywhere on the page. Both now
 /// come from here, so the header badge and the row badge cannot disagree.
 ///
@@ -89,9 +89,9 @@ MediaAvailability sonarrSeasonAvailability(SonarrSeason season) {
 
 /// The season's manifest gap in words: `8 of 10 episodes`.
 ///
-/// The gap is the only reason this region exists — Sonarr models expected
+/// The gap is the only reason this region exists: Sonarr models expected
 /// episodes (`episodeCount`) separately from present ones
-/// (`episodeFileCount`) — so it is stated rather than left to a bar. When more
+/// (`episodeFileCount`), so it is stated rather than left to a bar. When more
 /// episodes are still to air the total is named too, because `8 of 8 episodes`
 /// on a season that will end up with twelve is true and misleading at once.
 ///

@@ -9,8 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 ///
 /// It read `getSeries`, which swallows its own failure into `[]`, so an
 /// unreachable Sonarr resolved this *successfully* and the wall read "No items
-/// found". The wall is the whole library in one request — there is nothing
-/// partial to show beside the failure — so it shows the failure. See
+/// found". The wall is the whole library in one request: there is nothing
+/// partial to show beside the failure, so it shows the failure. See
 /// `moviesProvider` for why the retry policy matches the KPI rail's.
 ///
 /// The one read of the lens's library, as `moviesProvider` is Radarr's:

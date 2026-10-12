@@ -67,7 +67,7 @@ void main() {
 
     final lanes = await _settledLanes(container);
 
-    // One lane per CONFIGURED connection, in the registry's own order — not one
+    // One lane per CONFIGURED connection, in the registry's own order, not one
     // per searchable service. `globalSearchServices` now also names Jellyfin and
     // Plex, which this container does not set up, and a lane for a connection
     // nobody has configured would be a section that can only ever be empty.
@@ -112,7 +112,7 @@ void main() {
     // Keyed on the CONNECTION and on the row's position, not on the service:
     // the same id names different things on two servers, and a lookup result
     // that is not in the library carries `id == 0`, so two of those in one
-    // section used to produce the identical tag — an assert in debug.
+    // section used to produce the identical tag: an assert in debug.
     expect(routes.map((uri) => uri.queryParameters['heroTag']), [
       'search_seerr_movie_101_0',
       'search_radarr_movie_10_0',
@@ -123,13 +123,13 @@ void main() {
     expect(routes.map((uri) => uri.queryParameters['i']), [
       // Seerr carries none: Discover resolves through the lens end to end, so a
       // connection in its URL would be a claim the page cannot honour. Its
-      // section is the lens's, singular and unlabelled — see
+      // section is the lens's, singular and unlabelled: see
       // `ServiceKeyExtension.searchesPerConnection`.
       null,
       'radarr',
       'sonarr',
     ]);
-    // The tag on the model and the tag in its route are the same string —
+    // The tag on the model and the tag in its route are the same string;
     // a mismatch would silently produce a flightless navigation.
     for (final result in lanes.expand((lane) => lane.results)) {
       expect(
@@ -175,8 +175,8 @@ void main() {
         .toList();
 
     // One section per connection, so nothing has to be reconciled between them
-    // — which is what makes the missing external id on Lidarr and Bazarr stop
-    // mattering.
+    // (which is what makes the missing external id on Lidarr and Bazarr stop
+    // mattering).
     expect(radarrLanes, hasLength(2));
     // The first carries no label of its own, so it is called by its place
     // among the Radarrs, never by its id.
@@ -193,7 +193,7 @@ void main() {
   test('the library marker is derived from the id, not from hasFile', () async {
     // `/movie/lookup` is a TMDB proxy: it stamps the library id onto a title
     // the server already has, and leaves `hasFile` false for every row. So the
-    // fixture says what the wire says — a movie in the library, with a file on
+    // fixture says what the wire says: a movie in the library, with a file on
     // disk, arriving with `hasFile: false`. Deriving the marker from that field
     // is what made "Aladdin (2019)" read as Missing in search while its own
     // detail page said "Available, 1 file".
@@ -269,7 +269,7 @@ void main() {
     // TWO of them per section, which is the whole point: `libraryKey` is built
     // from the external id, so a pair of unmatched rows shared `…:0` and
     // adding either flipped both to owned. The same collision `_heroTag`
-    // documents, one field over. Closed at the source — no id, no add — since
+    // documents, one field over. Closed at the source: no id, no add, since
     // the missing id is also why the server would refuse the post.
     final container = _container(
       radarr: _SearchRadarrService(
@@ -438,7 +438,7 @@ void main() {
     // CHANGED from "hands every service leg of one round the same cancel
     // token". One token per round belonged to the round: there was one provider
     // and it owned the whole fan-out. A leg is its own provider now, so the
-    // token's life is the leg's — which is precisely what makes a per-lane
+    // token's life is the leg's, which is precisely what makes a per-lane
     // Retry able to abort one request without touching the other six.
     final seerr = _SearchSeerrService();
     final radarr = _SearchRadarrService();
@@ -461,7 +461,7 @@ void main() {
   test('a fifth leg waits for a slot rather than opening a fifth socket', () async {
     // The bound used to be a worker loop inside the one provider that owned the
     // fan-out. With a leg per provider every member fires at once, so the bound
-    // has to be a gate the legs share — and this is the test that it still is
+    // has to be a gate the legs share, and this is the test that it still is
     // one.
     final gate = Completer<void>();
     addTearDown(() {
@@ -505,7 +505,7 @@ void main() {
 
   test('a superseded query cancels the leg that was in flight', () async {
     // Every leg parks here, so the first round is genuinely still in flight
-    // when the second query arrives — which is the only state in which
+    // when the second query arrives, which is the only state in which
     // cancelling means anything.
     final gate = Completer<void>();
     addTearDown(() {
@@ -639,7 +639,7 @@ void main() {
       ]);
       // The band's name rides on the row, verbatim. The lane heading names the
       // connection, so without this nothing on screen says what kind of hit it
-      // is — and deriving a word from the kind would rename a localised Plex's
+      // is, and deriving a word from the kind would rename a localised Plex's
       // own hubs.
       expect(lane.results.map((r) => r.tags.single), [
         'Movies',
@@ -736,7 +736,7 @@ void main() {
         // Spelled by the constant, not by hand: the item detail lives inside the
         // Libraries branch, and where exactly it sits is asserted in
         // service_routes_test. What this case is about is that the row opens the
-        // item it names — a literal here only makes it break the next time the
+        // item it names. A literal here only makes it break the next time the
         // route moves, which is how it broke this time.
         expect(row.route, ServiceRoutes.jellyfinItem('id-Dune'));
         // No plus and no "In library": every row here is already on the server
@@ -817,8 +817,8 @@ void main() {
 
 /// Drives every leg to completion and returns the lanes as they then stand.
 ///
-/// There is no page-wide future to await any more — that is the point of the
-/// change — so a test that wants the settled page asks each leg for its own.
+/// There is no page-wide future to await any more: that is the point of the
+/// change, so a test that wants the settled page asks each leg for its own.
 Future<List<GlobalSearchServiceResults>> _settledLanes(
   ProviderContainer container,
 ) async {
@@ -905,8 +905,8 @@ ProviderContainer _container({
   );
 }
 
-/// Records the cancel token every search leg is handed, and — when a [gate] is
-/// supplied — parks there so a round can still be in flight when the next
+/// Records the cancel token every search leg is handed (and, when a [gate] is
+/// supplied) parks there so a round can still be in flight when the next
 /// query supersedes it.
 class _LegRecorder {
   final List<CancelToken?> tokens = [];
@@ -1018,8 +1018,8 @@ StreamSearchGroup _band(
 
 /// Stands in for both media servers.
 ///
-/// The leg asks exactly two things of a [StreamServerClient] — `search` and, per
-/// row, `imageFor` — so `noSuchMethod` covers the other eleven futures rather
+/// The leg asks exactly two things of a [StreamServerClient]: `search` and, per
+/// row, `imageFor`, so `noSuchMethod` covers the other eleven futures rather
 /// than the test pretending to implement a media server.
 class _ScriptedStreamServer implements StreamServerClient {
   _ScriptedStreamServer(this.groups, {this.gate}) : failure = null;

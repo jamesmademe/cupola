@@ -20,9 +20,9 @@ import 'package:cupola/core/status/media_status.dart';
 /// ## Red is one reason
 ///
 /// [unreachable] is the only reason nothing replied, and the only one painted
-/// red ([failureTone]). Every other reason is something that *answered* — a
+/// red ([failureTone]). Every other reason is something that *answered*: a
 /// refusal, a 5xx, a reply nobody can read, a timeout after the connection was
-/// made — or a request the device itself would not send, and each of those is
+/// made, or a request the device itself would not send, and each of those is
 /// a **fault**: amber, with one concrete thing to go and fix. One is neither:
 /// [sessionEnded] is a step that falls to the person, blue like a certificate
 /// waiting to be trusted. A surface decides nothing about tone or words on its
@@ -35,11 +35,11 @@ enum ServiceFailureReason {
   unreachable,
 
   /// Reached the host, then it did not answer within the timeout. Only a
-  /// timeout that proves the connection was made lands here — Dio's send and
+  /// timeout that proves the connection was made lands here: Dio's send and
   /// receive timeouts, or a client that knows it was talking to the server.
   timeout,
 
-  /// The TLS handshake failed — untrusted, expired or mismatched certificate.
+  /// The TLS handshake failed: untrusted, expired or mismatched certificate.
   tls,
 
   /// Reached the service, which rejected the credentials or the API key.
@@ -69,7 +69,7 @@ enum ServiceFailureReason {
   /// sends the write again (`SeerrCsrfInterceptor`).
   csrfRefused,
 
-  /// Reached a server, but the API is not at this URL — typically a base URL
+  /// Reached a server, but the API is not at this URL: typically a base URL
   /// pointing at the wrong app, or a missing reverse-proxy subpath.
   notFound,
 
@@ -78,9 +78,9 @@ enum ServiceFailureReason {
   /// API key to a host the user never configured), a 3xx with no `Location` at
   /// all, or a redirect loop.
   ///
-  /// Distinct from [notFound] because the fix is different — the address is
+  /// Distinct from [notFound] because the fix is different: the address is
   /// plausible and the server is answering, but something in front of the
-  /// service is bouncing the request — and because it must never trigger a TLS
+  /// service is bouncing the request, and because it must never trigger a TLS
   /// probe: the handshake already succeeded.
   redirected,
 
@@ -98,7 +98,7 @@ enum ServiceFailureReason {
   serverError,
 
   /// Something answered, with a body nobody can read: not JSON where JSON was
-  /// asked for — typically a reverse proxy's HTML page.
+  /// asked for, typically a reverse proxy's HTML page.
   invalidResponse,
 
   /// The request was refused before it left the device because the address
@@ -106,22 +106,22 @@ enum ServiceFailureReason {
   /// the server revokes on sight when it arrives that way.
   ///
   /// Amber, and never red: nothing failed to answer, because nothing was
-  /// dialled. And never a certificate or local-network question either — both
+  /// dialled. And never a certificate or local-network question either; both
   /// probes would dial the very address this refused to dial.
   insecureTransport,
 
   /// The host OS refused to let Cupola onto the local network at all, so the
   /// request never left the device.
   ///
-  /// Unreachable in every way that matters at the socket — iOS answers "no route
-  /// to host", Android times out — which is why this is the one reason
+  /// Unreachable in every way that matters at the socket: iOS answers "no route
+  /// to host", Android times out, which is why this is the one reason
   /// [classifyConnectionFailure] can never produce: no exception carries it.
   /// It is attributed afterwards, by asking the OS
   /// (`probeLocalNetworkAccess`), and it *supersedes* the socket's verdict
   /// because the address the user is being told to check was never dialled.
   localNetworkBlocked,
 
-  /// Reached, failed, and the cause cannot be attributed — a 4xx no other
+  /// Reached, failed, and the cause cannot be attributed: a 4xx no other
   /// reason covers, an error a client raised after the server replied.
   ///
   /// A fault, like everything that is not [unreachable]: "did not answer" is a
@@ -139,8 +139,8 @@ abstract interface class HasFailureReason {
 /// Implemented by failures that carry a sentence worth showing verbatim,
 /// because [ServiceFailureReason] cannot express it.
 ///
-/// The enum is a closed vocabulary on purpose — the UI resolves a tone, a glyph
-/// and a label from it — but a handful of failures know something specific and
+/// The enum is a closed vocabulary on purpose: the UI resolves a tone, a glyph
+/// and a label from it, but a handful of failures know something specific and
 /// actionable that the vocabulary flattens away: *which* host a reverse proxy
 /// redirected to, for instance. Those implement this so the sentence survives
 /// the trip to the UI instead of collapsing into the generic copy.
@@ -357,7 +357,7 @@ AccessGatewayAnswer? accessGatewayOf(Object? error) {
   return null;
 }
 
-/// The verbatim explanation [error] carries, or null when it has none — which
+/// The verbatim explanation [error] carries, or null when it has none, which
 /// is the common case, and means "use the message for the reason instead".
 ///
 /// Unwraps one [DioException] level the same way [classifyConnectionFailure]
@@ -435,14 +435,14 @@ bool isClosedClientFailure(Object? error) {
   return false;
 }
 
-/// The failure a [ParallelWaitError] stands in front of — the first of the
-/// requests that failed — or the one a Riverpod [ProviderException] wraps, or
+/// The failure a [ParallelWaitError] stands in front of: the first of the
+/// requests that failed, or the one a Riverpod [ProviderException] wraps, or
 /// [error] itself.
 ///
 /// `(a, b).wait` does not rethrow what failed: it throws a `ParallelWaitError`
 /// holding every outcome, which no reason can be read from. Without this a
-/// Radarr that did not answer its profile and folder reads — the add sheet's
-/// load — classified as a failure nobody can attribute, and never as silence.
+/// Radarr that did not answer its profile and folder reads: the add sheet's
+/// load, classified as a failure nobody can attribute, and never as silence.
 Object? unwrapFailure(Object? error) {
   // A provider read while in error rethrows its failure wrapped: the cause is
   // the one inside (a client provider that refused to build, say).
@@ -463,8 +463,8 @@ Object? unwrapFailure(Object? error) {
   return error;
 }
 
-/// Whether [error] failed on its way to or from a service — the failures the
-/// classification can read — rather than an exception the app raised with a
+/// Whether [error] failed on its way to or from a service: the failures the
+/// classification can read, rather than an exception the app raised with a
 /// sentence of its own.
 bool isTransportFailure(Object? error) {
   error = unwrapFailure(error);
@@ -475,7 +475,7 @@ bool isTransportFailure(Object? error) {
       error is HasFailureReason;
 }
 
-/// The line a failure keeps under its sentence — its *why* — for the surfaces
+/// The line a failure keeps under its sentence (its *why*) for the surfaces
 /// that print one (a toast's second line, a sheet's detail, a search's
 /// diagnosis). **Never `toString()` of a transport failure**: that is a class
 /// name and a library's paragraph.
@@ -484,8 +484,8 @@ bool isTransportFailure(Object? error) {
 /// ([failureServiceMessage]) or the classification's sentence
 /// ([connectionFailureSentence]). An exception the app raised keeps its own
 /// message, which is already a sentence, without the type Dart prefixes it
-/// with (`Exception: `, `Bad state: `). Anything else — a `TypeError`, a
-/// cast — is internals, and reads the classification's sentence too.
+/// with (`Exception: `, `Bad state: `). Anything else: a `TypeError`, a
+/// cast, which is internals, and reads the classification's sentence too.
 String failureDiagnostic(Object? error) {
   final cause = unwrapFailure(error);
   if (isTransportFailure(cause)) {
@@ -506,7 +506,7 @@ String failureDiagnostic(Object? error) {
 /// Maps a thrown [error] onto the cause the UI should report.
 ///
 /// [fallback] is returned only when the error carries nothing to attribute it
-/// with — Socket.IO, for instance, reports connect failures as an untyped
+/// with. Socket.IO, for instance, reports connect failures as an untyped
 /// string, and there `unreachable` is a better guess than `unknown`.
 ServiceFailureReason classifyConnectionFailure(
   Object? error, {
@@ -529,7 +529,7 @@ ServiceFailureReason classifyConnectionFailure(
 }
 
 /// Heuristic for the services that report an auth failure inside a 200 body
-/// instead of an HTTP status — SABnzbd's `{"status": false, "error": …}` and
+/// instead of an HTTP status: SABnzbd's `{"status": false, "error": …}` and
 /// Unraid's GraphQL `errors` array. Matches the wording those APIs use; a
 /// miss only costs the generic message, never a wrong verdict on reachability.
 bool looksUnauthorizedMessage(String message) {
@@ -548,7 +548,7 @@ ServiceFailureReason reasonForStatusCode(int code) {
   if (code == 401 || code == 403) return ServiceFailureReason.unauthorized;
   if (code == 404) return ServiceFailureReason.notFound;
   if (code >= 500) return ServiceFailureReason.serverError;
-  // Any 3xx that reaches here is one nothing followed — the codes
+  // Any 3xx that reaches here is one nothing followed: the codes
   // `allowRedirectStatus` rejects outright (300, 304, 305, 306), or a redirect
   // on a client that does not follow them. Left as `unknown` these produced
   // "Could not verify the instance", which sends the user to re-check
@@ -563,7 +563,7 @@ ServiceFailureReason _fromDio(
 ) {
   // An interceptor that refused the request already reached a verdict; Dio only
   // wrapped it. Reading it here is what keeps that verdict from being re-derived
-  // — wrongly — from the status code Dio happened to attach. Without this a
+  // (wrongly) from the status code Dio happened to attach. Without this a
   // refused redirect is classified from its 3xx, which `reasonForStatusCode`
   // does not map, so every one of them landed on `unknown`.
   final wrapped = error.error;
@@ -592,7 +592,7 @@ ServiceFailureReason _fromDio(
       if (inner is SocketException) return ServiceFailureReason.unreachable;
       if (inner is TimeoutException) return ServiceFailureReason.unreachable;
       // Dio decodes the body after the reply arrived, so a decode failure is
-      // an answer nobody could read — a proxy's HTML page, most often.
+      // an answer nobody could read: a proxy's HTML page, most often.
       if (inner is FormatException) return ServiceFailureReason.invalidResponse;
       return error.type == DioExceptionType.connectionError
           ? ServiceFailureReason.unreachable
@@ -600,15 +600,15 @@ ServiceFailureReason _fromDio(
   }
 }
 
-/// Whether [reason] means nothing replied at all — the one reason painted red.
+/// Whether [reason] means nothing replied at all: the one reason painted red.
 ///
 /// The brand book's fourth rule as a function: red means `Did not answer` and
 /// nothing else. A refusal, or a failure that did answer, is amber.
 bool failureDidNotAnswer(ServiceFailureReason reason) =>
     reason == ServiceFailureReason.unreachable;
 
-/// Whether [reason] is a **fault** — something answered, or the device
-/// refused to dial, so there is one concrete thing to go and fix — rather than
+/// Whether [reason] is a **fault**: something answered, or the device
+/// refused to dial, so there is one concrete thing to go and fix, rather than
 /// silence.
 ///
 /// The complement of [failureDidNotAnswer]. `unknown` is a fault too: the
@@ -639,7 +639,7 @@ String _secretNoun(String credential) =>
 /// What a refusal names as the thing refused, when nothing more specific is
 /// known.
 ///
-/// `describeFailure` resolves the service's own word from the registry — `key`,
+/// `describeFailure` resolves the service's own word from the registry: `key`,
 /// `token` for Plex, `sign-in` for the services that take a username and a
 /// password. A surface with no service to name (a figures rail, a bare error
 /// state) says `key`, which is what most of the seventeen take.
@@ -749,7 +749,7 @@ String failureHeadline(
 
 /// The verb that fixes this fault, when the fix is somewhere other than asking
 /// again: `Paste the key again`, `Check the address`. Null when `Retry` is the
-/// remedy — nothing answered, or the service answered with a failure of its
+/// remedy: nothing answered, or the service answered with a failure of its
 /// own that the next request may not repeat.
 ///
 /// Each of these leads to the connection's own form, which is where the key,
@@ -867,8 +867,8 @@ class ClassifiedFailure
   String toString() => 'ClassifiedFailure(${reason.name})';
 }
 
-/// What the service itself said when it answered with a failure, verbatim —
-/// the line a fault keeps under *Why?* — or null when it said nothing a
+/// What the service itself said when it answered with a failure, verbatim:
+/// the line a fault keeps under *Why?*, or null when it said nothing a
 /// person can read.
 ///
 /// Read from the body of a reply Dio kept: an object's `message` or `error`
@@ -903,7 +903,7 @@ String? failureServiceMessage(Object? error) {
 }
 
 /// A failed read in one plain sentence, for a surface that has no service to
-/// name — `AppErrorState`, which only knows a display string.
+/// name: `AppErrorState`, which only knows a display string.
 ///
 /// **Never the exception.** `error.toString()` is a class name and a library's
 /// message ("DioException [connection error]: … This indicates an error which

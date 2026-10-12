@@ -49,7 +49,7 @@ void main() {
   });
 
   group('prowlarrIndexerFaultRows', () {
-    test('a failing indexer is AMBER — red is for a Prowlarr that is dark', () {
+    test('a failing indexer is AMBER: red is for a Prowlarr that is dark', () {
       final rows = prowlarrIndexerFaultRows(
         [
           ProwlarrIndexerStatus(
@@ -112,7 +112,7 @@ void main() {
         'Nyaa',
         'ApplicationLongTermStatusCheck',
       ]);
-      // Amber throughout — nothing on this page paints red.
+      // Amber throughout: nothing on this page paints red.
       expect(
         section.rows.every((row) => row.tone == StatusTone.warning),
         isTrue,

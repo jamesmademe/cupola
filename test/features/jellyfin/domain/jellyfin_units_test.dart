@@ -32,7 +32,7 @@ void main() {
       expect(jellyfinMillisecondsFromTicks(72000000000.0), 7200000);
       // A gateway that round-trips the payload through a floating-point type and
       // re-quotes it hands back exponent notation, which `int.parse` rejects
-      // outright — so a two-hour film would arrive as "no runtime".
+      // outright, so a two-hour film would arrive as "no runtime".
       expect(jellyfinMillisecondsFromTicks('7.2e10'), 7200000);
       expect(jellyfinMillisecondsFromTicks('72000000000.0'), 7200000);
       // `Infinity` and `NaN` are parseable doubles with no integer value at all;
@@ -75,23 +75,20 @@ void main() {
       );
     });
 
-    test(
-      'live TV — a position with no runtime — yields null, not Infinity',
-      () {
-        expect(
-          jellyfinFractionFromTicks(position: 18000000000, runtime: 0),
-          null,
-        );
-        expect(
-          jellyfinFractionFromTicks(position: 18000000000, runtime: null),
-          null,
-        );
-        expect(
-          jellyfinFractionFromTicks(position: null, runtime: 72000000000),
-          null,
-        );
-      },
-    );
+    test('live TV: a position with no runtime yields null, not Infinity', () {
+      expect(
+        jellyfinFractionFromTicks(position: 18000000000, runtime: 0),
+        null,
+      );
+      expect(
+        jellyfinFractionFromTicks(position: 18000000000, runtime: null),
+        null,
+      );
+      expect(
+        jellyfinFractionFromTicks(position: null, runtime: 72000000000),
+        null,
+      );
+    });
   });
 
   group('percentages', () {

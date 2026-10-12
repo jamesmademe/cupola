@@ -8,8 +8,8 @@ import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
 /// `system.info`, on its own rather than through the dashboard snapshot.
 ///
-/// The Power card needs exactly one field out of it — the hostname it asks to
-/// be typed — and the dashboard provider it would otherwise have to watch drags
+/// The Power card needs exactly one field out of it: the hostname it asks to
+/// be typed, and the dashboard provider it would otherwise have to watch drags
 /// pools, alerts and services along with it on a 3-second poll.
 final truenasSystemInfoProvider =
     FutureProvider.autoDispose<TrueNasSystemInfo?>((ref) async {

@@ -33,7 +33,7 @@ class InspectorState {
 ///
 /// Persisted rather than session-only because the pane is a *workspace*
 /// decision, not a navigation one: somebody who drags it to 480 and closes the
-/// app has told us where they want it. Keyed plainly rather than per-window —
+/// app has told us where they want it. Keyed plainly rather than per-window:
 /// the app is single-window today, and a key that pretended otherwise would be
 /// a migration waiting to happen.
 final inspectorStateProvider =

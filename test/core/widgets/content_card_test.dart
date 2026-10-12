@@ -68,7 +68,7 @@ void main() {
       );
 
       final decoration = container.decoration as BoxDecoration?;
-      // AppRadius.borderRadiusMd: the control radius, 14 — a poster's corner.
+      // AppRadius.borderRadiusMd: the control radius, 14, which is a poster's corner.
       expect(decoration?.borderRadius, BorderRadius.circular(14));
     });
 

@@ -10,8 +10,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The fold behind the settings summary card: how many, in which state, and
 /// what colour the whole thing is.
 ///
-/// Every assertion here is on a rule — the tone the fold resolves, the word the
-/// vocabulary supplies — never on a colour or a layout. The point of the fold
+/// Every assertion here is on a rule: the tone the fold resolves, the word the
+/// vocabulary supplies, never on a colour or a layout. The point of the fold
 /// being pure is that these can be asked without a widget.
 void main() {
   ConnectionPresentation failed(ServiceKey service, ServiceFailureReason why) =>
@@ -60,8 +60,8 @@ void main() {
 
   group('the tone of the whole card', () {
     test('a rejected key is amber, not red', () {
-      // The regression this guards: the card took its tone from a boolean —
-      // "anything failing at all ⇒ error" — so a stack whose only complaint
+      // The regression this guards: the card took its tone from a boolean:
+      // "anything failing at all ⇒ error", so a stack whose only complaint
       // was a wrong API key wore the colour this system reserves for nothing
       // answering, and sent the user to check cables.
       final readout = ConnectionsReadout.from(
@@ -104,7 +104,7 @@ void main() {
         ).tone,
         StatusTone.success,
       );
-      // Nothing set up is not a fault — it is a fresh install.
+      // Nothing set up is not a fault: it is a fresh install.
       expect(
         ConnectionsReadout.from(
           states: const {},

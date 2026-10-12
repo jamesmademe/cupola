@@ -387,7 +387,7 @@ void main() {
         final result = await notifier.applyFixAssignment(item, assignment);
 
         expect(result, isNotNull);
-        // The fix flow MUST NOT call the import endpoint — the actual import
+        // The fix flow MUST NOT call the import endpoint. The actual import
         // is triggered by confirmImport when the user clicks "Confirm import".
         expect(client.postCallCount, 0);
 
@@ -409,7 +409,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      // A service that hands every file the same id — the *arrs hash the path
+      // A service that hands every file the same id: the *arrs hash the path
       // into `Id` so this does not happen in practice, but the match must not
       // depend on that being true.
       final first = ManualImportItem.fromJson({
@@ -482,7 +482,7 @@ void main() {
           .map((item) => item.path);
       // Radarr's library guard is satisfied by a movieId alone, so without the
       // supported-file filter the launch target was written into the subtitle,
-      // the artwork and the NFO too — one tap from importing them as the movie.
+      // the artwork and the NFO too: one tap from importing them as the movie.
       expect(matched, ['/downloads/Target Movie.mkv']);
     });
 
@@ -501,7 +501,7 @@ void main() {
 
       final state = container.read(manualImportFlowProvider);
       // The file did get the guess, but a guess must not arrive armed: nothing
-      // is selected — and so nothing is importable — until the user ticks it.
+      // is selected, and so nothing is importable, until the user ticks it.
       expect(state.readyItems, hasLength(1));
       expect(state.selectedPaths, isEmpty);
       expect(state.canImportSelected, isFalse);
@@ -726,7 +726,7 @@ void main() {
       final notifier = container.read(manualImportFlowProvider.notifier);
 
       await notifier.confirmImport();
-      // Simulate the user going back to Review and hitting the button again —
+      // Simulate the user going back to Review and hitting the button again:
       // the old flow queued a second identical ManualImport command here.
       final again = await notifier.confirmImport();
 
@@ -778,7 +778,7 @@ void main() {
         await notifier.confirmImport();
 
         final state = container.read(manualImportFlowProvider);
-        // The files are still on disk — the import did not happen — so the user
+        // The files are still on disk (the import did not happen), so the user
         // must be able to fix the cause and try again.
         expect(state.blockedPaths, isEmpty);
         expect(state.readyItems, hasLength(2));
@@ -894,7 +894,7 @@ void main() {
       await notifier.loadSelectedFolderItems();
 
       final state = container.read(manualImportFlowProvider);
-      // Visible and still ready — the row keeps its checkbox and its match.
+      // Visible and still ready: the row keeps its checkbox and its match.
       expect(state.items.length, 2);
       expect(state.readyItems.length, 2);
       // But the button promises one file, not two. It used to promise both,
@@ -1063,7 +1063,7 @@ void main() {
 
       expect(command?.id, 78);
       // Confirming spent the selection, so the retry has to re-post what was
-      // submitted — not what is ticked, which is nothing.
+      // submitted, not what is ticked, which is nothing.
       final body = client.lastPostData as Map<String, dynamic>;
       expect((body['files'] as List).length, 2);
       expect(

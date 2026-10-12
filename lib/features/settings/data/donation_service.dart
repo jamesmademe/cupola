@@ -22,7 +22,7 @@ class DonationService {
   // Product type: Consumable (allows repeated purchases)
   //
   // Moved from the pre-rebrand com.matthw.1.seekarr.tip.* ids. If those were
-  // ever live in App Store Connect, they're now orphaned there — harmless,
+  // ever live in App Store Connect, they're now orphaned there (harmless),
   // but the equivalent com.matthwlabs.cupola.tip.* products need creating
   // fresh in App Store Connect before a real purchase can succeed.
 

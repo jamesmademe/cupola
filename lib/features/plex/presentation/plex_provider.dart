@@ -15,7 +15,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 ///
 /// Throws if Plex is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.plex)` before reading. The exact
-/// `'not configured'` wording is load-bearing — `AsyncValueWidget` matches on it
+/// `'not configured'` wording is load-bearing: `AsyncValueWidget` matches on it
 /// to render `NotConfiguredPlaceholder` instead of an error.
 ///
 /// Follows the **lens**. It used to read the flat `plexUrl`/`plexToken`
@@ -84,13 +84,13 @@ PlexClient _plexClient(Ref ref, {required String? instanceId}) {
 ///
 /// The Jellyfin side has always had this; Plex was missing it, which meant a
 /// screen meant to serve both servers had to name one of them. Nothing above the
-/// data layer should know which media server it is talking to — that is the whole
+/// data layer should know which media server it is talking to: that is the whole
 /// reason `StreamServerClient` exists.
 final plexServerProvider = Provider<StreamServerClient>((ref) {
   return ref.watch(plexClientProvider);
 });
 
-/// `GET /` — friendly name, version, and the Plex Pass flag that decides whether
+/// `GET /`: friendly name, version, and the Plex Pass flag that decides whether
 /// a "stop stream" affordance is offered at all.
 final plexCapabilitiesProvider = FutureProvider<PlexServerCapabilities>((
   ref,
@@ -153,7 +153,7 @@ final plexLibrariesProvider = FutureProvider<List<StreamLibrary>>((ref) async {
   return ref.watch(plexClientProvider).getLibraries();
 }, retry: noProviderRetry);
 
-/// One item at any depth — film, show, season, episode, album or track.
+/// One item at any depth: film, show, season, episode, album or track.
 final plexItemProvider = FutureProvider.autoDispose.family<StreamItem?, String>(
   (ref, ratingKey) async {
     return ref.watch(plexClientProvider).getItem(ratingKey);
@@ -171,7 +171,7 @@ final plexChildrenProvider = FutureProvider.autoDispose
 /// a **figure** rather than draw a board.
 ///
 /// Written when `getSessions()` still answered an unreachable server with
-/// `const []` — wrong for a counter, where `0 streams` is a claim nobody made,
+/// `const []`, wrong for a counter, where `0 streams` is a claim nobody made,
 /// and, it turned out, wrong for the board too. Both now throw; the KPI rail
 /// and the reachability signal keep reading this one.
 ///

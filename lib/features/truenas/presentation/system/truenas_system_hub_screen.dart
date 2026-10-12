@@ -102,7 +102,7 @@ class TrueNasSystemHubScreen extends StatelessWidget {
             // only: the screen dumps server payloads verbatim with a copy button,
             // which must never ship to release even while today's probes are
             // limited to non-sensitive methods. It stays route-less on purpose
-            // (decision 37) — a `go_router` path would be reachable by deep link
+            // (decision 37): a `go_router` path would be reachable by deep link
             // in a release build, where `kDebugMode` no longer guards anything.
             if (kDebugMode) ...[
               const SizedBox(height: AppSpacing.md),

@@ -2,14 +2,14 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Tells the user a background release search finished. This is the only
          permission the notification plugin needs, because `zonedSchedule` is
-         never called — which is what keeps this clear of the Play-restricted
+        never called, which is what keeps this clear of the Play-restricted
          exact-alarm permissions and their declaration form. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Every service Cupola manages lives on the user's own network. Android's
          Local Network Protections gate that traffic behind this runtime
          permission: opt-in on Android 16, mandatory from Android 17 for apps
          that target it. Declared now so the day `targetSdk` reaches 37 the
-         connection tests ask for it instead of silently timing out — the gate in
+        connection tests ask for it instead of silently timing out; the gate in
          `MainActivity.localNetworkIsGated` keeps it inert until then, and on
          every older release the name is simply ignored. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>
@@ -29,7 +29,7 @@
              `orientation` stays in `configChanges` even though a locked
              activity should never see one. From Android 16 the platform ignores
              `screenOrientation` on displays whose smallest width is 600dp or
-             more — tablets, unfolded foldables, desktop windowing — so on
+            more (tablets, unfolded foldables, desktop windowing), so on
              exactly those devices the lock is advisory and the rotation still
              arrives. Dropping the flag there would trade a resize for an
              activity recreation. -->

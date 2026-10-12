@@ -1,17 +1,17 @@
 # SelectionPills
 
-A horizontally scrolling segment row — one selected at a time — for switching views inside a section; `SelectionPills.wrap` lays the same pills on as many lines as they need, for a choice that must be seen whole.
+A horizontally scrolling segment row (one selected at a time) for switching views inside a section; `SelectionPills.wrap` lays the same pills on as many lines as they need, for a choice that must be seen whole.
 
 Rendered from `lib/core/widgets/selection_pills.dart` by `test/design_catalog/selection_pills_catalog_test.dart`.
 
 ## Anatomy
 
-- Row: `SingleChildScrollView` scrolling horizontally; `padding` defaults to `SelectionPills.gutter` — `AppSpacing.lg` leading and trailing inside a row that runs edge to edge, so the first pill sits on the screen gutter and a scrolled pill bleeds off the screen — with `AppSpacing.sm` under the row; pills `AppSpacing.sm` apart. A host never wraps the default in a second side padding.
+- Row: `SingleChildScrollView` scrolling horizontally; `padding` defaults to `SelectionPills.gutter`: `AppSpacing.lg` leading and trailing inside a row that runs edge to edge, so the first pill sits on the screen gutter and a scrolled pill bleeds off the screen, with `AppSpacing.sm` under the row; pills `AppSpacing.sm` apart. A host never wraps the default in a second side padding.
 - Wrap (`SelectionPills.wrap`): no scroll; the pills flow onto further lines, `AppSpacing.sm` apart in both directions, with no side inset and `AppSpacing.sm` under (the host is on the gutter). For a setting with a handful of answers, where a pill scrolled off the edge is an answer the user cannot see: the Access row's four choices take a second line on a 320–390pt phone.
-- Pill: drawn at least `size.chip` 36 tall, centred in a target at least `size.touch` 44 tall (the area grows, the drawing does not; it was drawn at 48 itself), padding `AppSpacing.lg` horizontal × `AppSpacing.sm` vertical, `AppRadius.borderRadiusPill` (fully rounded) — the same radius the navigation bar's selected state uses. `AppRadius.pill` and `AppRadius.full` resolve to the same value now; `pill` is the name for the interactive one. Sized by its label, not fixed, so a pill grows with the reading size or a long label instead of overflowing.
+- Pill: drawn at least `size.chip` 36 tall, centred in a target at least `size.touch` 44 tall (the area grows, the drawing does not; it was drawn at 48 itself), padding `AppSpacing.lg` horizontal × `AppSpacing.sm` vertical, `AppRadius.borderRadiusPill` (fully rounded), the same radius the navigation bar's selected state uses. `AppRadius.pill` and `AppRadius.full` resolve to the same value now; `pill` is the name for the interactive one. Sized by its label, not fixed, so a pill grows with the reading size or a long label instead of overflowing.
 - Label in `textTheme.labelMedium` at weight 600.
 - Unselected: `colorScheme.surfaceContainer` fill, 1px `outlineVariant` border, `onSurfaceVariant` label.
-- Selected: the room's strong fill (`fill-strong`: white at 12% dark, ink at 12% light) with a 1px `line-edge` border, the label in `on-surface` (the primary ink) — the nav bar's pill, the same on every screen. Monochrome: no service or section colours it, so there is no hue to walk.
+- Selected: the room's strong fill (`fill-strong`: white at 12% dark, ink at 12% light) with a 1px `line-edge` border, the label in `on-surface` (the primary ink), the nav bar's pill, the same on every screen. Monochrome: no service or section colours it, so there is no hue to walk.
 - Press: `PressableScale` (dip, light haptic, Reduce Motion respected).
 - The chosen pill stays in view (the row only): when the row first draws with it past the edge, it is brought in at once; when it is chosen, with `duration-md` on the standard curve (a jump under Reduce Motion). The least scroll that shows it whole, and the order of the row never changes: a row that moved the chosen pill to its head read as reshuffling under the finger.
 - One pill alone (`SelectionPill`): the same drawing for a page's other controls, so a page speaks one language. A toggle (`Under 100 min`, selected while on) or a pill that opens a choice, with a trailing chevron (`trailing: Icons.expand_more_rounded`, 18px, in the label's colour, `space-xxs` after it).

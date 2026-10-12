@@ -52,12 +52,12 @@ enum NpmSection {
 /// `lib/core/widgets/AGENTS.md`: a call site says which part it wants in the
 /// constructor name.
 ///
-/// **What went where, and why** — the split is a decision, not a cut:
+/// **What went where, and why**. The split is a decision, not a cut:
 ///
 ///  * The **redirections, 404s and streams** ride the Proxy hosts tab rather
 ///    than getting one of their own. NPM's own menu files all four kinds under
 ///    Hosts, the bar has exactly one Hosts entry and this is it, and the list
-///    is already fetched — under Certificates it would be nonsense, and dropped
+///    is already fetched; under Certificates it would be nonsense, and dropped
 ///    it would delete a list the client answers for. On
 ///    [NpmSection.everything] that keeps the two host lists adjacent, which
 ///    moves them above Certificates: one grouping, drawn the same way whether
@@ -65,7 +65,7 @@ enum NpmSection {
 ///  * The **permission band and the default-admin warning are shared chrome**,
 ///    drawn on every variant. The band is not decoration: it is the sentence
 ///    that explains why a control is attenuated, and *both* tabs carry gated
-///    controls — the host menu's Enable/Disable on one, a certificate's Renew
+///    controls: the host menu's Enable/Disable on one, a certificate's Renew
 ///    on the other. Leaving the controls on two tabs and the explanation on one
 ///    is exactly the failure `npm_write_gate.dart` exists to prevent. The
 ///    warning is a fact about the box rather than about a section, it renders
@@ -87,14 +87,14 @@ class NpmScreen extends ConsumerWidget {
   const NpmScreen({super.key, this.showAppBar = true, this.topPadding = 0})
     : section = NpmSection.everything;
 
-  /// The hosts half — NPM's Proxy hosts tab.
+  /// The hosts half: NPM's Proxy hosts tab.
   const NpmScreen.proxyHosts({
     super.key,
     this.showAppBar = true,
     this.topPadding = 0,
   }) : section = NpmSection.proxyHosts;
 
-  /// The certificates half — NPM's Certificates tab.
+  /// The certificates half: NPM's Certificates tab.
   const NpmScreen.certificates({
     super.key,
     this.showAppBar = true,
@@ -131,7 +131,7 @@ class NpmScreen extends ConsumerWidget {
     final settings = ref.watch(currentSettingsProvider);
     // Checked **before** any provider is read, not after: `npmClientProvider`
     // throws when NPM is not configured, and a `FutureProvider` that throws is
-    // a failed provider — it schedules a retry with backoff for a condition no
+    // a failed provider: it schedules a retry with backoff for a condition no
     // waiting changes, and surfaces in tests as a pending timer.
     final isConfigured = settings.isServiceConfigured(
       ServiceKey.nginxProxyManager,
@@ -169,9 +169,9 @@ final _invalidateAfterAction = <ProviderOrFamily>[
 ///
 /// A pull on Certificates no longer re-fetches the host list: the two are
 /// separate branches now, and refreshing a page the user cannot see is a round
-/// trip they did not ask for. Three things are re-read by every section — the
+/// trip they did not ask for. Three things are re-read by every section: the
 /// account probe behind the permission band, the server info behind the
-/// default-admin warning, and the KPI and summary the Dashboard card reads —
+/// default-admin warning, and the KPI and summary the Dashboard card reads,
 /// because all three qualify whatever is on screen.
 void _invalidate(WidgetRef ref, NpmSection section) {
   switch (section) {
@@ -288,7 +288,7 @@ class _NpmSection extends ConsumerWidget {
       SectionHeader(
         title: 'Proxy hosts',
         showChevron: false,
-        // "25 · 8 of 23 enabled checked from this device" —
+        // "25 · 8 of 23 enabled checked from this device":
         // the coverage is drawn because the Upstream column is partial by
         // design. Without it a column that answered for eight rows and stayed
         // blank for fifteen would read as fifteen healthy hosts.
@@ -486,8 +486,8 @@ class _NpmReadOnlyTile extends StatelessWidget {
 /// more than anything else on this screen.
 ///
 /// **Public because it is shared chrome, not a section.** It is a fact about
-/// the box rather than about a list, so every NPM surface draws it — this page
-/// in all three of its shapes and `NpmOverviewScreen` — and a second copy of
+/// the box rather than about a list, so every NPM surface draws it: this page
+/// in all three of its shapes and `NpmOverviewScreen`, and a second copy of
 /// the card written next door is a second copy that drifts.
 /// `NpmCapabilityBannerSlot` travels with it for the same reason.
 class NpmDefaultAdminWarning extends ConsumerWidget {
@@ -631,7 +631,7 @@ class _ProxyHostTile extends ConsumerWidget {
     // What the probe saw, and from where: a socket this device could not open
     // is no outage of the host's, and the commonest reason for one is a
     // forward host that only resolves on the server's own network. A host
-    // nobody probed says nothing at all — the section header carries the
+    // nobody probed says nothing at all: the section header carries the
     // coverage, so silence here means "not measured", not "fine".
     final detail = [
       state,
@@ -903,7 +903,7 @@ class _CertificateTile extends ConsumerWidget {
     // tile would print "Expires in 0 days" about something already refused.
     final expired = cert.hasExpired(now);
     // An expired certificate and one about to expire are the same kind of
-    // fact — the canvas names "expiring" in the amber set — and neither is a
+    // fact: the canvas names "expiring" in the amber set, and neither is a
     // connection that did not answer.
     final tone = statusToneColor(
       colorScheme,
@@ -971,7 +971,7 @@ class _CertificateTile extends ConsumerWidget {
               ),
               // Renewal is offered only for Let's Encrypt certificates, and
               // only as a deliberate tap. The call reaches Let's Encrypt, so
-              // binding it to anything automatic — a retry, a pull-to-refresh —
+              // binding it to anything automatic (a retry, a pull-to-refresh)
               // would burn the account's ACME rate limits and get the user's
               // domain refused for hours in a way they cannot fix from here.
               //
@@ -1015,7 +1015,7 @@ class _SimpleHostList extends ConsumerWidget {
 
   final AsyncValue<List<NpmSimpleHost>> hostsAsync;
 
-  /// How many rows to draw, or null for all of them — [_CertificateList.limit]
+  /// How many rows to draw, or null for all of them. [_CertificateList.limit]
   /// carries the reasoning.
   final int? limit;
 

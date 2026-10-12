@@ -15,13 +15,13 @@ final seriesSearchQueryProvider = StateProvider<String>((ref) => '');
 ///
 /// Returns null when query is empty, otherwise returns lookup results.
 ///
-/// The lookup carries a [CancelToken] cancelled on dispose — see
+/// The lookup carries a [CancelToken] cancelled on dispose: see
 /// `moviesSearchResultsProvider` for why the superseded round has to stop.
 final seriesSearchResultsProvider = FutureProvider<List<SonarrSeries>?>((
   ref,
 ) async {
   final query = ref.watch(seriesSearchQueryProvider);
-  // `watch`, not `read` — see `moviesSearchResultsProvider`.
+  // `watch`, not `read`: see `moviesSearchResultsProvider`.
   final service = ref.watch(sonarrServiceProvider);
   final cancelToken = CancelToken();
   ref.onDispose(cancelToken.cancel);

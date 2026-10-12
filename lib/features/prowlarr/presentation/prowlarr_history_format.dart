@@ -9,10 +9,10 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 ///
 /// Shared by the dashboard activity feed and the indexer detail history so
 /// event styling stays consistent across both screens.
-/// [colorScheme] is required because the two *status* arms — a refused query
-/// and a successful grab — are resolved through [statusToneColor] and therefore
-/// walked against the surface. The remaining arms are not statuses — an RSS
-/// sync is not "good", it is Prowlarr doing a Prowlarr thing — so they are the
+/// [colorScheme] is required because the two *status* arms: a refused query
+/// and a successful grab are resolved through [statusToneColor] and therefore
+/// walked against the surface. The remaining arms are not statuses: an RSS
+/// sync is not "good": it is Prowlarr doing a Prowlarr thing, so they are the
 /// secondary ink: the label says which event it was, and a hue per event type
 /// was a legend with nothing to decode.
 ({String label, Color color, IconData icon}) prowlarrEventStyle(
@@ -46,7 +46,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
     ),
     // A *successful* auth handshake, because the `!item.successful` arm above
     // has already taken every failure. It was amber, which spent the fault
-    // colour on an indexer doing exactly what it is supposed to — and left the
+    // colour on an indexer doing exactly what it is supposed to, and left the
     // one real failure in this list indistinguishable from it.
     'indexerAuth' => (
       label: 'Auth',

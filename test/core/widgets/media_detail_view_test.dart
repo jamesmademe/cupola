@@ -250,8 +250,8 @@ void main() {
     // sits inside a `LayoutBuilder`, so the destination-settle animation is
     // rebuilt once per frame across the whole collapse range. A
     // `CurvedAnimation` registers a status listener on its parent in its
-    // constructor that only `dispose()` removes — and the parent here is the
-    // *route's* animation, which outlives the page — so building one here left
+    // constructor that only `dispose()` removes, and the parent here is the
+    // *route's* animation, which outlives the page, so building one here left
     // a listener behind on every scroll frame.
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
     await tester.pumpAndSettle();
@@ -706,7 +706,7 @@ void main() {
     // `AppGradients.heroScrim` bottoms out on *opaque* `surface`, which occludes
     // the page's ambient accent radials while the body one row below shows them.
     // Before the seam band, that put a hard single-row step across the full
-    // width at every collapse position, in both themes — summed |dRGB| of 15 at
+    // width at every collapse position, in both themes: summed |dRGB| of 15 at
     // rest, 31 mid-collapse and 37 pinned (390x844, violet accent, x=195). An
     // opaque strip cutting the room's gradient is exactly what
     // `AmbientBackground` + `GlassSurface` exist to prevent.
@@ -802,7 +802,7 @@ void main() {
 
           // Two boundaries, not one. The band fixes the hero/body seam by
           // clipping the art group a gutter short, which *introduces* a second
-          // boundary at the top of the band — so a fix that only moved the step
+          // boundary at the top of the band, so a fix that only moved the step
           // 16pt up the screen would pass on the first pair and fail here.
           final rows = <int>[
             edge - AppSpacing.lg.round(), // art group → band
@@ -901,8 +901,8 @@ void main() {
           const MediaDetailBody(
             sideTrack: {'Details', 'Collection'},
             // One slot from the region that used to move wholesale, one from the
-            // region that used to stay, and — the case that kills every rule
-            // cleverer than a set — two slots out of ONE region landing in
+            // region that used to stay, and the case that kills every rule
+            // cleverer than a set: two slots out of ONE region landing in
             // different tracks.
             operate: [MediaDetailSlot.box(label: 'Seasons', child: Text('s'))],
             reference: [
@@ -990,8 +990,8 @@ void main() {
     testWidgets('a table is not held to the prose measure', (tester) async {
       // The rule, not the rendering: `bodyMaxWidth` is where the eye loses the
       // line it came from on the return sweep, and a table has no return sweep.
-      // At 1000pt the centred column is 688 — a 312pt margin around a four
-      // column table — and the track slot must refuse it.
+      // At 1000pt the centred column is 688: a 312pt margin around a four
+      // column table, and the track slot must refuse it.
       await pumpAt(tester, 1000);
 
       expect(tester.getSize(find.byKey(columnKey)).width, 688);

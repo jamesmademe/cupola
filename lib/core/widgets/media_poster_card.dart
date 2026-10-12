@@ -13,7 +13,7 @@ import 'package:cupola/core/widgets/artwork_decode.dart';
 /// (`_MoviePosterCard`, `_SeriesPosterCard`, `_MusicPosterCard`,
 /// `_DiscoverPosterCard`) into a single shared component.
 ///
-/// The card fills its parent constraints — wrap in a [SizedBox] to
+/// The card fills its parent constraints. Wrap in a [SizedBox] to
 /// control dimensions externally (e.g. from [MediaDetailPosterRow]).
 class MediaPosterCard extends StatelessWidget {
   final String heroTag;
@@ -51,7 +51,7 @@ class MediaPosterCard extends StatelessWidget {
 
   /// Whether poster Heroes also fly during the interactive swipe-back
   /// gesture (iOS Photos behaviour). Shared by every Hero source that flies
-  /// into a detail page, so the whole flight family toggles in one place —
+  /// into a detail page, so the whole flight family toggles in one place:
   /// flip to false if the interactive flight proves flaky on device.
   static const bool flightOnUserGestures = true;
 
@@ -63,7 +63,7 @@ class MediaPosterCard extends StatelessWidget {
     final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     final effectiveBorderRadius = borderRadius ?? AppRadius.borderRadiusMd;
     // The plate, not the theme. This rectangle stands in for artwork, and
-    // artwork is not palette — a missing poster painted `surfaceContainer`
+    // artwork is not palette: a missing poster painted `surfaceContainer`
     // renders as a white hole in a light-theme grid, and then flips to a dark
     // photograph the moment the real image lands. Pinned to the plate tokens it
     // is the same well in both themes and the arriving image replaces like with

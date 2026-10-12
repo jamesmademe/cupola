@@ -22,7 +22,7 @@ import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
 import '../../../test_helpers/settings_scope.dart';
 
-/// Every service client provider owns a live `Dio` — and several own more than
+/// Every service client provider owns a live `Dio`, and several own more than
 /// that: qBittorrent holds the WebUI SID cookie, NPM holds a bearer token that
 /// exists nowhere else. Rebuilding one is therefore not free, it drops a
 /// session.
@@ -30,7 +30,7 @@ import '../../../test_helpers/settings_scope.dart';
 /// These providers used to `ref.watch(currentSettingsProvider)` whole, so *any*
 /// settings write rebuilt *every* client: changing the theme, editing a
 /// different service's address, finishing onboarding. Five of them also had no
-/// `onDispose`, so the client they replaced was never closed — a transport
+/// `onDispose`, so the client they replaced was never closed: a transport
 /// leak on every rebuild.
 ///
 /// Each provider now watches a `select` of just its own transport identity
@@ -190,7 +190,7 @@ void main() {
     // Asserted by swapping in an adapter that records its own close(), NOT by
     // watching a request fail: a request to an unreachable host throws
     // DioException whether or not anything was ever closed, so that assertion
-    // passes on the very leak it is meant to catch — and it would put a real
+    // passes on the very leak it is meant to catch, and it would put a real
     // socket in an offline test suite.
     test('a rebuild closes the Dio it replaces', () async {
       final container = await containerWith([ServiceKey.radarr]);
@@ -214,7 +214,7 @@ void main() {
         adapter.closed,
         isTrue,
         reason:
-            'the replaced ApiClient kept its Dio open — every settings change '
+            'the replaced ApiClient kept its Dio open: every settings change '
             'would leak one.',
       );
     });

@@ -7,7 +7,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 /// Re-tests every saved connection, at once.
 ///
 /// **One command with two triggers, deliberately.** "Test all" in Settings and
-/// ⌘R on the Settings tab are the same sentence — *ask every server again* —
+/// ⌘R on the Settings tab are the same sentence, *ask every server again*,
 /// and the moment they are two implementations they start disagreeing about
 /// what "every" means: the button would refresh the services and the shortcut
 /// the connections, or one would miss the second Radarr. So the set is defined
@@ -26,7 +26,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 /// pane showing three rows and cheap on one showing seventeen.
 ///
 /// Returns the number of connections that will be re-tested, so the caller can
-/// say what it just did — a command whose only feedback is a spinner appearing
+/// say what it just did: a command whose only feedback is a spinner appearing
 /// somewhere below the fold is a command the user presses twice.
 int testAllConnections(WidgetRef ref) {
   final connections = ref.read(currentSettingsProvider).configuredInstances;

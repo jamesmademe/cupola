@@ -9,7 +9,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 
 import 'catalog.dart';
 
-/// The Stoll series of 1921, fifteen two-reelers — public domain, and a real
+/// The Stoll series of 1921, fifteen two-reelers (public domain), and a real
 /// season-shaped list of titles.
 const _titles = [
   'The Dying Detective',

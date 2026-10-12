@@ -10,7 +10,7 @@ import 'package:cupola/features/shell/domain/shell_breadcrumb.dart';
 
 /// What kind of thing an entry is, which decides how it is grouped and drawn.
 enum CommandDeckKind {
-  /// One *connection* — not one service. Radarr 4K and Radarr HD are two
+  /// One *connection*, not one service. Radarr 4K and Radarr HD are two
   /// entries, for the same reason the phone's Portal gives each its own cell: a
   /// folded entry would reach the service while hiding every connection but the
   /// one the lens happens to point at.
@@ -50,7 +50,7 @@ class CommandDeckEntry {
   /// Set for a connection entry: opening it moves the lens as well as the route.
   final String? instanceId;
 
-  /// The muted half of the row — a host, a breadcrumb, a hint.
+  /// The muted half of the row: a host, a breadcrumb, a hint.
   final String? detail;
 
   final IconData? icon;
@@ -67,7 +67,7 @@ class CommandDeckEntry {
 /// Where this window has been, most recent first, this session only.
 ///
 /// Not persisted. A recent list that survives a restart is a history, and a
-/// history is a thing you curate and delete — a promise the app is not making
+/// history is a thing you curate and delete: a promise the app is not making
 /// here. Within a session it is simply the back of your own hand.
 final recentLocationsProvider = StateProvider<List<String>>((ref) => const []);
 

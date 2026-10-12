@@ -53,7 +53,7 @@ void main() {
   });
 
   group('formatElapsedSpan', () {
-    test('is a span, not an age — the two grammars do not share a string', () {
+    test('is a span, not an age: the two grammars do not share a string', () {
       // "No response for 6 min ago" is not a sentence, which is why this is a
       // separate function rather than a caller stripping the suffix.
       expect(formatElapsedSpan(const Duration(minutes: 6)), '6 minutes');

@@ -2,7 +2,7 @@
 ///
 /// The Dashboard's stack card for a multi-connection service draws `×N` and,
 /// beside it, the fleet's figures. Before this existed it drew `×N` beside the
-/// *lensed* connection's figures — the lens wearing the fleet's clothes, and a
+/// *lensed* connection's figures: the lens wearing the fleet's clothes, and a
 /// number that is wrong by exactly however much the other servers hold.
 ///
 /// **The rule is mostly a refusal to aggregate.** Three clauses, and the second
@@ -31,7 +31,7 @@
 /// behind them, because [ServiceKpi] is where the figures already are and the
 /// alternative is threading a second, numeric channel through all seventeen
 /// builders. For counts that is exact. For rates it inherits the resolution the
-/// ladder in `byte_format.dart` prints (one decimal, whole from 100 up) — which
+/// ladder in `byte_format.dart` prints (one decimal, whole from 100 up), which
 /// is the resolution the card shows anyway, so the sum is as precise as the
 /// thing it is displayed next to.
 library;
@@ -46,13 +46,13 @@ import 'package:cupola/core/utils/unit_space.dart';
 ///
 /// [perConnection] is **lens first**, then the rest in settings order; the lens
 /// is what a figure falls back to when its unit cannot be added. A `null` entry
-/// means that connection could not be read — see [ServiceKpi.unavailable] for
+/// means that connection could not be read: see [ServiceKpi.unavailable] for
 /// the same rule one level down.
 ///
 /// Returns null when the fold cannot be formed at all:
 ///
 ///  * nothing to fold;
-///  * any connection unreadable — never partial;
+///  * any connection unreadable: never partial;
 ///  * the lists disagree about what they are reporting. Two connections of one
 ///    service run the same builder, so a mismatch means one of them answered
 ///    something else entirely, and folding by position would add a film count
@@ -86,8 +86,8 @@ ServiceKpi _foldOne(List<ServiceKpi> terms) {
   final lens = terms.first;
 
   // A term that did not answer is not a zero, so the sum it belongs to did not
-  // answer either. The label survives — the row still says which figure is
-  // missing — and the note names what did not answer.
+  // answer either. The label survives: the row still says which figure is
+  // missing, and the note names what did not answer.
   if (terms.any((term) => term.isUnavailable)) {
     return ServiceKpi.unavailable(
       label: lens.label,
@@ -163,7 +163,7 @@ ServiceKpi _foldOne(List<ServiceKpi> terms) {
 /// The tone a summed figure carries.
 ///
 /// The worst any connection reported, because a fault on one server is a fault
-/// in the fleet — a fold that averaged the judgement would let a healthy
+/// in the fleet: a fold that averaged the judgement would let a healthy
 /// neighbour talk a failing indexer out of its amber. It cannot be recomputed
 /// from the sum: the predicate that decided `_faultIf(...)` lives in the
 /// builder, next to the data, and that is where it belongs.
@@ -177,8 +177,8 @@ StatusTone? _worstTone(List<ServiceKpi> terms) {
 
 /// The order the fold ranks judgements in.
 ///
-/// Only three of the six ever reach a KPI — `_backlogIf`, `_activityIf` and
-/// `_faultIf` in `service_kpi_provider.dart` are the whole vocabulary — but the
+/// Only three of the six ever reach a KPI: `_backlogIf`, `_activityIf` and
+/// `_faultIf` in `service_kpi_provider.dart` are the whole vocabulary, but the
 /// switch stays exhaustive so a builder that starts using a fourth cannot land
 /// silently below the one it should outrank.
 int _severity(StatusTone? tone) => switch (tone) {
@@ -213,8 +213,8 @@ String? _sharedNote(List<ServiceKpi> terms) {
 
 /// `2.0 MB/s` back into bytes per second, or null if it is not a rate.
 ///
-/// Deliberately anchored to what `formatBytesPerSecond` prints — one no-break
-/// space, the binary ladder, the `/s` suffix — rather than to anything more
+/// Deliberately anchored to what `formatBytesPerSecond` prints (one no-break
+/// space, the binary ladder, the `/s` suffix) rather than to anything more
 /// forgiving: a loose parser here would quietly start adding up strings that
 /// only look like rates.
 double? _bytesPerSecond(String value) {

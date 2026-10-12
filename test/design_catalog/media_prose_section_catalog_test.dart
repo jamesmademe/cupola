@@ -25,7 +25,7 @@ const _short =
     'film he is showing and solves the case on screen.';
 
 /// Presses the first [TextButton] below it once it has laid out, the way a
-/// reader would — the expansion is the section's own state.
+/// reader would: the expansion is the section's own state.
 class _Pressed extends StatefulWidget {
   const _Pressed({required this.child});
 
@@ -86,7 +86,7 @@ void main() {
       CatalogScene(
         'MediaProseSection(accent: radarr) · phone column, clamped at six '
         'lines, then expanded · Show more appears because the clamp bites, '
-        'reads Show less once open, and draws in the page\'s accent — the '
+        'reads Show less once open, and draws in the page\'s accent: the '
         'lamp, which resolves to the primary ink',
         (_) => _pair([
           _slot(358, MediaProseSection(text: _overview, accent: _radarr)),

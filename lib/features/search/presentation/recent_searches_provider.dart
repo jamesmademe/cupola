@@ -47,7 +47,7 @@ class RecentSearchesNotifier extends Notifier<List<String>> {
     try {
       ref.read(sharedPreferencesProvider).setStringList(_key, next);
     } catch (_) {
-      // No persistence available (tests) — in-memory state still updates.
+      // No persistence available (tests): in-memory state still updates.
     }
   }
 }

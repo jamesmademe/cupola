@@ -14,7 +14,7 @@ void main() {
     test('is null when the chart carries no idle dimension', () {
       // netdata's `system.cpu` is a stacked percentage that *excludes* idle.
       // The old `(total - idle) / total` then reduced to total/total, so a
-      // completely idle box read a confident 100% — and because that is not
+      // completely idle box read a confident 100%, and because that is not
       // null, the load-per-core fallback never got to run.
       final metrics = TrueNasDashboardMetrics(
         cpu: _graph(

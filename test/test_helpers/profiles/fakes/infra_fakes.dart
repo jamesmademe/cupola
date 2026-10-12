@@ -2,8 +2,8 @@
 ///
 /// TrueNAS and Dockge answer over a real WebSocket upgrade (see
 /// `fake_socket.dart`): TrueNAS speaks JSON-RPC 2.0, Dockge speaks Socket.IO
-/// over Engine.IO v4. Both are driven by the app's own clients — including
-/// the throwaway ones the Dashboard's probe builds — so nothing about them is
+/// over Engine.IO v4. Both are driven by the app's own clients, including
+/// the throwaway ones the Dashboard's probe builds, so nothing about them is
 /// overridden at the provider level.
 library;
 
@@ -44,8 +44,8 @@ class TrueNasFake extends ServiceFake {
 ///
 /// [ConnectionBehaviour.refusesKey] answers the key login with `false`, as
 /// TrueNAS does. [ConnectionBehaviour.readOnly] answers `auth.me` with the
-/// READONLY_ADMIN fixture — so the app's capability probe reads read-only on
-/// its own — and every write with `EACCES`.
+/// READONLY_ADMIN fixture, so the app's capability probe reads read-only on
+/// its own, and every write with `EACCES`.
 class TrueNasPeer extends WebSocketPeer {
   TrueNasPeer(this.context);
 
@@ -358,7 +358,7 @@ class DockgePeer extends WebSocketPeer {
 /// Unraid's GraphQL at `/graphql`, keyed by `x-api-key`.
 ///
 /// A refused key is a `200` with an `UNAUTHENTICATED` error, and a read-only
-/// key answers `me` as a VIEWER — both from the recorded fixtures — so the
+/// key answers `me` as a VIEWER (both from the recorded fixtures), so the
 /// app's capability probe reaches its own verdict.
 class UnraidFake extends ServiceFake {
   const UnraidFake();

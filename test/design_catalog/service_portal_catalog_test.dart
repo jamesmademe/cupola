@@ -125,8 +125,8 @@ List<FloatingNavDestination> _destinations() => [
 
 late SharedPreferences _prefs;
 
-/// The phone shell's touch layout — the stage over the page, the coach mark,
-/// the bar that drives the Portal — held at portal value [t].
+/// The phone shell's touch layout: the stage over the page, the coach mark,
+/// the bar that drives the Portal, held at portal value [t].
 ///
 /// The value is set after the page has loaded: the card freezes the page to a
 /// texture on its first frame above zero, so setting it on the first frame

@@ -17,8 +17,8 @@ void main() {
       group('on $name', () {
         test('every event resolves through the tone walk', () {
           // The rule: no surface paints a palette constant raw. Two arms of
-          // this function used to — grabbed and imported, the two events the
-          // list shows most — so the Readarr history was the one place in the
+          // this function used to: grabbed and imported, the two events the
+          // list shows most, so the Readarr history was the one place in the
           // app where the success green landed unwalked.
           // Neutral, and deliberately the same neutral the shared table
           // gives. This arm used to be blue on its own authority, so one
@@ -65,14 +65,14 @@ void main() {
         test('an import fault is amber, not the grey of an unknown event', () {
           // `bookImportIncomplete` is Readarr's own spelling and the failure a
           // book library actually suffers. It used to fall through to the
-          // default arm, which paints `onSurfaceVariant` — the backlog
+          // default arm, which paints `onSurfaceVariant`, the backlog
           // treatment, given to the one row on the page that is not backlog.
           final incomplete = readarrEventStyle('bookImportIncomplete', scheme);
           expect(incomplete.color, statusToneColor(scheme, StatusTone.warning));
           expect(incomplete.color, isNot(scheme.onSurfaceVariant));
           // The table's wording, not this tile's. These are two different
-          // events — a grab that never imported, and a book that imported with
-          // files missing — and collapsing both to "Import failed" here made
+          // events: a grab that never imported, and a book that imported with
+          // files missing, and collapsing both to "Import failed" here made
           // the History tab say one thing where the Overview said two.
           expect(incomplete.label, 'Import incomplete');
           expect(
@@ -87,8 +87,8 @@ void main() {
 
         test('a named event is spelled, never shouted camel-case', () {
           // The defect this function was: its default arm was
-          // `eventType.toUpperCase()`, so `bookFileRenamed` — an event the
-          // shared table has named since Readarr's arms landed — read
+          // `eventType.toUpperCase()`, so `bookFileRenamed`, an event the
+          // shared table has named since Readarr's arms landed, read
           // "BOOKFILERENAMED" on the History tab while the Overview, reading
           // the same record through the same table, read "Renamed".
           final renamed = readarrEventStyle('bookFileRenamed', scheme);

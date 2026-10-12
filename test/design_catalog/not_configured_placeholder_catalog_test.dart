@@ -45,7 +45,7 @@ void main() {
       ),
       CatalogScene(
         'NotConfiguredPlaceholder(serviceName:) · the generic form, for a '
-        'caller that only holds a name — lands on /settings',
+        'caller that only holds a name: lands on /settings',
         (_) => const NotConfiguredPlaceholder(serviceName: 'Bazarr'),
         width: 320,
       ),

@@ -35,7 +35,7 @@ void main() {
       // `where`. `displayStatus` lets the media's availability override the
       // request's own state, so this request reads "Available" while still
       // waiting on a person. A decisions list keyed off it would drop exactly
-      // the approvals that matter most — the ones for titles already on disk.
+      // the approvals that matter most: the ones for titles already on disk.
       final pendingButAvailable = _request(
         id: 1,
         status: RequestStatus.pendingApproval,
@@ -144,8 +144,8 @@ void main() {
       'a Seerr that did not answer fails rather than reading zero',
       () async {
         // Overridden at the service rather than at `requestsProvider`, so the
-        // real provider — and its `noProviderRetry`, which is what stops a dead
-        // server from being retried forever — is the one under test.
+        // real provider (and its `noProviderRetry`, which is what stops a dead
+        // server from being retried forever) is the one under test.
         final client = FakeApiClient()..getException = Exception('unreachable');
         final container = ProviderContainer(
           overrides: [

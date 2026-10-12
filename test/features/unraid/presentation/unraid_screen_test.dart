@@ -262,7 +262,7 @@ void main() {
     // Configuration is checked before any provider is read, so nothing is
     // overridden here: a half that reached `unraidClientProvider` would throw,
     // and a provider that throws schedules a retry for a condition no waiting
-    // changes — which this test would report as a pending timer.
+    // changes, which this test would report as a pending timer.
     for (final screen in const [
       UnraidScreen.array(showAppBar: false),
       UnraidScreen.docker(showAppBar: false),

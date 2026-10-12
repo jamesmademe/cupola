@@ -15,7 +15,7 @@ class SonarrEpisode {
   final String? airDate;
 
   /// Broadcast instant in UTC, used to tell an unaired episode from a missing
-  /// one — "Not released" and "Missing" are very different rows.
+  /// one: "Not released" and "Missing" are very different rows.
   final String? airDateUtc;
 
   /// Episode length in minutes, when Sonarr knows it.

@@ -8,7 +8,7 @@ import 'package:cupola/core/network/local_network_target.dart';
 /// Whether the host OS is standing between Cupola and the user's own network.
 ///
 /// Three platforms gate that traffic behind a permission the user grants once:
-/// iOS 14+, macOS 15+ and — for apps targeting API 37 — Android 17+. Every one
+/// iOS 14+, macOS 15+ and, for apps targeting API 37, Android 17+. Every one
 /// of them blocks the connection *silently*, so a blocked LAN address is
 /// indistinguishable from a wrong one at the socket: iOS reports "no route to
 /// host", Android times out. That is the bug this enum exists to close. A first
@@ -22,7 +22,7 @@ enum LocalNetworkAccess {
   unrestricted,
 
   /// The user has allowed it. A failure is the address, the credentials or the
-  /// server — not the permission.
+  /// server, not the permission.
   granted,
 
   /// Allowed *while Cupola was asking*: the user answered the OS alert during
@@ -30,7 +30,7 @@ enum LocalNetworkAccess {
   ///
   /// Held apart from [granted] because it is the one case worth retrying. The
   /// connection that failed a moment ago was dialled while the alert was still
-  /// on screen, so its verdict is void — this is the "test again" the user
+  /// on screen, so its verdict is void: this is the "test again" the user
   /// otherwise has to think of themselves. Retrying on plain [granted] instead
   /// would double the wait on every genuinely wrong LAN address.
   justGranted,
@@ -54,14 +54,14 @@ typedef LocalNetworkProbe =
 /// Asks the host OS whether it is blocking Cupola from reaching [rawUrl].
 ///
 /// Returns [LocalNetworkAccess.unrestricted] without touching the host whenever
-/// the question does not apply — a platform with no such gate, or an address
+/// the question does not apply: a platform with no such gate, or an address
 /// that is not on the local network. That ordering is load-bearing: resolving
 /// the permission on iOS *shows the system alert* when the user has not answered
 /// it yet, and raising a Local Network prompt because a public server timed out
 /// would be a worse bug than the one this fixes.
 ///
 /// [timeout] is how long to wait for a verdict. Callers with a human watching
-/// should be generous — the wait is the user reading an alert and tapping Allow —
+/// should be generous: the wait is the user reading an alert and tapping Allow,
 /// while a background refresh should pass something short, because there the
 /// only useful answer is one the OS already knows.
 Future<LocalNetworkAccess> probeLocalNetworkAccess(
@@ -80,8 +80,8 @@ Future<LocalNetworkAccess> probeLocalNetworkAccess(
 /// The host side of the local-network permission.
 ///
 /// There is no API on any of these platforms that reads the permission without
-/// possibly asking for it — Apple's own answer is to start a Bonjour browser and
-/// watch for `PolicyDenied` — so this exposes exactly one operation, [resolve],
+/// possibly asking for it: Apple's own answer is to start a Bonjour browser and
+/// watch for `PolicyDenied`; so this exposes exactly one operation, [resolve],
 /// and is honest about the fact that it may put an alert on screen. What makes
 /// that safe is *when* Cupola calls it: only after a connection to the LAN has
 /// already failed, which on iOS is the very thing that raised the alert. By then
@@ -94,7 +94,7 @@ abstract final class LocalNetworkPermission {
   );
 
   /// Platforms whose OS *may* gate local-network traffic. The OS-version half of
-  /// the question is the native side's to answer — it can read the running
+  /// the question is the native side's to answer; it can read the running
   /// version, and answers `unrestricted` below iOS 14, macOS 15 and Android 17.
   static bool get platformMayGate => switch (defaultTargetPlatform) {
     TargetPlatform.iOS ||
@@ -110,7 +110,7 @@ abstract final class LocalNetworkPermission {
   /// verdict is wrong because the user can revoke this permission in Settings
   /// while the app runs, and sharing one in-flight future between the services
   /// onboarding tests in parallel is wrong because a future abandoned by a
-  /// disposed widget tree is never completed — it becomes a shared promise that
+  /// disposed widget tree is never completed; it becomes a shared promise that
   /// can only hang, and every later caller in the process inherits it. The
   /// coalescing that saves is real but belongs to the host, which can tear its
   /// probe down and answer every waiter at once.
@@ -125,8 +125,8 @@ abstract final class LocalNetworkPermission {
     try {
       // [timeout] crosses the channel so the host can tear its own probe down,
       // and is *also* enforced here. The duplication is deliberate: a channel
-      // with nothing listening does not fail, it simply never answers — that is
-      // what a test binding with no mock handler does — and a permission check
+      // with nothing listening does not fail, it simply never answers; that is
+      // what a test binding with no mock handler does, and a permission check
       // that can hang is a connection test that never finishes. Whatever this
       // returns, it returns.
       final verdict = await channel
@@ -142,7 +142,7 @@ abstract final class LocalNetworkPermission {
         _ => LocalNetworkAccess.unknown,
       };
     } on MissingPluginException {
-      // A platform this app builds for but has not wired — desktop Linux and
+      // A platform this app builds for but has not wired: desktop Linux and
       // Windows, or a test binding. Neither gates the local network.
       return LocalNetworkAccess.unrestricted;
     } catch (_) {

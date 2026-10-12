@@ -5,8 +5,8 @@ The always-visible search field at the top of a browsable screen: a monochrome m
 Rendered from `lib/core/widgets/search_bar_header.dart` (a Material 3 `SearchBar`) by `test/design_catalog/search_bar_header_catalog_test.dart`. Hints are the callers' real strings: *Movies, series, people* (the Discover tab; *Movies and series* without Seerr, which is where people come from), *Search torrents* (qBittorrent), *Search movies* / *Search series* / *Search artists* (the library screens); the default is *Search*. No hint ends in an ellipsis.
 
 - Outer padding `AppSpacing.sm` top, `AppSpacing.lg` sides, `AppSpacing.lg` bottom.
-- Field: minimum height 52, `surfaceContainer` fill, 1px `outlineVariant` side, `AppRadius.borderRadiusMd` (14) — the control radius; the theme's own text fields take the 16 field radius — elevation 0, horizontal padding `AppSpacing.sm`. Focused, the side is 1.5px `line.focus`, as every focused field's is, so the keyboard's place is never only a caret.
-- Leading: `AppSpacing.sm`, then a 24pt `search_rounded` glyph in `on-surface-variant` (the secondary ink), on every screen — spaced for the field's own fill in both themes. It used to take the page's service or section colour.
+- Field: minimum height 52, `surfaceContainer` fill, 1px `outlineVariant` side, `AppRadius.borderRadiusMd` (14), the control radius; the theme's own text fields take the 16 field radius, elevation 0, horizontal padding `AppSpacing.sm`. Focused, the side is 1.5px `line.focus`, as every focused field's is, so the keyboard's place is never only a caret.
+- Leading: `AppSpacing.sm`, then a 24pt `search_rounded` glyph in `on-surface-variant` (the secondary ink), on every screen, spaced for the field's own fill in both themes. It used to take the page's service or section colour.
 - Text and hint are the `SearchBar` defaults: `bodyLarge` in `onSurface`, the hint in `onSurfaceVariant`, with `SearchBar`'s own 8pt either side of the input. A query longer than the field scrolls inside it.
 - Trailing, only while there is text: an `IconButton` with a `close_rounded` glyph in `onSurfaceVariant`.
 - **Cancel** (`onCancel`, the Discover tab only): while the field is focused or holds a query, a text button *Cancel* after it, `space-xs` away, in the ink at the `button` role, 44 tall (`VisualDensity.standard` pinned). It clears the query, reports the empty query at once, lets go of the keyboard and calls `onCancel`. A library's field has none: there the field is part of the page, not a mode of it. On the Discover tab the field and its Cancel then take the column the answers read in, a page of one column's measure (`reading-well` 720) at the head of the tab; at rest the field spans the tab, over the doors.
@@ -33,5 +33,5 @@ Each sheet is drawn in the dark and the light room, on the phone and on the desk
 ## Do / don't
 
 - Do let the hint say what is searched (*Search artists*); the glyph says nothing about whose search it is.
-- Don't round the field into a pill — that is the metadata shape.
+- Don't round the field into a pill; that is the metadata shape.
 - Don't debounce again in the caller; the value arrives settled.

@@ -13,7 +13,7 @@ export 'package:cupola/core/status/media_status.dart';
 /// Renders a resolved [MediaStatusInfo].
 ///
 /// The badge no longer derives anything: the status arrives fully resolved from
-/// a per-service resolver in the feature's `domain/` layer. That is deliberate —
+/// a per-service resolver in the feature's `domain/` layer. That is deliberate:
 /// when the derivation lived here, each caller passed a different `status`
 /// string and an item being downloaded rendered as `Missing`.
 class StatusBadge extends StatelessWidget {
@@ -28,21 +28,21 @@ class StatusBadge extends StatelessWidget {
 
   /// Suppresses this badge's own semantics node.
   ///
-  /// Set it when an enclosing tile already speaks the status — a poster cell
+  /// Set it when an enclosing tile already speaks the status, a poster cell
   /// passing `info.semanticLabel` as its `semanticValue`, say. Without it the
   /// tile and the badge are two stops for one piece of information; with it the
   /// badge is decoration, which is what a coloured dot on a poster is.
   final bool excludeFromSemantics;
 
   /// Whether status changes animate. A new resolved status cross-fades the
-  /// badge's content — glyph, label and percentage together — through an
+  /// badge's content (glyph, label and percentage together) through an
   /// [AnimatedSwitcher], so the tone changes only as the old glyph fades out
   /// and the new one fades in; no colour is tweened. The progress ring sweeps
   /// to each new value rather than snapping. The pill does not resize
   /// smoothly: during the fade it holds the wider of the two contents, and the
   /// width jumps to the new one when the fade ends.
   ///
-  /// Only the `.animated` constructor sets this — the
+  /// Only the `.animated` constructor sets this. The
   /// default badge stays static because it appears on twenty-odd surfaces
   /// (poster overlays, queue rows, activity feeds) where a per-cell animation
   /// would be noise.
@@ -122,7 +122,7 @@ class StatusBadge extends StatelessWidget {
           decoration: BoxDecoration(
             color: accentColor,
             shape: BoxShape.circle,
-            // A separator ring, not a depth level — this is why it is a single
+            // A separator ring, not a depth level: this is why it is a single
             // `BoxShadow` rather than an `AppElevation` stack. An 8px mark sits
             // directly on arbitrary poster artwork in a dense row, and without a
             // ring a tone-coloured dot can land on artwork of its own tone and
@@ -212,14 +212,14 @@ class StatusBadge extends StatelessWidget {
     final animate = _animated && !MediaQuery.disableAnimationsOf(context);
 
     // **Nothing in this badge rolls, and that is a decision rather than an
-    // omission** — it is the one surface in the app where a state word genuinely
+    // omission**: it is the one surface in the app where a state word genuinely
     // changes and is deliberately left alone.
     //
     // The label was rolled on `.animated` and reverted. This badge is the only
     // reel candidate whose surface *already* had a considered animation: a keyed
     // cross-fade of the whole content and a swept progress ring, tuned together
     // for a badge whose changing state is the point of the page. A roll on top
-    // of those is a third treatment competing with two that work —
+    // of those is a third treatment competing with two that work:
     // motion added because it was available, not because anything was missing.
     // It also does not pay for itself: `ReelText` renders one `Text` per
     // grapheme, so rolling the label scattered single-letter `Text` widgets over
@@ -294,7 +294,7 @@ class StatusBadge extends StatelessWidget {
   ///
   /// The `iconOnly` dot is pure colour and the `compact` overlay is colour plus
   /// a glyph, so neither has anything to read. Even the full badge paints only
-  /// [MediaStatusInfo.label] and a percentage — the warning carried by the tone
+  /// [MediaStatusInfo.label] and a percentage. The warning carried by the tone
   /// is never written down. So the string always comes from
   /// [MediaStatusInfo.semanticLabel] and the painted children are excluded,
   /// which keeps one code path instead of three and stops the full badge
@@ -315,7 +315,7 @@ class StatusBadge extends StatelessWidget {
   /// A determinate ring while bytes are moving, the state icon otherwise.
   ///
   /// When [animate] is set, the ring sweeps to each new value instead of
-  /// snapping — the digits beside it stay live and honest, only the arc
+  /// snapping: the digits beside it stay live and honest, only the arc
   /// eases. A count-up on the numbers themselves was considered and
   /// rejected: a percentage that lags the actual transfer is briefly wrong
   /// on purpose.
@@ -361,13 +361,13 @@ class StatusBadge extends StatelessWidget {
 /// drawn *as* a badge: a queue row tints its progress bar by tone so a failed
 /// transfer reads red instead of the service accent, and the Activity feed tints
 /// its leading icon well the same way. Every one of those was previously a
-/// widget-local `switch` on something other than the resolved status — which is
+/// widget-local `switch` on something other than the resolved status, which is
 /// how a `downloadFailed` event ended up rendering in the success green.
 ///
 /// Anything that colours by status calls this. Nothing re-derives it.
 ///
-/// Each room has its own five tones — the dark room's bright ones, the day
-/// room's deep ones — and the tone is taken from the room [colorScheme]
+/// Each room has its own five tones: the dark room's bright ones, the day
+/// room's deep ones, and the tone is taken from the room [colorScheme]
 /// belongs to. It is then *walked* against [surface] the same way a service
 /// accent is, because a tone verified on one ground is not verified on the
 /// others: the day room's green measures 4.91:1 on paper but 4.45:1 on the
@@ -375,7 +375,7 @@ class StatusBadge extends StatelessWidget {
 /// moves only the lightness, so a failed transfer is still red, just a red that
 /// can be read.
 ///
-/// Callers used to do this themselves where someone had noticed — the expanded
+/// Callers used to do this themselves where someone had noticed: the expanded
 /// service card carried the idiom and a comment explaining it. Sixteen other
 /// files did not, which is the whole argument for resolving it here: a contrast
 /// rule applied at some of the call sites is a rule that is wrong at the rest.
@@ -392,7 +392,7 @@ class StatusBadge extends StatelessWidget {
 /// `surfaceContainerHighest`, and only the caller knows it is there.
 ///
 /// [tintAlpha] is for the common badge shape where the tone is *both* the wash
-/// behind the label and the label itself — a score pill on its own colour at
+/// behind the label and the label itself: a score pill on its own colour at
 /// 16%, a filter chip on its own colour at 13%. The real ground there is the
 /// composite, not the surface, and measuring against the surface alone passes
 /// combinations that fail on screen: the day room's green on paper measures
@@ -404,7 +404,7 @@ class StatusBadge extends StatelessWidget {
 /// is spaced against the worst surface the theme paints text on.
 ///
 /// [StatusTone.primary] **is** walked, and used not to be. The argument for
-/// exempting it was that walking the brand would quietly repaint it — true of
+/// exempting it was that walking the brand would quietly repaint it; true of
 /// brand *chrome*, and not true here. This function does not colour buttons or
 /// marks; it colours a status word, and a status word owes the same legibility
 /// as every other status word beside it. In the monochrome room the primary
@@ -437,7 +437,7 @@ Color statusToneColor(
 ///
 /// The other half of [statusToneColor], and the distinction is the whole reason
 /// the walk is safe to apply everywhere else: a fill is a surface, not a
-/// foreground, and it carries no contrast obligation of its own — what it owes
+/// foreground, and it carries no contrast obligation of its own: what it owes
 /// is measured *by whatever is drawn on top of it*. Walking a fill would drag
 /// every tinted wash in the app toward the ink and drain the colour out of the
 /// one thing that is supposed to be coloured.
@@ -469,7 +469,7 @@ IconData statusIconFor(MediaStatusInfo info) {
     return switch (pipeline) {
       MediaPipeline.queued => Icons.schedule_rounded,
       MediaPipeline.downloading => Icons.downloading_rounded,
-      // A transfer that should be moving and is not — distinct from a pause,
+      // A transfer that should be moving and is not, distinct from a pause,
       // which the user chose.
       MediaPipeline.stalled => Icons.sync_problem_rounded,
       MediaPipeline.importPending => Icons.hourglass_bottom_rounded,
@@ -488,15 +488,15 @@ IconData statusIconFor(MediaStatusInfo info) {
     return Icons.bookmark_border_rounded;
   }
 
-  // A status can describe an *event* rather than a thing on disk — a history
-  // record, a blocked release — in which case it carries no availability and no
+  // A status can describe an *event* rather than a thing on disk: a history
+  // record or a blocked release, in which case it has no availability and no
   // pipeline. Falling through to the availability switch gave all of those the
   // `unknown` question mark, which is the one glyph that tells the user
   // nothing.
   //
   // The resolver says what happened, and that is read first. It used to be
   // derived from the tone instead, which held only while every event that
-  // needed its own picture also had its own colour — and stopped holding the
+  // needed its own picture also had its own colour, and stopped holding the
   // moment `Grabbed`, `Deleted` and `Blocked` became correctly neutral, because
   // one tone cannot answer for five different events.
   final glyph = info.glyph;

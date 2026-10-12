@@ -20,8 +20,8 @@ import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.d
 /// **The landing lens is never A–Z, and that is the whole design.** Radarr already
 /// holds an alphabetical wall of the same films; a Stream library that opened on one
 /// would be Radarr rendered twice under a different accent. What only a media server
-/// knows is *subject and time* — who watched, where they stopped, what is next, what
-/// nobody has played — so those lenses lead and `StreamLibraryLens.all` is an
+/// knows is *subject and time*: who watched, where they stopped, what is next, what
+/// nobody has played, so those lenses lead and `StreamLibraryLens.all` is an
 /// explicit sort you have to ask for.
 ///
 /// The falsifiable form of that rule lives on `StreamLibraryLens`: **if this screen
@@ -65,13 +65,13 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
   /// controller inferred both from the rows it happened to receive:
   /// `lastPageIsEmpty ? null : nextIntPageKey` ended the list on any empty page,
   /// which on Plex's on-deck lenses is a page whose rows simply all fell on the
-  /// wrong side of the continue/next-up split — real items sat in the page after
+  /// wrong side of the continue/next-up split: real items sat in the page after
   /// it. Reset with the controller, because the offset belongs to the lens.
   int? _nextStartIndex;
 
   /// Whether the *first* fetch of the current lens has been made.
   ///
-  /// `getNextPageKey` cannot ask the state — a first call and a call after a
+  /// `getNextPageKey` cannot ask the state. A first call and a call after a
   /// completed page look the same through `PagingState` once the key stops being
   /// derivable from the page count.
   bool _started = false;
@@ -80,8 +80,8 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
   ///
   /// Those two live on the State rather than in `PagingState`, which means they
   /// are *shared* across a rebuild in a way per-controller state never was. A
-  /// `PagingController.dispose` only detaches its result — the fetch it was
-  /// awaiting keeps running — so without this fence a stale fetch resolved
+  /// `PagingController.dispose` only detaches its result; the fetch it was
+  /// awaiting keeps running, so without this fence a stale fetch resolved
   /// after a lens change and wrote its offset over the new lens's: tap A–Z while
   /// Continue's first page is in flight, and A–Z's list truncates at fifty rows
   /// because Continue finished with `hasMore == false`.
@@ -126,7 +126,7 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
   /// Changing lens is a new list, not a filter over the old one.
   ///
   /// Each lens is a different server query with its own ordering, so the paging
-  /// controller is rebuilt rather than refreshed — reusing it would append page 1
+  /// controller is rebuilt rather than refreshed; reusing it would append page 1
   /// of "Unplayed" onto page 3 of "Continue" and produce a list that is neither.
   void _selectLens(StreamLibraryLens lens) {
     if (lens == _lens) return;
@@ -137,8 +137,8 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
   /// One screenful of rows, which is not the same thing as one server page.
   ///
   /// The loop is the fix for the on-deck split. `PagedLayoutBuilder` reports
-  /// `noItemsFound` the moment the accumulated item count is zero — regardless
-  /// of `hasNextPage` — and then never builds an item, so nothing ever triggers
+  /// `noItemsFound` the moment the accumulated item count is zero, regardless
+  /// of `hasNextPage`, and then never builds an item, so nothing ever triggers
   /// the next fetch. A server page that filtered down to nothing therefore has
   /// to be walked past *here*, before the controller is told about it, or the
   /// grid shows "Nothing in progress" over a library that has plenty.
@@ -206,8 +206,8 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
   ///
   /// A bound rather than "until something turns up": the loop above only runs
   /// while the fetch is empty-handed, and on the lenses that can filter a page
-  /// away (Plex's on-deck split) the underlying list is small, so five pages —
-  /// 250 rows — is far past any real case. Unbounded, one pathological library
+  /// away (Plex's on-deck split) the underlying list is small, so five pages (250 rows)
+  /// is far past any real case. Unbounded, one pathological library
   /// could walk itself end to end inside a single fetch.
   static const int _maxPagesPerFetch = 5;
 
@@ -237,8 +237,8 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
     }
 
     // Choosing a household member is the one action [_NeedsViewer] offers, and
-    // it happens on another route. Nothing here reads settings otherwise — the
-    // client is fetched with `ref.read` inside the fetch — so coming back landed
+    // it happens on another route. Nothing here reads settings otherwise: the
+    // client is fetched with `ref.read` inside the fetch, so coming back landed
     // on a controller still parked in `firstPageError`, which
     // `PagedLayoutBuilder` never retries: the panel kept telling the user to
     // choose a viewer they had just chosen. Plex has no viewer to pick.
@@ -305,7 +305,7 @@ class StreamLibraryViewerRequired implements Exception {
 ///
 /// `ChoiceChip` rather than a `SegmentedButton`: five options do not fit a phone's
 /// width as segments, and the row has to be able to scroll. Labels stay short for
-/// the eye and are expanded for the ear through [streamLensLabel] — "Continue" on
+/// the eye and are expanded for the ear through [streamLensLabel]: "Continue" on
 /// its own does not say what it continues, and both screen readers spell "A–Z" out
 /// character by character.
 class _LensChips extends StatelessWidget {
@@ -374,7 +374,7 @@ class _LibraryGrid extends StatelessWidget {
     //
     // What was here before claimed the Column Floor Rule and implemented its
     // opposite. `SliverGridDelegateWithMaxCrossAxisExtent` rounds the count
-    // *up* — `ceil(extent / (max + spacing))` — so a 640pt well answered five
+    // *up*, `ceil(extent / (max + spacing))`, so a 640pt well answered five
     // columns of 118pt posters, under the 130pt floor, where four would have
     // been 151. A maximum extent cannot express a minimum; only a fixed count
     // computed against the floor can.
@@ -422,7 +422,7 @@ class _LibraryGrid extends StatelessWidget {
                 service: service,
                 onRetry: fetchNextPage,
               ),
-        // A failure partway down used to truncate the grid silently — no
+        // A failure partway down used to truncate the grid silently: no
         // spinner, no message, no way to ask again. The rows already fetched
         // stay; this is the footer under them.
         newPageErrorIndicatorBuilder: (context) => Padding(
@@ -442,7 +442,7 @@ class _LibraryGrid extends StatelessWidget {
 
 /// The per-viewer lenses on a Jellyfin server with no household member chosen.
 ///
-/// **Not an empty state, because the library is not empty** — nothing has been
+/// **Not an empty state, because the library is not empty**: nothing has been
 /// asked of the server at all. An API key authenticates as an administrator with
 /// no user attached, so "continue watching" has no subject until one is named,
 /// and the control that names it lives in settings. Saying "This library is
@@ -474,7 +474,7 @@ class _NeedsViewer extends StatelessWidget {
 /// A lens with nothing in it.
 ///
 /// The per-viewer lenses are legitimately empty on a server nobody has watched
-/// yet, and that is not a failure — so this offers the way out rather than just
+/// yet, and that is not a failure, so this offers the way out rather than just
 /// reporting the absence. It deliberately does **not** silently fall back to A–Z:
 /// that would quietly undo the reason the landing lens is what it is, and the user
 /// would never learn the other lenses exist.

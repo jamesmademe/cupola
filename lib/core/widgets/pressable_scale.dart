@@ -123,7 +123,7 @@ class _PressableScaleState extends State<PressableScale> {
       selected: widget.semanticSelected,
       // The hint survives a control that cannot act, and that is the point of
       // it. It used to be gated on `enabled`, which meant the one state where a
-      // hint is load-bearing — a control the user can see and cannot use — was
+      // hint is load-bearing, a control the user can see and cannot use, was
       // the one state that published nothing, and a screen reader landed on a
       // named button with no explanation of why it would not respond. "requires
       // qBittorrent" is exactly that sentence. A sighted user reads the dimming

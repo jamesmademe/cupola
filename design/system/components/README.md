@@ -1,7 +1,7 @@
 # Components
 
-One card per widget. Each card is a `README.md` — what the widget is for, its variants, the tokens it
-uses, what the caller provides, how it reads to a screen reader, and what not to do with it — and a
+One card per widget. Each card is a `README.md`: what the widget is for, its variants, the tokens it
+uses, what the caller provides, how it reads to a screen reader, and what not to do with it, and a
 catalog of pictures the real widget renders:
 
 ```sh

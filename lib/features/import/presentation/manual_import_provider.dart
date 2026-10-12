@@ -20,7 +20,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Keyed on the connection, not only on the service: two Radarrs are two
 /// servers with two filesystems, and the shortcut keyed on `radarr` alone
 /// offered the 4K box's completed-downloads path to a wizard bound to the HD
-/// box — a path that may not exist there, and if it does is the wrong one.
+/// box: a path that may not exist there, and if it does is the wrong one.
 /// An empty id keeps the historical key, so the single-connection setup that
 /// wrote it keeps its shortcut.
 String manualImportLastFolderKey(ServiceKey service, [String instanceId = '']) {
@@ -28,7 +28,7 @@ String manualImportLastFolderKey(ServiceKey service, [String instanceId = '']) {
   return instanceId.isEmpty ? base : '$base.$instanceId';
 }
 
-/// The folder a connection last scanned, and when — or null when there is none.
+/// The folder a connection last scanned, and when, or null when there is none.
 class ManualImportLastFolder {
   final String path;
 
@@ -102,7 +102,7 @@ class ManualImportFlowState {
   /// Separate from [selectedPaths] because they answer different questions:
   /// that one is "import these", this one is "these share an identity". The
   /// distinction is what stopped bulk assignment from being a blunt
-  /// instrument — one series applied to every unmatched file in the folder
+  /// instrument: one series applied to every unmatched file in the folder
   /// happily matched playlists and other shows' episodes to it.
   final Set<String> fixSelectionPaths;
 
@@ -167,7 +167,7 @@ class ManualImportFlowState {
 
   /// Paths that must not be submitted again.
   ///
-  /// A batch is spent while its command is running and once it has completed —
+  /// A batch is spent while its command is running and once it has completed:
   /// the files are being, or have been, moved into the library. A **failed**
   /// command releases them: the file may well still be on disk, and retrying
   /// after fixing the cause is exactly what the user should be able to do.
@@ -187,7 +187,7 @@ class ManualImportFlowState {
         .toList(growable: false);
   }
 
-  /// Fully matched files — the only ones the import checkbox can include.
+  /// Fully matched files, the only ones the import checkbox can include.
   List<ManualImportItem> get readyItems {
     final service = this.service;
     if (service == null) return const [];
@@ -204,7 +204,7 @@ class ManualImportFlowState {
   ///
   /// Only files the service could actually import: a Sonarr scan of a real
   /// downloads folder also returns playlists, artwork and music, and counting
-  /// those as "needs attention" makes the number unactionable — 26 items to fix
+  /// those as "needs attention" makes the number unactionable: 26 items to fix
   /// when only a handful are episodes. Those land in [otherItems] instead.
   List<ManualImportItem> get attentionItems {
     final service = this.service;
@@ -221,7 +221,7 @@ class ManualImportFlowState {
         .toList(growable: false);
   }
 
-  /// Files of a kind this service does not import — kept visible, and still
+  /// Files of a kind this service does not import: kept visible, and still
   /// fixable, but out of the way.
   List<ManualImportItem> get otherItems {
     final service = this.service;
@@ -247,7 +247,7 @@ class ManualImportFlowState {
   ///
   /// The scan asks for them deliberately (`filterExistingFiles: false`), because
   /// with the service's default filter on, an already-imported file is simply
-  /// absent — and "did I already take this one?" then has no answer anywhere in
+  /// absent, and "did I already take this one?" then has no answer anywhere in
   /// the app. They are listed inline with everything else, and a user who wants
   /// one taken again can tick it; see [ManualImportItem.isReimportableFor].
   List<ManualImportItem> get importedItems {
@@ -261,7 +261,7 @@ class ManualImportFlowState {
   /// files still waiting for an identity, and files it already holds.
   ///
   /// The denominator the footer summary prints against. [otherItems] is
-  /// deliberately outside it — a real downloads folder carries dozens of
+  /// deliberately outside it: a real downloads folder carries dozens of
   /// playlists, NFOs and artwork, and counting them would turn "3 of 5
   /// selected" into "3 of 61 selected", a fraction about a problem the user
   /// does not have.
@@ -652,7 +652,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
 
   /// When the flow was launched from a specific movie/series/artist
   /// ([ManualImportFlowState.targetId]), pre-assign that title as the match for
-  /// files the server could not identify — so the user doesn't have to re-match
+  /// files the server could not identify, so the user doesn't have to re-match
   /// what they already came from. Movies resolve fully; for series/artists this
   /// only fills in files whose season+episode / album+track the server already
   /// parsed. Anything ambiguous is left untouched for the Fix sheet.
@@ -665,7 +665,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   /// Three things keep the guess from becoming a decision.
   ///
   /// It only ever touches files the service could import at all
-  /// ([manualImportIsSupportedFile]) — Radarr's guard is satisfied by a
+  /// ([manualImportIsSupportedFile]): Radarr's guard is satisfied by a
   /// `movieId` alone, so without that filter a scan of a shared downloads folder
   /// wrote the launch target into every unmatched row it returned: samples,
   /// subtitles, artwork, NFOs.
@@ -673,7 +673,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   /// It only touches files whose *name* says they are the target
   /// ([manualImportFileNamesTitle]). [targetId] survives every
   /// [selectFolder]/scan for the rest of the flow, and nothing about the launch
-  /// pins it to a folder — the entry points that carry a target carry no path —
+  /// pins it to a folder: the entry points that carry a target carry no path,
   /// so "any video file in whatever folder is on screen" meant a scan of the
   /// whole downloads root labelled every unidentified rip in it with the movie
   /// the user happened to come from.
@@ -768,21 +768,21 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
         folder: folder,
         // Always: the files the service already holds are part of the review,
         // not noise. Left filtered, an already-imported file simply vanishes
-        // from the scan — which is how "is this one already in the library?"
+        // from the scan, which is how "is this one already in the library?"
         // came to have no answer, and how a folder that looked half-empty was
         // actually reporting a successful earlier import.
         filterExistingFiles: false,
       );
       // Only files that are actually importable are preselected. Selecting the
       // unmatched ones too is how the old flow ended up with a confirm button
-      // that one bad file could hold hostage — and an already-imported file is
+      // that one bad file could hold hostage, and an already-imported file is
       // never preselected either, because sending one again is a decision the
       // user makes, not a default.
       //
       // Nor is a sample. It is matched as precisely as the rip beside it, so it
       // passed every readiness test and arrived ticked: "Import 4 files" was
       // five, and the fifth was a 42 MB trailer about to be moved into the
-      // library under the feature's name. The row stays visible and tickable —
+      // library under the feature's name. The row stays visible and tickable:
       // this removes a default, not a capability.
       final readyPaths = items
           .where(
@@ -953,7 +953,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     state = state.copyWith(importMode: importMode);
   }
 
-  /// Applies a fix assignment to a single item locally — no API call.
+  /// Applies a fix assignment to a single item locally, with no API call.
   ///
   /// The actual import is triggered separately via [confirmImport], which
   /// POSTs the `ManualImport` command for all currently selected items.
@@ -1018,14 +1018,14 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     return applyFixAssignment(draft, assignment);
   }
 
-  /// Applies fix assignments to a batch of items locally — no API call.
+  /// Applies fix assignments to a batch of items locally, with no API call.
   ///
   /// Mirrors [applyFixAssignment] for the bulk fix flow. The actual import
   /// is triggered separately via [confirmImport].
   ///
   /// [select] adds the now-ready files to the import selection, which is right
   /// when the user just assigned them by hand and wrong when the app guessed on
-  /// their behalf — see [_applyTargetPreselection].
+  /// their behalf. See [_applyTargetPreselection].
   Future<List<ManualImportItem>> applyBulkFixAssignments(
     Map<ManualImportItem, ManualImportFixAssignment> assignments, {
     bool select = true,
@@ -1033,7 +1033,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     final service = state.service;
     if (service == null || assignments.isEmpty) return const [];
 
-    // Library guard — fail fast, don't update state for invalid assignments.
+    // Library guard: fail fast, don't update state for invalid assignments.
     for (final entry in assignments.entries) {
       final guardError = libraryGuardError(service, entry.value);
       if (guardError != null) {
@@ -1094,7 +1094,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   /// Posts the selected files as one `ManualImport` command.
   ///
   /// Returns the existing command, without posting, when there is nothing new
-  /// to send — so navigating back into Track is always safe and pressing the
+  /// to send, so navigating back into Track is always safe and pressing the
   /// button twice can never queue the same files twice.
   Future<ManualImportCommandStatus?> confirmImport() async {
     final service = state.service;
@@ -1150,8 +1150,8 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   /// The failed leaf of Track is the one place this is reachable, and it is
   /// also the only command state in which [ManualImportFlowState.blockedPaths]
   /// releases those paths: a failed import leaves the files where they were, so
-  /// retrying after fixing the cause — a full disk, a permission, a service
-  /// restart — is exactly what should happen next.
+  /// retrying after fixing the cause (a full disk, a permission, a service
+  /// restart) is exactly what should happen next.
   ///
   /// It re-posts [ManualImportFlowState.submittedItems] rather than the
   /// selection, because confirming spent the selection; making the user walk

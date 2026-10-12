@@ -15,12 +15,12 @@ import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_message_prompt.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
-/// Who is watching, right now — the one thing only a media server knows.
+/// Who is watching, right now: the one thing only a media server knows.
 ///
 /// **A section rather than a screen, and that is the point of the file.** Every
 /// other domain in Cupola answers questions about objects (is this film owned,
 /// grabbed, subtitled, on disk); Jellyfin and Plex are the only source of
-/// subject-and-time state — who is watching, where they stopped, what is next
+/// subject-and-time state: who is watching, where they stopped, what is next
 /// for them. That belongs at the top of the service's Overview, above whatever
 /// readouts the board grows, and it is built here so the Overview composes it
 /// instead of rewriting three controls whose rules took a live server to learn.
@@ -35,15 +35,15 @@ import 'package:cupola/features/stream/presentation/widgets/stream_session_card.
 /// **What this deliberately does not have: a total.** An earlier design opened
 /// on an aggregate "egress" figure, on the theory that streams are the mirror of
 /// the download rate. That figure does not exist. Jellyfin reports a bitrate only
-/// while transcoding — a direct play carries none, so the only number available
-/// is the source file's own — and Plex's `Session.bandwidth` is a reservation
+/// while transcoding. A direct play carries none, so the only number available
+/// is the source file's own, and Plex's `Session.bandwidth` is a reservation
 /// made by its streaming brain. Summing those adds two different units together
 /// and presents the result as the box's outbound traffic, which would be
 /// fabricated. Per-session figures live on the cards, where
 /// `StreamSession.bitrateIsNominal` can say what they actually are.
 ///
 /// **Idle is the majority state and is built first.** Nobody watching is not an
-/// empty state and not a failure — it is a quiet room, and on a home server it is
+/// empty state and not a failure: it is a quiet room, and on a home server it is
 /// the normal condition. It gets one line.
 class StreamNowPlayingSection extends ConsumerWidget {
   const StreamNowPlayingSection({
@@ -136,7 +136,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
   ///
   /// Plex gates termination behind Plex Pass, and answers a server without it
   /// with a 401 that has nothing to do with the token. Reading the flag first
-  /// means the control is simply absent rather than present-and-misleading — and
+  /// means the control is simply absent rather than present-and-misleading, and
   /// a user who taps it never gets sent off to re-paste a credential that was
   /// fine. A session with no server-side id cannot be terminated at all, which is
   /// a real Plex shape, not a defensive guard.
@@ -166,7 +166,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
   /// over the WebSocket the server already holds to that client. Plex has no
   /// equivalent this app can reach: its player routes address the client
   /// directly on the LAN, so the board keeps **stop alone** there rather than
-  /// drawing two controls that would fail. Absent, not dimmed — a dimmed control
+  /// drawing two controls that would fail. Absent, not dimmed: a dimmed control
   /// promises a way to enable it, and there is none.
   VoidCallback? _pauseHandler(
     BuildContext context,
@@ -276,7 +276,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
           ? ref.read(jellyfinServerProvider)
           : ref.read(plexServerProvider);
       await client.stopSession(session.id);
-      // Both servers only *dispatch* a stop — Jellyfin's 204 means "sent to the
+      // Both servers only *dispatch* a stop: Jellyfin's 204 means "sent to the
       // client", which may ignore it. So the board re-reads rather than removing
       // the row optimistically and claiming something it cannot know.
       if (service == ServiceKey.jellyfin) {
@@ -302,8 +302,8 @@ class StreamNowPlayingSection extends ConsumerWidget {
 /// state the user needs to fix. One quiet line, in the same register the
 /// `/services` outage notice uses for a fault that is normal for the product.
 ///
-/// **A dashed rule, and that is the whole shape of it.** A well — a filled box
-/// with a centred glyph and a sentence — is how this surface reads when
+/// **A dashed rule, and that is the whole shape of it.** A well (a filled box
+/// with a centred glyph and a sentence) is how this surface reads when
 /// something is missing, and nothing is missing here. The dash says the region
 /// exists and is empty by nature, the way an outline on a plan says "this space
 /// is reserved" rather than "this space failed".
@@ -357,7 +357,7 @@ class _IdleRoom extends StatelessWidget {
 ///
 /// Local to this file on purpose. There is no dashed primitive in
 /// `lib/core/widgets/`, and one line on one screen does not earn a shared
-/// widget — the moment a second surface wants dashes, this is what moves.
+/// widget. The moment a second surface wants dashes, this is what moves.
 class _DashedRulePainter extends CustomPainter {
   const _DashedRulePainter({required this.color});
 

@@ -44,7 +44,7 @@ class ServerContext {
 /// The refusal shapes are the load-bearing part. A 401 from Radarr, a
 /// `200 Fails.` from qBittorrent, `{"status": false, "error": "API Key
 /// Incorrect"}` from SABnzbd and a `false` login from TrueNAS are four spellings
-/// of one fact, and the app's classifiers are written against each spelling —
+/// of one fact, and the app's classifiers are written against each spelling:
 /// so each fake answers in its service's own.
 abstract class ServiceFake {
   const ServiceFake();
@@ -73,7 +73,7 @@ abstract class ServiceFake {
   /// The reply the connection's behaviour forces, or null to answer normally.
   ///
   /// [ConnectionBehaviour.didNotAnswer] and [ConnectionBehaviour.timesOut]
-  /// never reach here — they fail at dial time, before a request exists.
+  /// never reach here: they fail at dial time, before a request exists.
   NetworkReply? gate(NetworkRequest request, ServerContext context) {
     switch (context.behaviour) {
       case PlainBehaviour.refusesKey:

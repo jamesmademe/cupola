@@ -21,7 +21,7 @@ class NpmUpstreamReport {
     required this.takenAt,
   });
 
-  /// Nothing probed yet — the state every screen starts in.
+  /// Nothing probed yet: the state every screen starts in.
   static final empty = NpmUpstreamReport(
     byHostId: const {},
     checked: 0,
@@ -39,7 +39,7 @@ class NpmUpstreamReport {
   /// **Enabled hosts only**, which is a narrower population than the host
   /// table a section header counts: a disabled host is not being served, so
   /// its backend is not a fact about this screen and the probe never opens a
-  /// socket for it. [coverage] names that narrowing out loud — see its doc.
+  /// socket for it. [coverage] names that narrowing out loud. See its doc.
   final int total;
 
   final DateTime takenAt;
@@ -52,7 +52,7 @@ class NpmUpstreamReport {
       byHostId.values.where((u) => u == NpmUpstream.down).length;
 
   /// `8 of 23 enabled checked from this device`, or null when nothing was
-  /// checked — a coverage line reading "0 of 23" is noise on a screen that has
+  /// checked: a coverage line reading "0 of 23" is noise on a screen that has
   /// not probed anything yet. It says where the check ran,
   /// because that is half of what it found.
   ///
@@ -60,8 +60,8 @@ class NpmUpstreamReport {
   /// beside a header count of the **whole** host table, and [total] counts only
   /// the hosts the probe is willing to look at. On a box with 25 hosts of which
   /// two are switched off, `25 · 8 of 23 checked from this device` invites
-  /// exactly one reading — that two hosts went missing between the two
-  /// figures — and the sentence has no way to say otherwise. Naming the
+  /// exactly one reading: that two hosts went missing between the two
+  /// figures, and the sentence has no way to say otherwise. Naming the
   /// population is what makes the pair honest.
   String? get coverage => checked == 0
       ? null
@@ -73,14 +73,14 @@ class NpmUpstreamReport {
 ///
 /// NPM cannot answer this. `meta.nginx_online` is the verdict of the last
 /// configuration attempt and nothing polls it, so a host whose backend died an
-/// hour ago still reads healthy — see [NpmProxyHost.configLoaded]. The only way
+/// hour ago still reads healthy. See [NpmProxyHost.configLoaded]. The only way
 /// to know what is actually answering is to go and look, and the only place
 /// that can look is the client. That is why the design calls this a
 /// **client-side** probe and says so on screen: the answer is about this
 /// device's view of the network, not the server's.
 ///
 /// It connects and hangs up. No HTTP request, no TLS negotiation, no
-/// credentials — the question is "is anything accepting connections here", and
+/// credentials: the question is "is anything accepting connections here", and
 /// a GET would additionally need a bad-certificate decision for every
 /// self-signed backend in a homelab, which is a security posture nobody asked
 /// for in order to colour one column. The cost is honest and stated: a TCP
@@ -106,7 +106,7 @@ class NpmUpstreamProbe {
   /// Budgeted rather than exhaustive, and partial **by design**: 23 hosts means
   /// 23 sockets, most of them to names that do not resolve off the server's
   /// network, each costing the full timeout. The design draws the partial
-  /// result — "checked for 8 of 23" — rather than making the user wait for a
+  /// result, "checked for 8 of 23", rather than making the user wait for a
   /// complete one.
   static const int defaultBudget = 8;
 
@@ -163,7 +163,7 @@ class NpmUpstreamProbe {
     try {
       return await connector(target, host.forwardPort, timeout);
     } catch (_) {
-      // Every failure is the same answer here — refused, no route, no such
+      // Every failure is the same answer here: refused, no route, no such
       // host, timed out. Which one it was would be a different screen.
       return false;
     }

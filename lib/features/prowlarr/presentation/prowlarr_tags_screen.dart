@@ -16,7 +16,7 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Tag manager, built on `tag/detail` so every row can say what still uses the
-/// tag — deleting one silently drops it from those indexers and apps.
+/// tag: deleting one silently drops it from those indexers and apps.
 class ProwlarrTagsScreen extends ConsumerWidget {
   const ProwlarrTagsScreen({super.key});
 

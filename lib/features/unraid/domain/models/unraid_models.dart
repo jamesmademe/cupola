@@ -2,7 +2,7 @@
 ///
 /// Unraid's GraphQL schema evolves between releases, so field access is
 /// deliberately tolerant: a missing field degrades rather than throwing.
-/// Tolerant is not the same as inventive — a field the server did not answer
+/// Tolerant is not the same as inventive: a field the server did not answer
 /// degrades to **null**, so the page above can say it has no figure. It never
 /// degrades to a zero, an empty list stated as a census, or a word nobody sent.
 /// Confirm exact field names against the target instance's schema (SDL / Apollo
@@ -36,7 +36,7 @@ class UnraidCapabilities {
   final Set<UnraidResource> writable;
 
   /// Whether the server answered with a `roles` list at all. False for a `me`
-  /// object missing the field — an answer that says nothing, which the probe
+  /// object missing the field: an answer that says nothing, which the probe
   /// reads as "could not ask" rather than as read-only.
   final bool answered;
 
@@ -60,7 +60,7 @@ class UnraidCapabilities {
               .toSet() ??
           const <String>{};
       // `me.permissions` lists only the key's **explicit** permissions, never
-      // the ones its roles imply — and `VIEWER`, `CONNECT` and `GUEST` imply
+      // the ones its roles imply, and `VIEWER`, `CONNECT` and `GUEST` imply
       // no write on the resources Cupola changes, so this list is the whole
       // answer for a non-admin.
       if (!actions.any(writeActions.contains)) continue;
@@ -265,8 +265,8 @@ class UnraidInfo {
   factory UnraidInfo.fromJson(Map<String, dynamic> json) {
     final os = (json['os'] as Map?)?.cast<String, dynamic>() ?? const {};
     // Empty, never `'Unraid'`: both `distro` and `release` are nullable in the
-    // committed SDL, and a server that answered `info: null` — or an `os` block
-    // without them — has stated no release. Filling the word in here would put
+    // committed SDL, and a server that answered `info: null` (or an `os` block
+    // without them) has stated no release. Filling the word in here would put
     // a string the server never sent under a row labelled `Release`, in the one
     // slot the page reserves for what the server said; the fold above this
     // reads an empty join as `—`, which is the truthful reading.
@@ -295,13 +295,13 @@ class UnraidArray {
   /// Fraction of total capacity used (0..1), or null when unknown.
   final double? usedFraction;
 
-  /// The slot list exactly as the array answered it — **null when it answered
+  /// The slot list exactly as the array answered it: **null when it answered
   /// with none at all**.
   ///
   /// `disks: [ArrayDisk!]` is nullable in the committed SDL, and this library
   /// is deliberately tolerant of a field a release renamed. Folding both of
   /// those into `const []` made an absent list indistinguishable from an empty
-  /// one, and the header that counts it then says `0 disks` — an assertion that
+  /// one, and the header that counts it then says `0 disks`: an assertion that
   /// the array has no drives, built out of silence.
   final List<UnraidDisk>? _disks;
 
@@ -311,8 +311,8 @@ class UnraidArray {
 
   /// Whether the payload carried a slot list at all.
   ///
-  /// True for an array that answered `disks: []` — that is a real census of an
-  /// array with no drives in it — and false only for silence.
+  /// True for an array that answered `disks: []`: that is a real census of an
+  /// array with no drives in it, and false only for silence.
   bool get reportedDisks => _disks != null;
 
   /// The parity slots (`parities`), which Unraid lists apart from the data
@@ -335,8 +335,8 @@ class UnraidArray {
   /// server reported no capacity block at all.
   ///
   /// Kept beside [usedFraction] rather than derived from it, because they
-  /// cannot be: a fraction is unitless and the board's headline readout —
-  /// `31.2 of 40.0 TB` — is the pair of absolute figures. The query has always
+  /// cannot be: a fraction is unitless, and the board's headline readout
+  /// (`31.2 of 40.0 TB`) is the pair of absolute figures. The query has always
   /// asked for `capacity { kilobytes { free used total } }`; the mapper simply
   /// threw the numerator and denominator away after dividing them, so the
   /// Overview had a percentage and no way to say what it was a percentage of.
@@ -351,7 +351,7 @@ class UnraidArray {
   ///
   /// Null and never 0, for the same reason [usedBytes] is: `Used 0%` on the
   /// readout rail reads as an empty array, which is the one conclusion a user
-  /// acts on, and it would contradict the Array section an inch below — whose
+  /// acts on, and it would contradict the Array section an inch below, whose
   /// capacity clause correctly disappears for exactly this input.
   int? get usedPercent {
     final fraction = usedFraction;
@@ -368,7 +368,7 @@ class UnraidArray {
     // Which bucket answered decides the unit, and the unit has to be settled
     // here: the fraction below is unitless and did not care, but an absolute
     // figure read out of the kilobyte bucket and printed as bytes is off by
-    // 1024 — a 40 TB array rendered as 39 GB.
+    // 1024: a 40 TB array rendered as 39 GB.
     final bucket = kilobytes ?? bytes;
     final scale = kilobytes != null ? 1024 : 1;
     if (bucket != null) {
@@ -443,7 +443,7 @@ class UnraidDisk {
   /// Whether the array has flagged this slot.
   ///
   /// Unraid reports slot health as `DISK_OK`, `DISK_NEW`, `DISK_NP` (no disk in
-  /// the slot), `DISK_INVALID`, `DISK_DSBL` (disabled — the array is running
+  /// the slot), `DISK_INVALID`, `DISK_DSBL` (disabled, the array is running
   /// without it) and a handful of `DISK_*` siblings. `DISK_OK` and `DISK_NEW`
   /// are "nothing to do here", and so is `DISK_NP`, an empty slot ([empty]): it
   /// used to be flagged, a fault on every array with a free slot. Everything
@@ -462,7 +462,7 @@ class UnraidDisk {
   }
 
   /// Amber for a slot the array has [flagged] or a drive over the warning
-  /// threshold — both are faults the user can act on — and neutral otherwise.
+  /// threshold (both are faults the user can act on), and neutral otherwise.
   /// Nothing here is ever red, because red on this canvas means the host did
   /// not answer at all.
   StatusTone get tone =>
@@ -480,8 +480,8 @@ class UnraidDisk {
 /// What a container's Docker status line actually says, once it is read rather
 /// than skimmed.
 ///
-/// The screen used to have exactly two states — `running` and everything else,
-/// painted in the dim foreground — which collapsed three different facts into
+/// The screen used to have exactly two states: `running` and everything else,
+/// painted in the dim foreground, which collapsed three different facts into
 /// one row: a container the user stopped yesterday, a container the kernel
 /// OOM-killed an hour ago, and a container whose healthcheck is failing while
 /// it is still up. Decision 15 needs them told apart, and they can be: Docker's
@@ -492,7 +492,7 @@ enum UnraidContainerCondition {
   unhealthy,
   paused,
 
-  /// Exited cleanly (code 0) — someone stopped it, and that is not damage.
+  /// Exited cleanly (code 0): someone stopped it, and that is not damage.
   stopped,
 
   /// Exited with a non-zero code. `Exited (137)` is the OOM kill; 143 is a
@@ -503,7 +503,7 @@ enum UnraidContainerCondition {
   /// exit, so a container sitting here is a container that keeps dying.
   restarting,
 
-  /// Docker could not remove the container's filesystem — it is neither
+  /// Docker could not remove the container's filesystem. It is neither
   /// running nor cleanly stopped.
   dead,
 
@@ -517,7 +517,7 @@ enum UnraidContainerCondition {
   /// Decision 15's five arms, for one row.
   ///
   /// Green only for a container that is up and whose healthcheck (if it has
-  /// one) agrees. Amber for the faults. Neutral for every deliberate state —
+  /// one) agrees. Amber for the faults. Neutral for every deliberate state:
   /// stopped, paused, never started. Red appears nowhere here: red belongs to
   /// an Unraid that did not answer, and an answer saying "this container is
   /// down" is the opposite of silence.
@@ -585,7 +585,7 @@ class UnraidDockerContainer {
 
   final UnraidContainerCondition condition;
 
-  /// The process exit code, when the status line carried one. Null — never 0 —
+  /// The process exit code, when the status line carried one. Null, never 0,
   /// when it did not: 0 is "exited cleanly", which is a different claim from
   /// "we do not know how it exited".
   final int? exitCode;

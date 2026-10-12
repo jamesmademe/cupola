@@ -177,7 +177,7 @@ void main() {
   ) async {
     // Regression: the dialog did `ref.read(sabnzbdCategoriesProvider)
     // .asData?.value` on a provider nothing else watches, so on first open it
-    // was cold — the read returned AsyncLoading with no value, the dropdown was
+    // was cold: the read returned AsyncLoading with no value, the dropdown was
     // hidden entirely, and the NZB was submitted with no category. The captured
     // local was never re-read either, so the dropdown stayed hidden even when
     // the fetch landed while the dialog was still open.
@@ -203,7 +203,7 @@ void main() {
     expect(find.text('Loading categories…'), findsOneWidget);
     expect(find.byType(DropdownButtonFormField<String>), findsNothing);
 
-    // The fetch lands while the dialog is still open — and the dialog notices.
+    // The fetch lands while the dialog is still open, and the dialog notices.
     gate.complete(const ['*', 'movies', 'tv']);
     await tester.pumpAndSettle();
 
@@ -241,7 +241,7 @@ void main() {
     tester,
   ) async {
     // The gap this row carried: `1.0 GB` on its own reads identically on a
-    // download a third of the way in and on one about to finish — and it did
+    // download a third of the way in and on one about to finish, and it did
     // not even say it was a remainder. `mode=queue` returns `mb` on every slot
     // beside `mbleft`, so the second figure was a parse away.
     await tester.pumpWidget(

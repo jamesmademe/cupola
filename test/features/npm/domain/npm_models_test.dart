@@ -31,7 +31,7 @@ void main() {
     expect(entry.createdOn, isNull);
   });
 
-  group('NpmProxyHost — the advanced block', () {
+  group('NpmProxyHost: the advanced block', () {
     test('an absent block is empty and zero lines, not one blank line', () {
       final host = NpmProxyHost.fromJson({
         'id': 1,
@@ -56,7 +56,7 @@ void main() {
     });
   });
 
-  group('NpmCertificate — the only honest renewal reason', () {
+  group('NpmCertificate: the only honest renewal reason', () {
     NpmCertificate cert({required String provider, required int inDays}) {
       return NpmCertificate.fromJson({
         'id': 1,
@@ -107,7 +107,7 @@ void main() {
     });
   });
 
-  group('NpmCertificate — lapsed is a date, not a day count', () {
+  group('NpmCertificate: lapsed is a date, not a day count', () {
     final now = DateTime.utc(2026, 1, 1, 12);
 
     NpmCertificate cert(Duration offset) => NpmCertificate(
@@ -151,7 +151,7 @@ void main() {
     });
   });
 
-  group('NpmAccount — decision 34', () {
+  group('NpmAccount: decision 34', () {
     NpmAccount account(Map<String, dynamic> json) => NpmAccount.fromJson(json);
 
     test('an admin short-circuits the permission map it never gets', () {

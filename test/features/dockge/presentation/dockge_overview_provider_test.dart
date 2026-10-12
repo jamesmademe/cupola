@@ -6,11 +6,11 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_overview_provider.dart';
 
 /// The folding rules of the Dockge Overview, exercised as the pure functions
-/// they are — no container, no socket, no clock.
+/// they are: no container, no socket, no clock.
 ///
 /// No clock because there is nothing to clock: `stackList` carries no
 /// timestamp, which is why this page has no window rule to test the boundaries
-/// of. That absence is asserted here too, in the one place it shows — a fault
+/// of. That absence is asserted here too, in the one place it shows: a fault
 /// row that prints no age rather than an invented one.
 void main() {
   group('the census', () {
@@ -38,7 +38,7 @@ void main() {
     test('an empty push is a census of zeroes, not a missing one', () {
       // The distinction the screen depends on: a server that answered with no
       // stacks reports 0, and a server that did not answer never reaches this
-      // function at all — the section prints an em dash instead.
+      // function at all: the section prints an em dash instead.
       final census = dockgeStackCensus(const []);
       expect(census.total, 0);
       expect(census.stopped, 0);
@@ -244,7 +244,7 @@ void main() {
     test('every instance is drawn, because none of them has anywhere else '
         'to be reported', () {
       // The Agents section is the only region with no "see the rest" tab, so a
-      // cap here would drop agents six and up off the app entirely — and its
+      // cap here would drop agents six and up off the app entirely, and its
       // header would then state the sample's own length as the total.
       final rows = dockgeAgentRows([
         DockgeAgent.local,

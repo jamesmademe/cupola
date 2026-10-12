@@ -17,12 +17,12 @@ import 'package:cupola/core/widgets/tag_chip.dart';
 /// accents (Radarr's amber, SABnzbd's gold, Plex's ochre, the status green and
 /// yellow) read comfortably at night and fall to about 1.5–2:1 on paper, so a
 /// review done in dark theme passes all of them. Every case below is measured
-/// in light *and* dark against the composite the widget sits on — the tint of
-/// its own tone over the surface underneath — because that composite, not the
+/// in light *and* dark against the composite the widget sits on: the tint of
+/// its own tone over the surface underneath, because that composite, not the
 /// surface, is what the eye reads the ink against.
 ///
 /// A service hands these widgets the lamp now (`ServiceKey.accent`), which the
-/// walk resolves to the room's ink — that is the first case. The brand bytes
+/// walk resolves to the room's ink. That is the first case. The brand bytes
 /// stay as the hardest colours a caller could pass, alongside the tones these
 /// widgets do still carry: the walk has to hold for anything it is handed.
 void main() {

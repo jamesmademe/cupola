@@ -4,7 +4,7 @@
 /// on each page, what leads Needs you, the cap per size class, that a probe
 /// still out is not a fault, that a figure nobody could take reads `—` and not
 /// `0`, and that a control whose target is not configured is dimmed but still
-/// reachable. Nothing asserts a hex or a pixel — those are the design system's
+/// reachable. Nothing asserts a hex or a pixel: those are the design system's
 /// to change and this file's to survive.
 ///
 /// The page that was the Dashboard is two now. The Home keeps Needs you, what
@@ -211,7 +211,7 @@ void main() {
       tester,
     ) async {
       // Two Radarr, one of them dark: the service still answers, so it is not
-      // unreachable — it is degraded, and the sum still closes over the
+      // unreachable: it is degraded, and the sum still closes over the
       // configured services.
       await _pumpPage(
         tester,
@@ -273,7 +273,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      // One offender, so the bare verb — `Retry both` is for exactly two.
+      // One offender, so the bare verb: `Retry both` is for exactly two.
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('services-alert-band')),
@@ -373,7 +373,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      // One offender, so the bare verb — `Retry both` is for exactly two.
+      // One offender, so the bare verb: `Retry both` is for exactly two.
       expect(inNeedsYou(find.text('Retry')), findsOneWidget);
       expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
     });
@@ -620,7 +620,7 @@ void main() {
       },
     );
 
-    // APP-04: a blocked import was filed as a stall — "Open in qBittorrent" —
+    // APP-04: a blocked import was filed as a stall, "Open in qBittorrent",
     // and eighteen of them were eighteen rows.
     testWidgets('blocked imports are one row that offers a manual import', (
       tester,
@@ -690,7 +690,7 @@ void main() {
   });
 
   group('the stack', () {
-    testWidgets('a card carries both figures on arrival — there is no fold', (
+    testWidgets('a card carries both figures on arrival: there is no fold', (
       tester,
     ) async {
       await _pumpPage(tester, _Page.stack);
@@ -1003,7 +1003,7 @@ void main() {
       await _scrollTo(tester, find.text('Downloads'));
 
       // Both rows belong to the same client, which reported 1 MB/s for its whole
-      // queue — not 2.
+      // queue, not 2.
       expect(find.text('2 moving · 1.0\u00A0MB/s'), findsOneWidget);
     });
   });
@@ -1282,7 +1282,7 @@ final SettingsModel _settingsWithClient = settingsWith(
   qbittorrentPassword: 'pass',
 );
 
-/// One service, two connections — the shape the header's `degraded` exists for.
+/// One service, two connections: the shape the header's `degraded` exists for.
 final SettingsModel _twoRadarrSettings = settingsWith(
   instances: const [
     ServiceInstance(
@@ -1425,7 +1425,7 @@ String _textContaining(WidgetTester tester, String needle) {
 /// How many reachability pips one card is drawing.
 ///
 /// Matched on the shape rather than on a type: the pip is private to
-/// `service_matrix.dart` on purpose — it is the anatomy of one screen, not a
+/// `service_matrix.dart` on purpose: it is the anatomy of one screen, not a
 /// reusable component.
 int _pipsIn(WidgetTester tester, String cellKey) => find
     .descendant(

@@ -14,7 +14,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Indexed by [NavTab.index]: the shell maps a bar tap and
 /// `StatefulNavigationShell.currentIndex` straight onto `NavTab.values`, so the
-/// branch order in the router is not cosmetic — the router asserts it.
+/// branch order in the router is not cosmetic: the router asserts it.
 final List<GlobalKey<NavigatorState>> shellBranchNavigatorKeys =
     List<GlobalKey<NavigatorState>>.unmodifiable([
       for (final tab in NavTab.values)
@@ -29,7 +29,7 @@ GlobalKey<NavigatorState> branchNavigatorKeyFor(NavTab tab) =>
 /// Dashboard branch.
 ///
 /// Built once at class load from the same table the bar and the router read, so
-/// a key can only exist for a tab that exists — there is no way to hand a
+/// a key can only exist for a tab that exists: there is no way to hand a
 /// branch a key for a view that is not on its service's bar.
 ///
 /// Distinct objects from [shellBranchNavigatorKeys] and from each other, which

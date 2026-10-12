@@ -8,8 +8,8 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 
 import 'catalog.dart';
 
-/// Opens the real dialog on a navigator of the scene's own, so the route —
-/// barrier and all — paints inside the scene rather than above the sheet.
+/// Opens the real dialog on a navigator of the scene's own, so the route
+/// (barrier and all) paints inside the scene rather than above the sheet.
 class _Opened extends StatefulWidget {
   const _Opened(this.open);
 

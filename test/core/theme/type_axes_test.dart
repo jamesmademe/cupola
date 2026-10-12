@@ -10,7 +10,7 @@ import 'package:cupola/core/theme.dart';
 /// Each bundled family is one variable file registered once. Flutter resolves
 /// `fontWeight` against that single face and never touches an axis, and it
 /// applies no optical size by itself, so a role that does not name its axes
-/// renders the file's default instance — for Bricolage Grotesque that is 96pt
+/// renders the file's default instance: for Bricolage Grotesque that is 96pt
 /// ExtraBold at full width. These tests measure the real faces.
 Future<void> _load(String family, String asset) async {
   final loader = FontLoader(family)..addFont(rootBundle.load(asset));

@@ -123,7 +123,7 @@ class BazarrProvidersScreen extends ConsumerWidget {
   ///
   /// The button was the whole guard. Nothing is deleted, but the throttle is
   /// how Bazarr stops asking a provider that has told it to wait, and it
-  /// cannot be put back once cleared — worth one question. [count] is the
+  /// cannot be put back once cleared: worth one question. [count] is the
   /// whole list on screen, not a sample of it.
   static Future<void> _confirmReset(
     BuildContext context,

@@ -6,7 +6,7 @@ import 'package:cupola/core/app_identity.dart';
 
 /// The one line a settings footer prints, and the one risk the file admits.
 ///
-/// `app_identity.dart` is a deliberate refusal of `package_info_plus` — the
+/// `app_identity.dart` is a deliberate refusal of `package_info_plus`. The
 /// project takes no new dependencies, and a const beats a platform channel for
 /// a string read before any async work is allowed. The price is that the version
 /// tracks `pubspec.yaml` by hand, and a hand-tracked constant with nothing
@@ -23,7 +23,7 @@ void main() {
       );
       expect(versionLine, isNotEmpty, reason: 'pubspec has no version:');
 
-      // `1.0.0+1` — the build number is deliberately not part of the
+      // `1.0.0+1`: the build number is deliberately not part of the
       // user-facing string, so only the part before `+` is compared.
       final declared = versionLine.split(':').last.trim().split('+').first;
       expect(

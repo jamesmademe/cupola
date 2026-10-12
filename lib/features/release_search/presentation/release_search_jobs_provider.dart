@@ -18,7 +18,7 @@ typedef ReleaseSearchRunner =
       CancelToken cancelToken,
     );
 
-/// Resolves how far a search for one target can travel — see
+/// Resolves how far a search for one target can travel: see
 /// [ReleaseSearchReach]. Injected the same way [ReleaseSearchRunner] is: the
 /// entry point that owns settings configures it once, so the manager stays
 /// free of knowing about certificates or reach beyond a target.
@@ -43,7 +43,7 @@ const kDefaultSearchConcurrency = 2;
 /// A [Notifier] and deliberately **not** a `FutureProvider`: Riverpod 3 re-runs
 /// a failed provider on an exponential backoff, which here would silently fire
 /// fresh searches at rate-limited indexers with nobody watching. Ownership also
-/// has to outlive the sheet — today an in-flight search dies when the modal is
+/// has to outlive the sheet: today an in-flight search dies when the modal is
 /// dismissed, because the sheet's `State` is its only owner.
 ///
 /// In-memory only: persistence across process death arrives with Phase 2.
@@ -56,8 +56,8 @@ final releaseSearchJobsProvider =
 ///
 /// A handoff rather than a navigation: the tap arrives in a plugin callback,
 /// which has no `BuildContext` and no business owning one. So the callback names
-/// the job here and routes to Activity, and the Searching list — which does have
-/// a context, and is where the user has just landed — opens the sheet and clears
+/// the job here and routes to Activity, and the Searching list (which does have
+/// a context, and is where the user has just landed) opens the sheet and clears
 /// this. That keeps every `showModalBottomSheet` in the widget layer.
 ///
 /// Null once consumed. Holding it would re-open the sheet on every rebuild.
@@ -76,7 +76,7 @@ class PendingReleaseSearchJobNotifier extends Notifier<String?> {
   void clear() => state = null;
 }
 
-/// The job whose releases have finished but not yet been looked at — what the
+/// The job whose releases have finished but not yet been looked at: what the
 /// Activity badge counts.
 final unseenReleaseSearchCountProvider = Provider<int>((ref) {
   final jobs = ref.watch(releaseSearchJobsProvider);
@@ -147,7 +147,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
     return null;
   }
 
-  /// An active job that would answer [target] — the same target, or one that
+  /// An active job that would answer [target]: the same target, or one that
   /// covers it.
   ///
   /// This is what makes the search button idempotent: tapping it twice, or
@@ -162,7 +162,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
   }
 
   /// A finished job whose releases are still grabbable and would answer
-  /// [target] — the read-through cache that saves a redundant pass.
+  /// [target]: the read-through cache that saves a redundant pass.
   ReleaseSearchJob? freshResultsFor(ReleaseSearchTarget target) {
     for (final job in state) {
       if (job.status != ReleaseSearchJobStatus.completed) continue;
@@ -175,7 +175,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
   /// Starts a search, or returns the job already doing that work.
   ///
   /// Never starts a second search for work already in flight, and never silently
-  /// replaces a fresh result — the caller decides whether to reuse
+  /// replaces a fresh result: the caller decides whether to reuse
   /// [freshResultsFor] before asking for a new one.
   ReleaseSearchJob start(ReleaseSearchTarget target) {
     final existing = activeJobCovering(target);
@@ -242,7 +242,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
   ///
   /// Letting a job finish against a credential the user has replaced would at
   /// best waste an indexer pass and at worst grab against a host they just
-  /// pointed somewhere else — so it stops, and it says why.
+  /// pointed somewhere else, so it stops, and it says why.
   void cancelForService(ServiceKey service) {
     for (final job in state.where((j) => j.isActive).toList()) {
       if (job.target.service != service) continue;
@@ -266,7 +266,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
   ///
   /// Cancelling is the *cleanup* here, not a courtesy: on the native transport
   /// a cancelled task reaches a **final** state, which is the condition under
-  /// which the plugin deletes its own record of the task — headers, and so the
+  /// which the plugin deletes its own record of the task: headers, and so the
   /// API key, included. That is why switching background search off cancels
   /// rather than letting the last searches drain: draining would leave exactly
   /// the record the user just asked not to have.
@@ -274,7 +274,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
   /// Deliberately every active job, not only the ones on the native transport.
   /// The manager does not track a transport per job, and buying that
   /// bookkeeping to spare a foreground search would trade a clear promise for a
-  /// subtle one — so the promise is the blunt one, and the copy says it.
+  /// subtle one, so the promise is the blunt one, and the copy says it.
   void cancelAll({required String headline, required String diagnosis}) {
     for (final job in state.where((j) => j.isActive).toList()) {
       _tokens.remove(job.id)?.cancel();

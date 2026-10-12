@@ -39,7 +39,7 @@ void main() {
     test('a host whose clock runs ahead still reads "just now"', () {
       // The case this function exists for. A NAS four minutes ahead of the
       // phone hands back a `scannedAt` in the future, and the shared formatter
-      // answers that honestly with "in 4 min" — which under a heading reading
+      // answers that honestly with "in 4 min", which under a heading reading
       // *Last scan* is not a sentence. The scan happened; only the two clocks
       // disagree about when.
       expect(
@@ -57,7 +57,7 @@ void main() {
     test('names the rooms, not just whether a broom is moving', () {
       // The region's substance, and the reason it is worth a third of the
       // page: `getLibraries` already answered names and kinds, so a Jellyfin
-      // server at rest — the majority state of a home server — says what is on
+      // server at rest (the majority state of a home server) says what is on
       // the shelf instead of only "no scan running".
       final rows = streamShelfRows([
         _library(name: 'Films', kind: StreamLibraryKind.movies),
@@ -81,7 +81,7 @@ void main() {
         // Case and padding do not make it a different word.
         _library(name: ' shows ', kind: StreamLibraryKind.shows),
         // A Jellyfin library of unclassified content, whose kind label is the
-        // word "Library" — worse than a stutter under a library's name.
+        // word "Library": worse than a stutter under a library's name.
         _library(name: 'Home video', kind: StreamLibraryKind.other),
       ], now: now);
 
@@ -119,8 +119,8 @@ void main() {
           _library(name: 'Library $i', refreshing: true),
       ], now: now);
 
-      // Three rows out of nine scans. Nothing here states a total — the
-      // header's subtitle is built from the whole list — so the sample is
+      // Three rows out of nine scans. Nothing here states a total: the
+      // header's subtitle is built from the whole list, so the sample is
       // never presented as the count.
       expect(rows, hasLength(streamShelfPeekLimit));
     });
@@ -155,7 +155,7 @@ void main() {
       () {
         // Every Jellyfin library lands here: that server exposes no per-library
         // timestamp, so null means "not reported" and "never scanned" at once.
-        // The room is still named — the half of the row the server did answer.
+        // The room is still named: the half of the row the server did answer.
         final rows = streamShelfRows([_library(name: 'Films')], now: now);
 
         expect(rows.single.title, 'Films');
@@ -200,7 +200,7 @@ void main() {
 
     test('a list in flight, or one that failed, is not a zero', () {
       // The header prints "—" for null. `getLibraries` throws on a remote
-      // failure now, so a dark server reaches this as no list at all — never
+      // failure now, so a dark server reaches this as no list at all, never
       // as the `[]` it used to swallow its failure into.
       expect(streamLibrariesCensus(libraries: null), isNull);
     });
@@ -227,7 +227,7 @@ void main() {
     test('drops an episode that arrived in two hubs at once', () {
       // `PlexClient._itemsFromHubs` concatenates `Metadata` across every hub
       // with no dedupe, and `/hubs/continueWatching` answers as a hub list on
-      // some builds — so one episode sitting in Continue watching *and* On deck
+      // some builds, so one episode sitting in Continue watching *and* On deck
       // arrives twice under one ratingKey. Two tiles for one episode is the
       // visible half; two Heroes sharing a tag is an assertion at flight time.
       final items = streamOnDeckPreview([

@@ -10,15 +10,15 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// lit glyph tile.
 ///
 /// The close is the one beat where the ring has finished saying what it had to
-/// say — every node is settled — so the instrument hands over to a row that
+/// say (every node is settled), so the instrument hands over to a row that
 /// names the outcome instead of tracking it. Tiles rather than the ring's dots
 /// because this is the only place in the flow where the answer is a *list of
 /// services* rather than a proportion of them.
 ///
 /// The wrap is bounded, not endless: [maxTiles] tiles across at most two rows,
 /// then one `+N` pill. A third row of glyphs stops being a result and starts
-/// being an inventory, and on the narrowest frame — 17 services picked and all
-/// of them answering, which is the case the phone board is drawn at — that is
+/// being an inventory, and on the narrowest frame: 17 services picked and all
+/// of them answering, which is the case the phone board is drawn at. That is
 /// exactly what it became.
 class OnboardingGlyphRow extends StatelessWidget {
   const OnboardingGlyphRow({super.key, required this.services});
@@ -58,7 +58,7 @@ class OnboardingGlyphRow extends StatelessWidget {
         final fits =
             !constraints.maxWidth.isFinite || wanted <= constraints.maxWidth;
         final tile = fits ? _fullTile : _smallTile;
-        // The gaps the boards draw — 10 and 8 — straddle a rung of the spacing
+        // The gaps the boards draw (10 and 8) straddle a rung of the spacing
         // ladder; the row takes the ladder rather than carrying two numbers of
         // its own.
         final gap = fits ? AppSpacing.md : AppSpacing.sm;
@@ -98,7 +98,7 @@ class _GlyphTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     // Seven of the seventeen accents fall under 3:1 on paper, so the glyph is
-    // never the raw accent — it is the ink `onTint` resolves for an accent
+    // never the raw accent: it is the ink `onTint` resolves for an accent
     // sitting on its own 16% wash.
     final ink = ServiceTheme.onTint(
       service.accent,
@@ -117,7 +117,7 @@ class _GlyphTile extends StatelessWidget {
         boxShadow: [
           // The lit part. A service that answered is the only thing in this
           // flow that gets to glow, and the glow is its own accent rather than
-          // a neutral shadow — the row is a result, not a toolbar.
+          // a neutral shadow. The row is a result, not a toolbar.
           BoxShadow(
             color: service.accent.withValues(alpha: 0.28),
             blurRadius: 24,

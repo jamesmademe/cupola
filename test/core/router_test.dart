@@ -265,8 +265,8 @@ void main() {
         final container = await _pumpRouter(tester);
         final router = container.read(routerProvider);
 
-        // Aimed at the canonical path — the one `ServiceRoutes.radarrMovie`
-        // builds and every in-app caller emits — rather than at the pre-tab
+        // Aimed at the canonical path: the one `ServiceRoutes.radarrMovie`
+        // builds and every in-app caller emits, rather than at the pre-tab
         // `radarr/movie/:id` tail. That tail still resolves, but only by
         // redirecting, and go_router re-matches a redirect with
         // `findMatch(uri)` and no extra: the preload would arrive as null and
@@ -414,7 +414,7 @@ void main() {
       // names with no branch behind it would 404 on tap rather than fail
       // anywhere a reader would look. Three of the four are faked by this
       // harness; the fourth, Readarr, needs no fake because every one of its
-      // tabs checks `isServiceConfigured` before it reads anything — an
+      // tabs checks `isServiceConfigured` before it reads anything: an
       // unconfigured service is answered without a request, so there is no
       // retry timer to leave pending.
       final container = await _pumpRouter(tester);
@@ -464,7 +464,7 @@ void main() {
       // Seerr shipped more link shapes than any other service, all of them
       // hanging off the service root because the service root *was* Discover.
       // Every one of them lives in the app's Discover tab now, so every one
-      // needs a tail — and the `.../all` literals need to be matched before
+      // needs a tail, and the `.../all` literals need to be matched before
       // the `:id` details, or `/dashboard/seerr/tv/all` becomes a title whose
       // id is the word `all`. Both spellings of the prefix, because the
       // `/services` rewrite chains into these rather than duplicating them.
@@ -550,8 +550,8 @@ void main() {
         // has to be walked.
         //
         // No fakes: every tab of these services answers an unconfigured
-        // connection without a request — the placeholder asks
-        // `isServiceConfigured` first and the queues gate on it too — so there
+        // connection without a request: the placeholder asks
+        // `isServiceConfigured` first and the queues gate on it too, so there
         // is no retry timer left pending by the time the case ends.
         final container = await _pumpRouter(tester);
         final router = container.read(routerProvider);
@@ -584,14 +584,14 @@ void main() {
       // months every one of these tabs resolved to `ServiceTabPlaceholder`,
       // which is a legitimate destination, so the location assertions above
       // stayed green while eight Overviews sat in the tree reachable by
-      // nothing. This table is the one that would have caught it — it names
+      // nothing. This table is the one that would have caught it: it names
       // the widget each Overview must build, and the `findsNothing` on the
       // placeholder is what fails when a screen is unmounted again.
       //
       // Every one of the sixteen services on the tab model is listed, which
       // it can be now that the last five Overviews are mounted: nothing on
       // this model draws a placeholder on its first tab any more. TrueNAS is
-      // absent because it has no bar at all — `tabsFor` returns null for it by
+      // absent because it has no bar at all: `tabsFor` returns null for it by
       // design, the console being ten sections that do not fit on one.
       //
       // Jellyfin and Plex both name `StreamOverviewScreen`, and that is the
@@ -747,7 +747,7 @@ void main() {
       // bare root, the tab-less detail, and the same two under the pre-rename
       // `/services` prefix. The prefix rewrite chains into the per-service
       // redirects rather than duplicating them, so what this asserts is that
-      // the chain finishes — a rewrite that stopped at the first hop would
+      // the chain finishes: a rewrite that stopped at the first hop would
       // leave the user on a path that draws nothing.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
@@ -815,7 +815,7 @@ void main() {
       // The rename moved thirty-four routes and every detail tail under them.
       // A bookmark, a restored session or a shared deep link from before it
       // must not 404, and the rewrite is a prefix swap rather than a shadow
-      // copy of the tree — so what this asserts is that the swap reaches the
+      // copy of the tree, so what this asserts is that the swap reaches the
       // *descendants*, not just the root.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
@@ -825,7 +825,7 @@ void main() {
       // than about the rewrite.
       // `/services/radarr` takes two hops now: the prefix rewrite lands it on
       // `/stack/radarr`, which is redirect-only and hands off to Overview.
-      // That chaining is the property — a rewrite that stopped at the first
+      // That chaining is the property: a rewrite that stopped at the first
       // hop would leave the user on a path that draws nothing.
       const cases = {
         '/services': '/stack',
@@ -848,7 +848,7 @@ void main() {
     ) async {
       // The instance lens travels as `?i=`, so a rewrite that dropped the
       // query would silently retarget a deep link at whichever connection the
-      // lens happens to point at — the one failure mode of this change that
+      // lens happens to point at: the one failure mode of this change that
       // moves a user's files rather than just their view.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
@@ -961,7 +961,7 @@ void main() {
 
   /// Jellyfin and Plex: two services, one screen family, two different bars.
   ///
-  /// Every case here is about the move onto the tab model — the service root
+  /// Every case here is about the move onto the tab model: the service root
   /// that now redirects, the two spellings the single-page service shipped, and
   /// the declaration order inside the Libraries branch. Neither server is
   /// configured in this harness, which is deliberate: an unconfigured tab is a
@@ -1107,8 +1107,8 @@ void main() {
     testWidgets('the legacy /services prefix still reaches both details', (
       tester,
     ) async {
-      // Three hops for the item — prefix rewrite, pre-tab tail, then the route
-      // inside the branch — and what this asserts is that the chain finishes.
+      // Three hops for the item: prefix rewrite, pre-tab tail, then the route
+      // inside the branch, and what this asserts is that the chain finishes.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
@@ -1134,7 +1134,7 @@ void main() {
   /// what keeps these cases about routing: every destination below gates on
   /// `isServiceConfigured` before it reaches a provider, so an unconfigured
   /// service draws its not-configured door without asking anything for
-  /// anything — and a destination that did ask would leave a retrying provider
+  /// anything, and a destination that did ask would leave a retrying provider
   /// behind and fail this file at teardown rather than at the assertion.
   group('the infrastructure three on the tab model', () {
     testWidgets('the bare service path lands on Overview', (tester) async {
@@ -1249,7 +1249,7 @@ void main() {
       tester,
     ) async {
       // Three routes that hung off the service root when a one-page service had
-      // nowhere else to hang them, and all three are still in the wild —
+      // nowhere else to hang them, and all three are still in the wild:
       // `ServiceRoutes.dockgeStack` built the first for every row of the list.
       // One hop, not two: each tail carries the deep link's own parameters
       // straight to the page inside the Stacks branch rather than bouncing
@@ -1258,7 +1258,7 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      // Nothing reads `from` — Dockge links carry no query in production. It is
+      // Nothing reads `from`. Dockge links carry no query in production. It is
       // here because the *mechanism* that would drop it is the same one that
       // drops `?i=`, and a lens pointed at a connection this harness does not
       // define would leave a provider retrying.
@@ -1309,8 +1309,8 @@ void main() {
     ) async {
       // Not to the app home: the branch is where the user still is, and sending
       // them out of the service is a bigger move than the mistake. A Dockge
-      // stack name is a Compose project directory — a free-form string with no
-      // `safeIntParam` to run — so emptiness is the whole of what can be
+      // stack name is a Compose project directory: a free-form string with no
+      // `safeIntParam` to run, so emptiness is the whole of what can be
       // checked.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
@@ -1325,8 +1325,8 @@ void main() {
     testWidgets('the legacy /services prefix still reaches all three', (
       tester,
     ) async {
-      // Two hops for a service root — the prefix rewrite lands on the
-      // redirect-only node, which hands off to Overview — and three for the
+      // Two hops for a service root: the prefix rewrite lands on the
+      // redirect-only node, which hands off to Overview, and three for the
       // Dockge stack, which crosses the pre-tab tail on the way into the
       // branch. What this asserts is that the chain finishes: a rewrite that
       // stopped at the first hop would leave the user on a path that draws
@@ -1356,7 +1356,7 @@ void main() {
   //
   // The tables above this one assert *locations*, and a location is not a
   // page: for months every tab on every bar resolved to `ServiceTabPlaceholder`
-  // — a legitimate destination — so the path assertions stayed green while the
+  // (a legitimate destination), so the path assertions stayed green while the
   // screens behind them were unreachable. The Overview table was written to
   // close that for the sixteen Overviews. This one closes it for the other
   // seventy tabs.
@@ -1364,8 +1364,8 @@ void main() {
   // Two properties, and the second is the load-bearing one:
   //
   //  * every tab draws the widget the router names for it, **and** where one
-  //    widget serves several tabs — `ArrTabScreen` is queue, wanted and
-  //    history; `UnraidScreen` is five sections; `NpmScreen` is four — the
+  //    widget serves several tabs: `ArrTabScreen` is queue, wanted and
+  //    history; `UnraidScreen` is five sections; `NpmScreen` is four: the
   //    entry asserts the *discriminator* too. A type-only check would pass
   //    with Queue mounted on History, which is a plausible page under the
   //    wrong label and the failure no path assertion can see.
@@ -1374,7 +1374,7 @@ void main() {
   //    without an entry here fails rather than going unchecked. That is the
   //    same shape as the router's own wildcard `throw`, in the test.
   //
-  // TrueNAS is absent because it has no bar at all — `tabsFor` returns null
+  // TrueNAS is absent because it has no bar at all: `tabsFor` returns null
   // for it by design, ten sections not fitting on one.
   //
   // No fake is needed: the harness leaves every service unconfigured and each
@@ -1764,7 +1764,7 @@ Future<ProviderContainer> _pumpRouter(
       // Prowlarr has no hand-written fake, and does not need one: every call
       // its screens make is a GET whose envelope is an array or an object that
       // degrades to `{}`, so one canned empty array answers all of them. What
-      // it buys is a *quiet* teardown — an unconfigured `ProwlarrService`
+      // it buys is a *quiet* teardown: an unconfigured `ProwlarrService`
       // throws, and Riverpod retries the throw on a timer that outlives the
       // widget tree. Prowlarr's Settings pages and its indexer detail are
       // reachable from this file's tables, and neither gates on configuration.

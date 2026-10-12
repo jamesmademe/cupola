@@ -9,8 +9,8 @@ import 'package:crypto/crypto.dart';
 ///
 /// TrueNAS speaks JSON-RPC over `wss://…/api/current` and Dockge speaks
 /// Socket.IO, and both dial through `WebSocket.connect` over the pinned
-/// `HttpClient`. Answering the upgrade here — a real `101`, a real
-/// `Sec-WebSocket-Accept`, real frames on a detached socket — is what lets the
+/// `HttpClient`. Answering the upgrade here (a real `101`, a real
+/// `Sec-WebSocket-Accept`, real frames on a detached socket) is what lets the
 /// app's own clients, and the Dashboard probe that builds them directly, run
 /// unmodified. A peer only ever sees whole text messages.
 abstract class WebSocketPeer {
@@ -37,7 +37,7 @@ String webSocketAccept(String key) => base64.encode(
 /// The detached socket `HttpClientResponse.detachSocket` hands `dart:io`'s
 /// WebSocket: client frames in, server frames out.
 ///
-/// Only what `_WebSocketImpl` touches is implemented — it listens once,
+/// Only what `_WebSocketImpl` touches is implemented: it listens once,
 /// writes through `addStream`, and ends with `close` or `destroy`. Anything
 /// else reaching [noSuchMethod] throws, so a new dependency on this surface
 /// fails loudly instead of quietly returning null.

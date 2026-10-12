@@ -19,7 +19,7 @@ enum TrueNasTaskKind {
   /// The RPC that starts the task immediately.
   ///
   /// Most namespaces expose `<namespace>.run`, but cloud sync is the exception:
-  /// the middleware method is `cloudsync.sync` — `cloudsync.run` does not exist
+  /// the middleware method is `cloudsync.sync`; `cloudsync.run` does not exist
   /// and every "Run now" against it failed server-side.
   String get runMethod =>
       this == TrueNasTaskKind.cloudSync ? 'cloudsync.sync' : '$namespace.run';

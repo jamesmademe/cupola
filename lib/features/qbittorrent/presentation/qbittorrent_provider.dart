@@ -61,13 +61,13 @@ final qbittorrentServiceForProvider =
     });
 
 /// Call first in a user's explicit Retry, or pull-to-refresh, on a qBittorrent
-/// surface — before invalidating what it retries.
+/// surface, before invalidating what it retries.
 ///
 /// Forgets a sign-in refusal the lens's client is holding (see
 /// `QbittorrentClient` and [qbittorrentClientForProvider]), so the one attempt
 /// the person asked for is actually made: they fixed the password on the
 /// server, or waited out a ban. Poll ticks invalidate directly
-/// and never come through here — a timer that cleared the refusal would be the
+/// and never come through here: a timer that cleared the refusal would be the
 /// loop that gets the address banned.
 void clearQbittorrentLoginRefusal(WidgetRef ref) {
   // Checked rather than caught: the service provider throws when qBittorrent is
@@ -158,7 +158,7 @@ final torrentSearchQueryProvider = StateProvider<String>((ref) => '');
 /// **Every `FutureProvider` in this feature carries `retry: noProviderRetry`**,
 /// and this one is why. Riverpod's default re-runs a failed build ten times
 /// behind an exponential backoff, and while it does the state is an
-/// `AsyncLoading` that still holds the last value *and* the error — which
+/// `AsyncLoading` that still holds the last value *and* the error, which
 /// `when` routes to `loading`. The list's three-second poll then invalidates
 /// before the tenth attempt, so a qBittorrent that went down stayed a spinner
 /// for as long as the page was open, and the last-known list with its fault
@@ -220,8 +220,8 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   // Paused is deliberately absent: it is folded client-side below, because
   // neither spelling of it survives every qBittorrent in the wild. `paused` is
   // what 4.x and 5.0 understand; 5.1 renamed the concept and answers `stopped`.
-  // An unrecognised `filter` is not an error to qB — `/torrents/info` returns
-  // the UNFILTERED list — so whichever word is sent, half the installed base
+  // An unrecognised `filter` is not an error to qB: `/torrents/info` returns
+  // the UNFILTERED list, so whichever word is sent, half the installed base
   // gets a Paused tab holding every torrent it has. A filter that silently does
   // nothing is worse than one that fails. [TorrentState.fromString] already
   // accepts both vocabularies, so the census the model builds is the only thing
@@ -234,7 +234,7 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   };
 
   // Whenever the server-side filter resolves to "all", reuse
-  // allTorrentsProvider — it requests the very same /torrents/info payload
+  // allTorrentsProvider: it requests the very same /torrents/info payload
   // (no `filter` param, which qB's WebUI v2 defaults to `all`) with the same
   // sort and direction, and it is already alive on this screen. Fetching
   // separately here would download and parse the identical body twice on
@@ -339,20 +339,20 @@ final torrentPollingProvider = Provider.autoDispose<void>((ref) {
   );
 });
 
-/// Invalidates [providers] for a poll tick — except any whose last request
+/// Invalidates [providers] for a poll tick, except any whose last request
 /// has not answered yet.
 ///
 /// The tick is three seconds and the transport's connect timeout is ten, so
 /// against a host that drops packets instead of refusing them, invalidating on
 /// every tick threw each request away before it could fail: the provider never
 /// left `loading`, the cold open was a spinner for as long as the page stayed
-/// open, and no error — hence no fault band — ever landed. A request still in
+/// open, and no error (hence no fault band) ever landed. A request still in
 /// flight is left to finish; the tick after it answers refreshes as usual.
 ///
 /// All of them are inspected **before** any is invalidated: reading a provider
 /// whose dependency this tick has just invalidated would force it to rebuild
 /// on the spot, inside the tick. And only a provider that already exists is
-/// inspected, so a tick never creates one just to ask about it — the same
+/// inspected, so a tick never creates one just to ask about it. The same
 /// no-op `invalidate` is for a provider nothing has read.
 void _refreshUnlessInFlight(
   Ref ref,
@@ -371,8 +371,8 @@ void _refreshUnlessInFlight(
 ///
 /// Invalidates only what the detail screen displays, and it is the only poll
 /// running while the detail is open: the list it was pushed from is covered, so
-/// that gate is shut. The saving is the list's whole tick — an unfiltered
-/// `/torrents/info` plus `/transfer/info` — not this screen's own filtered
+/// that gate is shut. The saving is the list's whole tick: an unfiltered
+/// `/torrents/info` plus `/transfer/info`, not this screen's own filtered
 /// `/torrents/info`, which is a different request to the same endpoint and is
 /// what this page actually reads.
 ///

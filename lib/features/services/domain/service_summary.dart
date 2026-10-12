@@ -4,7 +4,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// What the probe found, in the three states a failure can mean.
 ///
 /// Two used to be one: every error the probe caught was `offline`, so a Radarr
-/// that answered 401 was painted exactly like one that was switched off — red,
+/// that answered 401 was painted exactly like one that was switched off: red,
 /// "unreachable", named in the band that says what did not answer. A refusal
 /// is an answer. It is the service speaking, and the fix is in the form.
 enum ServiceSummaryStatus {
@@ -25,15 +25,15 @@ enum ServiceSummaryStatus {
 /// ## What this deliberately no longer carries
 ///
 /// It used to hold an `itemCount` and an `itemLabel`, which composed into a
-/// `countLabel` — the "76 movies" line on the old status card. Producing that one
+/// `countLabel`: the "76 movies" line on the old status card. Producing that one
 /// string cost a **full library fetch per service**: `getMovies()`,
 /// `getSeries()`, `getArtists()`, `getTorrents()`, `getAuthors()`, `getPools()`,
 /// `fetchStacks()`, `getIndexers()`, one after another, none of them shared with
 /// the providers the rest of the screen already used.
 ///
 /// Two things made that indefensible. The figure was the *least* live thing on a
-/// control-room screen — a library total does not change from one week to the
-/// next — and the stack matrix that replaced the card shows a genuinely live
+/// control-room screen: a library total does not change from one week to the
+/// next, and the stack matrix that replaced the card shows a genuinely live
 /// metric instead, resolved from `serviceKpiProvider`, which reads providers the
 /// screen was loading anyway. So the counts became invisible while still being
 /// paid for, thirteen times, on every open and every pull-to-refresh.
@@ -87,10 +87,10 @@ class ServiceSummary {
   /// Answered, and nothing is wrong.
   bool get isOnline => status == ServiceSummaryStatus.online;
 
-  /// Nothing answered — the red state.
+  /// Nothing answered: the red state.
   bool get didNotAnswer => status == ServiceSummaryStatus.offline;
 
-  /// Answered with a refusal or a fault — amber.
+  /// Answered with a refusal or a fault: amber.
   bool get isFault => status == ServiceSummaryStatus.fault;
 
   /// The reason the probe failed, as the words and the tone read it. An

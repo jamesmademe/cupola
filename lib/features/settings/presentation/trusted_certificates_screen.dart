@@ -18,7 +18,7 @@ import 'package:cupola/features/settings/presentation/widgets/settings_master_de
 /// Every self-signed certificate trusted inside Cupola (ADR-6), independent
 /// of any one service's settings screen.
 ///
-/// Trust is scoped to an origin, not to a service — the per-service form
+/// Trust is scoped to an origin, not to a service. The per-service form
 /// shows the pin for *its own* address and can forget it, but nothing there
 /// finds a pin whose services have all since been removed, or shows the one
 /// decision covering three services at once. This screen is that one place.
@@ -55,8 +55,8 @@ class TrustedCertificatesScreen extends ConsumerWidget {
                 children: [
                   // The doctrine was written down only on the empty state,
                   // which is the one screen where nobody needs it. A user
-                  // arrives here with three pins and one question — why is this
-                  // list of *addresses* rather than of services — and the
+                  // arrives here with three pins and one question: why is this
+                  // list of *addresses* rather than of services, and the
                   // answer is ADR-6.
                   _PinnedOriginsHeader(count: origins.length),
                   const SizedBox(height: AppSpacing.lg),
@@ -139,7 +139,7 @@ class _TrustedOriginCard extends ConsumerWidget {
           : 'The next connection from '
                 '${services.map((s) => s.title).join(', ')} will need to be '
                 'trusted again.',
-      // Reversible — the next connection re-offers the trust prompt — so no
+      // Reversible: the next connection re-offers the trust prompt, so no
       // "cannot be undone" sentence.
       confirmLabel: 'Forget certificate',
     );
@@ -209,7 +209,7 @@ class _TrustedOriginCard extends ConsumerWidget {
   }
 
   /// Uppercased, colon-grouped hex, matching
-  /// [ServerCertificate.displayFingerprint] — storage keeps the raw lowercase
+  /// [ServerCertificate.displayFingerprint]; storage keeps the raw lowercase
   /// hex, so it needs the same formatting to read the way the trust prompt
   /// that created it did.
   static String _displayFingerprint(String rawHex) {

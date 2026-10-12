@@ -40,7 +40,7 @@ class ReadarrLibraryScreen extends ConsumerWidget {
     // The configured check comes first, as it does on every other service's
     // landing surface: `readarrServiceProvider` throws for a Readarr that was
     // never set up, so without this the tab would answer a question about an
-    // unreachable server with "Failed to load authors" — an error about a
+    // unreachable server with "Failed to load authors": an error about a
     // request that was never worth making.
     final configured = ref.watch(
       currentSettingsProvider.select(

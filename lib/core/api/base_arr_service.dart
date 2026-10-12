@@ -18,8 +18,8 @@ class ArrServiceConfig {
 
   /// Embedded **parents** requested by the calendar endpoint.
   ///
-  /// The calendar record is always the dated entity itself — a movie, an
-  /// episode, an album, a book — so there is never anything to ask for that
+  /// The calendar record is always the dated entity itself: a movie, an
+  /// episode, an album, a book, so there is never anything to ask for that
   /// names the record's own type. What a service may need is the thing above
   /// it: Sonarr's series, Lidarr's artist, Readarr's author.
   final Map<String, dynamic> calendarParams;
@@ -33,7 +33,7 @@ class ArrServiceConfig {
 
   // No calendar params: `/api/v3/calendar` returns the movies themselves, so
   // there is nothing to embed. `includeMovie` is a *queue* parameter and was
-  // dead weight here — with the matching `record['movie']` lookup that never
+  // dead weight here, with the matching `record['movie']` lookup that never
   // found anything on the presentation side.
   static const radarr = ArrServiceConfig(
     apiVersion: 'v3',
@@ -50,7 +50,7 @@ class ArrServiceConfig {
     sortKey: 'releaseDate',
     calendarParams: {'includeArtist': true},
   );
-  // The record *is* the book, so only the author is worth embedding —
+  // The record *is* the book, so only the author is worth embedding:
   // `includeBook` was the same mistake as Radarr's `includeMovie`.
   static const readarr = ArrServiceConfig(
     apiVersion: 'v1',
@@ -72,7 +72,7 @@ const int arrIsolateMapThreshold = 200;
 ///
 /// Top-level rather than a mixin method on purpose: the closure handed to
 /// `Isolate.run` must capture only sendable values, and one written inside an
-/// instance method can drag `this` — which holds an [ApiClient] — across the
+/// instance method can drag `this` (which holds an [ApiClient]) across the
 /// boundary.
 Future<List<T>> _mapArrItems<T>(
   List<dynamic> data,
@@ -88,21 +88,21 @@ Future<List<T>> _mapArrItems<T>(
 
 /// One page of an \*arr paged endpoint: the rows, and how many rows there are.
 ///
-/// Every paged \*arr endpoint answers with the same envelope —
-/// `{page, pageSize, totalRecords, records}` — and for a long time this app
+/// Every paged \*arr endpoint answers with the same envelope:
+/// `{page, pageSize, totalRecords, records}`, and for a long time this app
 /// threw away three quarters of it. `getHistory`, `getMissing` and `getCutoff`
 /// each returned `response.data['records']` and nothing else, so **every count
 /// derived from them was the size of the page, not the size of the set**: a
 /// library with 340 missing episodes read "20 missing" on the Activity pill,
 /// because 20 is the default page size. The number was not approximate, it was
-/// answering a different question — *how many did we fetch* — and it happened to
+/// answering a different question (*how many did we fetch*) and it happened to
 /// look like an answer to the one the user asked.
 ///
 /// [total] is nullable rather than defaulted to [records]`.length`, and that is
 /// the point of the type: a server that does not send `totalRecords` (an older
 /// build, a proxy that rewrites the body) has told us nothing about the size of
 /// the set, and `records.length` would be the same lie with a fresh coat on it.
-/// A caller that gets null must print a count it can defend — "20 shown" — or
+/// A caller that gets null must print a count it can defend: "20 shown", or
 /// no count at all.
 class ArrRecordPage {
   const ArrRecordPage({
@@ -111,7 +111,7 @@ class ArrRecordPage {
     this.cutShort = false,
   });
 
-  /// The rows on this page — exactly what the old `List<dynamic>` return was.
+  /// The rows on this page: exactly what the old `List<dynamic>` return was.
   final List<dynamic> records;
 
   /// How many records the server says exist across every page, or null when it
@@ -188,7 +188,7 @@ mixin ArrActivityMixin {
   /// the walk reached the end**.
   ///
   /// The queue endpoint is paginated and defaults to a page size of 10, so a
-  /// bare `/queue` call silently returns the first ten records — which is what
+  /// bare `/queue` call silently returns the first ten records, which is what
   /// made Activity's "Now" bucket show ten Sonarr rows however full the real
   /// queue was. Pages of 200 (the server-side cap) keep this to a single
   /// request in the common case, and only page on when a queue is genuinely
@@ -248,15 +248,15 @@ mixin ArrActivityMixin {
   /// Fetches one page of history, **with the envelope's total**.
   ///
   /// The primitive; [getHistory] is the same request with the total dropped on
-  /// the floor. Anything that prints a figure — the Activity pills, a service
-  /// readout — must come through here, because the other one can only say how
+  /// the floor. Anything that prints a figure: the Activity pills, a service
+  /// readout: must come through here, because the other one can only say how
   /// many rows it happened to fetch.
   ///
   /// NOTE for whoever migrates the callers: Radarr and Sonarr hang their extra
   /// query parameters (`includeMovie`, `includeSeries`/`includeEpisode`) off an
   /// override of [getHistory], not of this method, so calling this one directly
   /// on those two services returns records without the embedded media. Move
-  /// those overrides onto [getHistoryPage] — same body, same super call — and
+  /// those overrides onto [getHistoryPage] (same body, same super call), and
   /// [getHistory] inherits them through the delegation below.
   Future<ArrRecordPage> getHistoryPage({
     int page = 1,
@@ -351,7 +351,7 @@ mixin ArrActivityMixin {
       );
 
       // The same envelope reader the single-page getters use, rather than the
-      // second copy of the parse that used to live here — one of which had
+      // second copy of the parse that used to live here, one of which had
       // already drifted, coercing an unreadable total into `records.length`
       // where the other coerced it into a page-sized guess.
       final envelope = ArrRecordPage.fromEnvelope(response.data);
@@ -426,13 +426,13 @@ mixin ArrActivityMixin {
   ///
   /// This is the one the "34 missing" figure has to come from. `wanted/missing`
   /// defaults to 20 rows, so a count taken from [getMissing] said 20 for every
-  /// library with more than twenty gaps in it — a number that is wrong in the
+  /// library with more than twenty gaps in it: a number that is wrong in the
   /// one direction that matters, since it makes a large backlog look small.
   /// [queryParameters] is where a service's own wanted embeds ride, and it has
   /// to be **here**, on the primitive, for the reason [getHistoryPage] gives:
   /// [getMissing] delegates to this, so an override of this one reaches both
   /// spellings, while an override of [getMissing] leaves every caller that
-  /// needs the envelope's total — which is every caller that prints a figure —
+  /// needs the envelope's total, which is every caller that prints a figure:
   /// holding records the embed would have filled. Lidarr's `includeArtist` is
   /// the live case: the Overview's backlog clause counts distinct artists over
   /// this page, and without the embed that set is empty on every real server.
@@ -471,7 +471,7 @@ mixin ArrActivityMixin {
   ///
   /// Takes [queryParameters] of its own rather than inheriting the page
   /// primitive's: it walks `_fetchAllPages` directly, so an override that only
-  /// covered [getMissingPage] would miss it — and this is the spelling
+  /// covered [getMissingPage] would miss it, and this is the spelling
   /// Activity's Wanted tab reads.
   Future<List<dynamic>> getAllMissing({
     Map<String, dynamic>? queryParameters,
@@ -547,14 +547,14 @@ mixin ArrActivityMixin {
   }
 
   /// Fetches all items from a list endpoint and maps them, in an isolate once
-  /// the response is large enough to be worth one — answering `[]` when the
+  /// the response is large enough to be worth one: answering `[]` when the
   /// list cannot be read.
   ///
   /// **Only for a caller that joins against the library and can go on
   /// without it**: a lookup by external id, an album cap in a queue join. There
   /// the library is one input among several, and the rest of the answer is
-  /// still honest without it. A surface that *is* the library — a wall, an
-  /// author list — has nothing else to show, and reading this made a dark
+  /// still honest without it. A surface that *is* the library (a wall, an
+  /// author list) has nothing else to show, and reading this made a dark
   /// server say "No items found". Those read [fetchAllItemsOrThrow].
   Future<List<T>> fetchAllItems<T>(
     String endpoint,
@@ -572,7 +572,7 @@ mixin ArrActivityMixin {
   /// The same list, with a failed fetch allowed to reach the caller.
   ///
   /// The sibling of [fetchAllItems], and the pair is the point. Swallowing is
-  /// right only for a join that can do without the library — and it is a
+  /// right only for a join that can do without the library, and it is a
   /// fabrication for anything that *counts* or *is* the library, because an
   /// unreachable server and an empty library arrive as the same `[]`. Every
   /// figure derived
@@ -582,8 +582,8 @@ mixin ArrActivityMixin {
   ///
   /// Callers that derive a figure read this one and turn the throw into
   /// [ServiceKpi.unavailable]'s em dash; the library walls read it too and
-  /// render the throw as their fault state. Mapping is identical — straight through
-  /// for a small list, through an isolate once it is worth the port — so the
+  /// render the throw as their fault state. Mapping is identical: straight through
+  /// for a small list, through an isolate once it is worth the port, so the
   /// two differ in exactly one thing, which is whether the failure survives.
   Future<List<T>> fetchAllItemsOrThrow<T>(
     String endpoint,
@@ -652,7 +652,7 @@ mixin ArrActivityMixin {
   /// [cancelToken] aborts the request once the search that asked for it has
   /// been superseded: global search re-runs every service leg on each debounced
   /// keystroke, and a discarded round should stop paying for itself rather than
-  /// run to completion. Failures — cancellation included — degrade to an empty
+  /// run to completion. Failures (cancellation included) degrade to an empty
   /// list, like every other browse path.
   /// [reportFailure] decides whether a dead server is allowed to look like an
   /// empty library.
@@ -661,7 +661,7 @@ mixin ArrActivityMixin {
   /// service: the user is mid-word, the box is theirs, and an error banner that
   /// appears and vanishes between keystrokes is noise. It is the wrong default
   /// for the global search, and with several connections per service it becomes
-  /// actively misleading — "No Radarr · Away results" reads as "that library
+  /// actively misleading: "No Radarr · Away results" reads as "that library
   /// does not have it" when what happened is that the box is off. There the
   /// caller passes true and gets the throw, which its own section turns into a
   /// stated failure.
@@ -780,7 +780,7 @@ mixin ArrActivityMixin {
   ///
   /// Unlike [fetchQualityProfiles], a failure here travels. The two are read
   /// side by side by the add sheet, and an empty list from this one is a
-  /// sentence — "this server has nowhere to put it" — that the sheet renders
+  /// sentence: "this server has nowhere to put it", that the sheet renders
   /// as a dead end. Swallowing the error would make an unreachable server say
   /// exactly that, which is the mistake `lookupItems` used to make: offline
   /// and empty became the same answer.
@@ -879,7 +879,7 @@ mixin ArrActivityMixin {
   /// [removeFromClient] also deletes the download from the connected client
   /// (qBittorrent, SABnzbd…) rather than only from the \*arr queue.
   /// [blocklist] additionally records the release so the same one is not grabbed
-  /// again — which, combined with a fresh search, is how a retry is expressed in
+  /// again, which, combined with a fresh search, is how a retry is expressed in
   /// the \*arr API. There is no dedicated "retry" endpoint.
   Future<void> removeFromQueue(
     int id, {

@@ -125,7 +125,7 @@ final serviceKpiProvider = FutureProvider.autoDispose
       }
     }, retry: noProviderRetry);
 
-/// Every provider [serviceKpiProvider] reads for [service] — the sources, not
+/// Every provider [serviceKpiProvider] reads for [service]: the sources, not
 /// the folds.
 ///
 /// A pull that invalidates only [serviceKpiProvider] re-folds the same cached
@@ -198,7 +198,7 @@ List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
 /// is not `autoDispose`; invalidating the wrapper alone redrew the identity
 /// band from the probe already in the cache, so a pull never asked the server
 /// whether it was up. And [serviceKpiProvider] folds sources that live as long
-/// as the app — see [serviceKpiSources].
+/// as the app: see [serviceKpiSources].
 void invalidateServiceReadout(WidgetRef ref, ServiceKey service) {
   ref.invalidate(serviceSummaryProvider(service));
   for (final instance
@@ -219,7 +219,7 @@ void invalidateServiceReadout(WidgetRef ref, ServiceKey service) {
 /// `×2` and the fleet's figures, and there is no fleet figure to compute while
 /// the only thing the app can ask is "what does the lens say". Keyed on
 /// [InstanceRef] and not on a bare id, for the reason that record already
-/// carries — a probe for a connection that has since been removed still has to
+/// carries, a probe for a connection that has since been removed still has to
 /// know what kind of thing it was.
 ///
 /// The lens's own id collapses back onto [serviceKpiProvider] rather than
@@ -279,9 +279,9 @@ final serviceKpiForProvider = FutureProvider.autoDispose
 ///  * **a connection is dark.** Gated on `offline == 0` before anything is
 ///    fetched: the fold is never partial, because a sum missing a term looks
 ///    exactly like a sum.
-///  * **a connection cannot be read per connection** — see
+///  * **a connection cannot be read per connection**: see
 ///    [serviceKpiForProvider].
-///  * **the figures do not fold** — see [aggregateServiceKpis], which is where
+///  * **the figures do not fold**: see [aggregateServiceKpis], which is where
 ///    the arithmetic and, more importantly, the refusals live.
 ///
 /// A single-connection service folds to itself, so the card does not have to
@@ -293,8 +293,8 @@ final foldedServiceKpisProvider = FutureProvider.autoDispose
       if (connections.isEmpty) return null;
 
       // Lens first. `aggregateServiceKpis` falls back to the head of this list
-      // for every figure whose unit cannot be added — a percentage, a ratio, a
-      // state word — and the lens is the connection the rest of the app is
+      // for every figure whose unit cannot be added: a percentage, a ratio, a
+      // state word, and the lens is the connection the rest of the app is
       // already pointed at, so it is the only defensible one to keep.
       final lens = ref.watch(activeInstanceProvider(service))?.id;
       final ordered = [
@@ -425,11 +425,11 @@ final serviceSignalProvider = FutureProvider.autoDispose
 int _statInt(Map<String, dynamic>? stats, String key) =>
     (stats?[key] as num?)?.toInt() ?? 0;
 
-/// Flags a metric as a **fault** — something that was meant to be working and
+/// Flags a metric as a **fault**: something that was meant to be working and
 /// is not, and the only one of the three that earns amber.
 StatusTone? _faultIf(bool condition) => condition ? StatusTone.warning : null;
 
-/// Flags a metric as **backlog** — work that has not happened yet.
+/// Flags a metric as **backlog**: work that has not happened yet.
 ///
 /// Noteworthy, because a pile of missing films is why you opened the service;
 /// untoned, because it is the resting state of a media manager and not a
@@ -491,7 +491,7 @@ String _notAnswering(ServiceKey service, Object? error) =>
 /// `resolveServiceSignal` depends on.
 ///
 /// **`Streams` is first, so it is the resting fallback.** With nothing flagged
-/// the matrix cell shows `kpis.first`, and `0 streams` is both true and live —
+/// the matrix cell shows `kpis.first`, and `0 streams` is both true and live:
 /// unlike a library total, which DESIGN.md rightly calls the least live thing you
 /// could put on a control-room screen.
 ///
@@ -506,7 +506,7 @@ String _notAnswering(ServiceKey service, Object? error) =>
 /// measured outbound throughput: Jellyfin only carries a bitrate while
 /// transcoding, and Plex's `Session.bandwidth` is a reservation. Summing those
 /// would add two different units together and present the result as the box's
-/// egress — a fabricated number. Per-session bitrate is shown on the board, where
+/// egress: a fabricated number. Per-session bitrate is shown on the board, where
 /// `StreamSession.bitrateIsNominal` can say what it actually is.
 ///
 /// **A null future is a read this token may not make**, and its figures read
@@ -668,18 +668,18 @@ Future<List<ServiceKpi>> _plexKpisFor(Ref ref, String instanceId) {
 /// *successfully* and the rail printed `Movies 0 · Monitored 0 · Missing 0`
 /// under an identity band whose own probe already read Unreachable. The wall
 /// now reads `getMoviesOrThrow` too, with the same retry policy, so the two are
-/// the same request made twice — kept apart so this rail's invalidation stays
+/// the same request made twice, kept apart so this rail's invalidation stays
 /// its own. See `getMoviesOrThrow`.
 ///
 /// Plain, not `autoDispose`, matching `moviesProvider` beside it: the library
-/// is a session-scoped read, and `serviceKpiProvider` *is* `autoDispose` — a
+/// is a session-scoped read, and `serviceKpiProvider` *is* `autoDispose`: a
 /// disposing source under it would turn one `GET /movie` per session into one
 /// per visit to the Dashboard and to every Radarr tab. Pull-to-refresh
 /// invalidates it explicitly.
 ///
 /// **`retry: noProviderRetry` is load-bearing**, not hygiene. Riverpod's
 /// default retry re-runs a throwing build ten times with backoff, and a
-/// `DioException` is an `Exception`, so it engages on every network failure —
+/// `DioException` is an `Exception`, so it engages on every network failure:
 /// which means `await ref.watch(...future)` inside the `catch` below does not
 /// settle for some forty seconds. The `catch` exists precisely to report that
 /// the server did not answer, so holding it until the retries run out is the
@@ -734,7 +734,7 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
 
 /// The same four figures for one **named** connection, whatever the lens is on.
 ///
-/// Only ever called for a connection that is *not* the lens — see
+/// Only ever called for a connection that is *not* the lens: see
 /// [serviceKpiForProvider], which collapses the lens back onto the plain
 /// builder so the card and the library screen keep reading one cache.
 Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
@@ -757,7 +757,7 @@ Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
   );
 }
 
-/// Null means the server did not answer — see [_figure]. Never `[]`, which is
+/// Null means the server did not answer: see [_figure]. Never `[]`, which is
 /// an answer: it says the library is there and empty.
 ///
 /// The queue figure is the films in [queue], and only as much of a figure as
@@ -1044,11 +1044,11 @@ List<ServiceKpi> _seerrKpisFrom(List<SeerrRequest> requests) {
   var available = 0;
   for (final r in requests) {
     // Pending counts the requests that still need a decision, so it reads the
-    // request's OWN status — the same source `request_ordering.dart` and the
+    // request's OWN status: the same source `request_ordering.dart` and the
     // /activity rows read, and for the same
     // documented reason. `displayStatus` answers a different question: it lets
     // the media's availability override the request, so a request still in
-    // pendingApproval whose media Radarr already holds reports "Available" —
+    // pendingApproval whose media Radarr already holds reports "Available":
     // which is how this KPI came to show "Pending 0" while /activity was
     // offering an Approve button for that very record.
     if (r.status == RequestStatus.pendingApproval) pending++;
@@ -1290,9 +1290,9 @@ List<ServiceKpi> _prowlarrKpisFrom(
 
 Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
   // [readarrKpiLibraryProvider], not [readarrAuthorsProvider]: see
-  // [_radarrKpis]. The two fetches fail independently — a library that answers
+  // [_radarrKpis]. The two fetches fail independently: a library that answers
   // over a queue endpoint that does not is the ordinary case on a Readarr
-  // mid-upgrade — so each figure says for itself whether it was answered.
+  // mid-upgrade, so each figure says for itself whether it was answered.
   List<ReadarrAuthor>? authors;
   Object? authorsError;
   try {
@@ -1394,7 +1394,7 @@ List<ServiceKpi> _readarrKpisFrom(
       value: queued == null ? null : queueFigure(queued),
       icon: Icons.download_rounded,
       // Its own reason, because it is its own fetch: a Readarr whose library
-      // reads fine and whose queue endpoint is down used to print `Queue 0` —
+      // reads fine and whose queue endpoint is down used to print `Queue 0`:
       // an idle downloader rather than an unread one.
       note: queued == null ? _queueNote(ServiceKey.readarr, queueError) : null,
     ),
@@ -1424,7 +1424,7 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
   try {
     stats = await ref.watch(sabnzbdServerStatsProvider.future);
   } catch (_) {
-    // Ignore — the queue KPIs are still useful when the optional stats call
+    // Ignore: the queue KPIs are still useful when the optional stats call
     // fails.
   }
   return _sabnzbdKpisFrom(queue, stats);
@@ -1432,7 +1432,7 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
 
 Future<List<ServiceKpi>> _sabnzbdKpisFor(Ref ref, String instanceId) async {
   final client = ref.watch(sabnzbdClientForProvider(instanceId));
-  // Independent reads, started together — see [_readarrKpisFor]. The stats call
+  // Independent reads, started together: see [_readarrKpisFor]. The stats call
   // stays optional, so it carries its own fallback instead of failing the pair.
   final queueFuture = client.getQueue();
   final statsFuture = client.getServerStats().then<SabnzbdServerStats?>(
@@ -1455,7 +1455,7 @@ List<ServiceKpi> _sabnzbdKpisFrom(
     ),
     ServiceKpi(
       // [SabnzbdQueue.jobCount], never `slots.length`: the client asks for a
-      // 50-slot page, so a queue deeper than the page read `50` forever — a
+      // 50-slot page, so a queue deeper than the page read `50` forever: a
       // figure that stops moving exactly when there is something to watch.
       // `jobCount` prefers the server's own `noofslots_total` and falls back to
       // the rows in hand when the payload carried no total.
@@ -1475,7 +1475,7 @@ List<ServiceKpi> _sabnzbdKpisFrom(
           ? Icons.pause_circle_rounded
           : Icons.play_circle_rounded,
       // Pausing the queue is something the user did on purpose, so it is
-      // neither a fault nor a backlog — it is the client obeying. It used to be
+      // neither a fault nor a backlog: it is the client obeying. It used to be
       // flagged amber, which put "you pressed pause" in the same colour as
       // "your disk is full" (decision 15).
     ),
@@ -1547,7 +1547,7 @@ List<ServiceKpi> _nzbgetKpisFrom(
 }
 
 /// Transmission's rail, shaped like qBittorrent's so the two torrent clients
-/// read the same way in the matrix — `Download` first, flagged while bytes are
+/// read the same way in the matrix: `Download` first, flagged while bytes are
 /// actually moving, so the resting cell says "0 B/s" rather than a library
 /// total.
 Future<List<ServiceKpi>> _transmissionKpis(Ref ref) async {
@@ -1616,7 +1616,7 @@ List<ServiceKpi> _transmissionKpisFrom(
 /// `Offline` is the metric that earns its place: a reverse proxy is either
 /// serving every hostname it claims or it is not, and a host that is switched on
 /// while nginx has refused its configuration is invisible from every other
-/// screen in the app — the site simply stops answering. Expiring certificates
+/// screen in the app: the site simply stops answering. Expiring certificates
 /// are the second, for the same reason a day later.
 Future<List<ServiceKpi>> _npmKpis(Ref ref) async {
   final results = await Future.wait([
@@ -1712,8 +1712,8 @@ List<ServiceKpi> _unraidKpisFrom(
 ) {
   final running = containers.where((c) => c.running).length;
   // Null when the array answered with no capacity block, which is nullable in
-  // the committed SDL. `Used 0%` would read as an empty array — the one
-  // conclusion a user acts on — and would contradict the Overview's Array
+  // the committed SDL. `Used 0%` would read as an empty array: the one
+  // conclusion a user acts on, and would contradict the Overview's Array
   // section, whose capacity clause correctly disappears for the same input.
   final usedPercent = array.usedPercent;
   return [

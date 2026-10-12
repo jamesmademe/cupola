@@ -43,8 +43,8 @@ class _ConversationAdapter extends CapturingHttpAdapter {
       uris.where((uri) => uri.path.contains(fragment));
 }
 
-/// A client whose transport is stubbed but whose request building — base URL,
-/// headers, query parameters — is entirely its own.
+/// A client whose transport is stubbed but whose request building (base URL,
+/// headers, query parameters) is entirely its own.
 JellyfinClient _client(
   CapturingHttpAdapter adapter, {
   String apiKey = 'SECRET-KEY',
@@ -68,7 +68,7 @@ JellyfinClient _client(
 }
 
 /// Dio keeps request headers in a case-insensitive map, but not every version
-/// agrees on the stored casing — so look the header up without assuming.
+/// agrees on the stored casing, so look the header up without assuming.
 String? _authorization(CapturingHttpAdapter adapter) {
   for (final entry in (adapter.lastHeaders ?? const {}).entries) {
     if (entry.key.toLowerCase() == 'authorization') {
@@ -96,19 +96,22 @@ void main() {
       );
     });
 
-    test('URL-encodes a comma so the pair after it cannot be swallowed', () async {
-      final adapter = CapturingHttpAdapter(response: const {});
-      // The server URL-decodes each value, so a literal comma inside one would
-      // split the pair and silently drop everything after it — including, for a
-      // differently ordered header, the token itself.
-      await _client(adapter, clientName: 'Cupola, Ltd "beta"').probeVersion();
+    test(
+      'URL-encodes a comma so the pair after it cannot be swallowed',
+      () async {
+        final adapter = CapturingHttpAdapter(response: const {});
+        // The server URL-decodes each value, so a literal comma inside one would
+        // split the pair and silently drop everything after it (including, for a
+        // differently ordered header, the token itself).
+        await _client(adapter, clientName: 'Cupola, Ltd "beta"').probeVersion();
 
-      final header = _authorization(adapter)!;
-      expect(header, contains('Client="Cupola%2C%20Ltd%20%22beta%22"'));
-      expect(header, contains('Token="SECRET-KEY"'));
-      // Exactly five pairs: the encoded comma did not create a sixth.
-      expect(header.split(', '), hasLength(5));
-    });
+        final header = _authorization(adapter)!;
+        expect(header, contains('Client="Cupola%2C%20Ltd%20%22beta%22"'));
+        expect(header, contains('Token="SECRET-KEY"'));
+        // Exactly five pairs: the encoded comma did not create a sixth.
+        expect(header.split(', '), hasLength(5));
+      },
+    );
 
     test('travels on every request, not just the first', () async {
       final adapter = CapturingHttpAdapter(
@@ -218,8 +221,8 @@ void main() {
       // No rate field exists for a direct play, so this is the source file's own
       // bitrate and must never be presented as measured throughput.
       //
-      // The fixture keeps two versions of this film — a 24 Mbps encode and a
-      // 60 Mbps remux — and `PlayState.MediaSourceId` names the encode. Reading
+      // The fixture keeps two versions of this film: a 24 Mbps encode and a
+      // 60 Mbps remux, and `PlayState.MediaSourceId` names the encode. Reading
       // the largest, or the first, `MediaSources` entry would put 60 Mbps on the
       // one row the whole board exists to make trustworthy.
       expect(directPlay.bitrate, 24305112);
@@ -298,7 +301,7 @@ void main() {
       expect(adapter.lastRequest!.method, 'POST');
     });
 
-    test('surfaces its failure — a write action, unlike the read paths', () {
+    test('surfaces its failure: a write action, unlike the read paths', () {
       final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
       expect(_client(adapter).stopSession('abc'), throwsA(isA<DioException>()));
     });
@@ -326,7 +329,7 @@ void main() {
       expect(body['Text'], 'Dinner in ten');
       // The player draws this above the text; without it the toast is anonymous.
       expect(body['Header'], kJellyfinClientName);
-      // Milliseconds — the one field in this client that is not in ticks.
+      // Milliseconds: the one field in this client that is not in ticks.
       expect(body['TimeoutMs'], kJellyfinMessageTimeoutMs);
     });
 
@@ -386,7 +389,7 @@ void main() {
       expect(query['searchTerm'], 'inter');
       expect(query['limit'], '$kJellyfinSearchLimit');
       // People are gated behind their own flag on this endpoint, so naming
-      // `Person` in `includeItemTypes` returns nothing instead of failing —
+      // `Person` in `includeItemTypes` returns nothing instead of failing:
       // which is why no type filter is sent at all.
       expect(query['includeMedia'], 'true');
       expect(query['includePeople'], 'true');
@@ -514,7 +517,7 @@ void main() {
       final libraries = await _client(adapter).getLibraries();
 
       expect(adapter.lastUri!.path, '/Library/VirtualFolders');
-      // The fixture's fifth entry has an empty ItemId — nothing to pass as
+      // The fixture's fifth entry has an empty ItemId: nothing to pass as
       // parentId, so listing it would only offer a dead end.
       expect(libraries, hasLength(4));
 
@@ -533,7 +536,7 @@ void main() {
       expect(libraries[1].kind, StreamLibraryKind.shows);
       expect(libraries[1].isRefreshing, isTrue);
       expect(libraries[2].kind, StreamLibraryKind.music);
-      // No CollectionType at all — a mixed library, which must still render.
+      // No CollectionType at all: a mixed library, which must still render.
       expect(libraries[3].kind, StreamLibraryKind.other);
       expect(libraries[3].isRefreshing, isFalse);
     });
@@ -736,7 +739,7 @@ void main() {
       expect(episode.kind, StreamItemKind.episode);
       expect(episode.title, "Woe's Hollow");
       expect(episode.subtitle, 'Severance · S2 E4');
-      // This item reports `PlayedPercentage: 40.0` and no position ticks — a
+      // This item reports `PlayedPercentage: 40.0` and no position ticks: a
       // 0-100 double, so 40% of 2 700 000 ms.
       expect(episode.runtimeMs, 2700000);
       expect(episode.resumeOffsetMs, 1080000);
@@ -757,7 +760,7 @@ void main() {
       expect(request.queryParameters['enableRewatching'], 'false');
       expect(items.single.title, 'Sweet Vitriol');
       // Thumb-only episode: asking for a Primary image that does not exist would
-      // 404, so the tag that is actually there is used — and the item's own art
+      // 404, so the tag that is actually there is used, and the item's own art
       // beats the `SeriesPrimaryImageTag` this fixture also carries, so an
       // episode list does not mix stills with series posters row by row.
       expect(
@@ -912,7 +915,7 @@ void main() {
     test('a failed library lookup is not cached, so the next page retries', () async {
       // The lookup degrades to `[]` rather than throwing, so "it failed" and "this
       // server has no libraries" arrive identically. Caching that would leave
-      // every later page of this library unfiltered for the life of the client —
+      // every later page of this library unfiltered for the life of the client:
       // an A-Z page interleaving series, seasons and episodes, with no way back
       // short of restarting the app.
       final adapter = browseAdapter(statusCode: 500);
@@ -957,7 +960,7 @@ void main() {
 
     test('a large page is mapped without dropping anything', () async {
       // Past the isolate threshold, so this exercises the `Isolate.run` path
-      // rather than the inline one — and proves the mapper is sendable.
+      // rather than the inline one, and proves the mapper is sendable.
       final page = jsonFixtureMap('jellyfin/items_movies_page.json');
       final template = (page['Items'] as List).first;
       final items =
@@ -1082,7 +1085,7 @@ void main() {
       expect(tracks, hasLength(2));
       expect(tracks.first.kind, StreamItemKind.track);
       expect(tracks.first.title, 'Intro');
-      // The artist credit contains a comma, which is fine in a payload — only a
+      // The artist credit contains a comma, which is fine in a payload; only a
       // header value has to escape one.
       expect(tracks.first.subtitle, 'Black Country, New Road');
       expect(
@@ -1151,7 +1154,7 @@ void main() {
     test('an absolute URL is handed back without the credential', () async {
       // Jellyfin never produces one of these, but a poster path is data from the
       // server and an admin API key must not be attached to a host the user never
-      // configured — the same guarantee `SameOriginRedirectInterceptor` gives the
+      // configured: the same guarantee `SameOriginRedirectInterceptor` gives the
       // API calls.
       final source = _client(
         CapturingHttpAdapter(response: const {}),
@@ -1401,7 +1404,7 @@ void main() {
 
     test('a server that ignored the filter links nothing', () async {
       // What `anyProviderIdEquals` being dropped looks like: 200, and the first
-      // rows of the whole library, each with its own — different — ids.
+      // rows of the whole library, each with its own (different) ids.
       final adapter = CapturingHttpAdapter(
         response: {
           'Items': [

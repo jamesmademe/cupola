@@ -42,7 +42,7 @@ void main() {
       // `author`, and with neither of those read every one of the four lookups
       // above missed: the helper answered null for *every* Readarr queue,
       // history and blocklist record, and its ten call sites fell back to the
-      // raw release name — so a Readarr queue row on the Dashboard read
+      // raw release name, so a Readarr queue row on the Dashboard read
       // `Orbital.2023.RETAIL.EPUB-XYZ` where every other \*arr read a title.
       expect(
         arrPrimaryMediaTitle(const {

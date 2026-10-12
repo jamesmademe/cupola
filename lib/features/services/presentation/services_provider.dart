@@ -86,8 +86,8 @@ import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 /// what this provider *is*: one family entry per service, each of which opens a
 /// connection and waits out a 5–8 second timeout ([_loadVersion] builds a fresh
 /// SABnzbd/NZBGet/Unraid client per call). Watching the whole
-/// `SettingsModel` meant that every settings write — a theme-mode toggle
-/// included — re-probed every service, and a single Save can write twice
+/// `SettingsModel` meant that every settings write (a theme-mode toggle
+/// included) re-probed every service, and a single Save can write twice
 /// because answering the cert-trust prompt writes again. Keyed on the service's
 /// own connection details, only the service that actually changed re-probes.
 /// The ids of every connection of [service], in order, as a stable value.
@@ -116,8 +116,8 @@ final serviceInstanceIdsProvider = Provider.family<List<String>, ServiceKey>((
 /// connection.
 ///
 /// `offline` counts the connections that **did not answer**, and nothing else.
-/// `faulted` counts the ones that answered with a refusal or a fault — a
-/// refused key, a 5xx — which are amber, and which the band that names what
+/// `faulted` counts the ones that answered with a refusal or a fault: a
+/// refused key, a 5xx, which are amber, and which the band that names what
 /// did not answer must never name.
 typedef FoldedServiceHealth = ({
   int total,
@@ -167,7 +167,7 @@ final foldedServiceHealthProvider =
 ///
 /// The service travels with the id so a probe for a connection that has since
 /// been removed can still say what kind of thing it was. Keyed on the id alone,
-/// the "gone" branch had nothing to answer with and named `ServiceKey.radarr` —
+/// the "gone" branch had nothing to answer with and named `ServiceKey.radarr`:
 /// a Plex cell removed mid-flight reported an offline *Radarr*.
 typedef InstanceRef = ({ServiceKey service, String instanceId});
 
@@ -410,7 +410,7 @@ Future<String?> _loadVersion(
   }
 
   // The two long-lived clients, and the two that used to lie. Their providers
-  // are built from the flat projections — the FIRST instance of the service —
+  // are built from the flat projections (the FIRST instance of the service),
   // so probing the second connection through them asked the first one whether
   // it was up and painted the answer on the second one's cell: a box that was
   // switched off reading green, and `foldedServiceHealthProvider` counting zero
@@ -518,7 +518,7 @@ Future<String?> _loadVersion(
       certFingerprint: settings.pinForUrl(instance.url),
       accessHeaders: instance.access.headers(),
     );
-    // Two hops on a cold client — the 409 handshake, then the real call — so
+    // Two hops on a cold client: the 409 handshake, then the real call, so
     // this gets the same headroom as qBittorrent's login-then-version pair.
     return _versionOrNull(
       client.version,
@@ -608,7 +608,7 @@ Future<String?> _loadVersion(
 /// Nothing is caught here, on purpose. A throw is what tells
 /// [_loadServiceSummary] the service is offline, so swallowing it would report
 /// an unreachable box as online with a blank version. The qBittorrent branch
-/// used to do exactly that — it caught everything and returned null, so a
+/// used to do exactly that: it caught everything and returned null, so a
 /// refusing or unreachable qBittorrent still showed ONLINE while the other five
 /// clients reported offline. All six now share this envelope.
 ///
@@ -670,7 +670,7 @@ final readarrQueueSnapshotForProvider =
 
 /// The Radarr queue indexed by movie id.
 ///
-/// Every surface that badges a movie — grid, poster rail, detail page — reads
+/// Every surface that badges a movie (grid, poster rail, detail page) reads
 /// this one snapshot, so they cannot disagree about what is downloading. A
 /// queue that did not answer is a failed snapshot, never an empty one, and a
 /// badge reads it through `queueUnknown: !snapshot.isWhole`
@@ -770,7 +770,7 @@ final sonarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
 /// those requests may be in flight at once.
 ///
 /// The fallback exists for Lidarr queue records that name an album but not its
-/// artist, and there is no endpoint that maps one to the other — the only route
+/// artist, and there is no endpoint that maps one to the other: the only route
 /// is `/album?artistId=` per artist. Unbounded, that walks the entire artist
 /// library one request at a time, so a four-thousand-artist library could fire
 /// four thousand sequential requests to badge one queue row. The guard above
@@ -921,8 +921,8 @@ Future<LidarrQueueSnapshots> _readLidarrQueueSnapshots(
 
 /// How many history records each arr is asked for.
 ///
-/// One page, unfiltered — see `domain/arr_import.dart` for why the brief's
-/// `eventType` filter cannot be sent. Twenty rather than ten because the page is
+/// One page, unfiltered (see `domain/arr_import.dart` for why the brief's
+/// `eventType` filter cannot be sent). Twenty rather than ten because the page is
 /// unfiltered: a busy evening's history is mostly `grabbed`, and ten records can
 /// contain no imports at all on a stack that is downloading faster than it
 /// imports. Twenty is still one request and still one page.
@@ -1008,7 +1008,7 @@ class ArrHistoryEntry {
   final String instanceId;
 
   /// The history record's own id. Unique per connection, and what the decision
-  /// row is keyed on — a media id is not, since one film can fail twice.
+  /// row is keyed on: a media id is not, since one film can fail twice.
   final int id;
 
   /// The library item this record is about, for the route. Zero when the record
@@ -1018,7 +1018,7 @@ class ArrHistoryEntry {
 
   final String title;
 
-  /// The season (Sonarr) or album id (Lidarr) the record belongs to — what
+  /// The season (Sonarr) or album id (Lidarr) the record belongs to: what
   /// Recently added folds on. Null on Radarr and when the record does not say.
   final int? unitId;
 
@@ -1068,7 +1068,7 @@ final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
         // delegates through, and injects `includeArtist`/`includeAlbum` there.
         // So the title resolves to the album (`arrPrimaryMediaTitle` reads
         // `album` then `artist`) rather than falling back to the raw
-        // `sourceTitle`, and the tile's artwork is the album cover — see
+        // `sourceTitle`, and the tile's artwork is the album cover: see
         // `_historyPosterUrl`.
         _ =>
           ref
@@ -1107,7 +1107,7 @@ final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
       );
     } catch (error) {
       // The convention: a browse degrades to `[]` rather than taking the region
-      // down — but the failure is kept, classified, so the count above the
+      // down, but the failure is kept, classified, so the count above the
       // rail can leave this connection out by name instead of counting it as
       // zero. A second Radarr that did not answer leaves the first one's
       // imports on the rail.
@@ -1445,7 +1445,7 @@ const int servicesQueuePreviewLimit = 5;
 
 /// Everything a transfer row prints, per source, in one shape.
 ///
-/// The fields are the row's grammar rather than one service's vocabulary — see
+/// The fields are the row's grammar rather than one service's vocabulary: see
 /// `domain/in_flight.dart`. It used to carry a pre-joined `subtitle` composed by
 /// each loader in its own words, which is why a Radarr row and a SABnzbd row
 /// could not be read down a column: they were two different sentences that
@@ -1491,7 +1491,7 @@ class ServiceQueueItem {
 
   final ServiceKey service;
 
-  /// The client's own id for this transfer — a torrent hash, an nzo id, a queue
+  /// The client's own id for this transfer: a torrent hash, an nzo id, a queue
   /// record id. Keys the row and the decision it can become.
   final String id;
 
@@ -1519,17 +1519,17 @@ class ServiceQueueItem {
   final int? etaSeconds;
 
   /// Who is moving the bytes, in words. For an \*arr row this is the download
-  /// client named in the queue record — the arr is the one that asked, not the
+  /// client named in the queue record: the arr is the one that asked, not the
   /// one that is transferring.
   final String clientLabel;
 
   /// Why this stopped being a transfer, or null while it still is one. A row
-  /// with a fault leaves this region entirely and becomes a decision — which
+  /// with a fault leaves this region entirely and becomes a decision, which
   /// decision, and so which remedy, is what the value says. See
   /// [InFlightFault].
   final InFlightFault? fault;
 
-  /// When it stopped being a transfer, as near as the source can date it —
+  /// When it stopped being a transfer, as near as the source can date it:
   /// qBittorrent's last activity, or the \*arr's `added`. Feeds the decision's
   /// ranking.
   final DateTime? stalledSince;
@@ -1556,18 +1556,18 @@ class ServiceQueueItem {
   /// A byte rate is a countable unit and sums, but only once per client: adding
   /// it per row would multiply one client's throughput by its queue depth. The
   /// eyebrow sums over distinct clients for exactly that reason, and an \*arr
-  /// carries none — the bytes it is waiting on are already being counted by the
+  /// carries none: the bytes it is waiting on are already being counted by the
   /// client that is moving them.
   final int? clientRateBytesPerSecond;
 
   /// Where the row leads.
   final String? route;
 
-  /// Extra facts a decision row prints that a transfer row does not — seeds, the
+  /// Extra facts a decision row prints that a transfer row does not: seeds, the
   /// current rate, the arr's own warning.
   final String? detail;
 
-  /// The download client's id for the transfer an \*arr row is tracking — the
+  /// The download client's id for the transfer an \*arr row is tracking: the
   /// torrent hash, the SABnzbd `nzo_id`, the NZBGet id. The key
   /// [joinQueueSources] joins an \*arr row to the client row moving the same
   /// bytes on. Null on a client's own row, whose [id] already is that id.
@@ -1581,7 +1581,7 @@ class ServiceQueueItem {
   final ServiceKey? clientService;
 
   /// The connection the row was read from, for a remedy that opens a flow
-  /// bound to one connection — the import wizard's `?i=` — and for a route
+  /// bound to one connection (the import wizard's `?i=`) and for a route
   /// into a detail page, whose ids are that server's.
   final String instanceId;
 
@@ -1596,12 +1596,12 @@ class ServiceQueueItem {
   /// and what the eyebrow keys a client's rate on.
   final String clientInstanceId;
 
-  /// The library item an \*arr row belongs to — the movie, series, artist or
-  /// author — which a manual import is filed under. Null when the record names
+  /// The library item an \*arr row belongs to (the movie, series, artist or
+  /// author), which a manual import is filed under. Null when the record names
   /// none, or when several records folded into this row name different ones.
   final int? mediaId;
 
-  /// Where the client is writing, as the \*arr reports it — what a manual
+  /// Where the client is writing, as the \*arr reports it: what a manual
   /// import is seeded from.
   final String? outputPath;
 
@@ -1726,7 +1726,7 @@ class ServiceQueueItem {
 /// Everything currently transferring, across every configured source.
 ///
 /// This is the region the old dashboard put *last*, below three browse rails,
-/// while sourcing it from Radarr and Sonarr only — so the most time-sensitive
+/// while sourcing it from Radarr and Sonarr only: so the most time-sensitive
 /// thing on a control-room screen was both buried and mostly blind. It now covers
 /// the two arr services it always did, plus Lidarr and Readarr, plus the four
 /// download clients that actually move the bytes.
@@ -1744,7 +1744,7 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
   // Every configured connection of the eight sources, each watched on its own
   // narrow key rather than the whole model. A bare
   // `ref.watch(currentSettingsProvider)` re-ran every queue fetch on every
-  // settings write — including a theme-mode toggle, which cannot change a
+  // settings write, including a theme-mode toggle, which cannot change a
   // queue.
   //
   // Every connection rather than the lens: Home counts the whole household,
@@ -1767,7 +1767,7 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
 
   // One row per transfer, not one per source that can see it. A Radarr grab
   // moving through qBittorrent is in both queues, and concatenating them drew
-  // it twice and counted it twice — and a stall in it became two decisions.
+  // it twice and counted it twice, and a stall in it became two decisions.
   final joined = joinQueueSources(
     arr: results
         .take(arrQueues.length)
@@ -1787,8 +1787,8 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
   // pushing it to the top would bury the transfer that is about to finish.
   //
   // Decorated with the source index because `List.sort` is not guaranteed
-  // stable. Without it, several progress-less items — normal for a usenet queue
-  // that has not started — could come back in a different order on each build,
+  // stable. Without it, several progress-less items (normal for a usenet queue
+  // that has not started) could come back in a different order on each build,
   // which reads on screen as rows shuffling for no reason.
   final ordered =
       List.generate(
@@ -2170,7 +2170,7 @@ typedef ServicesQueue = ({
 /// [preview] and [activeCount] are two fields because they answer two
 /// questions. The rows are capped at [servicesQueuePreviewLimit]; the eyebrow
 /// states how many transfers there are, and it used to state it by counting
-/// the capped list — thirty downloads read "5 downloading".
+/// the capped list: thirty downloads read "5 downloading".
 ///
 /// [preview] and [activeCount] are the **moving** rows only: a download
 /// waiting its turn is not moving, and is in [queued] instead, in its
@@ -2205,7 +2205,7 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
   // region does not call a paused queue an empty one.
   final held = items.where((item) => item.fault == null && item.held).length;
 
-  // Summed once per client, never once per row — see
+  // Summed once per client, never once per row: see
   // [ServiceQueueItem.clientRateBytesPerSecond]. Keyed on the client rather
   // than on the row's service, because an \*arr row that absorbed a torrent
   // carries that torrent's client rate.
@@ -2241,8 +2241,8 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
 /// The match is [joinDownloads], the one Activity's records go through too:
 /// an \*arr row names the client's own id for the transfer in `downloadId`.
 /// The \*arr row wins: it knows the title, the quality and whether the file
-/// can be imported. The client row lends it what only the client measures —
-/// progress, bytes, time left, rate — and a stall the \*arr has not noticed
+/// can be imported. The client row lends it what only the client measures:
+/// progress, bytes, time left, rate, and a stall the \*arr has not noticed
 /// yet. A client row no \*arr claims (a torrent added by hand) stays a row of
 /// its own.
 ///
@@ -2269,7 +2269,7 @@ ServiceQueueItem _joinedQueueItem(
   ServiceQueueItem client,
 ) {
   // The \*arr's fault first: an import it refuses is the more specific truth.
-  // The client's stall second — the \*arr polls its client on a minute's delay
+  // The client's stall second: the \*arr polls its client on a minute's delay
   // and can still be calling a dead transfer "downloading".
   //
   // Except a stall, where the torrent client measured how long nothing has
@@ -2489,7 +2489,7 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
 
 /// qBittorrent's "no estimate" sentinel, in seconds (100 days).
 ///
-/// Printed literally it reads `100 d left`, which is not an estimate — it is the
+/// Printed literally it reads `100 d left`, which is not an estimate: it is the
 /// client saying it has none. Mapped to null so the row prints `—`.
 const int _qbNoEta = 8640000;
 
@@ -2666,12 +2666,12 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
       .map(
         (row) => ServiceQueueItem(
           service: ServiceKey.nzbget,
-          // The key an \*arr row names this job by — its `drone` parameter,
-          // else the NZBID — so [joinQueueSources] can meet the two.
+          // The key an \*arr row names this job by (its `drone` parameter,
+          // else the NZBID), so [joinQueueSources] can meet the two.
           id: row.group.downloadId,
           title: row.group.name,
           progress: row.group.progress,
-          // Both sizes are nullable now — NZBGet reporting neither the `*MB`
+          // Both sizes are nullable now: NZBGet reporting neither the `*MB`
           // key nor the `*Hi`/`*Lo` pair used to read as zero megabytes, which
           // made an unmeasured job render as a finished one.
           doneBytes: switch ((
@@ -2851,7 +2851,7 @@ Future<_QueueRead> _loadServiceQueueItems(
 ///
 /// A season pack is one torrent and **one record per episode** in Sonarr's
 /// queue, every one of them carrying the same `downloadId` and the same
-/// `size`/`sizeleft` — the torrent's. Drawn a row per record, one transfer
+/// `size`/`sizeleft` (the torrent's). Drawn a row per record, one transfer
 /// read as ten, and "10 downloading" counted episodes rather than downloads.
 /// Records with no `downloadId` are each their own download: nothing says
 /// otherwise. First-seen order.
@@ -2941,18 +2941,18 @@ ServiceQueueItem _queueItemFromRecords(
     quality: _queueQualityLabel(typedItem['quality']),
     // Derived from the two figures the record actually carries, and only when
     // both are there: `size - sizeleft` is what has landed. An arr that reports
-    // neither prints `—`, never `0` — a transfer nobody could measure has not
+    // neither prints `—`, never `0`: a transfer nobody could measure has not
     // downloaded nothing.
     doneBytes: size == null || left == null ? null : size - left,
     totalBytes: size,
     etaSeconds: parseClockDuration(stringOrNull(typedItem['timeleft'])),
     // The client moving the bytes, which is the answer the row owes. The arr is
-    // the one that asked for them — it is already the row's glyph and accent.
+    // the one that asked for them: it is already the row's glyph and accent.
     clientLabel:
         stringOrNull(typedItem['downloadClient']) ??
         _queueTypeLabel(service) ??
         service.title,
-    // Classified by what the record *is* — stalled, blocked, failed — and not
+    // Classified by what the record *is* (stalled, blocked, failed), and not
     // by whether it carries a warning. "Any warning is a stall" made a finished
     // download the arr could not import into a stalled transfer, with a remedy
     // in the one place that cannot fix it. A record merely carrying a warning
@@ -3060,7 +3060,7 @@ int? _queueMediaId(Map<String, dynamic> record) {
   return id == null || id <= 0 ? null : id;
 }
 
-/// `The Boys · 8 episodes` — one row for a download the \*arr filed as several
+/// `The Boys · 8 episodes`: one row for a download the \*arr filed as several
 /// records.
 String _packTitle(ServiceKey service, List<Map<String, dynamic>> records) {
   final first = records.first;
@@ -3139,7 +3139,7 @@ String? _queueTypeLabel(ServiceKey service) {
     ServiceKey.sonarr => 'Series',
     ServiceKey.lidarr => 'Music',
     ServiceKey.readarr => 'Book',
-    // Nothing for the rest. Only an arr reaches this — the download clients
+    // Nothing for the rest. Only an arr reaches this: the download clients
     // build their own rows, and each already opens with the client's name,
     // which is the whole point of the row: the bytes are coming through this
     // client rather than through an arr, and the media type is in the release
@@ -3175,9 +3175,9 @@ typedef DashboardDecisions = ({
   SourceCoverage coverage,
 });
 
-/// One source's decisions — see [DecisionSource] for why each is read alone.
+/// One source's decisions: see [DecisionSource] for why each is read alone.
 ///
-/// Reads what the page has already loaded — the requests it was going to show,
+/// Reads what the page has already loaded: the requests it was going to show,
 /// the queue the in-flight region reads, the history the recently-added rail
 /// reads, and the three infrastructure providers the stack cards' KPIs already
 /// watch. Nothing here is a new request; the region is a **view** of the page's
@@ -3295,8 +3295,8 @@ Future<DashboardDecisions> _decisionsOnEveryConnection(
         ),
       );
     } catch (error) {
-      // Degrades to no decisions — a region that answers "what needs me" must
-      // not itself become the thing that needs you — but says who failed.
+      // Degrades to no decisions: a region that answers "what needs me" must
+      // not itself become the thing that needs you, but says who failed.
       return (
         decisions: const <DashboardDecision>[],
         coverage: SourceCoverage.failure(
@@ -3333,8 +3333,8 @@ Future<DashboardDecisions> _decisionsOnEveryConnection(
 /// Synchronous over the sources' states rather than an `await` of all of them:
 /// the decisions of the sources that answered are here as soon as they are,
 /// and a source still out is [SourceCoverage.pending] rather than a wait. A
-/// source being read again keeps its last answer while it is — `value`, not
-/// `asData` — so a Dockge push does not blank the region between two lists.
+/// source being read again keeps its last answer while it is: `value`, not
+/// `asData`, so a Dockge push does not blank the region between two lists.
 final dashboardDecisionsProvider = Provider<DashboardDecisions>((ref) {
   final decisions = <DashboardDecision>[];
   final parts = <SourceCoverage>[];
@@ -3390,7 +3390,7 @@ Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
         decisions: [
           for (final request in requests)
             // `isAwaitingApproval` keys off the request's own status, never
-            // `displayStatus` — a request for media that already exists
+            // `displayStatus`: a request for media that already exists
             // reports "Available" while nobody has approved it. See
             // `request_ordering.dart`.
             if (decides && isAwaitingApproval(request))
@@ -3514,7 +3514,7 @@ Future<List<DashboardDecision>> _failingIndexerDecisions(
   _MergeConnection source,
 ) async {
   // `/indexerstatus` returns only the indexers with an active problem, so this
-  // list *is* the fault list — no filtering, and no counting against the total.
+  // list *is* the fault list: no filtering, and no counting against the total.
   final results = await Future.wait([
     ref.watch(prowlarrIndexerStatusForProvider(source.instanceId).future),
     ref.watch(prowlarrIndexersForProvider(source.instanceId).future),
@@ -3862,7 +3862,7 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
     // The client the control opens, on the connection moving the bytes.
     actionInstanceId: item.clientInstanceId,
     // The decision acts on the client, which may not be a service this user has
-    // set up at all — an \*arr can name a download client Cupola has no
+    // set up at all: an \*arr can name a download client Cupola has no
     // connection to. The control stays drawn and tappable either way; see the
     // row.
     requiresService: _clientServiceFor(item),
@@ -3903,8 +3903,8 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
         entry.reason,
       ]),
       occurredAt: entry.at,
-      // The library item a manual import would be filed under. Zero — a failed
-      // grab of something the \*arr never added — leaves the wizard to ask.
+      // The library item a manual import would be filed under. Zero (a failed
+      // grab of something the \*arr never added) leaves the wizard to ask.
       actionId: entry.mediaId <= 0 ? null : entry.mediaId,
       // The connection the record came off: the wizard files into that
       // server's library, under that server's id for the film.
@@ -3946,7 +3946,7 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
 /// Lives here rather than beside `serviceSignalProvider` because it is a
 /// Dashboard concern: the Portal's picker and the aggregate lines all want
 /// exactly one figure and are right to. The card wants two, and reduces the same
-/// KPI list through the same ranking — see `resolveServiceSignalPair` — so the
+/// KPI list through the same ranking (see `resolveServiceSignalPair`), so the
 /// card's primary and the single figure can never disagree about which
 /// metric matters.
 ///
@@ -3965,12 +3965,12 @@ final serviceSignalPairProvider = FutureProvider.autoDispose
 /// The two figures a **folded** card shows: the fleet's, not the lens's.
 ///
 /// A card carrying `×2` beside one server's numbers is the lens wearing the
-/// fleet's clothes — it reads as a total and is short by whatever the other
+/// fleet's clothes: it reads as a total and is short by whatever the other
 /// server holds. This reduces the aggregate through the same ranking
 /// [serviceSignalPairProvider] uses, so a single-connection service cannot
 /// disagree with itself depending on which provider the cell happened to watch.
 ///
-/// Null where there is no aggregate to show — a dark connection, a connection
+/// Null where there is no aggregate to show: a dark connection, a connection
 /// the app cannot yet read on its own, or figures that do not fold. See
 /// [foldedServiceKpisProvider]. The card then draws `×N` and no figure, which
 /// is what the design asks for and the only honest reading available.

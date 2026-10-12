@@ -44,7 +44,7 @@ String certificateFingerprint(X509Certificate cert) {
 ///
 /// When [pinnedFingerprint] is null or empty, no exception is made: the
 /// platform trust store is the sole authority, exactly like a browser with no
-/// stored exception. This is deliberately the secure default — blindly
+/// stored exception. This is deliberately the secure default: blindly
 /// accepting every certificate would let any on-path attacker present their
 /// own and capture the credentials sent over the connection.
 ///
@@ -85,7 +85,7 @@ HttpClient buildPinnedHttpClient({
 ///
 /// Lifted out of the closure so it can be tested directly. `HttpClient`
 /// exposes `badCertificateCallback` as a **setter only**, so a test cannot read
-/// the installed closure back — which left the single most security-critical
+/// the installed closure back, which left the single most security-critical
 /// predicate in the app with no coverage at all, in either direction. Everything
 /// it guards (ADR-6's host and port binding, the fingerprint comparison) is
 /// invisible to CI unless it lives somewhere a test can call.
@@ -111,7 +111,7 @@ bool pinnedCertificateIsTrusted(
 /// Connects to [host]:[port] over TLS accepting any certificate, purely to read
 /// the certificate the server presents so it can be shown in a trust prompt.
 ///
-/// The socket is never used to transfer data — it is closed immediately. Used
+/// The socket is never used to transfer data; it is closed immediately. Used
 /// only on the connection-test failure path to power the self-signed exception
 /// flow. Returns null if no certificate could be read.
 Future<ServerCertificate?> probeServerCertificate(
@@ -168,13 +168,13 @@ Future<ServerCertificate?> probeServerCertificate(
 /// [baseUrl]'s own origin, or null when [pinnedFingerprint] is null/empty.
 ///
 /// The one place every Dio-based client threads a stored fingerprint (ADR-6)
-/// through to [buildPinnedHttpClient] — `ApiClient` and the four per-service
+/// through to [buildPinnedHttpClient]: `ApiClient` and the four per-service
 /// clients that build their own `Dio` (qBittorrent, SABnzbd, NZBGet, Unraid)
 /// all call this rather than deriving the origin's host/port themselves, so
 /// there is exactly one place that rule can drift. A null return means "leave
 /// this Dio's adapter at its default", which is what keeps every unpinned
-/// connection — the overwhelming majority, including every service reached
-/// over a certificate the OS already trusts — byte-identical to how it
+/// connection: the overwhelming majority, including every service reached
+/// over a certificate the OS already trusts; byte-identical to how it
 /// behaved before ADR-6.
 IOHttpClientAdapter? pinnedHttpClientAdapterFor(
   String baseUrl, {

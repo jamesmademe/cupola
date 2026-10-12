@@ -109,7 +109,7 @@ void main() {
       expect(summary.status, ServiceSummaryStatus.online);
       // Reachability is settled by the version probe alone. The summary no
       // longer fetches a library count, so a failing library call cannot
-      // downgrade it — that whole fetch was removed when the status card that
+      // downgrade it: that whole fetch was removed when the status card that
       // displayed the count gave way to the stack matrix's live signal.
       expect(summary.versionLabel, 'v5.4.6');
     });
@@ -129,7 +129,7 @@ void main() {
           serviceSummaryProvider(ServiceKey.seerr).future,
         );
 
-        // Refused, and an answer: a fault, amber — never "did not answer".
+        // Refused, and an answer: a fault, amber, never "did not answer".
         expect(summary.status, ServiceSummaryStatus.fault);
         expect(summary.failureReason, ServiceFailureReason.unauthorized);
       },
@@ -137,8 +137,8 @@ void main() {
 
     // What this provider watches decides how much of the network it touches:
     // one family entry per service, each opening a connection and waiting out a
-    // multi-second timeout. Watching the whole SettingsModel meant every write —
-    // a theme toggle included, and a single Save can write twice — re-probed
+    // multi-second timeout. Watching the whole SettingsModel meant every write,
+    // a theme toggle included, and a single Save can write twice, re-probed
     // every configured service at once.
     test(
       'an unrelated settings change does not re-probe the service',
@@ -306,7 +306,7 @@ void main() {
         expect(items[0].service, ServiceKey.radarr);
         // The row's four fields are the row's four fields, whatever the source:
         // the quality the \*arr grabbed under, and the client actually moving
-        // the bytes — which is the one fact a merged queue cannot leave to a
+        // the bytes, which is the one fact a merged queue cannot leave to a
         // glyph. The pre-joined per-service subtitle is gone; see
         // `domain/in_flight.dart`.
         expect(items[0].quality, 'WEB-DL 1080p');
@@ -370,7 +370,7 @@ void main() {
       expect(inFlight.preview, hasLength(servicesQueuePreviewLimit));
       expect(inFlight.preview.first.title, 'Release 7');
       expect(inFlight.preview.last.title, 'Release 3');
-      // APP-01: the eyebrow's figure is the count, not the preview's length —
+      // APP-01: the eyebrow's figure is the count, not the preview's length:
       // eight transfers used to read "5 downloading".
       expect(inFlight.activeCount, 8);
     });
@@ -415,7 +415,7 @@ void main() {
 
     // The provider fans out to seven services at once, so what it watches
     // decides how often the whole stack gets polled. Watching the entire
-    // SettingsModel meant a theme-mode toggle — a value no queue can depend on —
+    // SettingsModel meant a theme-mode toggle, a value no queue can depend on,
     // re-ran all seven fetches.
     test('an unrelated settings change does not re-poll the queue', () async {
       final radarr = _CountingQueueRadarrService();
@@ -566,7 +566,7 @@ void main() {
           'debian-12.iso',
         ]);
         final dune = items.first;
-        // The arr row wins — it knows the title and the quality …
+        // The arr row wins: it knows the title and the quality …
         expect(dune.service, ServiceKey.radarr);
         expect(dune.quality, 'WEB-DL 2160p');
         // … and the client lends it what only the client measures.
@@ -575,7 +575,7 @@ void main() {
 
         final inFlight = await container.read(servicesInFlightProvider.future);
         expect(inFlight.activeCount, 2);
-        // One client, its rate summed once — not once per row it contributed.
+        // One client, its rate summed once, not once per row it contributed.
         expect(inFlight.clients, 1);
         expect(inFlight.rateBytesPerSecond, 2048);
       },
@@ -926,7 +926,7 @@ void main() {
       expect(radarr.asked.single.query['includeMovie'], isTrue);
     });
 
-    // The comment above this fetch used to say the opposite — that Lidarr's
+    // The comment above this fetch used to say the opposite: that Lidarr's
     // records arrive without their artist because `LidarrService` has no
     // override. The dashboard now sends the embeds itself: a real
     // `LidarrService` over a fake client, so the query Arrived actually sends
@@ -1562,7 +1562,7 @@ ProviderContainer _mutableSettingsContainer({
 }
 
 /// One HTTPS-addressed Radarr, so `pinForUrl` has an origin to key a trusted
-/// certificate on — [UrlUtils.certOrigin] answers null for plain HTTP, and a
+/// certificate on: [UrlUtils.certOrigin] answers null for plain HTTP, and a
 /// test that pinned against an `http://` URL would silently assert nothing.
 final _secureRadarr = settingsWith(
   radarrUrl: 'https://radarr.local:7878',

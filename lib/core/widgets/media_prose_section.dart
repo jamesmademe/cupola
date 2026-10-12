@@ -4,7 +4,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
 
-/// Running prose on a detail page — an overview, a biography — clamped to a
+/// Running prose on a detail page (an overview, a biography) clamped to a
 /// readable measure and expandable in place.
 ///
 /// Set in `bodyLarge` on `onSurfaceVariant`, the role the type ramp designates
@@ -14,7 +14,7 @@ import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
 /// that.
 ///
 /// Bounded by `maxLines`, never by a fixed height, so it needs no
-/// `TextScaleMetrics` and no clamp — it grows downward with the reading size
+/// `TextScaleMetrics` and no clamp: it grows downward with the reading size
 /// like a paragraph should.
 class MediaProseSection extends StatefulWidget {
   /// The paragraph. Blank renders nothing at all.
@@ -27,7 +27,7 @@ class MediaProseSection extends StatefulWidget {
   ///
   /// The page's service accent: on a service page the section's own control
   /// draws through it, walked against the page surface like every other
-  /// section action there — and since the accent is the lamp, the walk lands on
+  /// section action there, and since the accent is the lamp, the walk lands on
   /// the room's primary ink. Null only where no service owns the surface,
   /// which keeps `primary` (the ink as well).
   final Color? accent;
@@ -73,7 +73,7 @@ class _MediaProseSectionState extends State<MediaProseSection> {
     // `Align` before the `ConstrainedBox`, not instead of it: a slot arrives
     // with a *tight* width from the spine's `Padding`, and
     // `ConstrainedBox.enforce` clamps its own `maxWidth` back up into that tight
-    // range — so on a wide macOS window the measure was silently inert and the
+    // range, so on a wide macOS window the measure was silently inert and the
     // paragraph ran the full column. `Align` loosens the incoming width first,
     // which is what lets the measure bite, and keeps the block leading-aligned.
     return Align(
@@ -86,7 +86,7 @@ class _MediaProseSectionState extends State<MediaProseSection> {
           builder: (context, constraints) {
             // Whether the clamp actually bites, measured rather than assumed: a
             // two-line overview must not grow a "Show more" that reveals nothing.
-            // Safe here because this is a route body slot — nothing asks it for
+            // Safe here because this is a route body slot: nothing asks it for
             // intrinsics, which is the one thing a `LayoutBuilder` cannot answer.
             final painter = TextPainter(
               text: TextSpan(text: text, style: style),

@@ -29,7 +29,7 @@ void main() {
 
     test('owns the missing count both screens read three times over', () {
       // Previously each screen re-derived this from the same
-      // `movie ?? fallback` cascade the view model already runs — two copies of
+      // `movie ?? fallback` cascade the view model already runs: two copies of
       // one rule, feeding the figure plate, the hero chip and the empty state.
       final fromMovie = BazarrDetailViewModel.forMovie(
         const BazarrMovie(

@@ -11,8 +11,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The bar of views belonging to one service.
 ///
 /// **Drawn by the tab's own root page, never by the shell and never as
-/// `GlassAppBar.bottom`.** That is not a style preference: a pushed page —
-/// a detail, a wizard, a search result — has to hide the bar without leaving
+/// `GlassAppBar.bottom`.** That is not a style preference. A pushed page
+/// (a detail, a wizard, a search result) has to hide the bar without leaving
 /// the branch it was pushed from, and a bar owned by the shell or bolted onto
 /// the app bar cannot be hidden without unmounting the thing that owns it.
 /// Each tab root drawing its own is what makes "back returns to the tab you
@@ -25,7 +25,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// give the same state two owners, which is how a bar and a URL come to
 /// disagree after a deep link or a back gesture.
 class ServiceTabBar extends StatelessWidget {
-  /// The service whose views these are — it supplies the tabs and the mark.
+  /// The service whose views these are: it supplies the tabs and the mark.
   final ServiceKey service;
 
   /// The tab currently showing. Read from the route, not from a controller.
@@ -47,7 +47,7 @@ class ServiceTabBar extends StatelessWidget {
 
   /// The room light across the desktop header band: the lamp over the
   /// header's surface. A service room has no artwork, so it is lit by the
-  /// neutral lamp — `ServiceKey.accent` is the lamp for every service — and the
+  /// neutral lamp (`ServiceKey.accent` is the lamp for every service), and the
   /// band, the one lit surface on a service page, says "a room" without saying
   /// "whose" in a hue: the mark and the name beside it say that.
   static const double roomLightAlpha = 0.12;
@@ -80,11 +80,11 @@ class ServiceTabBar extends StatelessWidget {
        actions = const [],
        _header = false;
 
-  /// The bar as the service's whole header — the desktop window's variant.
+  /// The bar as the service's whole header: the desktop window's variant.
   ///
   /// On a desktop window the chrome already names the room (the breadcrumb is
   /// the URL) and the deck carries the fleet, so the phone's band above this
-  /// bar — back, name, one action — would be a third strip saying what two
+  /// bar (back, name, one action) would be a third strip saying what two
   /// have said. This row takes over what the band had that nobody else says:
   /// the service's glyph and name, its [lens], and its [actions]. One 44pt row
   /// instead of 100pt of band and bar.
@@ -100,7 +100,7 @@ class ServiceTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tabs = tabsFor(service);
-    // TrueNAS. Ten sections are too many for a bar, so it keeps its console —
+    // TrueNAS. Ten sections are too many for a bar, so it keeps its console:
     // and a console is not an empty bar, so nothing is drawn rather than an
     // empty strip that would read as tabs that failed to load.
     if (tabs == null) return const SizedBox.shrink();
@@ -110,7 +110,7 @@ class ServiceTabBar extends StatelessWidget {
 
     // Scrollable, always, and aligned to the start. Eight of the sixteen
     // label sets are wider than the narrowest frame the app draws, so a bar
-    // that distributed its tabs would silently squeeze them — and a bar that
+    // that distributed its tabs would silently squeeze them, and a bar that
     // centred them would put Overview somewhere different on every service.
     //
     // Every tab is built, rather than a lazy list: six children is nothing to
@@ -212,7 +212,7 @@ class ServiceTabBar extends StatelessWidget {
 ///
 /// The header's lens and actions are built by whoever hosts the header and
 /// passed in as widgets, so they cannot be handed the lit band's colour as an
-/// argument; they read it here instead. Outside a header — the phone's band —
+/// argument; they read it here instead. Outside a header, the phone's band,
 /// there is no room light and the answer is the scheme's own surface, which is
 /// what those controls resolved against before.
 ///
@@ -242,11 +242,11 @@ class ServiceBandSurface extends InheritedWidget {
 
 /// The service's glyph and name at the start of the header row.
 ///
-/// The name is the page's heading — on a desktop window it is the only place
+/// The name is the page's heading. On a desktop window it is the only place
 /// the service's name is set as one, since the band that carried it is gone.
 ///
 /// The mark is the brand book's lit tile: the room's strong fill with an edge and the glyph
-/// in the primary ink, a step brighter than a mark in a list, and no hue — the
+/// in the primary ink, a step brighter than a mark in a list, and no hue: the
 /// identity is the shape and the name.
 class _Identity extends StatelessWidget {
   const _Identity({required this.service});
@@ -299,7 +299,7 @@ class _Identity extends StatelessWidget {
 }
 
 /// One tab, the brand book's way: the selected one is the room's strong fill under the
-/// primary ink, the rest the tertiary ink on nothing — never the service's
+/// primary ink, the rest the tertiary ink on nothing, never the service's
 /// colour, the same pill the phone's bar and the desktop rail draw.
 class _Tab extends StatelessWidget {
   final ServiceTab tab;

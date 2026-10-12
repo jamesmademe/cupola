@@ -4,7 +4,7 @@
 /// NPM scopes an account per resource: a non-admin carries one of `hidden` /
 /// `view` / `manage` for each of proxy hosts, redirections, 404 hosts,
 /// streams, certificates and access lists, and `visibility` scopes which rows
-/// it sees — never what it may write. An admin manages everything. A write the
+/// it sees, never what it may write. An admin manages everything. A write the
 /// account may not make is refused with 403 (`PermissionError`), which the
 /// client reports as `NpmException.forbidden`.
 library;
@@ -25,8 +25,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Asks NPM what the account saved for [connectionId] may manage.
 ///
 /// `GET /api/users/me?expand=permissions`. For the connection the app is
-/// looking through it reads [npmAccountProvider] — the same answer the audit
-/// log's admin-only note reads, asked once — and for any other connection it
+/// looking through it reads [npmAccountProvider]: the same answer the audit
+/// log's admin-only note reads, asked once, and for any other connection it
 /// asks that connection's own client.
 ///
 /// Admin → read-write; nothing managed → read-only; otherwise the resources
@@ -45,7 +45,7 @@ Future<CapabilityGrant> probeNpmCapability(Ref ref, String connectionId) async {
   }
 }
 
-/// The grant an [account] carries. Null — the probe could not answer — is
+/// The grant an [account] carries. Null (the probe could not answer) is
 /// `unanswered`.
 CapabilityGrant npmGrantFor(NpmAccount? account) {
   if (account == null) return const CapabilityGrant.unanswered();
@@ -119,8 +119,8 @@ String npmBlockedMessage(NpmResource resource) =>
 
 /// The NPM page banner, on the connection the page reads through.
 ///
-/// [resources] are what the page writes. Null — the Overview, and the tabs
-/// with no writes — shows it only when the account can change nothing at all;
+/// [resources] are what the page writes. Null (the Overview, and the tabs
+/// with no writes) shows it only when the account can change nothing at all;
 /// a tab with writes shows it whenever the account may not change that tab's
 /// resources, naming them.
 class NpmCapabilityBannerSlot extends ConsumerWidget {

@@ -15,7 +15,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// The body is generated from the resource's `fields` (see
 /// [ProwlarrFieldsSection]); on top of that each kind gets the few typed
-/// controls its own modal has in the web UI — a sync level for apps, an
+/// controls its own modal has in the web UI: a sync level for apps, an
 /// enable/priority pair for download clients, event toggles for notifications.
 ///
 /// Deleting is *requested*, not performed: the confirmation and the

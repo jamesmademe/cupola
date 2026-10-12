@@ -40,8 +40,8 @@ void main() {
     );
 
     // The whole point of `retry: noProviderRetry`. Riverpod's default would run
-    // this ten times behind an exponential backoff, and — the part that costs
-    // something — the future would not settle until it had. `streamActivity`
+    // this ten times behind an exponential backoff, and the part that costs
+    // something: the future would not settle until it had. `streamActivity`
     // awaits it inside a `try` written to carry on without this server, walking
     // the media servers one at a time, so those forty seconds are spent before
     // Plex is even asked.

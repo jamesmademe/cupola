@@ -26,11 +26,11 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// ## The privilege model, which decides the shape of this whole file
 ///
 /// A Jellyfin API key authenticates as `role=Administrator` with `IsApiKey=true`
-/// and **no user attached** — the `UserId` claim is the empty GUID. So the key
+/// and **no user attached**: the `UserId` claim is the empty GUID. So the key
 /// passes every admin policy (it can read `/Sessions`, `/Users`,
 /// `/Library/VirtualFolders`, and stop a playback) while having no idea who "I"
-/// am. Every user-scoped question — what did I not finish, what is next up, what
-/// have I not played — therefore has to name a user explicitly, and the
+/// am. Every user-scoped question (what did I not finish, what is next up, what
+/// have I not played) therefore has to name a user explicitly, and the
 /// endpoints that need one 404 rather than defaulting when it is missing.
 ///
 /// That is why [viewerId] threads through the browse methods and why
@@ -43,8 +43,8 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// The credential slot holds **either** of two kinds, and both work. Jellyfin
 /// matches a token against user sessions first and API keys second, so an
 /// API key authenticates as Administrator with no user, while a user's
-/// `AccessToken` from `POST /Users/AuthenticateByName` — which is what the
-/// maclab bootstrap stores — authenticates as that user, with that user's
+/// `AccessToken` from `POST /Users/AuthenticateByName`, which is what the
+/// maclab bootstrap stores, authenticates as that user, with that user's
 /// policy.
 ///
 /// Even so, **no session control Cupola draws can be refused.** Pause, resume,
@@ -52,7 +52,7 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// 10.11.x; from 12.0 it allows an API key, a session with no user or the
 /// caller's own session, and otherwise wants
 /// `Policy.EnableRemoteControlOfOtherUsers`. But `GET /Sessions` without
-/// `controllableByUserId` — which is how [getSessions] asks — hands a
+/// `controllableByUserId` (which is how [getSessions] asks) hands a
 /// non-administrator only its own sessions plus sessions with no user: exactly
 /// the ones it may control. A control on screen is a control the credential
 /// may use, on every version, so Jellyfin carries no write gate, no banner and
@@ -78,7 +78,7 @@ class JellyfinClient implements StreamServerClient {
   /// it.
   ///
   /// [clientName], [deviceName], [deviceId] and [appVersion] only decorate the
-  /// `Authorization` header — Jellyfin requires none of them functionally, and
+  /// `Authorization` header. Jellyfin requires none of them functionally, and
   /// they exist so the server's Dashboard → Devices list names Cupola instead of
   /// showing an anonymous row.
   JellyfinClient({
@@ -105,7 +105,7 @@ class JellyfinClient implements StreamServerClient {
     // `ApiClient.authenticatedBy` rather than a bespoke `Dio`: it carries the
     // shared timeouts and, decisively, `SameOriginRedirectInterceptor`. Without
     // that interceptor a single 302 from a misconfigured reverse proxy would
-    // replay the `Authorization` header — a full-privilege admin key — to a host
+    // replay the `Authorization` header (a full-privilege admin key) to a host
     // the user never configured.
     _api = ApiClient.authenticatedBy(
       baseUrl: _baseUrl,
@@ -166,7 +166,7 @@ class JellyfinClient implements StreamServerClient {
       'PrimaryImageAspectRatio,Overview,ProviderIds';
 
   /// Lets a test swap in a stubbed transport, exactly as the per-service clients
-  /// do with an injected `Dio` — and lets it assert on the real request this
+  /// do with an injected `Dio`, and lets it assert on the real request this
   /// client builds, headers included.
   ///
   /// Propagating [ApiClient]'s own test seam rather than taking a `Dio` in the
@@ -231,7 +231,7 @@ class JellyfinClient implements StreamServerClient {
   /// [probeVersion] reads the anonymous endpoint, so a Jellyfin with a wrong
   /// token read as answering. `/System/Info` is its authenticated twin and
   /// carries the same `Version`. A **403** is a valid token without the
-  /// administrator's reads — a narrower credential, not a fault — so it still
+  /// administrator's reads (a narrower credential, not a fault), so it still
   /// answers, and the version comes from the public endpoint. A 401 throws:
   /// the server answered and refused the token.
   ///
@@ -290,7 +290,7 @@ class JellyfinClient implements StreamServerClient {
   /// It used to answer a dark server with `const []`, on the theory that a
   /// dead server is a quiet empty board. It is not: the board said "Nobody is
   /// watching right now" about a server nobody could ask, and Activity's
-  /// offline note — which exists to name the dark server — never fired.
+  /// offline note, which exists to name the dark server, never fired.
   @override
   Future<List<StreamSession>> getSessions() => getSessionsOrThrow();
 
@@ -309,7 +309,7 @@ class JellyfinClient implements StreamServerClient {
 
   @override
   Future<void> stopSession(String sessionId) async {
-    // A write action, so the error surfaces — the UI needs to say "the stop did
+    // A write action, so the error surfaces: the UI needs to say "the stop did
     // not go through". Note the 204 means *dispatched*, not stopped: the client
     // may ignore the command, which is why callers re-read [getSessions] instead
     // of trusting this returning normally.
@@ -322,7 +322,7 @@ class JellyfinClient implements StreamServerClient {
   /// commands: Jellyfin relays them over the WebSocket it already holds open to
   /// that client, and a client that is not listening (a browser tab, an old
   /// Infuse build) simply never acts on the 204. So this is dispatch, not
-  /// control, exactly like [stopSession] — the caller re-reads [getSessions]
+  /// control, exactly like [stopSession]: the caller re-reads [getSessions]
   /// rather than flipping [StreamSession.isPaused] optimistically.
   ///
   /// **Plex has no counterpart reachable from here**, which is why the board
@@ -342,7 +342,7 @@ class JellyfinClient implements StreamServerClient {
   /// `POST /Sessions/{id}/Message`, whose body is a `MessageCommand`: `Text` is
   /// required, `Header` is the title the client draws above it, and `TimeoutMs`
   /// is how long the toast stays. Sent as milliseconds because that is the
-  /// field's unit — the one Jellyfin write in this file that is not in ticks.
+  /// field's unit: the one Jellyfin write in this file that is not in ticks.
   ///
   /// The same dispatch caveat as [pauseSession]: the client decides whether it
   /// has anywhere to draw a message, and several have nowhere.
@@ -372,8 +372,8 @@ class JellyfinClient implements StreamServerClient {
     final folders = jellyfinVirtualFoldersFromJson(response.data);
     final libraries = <StreamLibrary>[];
     for (final folder in folders) {
-      // A library with no `ItemId` cannot be browsed or rescanned — there is
-      // nothing to pass as `parentId` — so listing it would only offer a dead
+      // A library with no `ItemId` cannot be browsed or rescanned: there is
+      // nothing to pass as `parentId`, so listing it would only offer a dead
       // end. This happens on a folder added to the config but never scanned.
       if (folder.itemId.isEmpty) continue;
       final library = folder.toStreamLibrary();
@@ -386,7 +386,7 @@ class JellyfinClient implements StreamServerClient {
   @override
   Future<void> refreshLibrary(String libraryId) async {
     // `metadataRefreshMode` and `imageRefreshMode` both default to `None`, so
-    // omitting them queues a task that does *nothing* and still answers 204 —
+    // omitting them queues a task that does *nothing* and still answers 204:
     // the single most misleading default in this API.
     //
     // `Default` scans for new and changed files; `FullRefresh` re-downloads
@@ -403,7 +403,7 @@ class JellyfinClient implements StreamServerClient {
     );
   }
 
-  /// [cancelToken] is an addition to the interface, not part of it — an override
+  /// [cancelToken] is an addition to the interface, not part of it: an override
   /// may widen its signature with optional parameters, and the project's rule is
   /// that list fetches are cancellable. A page scrolled past mid-flight is a real
   /// case here: the browse is paged, Riverpod disposes the provider for a page
@@ -440,11 +440,11 @@ class JellyfinClient implements StreamServerClient {
     final userId = _resolveViewerId(viewerId);
     // The genuinely per-viewer lenses are user-scoped end to end, and the
     // endpoints behind them 404 without a userId rather than falling back to the
-    // token's own identity — the API key has none. Saying so is the point:
+    // token's own identity, and the API key has none. Saying so is the point:
     // returning a bare empty list here is what made the browse claim the library
     // was empty when the user had simply not picked a household member yet.
     //
-    // `all` is deliberately not in that set — see [StreamLibraryLens.isPerViewer].
+    // `all` is deliberately not in that set. See [StreamLibraryLens.isPerViewer].
     if (userId == null && lens.isPerViewer) {
       return const StreamLibraryPage.viewerRequired();
     }
@@ -517,7 +517,7 @@ class JellyfinClient implements StreamServerClient {
   /// How many items a library holds, without downloading any of them.
   ///
   /// `limit=0` still returns the `BaseItemDtoQueryResult` envelope, so
-  /// `TotalRecordCount` arrives with an empty `Items` array — the cheapest count
+  /// `TotalRecordCount` arrives with an empty `Items` array: the cheapest count
   /// Jellyfin offers, and the reason `VirtualFolderInfo` carrying none is
   /// survivable.
   ///
@@ -586,7 +586,7 @@ class JellyfinClient implements StreamServerClient {
     return page.items;
   }
 
-  /// `GET /Search/Hints` — the library search, typed and grouped.
+  /// `GET /Search/Hints`: the library search, typed and grouped.
   ///
   /// **Why the type set is not sent as `includeItemTypes`.** This endpoint gates
   /// people, studios and artists behind their own boolean flags rather than
@@ -596,13 +596,13 @@ class JellyfinClient implements StreamServerClient {
   ///
   /// The bands in [kJellyfinSearchBands] are emitted **even when empty**, in
   /// their declared order, because the strip has to say what was searched and
-  /// not only what answered — see [StreamSearchGroup]. Anything Jellyfin returns
+  /// not only what answered. See [StreamSearchGroup]. Anything Jellyfin returns
   /// that none of them claims (a `MusicArtist`, a `BoxSet`) falls into a
   /// trailing band that appears only when it has something, since nobody asked
   /// for it by name.
   ///
   /// [limit] is the total across every band, not per band, and the hints arrive
-  /// in the server's own relevance order — grouping preserves it within each.
+  /// in the server's own relevance order; grouping preserves it within each.
   @override
   Future<List<StreamSearchGroup>> search(
     String query, {
@@ -644,7 +644,7 @@ class JellyfinClient implements StreamServerClient {
     // **Bucketed on the raw `Type`, before mapping, and that ordering is not an
     // optimisation.** `StreamItemKind` folds `Person`, `Book`, `MusicArtist` and
     // `BoxSet` all onto `other`, so grouping the mapped items would merge People
-    // and Books into one band — two of the six the design names separately.
+    // and Books into one band: two of the six the design names separately.
     // `Type` is the only place that distinction still exists.
     final byType = <String, List<Map<String, dynamic>>>{};
     for (final hint in hints) {
@@ -688,7 +688,7 @@ class JellyfinClient implements StreamServerClient {
     String? viewerId,
     CancelToken? cancelToken,
   }) async {
-    // `userId` is optional on `GET /Items/{itemId}` — it is a `Guid?`, and
+    // `userId` is optional on `GET /Items/{itemId}`: it is a `Guid?`, and
     // omitting it costs the `UserData` block (played flag, resume point) and
     // nothing else. Refusing to call at all without one is what made a deep link
     // into `/services/jellyfin/item/<id>` render "Not on the server" on an
@@ -743,7 +743,7 @@ class JellyfinClient implements StreamServerClient {
     CancelToken? cancelToken,
   }) async {
     // `anyProviderIdEquals` takes `provider.value` pairs; passing several is an
-    // OR, which is what we want — an arr may know a film by TMDB and a series by
+    // OR, which is what we want: an arr may know a film by TMDB and a series by
     // TVDB, and either identifies the same thing here.
     final pairs = <String>[
       if (tmdbId != null && tmdbId.isNotEmpty) 'tmdb.$tmdbId',
@@ -773,9 +773,9 @@ class JellyfinClient implements StreamServerClient {
     final items = await _fetchItems('/Items', {
       'recursive': true,
       'anyProviderIdEquals': pairs.join(','),
-      // Only the two kinds an arr record can be. Without this an episode —
+      // Only the two kinds an arr record can be. Without this an episode,
       // which carries TVDB and IMDb ids of its own, in the same namespaces a
-      // series uses — is a legitimate hit for a Sonarr lookup.
+      // series uses, is a legitimate hit for a Sonarr lookup.
       'includeItemTypes': switch (kind) {
         StreamItemKind.movie => 'Movie',
         StreamItemKind.series => 'Series',
@@ -787,7 +787,7 @@ class JellyfinClient implements StreamServerClient {
       'limit': _kExternalMatchCandidates,
       // `ProviderIds`, in the browse fields, is what the answer is checked
       // against. Without it the
-      // only evidence a row matched is that the server returned it — which is
+      // only evidence a row matched is that the server returned it, which is
       // also what a server that ignored `anyProviderIdEquals` does, with the
       // first rows of the whole library.
       // `MediaStreams` for the picture the Media page names: `2160p · HDR10`.
@@ -838,7 +838,7 @@ class JellyfinClient implements StreamServerClient {
     // server did not answer, with a Retry, rather than "Nothing inside".
     {
       // The interface takes an id and nothing else, so that a detail route can be
-      // reached from a deep link — which means the kind has to be discovered
+      // reached from a deep link, which means the kind has to be discovered
       // here. It cannot be inferred from the id (every id is a GUID) and the
       // three shapes need three different endpoints, one of which needs an id
       // this method was not given: `/Shows/{seriesId}/Episodes` wants the
@@ -854,7 +854,7 @@ class JellyfinClient implements StreamServerClient {
       final kind = jellyfinItemKind(item['Type']);
       switch (kind) {
         case StreamItemKind.series:
-          // Unpaged by design — `/Shows/{id}/Seasons` takes no startIndex or
+          // Unpaged by design: `/Shows/{id}/Seasons` takes no startIndex or
           // limit. A series has tens of seasons at worst.
           return await _fetchItems('/Shows/$itemId/Seasons', {
             'userId': userId,
@@ -1028,10 +1028,10 @@ class JellyfinClient implements StreamServerClient {
   /// Which credential kind the slot holds, from `GET /Users/Me`.
   ///
   /// An API key has no user, and Jellyfin answers **400** with no body (the
-  /// user id is empty — unchanged from 10.8 to master); that means
+  /// user id is empty, unchanged from 10.8 to master); that means
   /// Administrator. A user token gets 200 and its `UserDto`, whose
-  /// `Policy.IsAdministrator` decides. Anything else — a transport error, a
-  /// 401 — is [JellyfinCredentialKind.unknown], so a failure never withholds a
+  /// `Policy.IsAdministrator` decides. Anything else (a transport error, a
+  /// 401) is [JellyfinCredentialKind.unknown], so a failure never withholds a
   /// tab that might have worked.
   Future<JellyfinCredentialKind> getCredentialKind() async {
     try {
@@ -1085,7 +1085,7 @@ class JellyfinClient implements StreamServerClient {
 
     // A bare id rather than a path: a deep-linked detail screen knows the item
     // but not its artwork tag yet. Untagged, so it is cacheable but not
-    // cache-busted — the tagged form from `jellyfinPosterPath` is preferred
+    // cache-busted: the tagged form from `jellyfinPosterPath` is preferred
     // everywhere it is available.
     final relative = path.contains('/') ? path : '/Items/$path/Images/Primary';
 
@@ -1225,7 +1225,7 @@ class JellyfinClient implements StreamServerClient {
       items: await _mapInIsolate(raw, jellyfinStreamItemsFromJson),
       rows: raw is List ? raw.length : 0,
       // Absent on the unwrapped shape and on some builds of `/Shows/NextUp`,
-      // which is why it is nullable rather than defaulted — see
+      // which is why it is nullable rather than defaulted. See
       // [_JellyfinItemsPage.toLibraryPage].
       total: data is Map ? intOrNull(data['TotalRecordCount']) : null,
     );
@@ -1236,8 +1236,8 @@ class JellyfinClient implements StreamServerClient {
     String? userId, {
     CancelToken? cancelToken,
   }) async {
-    // `fields` is ignored by this endpoint — it always returns the full DTO
-    // including MediaSources, MediaStreams and People — so none is sent.
+    // `fields` is ignored by this endpoint: it always returns the full DTO
+    // including MediaSources, MediaStreams and People, so none is sent.
     final response = await _api.get(
       '/Items/$itemId',
       queryParameters: {'userId': ?userId},
@@ -1285,8 +1285,8 @@ extension _JellyfinItemsPageX on _JellyfinItemsPage {
     return StreamLibraryPage(
       items: items,
       nextStartIndex: nextStartIndex,
-      // With a `TotalRecordCount` this is arithmetic. Without one — the
-      // unwrapped shape, and some builds of `/Shows/NextUp` — the only honest
+      // With a `TotalRecordCount` this is arithmetic. Without one (the
+      // unwrapped shape, and some builds of `/Shows/NextUp`) the only honest
       // signal is "the server sent rows", so the pager asks once more and stops
       // on the empty answer.
       hasMore: total == null ? rows > 0 : nextStartIndex < total,
@@ -1297,7 +1297,7 @@ extension _JellyfinItemsPageX on _JellyfinItemsPage {
 /// One band of a `/Search/Hints` answer: the word the strip prints, the raw
 /// `Type` it collects, and the shared kind when there is one.
 ///
-/// [kind] is null where `StreamItemKind` has no entry — a person and a book are
+/// [kind] is null where `StreamItemKind` has no entry: a person and a book are
 /// both `other` to the item model, and the bands must not merge because of it.
 typedef JellyfinSearchBand = ({
   String label,
@@ -1334,7 +1334,7 @@ const String kJellyfinMessageHeader = kJellyfinClientName;
 
 /// How long a sent message stays on the player's screen.
 ///
-/// Milliseconds — `MessageCommand.TimeoutMs` is the one Jellyfin field in this
+/// Milliseconds: `MessageCommand.TimeoutMs` is the one Jellyfin field in this
 /// file that is not in ticks. Eight seconds is long enough to read a sentence
 /// over a film and short enough not to sit on top of one.
 const int kJellyfinMessageTimeoutMs = 8000;
@@ -1342,8 +1342,8 @@ const int kJellyfinMessageTimeoutMs = 8000;
 /// What Jellyfin's Dashboard → Devices list calls this app.
 const String kJellyfinClientName = 'Cupola';
 
-/// Sent as `Version` in the `Authorization` header. Cosmetic — it appears beside
-/// the client name in the server's device list — and tracks `pubspec.yaml`.
+/// Sent as `Version` in the `Authorization` header. Cosmetic: it appears beside
+/// the client name in the server's device list, and tracks `pubspec.yaml`.
 const String kJellyfinClientVersion = '0.8.0';
 
 /// The `Device` value: which platform this install is.
@@ -1354,7 +1354,7 @@ String defaultJellyfinDeviceName() => Platform.operatingSystem;
 ///
 /// Jellyfin registers a device row per distinct id it sees, so a value
 /// regenerated each launch would litter the user's dashboard with a permanent
-/// row per app start — the same trap `settings.plexClientId` exists to avoid.
+/// row per app start: the same trap `settings.plexClientId` exists to avoid.
 /// Plex needed a persisted random identifier because its id is also an identity;
 /// Jellyfin's is only a label, and an API key creates no session against it at
 /// all, so deriving it deterministically is enough and costs no settings field
@@ -1380,7 +1380,7 @@ String defaultJellyfinDeviceId([String? deviceName]) {
 ///  * the keys are **case-sensitive** (`token=` is not read);
 ///  * the values **must** be double-quoted;
 ///  * the values are **URL-decoded** by the server, so any comma or quote inside
-///    one has to be percent-encoded — an unencoded comma in a client name would
+///    one has to be percent-encoded: an unencoded comma in a client name would
 ///    otherwise split the pair and silently drop the credential that follows it.
 ///
 /// Only `Token` is functionally required; the rest is what makes the server's

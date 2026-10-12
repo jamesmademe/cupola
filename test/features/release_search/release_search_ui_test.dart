@@ -214,7 +214,7 @@ void main() {
           find.text('Sonarr is probably still searching.'),
           findsOneWidget,
         );
-        // Present, because a self-hoster can act on it — but demoted, never the
+        // Present, because a self-hoster can act on it, but demoted, never the
         // message.
         expect(find.text('HTTP 502 · nginx'), findsOneWidget);
       },
@@ -403,7 +403,7 @@ void main() {
     ) async {
       final clock = _FakeClock();
       // The sheet watches `releaseSearchReachProvider`, whose settings chain
-      // reaches SharedPreferences — overridden here so the test stays offline.
+      // reaches SharedPreferences, overridden here so the test stays offline.
       final container = ProviderContainer(
         overrides: [
           currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
@@ -462,7 +462,7 @@ void main() {
     ) async {
       // The whole point of the ReleaseGrabAbandoned signal. `_grab` returns
       // without grabbing on both non-grab outcomes of this prompt, and
-      // InteractiveSearchSheet reads a normal return as "grabbed" — so this
+      // InteractiveSearchSheet reads a normal return as "grabbed", so this
       // used to pop the sheet under a green "Download started" for a user who
       // had just pressed Cancel.
       await pumpExpiredSheet(tester);
@@ -476,7 +476,7 @@ void main() {
 
       expect(find.text('Download started'), findsNothing);
       expect(find.byType(ReleaseSearchSheet), findsOneWidget);
-      // Not reported as a failure either — the prompt already said why.
+      // Not reported as a failure either: the prompt already said why.
       expect(find.byType(SnackBar), findsNothing);
       // Re-armed rather than dead: the row can be grabbed again.
       expect(find.byTooltip('Grab release'), findsOneWidget);
@@ -519,7 +519,7 @@ void main() {
 
       // The expired job was replaced by a brand new search rather than grabbed
       // from. (The stub runner answers instantly, so the replacement is already
-      // finished here — the id is what says a second pass actually happened.)
+      // finished here; the id is what says a second pass actually happened.)
       final jobs = container.read(releaseSearchJobsProvider);
       expect(jobs, hasLength(1));
       expect(jobs.single.id, isNot(jobId));
@@ -540,7 +540,7 @@ void main() {
     test(
       'explainerBody and confirmation agree about what survives, for every reach',
       () {
-        // Two functions, not two constants — because under ADR-5 they were two
+        // Two functions, not two constants, because under ADR-5 they were two
         // hard-coded strings that quietly drifted apart (one saying "runs while
         // Cupola is open", the other "running in the background", for the same
         // build), and that drift was the most dangerous defect in the design.
@@ -564,8 +564,8 @@ void main() {
           // which the opt-in made ambiguous: `whileOpenSwitchedOff` names the
           // setting ("Background search is off") in the same breath as it says
           // the search will not survive, so a bare keyword check read that as a
-          // promise. What must never drift is the promise itself — "running in
-          // the background" against "keep Cupola open" — so that is what is
+          // promise. What must never drift is the promise itself: "running in
+          // the background" against "keep Cupola open", so that is what is
           // checked, in both directions. Do not weaken this to a one-way test:
           // the original defect was a confirmation that claimed the background
           // on a build that did not have it.
@@ -574,7 +574,7 @@ void main() {
             survivesLeavingTheApp,
             reason:
                 '$reach: confirmation may claim to be running in the '
-                'background iff the search actually survives leaving the app — '
+                'background iff the search actually survives leaving the app: '
                 'the exact pairing whose absence let the two strings drift '
                 'apart before ADR-6.',
           );
@@ -643,7 +643,7 @@ void main() {
       );
 
       // The list holds a 10-second window ticker while it is on screen, so the
-      // tree has to come down — and the container be disposed on the spot,
+      // tree has to come down, and the container be disposed on the spot,
       // since autoDispose would otherwise get there after the test has ended.
       await tester.pumpWidget(const SizedBox());
       container.dispose();
@@ -652,7 +652,7 @@ void main() {
     testWidgets('leaves a stopped search on its card, with no picker', (
       tester,
     ) async {
-      // The notice for a failure promises a verdict, not a choice — and the
+      // The notice for a failure promises a verdict, not a choice, and the
       // verdict, with Search again next to it, is already on the card here.
       final container = ProviderContainer(
         overrides: [
@@ -741,8 +741,8 @@ void main() {
         // The regression this pins: showReleaseSearch used to hand the job
         // manager callbacks built on the launching widget's own ref, and a
         // WidgetRef throws on any use after its widget unmounts. A search
-        // finishing after the page was popped — the flow the feature exists
-        // for — then lost its notification, and a queued job never started.
+        // finishing after the page was popped: the flow the feature exists
+        // for, then lost its notification, and a queued job never started.
         final firstAnswer = Completer<List<dynamic>>();
         final notifications = _RecordingNotifications();
         final second = ReleaseSearchTarget.movie(
@@ -786,7 +786,7 @@ void main() {
         await tester.pump();
         container.read(releaseSearchJobsProvider.notifier).start(second);
 
-        // The launching page — sheet and all — goes away, then the app goes
+        // The launching page (sheet and all) goes away, then the app goes
         // to the background, and only then does the search answer.
         await tester.pumpWidget(
           UncontrolledProviderScope(

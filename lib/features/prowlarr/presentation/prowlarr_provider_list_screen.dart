@@ -226,7 +226,7 @@ class _ProviderRow extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    // Walked: see the applications row on the Prowlarr home —
+                    // Walked: see the applications row on the Prowlarr home:
                     // an 8px dot is the only thing distinguishing an enabled
                     // provider from a disabled one.
                     color: resource.isActive

@@ -9,7 +9,7 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 /// relays every command to its agents through an `agent` envelope
 /// (`emit("agent", endpoint, event, …)`) keyed by the agent's endpoint. The
 /// local instance is the empty endpoint, which is why the client hardwired
-/// `_endpoint` to `''` and could only ever see one Dockge — while
+/// `_endpoint` to `''` and could only ever see one Dockge, while
 /// [DockgeStack.endpoint] was parsed off every row and read by nothing.
 @immutable
 class DockgeAgent {
@@ -29,7 +29,7 @@ class DockgeAgent {
     this.status = 'online',
   });
 
-  /// The hub itself — always present, never removable, and the one agent that
+  /// The hub itself: always present, never removable, and the one agent that
   /// exists whether or not Dockge has the multi-agent feature enabled.
   static const local = DockgeAgent(endpoint: '', name: 'local');
 
@@ -37,7 +37,7 @@ class DockgeAgent {
 
   /// An agent that is not answering is the one red in this feature: red means a
   /// connection that did not answer, and this is that, exactly. `connecting` is
-  /// informational rather than a fault — it has not failed yet.
+  /// informational rather than a fault: it has not failed yet.
   StatusTone get tone => switch (status.toLowerCase()) {
     'online' => StatusTone.success,
     'connecting' => StatusTone.info,

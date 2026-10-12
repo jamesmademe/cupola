@@ -7,7 +7,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// bar draws its label, the router mounts its branch, the breadcrumb prints it
 /// as the third crumb, and a deep link spells it as a path segment. When those
 /// were independent the breadcrumb title-cased whatever segment it found and
-/// printed `Vms` and `Rss` — neither of which is how anyone writes them, and
+/// printed `Vms` and `Rss`, neither of which is how anyone writes them, and
 /// neither of which any other surface said.
 ///
 /// [segment] is the URL spelling and [label] the human one; they differ only
@@ -88,7 +88,7 @@ enum ServiceTab {
 /// Read off the seventeen service home boards. Three rules hold over the whole
 /// table and are asserted by its tests rather than left to review:
 ///
-///  * every list starts with [ServiceTab.overview] — opening a service always
+///  * every list starts with [ServiceTab.overview]: opening a service always
 ///    lands there, and it is the only tab carrying the identity block and the
 ///    readouts;
 ///  * at most six entries, because past six the bar stops being a bar;
@@ -233,8 +233,8 @@ ServiceTab? serviceTabOf(ServiceKey service, String path) {
 /// Whether [path] is a tab's own root rather than a page pushed from it.
 ///
 /// The one question the service shell's app-bar band has to ask. The band is
-/// drawn above every branch navigator, so unlike the tab bar — which a pushed
-/// page simply covers — it cannot be hidden by the page that wants it gone, and
+/// drawn above every branch navigator, so unlike the tab bar (which a pushed
+/// page simply covers), it cannot be hidden by the page that wants it gone, and
 /// has to hide itself. Two back chevrons in one corner is what this answers.
 bool isServiceTabRoot(ServiceKey service, String path) =>
     serviceTabOf(service, path) != null &&

@@ -16,7 +16,7 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// Picks whose watch state the Jellyfin library is read through.
 ///
 /// **This is a required setting, not a preference, and the reason is structural.**
-/// A Jellyfin API key authenticates as an administrator with **no user attached** —
+/// A Jellyfin API key authenticates as an administrator with **no user attached**:
 /// the `UserId` claim is the empty GUID. It can therefore see every session and
 /// every library, but it cannot answer "have I watched this": resume positions,
 /// next-up and the unplayed filter are all user-scoped, and the endpoints that
@@ -25,7 +25,7 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// So a household has to say which member the library speaks for. There is no
 /// sensible default to fall back on: picking the first administrator would
 /// silently report someone else's positions in a house of four, which is both a
-/// wrong answer and a small privacy leak — and invisible in single-user testing.
+/// wrong answer and a small privacy leak, and invisible in single-user testing.
 ///
 /// **Plex has no counterpart, deliberately.** Its token *is* its user and
 /// `/library/*` accepts no impersonation parameter, so a Plex library has exactly
@@ -40,7 +40,7 @@ class JellyfinViewerPicker extends ConsumerWidget {
   /// connection. Read and written through `settings.jellyfinUserId` /
   /// `copyWithViewer`, both of which resolve to the *first* instance, this
   /// control listed the users of the server whose form was on screen and then
-  /// saved the chosen one onto a different server — leaving that one bound to an
+  /// saved the chosen one onto a different server, leaving that one bound to an
   /// id it has never heard of, which breaks every user-scoped query on it
   /// (Continue watching, Next up, unplayed) and silently.
   ///
@@ -120,13 +120,13 @@ class JellyfinViewerPicker extends ConsumerWidget {
     await ref
         .read(settingsProvider.notifier)
         // Onto the instance the list came from, never through `copyWithViewer`
-        // — that writes the service's first connection whatever this form is
-        // editing. See [instanceId].
+        // (that writes the service's first connection whatever this form is
+        // editing). See [instanceId].
         .updateSettings(
           settings.copyWithInstance(instance.copyWith(viewerId: viewer.id)),
         );
     // The client is rebuilt from the new id, which invalidates every per-viewer
-    // lens with it — see `jellyfinClientProvider`, where the viewer is part of
+    // lens with it; see `jellyfinClientProvider`, where the viewer is part of
     // *which client you are talking to* rather than part of a page's identity.
   }
 }

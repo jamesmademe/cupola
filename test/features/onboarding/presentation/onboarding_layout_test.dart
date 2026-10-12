@@ -10,7 +10,7 @@ import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts
 /// (`>= AppBreakpoints.desktopCompact`, i.e. 1100), which made the four drawn
 /// compact onboarding frames unreachable: at 720x450 a desktop window kept the
 /// phone's stacked layout. The gate is the window's *shape* now, so the test is
-/// about shape — a portrait window twice as wide as the compact one still
+/// about shape: a portrait window twice as wide as the compact one still
 /// stacks, and a landscape window half its width does not.
 void main() {
   Future<bool> sideBySideAt(

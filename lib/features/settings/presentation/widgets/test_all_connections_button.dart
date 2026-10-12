@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/settings/data/connection_test_command.dart';
 
-/// "Test all" — the button half of the command ⌘R is the other half of.
+/// "Test all": the button half of the command ⌘R is the other half of.
 ///
 /// One widget rather than one per surface: the summary card and the connections
 /// header are the same command in two places, and a second copy is where the

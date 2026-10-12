@@ -15,7 +15,7 @@ import 'package:cupola/features/transmission/presentation/transmission_provider.
 /// Simpler than its NZBGet counterpart, and for a reason worth recording:
 /// NZBGet signals a refused command by answering HTTP 200 with `{"result":
 /// false}`, so its wrapper has to inspect the return value. Transmission never
-/// does that — a refusal comes back as a `result` string that is not
+/// does that. A refusal comes back as a `result` string that is not
 /// `"success"`, and [TransmissionClient] has already turned that into a thrown
 /// [TransmissionException] carrying the server's own words. So "did it work" is
 /// exactly "did it throw", and there is no `_isRejection` equivalent to get
@@ -29,7 +29,7 @@ import 'package:cupola/features/transmission/presentation/transmission_provider.
 ///
 /// Transmission keeps its Basic credentials in the `Authorization` header and
 /// never in the URL, and [TransmissionException.message] is always either a
-/// static sentence or the server's own error string — so the `$e` interpolated
+/// static sentence or the server's own error string, so the `$e` interpolated
 /// below cannot carry the password.
 Future<bool> runTransmissionAction(
   BuildContext context,
@@ -73,8 +73,8 @@ enum TransmissionAddVerdict {
   /// The daemon read the request and refused it, in its own words.
   refused,
 
-  /// The request never reached the RPC handler — no route, a TLS failure, the
-  /// credentials or a whitelist turned it away — so nothing can have been
+  /// The request never reached the RPC handler: no route, a TLS failure, the
+  /// credentials or a whitelist turned it away, so nothing can have been
   /// added.
   notSent,
 
@@ -167,7 +167,7 @@ class TransmissionAddReport {
   final String? detail;
 }
 
-/// Hands [link] to the daemon and says what came of it — see
+/// Hands [link] to the daemon and says what came of it; see
 /// [TransmissionAddReport.from]. The queue is re-read whatever the outcome.
 Future<TransmissionAddVerdict> runTransmissionAdd(
   BuildContext context,

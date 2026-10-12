@@ -131,7 +131,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
   ///
   /// The header count and every bulk action read [_selection] straight through,
   /// so a selection that outlives the filter which put those rows on screen is a
-  /// set the user can neither see nor untick — and "Delete N indexers?" would
+  /// set the user can neither see nor untick, and "Delete N indexers?" would
   /// happily take rows that were never displayed. Narrowing the view narrows
   /// what the view can act on.
   void _changeFilter(VoidCallback change) {
@@ -139,7 +139,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
       change();
       final selection = _selection;
       if (selection == null || selection.isEmpty) return;
-      // `_matches` reads the expanded category ids, which `build` recomputes —
+      // `_matches` reads the expanded category ids, which `build` recomputes;
       // and a category change has not been through a build yet.
       _acceptedCategoryIds = prowlarrExpandCategories(
         _categories,
@@ -253,7 +253,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
     // Asked before anything is read, and that is new with the tab model. This
     // page used to be reachable only by tapping through a configured service,
     // so an unconfigured Prowlarr could only arrive here by deep link and got
-    // "Failed to load indexers" with a Retry that retried forever — a dead end
+    // "Failed to load indexers" with a Retry that retried forever: a dead end
     // wearing fault chrome for a state the user created by not filling in a
     // form. It is a *tab* now: the bar draws it whether or not the service is
     // set up, so this is an ordinary daily arrival.
@@ -298,7 +298,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
 
     // Computed once, above the `when`, because the selection bar and the
     // select-all button live outside the data branch and must act on exactly
-    // the rows the list is showing — not on whatever the selection accumulated
+    // the rows the list is showing, not on whatever the selection accumulated
     // under an earlier filter. `AsyncValue.value` keeps the previous data during
     // a refresh, so a pull-to-refresh cannot momentarily empty the selection.
     final allIndexers = indexersAsync.value ?? const <ProwlarrIndexer>[];
@@ -314,7 +314,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
         .map((indexer) => indexer.id)
         .toList(growable: false);
 
-    // Built once and placed in one of two ways. Hosted, the app bar is gone —
+    // Built once and placed in one of two ways. Hosted, the app bar is gone:
     // but these controls must not go with it, and they cannot move up onto the
     // service band either: Add indexer, Test all, Sync apps and the whole
     // selection mode belong to THIS tab, and the band is drawn above every
@@ -583,8 +583,8 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
             ),
           ),
           if (selection != null)
-            // Every action is handed `selected` — the selection intersected
-            // with what is on screen — so a bulk edit, retag or delete can only
+            // Every action is handed `selected`, the selection intersected
+            // with what is on screen, so a bulk edit, retag or delete can only
             // ever touch rows the user is looking at.
             _SelectionBar(
               count: selected.length,

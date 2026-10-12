@@ -28,7 +28,7 @@ import 'package:cupola/features/settings/presentation/widgets/connection_access_
 
 // ── Beat 3: the walk ────────────────────────────────────────────────────────
 
-/// Which service this step is about, and how far in — hoisted out of the pager
+/// Which service this step is about, and how far in: hoisted out of the pager
 /// so it can *roll* from one service to the next.
 ///
 /// It sits beside the ring for the same reason the ring sits outside the
@@ -36,13 +36,13 @@ import 'package:cupola/features/settings/presentation/widgets/connection_access_
 /// are nine separate elements and nothing in one can animate into its
 /// counterpart in the next. Held here it is a single widget across the whole
 /// walk, and advancing rolls `Where does Radarr live?` into `Where does Sonarr
-/// live?` — one word moving inside a sentence that holds still, on the same beat
+/// live?`: one word moving inside a sentence that holds still, on the same beat
 /// as the ring rotating that service to noon. Two instruments, one clock,
 /// answering the same question.
 ///
 /// The service's accent travels with it, but no longer as the eyebrow's ink:
 /// the counter is neutral type and the identity moves into the glyph tile
-/// beside it — see [_ServiceGlyph]. A counter is a counter in every service's
+/// beside it (see [_ServiceGlyph]). A counter is a counter in every service's
 /// step, and seventeen differently-coloured ones taught the eye to read the
 /// colour rather than the number.
 class OnboardingWalkSubject extends StatelessWidget {
@@ -53,7 +53,7 @@ class OnboardingWalkSubject extends StatelessWidget {
     required this.total,
   }) : _eyebrowOnly = false;
 
-  /// The eyebrow on its own, for the ring's compact register — see
+  /// The eyebrow on its own, for the ring's compact register: see
   /// [OnboardingInstrument].
   ///
   /// The question goes, and only the question. While the keyboard is up the user
@@ -88,12 +88,12 @@ class OnboardingWalkSubject extends StatelessWidget {
     // 47). Compound because that is what earns it a place: the ring already
     // says how far in, so a bare "2 of 8" was the instrument's own answer in
     // words, while "step 3 of 4 · service 2 of 8" says the thing the ring
-    // cannot — which service, out of how many, inside which beat.
+    // cannot: which service, out of how many, inside which beat.
     final eyebrow = ReelLine(
       '$_beat · service $position of $total',
       style: AppTheme.chrome(context, color: scheme.onSurfaceVariant),
       // The word holds still and the digit moves, which is precisely what
-      // `figure` is for — `word` rolled the whole line when only a numeral
+      // `figure` is for: `word` rolled the whole line when only a numeral
       // changed.
       options: ReelMotion.figure,
       // The service is named here rather than drawn, because in the compact register the glyph tile and
@@ -151,7 +151,7 @@ class OnboardingWalkSubject extends StatelessWidget {
   }
 }
 
-/// What this step is asking for, in one line — the walk's subtitle.
+/// What this step is asking for, in one line: the walk's subtitle.
 ///
 /// Shared rather than inlined because the step says it twice in two registers:
 /// under the headline as a standing instruction, and, when a test runs against
@@ -167,7 +167,7 @@ String walkInstruction(ServiceKey service) => service.usesApiKey
 ///
 /// A tile rather than a bare icon: at 34pt the accent needs a ground to be read
 /// as an accent, and the wash is what lets the glyph itself be an ink that
-/// measures — seven of the seventeen accents fall under 3:1 on paper, so the
+/// measures: seven of the seventeen accents fall under 3:1 on paper, so the
 /// raw colour is never what gets stroked.
 class _ServiceGlyph extends StatelessWidget {
   const _ServiceGlyph({required this.service});
@@ -212,7 +212,7 @@ class _ServiceGlyph extends StatelessWidget {
 /// form: address → credential → done, one field under the cursor at a time. The
 /// framework's own handling of [TextInputAction.next] cannot do this, because it
 /// moves focus to the next *traversable* widget and the address field has two of
-/// its own — the port chip and, on a secret, the reveal toggle. Both stay in the
+/// its own: the port chip and, on a secret, the reveal toggle. Both stay in the
 /// traversal order for keyboard and screen-reader users; they are simply not
 /// where the return key goes.
 class OnboardingWalk extends StatefulWidget {
@@ -282,13 +282,13 @@ class OnboardingWalk extends StatefulWidget {
   /// state word names it.
   final AccessGatewayAnswer? gateway;
 
-  /// The verbatim sentence the failure carried, when it carried one — see
+  /// The verbatim sentence the failure carried, when it carried one: see
   /// `ServiceDiagnosis.detail`. Null for almost every failure, where the
   /// reason-derived message is the better one.
   final String? failureDetail;
 
-  /// The version the server named while the test ran, for the services that say
-  /// — see `ServiceDiagnosis.serverVersion`. Printed in the outcome, because a
+  /// The version the server named during its test, for services that say so.
+  /// See `ServiceDiagnosis.serverVersion`. Printed in the outcome, because a
   /// TrueNAS below the supported floor answers this test and then leaves whole
   /// sections of its console empty.
   final String? serverVersion;
@@ -299,7 +299,7 @@ class OnboardingWalk extends StatefulWidget {
   final String? trustedFingerprint;
 
   /// Other services in this walk whose typed address shares this one's TLS
-  /// origin — trusting or forgetting the certificate here covers them too.
+  /// origin: trusting or forgetting the certificate here covers them too.
   final List<ServiceKey> affectedServices;
 
   /// The next service in the walk, so the step can say how far there is to go.
@@ -380,9 +380,9 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   /// two fields, which on iOS costs two animations and a relayout of the beat.
   void _pass(FocusNode next) => next.requestFocus();
 
-  /// The end of the form: the return key does what the primary button does —
-  /// runs the test. The keyboard goes with it (the test itself dismisses it), so
-  /// the outcome and the pinned actions — Test, Skip, Back — come back into
+  /// The end of the form: the return key does what the primary button does:
+  /// it runs the test. The keyboard goes with it (the test itself dismisses it), so
+  /// the outcome and the pinned actions (Test, Skip, Back) come back into
   /// view instead of being answered behind the keys.
   ///
   /// Guarded on [OnboardingWalk.verifying] the same way the button is: a second
@@ -421,7 +421,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           ),
           const SizedBox(height: AppSpacing.sm),
           // Back keeps the row to itself until the keyboard is up, at which
-          // point the dismiss control joins it rather than taking a third row —
+          // point the dismiss control joins it rather than taking a third row:
           // that row cost more height than the ring it was competing with.
           if (OnboardingKeyboardScope.of(context))
             Row(
@@ -438,7 +438,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
             // moment the server answered. The router's own redirect sends every
             // location other than `/onboarding` back to `/onboarding` until the
             // walk is finished (`router.dart`, `redirect:`), and go_router
-            // applies that to imperative pushes too — so the button pushed a
+            // applies that to imperative pushes too, so the button pushed a
             // *second* onboarding screen on top of the one in progress. Widening
             // the redirect is not the fix either: the destination lives inside
             // the Settings branch of the `StatefulShellRoute`, so honouring it
@@ -446,7 +446,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
             // middle of a flow that has no tabs.
             //
             // A second connection during onboarding therefore belongs to the
-            // walk itself — another page in the flow, not a door out of it —
+            // walk itself, another page in the flow, not a door out of it,
             // which is its own change. Settings → Connections offers it the
             // moment the walk ends.
             TextButton(onPressed: widget.onBack, child: const Text('Back')),
@@ -494,7 +494,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           hint: 'Paste the ${service.credentialLabel}',
           // On the label row, not under the field. Under it, a Plex token
           // warning replaced the very breadcrumb that says where a better
-          // token lives — the note slot is validation's, and this is not a
+          // token lives: the note slot is validation's, and this is not a
           // validation.
           breadcrumb: service.credentialPath == null
               ? null
@@ -554,7 +554,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           ),
         ),
       ],
-      // Per-service facts worth saying at the moment they matter — registry
+      // Per-service facts worth saying at the moment they matter: registry
       // data, so Settings and the walk cannot drift apart on which services
       // have something to say.
       if (service.walkNote case final note?) ...[
@@ -648,8 +648,8 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
 /// instead of rolling it.
 ///
 /// The spinner this replaced is not missed. A test behind a reverse proxy can
-/// take fifteen seconds, and for all fifteen the old button said nothing at all
-/// — the label had been swapped out for an 18pt ring. Here the label stays and
+/// take fifteen seconds; for all fifteen the old button said nothing at all:
+/// the label had been swapped out for an 18pt ring. Here the label stays and
 /// being in motion is what says busy.
 class _TestOrAdvance extends StatelessWidget {
   const _TestOrAdvance({
@@ -681,7 +681,7 @@ class _TestOrAdvance extends StatelessWidget {
       // it again will do.
       failureLabel: connected ? null : 'Test again',
       // Both arms measured now, so the one transition this reservation exists
-      // for — answered — moves a word and not the button's width.
+      // for: the answer moves a word and not the button's width.
       slotLabels: ['Test connection', 'Test again', advanceLabel],
       onPressed: verifying
           ? null
@@ -748,7 +748,7 @@ class _Outcome extends StatelessWidget {
       // actually found is that there is nothing to send.
       ServiceConnectionStatus.notConfigured => 'Nothing to send yet.',
       // The detail when the failure carried one, the reason-derived sentence
-      // otherwise — the same rule `ServiceDiagnosis.messageFor` applies on the
+      // otherwise: the same rule `ServiceDiagnosis.messageFor` applies on the
       // settings screen, so the two surfaces cannot describe one test
       // differently.
       _ =>
@@ -884,7 +884,7 @@ class _Outcome extends StatelessWidget {
 /// A modal appearing on top of a failure the user has not read yet is an
 /// ambush; on a home lab a server presenting its own certificate is normal,
 /// so it gets a state rather than an interruption. [CertTrustContent] is the
-/// same content [showCertTrustDialog] wraps in a modal for settings — the
+/// same content [showCertTrustDialog] wraps in a modal for settings: the
 /// evidence and words match wherever the user meets a certificate; only the
 /// chrome around it (a card here, a dialog there) differs.
 class _CertificateCard extends StatelessWidget {
@@ -901,7 +901,7 @@ class _CertificateCard extends StatelessWidget {
 
   /// The address this certificate was presented for, already resolved to
   /// [UrlUtils.certOrigin]'s canonical `https://host:port` form by the
-  /// caller — the same string [SettingsModel.trustedCertificates] keys on.
+  /// caller, the same string [SettingsModel.trustedCertificates] keys on.
   final String origin;
   final UntrustedCertificateProbe probe;
   final VoidCallback onTrust;
@@ -1040,7 +1040,7 @@ class _PortChip extends StatelessWidget {
 
 /// Flags a pasted Plex JSON Web Token while it is still being typed.
 ///
-/// A warning rather than an error: the token is well-formed and will work — for
+/// A warning rather than an error: the token is well-formed and will work, for
 /// seven days. After that it can only be renewed through plex.tv, which Cupola
 /// never calls, so the user would be left with a 401 and no way to read it.
 String? _plexTokenWarning(String value) => value.trim().startsWith('eyJ')

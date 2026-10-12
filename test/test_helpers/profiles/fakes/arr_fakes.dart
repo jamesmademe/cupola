@@ -1,7 +1,7 @@
 /// Radarr, Sonarr, Lidarr, Readarr, Prowlarr and Bazarr on the fake network.
 ///
-/// The arrs share one wire shape — `X-Api-Key`, `/api/<v>/…`, the paged
-/// envelope — so they share [ArrFake]; each subclass supplies its library. A
+/// The arrs share one wire shape: `X-Api-Key`, `/api/<v>/…`, the paged
+/// envelope, so they share [ArrFake]; each subclass supplies its library. A
 /// server's library is chosen by which connection it is (Radarr or Radarr 4K,
 /// Sonarr or Sonarr Anime), never by which profile, so the same Radarr answers
 /// the same way wherever it appears.

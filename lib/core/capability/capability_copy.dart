@@ -5,15 +5,15 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The fixed sentences one gated surface speaks, in one place per feature.
 ///
-/// Every capability surface says the same few things — the banner, the hint on
-/// a dimmed control, the toast when a write is refused — and they must agree
+/// Every capability surface says the same few things: the banner, the hint on
+/// a dimmed control, the toast when a write is refused, and they must agree
 /// with each other and with the service's own vocabulary. Written inline at
 /// forty call sites they would not. A feature declares one value per resource
 /// it gates (`unraid_capability.dart`, `truenas_capability.dart`,
 /// `npm_capability.dart`) and every surface reads from it.
 ///
-/// Voice: sentence case, two sentences for a banner — what this credential can
-/// do, then what it cannot — naming the service and the credential in the
+/// Voice: sentence case, two sentences for a banner: what this credential can
+/// do, then what it cannot, naming the service and the credential in the
 /// service's own terms. A banner that lists only refusals reads as breakage.
 @immutable
 class CapabilityCopy {
@@ -45,7 +45,7 @@ class CapabilityCopy {
 
   /// The banner for a credential that may write *some* of what the page
   /// offers, given the page's resources it may not write. Null means [answered]
-  /// is already right for that case — a page that gates one resource.
+  /// is already right for that case; a page that gates one resource.
   final String Function(Set<String> restricted)? partial;
 
   final String? _refusal;
@@ -64,7 +64,7 @@ class CapabilityCopy {
       'read; changes need $scope.';
 
   /// The banner when Cupola could not ask. Not a claim about the credential,
-  /// which may well be fine — which is why its action is *Check again* and
+  /// which may well be fine; which is why its action is *Check again* and
   /// not a new key.
   String get unanswered => CapabilityCopy.unansweredBanner(service);
 

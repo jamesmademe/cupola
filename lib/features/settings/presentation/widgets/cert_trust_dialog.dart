@@ -6,11 +6,11 @@ import 'package:cupola/features/settings/presentation/widgets/cert_trust_content
 
 /// Prompts the user to trust an untrusted (typically self-signed) TLS
 /// certificate for a self-hosted service, mirroring a browser's "this site
-/// uses an untrusted certificate — proceed?" exception flow.
+/// uses an untrusted certificate: proceed?" exception flow.
 ///
 /// Returns true if the user chose to trust the certificate. The caller is
 /// responsible for persisting the pinned fingerprint (as the origin's pin,
-/// per [SettingsModel.copyWithTrustedCertificate] — ADR-6).
+/// per [SettingsModel.copyWithTrustedCertificate], ADR-6).
 ///
 /// [probe.rotated] changes more than the copy: a certificate change gets no
 /// visually-affirmative default. Both actions render the same weight, so

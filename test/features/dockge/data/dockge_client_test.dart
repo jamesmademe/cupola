@@ -42,11 +42,11 @@ void main() {
 
   // The editor screen refuses this too, but the call that actually destroys the
   // file is here: Dockge takes the YAML it is handed as the stack's new truth,
-  // so an empty string replaces docker-compose.yaml with nothing — and for
+  // so an empty string replaces docker-compose.yaml with nothing, and for
   // deployStack, then runs `compose up` on the result.
   group('DockgeClient empty-compose guard', () {
     // An unreachable URL, so anything that gets *past* the guard fails on the
-    // endpoint instead of opening a socket — which is what distinguishes
+    // endpoint instead of opening a socket, which is what distinguishes
     // "refused" from "allowed through" without going near the network.
     DockgeClient client() => _client('');
 
@@ -78,7 +78,7 @@ void main() {
     });
 
     test('creating a stack from a blank editor is not blocked', () async {
-      // `isAdd` overwrites nothing, so the guard must not fire — it gets as far
+      // `isAdd` overwrites nothing, so the guard must not fire; it gets as far
       // as the transport, which is what fails here.
       await expectLater(
         client().deployStack(name: 'new', composeYAML: '', isAdd: true),

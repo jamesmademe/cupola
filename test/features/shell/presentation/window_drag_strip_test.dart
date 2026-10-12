@@ -10,7 +10,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
-/// The strip above a screen the shell does not host — onboarding, and the flows
+/// The strip above a screen the shell does not host: onboarding, and the flows
 /// that live with it on the root navigator.
 ///
 /// Annotation `onb1` is explicit that it is load-bearing rather than decoration,
@@ -63,8 +63,8 @@ void main() {
   });
 
   group('WindowDragStrip', () {
-    // The strip carries the same breadcrumb the shell prints everywhere else —
-    // "Cupola › Setup" — which is what makes the strip above a beat recognisably
+    // The strip carries the same breadcrumb the shell prints everywhere else:
+    // "Cupola › Setup", which is what makes the strip above a beat recognisably
     // the strip above a page. It carries no window *title*; the Chrome sheet
     // forbids one, and the trail is the title.
     testWidgets('carries the trail on all three desktop shells', (
@@ -85,7 +85,7 @@ void main() {
     });
 
     // The bug this replaced: the old guard bailed on `!drawsOwnButtons`, which
-    // is exactly the Mac — so on macOS the strip rendered *nothing*, and the
+    // is exactly the Mac, so on macOS the strip rendered *nothing*, and the
     // onboarding walk drew its content under AppKit's traffic lights. The
     // gutter is the whole reason the strip exists on that platform.
     testWidgets('reserves the traffic-light gutter on macOS', (tester) async {

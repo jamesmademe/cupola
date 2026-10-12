@@ -7,8 +7,8 @@ import 'package:cupola/features/activity/presentation/widgets/activity_formatter
 void main() {
   group('formatActivitySize', () {
     test('reads the same ladder as the queue sheet next to it', () {
-      // The Activity detail sheet renders "Size" twice — the queue half through
-      // formatActivityBytes, the history half through this — and the two used
+      // The Activity detail sheet renders "Size" twice: the queue half through
+      // formatActivityBytes, the history half through this, and the two used
       // to disagree, because this one was a GB-only ladder: 297 MB printed as
       // "0.29 GB" and 2 TiB as "2048.00 GB".
       for (final bytes in const [

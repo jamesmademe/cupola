@@ -359,7 +359,7 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
 
       if (servers.isEmpty) {
         // Seerr answered, with no server to send to: a fault with its
-        // remedy, amber — never the red of a Seerr that did not answer,
+        // remedy, amber, never the red of a Seerr that did not answer,
         // which is what this line used to claim when the read had failed.
         final arr = arg.mediaType == 'movie' ? 'Radarr' : 'Sonarr';
         state = state.copyWith(

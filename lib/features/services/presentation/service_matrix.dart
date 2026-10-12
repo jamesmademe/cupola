@@ -1,6 +1,6 @@
 /// The stack: the launcher region of the Dashboard, and the Portal's floor.
 ///
-/// One cell per configured service, answering three questions at once —
+/// One cell per configured service, answering three questions at once:
 /// *is it reachable* (the pip and the state word), *what is it doing* (two live
 /// figures), and *take me there* (the whole cell is the button). That is why
 /// this replaced a status grid and a separate feed: they were the same three
@@ -17,10 +17,10 @@
 /// design: reading order ran top-left, bottom-left, top-right, so the grid had
 /// to be decoded rather than scanned; the page scrolls vertically while the
 /// primary readout scrolled horizontally, so the first two gestures fought; and
-/// the single cell that matters — the one that is down — had an even chance of
+/// the single cell that matters, the one that is down, had an even chance of
 /// being off-screen. A health readout you have to swipe to finish is not one.
 ///
-/// ## One density — and what retiring the fold cost and bought
+/// ## One density: and what retiring the fold cost and bought
 ///
 /// A band used to render its services at one of two densities, on a persisted
 /// per-domain fold, with a container transform between them and a once-per-launch
@@ -29,7 +29,7 @@
 ///
 /// It was a well-built answer to a question the design has since answered
 /// differently. The fold existed because the stack was the *headline* of this
-/// screen — sixteen cards to scroll past before reaching anything actionable —
+/// screen, sixteen cards to scroll past before reaching anything actionable,
 /// so packing two thirds of them into a strip was a real saving. The stack is
 /// now **fourth**: the header answers "is everything all right", the alert band
 /// and the decisions region answer "what needs me", and the stack is a launcher
@@ -54,22 +54,22 @@
 ///
 /// ## The header is engraved on the panel, not boxed on top of it
 ///
-/// [_DomainBand]'s header is an eyebrow row — kicker, service count, and the
-/// band's permanent health line — with no fill and no border. Grouping is
+/// [_DomainBand]'s header is an eyebrow row (kicker, service count, and the
+/// band's permanent health line) with no fill and no border. Grouping is
 /// carried by **proximity** alone: the gap from a header up to the previous
 /// band's cards is several times the gap down to its own, so a squint still
 /// reveals which cards belong to which label.
 ///
-/// It was a boxed lid once — the same `surfaceContainer`-over-`outlineVariant`
-/// recipe a cell uses — and the box was the mistake: the page's own hierarchy
+/// It was a boxed lid once: the same `surfaceContainer`-over-`outlineVariant`
+/// recipe a cell uses, and the box was the mistake: the page's own hierarchy
 /// inverted, because "Stack" and "In flight" are bare text while their
 /// subordinate group labels wore containers, and a full-width contained row with
 /// a chevron is the visual idiom of a list row that navigates somewhere.
 ///
 /// The health line is what makes the header worth its line, and it is
 /// **permanent** now rather than appearing only while a band was shut. It used
-/// to be the fold's consolation prize — the one fact a closed band would
-/// otherwise swallow — which meant retiring the fold would have deleted the only
+/// to be the fold's consolation prize: the one fact a closed band would
+/// otherwise swallow, which meant retiring the fold would have deleted the only
 /// place a band said anything about itself.
 library;
 
@@ -104,12 +104,12 @@ import 'package:cupola/features/shell/presentation/portal_dismiss_scope.dart';
 ///
 /// `checking` is a state of its own rather than "offline with a different word".
 /// The grid this replaced fabricated an offline summary while loading, which made
-/// its border resolve to error red — so every service flashed as failed on cold
+/// its border resolve to error red, so every service flashed as failed on cold
 /// open, before a single request had come back.
 ///
 /// `fault` is a state of its own for the same kind of reason: a service that
 /// answered and refused the key is not a service that did not answer. It used
-/// to be `offline` — red, "Unreachable", unlit — which sent the user to check a
+/// to be `offline` (red, "Unreachable", unlit), which sent the user to check a
 /// cable when the fix was the key in the form. It is amber, and it stays lit:
 /// the service is there.
 enum ServiceReachability { online, checking, fault, offline }
@@ -120,7 +120,7 @@ enum ServiceReachability { online, checking, fault, offline }
 /// *readout*: "is anything in here wrong", and folding several connections into
 /// one cell is density well spent. As the Portal's floor it is a *picker*:
 /// "where do I go", and there every reachable destination has to have its own
-/// cell — a picker that hides a destination is a wall.
+/// cell: a picker that hides a destination is a wall.
 ///
 /// Named for the role rather than for the shape, because the shape is the
 /// consequence and the role is the cause.
@@ -129,7 +129,7 @@ enum ServiceMatrixRole { readout, picker }
 /// What one cell stands for: a service folded across its connections, or one
 /// named connection.
 ///
-/// A record rather than a class hierarchy — it is two fields and it needs
+/// A record rather than a class hierarchy: it is two fields and it needs
 /// nothing but equality, which is exactly what a record gives for free and what
 /// the band's `ValueKey` depends on.
 typedef MatrixCellSubject = ({ServiceKey service, String? instanceId});
@@ -161,7 +161,7 @@ class ServiceMatrixMetrics {
   ///
   /// The wash is the service's accent, which is the lamp for every service
   /// (`ServiceKey.accent`): a live card is lit, an unreachable one is not, and
-  /// the light says nothing about *which* service — the mark and the name do.
+  /// the light says nothing about *which* service: the mark and the name do.
   /// Deliberately the same 0.14 the icon tile this replaced used for its fill,
   /// spread as light across a corner instead of stamped into a 28pt square.
   static const double accentWashAlpha = 0.14;
@@ -171,8 +171,8 @@ class ServiceMatrixMetrics {
 
   /// How much of [cellBaseHeight] follows the reading size.
   ///
-  /// The three text lines a card can carry — the name, the primary figure and
-  /// the secondary — and nothing else. The app root installs a
+  /// The three text lines a card can carry (the name, the primary figure and
+  /// the secondary) and nothing else. The app root installs a
   /// [DefaultTextHeightBehavior] with `applyHeightToFirstAscent` and
   /// `applyHeightToLastDescent` both false, so the leading applies only
   /// *between* lines while a block's outer edges keep the face's natural
@@ -209,7 +209,7 @@ class ServiceMatrix extends ConsumerWidget {
     for (final domain in ServiceDomain.values) {
       final subjects = <MatrixCellSubject>[
         for (final service in domain.services)
-          // One folded cell per service in the readout — including one for a
+          // One folded cell per service in the readout, including one for a
           // service nobody has set up, dimmed, leading to its settings. It used
           // to be filtered out of the band and summarised by a single
           // dismissible line under the whole matrix, which could not say *which*
@@ -219,7 +219,7 @@ class ServiceMatrix extends ConsumerWidget {
           // The readout branch is written FIRST on purpose. Written the other
           // way round, Dart's dangling-else binds the `else` to the inner
           // `if (instance.isConfigured)` rather than to this one, and the
-          // readout silently produces no subjects at all — a stack region that
+          // readout silently produces no subjects at all: a stack region that
           // renders its header and no cards.
           if (readout)
             (service: service, instanceId: null)
@@ -254,7 +254,7 @@ class ServiceMatrix extends ConsumerWidget {
 /// The count is the whole registry rather than the configured subset, which is
 /// the point of the region: it is the inventory of everything this app can talk
 /// to, and the trailing clause says how many of them are still dark. Not a
-/// control — the cells are — so it publishes one silent header node.
+/// control (the cells are), so it publishes one silent header node.
 class _StackHeader extends StatelessWidget {
   const _StackHeader({required this.registrySize, required this.notSetUp});
 
@@ -326,10 +326,10 @@ class _DomainBand extends ConsumerWidget {
   final ServiceDomain domain;
   final List<MatrixCellSubject> subjects;
 
-  /// What the matrix is being asked for — see [ServiceMatrixRole].
+  /// What the matrix is being asked for: see [ServiceMatrixRole].
   ///
   /// Carried down rather than inferred from whether a subject names a
-  /// connection: the rules that hang off this — no live figure, no health line —
+  /// connection: the rules that hang off this (no live figure, no health line),
   /// are rules about the role.
   final ServiceMatrixRole role;
 
@@ -364,7 +364,7 @@ class _DomainBand extends ConsumerWidget {
   /// as fine would contradict the amber figure on the card two rows below, or
   /// the fault Needs you holds on it ([faultedServices]).
   ///
-  /// Watching these providers here costs no extra fetch — every cell in the band
+  /// Watching these providers here costs no extra fetch: every cell in the band
   /// already watches the same ones.
   String? _health(WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
@@ -480,7 +480,7 @@ class _DomainBand extends ConsumerWidget {
     );
   }
 
-  /// The engraved label — see "The header is engraved on the panel" in the
+  /// The engraved label: see "The header is engraved on the panel" in the
   /// library doc. No container: an eyebrow kicker with the service count and the
   /// band's health line. Grouping is carried by the asymmetric gaps alone.
   Widget _engravedHeader(BuildContext context, {required String? health}) {
@@ -608,7 +608,7 @@ class _ServiceMatrixBand extends StatelessWidget {
   Widget build(BuildContext context) {
     // The box grows by the clamped scale, so the text has to be laid out at the
     // same clamp or the two disagree: `boxHeight` stops growing at 1.6x by
-    // design — "compact chrome ellipsises rather than clipping" — but a `Text`
+    // design ("compact chrome ellipsises rather than clipping"), but a `Text`
     // reads the ambient scaler, so at 3x the cell would be sized for 1.6 and
     // painted at 3. That is the overflow stripe, not an ellipsis.
     final clamped = TextScaleMetrics.clampedScalerOf(context);
@@ -644,8 +644,8 @@ class _ServiceMatrixBand extends StatelessWidget {
                     width: cellWidth,
                     height: cellHeight,
                     child: ServiceMatrixCell(
-                      // Keyed by subject, so the element — and the ink, the
-                      // press state, the provider subscriptions — follows the
+                      // Keyed by subject, so the element (and the ink, the
+                      // press state, the provider subscriptions) follows the
                       // card rather than being recycled into whichever card
                       // happens to land at that index.
                       key: ValueKey(subject),
@@ -679,9 +679,9 @@ class ServiceMatrixCell extends ConsumerWidget {
   final String? instanceId;
 
   /// What this cell is being asked for. Decides whether it carries live figures:
-  /// the signal provider answers for the *lens*, so on a picker — where the
+  /// the signal provider answers for the *lens*, so on a picker (where the
   /// whole point is that the cell stands for one destination rather than for
-  /// whichever one is currently being read — a figure is a right number under
+  /// whichever one is currently being read), a figure is a right number under
   /// the wrong name.
   final ServiceMatrixRole role;
 
@@ -718,7 +718,7 @@ class ServiceMatrixCell extends ConsumerWidget {
     // to answer.
     //
     // Only a folded cell folds. A picker cell stands for exactly one connection
-    // and reports that connection's own state — reading the service's rollup
+    // and reports that connection's own state: reading the service's rollup
     // there would mark a healthy server offline because a different one is.
     final folded = instanceId == null
         ? ref.watch(foldedServiceHealthProvider(service))
@@ -758,7 +758,7 @@ class ServiceMatrixCell extends ConsumerWidget {
     final signals = signalState?.asData?.value;
     // A figure that failed is not a figure still coming. Both left `signals`
     // null, and null drew the shimmer, so a service that answered its probe
-    // and then failed its read shimmered for good — a Dockge whose stack push
+    // and then failed its read shimmered for good: a Dockge whose stack push
     // timed out sat on "coming" until the app was restarted. A retry in flight
     // is still coming, which is why a reloading error does not count.
     final signalsFailed =
@@ -801,7 +801,7 @@ class ServiceMatrixCell extends ConsumerWidget {
       // A picker cell is named for the connection; the service is already said
       // by the glyph and the accent beside it. Named by the app's one rule, so
       // a connection the user never named reads `Radarr 2` beside its sibling
-      // rather than a second bare "Radarr", and never its host — the host is
+      // rather than a second bare "Radarr", and never its host: the host is
       // on the line below it, and a cell whose *title* is an address reads as
       // a different kind of object from its neighbours.
       displayName: instance == null
@@ -813,7 +813,7 @@ class ServiceMatrixCell extends ConsumerWidget {
 
 /// The cell for a service that has never been set up.
 ///
-/// Dimmed but a real destination: the Column Floor Rule's cousin — a stack that
+/// Dimmed but a real destination: the Column Floor Rule's cousin, a stack that
 /// silently omits what you have not connected cannot be read as an inventory,
 /// and the one action it needs is one tap away.
 class _NotSetUpCell extends StatelessWidget {
@@ -910,7 +910,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   final FoldedServiceHealth? faultedOf;
 
   /// What the matrix is being asked for. Decides whether the live lines are
-  /// rendered at all — see [ServiceMatrixCell.role].
+  /// rendered at all: see [ServiceMatrixCell.role].
   final ServiceMatrixRole role;
 
   /// Set on a picker cell, and what makes its key and its destination differ
@@ -933,7 +933,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   final ServiceSignalPair? signals;
 
   /// The service answered its probe and its figures did not arrive. Drawn as
-  /// an em dash rather than the in-flight shimmer — see [_CellLiveLine].
+  /// an em dash rather than the in-flight shimmer: see [_CellLiveLine].
   final bool signalsFailed;
   final String host;
 
@@ -941,7 +941,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    // A service that answered — cleanly or with a fault — stays lit: it is
+    // A service that answered (cleanly or with a fault) stays lit: it is
     // there, and a refused key is not a dark box.
     final answered =
         reachability == ServiceReachability.online ||
@@ -969,7 +969,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
             ServiceReachability.online => StateWord.answering.label,
             ServiceReachability.checking => 'Checking',
             // The classification's own words: `Refused the key`, `Timed out`,
-            // `Answered with an error` — the same the connection form says.
+            // `Answered with an error`: the same the connection form says.
             ServiceReachability.fault => failureLabel(
               failure ?? ServiceFailureReason.unknown,
               credential: refusedCredentialOf(service),
@@ -1000,17 +1000,17 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
             : 'service-matrix-cell-${service.routeParam}-$instanceId',
       ),
       // Two acts, not one. Navigating alone would land on whichever connection
-      // the lens already pointed at — which is the cell the user did *not* tap —
+      // the lens already pointed at (which is the cell the user did *not* tap),
       // so the lens moves first and the route follows it.
       //
       // And `go`, not `push`, because this same cell is rendered in two places:
-      // on the Dashboard, and on the Portal's floor — which lives ABOVE the
+      // on the Dashboard, and on the Portal's floor, which lives ABOVE the
       // branch navigators and can be opened from any tab. A push keeps the
       // origin branch, so travelling to Radarr from Activity would have stacked
       // a service page on the Activity tab with the bar still lit on Activity.
       //
-      // Choosing a cell is also an action ON the Portal, so it closes the Portal
-      // — always, before anything else is known about where it leads. The
+      // Choosing a cell is also an action ON the Portal, so it closes the Portal,
+      // always, before anything else is known about where it leads. The
       // shell's route hook closes on a different question ("did the content
       // under the card move?"), and the answer to that is *no* for the commonest
       // tap of all: the cell for the connection the lens already points at.
@@ -1088,7 +1088,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   }
 }
 
-/// The glyph, the name, the `×N`, and — only when there is something to say —
+/// The glyph, the name, the `×N`, and (only when there is something to say)
 /// the reachability pip.
 class _CellIdentity extends StatelessWidget {
   const _CellIdentity({
@@ -1126,7 +1126,7 @@ class _CellIdentity extends StatelessWidget {
         // Drawn straight on the card, no tile. Resolved through `onTint` for the
         // same reason a label over a tint is: an icon is a graphical object with
         // a 3:1 floor, and the raw accent measures about 1.9:1 on the light card
-        // — Radarr's amber especially.
+        // (Radarr's amber especially).
         Icon(
           service.icon,
           size: ServiceMatrixMetrics.glyphSize,
@@ -1167,7 +1167,7 @@ class _CellIdentity extends StatelessWidget {
         // The whole pip policy, in one condition: a mark for *checking* and for
         // *unreachable*, and nothing for a service that is answering. The figure
         // below is that service's proof of life, and a green dot beside it would
-        // be a second, weaker statement of the same fact — present on almost
+        // be a second, weaker statement of the same fact: present on almost
         // every cell of almost every open, which is how a mark stops being read.
         if (reachability != ServiceReachability.online) ...[
           const SizedBox(width: AppSpacing.xs),
@@ -1190,8 +1190,8 @@ class _ReachabilityPip extends StatelessWidget {
   /// Amber for a fault; blue for a Seerr account that signed out.
   final StatusTone faultTone;
 
-  /// 8pt, matching `components.status-dot` — the token this app uses everywhere
-  /// a bare dot carries state.
+  /// 8pt, matching `components.status-dot` (the token this app uses everywhere
+  /// a bare dot carries state).
   static const double _size = 8;
 
   @override
@@ -1202,7 +1202,7 @@ class _ReachabilityPip extends StatelessWidget {
     // first second of every launch; neutral says "asking".
     //
     // Both resolve through `statusToneColor` rather than through `AppColors.*`
-    // literals — the Closed Tone Rule this file's own doc comment cites, and the
+    // literals: the Closed Tone Rule this file's own doc comment cites, and the
     // token ImplNotes names for this archetype.
     final color = switch (reachability) {
       ServiceReachability.online => statusToneColor(
@@ -1236,7 +1236,7 @@ class _ReachabilityPip extends StatelessWidget {
 ///
 /// One slot for both is the point. The old card spent a row on `ONLINE` next to
 /// a green dot saying the same thing, and spent the row below it on a library
-/// total that does not change from one week to the next — so the only genuinely
+/// total that does not change from one week to the next: so the only genuinely
 /// live line on a control-room screen was chrome.
 ///
 /// Two figures rather than one, because one was never the whole answer: the
@@ -1359,7 +1359,7 @@ class _FigureLine extends StatelessWidget {
   final Color surface;
 
   /// Whether this is the card's primary. The secondary is a step quieter in
-  /// size and weight — two figures at the same weight are two headlines.
+  /// size and weight: two figures at the same weight are two headlines.
   final bool emphasis;
 
   @override
@@ -1384,7 +1384,7 @@ class _FigureLine extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
         ],
         // One text run, not two `Text`s in a `Row`. Two of them cannot both be
-        // right: unflexed, a wide figure has no way to shrink — a transfer rate
+        // right. Unflexed, a wide figure cannot shrink, and a transfer rate
         // is service-supplied and `1023.9 KB/s` at the band's 1.6x clamp is
         // wider on its own than a two-column cell on a 375pt phone, which is an
         // overflow stripe rather than an ellipsis. Made flexible instead,
@@ -1401,7 +1401,7 @@ class _FigureLine extends StatelessWidget {
                   text: signal.value,
                   style: style?.tabular.copyWith(color: toneColor),
                 ),
-                // Absent when the value is already a state word — "Paused" needs
+                // Absent when the value is already a state word, such as "Paused", which needs
                 // no "status" after it. See `ServiceSignal.label`.
                 if (signal.label.isNotEmpty)
                   TextSpan(

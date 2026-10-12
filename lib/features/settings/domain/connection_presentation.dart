@@ -34,7 +34,7 @@ class ConnectionPresentation {
   final String label;
 
   /// Whether this state is worth promoting to the user. False for healthy and
-  /// for never-configured services — the settings home stays quiet unless
+  /// for never-configured services; the settings home stays quiet unless
   /// something is actually wrong.
   final bool needsAttention;
 }
@@ -45,8 +45,8 @@ class ConnectionPresentation {
 ///
 /// Only answers the service gave (or a refusal it made) qualify the label. A
 /// probe that could not ask says nothing here: "Answering · read-only key"
-/// would state a fact nobody established. Green stays green — a narrow
-/// credential is configuration, not a fault — so this changes the words and
+/// would state a fact nobody established. Green stays green: a narrow
+/// credential is configuration, not a fault, so this changes the words and
 /// never the tone.
 String? credentialScopeQualifier(ServiceKey service, CapabilityGrant grant) {
   if (!service.hasScopedCredential) return null;
@@ -69,8 +69,8 @@ String? credentialScopeQualifier(ServiceKey service, CapabilityGrant grant) {
 /// Describes a connection state for [service].
 ///
 /// The split between `warning` and `error` is triage, not decoration, and it is
-/// the five-arm tone rule applied to reachability: amber is a **fault** — the
-/// host was reached, so there is one concrete thing to go and fix — and red is
+/// the five-arm tone rule applied to reachability: amber is a **fault**. The
+/// host was reached, so there is one concrete thing to go and fix, and red is
 /// reserved for a host that did not answer at all. Everything that got a reply,
 /// however bad the reply was, is amber; red is the one word the user cannot act
 /// on from the form, so spending it on a fault costs the distinction.
@@ -166,7 +166,7 @@ class FailurePresentation {
   /// or null when `Retry` is the remedy.
   final String? remedy;
 
-  /// Nothing replied — the only red state.
+  /// Nothing replied: the only red state.
   bool get didNotAnswer => failureDidNotAnswer(reason);
 }
 
@@ -174,9 +174,9 @@ class FailurePresentation {
 /// defaults to the service: pass a connection's name (`Radarr 4K`) when there
 /// is more than one.
 ///
-/// The tone split is triage, not decoration. Amber is a **fault** — the host
+/// The tone split is triage, not decoration. Amber is a **fault**: the host
 /// was reached, or the device would not dial, so there is one concrete thing to
-/// go and fix — and red is reserved for a host that did not answer at all.
+/// go and fix, and red is reserved for a host that did not answer at all.
 /// Everything that got a reply, however bad the reply was, is amber; red is the
 /// one word the user cannot act on from the form, so spending it on a fault
 /// costs the distinction. In particular:
@@ -184,7 +184,7 @@ class FailurePresentation {
 ///  * a **timeout** is amber because it means the host was *reached* and then
 ///    ran out of time (see [ServiceFailureReason.timeout]); a connection that
 ///    never completed is `unreachable`, and red;
-///  * a **5xx** is the service speaking — reachable, configured and trusted —
+///  * a **5xx** is the service speaking: reachable, configured and trusted,
 ///    so red would hide that the address and the key are already right;
 ///  * a **blocked local network** is amber and never red: nothing is wrong with
 ///    the address, the server or the credentials, and red would send the user
@@ -232,7 +232,7 @@ FailurePresentation describeFailureOf(
 );
 
 /// A section of a page whose read failed, in one line: what happened, then
-/// what the page is without because of it — `Unraid did not answer, so its
+/// what the page is without because of it: `Unraid did not answer, so its
 /// shares are not shown.`
 ///
 /// The first half is [describeFailure]'s headline, so a refused key reads as
@@ -255,7 +255,7 @@ String sectionFailureMessage(
 /// `Could not decline this request. Seerr answered but refused the key.
 /// Nothing changed.`
 ///
-/// The toasts used to guess — "The service may be unreachable." — for every
+/// The toasts used to guess ("The service may be unreachable.") for every
 /// failure, which blamed reachability for a refusal and sent the user to check
 /// a server that had just answered. A refused write says that nothing changed,
 /// because that is the one thing the user needs to know about it.
@@ -272,7 +272,7 @@ String writeFailureReason(
 }
 
 /// What an address field owes [service] before anything is sent, when the
-/// scheme itself is the problem — null when there is nothing specific to say
+/// scheme itself is the problem; null when there is nothing specific to say
 /// (the general `UrlUtils.cleartextWarning` still applies).
 ///
 /// The form-side half of [ServiceFailureReason.insecureTransport]. Two
@@ -353,7 +353,7 @@ ServerVersionNote? describeServerVersion(ServiceKey service, String? version) {
     final parsed = TrueNasVersion.parse(reported);
     // Only a version that parses *and* falls short earns the warning. An
     // unparseable string fails open, the same way `TrueNasVersion.parse` does
-    // everywhere else — guessing "unsupported" from a string we cannot read
+    // everywhere else: guessing "unsupported" from a string we cannot read
     // would put a caveat on a working server.
     if (parsed != null && !parsed.isSupported) {
       return ServerVersionNote(

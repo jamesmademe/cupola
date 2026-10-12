@@ -180,8 +180,8 @@ class AppStateLabel extends StatelessWidget {
     final theme = Theme.of(context);
     final upper = state.toUpperCase();
     // CRASHED is amber, not red: the app fell over and TrueNAS told us so,
-    // which is a fault. Red is the host that told us nothing. Everything else —
-    // STOPPED, DEPLOYING — is neutral, because an app nobody started is not a
+    // which is a fault. Red is the host that told us nothing. Everything else
+    // (STOPPED, DEPLOYING) is neutral, because an app nobody started is not a
     // problem to be fixed.
     final color = statusToneColor(theme.colorScheme, switch (upper) {
       'RUNNING' => StatusTone.success,

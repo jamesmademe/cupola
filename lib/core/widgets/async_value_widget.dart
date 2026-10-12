@@ -12,7 +12,7 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 ///              there is nothing to show: a reload or a refresh over data
 ///              keeps the data
 /// - error, with a retained previous value → the data it had, at full ink,
-///              under a [FaultBand.unreachable] (see below) — also while the
+///              under a [FaultBand.unreachable] (see below), also while the
 ///              provider is reloading or retrying over that error
 /// - error    → [AppErrorState] with a retry button
 ///              (the "not configured" case still routes to [NotConfiguredPlaceholder])
@@ -31,14 +31,14 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 /// boundary**, after the state layer had gone to the trouble of keeping it.
 ///
 /// A self-hosted box that stops answering is a daily condition, and the last
-/// thing it said before it went quiet is the most useful thing on the screen —
+/// thing it said before it went quiet is the most useful thing on the screen:
 /// a pool that was already degraded, a queue that was already stuck. So an
 /// error over retained data draws that data, unchanged and undimmed, with a
 /// band above it saying what happened. Nothing is dimmed for being
 /// unreachable: dimming means *not configured* everywhere else on this canvas,
 /// and the two states need opposite responses.
 ///
-/// The full-page [AppErrorState] survives for the case it is actually for —
+/// The full-page [AppErrorState] survives for the case it is actually for:
 /// the cold open, where the service has never answered in this session and
 /// there is no readout behind the band to keep.
 ///

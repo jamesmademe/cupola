@@ -46,8 +46,8 @@ void main() {
     // **The assertion has to be that it reached the Home, not that it
     // reached one of the two screens it could already have been on.** An
     // `onboarding || Home` check is satisfied by the state a clean
-    // simulator starts in, so a Skip button that had been renamed — or a
-    // routing change that trapped the app in onboarding — left this gate
+    // simulator starts in, so a Skip button that had been renamed, or a
+    // routing change that trapped the app in onboarding: left this gate
     // green. There is exactly one acceptable end state and it is named below.
     final onboarding = find.byType(OnboardingScreen);
     if (tester.any(onboarding)) {

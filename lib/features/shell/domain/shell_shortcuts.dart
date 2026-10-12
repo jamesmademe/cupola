@@ -9,7 +9,7 @@ import 'package:flutter/widgets.dart';
 /// The keyboard map is the one place a per-OS difference reaches *inside* the
 /// app: the command modifier is Command on macOS and Control everywhere else,
 /// and the label printed next to a menu item has to match the key that actually
-/// fires it. Both come from here so they cannot drift apart — a tooltip that
+/// fires it. Both come from here so they cannot drift apart: a tooltip that
 /// promises Ctrl+K on a Mac is worse than no tooltip.
 abstract final class AppModifier {
   /// Whether the command modifier is Command rather than Control.
@@ -52,7 +52,7 @@ abstract final class AppModifier {
     alt: alt,
   );
 
-  /// An alt-only activator — the inspector toggle and `open in inspector`.
+  /// An alt-only activator: the inspector toggle and `open in inspector`.
   ///
   /// Alt alone rather than the command modifier on purpose: both of those
   /// actions move a *pane*, not the document, and the command modifier's
@@ -128,7 +128,7 @@ class OpenInInspectorIntent extends Intent {
 ///
 /// One map, built once per platform, and the only source for both the bindings
 /// and the labels shown in tooltips and context menus. Every entry here also
-/// has a visible control somewhere — hover, right-click and shortcuts are
+/// has a visible control somewhere: hover, right-click and shortcuts are
 /// accelerators, never the only door, because the phone has none of them and no
 /// action may become desktop-only.
 abstract final class ShellShortcuts {

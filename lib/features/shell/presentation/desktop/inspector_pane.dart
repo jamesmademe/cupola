@@ -23,7 +23,7 @@ import 'package:cupola/features/shell/domain/stack_health.dart';
 /// The inspector: what is happening, without leaving what you are doing.
 ///
 /// The pane exists because a desktop window is wide enough to hold two thoughts
-/// at once, and the second thought is almost always the same one — "is my
+/// at once, and the second thought is almost always the same one: "is my
 /// transfer moving". On the phone that is a whole tab you have to travel to and
 /// come back from; here it is a column.
 ///
@@ -218,8 +218,8 @@ class _InspectorHeader extends ConsumerWidget {
 
 /// One transfer: name, a 3pt bar, and the line under it in the text face.
 ///
-/// The bar is 3pt because it is a *readout*, not a control — nothing here can be
-/// dragged — and the row is the same 48pt-ish height as a list row elsewhere so
+/// The bar is 3pt because it is a *readout*, not a control: nothing here can be
+/// dragged, and the row is the same 48pt-ish height as a list row elsewhere so
 /// the pane does not become its own typographic world.
 class _QueueRow extends StatelessWidget {
   const _QueueRow({required this.item});
@@ -279,7 +279,7 @@ class _QueueRow extends StatelessWidget {
                       minHeight: 3,
                       backgroundColor: colorScheme.surfaceContainerHighest,
                       // `AppColors.warning` raw was a dark-palette literal at
-                      // 1.39:1 on paper — a bar that says "this one is in
+                      // 1.39:1 on paper: a bar that says "this one is in
                       // trouble" and cannot be seen saying it. The row already
                       // carries a resolved tone; the bar spends that instead of
                       // re-deciding, through the same walk every other status
@@ -323,7 +323,7 @@ class _QueueRow extends StatelessWidget {
 /// The incomplete-list warning, in the pane that would otherwise imply a whole
 /// queue. A queue that silently omits a service is worse than no queue.
 ///
-/// A quiet line — glyph, sentence, remedy — and not a card: the Presence
+/// A quiet line (glyph, sentence, remedy), not a card: the Presence
 /// Rule keeps the red on the glyph and the title. It used to be a card in the
 /// error tone at 7% under a 30% border, with an amber-shaped warning glyph,
 /// and "No response." for words.
@@ -494,14 +494,14 @@ class _FinishedToday extends ConsumerWidget {
                       // It painted **red** for a failed import. Under the tone
                       // rule red means one thing and only one: a connection that
                       // did not answer. An import the service reported as failed
-                      // is the opposite — the server answered, and told us what
-                      // went wrong — so it is a fault, and faults are amber.
+                      // is the opposite: the server answered, and told us what
+                      // went wrong, so it is a fault, and faults are amber.
                       // `historyEventTone` has said exactly that since the
                       // Activity pass; this row was re-deciding from a boolean
                       // instead of spending the answer, and getting it wrong.
                       //
                       // And the calm half was `AppColors.success` raw, a dark
-                      // palette constant at 2.07:1 on paper — a green dot that
+                      // palette constant at 2.07:1 on paper: a green dot that
                       // is legible at night and a pale smudge in daylight.
                       color: statusToneColor(
                         colorScheme,
@@ -579,7 +579,7 @@ class _InspectorNote extends StatelessWidget {
 ///
 /// Nine because a 3pt target is a miss with a mouse and impossible with a
 /// trackpad, and the visual has to stay 3 or the window grows a seam. Double
-/// click restores the drawn width — the one gesture that makes an experiment
+/// click restores the drawn width: the one gesture that makes an experiment
 /// with the width free.
 class InspectorSplitHandle extends ConsumerWidget {
   const InspectorSplitHandle({super.key});

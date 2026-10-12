@@ -14,7 +14,7 @@ const double _stackAboveScaleFactor = 1.4;
 /// The body-role size the threshold is measured at.
 const double _stackProbeFontSize = 14.0;
 
-/// The media detail body's region label — an accent label in the micro role,
+/// The media detail body's region label: an accent label in the micro role,
 /// sentence case, with an optional
 /// tabular count and an optional trailing control.
 ///
@@ -26,7 +26,7 @@ const double _stackProbeFontSize = 14.0;
 /// Why a small label and not [SectionHeader]'s `titleLarge`: on a five-region page
 /// the hero title and the collapsed bar's title are the page's voice, and a
 /// stack of 22pt bold headings competes with them. An accent kicker repeated
-/// five or six times down the page reads as a *rhythm* — which is the same
+/// five or six times down the page reads as a *rhythm*, which is the same
 /// argument the `/services` engraved domain header makes, including the
 /// asymmetric 24-above / 8-below proximity the spine applies around it. No
 /// fill, no border, and deliberately no leading colour pipe: three pipes of
@@ -37,7 +37,7 @@ class MediaDetailSectionLabel extends StatelessWidget {
   final String label;
 
   /// The page's service accent. Walked to a legible tone before it is used as
-  /// text — see [ServiceTheme.onTint].
+  /// text. See [ServiceTheme.onTint].
   final Color accent;
 
   /// A count beside the label ('41 of 48 · 5 seasons'), in tabular digits.
@@ -65,7 +65,7 @@ class MediaDetailSectionLabel extends StatelessWidget {
 
     // The accent as *text on the surface*, not as a fill. `tintAlpha: 0` makes
     // the composite the surface itself, so `onTint` walks the accent's
-    // lightness — keeping its hue — until it clears 4.5:1. Without it Sonarr's
+    // lightness, keeping its hue, until it clears 4.5:1. Without it Sonarr's
     // violet on `surface-light` measures about 3.96:1, and an 11pt label is
     // not large text.
     final litAccent = ServiceTheme.onTint(
@@ -93,15 +93,15 @@ class MediaDetailSectionLabel extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Flexible(
               // **This count does not roll, and the reason is the note further
-              // down this very file.** It moves when the library does — an
-              // episode is grabbed and "41 of 48" becomes "42 of 48" — so it
+              // down this very file.** It moves when the library does: an
+              // episode is grabbed and "41 of 48" becomes "42 of 48", so it
               // looks like an obvious candidate, and it was tried.
               //
               // `ReelLine` gates itself with a `LayoutBuilder`, because deciding
               // whether a line can roll means knowing the width it has. But a
               // `LayoutBuilder` cannot report intrinsic dimensions, and the
               // stacking note below records that this widget "sits inside callers
-              // that ask for them" — which is why the stack threshold here is
+              // that ask for them", which is why the stack threshold here is
               // keyed off the text scaler instead of measuring. Putting a
               // measuring widget inside the one component that documents it must
               // not measure would fail on whichever caller asks first, and the

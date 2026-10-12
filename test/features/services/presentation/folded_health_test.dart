@@ -63,7 +63,7 @@ void main() {
     final again = container.read(serviceInstanceIdsProvider(ServiceKey.radarr));
 
     expect(first, ['radarr', 'radarr-hd11111', 'radarr-anime11']);
-    // Same value, not merely equal contents — a fresh List each read would
+    // Same value, not merely equal contents: a fresh List each read would
     // rebuild every consumer on every unrelated settings write.
     expect(identical(first, again), isTrue);
   });
@@ -109,8 +109,8 @@ void main() {
   });
 
   test('one down is counted, and the other two are not hidden', () async {
-    // The state the matrix cell exists to report: "Offline" would be false —
-    // two are answering — and "Online" would hide the one that is not.
+    // The state the matrix cell exists to report: "Offline" would be false, since
+    // two are answering, and "Online" would hide the one that is not.
     final container = _container(const {
       'radarr': true,
       'radarr-hd11111': true,

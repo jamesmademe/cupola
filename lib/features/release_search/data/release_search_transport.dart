@@ -9,8 +9,8 @@ import 'package:flutter/foundation.dart';
 /// A release search, however it is actually performed.
 ///
 /// The abstraction exists because Phase 2 changes the transport on two platforms
-/// and not the others, and because every rule the feature enforces — adoption,
-/// the concurrency cap, the verdicts — has to keep working the same either way.
+/// and not the others, and because every rule the feature enforces (adoption,
+/// the concurrency cap, the verdicts) has to keep working the same either way.
 /// Keeping the seam here means all of that stays testable without a plugin.
 abstract interface class ReleaseSearchTransport {
   /// Runs the search and returns the raw release list.
@@ -31,7 +31,7 @@ abstract interface class ReleaseSearchTransport {
 
 /// The foreground transport: the app's own Dio, guard and all.
 ///
-/// Used on macOS, and anywhere the background path is unavailable — or unsafe.
+/// Used on macOS, and anywhere the background path is unavailable, or unsafe.
 /// macOS is not a compromise here, it is the better path: an unfocused desktop
 /// app keeps running, so the request finishes on its own *and* keeps
 /// `SameOriginRedirectInterceptor`, which the native path cannot. That same
@@ -74,21 +74,21 @@ class ForegroundReleaseSearchTransport implements ReleaseSearchTransport {
 
 /// The background transport: a native task that outlives suspension.
 ///
-/// `DataTask` is not implemented as a data task on iOS — the library routes it
+/// `DataTask` is not implemented as a data task on iOS: the library routes it
 /// onto a real `URLSessionConfiguration.background`, which is what lets a
 /// multi-minute request survive the app being suspended, and needs **no**
 /// `UIBackgroundModes`.
 ///
 /// **Only ever reached for an `https` origin**, and that is a boundary rather
-/// than a preference — see `ReleaseSearchReach.whileOpenCleartext`, which is
+/// than a preference: see `ReleaseSearchReach.whileOpenCleartext`, which is
 /// where the reasoning lives and where the choice is actually made. In short:
 /// this path cannot use `SameOriginRedirectInterceptor` and the plugin has no
 /// redirect control of any kind (its own README states "redirects will be
 /// followed"), while every stack underneath it strips only `Authorization` and
 /// `Cookie` across origins and replays a custom `X-Api-Key` verbatim. A
 /// redirect on this path is therefore a handover of the arr admin key, and the
-/// only attacker who can *inject* one — as opposed to the instance itself,
-/// which already holds the key — needs cleartext to do it. So cleartext takes
+/// only attacker who can *inject* one, as opposed to the instance itself,
+/// which already holds the key, needs cleartext to do it. So cleartext takes
 /// the in-app path instead, and [run] refuses anything but `https` outright so
 /// a future call site cannot quietly undo that.
 ///
@@ -102,8 +102,8 @@ class ForegroundReleaseSearchTransport implements ReleaseSearchTransport {
 /// wired for this task type, so [platformCeiling] reports it and the verdict
 /// names it.
 class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
-  /// [transmit], [cancelTask] and [grace] exist so the task's whole lifetime —
-  /// the watchdog, the cancellation, the refusals — is testable offline.
+  /// [transmit], [cancelTask] and [grace] exist so the task's whole lifetime:
+  /// the watchdog, the cancellation and the refusals, all testable offline.
   /// Production passes none of them and gets the plugin and [watchdogGrace].
   const BackgroundReleaseSearchTransport({
     Future<TaskStatusUpdate> Function(DataTask task)? transmit,
@@ -116,20 +116,20 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
   final Future<void> Function(String taskId)? _cancelTask;
 
   /// This instance's watchdog grace. Only a test passes anything but
-  /// [watchdogGrace] — one cannot wait thirty real seconds to prove a ceiling.
+  /// [watchdogGrace]: one cannot wait thirty real seconds to prove a ceiling.
   final Duration grace;
 
   /// WorkManager stops a job here, and the library's `runInForeground` escape is
   /// never applied to a `DataTask`. Lifting it would cost a Play-restricted
   /// foreground-service permission and a review video, to gain headroom above a
-  /// five-minute default — so the ceiling is accepted and stated instead.
+  /// five-minute default, so the ceiling is accepted and stated instead.
   static const androidCeiling = Duration(minutes: 9);
 
   /// How long past the user's own ceiling the watchdog waits before it gives up
   /// on a task the plugin has stopped talking about.
   ///
   /// Not zero, because the clock here starts when the task is *enqueued*, and
-  /// the native side still has to pick it up and report back — cutting at
+  /// the native side still has to pick it up and report back: cutting at
   /// exactly the ceiling would turn that latency into a phantom timeout.
   static const watchdogGrace = Duration(seconds: 30);
 
@@ -153,7 +153,7 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
     // A `StateError` rather than a `DioException` on purpose: nothing about the
     // network went wrong, the transport was simply used against its contract,
     // and `classifyReleaseSearchFailure` carries a non-Dio error's own text
-    // into the verdict's detail — where "could not reach the service", which is
+    // into the verdict's detail, where "could not reach the service", which is
     // what an untyped `DioException` would produce, would be a lie.
     if (url.scheme != 'https') {
       throw StateError(
@@ -177,7 +177,7 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
       url: url.toString(),
       headers: headers,
       httpRequestMethod: 'GET',
-      // Priority 0 would be what routes this onto Android's own job service —
+      // Priority 0 would be what routes this onto Android's own job service;
       // but not in 9.5.7: that path also requires a notificationConfig and
       // SDK >= 34, and a DataTask from transmit() never has one. This task
       // therefore always runs on WorkManager, which is where the nine-minute
@@ -190,7 +190,7 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
     var settled = false;
 
     // Cancelling is not a courtesy here, it is the cleanup. The plugin persists
-    // the whole task — headers, so the API key — in plaintext (Android's default
+    // the whole task (headers, so the API key) in plaintext (Android's default
     // SharedPreferences, iOS's `taskDescription` and, when the Dart side is
     // unreachable, `UserDefaults`), and removes it only when the task reaches a
     // **final** state. `canceled` is one; a task nobody ever finalises is not,
@@ -214,7 +214,7 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
           // Two things are wrong by now and both want the same answer: the
           // plugin can lose a task silently ("may disappear without
           // providing any status"), and nothing native enforces the user's
-          // own ceiling — iOS would hold the task, key included, until the
+          // own ceiling; iOS would hold the task, key included, until the
           // resource timeout hours later. Reported as `failed` so it lands
           // in the timeout vocabulary the classifier already speaks.
           unawaited(discard());
@@ -249,12 +249,12 @@ RequestOptions _releaseRequestOptions() =>
 /// the existing classifier already understands.
 ///
 /// Separated out and public so the whole translation is testable without running
-/// a native task — which is the only way this path can be covered at all.
+/// a native task, which is the only way this path can be covered at all.
 ///
 /// The one fact this function exists to preserve: **the plugin never reports
 /// `complete` for a non-2xx answer.** Natively a 404 becomes [TaskStatus.notFound]
 /// and every other HTTP error becomes [TaskStatus.failed], with the code carried
-/// only inside a [TaskHttpException] — and `responseStatusCode` is serialized
+/// only inside a [TaskHttpException], and `responseStatusCode` is serialized
 /// solely for `complete`/`notFound`. Read the status code alone and every
 /// gateway 504 collapses into "timeout", telling the user to check their network
 /// when the fix is their proxy's read ceiling.
@@ -292,7 +292,7 @@ List<dynamic> decodeReleaseResponse({
       response: Response<dynamic>(
         requestOptions: options,
         statusCode: httpStatus,
-        // Present only for `notFound` (and `complete`) updates — but when they
+        // Present only for `notFound` (and `complete`) updates, but when they
         // are, the classifier can name the gateway that answered.
         headers: Headers.fromMap({
           for (final entry in (headers ?? const <String, String>{}).entries)
@@ -327,7 +327,7 @@ List<dynamic> decodeReleaseResponse({
   }
   if (decoded is List) return decoded;
 
-  // Anything that is not a JSON list did not come from the API — most likely a
+  // Anything that is not a JSON list did not come from the API, most likely a
   // gateway's own page. Refused rather than trusted, which is this path's
   // stand-in for the redirect guard it cannot use.
   throw DioException(
@@ -339,7 +339,7 @@ List<dynamic> decodeReleaseResponse({
 
 /// The plugin-wide ceiling on how long a task may live, set once in `main()`.
 ///
-/// This is the *only* limit that still applies while the app is suspended — the
+/// This is the *only* limit that still applies while the app is suspended: the
 /// transport's own watchdog is a Dart `Timer`, which does not fire until the app
 /// resumes. It therefore bounds two things that matter more than a download: how
 /// long a task carrying the service's API key in its headers can exist, and how
@@ -355,7 +355,7 @@ List<dynamic> decodeReleaseResponse({
 /// does, widened because this clock is the coarse one.
 ///
 /// Note for anyone changing it: the plugin accepts `resourceTimeout` only once,
-/// before the first task, and persists it in native preferences — a device that
+/// before the first task, and persists it in native preferences: a device that
 /// already stored the old hour keeps it until this value is written again.
 const Duration kBackgroundSearchResourceTimeout = Duration(minutes: 11);
 
@@ -369,7 +369,7 @@ const Duration kBackgroundSearchResourceTimeout = Duration(minutes: 11);
 /// difference is load-bearing: `flutter_test` reports `defaultTargetPlatform` as
 /// Android, so a check on that would send every widget test down a native path
 /// with no plugin behind it. `Platform` reports the host, which under test is the
-/// desktop running it — the foreground path, where a stubbed service still works.
+/// desktop running it: the foreground path, where a stubbed service still works.
 /// The [platform] parameter exists so the rule itself stays unit-testable.
 bool backgroundSearchSupported({TargetPlatform? platform}) {
   if (platform != null) {

@@ -99,7 +99,7 @@ class _StackPicker extends ConsumerWidget {
           )
         // `SelectionPills`, not a `Wrap` of `ChoiceChip`: the shared control
         // is where the press animation, the haptic, the Reduce Motion check
-        // and — the part that matters here — the button role live together. A
+        // and, the part that matters here, the button role live together. A
         // bare chip row has no semantics node at all, so a screen reader got
         // no role, no accessible name and no selected state for the one
         // control that chooses which stack the terminal is showing.

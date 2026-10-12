@@ -129,8 +129,8 @@ void main() {
         reason: ServiceFailureReason.redirected,
       );
 
-      // Red means nothing answered. Something answered — it just answered with
-      // a redirect — so this is the amber "fix something" tone, and the label
+      // Red means nothing answered. Something answered; it just answered with
+      // a redirect, so this is the amber "fix something" tone, and the label
       // has to say which something.
       expect(presentation.tone, StatusTone.warning);
       expect(presentation.needsAttention, isTrue);
@@ -167,7 +167,7 @@ void main() {
       );
 
       // Red says "nothing answered", which sends the user auditing an address
-      // and a port that are both fine — the request never left the device. Amber
+      // and a port that are both fine; the request never left the device. Amber
       // says "there is one thing to change", and there is exactly one.
       expect(blocked.tone, StatusTone.warning);
       expect(unreachable.tone, StatusTone.error);
@@ -180,7 +180,7 @@ void main() {
       // host replied, so there is one thing to go and fix. Red is the absence
       // of a reply, which is the only state the user cannot act on from the
       // form. A timeout is reached-then-silent and a 5xx is the service
-      // talking — both used to be red, which put "your server is busy" beside
+      // talking: both used to be red, which put "your server is busy" beside
       // "no route to host". A failure nobody can attribute is amber too: it is
       // no evidence that the host is silent. A Seerr session that ended is
       // neither: blue, the person's own step.

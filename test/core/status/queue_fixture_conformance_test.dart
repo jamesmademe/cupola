@@ -86,7 +86,7 @@ void main() {
         ],
       );
 
-      // Movie J is `imported`, Movie K is `ignored` — neither is in flight, so
+      // Movie J is `imported`, Movie K is `ignored`; neither is in flight, so
       // their real availability must show through instead.
       expect(snapshot.entryFor(110), isNull);
       expect(snapshot.entryFor(111), isNull);
@@ -254,7 +254,7 @@ void main() {
 
         // Two records in this payload: S02E04 downloading healthily, S02E05
         // `importBlocked`. The headline used to be "Downloading" with a bare
-        // warning marker — the actionable episode hidden behind the healthy one,
+        // warning marker: the actionable episode hidden behind the healthy one,
         // and no way to tell why the marker was there. Gravity ranking surfaces the
         // blocked one, which is the only one that will still be stuck tomorrow.
         expect(status.availability, MediaAvailability.partial);

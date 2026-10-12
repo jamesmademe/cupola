@@ -95,7 +95,7 @@ void main() {
   });
 
   group('what refuses to fold', () {
-    test('a percentage keeps the lens — the mean describes no disk', () {
+    test('a percentage keeps the lens: the mean describes no disk', () {
       final folded = aggregateServiceKpis([
         [kpi('Pool', '81%')],
         [kpi('Pool', '35%')],
@@ -151,7 +151,7 @@ void main() {
 
     test('lists reporting different things do not fold by position', () {
       // Two connections of one service run one builder, so a mismatch means
-      // one of them answered something else — and folding by position would
+      // one of them answered something else, and folding by position would
       // add a film count to a disk percentage.
       expect(
         aggregateServiceKpis([

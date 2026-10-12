@@ -8,20 +8,20 @@ import 'package:cupola/core/reel_motion.dart';
 /// The pattern it replaces was: swap the label for an 18pt
 /// [CircularProgressIndicator] while the future runs. That loses the one thing
 /// naming what you just pressed, at exactly the moment you are waiting to find
-/// out whether it worked — a service test on a home lab can take fifteen seconds
+/// out whether it worked: a service test on a home lab can take fifteen seconds
 /// behind a reverse proxy, and for all fifteen the button said nothing. Here the
 /// label stays, and being *in motion* is what says busy.
 ///
 /// Three things make that safe rather than merely prettier:
 ///
 /// **The slot is reserved, so the button never resizes and the label never
-/// re-centres.** [_slotWidth] measures every label this button can ever show —
-/// including the widest ellipsis frame of the busy label — and reserves the
+/// re-centres.** [_slotWidth] measures every label this button can ever show,
+/// including the widest ellipsis frame of the busy label, and reserves the
 /// maximum. Without it a full-width button's centred text slides sideways on
 /// every state change, which reads as a layout bug rather than as feedback.
 ///
 /// **The resting label is declarative, the busy span is imperative.** The parent
-/// owns what the button says at rest and may change it freely — `Test
+/// owns what the button says at rest and may change it freely: `Test
 /// connection` becomes `Next service` once the service answers, because there is
 /// no reason to make someone press Test and then press Next. [didUpdateWidget]
 /// rolls to whatever the parent now wants. The controller only takes over
@@ -46,11 +46,11 @@ class ReelCommandButton extends StatefulWidget {
   final String label;
 
   /// What it says while [onPressed]'s future is in flight. Rolling dots are
-  /// appended to it, so pass a bare participle — `Testing`, not `Testing…`.
+  /// appended to it, so pass a bare participle: `Testing`, not `Testing…`.
   ///
   /// `null` means the press has no waiting state worth showing: the label is not
   /// taken over, the button is not disabled, and the action simply runs. That is
-  /// the right shape for a press that navigates rather than waits — and it lets
+  /// the right shape for a press that navigates rather than waits, and it lets
   /// **one** button instance serve an action whose job changes underneath it. A
   /// service step's primary control tests while the service is silent and
   /// advances once it answers; keeping it the same widget through that change is
@@ -66,7 +66,7 @@ class ReelCommandButton extends StatefulWidget {
   final Future<void> Function()? onPressed;
 
   /// Labels this button will show later, so the slot is wide enough for them
-  /// now. Pass the *other* arm of a two-state action — a button that will
+  /// now. Pass the *other* arm of a two-state action: a button that will
   /// become `Next service` reserves room for it while it still says `Test
   /// connection`, otherwise the width changes on the one transition the
   /// reservation exists to absorb.
@@ -87,7 +87,7 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
   void didUpdateWidget(ReelCommandButton old) {
     super.didUpdateWidget(old);
     // While the future owns the label, the parent's value is staged rather than
-    // applied — the completion below reads `widget.label` after the await and
+    // applied: the completion below reads `widget.label` after the await and
     // therefore lands on whatever the parent decided in the meantime.
     if (_busy) return;
     if (widget.label != _label.value) {
@@ -104,15 +104,15 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
   /// Where a thrown action ends, since the button's own future has nowhere to go.
   ///
   /// [FilledButton.onPressed] is a `VoidCallback`, so the `Future` [_run]
-  /// returns is discarded the moment it is handed over — a `rethrow` from here
+  /// returns is discarded the moment it is handed over: a `rethrow` from here
   /// landed in nothing and surfaced as an unhandled async exception, because
   /// `main()` runs a plain `runApp` with no zone guard. The label roll is the
   /// user-facing half of handling it; this is the other half, so the failure is
   /// still reported through the framework's own channel (and is visible to
   /// `tester.takeException`) instead of escaping the app.
   ///
-  /// A *failed* connection test does not come through here — `diagnoseCredentials`
-  /// returns a failure value rather than throwing — so this is reserved for the
+  /// A *failed* connection test does not come through here: `diagnoseCredentials`
+  /// returns a failure value rather than throwing, so this is reserved for the
   /// genuinely exceptional: a malformed URL, a client constructor that raises.
   void _reportFailure(Object error, StackTrace stack) {
     FlutterError.reportError(
@@ -225,7 +225,7 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
         theme.textTheme.labelLarge!;
 
     // Reduce Motion drops the slot renderer entirely rather than asking it to
-    // stand still — same rule as [ReelLine]. The reservation stays, because the
+    // stand still, same rule as [ReelLine]. The reservation stays, because the
     // label still changes and a button that resizes under a settled swap is the
     // same defect with the animation removed.
     if (MediaQuery.disableAnimationsOf(context)) {
@@ -251,7 +251,7 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
       onPressed: widget.onPressed == null || _busy ? null : _run,
       child: SizedBox(
         width: _slotWidth(context, style),
-        // Clipped like every other roll — see [ReelLine]. A button is the
+        // Clipped like every other roll (see [ReelLine]). A button is the
         // tightest housing in the app: unclipped, a label's travelling glyphs
         // reach past the button's own fill and paint on the surface behind it.
         child: ClipRect(
@@ -262,7 +262,7 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
             textAlign: TextAlign.center,
             // Pinned to the resting label. Without it a screen reader reads the
             // button's name as whatever ellipsis frame is on screen, so the
-            // control announces itself as "Testing.." — a name that is different
+            // control announces itself as "Testing..", a name that is different
             // every time it is focused.
             semanticsLabel: _busy
                 ? widget.busyLabel ?? widget.label

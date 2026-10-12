@@ -22,11 +22,11 @@ class BazarrDetailViewModel {
   /// Exposed rather than derived per screen: both screens need it three times
   /// over (the figure plate, the hero chip and the empty state), and each was
   /// re-deriving it from the same `movie ?? fallback` cascade this class already
-  /// owns — two copies of one rule.
+  /// owns: two copies of one rule.
   ///
   /// **Null is not zero.** The cascade used to end in `?? 0`, so a series whose
-  /// record lookup failed — opened from the wanted list, where the episode that
-  /// brought the user here is itself a missing subtitle — read "0 Missing" over
+  /// record lookup failed, opened from the wanted list, where the episode that
+  /// brought the user here is itself a missing subtitle, read "0 Missing" over
   /// "All covered". Zero is a count Bazarr sent; null is a lookup that failed,
   /// is still running, or came back without the figure.
   final int? missing;
@@ -47,7 +47,7 @@ class BazarrDetailViewModel {
   };
 
   /// What a screen reader hears for the chip. The plate beside it is silent,
-  /// so this is the figure's only voice — and a dash is spoken as what it
+  /// so this is the figure's only voice, and a dash is spoken as what it
   /// means, never as "dash".
   String get missingChipSpoken =>
       missing == null ? 'Missing subtitles unknown' : missingChip;
@@ -71,7 +71,7 @@ class BazarrDetailViewModel {
     BazarrWantedItem? fallback,
   ) {
     // The library record is the answer. Without it, the wanted item the user
-    // came from still names its languages — but a wanted item naming none
+    // came from still names its languages, but a wanted item naming none
     // says something is missing without saying how much, and that is not 0.
     final fallbackMissing = fallback?.missingSubtitlesCount ?? 0;
     final missing =

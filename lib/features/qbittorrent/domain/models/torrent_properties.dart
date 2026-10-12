@@ -6,7 +6,7 @@ import 'package:cupola/core/utils/unit_space.dart';
 /// Mirrors the qBittorrent WebUI General tab. Sentinel integers (-1) and
 /// string-or-empty values are preserved here and only rendered into display
 /// form by the formatted getters below. All fields are required at
-/// construction time — the family provider guarantees a non-null payload.
+/// construction time: the family provider guarantees a non-null payload.
 class TorrentProperties {
   final String savePath;
   final int creationDate;
@@ -138,7 +138,7 @@ class TorrentProperties {
   String get seedsFormatted => '$seeds / $seedsTotal';
   String get pieceSizeFormatted => formatSize(pieceSize);
 
-  /// qB uses `0` to mean "no connection limit" — suppress the denominator in
+  /// qB uses `0` to mean "no connection limit": suppress the denominator in
   /// that case to avoid a misleading `5 / 0` row.
   String get connectionsFormatted => nbConnectionsLimit > 0
       ? '$nbConnections / $nbConnectionsLimit'

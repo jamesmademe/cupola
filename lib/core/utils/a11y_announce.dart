@@ -16,9 +16,9 @@ import 'package:flutter/widgets.dart';
 ///
 ///  * Where the engine reports announcement support (iOS, macOS, Windows) the
 ///    message goes out natively, through [SemanticsService.sendAnnouncement].
-///  * Where it does not — Android, whose engine sets `NO_ANNOUNCE`
+///  * Where it does not: Android, whose engine sets `NO_ANNOUNCE`
 ///    unconditionally because an announcement event makes TalkBack clear its
-///    speech queue — the message is handed to the app's [AnnouncementHost],
+///    speech queue: the message is handed to the app's [AnnouncementHost],
 ///    which draws it as a polite live region. That is the channel Android
 ///    offers in place of announcements, and the one the framework itself falls
 ///    back to (`InputDecorator` marks its error `liveRegion` exactly when
@@ -30,8 +30,8 @@ import 'package:flutter/widgets.dart';
 /// channel moves over without a change here.
 ///
 /// A `SnackBar` already carries `liveRegion: true`, and so do dialogs and error
-/// states. Announcing alongside one means the user hears it twice — on every
-/// platform, now that Android has a channel too — which is why `SnackBarHelper`
+/// states. Announcing alongside one means the user hears it twice, on every
+/// platform, now that Android has a channel too, which is why `SnackBarHelper`
 /// deliberately does *not* route through here.
 ///
 /// Linux is the gap: its engine reports announcement support but ignores the
@@ -69,7 +69,7 @@ void announce(
 /// has no announcement channel.
 ///
 /// Mounted once, around the whole app in `MaterialApp.builder`, so it sits
-/// above every route — the shell, the routes outside it, dialogs — and paints
+/// above every route (the shell, the routes outside it, dialogs) and paints
 /// after the navigator, where no route's `BlockSemantics` can reach it. On a
 /// platform with the native channel it draws nothing and costs one `Stack`.
 ///
@@ -77,7 +77,7 @@ void announce(
 /// (an empty rect is dropped from the semantics tree), carrying the message as
 /// its label. Android's bridge speaks a live region when its label changes, and
 /// a node that has just appeared counts as changed; so a node of its own is
-/// what lets the same sentence, sent twice, be heard twice — a label set to the
+/// what lets the same sentence, sent twice, be heard twice: a label set to the
 /// value it already holds changes nothing and says nothing.
 ///
 /// **Messages close together are coalesced within a frame and kept apart
@@ -88,7 +88,7 @@ void announce(
 /// own, and the nodes before it are left alone: each stays in the tree for
 /// [linger] from its first message, so none is taken away before the reader
 /// has fetched it, and keys keep an earlier node's expiry from relabelling a
-/// later one — which would announce the later sentence a second time.
+/// later one, which would announce the later sentence a second time.
 ///
 /// The cost is that for [linger] a reader walking the screen can land on the
 /// sentence it just heard. It is gone after that.

@@ -17,7 +17,7 @@ void main() {
     });
 
     test('falls back to the built url when the server sends a non-web one', () {
-      // The URL is launched externally, so `Uri.tryParse` — a syntax check —
+      // The URL is launched externally, so `Uri.tryParse` (a syntax check)
       // is not enough of a gate: these all parse.
       for (final hostile in const [
         'javascript:alert(1)',
@@ -48,7 +48,7 @@ void main() {
         'site': 'EvilTube',
       });
 
-      // An empty url makes the row untappable — `playableVideos` drops it.
+      // An empty url makes the row untappable: `playableVideos` drops it.
       expect(video.url, isEmpty);
     });
   });

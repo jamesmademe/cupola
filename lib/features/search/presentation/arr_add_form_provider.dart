@@ -19,7 +19,7 @@ typedef ArrProfileOption = ({int id, String name});
 /// Which connection the add sheet is filling in for.
 ///
 /// The item itself is not part of the key: the sheet is modal, so only one is
-/// ever open, and a `RadarrMovie` has no value equality — keying on it would
+/// ever open, and a `RadarrMovie` has no value equality; keying on it would
 /// mint a fresh entry on every rebuild.
 typedef ArrAddArgs = ({String instanceId, ServiceKey service});
 
@@ -55,7 +55,7 @@ class ArrAddFormState {
   /// `SnackBarHelper.error` and `AppErrorState` use.
   final String? errorDetail;
 
-  /// Why the request failed, when one was sent — the tone of the sheet's
+  /// Why the request failed, when one was sent: the tone of the sheet's
   /// glyph. Null for a fault that was an answer (Radarr has no quality
   /// profile) or a post this sheet refused to send: amber, never red.
   final ServiceFailureReason? errorReason;
@@ -135,15 +135,15 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
 
   /// Whether this notifier is still attached to a live provider.
   ///
-  /// Every message here is produced *after* an await — a profile fetch, an add
-  /// — and the provider is `autoDispose` behind a modal sheet, so dismissing the
+  /// Every message here is produced *after* an await: a profile fetch, an add
+  /// request, and the provider is `autoDispose` behind a modal sheet, so dismissing the
   /// sheet mid-request disposes it before the answer lands. Assigning `state`
   /// then throws `UnmountedRefException`, and in [_load] the `catch` that would
   /// have reported it opens with an assignment of its own, so the second throw
   /// escapes the microtask with nothing to catch it.
   bool _alive = true;
 
-  /// What this connection is called in a sentence — `Radarr · Away`.
+  /// What this connection is called in a sentence: `Radarr · Away`.
   ///
   /// Every message this notifier produces carries it. "The add failed" is
   /// useless on a screen where two Radarr are both visible, and the section
@@ -313,7 +313,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
   ///
   /// The failure is never swallowed: Radarr answers 400 for a title it already
   /// holds, and a caller that could not tell that from a success would report
-  /// an add that never happened — the mistake `lookupItems` used to make, where
+  /// an add that never happened: the mistake `lookupItems` used to make, where
   /// "offline" and "no results" became one answer.
   Future<String?> submit(ArrAddRequest request) async {
     final profileId = state.profileId;
@@ -321,7 +321,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
     // A sentence, not null: null is this method's word for "it is on the
     // server now", and a caller that gets it back closes the sheet and marks
     // the row added. Refusing to post and reporting success is the same lie the
-    // doc above says this method exists to prevent — `canSubmit` keeps the
+    // doc above says this method exists to prevent: `canSubmit` keeps the
     // button off, but the contract must hold without it.
     if (profileId == null || rootFolder == null) {
       return _refuse(request, 'the form is not filled in');

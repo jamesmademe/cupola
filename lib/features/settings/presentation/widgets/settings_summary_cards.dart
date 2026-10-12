@@ -28,7 +28,7 @@ import 'package:cupola/features/settings/presentation/widgets/test_all_connectio
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 
-/// The six cards of the settings summary — and the rule all six obey: **print
+/// The six cards of the settings summary, and the rule all six obey: **print
 /// only what is wrong.**
 ///
 /// A settings index that lists every preference at its current value is an
@@ -122,7 +122,7 @@ class _AboutSummaryCard extends StatelessWidget {
 
 /// The connections card: the count, then only the connections that are wrong.
 ///
-/// Shared by the summary pane and the phone index rather than drawn twice —
+/// Shared by the summary pane and the phone index rather than drawn twice:
 /// the phone's header card and the window's first card are the same statement
 /// about the same stack, and two implementations of it would be two chances to
 /// count "set up" differently.
@@ -250,8 +250,8 @@ class _TrustedCertificatesSummaryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
     final origins = settings.trustedCertificates.keys.toList()..sort();
-    // An origin no configured service reaches any more. Not a fault — nothing
-    // is broken and nothing is at risk — but it is the one thing on this pane
+    // An origin no configured service reaches any more. Not a fault. Nothing
+    // is broken and nothing is at risk, but it is the one thing on this pane
     // that cannot be found anywhere else, since the per-service form only ever
     // shows the pin for its own address (ADR-6).
     final orphans = origins
@@ -342,7 +342,7 @@ class _BackgroundSearchSummaryCard extends ConsumerWidget {
   }
 
   /// The release-search services whose lens instance cannot hand a search to
-  /// the OS, grouped by the reason — the two reasons have different fixes, and
+  /// the OS, grouped by the reason: the two reasons have different fixes, and
   /// only one of them is something the user can do anything about.
   ///
   /// Configured services only: reach answers for an empty address as readily
@@ -435,7 +435,7 @@ class _HintsSummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // One gesture teaches itself today — the Portal — so the count is out of
+    // One gesture teaches itself today, the Portal, so the count is out of
     // one. The board draws "2 of 5": the other four hints do not exist yet
     // (long-press to select is its own decision), and printing 5 would be the
     // summary inventing features the app does not have.
@@ -483,7 +483,7 @@ class _SummaryCard extends StatelessWidget {
   final String label;
   final List<Widget> children;
 
-  /// A command that belongs to this card rather than to the pane it opens —
+  /// A command that belongs to this card rather than to the pane it opens:
   /// "Test all" is the only one so far. The door is the first row; this is not
   /// a second door.
   final Widget? action;
@@ -513,8 +513,8 @@ class _SummaryCard extends StatelessWidget {
 /// A row that states one fact about the area this card covers.
 ///
 /// Tone defaults to neutral because most of what these cards have to say is a
-/// limit rather than a fault — a certificate nobody uses, a setting that does
-/// less than its name suggests — and the amber in this system means something
+/// limit rather than a fault: a certificate nobody uses, a setting that does
+/// less than its name suggests, and the amber in this system means something
 /// is failing right now.
 class _NoteRow extends StatelessWidget {
   const _NoteRow({

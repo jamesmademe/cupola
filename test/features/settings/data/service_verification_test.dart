@@ -19,7 +19,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// These cases drive the real clients over a stubbed HTTP stack rather than a
 /// stubbed `Dio`, because the client is built inside `diagnoseCredentials` from
-/// the values under test — which is exactly the wiring worth asserting on.
+/// the values under test, which is exactly the wiring worth asserting on.
 void main() {
   group('Jellyfin verification', () {
     test('a rejected key is unauthorized, not a green connection', () async {
@@ -334,7 +334,7 @@ void main() {
   // A failure that has already reached its own verdict says so verbatim.
   //
   // `SameOriginRedirectInterceptor` refuses a redirect that would replay
-  // `X-Api-Key` to a host the user never configured, and it knows *which* host —
+  // `X-Api-Key` to a host the user never configured, and it knows *which* host:
   // information "Could not verify the instance" throws away. The detail channel
   // carries that sentence to the two surfaces that report a connection test, and
   // both read it through the same accessor so they cannot word it differently.
@@ -356,7 +356,7 @@ void main() {
       );
 
       expect(diagnosis.status, ServiceConnectionStatus.disconnected);
-      // Not `unknown` — that reaches the user as "Could not verify the
+      // Not `unknown`: that reaches the user as "Could not verify the
       // instance. Double-check the address and credentials", which is advice
       // for a problem they do not have. Not `notFound` either: the address may
       // be exactly right and the proxy in front of it wrong.
@@ -405,7 +405,7 @@ void main() {
   });
 
   group('certProbeWorthwhile', () {
-    // A response — any response — proves the TLS handshake completed, so
+    // A response, any response, proves the TLS handshake completed, so
     // there is no untrusted certificate left to discover. A refused redirect
     // is a response; while it classified as `unknown` it fell into the
     // catch-all and cost every user a pointless probe round trip.
@@ -531,7 +531,7 @@ void main() {
 //
 // `flutter_test` installs its own `HttpOverrides` that answers 400 to
 // everything, which cannot express "this endpoint is fine and that one refuses
-// the credential" — the exact distinction under test here. The clients build
+// the credential", the exact distinction under test here. The clients build
 // their own `Dio` inside `diagnoseCredentials`, so there is no adapter to inject
 // either; overriding at the `HttpClient` layer is what remains, and it has the
 // advantage of exercising the real header building end to end.
@@ -585,8 +585,8 @@ class _Client implements HttpClient {
   final _FakeServer server;
 
   // Declared as fields rather than left to `noSuchMethod`, because these are
-  // *set* on a freshly built client — by Dio (`idleTimeout`) and by its adapter
-  // (`connectionTimeout`) — and a missing setter throws before any request is
+  // *set* on a freshly built client, by Dio (`idleTimeout`) and by its adapter
+  // (`connectionTimeout`), and a missing setter throws before any request is
   // made, which surfaces as an ordinary connection failure and makes the fake
   // look like a real refusal.
   @override

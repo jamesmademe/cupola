@@ -11,9 +11,9 @@ import 'package:cupola/features/transmission/domain/transmission_tone.dart';
 ///
 /// This was the **last** private copy of [DownloadQueueTile]: qBittorrent's went
 /// this morning, SABnzbd's and NZBGet's before it. What it carried that the
-/// plate now carries for every client — its own radius and 11px padding, a
+/// plate now carries for every client: its own radius and 11px padding, a
 /// hand-rolled `LinearProgressIndicator`, a percentage painted from
-/// `AppColors.transmission`, a warning line painted from `AppColors.warning` —
+/// `AppColors.transmission`, a warning line painted from `AppColors.warning`, and
 /// was not Transmission's; it was four clients' worth of the same row drifting
 /// apart. What genuinely is Transmission's is below: the daemon's own status
 /// vocabulary, the stall/error phrase it reports, the two rates, the ratio, and
@@ -36,14 +36,14 @@ class TransmissionTorrentTile extends StatelessWidget {
   /// the commands dispatch through the screen's `ref`, and a tile that reached
   /// for a provider would be a screen again. Transmission is the one client on
   /// this plate that has per-torrent commands wired, and they sit behind a 44pt
-  /// trailing target rather than a long-press — a menu reachable only by
+  /// trailing target rather than a long-press: a menu reachable only by
   /// long-press is a menu a pointer user and a switch user cannot reach at all.
   final Widget? actions;
 
   @override
   Widget build(BuildContext context) {
-    // The daemon's own sentence when it has one — "Stalled", or the error string
-    // it reported — and its plain status otherwise. It used to be printed as a
+    // The daemon's own sentence when it has one: "Stalled", or the error string
+    // it reported, and its plain status otherwise. It used to be printed as a
     // coloured prefix glued onto the front of the subtitle, which is the same
     // fact in a place where nothing could read it as a state.
     final warning = torrent.warning;
@@ -70,7 +70,7 @@ class TransmissionTorrentTile extends StatelessWidget {
             label: '↓ ${torrent.downloadSpeedLabel}',
             accented: true,
             // The arrow carries the whole meaning and screen readers disagree
-            // about it — some skip it, some name the character. Spelt out, it
+            // about it: some skip it, some name the character. Spelt out, it
             // is a sentence.
             spoken: 'downloading at ${torrent.downloadSpeedLabel}',
           ),
@@ -84,14 +84,14 @@ class TransmissionTorrentTile extends StatelessWidget {
       // No tap and no long-press on purpose: this dashboard has no torrent
       // detail page to open and no multi-select, and a row that highlights and
       // goes nowhere is worse than one that does not invite the press. The
-      // plate omits its InkWell — and its inner semantics node — when both are
+      // plate omits its InkWell, and its inner semantics node, when both are
       // null, so the row stays one thing a screen reader can act on.
     );
   }
 
   /// Whether this torrent has a transfer worth drawing a bar for.
   ///
-  /// A finished torrent has none — it is seeding, and a full bar under a seeding
+  /// A finished torrent has none. It is seeding, and a full bar under a seeding
   /// row reads as "finishing" about something that finished. Nor does one that
   /// is only queued, or one the daemon has stopped with an error: a 0% bar under
   /// either says "stuck" about a transfer that has not begun. A *stopped*
@@ -108,7 +108,7 @@ class TransmissionTorrentTile extends StatelessWidget {
   ///
   /// The private row had no state chip at all: it printed the status as prose
   /// and coloured only the *warning* case, in `AppColors.warning` straight from
-  /// the palette. The mapping itself is not this widget's — it is shared with
+  /// the palette. The mapping itself is not this widget's: it is shared with
   /// the Overview's Finished region through [transmissionTorrentTone], because
   /// the two surfaces draw the **same torrent** and a second copy of the switch
   /// is how they came to disagree about it.

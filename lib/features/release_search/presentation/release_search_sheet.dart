@@ -31,8 +31,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// have. [explainerBody] and [confirmation] are functions of
 /// [ReleaseSearchReach] rather than constants for exactly the reason this
 /// class's own history warns about: they used to be two hard-coded strings
-/// that quietly drifted apart — one saying "runs while Cupola is open", the
-/// other "running in the background" — for the same build, because neither
+/// that quietly drifted apart: one saying "runs while Cupola is open", the
+/// other "running in the background", for the same build, because neither
 /// knew which transport it was describing. A pinned origin makes the split
 /// three-way, so the fix is the same fix: derive both from the one value
 /// that actually knows.
@@ -71,7 +71,7 @@ class ReleaseSearchHandoffCopy {
   /// discovery channel that actually works: the inline explainer above is
   /// persisted per install, so anyone who met it before this feature existed
   /// will never see it again. Named here rather than left implicit because it
-  /// is the one recurring mention of the setting in the whole app — and it
+  /// is the one recurring mention of the setting in the whole app; and it
   /// appears only while the user is using the handoff, which is exactly when
   /// the limitation is about them.
   static String confirmation(ReleaseSearchReach reach) => switch (reach) {
@@ -95,7 +95,7 @@ class ReleaseSearchHandoffCopy {
 ///
 /// The important inversion: this is no longer where an in-flight search lives.
 /// The job manager owns it, so dismissing the sheet stops watching rather than
-/// stopping the work — which is the whole point of the feature.
+/// stopping the work, which is the whole point of the feature.
 class ReleaseSearchSheet extends ConsumerStatefulWidget {
   const ReleaseSearchSheet({
     super.key,
@@ -110,7 +110,7 @@ class ReleaseSearchSheet extends ConsumerStatefulWidget {
   final ReleaseSearchTarget target;
   final ScrollController scrollController;
 
-  /// Set when this sheet is watching a search the user did not just start —
+  /// Set when this sheet is watching a search the user did not just start,
   /// because adopting one without a word is work they cannot see.
   final String? adoptedFrom;
 
@@ -161,7 +161,7 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
   @override
   void initState() {
     super.initState();
-    // Opening the results is what clears this job's share of the badge — not
+    // Opening the results is what clears this job's share of the badge, not
     // visiting the section, which would zero a count for searches nobody read.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -184,7 +184,7 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
     HapticFeedback.selectionClick();
     setState(() => _handingOff = true);
     // The row promotes into the card the user will look for, the destination
-    // badge lights, and only then does the sheet leave — showing them the object
+    // badge lights, and only then does the sheet leave: showing them the object
     // and its home before sending them away from it.
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (mounted) Navigator.of(context).maybePop();
@@ -196,7 +196,7 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
     final expired = job?.status == ReleaseSearchJobStatus.expired;
     if (expired) {
       // Neither branch below grabs anything, and `InteractiveSearchSheet` reads
-      // a normal return as "grabbed" — so returning silently closed the sheet
+      // a normal return as "grabbed", so returning silently closed the sheet
       // under a green "Download started" for a user who had just cancelled, or
       // who was about to watch a fresh search run. [ReleaseGrabAbandoned] is
       // how a callback says it declined: the row re-arms, the sheet stays open
@@ -216,9 +216,9 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
   /// Never silent: the dialog names the cost, the target and the likely wait.
   ///
   /// It also names what accepting actually does, which is only half of what the
-  /// user asked for. Accepting re-runs the search and nothing else — the guid
+  /// user asked for. Accepting re-runs the search and nothing else: the guid
   /// they tapped belongs to a list the service has already dropped, and there
-  /// is no re-grab hook to carry it into the next pass — so the copy promises a
+  /// is no re-grab hook to carry it into the next pass, so the copy promises a
   /// search and hands the grab back to them. It used to say *"Search & grab"*,
   /// which turned the abandoned grab into a broken promise instead of an
   /// explained one.
@@ -349,7 +349,7 @@ class _QueuedBody extends StatelessWidget {
 ///
 /// Owns its own one-second tick, because it is the only place an elapsed clock is
 /// drawn. A timer in the job manager would keep the whole tree dirty for as long
-/// as any search ran — which no `pumpAndSettle` could ever outlast.
+/// as any search ran, which no `pumpAndSettle` could ever outlast.
 class _RunningBody extends StatefulWidget {
   const _RunningBody({
     required this.job,
@@ -574,8 +574,8 @@ class _HandoffOffer extends StatelessWidget {
 
 /// The focal moment: the running row becomes the card the user will look for.
 ///
-/// A container transform rather than a cross-fade — the row and the card are the
-/// same object at two densities — so the identity never fades and only the
+/// A container transform rather than a cross-fade: the row and the card are the
+/// same object at two densities, so the identity never fades and only the
 /// geometry moves.
 class _HandoffConfirmation extends StatelessWidget {
   const _HandoffConfirmation({

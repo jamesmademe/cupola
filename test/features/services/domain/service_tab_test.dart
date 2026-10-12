@@ -7,7 +7,7 @@ void main() {
   group('serviceTabs', () {
     test('every service in the registry has a bar, except TrueNAS', () {
       // Exhaustive, so a service added to the registry cannot ship without a
-      // bar — and so the one exception stays a decision rather than an
+      // bar, and so the one exception stays a decision rather than an
       // oversight. Ten sections are too many for a bar, so TrueNAS keeps the
       // console it already has; everything else in the stack follows the tab
       // model.
@@ -32,9 +32,9 @@ void main() {
 
     test('no bar exceeds six tabs', () {
       // Past six the bar stops being a bar. Three of the answered decisions
-      // exist to hold this line — Lidarr merged Artists and Albums, Bazarr
+      // exist to hold this line: Lidarr merged Artists and Albums, Bazarr
       // folded Blacklist into History, Prowlarr moved Apps into its own
-      // settings page — so a seventh entry here means one of them was undone.
+      // settings page, so a seventh entry here means one of them was undone.
       for (final entry in serviceTabs.entries) {
         expect(
           entry.value.length,

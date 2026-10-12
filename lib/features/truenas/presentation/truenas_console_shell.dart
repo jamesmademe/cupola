@@ -45,7 +45,7 @@ class TrueNasSection {
 ///
 /// The subtitles are still constants. Every one of them is a live count on the
 /// boards (`2 pools · 8 disks`, `SMB 6 · NFS 2 · iSCSI 1`, `11 running · 1
-/// stopped`) and every one of those counts is a data-layer addition — the
+/// stopped`) and every one of those counts is a data-layer addition: the
 /// dataset query does not ask for `snapshot_count`, the pool query does not
 /// return per-member capacity. A wrong count is worse than a description, so
 /// these stay descriptions until the queries can answer.
@@ -111,7 +111,7 @@ const trueNasSections = <TrueNasSection>[
 ///
 /// The archetype furthest from the phone. On a phone TrueNAS is a hub of nine
 /// cards and one tap per level, which is right for a phone and hopeless on a
-/// 1440pt window — three levels of hierarchy, one at a time, in a room with
+/// 1440pt window: three levels of hierarchy, one at a time, in a room with
 /// space for all three.
 ///
 /// So the nine areas become a list that stays put, and the area beside it

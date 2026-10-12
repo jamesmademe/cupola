@@ -29,7 +29,7 @@ void main() {
 
     test('prefers the first flagged KPI over the headline', () {
       // The KPI builders mark their own noteworthy metric with a non-null
-      // tone — `_backlogIf(missing > 0)`. That flag is the domain's judgment
+      // tone: `_backlogIf(missing > 0)`. That flag is the domain's judgment
       // about its own data, so this reads it instead of restating a per-service
       // table here.
       final signal = resolveServiceSignal([
@@ -85,7 +85,7 @@ void main() {
 
       test('backlog is surfaced without being coloured', () {
         // The case the old code got backwards. A Bazarr with 14 wanted
-        // subtitles is still the headline — it is why you would open Bazarr —
+        // subtitles is still the headline (it is why you would open Bazarr),
         // but it is work to do, not a fault, so it carries no tone.
         final signal = resolveServiceSignal([
           _kpi('Wanted', '14', tone: StatusTone.neutral),
@@ -123,7 +123,7 @@ void main() {
 
       test('a state word carries no label after it', () {
         // SABnzbd and NZBGet report their paused queue as `Status: Paused`, and
-        // the cell paints value-then-label — so keeping the label printed
+        // the cell paints value-then-label, so keeping the label printed
         // "Paused status".
         final signal = resolveServiceSignal([
           _kpi('Status', 'Paused', tone: StatusTone.neutral),
@@ -198,7 +198,7 @@ void _twoFigures() {
       ];
 
       // The flagged KPI wins, which is the ranking the deck and the status bar
-      // already use — so the card's primary and the deck's one figure cannot
+      // already use, so the card's primary and the deck's one figure cannot
       // disagree about which metric matters.
       expect(resolveServiceSignalPair(kpis)!.primary.value, '34');
       expect(resolveServiceSignal(kpis)!.value, '34');

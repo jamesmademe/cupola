@@ -18,8 +18,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Nginx Proxy Manager's service home.
 ///
-/// Overview alone carries the identity block and the readouts — Proxy hosts and
-/// Certificates are each a view of one kind of record — and then three regions
+/// Overview alone carries the identity block and the readouts: Proxy hosts and
+/// Certificates are each a view of one kind of record, and then three regions
 /// in the order the **mobile** board draws them: what is wrong, what is being
 /// fronted, what is about to lapse. That order is the board's answer rather
 /// than a preference: `HomeNpmMobile` promotes Needs attention above the host
@@ -39,14 +39,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 ///  * the warning fires only on an install that still ships
 ///    `admin@example.com` / `changeme`, and on that install it outranks every
-///    other thing on the page — that account rewrites every route on the box;
+///    other thing on the page: that account rewrites every route on the box;
 ///  * the band is the sentence that explains why a control elsewhere in this
 ///    service is attenuated. `npm_capability.dart` owns the gate, this page
 ///    neither weakens nor duplicates it: **the Overview offers no writes at
 ///    all.** Renew lives on the Certificates tab beside its confirmation, and
 ///    `NpmClient.renewCertificate` talks to Let's Encrypt, so a Renew reachable
 ///    from a pull-to-refresh surface is one mis-tap away from burning the
-///    user's ACME rate limits — a failure that outlasts the app session and
+///    user's ACME rate limits, a failure that outlasts the app session and
 ///    that they cannot fix from here. Better to delete a promise than to build
 ///    a control that has to be defended.
 ///
@@ -61,7 +61,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// ## The coverage figure, which is the one thing that must never disappear
 ///
-/// The upstream probe is partial **by design** — eight hosts of however many
+/// The upstream probe is partial **by design**: eight hosts of however many
 /// the box fronts. Every region here that reports anything derived from it
 /// prints `8 of 23 enabled checked from this device` beside
 /// the figure, and a host with no verdict contributes no clause to its row. That last word is not
@@ -80,7 +80,7 @@ class NpmOverviewScreen extends ConsumerWidget {
   /// The room the two glass bands above this page occupy.
   ///
   /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router — a test, a preview — reserves the right
+  /// a screen built outside the router (a test, a preview) reserves the right
   /// space instead of tucking its first region under the tab bar.
   static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
@@ -93,7 +93,7 @@ class NpmOverviewScreen extends ConsumerWidget {
     // `Nginx Proxy Manager not configured`, and letting `AsyncValueWidget`
     // catch that throw would draw the same pixels while leaving five *failed*
     // providers behind it, each scheduling a retry with backoff for a condition
-    // no amount of waiting changes — a battery cost on device and a pending
+    // no amount of waiting changes: a battery cost on device and a pending
     // timer in tests.
     final configured = ref.watch(
       currentSettingsProvider.select(

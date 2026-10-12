@@ -11,7 +11,7 @@ void main() {
     test('reads "—", and never 0', () {
       // The rule, and the whole reason the constructor exists. The builders
       // used to write `?? 0`, so a download client that was down drew
-      // `Queue 0` — indistinguishable from a queue that had just drained, and
+      // `Queue 0`, indistinguishable from a queue that had just drained, and
       // the reading the user would act on is the opposite one.
       const kpi = ServiceKpi.unavailable(
         label: 'Queue',
@@ -38,7 +38,7 @@ void main() {
 
     test('says "unavailable" out loud, with the reason', () {
       // An em dash is the one character on the rail assistive technology cannot
-      // render usefully — most screen readers say "dash" or skip it — so the
+      // render usefully: most screen readers say "dash" or skip it, so the
       // figure that matters most announced worst.
       const kpi = ServiceKpi.unavailable(
         label: 'Queue',
@@ -105,7 +105,7 @@ void main() {
         ),
       );
 
-      // Not four fragments — "3", "QUEUE", "—", "CLIENT NOT ANSWERING" — that a
+      // Not four fragments ("3", "QUEUE", "—", "CLIENT NOT ANSWERING") that a
       // listener has to reassemble in reading order.
       expect(
         find.bySemanticsLabel('Queue: unavailable, client not answering'),

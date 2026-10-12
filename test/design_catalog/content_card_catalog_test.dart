@@ -136,7 +136,7 @@ void main() {
       CatalogScene(
         'ContentCard() · loading, no URL, failed load · shimmer, then '
         'the plate with movie_outlined, then the plate with '
-        'broken_image_outlined — MediaPosterCard\'s well in both themes, '
+        'broken_image_outlined: MediaPosterCard\'s well in both themes, '
         'glyph 32',
         (_) {
           _servePending();

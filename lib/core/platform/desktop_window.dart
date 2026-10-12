@@ -9,7 +9,7 @@ import 'package:cupola/core/app_breakpoints.dart';
 /// The design's whole per-OS budget is spent here: everything below the deck is
 /// identical on the three targets, and only the top strip moves. Modelling that
 /// as an enum rather than as scattered `Platform.isX` tests is what keeps the
-/// budget honest — a widget asks for the *shape* of the chrome, never for the
+/// budget honest: a widget asks for the *shape* of the chrome, never for the
 /// operating system, so nothing else can quietly start branching on it.
 enum WindowChromeStyle {
   /// Traffic lights at the leading edge, drawn by AppKit over our strip.
@@ -21,7 +21,7 @@ enum WindowChromeStyle {
 
   /// No lights; 44x44 caption buttons at the trailing edge, close last.
   ///
-  /// Nothing of ours may cover the maximise button — Windows 11 snap layouts
+  /// Nothing of ours may cover the maximise button: Windows 11 snap layouts
   /// open from a hover on exactly that rectangle, and an overlay that eats the
   /// hover removes a system feature.
   windows,
@@ -38,7 +38,7 @@ enum WindowChromeStyle {
 /// One place, called once from `main`, and inert everywhere else: on iOS and
 /// Android every member either answers false or returns without doing anything,
 /// so the mobile builds never reach the plugin. That is deliberate rather than
-/// defensive — `window_manager` has no mobile implementation, and a call that
+/// defensive: `window_manager` has no mobile implementation, and a call that
 /// slipped through would fail at the channel with a `MissingPluginException`
 /// during startup, before any error UI exists to report it.
 abstract final class DesktopWindow {
@@ -47,7 +47,7 @@ abstract final class DesktopWindow {
 
   /// Which chrome shape this OS wants. Only meaningful when [isSupported].
   /// Asked of [defaultTargetPlatform] rather than of `dart:io`, so a test can
-  /// render all three chromes — see [AppBreakpoints.isDesktopPlatform].
+  /// render all three chromes: see [AppBreakpoints.isDesktopPlatform].
   static WindowChromeStyle get style => switch (defaultTargetPlatform) {
     TargetPlatform.macOS => WindowChromeStyle.macos,
     TargetPlatform.windows => WindowChromeStyle.windows,
@@ -74,7 +74,7 @@ abstract final class DesktopWindow {
   /// default in their own runners, once, at creation. The minimum is set here
   /// because it is a design constant rather than a platform one: a small
   /// phone's width, since below the 720pt compact artboard the window paints
-  /// the phone layout instead of stopping — see [AppBreakpoints.desktopMobile].
+  /// the phone layout instead of stopping: see [AppBreakpoints.desktopMobile].
   static Future<void> ensureReady() async {
     if (!isSupported) return;
     await windowManager.ensureInitialized();

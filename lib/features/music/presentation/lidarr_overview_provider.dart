@@ -1,15 +1,15 @@
 /// What the Lidarr Overview reads, and the pure functions that shape it.
 ///
-/// Built the same way Radarr's Overview provider is — every windowing
+/// Built the same way Radarr's Overview provider is: every windowing
 /// rule is a top-level pure function taking an explicit `now`, so the
-/// boundaries are unit-testable without a clock or a container — but the shape
+/// boundaries are unit-testable without a clock or a container, but the shape
 /// of the page differs from Radarr's in three places, and each difference is a
 /// fact about what this client can actually ask Lidarr for:
 ///
 ///  * **There is no Coming up section.** Radarr derives its week from the
 ///    library, because a film carries its own three release dates on the row
 ///    the library list already returned. A Lidarr *artist* carries no dates at
-///    all — the date belongs to the album — and [LidarrService.getAlbums] is
+///    all: the date belongs to the album, and [LidarrService.getAlbums] is
 ///    artist-scoped, so "what releases this week" would be one request per
 ///    artist, or the `/api/v1/calendar` endpoint this client does not call.
 ///    A window the client cannot fetch is a window that would have to be
@@ -18,7 +18,7 @@
 ///    import writes one history record *per track*, so an ungrouped feed shows
 ///    the same album three times and calls it three events. [lidarrHistoryToday]
 ///    folds a page down to albums and only states a track count when it can
-///    prove it has every record — see [lidarrHistoryPageIsComplete].
+///    prove it has every record. See [lidarrHistoryPageIsComplete].
 ///  * **The backlog figure comes off the envelope, not off the page.**
 ///    `wanted/missing` answers twenty rows by default, so `records.length` is
 ///    the size of the page and not the size of the backlog. [ArrRecordPage.total]
@@ -71,19 +71,19 @@ const int lidarrMissingPageSize = 20;
 /// The rule the whole function exists for: **a count whose source did not
 /// answer is not zero**. A section that printed "0 releases" over a failed
 /// fetch would be making a claim no server made, and it is the reassuring
-/// direction of wrong — nothing to do here — which is exactly why it has to be
+/// direction of wrong: nothing to do here, which is exactly why it has to be
 /// impossible to write by accident.
 String lidarrCountLabel(int? count, {required String noun, String? plural}) {
   if (count == null) return '—';
   return '$count ${count == 1 ? noun : (plural ?? '${noun}s')}';
 }
 
-/// `Cindy Lee — Diamond Jubilee`, for the eye.
+/// `Cindy Lee: Diamond Jubilee`, for the eye.
 ///
 /// An \*arr record embeds `artist` and `album` as separate objects and this is
 /// the only place the app joins them, so the em dash lives here rather than in
 /// four row builders. Falls back through album, artist, then the release title
-/// the record was grabbed under — the last of which is ugly and true, which
+/// the record was grabbed under; the last of which is ugly and true, which
 /// beats "Unknown" for a row whose whole job is to name a thing.
 String lidarrRecordTitle(Map<String, dynamic> record) {
   final artist = arrArtistName(record);
@@ -138,7 +138,7 @@ int? _sizeBytes(Map<String, dynamic> record) {
 /// **Artists, where the board draws albums**, and the substitution is the
 /// honest half of a blocked section rather than a shortcut: the board's rail is
 /// six album covers captioned `Artist · Year`, which needs a library-wide
-/// `GET /api/v1/album?includeArtist=true` this client has no method for —
+/// `GET /api/v1/album?includeArtist=true` this client has no method for:
 /// `getAlbums` takes an `artistId`. The artist list is already loaded for the
 /// KPI rail, carries `added`, and captions with a fact the model really holds
 /// (`albumCount`). The rail therefore says less than the board asks for, and
@@ -189,11 +189,11 @@ enum LidarrAttentionKind {
   /// Lidarr grabbed the release and could not move it into the library.
   importFailed(StatusTone.warning, Icons.file_download_off_rounded),
 
-  /// The transfer is not moving. A fault — the user did not ask for this.
+  /// The transfer is not moving. A fault: the user did not ask for this.
   stalled(StatusTone.warning, Icons.sync_problem_rounded),
 
   /// Monitored albums with no files. Backlog, so neutral: nothing is broken,
-  /// there is simply work outstanding — this is the resting state of every
+  /// there is simply work outstanding. This is the resting state of every
   /// \*arr that is still following an artist.
   missingAlbums(StatusTone.neutral, Icons.album_outlined);
 
@@ -206,7 +206,7 @@ enum LidarrAttentionKind {
 /// One row of Needs attention: what happened, to what, and when.
 ///
 /// The per-row cross-service action the board draws ("Fix", "Search all") is
-/// deliberately absent — those need a write this client does not make, and a
+/// deliberately absent: those need a write this client does not make, and a
 /// button that cannot do the thing it names is worse than no button.
 @immutable
 class LidarrAttentionItem {
@@ -219,7 +219,7 @@ class LidarrAttentionItem {
 
   final LidarrAttentionKind kind;
 
-  /// The fault and its subject: `Import failed · Alvvays — Blue Rev`.
+  /// The fault and its subject: `Import failed · Alvvays: Blue Rev`.
   final String headline;
 
   /// The evidence: the service's own message, the client, the timestamp.
@@ -233,7 +233,7 @@ class LidarrAttentionItem {
   IconData get icon => kind.icon;
 
   /// The row as a sentence, with the dots the layout uses turned back into
-  /// commas — `·` is decoration, and a screen reader either names it or drops
+  /// commas. `·` is decoration, and a screen reader either names it or drops
   /// it depending on the user's punctuation setting.
   String get spoken => joinSpokenParts([
     spokenFromDotted(_spokenHeadline ?? headline),
@@ -244,7 +244,7 @@ class LidarrAttentionItem {
 /// Reads the faults out of a page of **raw** `/queue` records.
 ///
 /// Raw, because `ArrQueueSnapshot` folds a queue down to one entry per album id
-/// and keeps neither the release title nor `added` — and this section is
+/// and keeps neither the release title nor `added`, and this section is
 /// entirely made of those two.
 ///
 /// Stalled is tested before import: a transfer that is not moving has not
@@ -252,7 +252,7 @@ class LidarrAttentionItem {
 /// `trackedDownloadStatus: warning`.
 ///
 /// An in-flight import is **not** a row here, although the board draws one.
-/// A healthy import is informational — blue, by the tone rule — and a blue row
+/// A healthy import is informational (blue, by the tone rule), and a blue row
 /// under a heading that says "Needs attention" is the heading lying about its
 /// own contents. It belongs to the Queue tab, which is where the header's link
 /// would send you and where the same record is already drawn with its progress.
@@ -318,7 +318,7 @@ bool _isImportFault(Map<String, dynamic> record) {
   }
   // The canonical "One or more tracks expected in this release were not
   // imported" arrives as a pending import carrying a status message, which is
-  // how the service says a human has to look at it — see `arrQueueSeverity`.
+  // how the service says a human has to look at it. See `arrQueueSeverity`.
   return state == 'importpending' &&
       arrQueueSeverity(record) != ArrQueueSeverity.ok;
 }
@@ -328,7 +328,7 @@ bool _isImportFault(Map<String, dynamic> record) {
 /// Two figures, and they are read from two different places on purpose:
 ///
 ///  * **how many** comes from [ArrRecordPage.total], the envelope's
-///    `totalRecords`. `records.length` is the size of the page — twenty — and a
+///    `totalRecords`. `records.length` is the size of the page (twenty), and a
 ///    library with three hundred gaps in it would read "20 missing", which is
 ///    wrong in the one direction that matters because it makes a large backlog
 ///    look finished.
@@ -424,13 +424,13 @@ class LidarrHistoryEntry {
     required this.trackCount,
   });
 
-  /// `Cindy Lee — Diamond Jubilee`.
+  /// `Cindy Lee: Diamond Jubilee`.
   final String title;
 
   /// The same, with the em dash spoken as a pause.
   final String spokenTitle;
 
-  /// What happened to it, in the shared history vocabulary — `Imported`,
+  /// What happened to it, in the shared history vocabulary: `Imported`,
   /// `Grabbed`, `Failed`.
   final String event;
 
@@ -444,7 +444,7 @@ class LidarrHistoryEntry {
   final DateTime date;
 
   /// How many records were folded into this row, or null when the page could
-  /// not prove it held them all. **Never printed when null** — see
+  /// not prove it held them all. **Never printed when null**: see
   /// [lidarrHistoryToday].
   final int? trackCount;
 
@@ -459,7 +459,7 @@ class LidarrHistoryEntry {
 ///
 ///  * a readable `totalRecords` no larger than what came back means we have
 ///    the lot;
-///  * no total at all leaves only the page size — a short page cannot have
+///  * no total at all leaves only the page size: a short page cannot have
 ///    been truncated, a full one very well may have been.
 ///
 /// A full page is treated as incomplete even when it happens not to be, which
@@ -478,7 +478,7 @@ bool lidarrHistoryPageIsComplete(
 /// Today's records, folded to one row per album and event, newest first.
 ///
 /// "Today" is the local calendar day of [now]. A record from 23:50 yesterday is
-/// out even though it is twenty minutes old — the section is headed `today`,
+/// out even though it is twenty minutes old: the section is headed `today`,
 /// and a heading is a promise.
 ///
 /// **The fold is what makes this readable at all.** Lidarr's history is written
@@ -553,8 +553,8 @@ List<LidarrHistoryEntry> lidarrHistoryToday(
     // spellings (`trackFileImported`, `trackFileRetagged`,
     // `albumImportIncomplete`) now live in `global_activity_status.dart`
     // beside Radarr's, Sonarr's and Readarr's. While they lived in a private
-    // switch here, this Overview and the global Activity feed — reading the
-    // same record — disagreed about the colour of a completed import.
+    // switch here, this Overview and the global Activity feed, reading the
+    // same record, disagreed about the colour of a completed import.
     final (event, tone) = historyEventDisplay(group.eventType);
     final countable = complete && group.count > 1;
     final sizeBytes = group.count == 1 || countable ? group.bytes : null;

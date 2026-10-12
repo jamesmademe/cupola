@@ -6,7 +6,7 @@
 /// mistake rather than a one-off:
 ///
 /// - **State by colour alone.** Both episode and track rows drew a 7pt circle
-///   filled `colorScheme.primary` or `colorScheme.outline` — the same eight
+///   filled `colorScheme.primary` or `colorScheme.outline`: the same eight
 ///   lines copied into two files, in files with *zero* `Semantics`. Nothing on
 ///   the page said what the fill meant, and a screen reader got nothing at all.
 ///   Here the state is a resolved [MediaStatusInfo]: the tile speaks
@@ -17,7 +17,7 @@
 ///   and a pink Lidarr page. Every colour here is the resolved status tone,
 ///   through [StatusBadge].
 /// - **Nothing to decide with.** A row was a number, a one-line truncated title
-///   and — twenty-five times over — the same magnifier glyph. [facts] is the
+///   and, twenty-five times over, the same magnifier glyph. [facts] is the
 ///   slot that fixes that, and both text runs wrap to two lines instead of
 ///   eliding at the first accessibility step.
 library;
@@ -76,8 +76,8 @@ class MediaChildTile extends StatelessWidget {
 
   final String title;
 
-  /// Decidable metadata: an air date, a duration, counts, and — per
-  /// [mediaStatusWord] — the status in words whenever the row is not plainly
+  /// Decidable metadata: an air date, a duration, counts, and, per
+  /// [mediaStatusWord], the status in words whenever the row is not plainly
   /// available. A row without at least one of these is the arr-web-UI table
   /// this region exists to replace.
   final List<String> facts;
@@ -91,7 +91,7 @@ class MediaChildTile extends StatelessWidget {
 
   final VoidCallback? onTap;
 
-  /// A control — a search menu — that stays reachable: it is the one slot this
+  /// A control (a search menu) that stays reachable: it is the one slot this
   /// row does not silence.
   final Widget? trailing;
 
@@ -123,7 +123,7 @@ class MediaChildTile extends StatelessWidget {
 
     return AppCard.filled(
       // A ~56pt row floods its own splash, and a flooded ripple reads as
-      // selection rather than as a touch — the Ripple-Needs-Room Rule. So the
+      // selection rather than as a touch: the Ripple-Needs-Room Rule. So the
       // row dips instead.
       pressFeedback: AppCardPressFeedback.scale,
       padding: const EdgeInsets.symmetric(

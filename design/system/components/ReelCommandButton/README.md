@@ -7,24 +7,24 @@ Rendered from `lib/core/widgets/reel_command_button.dart` by `test/design_catalo
 ## Values
 
 - A `FilledButton` from the theme: `primary` fill (the ink), `onPrimary` label, the row role (15 / 600), `AppRadius.control` (14), padding `AppSpacing.lg` × `AppSpacing.md`. It paints 44pt tall inside Material's padded 48pt target on a phone, and 44pt on a desktop too, where the theme pins standard density.
-- While the future runs the button is disabled — Material's `onSurface` 12% fill and 38% label — and the label keeps moving.
-- **Reserved slot**: the label box is as wide as the widest string the button can ever show — the resting label, the busy label with its full `...`, the failure label and every `slotLabels` entry — measured in the button's own text style at the current reading size. The button never resizes and the label never re-centres. The slot clips, so travelling glyphs never paint outside the fill.
+- While the future runs the button is disabled: Material's `onSurface` 12% fill and 38% label, and the label keeps moving.
+- **Reserved slot**: the label box is as wide as the widest string the button can ever show: the resting label, the busy label with its full `...`, the failure label and every `slotLabels` entry, measured in the button's own text style at the current reading size. The button never resizes and the label never re-centres. The slot clips, so travelling glyphs never paint outside the fill.
 - **States**: rest `Test connection` → waiting `Testing` + rolling dots → answered, the parent changes `label` and it rolls to `Next service` (or `Finish`) → thrown, rolls to `failureLabel` (`Test again`), falling back to `label`. `busyLabel: null` means no waiting state: the button is not disabled, the action runs, and the label rolls when the parent changes it (`Continue` → `Continue with 4`). `Enter Cupola` / `Opening` is the finish step's pair. `onPressed: null` disables the button like any `FilledButton`.
 - A thrown action is reported through `FlutterError.reportError` as well as rolled to the failure label; a failed connection test returns a value and does not throw.
 
 ## Motion
 
-- `ReelMotion.command`: changed glyphs slide down, new faces entering from above; `AppAnimation.durationSm` (320 ms) on `AppAnimation.emphasizedCurve`, 20 ms between glyphs, each incoming face 30 ms behind its outgoing one, bounce 0.15, and `interrupt: false` — a second change queues rather than snapping the roll in flight.
+- `ReelMotion.command`: changed glyphs slide down, new faces entering from above; `AppAnimation.durationSm` (320 ms) on `AppAnimation.emphasizedCurve`, 20 ms between glyphs, each incoming face 30 ms behind its outgoing one, bounce 0.15, and `interrupt: false`, a second change queues rather than snapping the roll in flight.
 - `ReelMotion.waiting` (the dots): the same clock with a 16 ms stagger, a 24 ms exit offset and no bounce. Its beat is the 320 ms roll plus the 24 ms exit offset plus a 160 ms rest, one dot every 504 ms (about 2.0 a second).
-- **Reduce Motion**: no roll and no dot timer — the button draws a plain `Text`: one settled `Testing`, then the new label swaps in place. The reservation stays.
+- **Reduce Motion**: no roll and no dot timer; the button draws a plain `Text`: one settled `Testing`, then the new label swaps in place. The reservation stays.
 
 ## The consumer provides
 
-The resting `label`, an optional `busyLabel` (a bare participle — the dots are appended), an optional `failureLabel`, the other labels to reserve in `slotLabels`, and an async `onPressed`.
+The resting `label`, an optional `busyLabel` (a bare participle, the dots are appended), an optional `failureLabel`, the other labels to reserve in `slotLabels`, and an async `onPressed`.
 
 ## Semantics
 
-The spoken name is pinned to the settled label — `busyLabel` while busy, `label` otherwise — never an ellipsis frame.
+The spoken name is pinned to the settled label (`busyLabel` while busy, `label` otherwise), never an ellipsis frame.
 
 ## Related
 

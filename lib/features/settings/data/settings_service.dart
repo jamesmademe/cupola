@@ -91,7 +91,7 @@ class SettingsService {
   static const _kForgottenSecrets = 'forgotten_secrets';
 
   /// Secure-storage key for the whole origin→fingerprint trust map (ADR-6).
-  /// One entry, JSON-encoded, rather than one key per service — the map is
+  /// One entry, JSON-encoded, rather than one key per service; the map is
   /// keyed by TLS origin, not by `ServiceKey`, so there is no per-service key
   /// to hang it on.
   static const _kTrustedCertificates = 'secure_trusted_certificates';
@@ -99,7 +99,7 @@ class SettingsService {
   /// The ordered list of configured connections: `[{id, service, label}, ...]`.
   ///
   /// Every value a connection holds already lives under keys derived from its
-  /// id, so this carries no addresses and no secrets — only which ids exist,
+  /// id, so this carries no addresses and no secrets; only which ids exist,
   /// what kind of server each is, and in what order the user put them. That is
   /// the part nothing else on disk can tell you: a primary is discoverable by
   /// walking the enum, but nothing announces that `radarr-a1b2c3d` is out
@@ -115,7 +115,7 @@ class SettingsService {
   ///
   /// Kept apart from the roster, and apart from [SettingsModel], because it is
   /// a *view* rather than configuration. Folding it into the settings blob
-  /// would make changing lens look like a settings write — and a settings write
+  /// would make changing lens look like a settings write, and a settings write
   /// re-probes every service, which is a connection storm for what is really a
   /// tab change.
   static const _kActiveInstances = 'active_instances';
@@ -285,7 +285,7 @@ class SettingsService {
   ///
   /// Entries naming a service this build does not have are dropped. An entry
   /// naming an instance that no longer exists is *kept* here and resolved away
-  /// at read time — this class does not know what exists, and silently editing
+  /// at read time. This class does not know what exists, and silently editing
   /// the user's last choice on load would lose it the moment a settings file
   /// was read before the instance list was.
   Map<ServiceKey, String> loadActiveInstances() {
@@ -404,7 +404,7 @@ class SettingsService {
     _firstReadError = null;
     final serviceSettings = await _loadServiceSettings();
     // The passwords come out of the same generic credential slot every other
-    // service's key does — see [_loadServiceSettings]. The usernames need their
+    // service's key does (see [_loadServiceSettings]). The usernames need their
     // own pass, because they are the half of the pair that has no generic slot;
     // driving it off the storage table rather than naming each service means a
     // new credential service is one map entry rather than a line here that is
@@ -418,7 +418,7 @@ class SettingsService {
     // Only the values with no `ServiceKey` to hang them on are named here;
     // everything per-service is folded in below, through the same registry that
     // produced it. Naming all 17 services a third time in a constructor literal
-    // is the hazard `copyWithCredentials` was written to kill — see its doc.
+    // is the hazard `copyWithCredentials` was written to kill; see its doc.
     var model = SettingsModel(
       plexClientId: plexClientId,
       trustedCertificates: trustedCertificates,
@@ -431,7 +431,7 @@ class SettingsService {
 
       // The guard is load-bearing, not cosmetic: `copyWithCredentials` asserts
       // the service has a username half, and `_loadUsernames` returns `''` for
-      // exactly the services that do not — the ones whose `_ServiceStorageKeys`
+      // exactly the services that do not: the ones whose `_ServiceStorageKeys`
       // entry has no `username`, i.e. the API-key services. Skipping the empty
       // case is what keeps that assert satisfied, and it drops nothing: `''` is
       // already the field's default.
@@ -443,7 +443,7 @@ class SettingsService {
 
     // Applied after the loop rather than in the constructor, because the viewer
     // now belongs to a Jellyfin *instance* and the loop above is what creates
-    // one. Setting it first would have nowhere to land — and doing it here
+    // one. Setting it first would have nowhere to land, and doing it here
     // cannot conjure an instance out of nothing either: an unconfigured
     // Jellyfin has no address, so `_upsertPrimary` declines to mint one and the
     // orphaned id is dropped rather than resurrected.
@@ -598,8 +598,8 @@ class SettingsService {
   /// [loaded] in the user's saved order, with anything the roster does not
   /// mention kept rather than dropped.
   ///
-  /// Order is meaning here — the first instance of a service is the one a bare
-  /// route resolves to — so it is restored from the roster rather than left to
+  /// Order is meaning here: the first instance of a service is the one a bare
+  /// route resolves to, so it is restored from the roster rather than left to
   /// enum declaration order. The tail is the safety net: an instance present on
   /// disk but missing from the roster is a roster that lost a write, and the
   /// answer to that is to show the connection, not to hide it.
@@ -634,7 +634,7 @@ class SettingsService {
 
     // Deliberately *not* written from `settings`. The client id is owned by
     // `_loadOrCreatePlexClientId`, which mints it once; honouring an incoming
-    // empty value here — which every `SettingsModel()` default carries — would
+    // empty value here, which every `SettingsModel()` default carries, would
     // clear it on the next unrelated save and hand the user's Plex server a new
     // device row on the following load.
     if (settings.plexClientId.isNotEmpty) {
@@ -647,7 +647,7 @@ class SettingsService {
   ///
   /// Keyed by [ServiceKey] and complete for all of them, so [loadSettings] can
   /// index it with `!` for the credential services without deciding anywhere
-  /// else which services those are — the presence of a `username` storage key
+  /// else which services those are: the presence of a `username` storage key
   /// is the whole of that decision.
   Map<ServiceKey, String> _loadUsernames() {
     return {
@@ -667,8 +667,8 @@ class SettingsService {
   /// Reads the persisted `X-Plex-Client-Identifier`, minting one on first use.
   ///
   /// Write-on-read is unusual but correct here and already precedented in this
-  /// file by [_loadCertFingerprint]'s prefs→secure migration. The alternative —
-  /// generating at connect time — leaves a window where two concurrent requests
+  /// file by [_loadCertFingerprint]'s prefs→secure migration. The alternative:
+  /// generating at connect time leaves a window where two concurrent requests
   /// each mint their own id, and Plex would record both as separate devices.
   ///
   /// Shaped as a v4 UUID because that is what every Plex client sends, but built
@@ -701,7 +701,7 @@ class SettingsService {
   /// Persists the whole trust-on-first-use map (ADR-6).
   ///
   /// Stored in secure storage rather than SharedPreferences: a fingerprint is
-  /// not a secret, but it *is* integrity-critical — whoever can write one can
+  /// not a secret, but it *is* integrity-critical: whoever can write one can
   /// pin their own certificate, after which `buildPinnedHttpClient` accepts
   /// it and every credential sent to that origin is captured. An empty map
   /// deletes the key outright rather than writing `'{}'`, so an install that
@@ -720,7 +720,7 @@ class SettingsService {
   /// Reads the trust map, migrating ADR-5's two per-service fingerprints
   /// (TrueNAS, Dockge) into ADR-6's origin-keyed map on an existing install.
   ///
-  /// [serviceSettings] is the caller's already-loaded URLs — reused rather
+  /// [serviceSettings] is the caller's already-loaded URLs, reused rather
   /// than re-read, since resolving a legacy fingerprint to an origin needs
   /// that service's saved URL. A legacy fingerprint whose URL is empty or
   /// unparseable as a TLS origin cannot be placed anywhere and is dropped;
@@ -738,7 +738,7 @@ class SettingsService {
           (origin, fingerprint) => MapEntry(origin, fingerprint as String),
         );
       } catch (_) {
-        // A future build's shape, or a hand-edited value — treated as no
+        // A future build's shape, or a hand-edited value: treated as no
         // trusted certificates rather than crashing startup.
         return {};
       }
@@ -786,20 +786,20 @@ class SettingsService {
   /// Both clients prepended `http://` to a scheme-less address until 9128220
   /// ("default qBittorrent/Dockge to TLS") changed them to `https://`. Every
   /// other service either always resolved a scheme-less value to `https://`
-  /// (SABnzbd, NZBGet, Unraid, TrueNAS — all shipped with the https default) or
+  /// (SABnzbd, NZBGet, Unraid and TrueNAS all shipped with the https default) or
   /// never worked without a scheme at all: the \*arrs go through `ApiClient`,
   /// which handed the raw value to `BaseOptions.baseUrl`, and Dio's own setter
   /// throws `ArgumentError` on `sonarr.lan:8989`.
   ///
   /// So this set is the exact blast radius of that one commit, and it is what
-  /// keeps [_schemeQualified] from being a downgrade — see its doc.
+  /// keeps [_schemeQualified] from being a downgrade; see its doc.
   static const Set<ServiceKey> _cleartextByDefaultBeforeTls = {
     ServiceKey.qbittorrent,
     ServiceKey.dockge,
   };
 
   /// One-shot migration for a stored service URL saved before addresses were
-  /// normalised on the way in — returns the rewritten value, or null when there
+  /// normalised on the way in, returning the rewritten value, or null when there
   /// is nothing to migrate.
   ///
   /// Older builds wrote the address field verbatim, and qBittorrent's own field
@@ -819,12 +819,12 @@ class SettingsService {
   ///
   /// Applying it to every service was the bug this scoping fixes: for everything
   /// else a scheme-less value has always resolved to `https://`, so rewriting it
-  /// destroyed a working TLS config — sending the TrueNAS API key over `ws://`
+  /// destroyed a working TLS config, sending the TrueNAS API key over `ws://`
   /// and the Dockge login over cleartext, and orphaning the origin's trusted
   /// certificate, since [UrlUtils.certOrigin] returns null for an `http://` URL
   /// and the pin is stored under `https://host:443`.
   ///
-  /// Returns null — leaving the value untouched — when the service is not one of
+  /// Returns null, leaving the value untouched, when the service is not one of
   /// the two, when the URL already carries a scheme, is empty, or does not
   /// resolve to a host once one is added, since there is then no working
   /// configuration to preserve.
@@ -842,7 +842,7 @@ class SettingsService {
     if (RegExp(r'^https?://', caseSensitive: false).hasMatch(trimmed)) {
       return null;
     }
-    // Some other scheme entirely — never a working Cupola address, and not
+    // Some other scheme entirely: never a working Cupola address, and not
     // this migration's business to rewrite.
     if (trimmed.contains('://')) return null;
 
@@ -870,7 +870,7 @@ class SettingsService {
         // Written back so the rewrite happens once rather than on every load,
         // the same one-shot shape `_loadTrustedCertificates` uses for ADR-5's
         // fingerprints. `_saveServiceUrls` would eventually persist it too, but
-        // only if the user saves something — and a config that has stopped
+        // only if the user saves something, and a config that has stopped
         // connecting is exactly the one nobody opens settings for.
         await _prefs.setString(storageKeys.url, url);
       }
@@ -881,7 +881,7 @@ class SettingsService {
       // authenticated service keeps its *password* under `secureApiKey`, which
       // is exactly what `SettingsModel.apiKeyFor` returns for it. Special-casing
       // those three here was a third copy of a decision the registry already
-      // owns, and it bought nothing — the read it skipped had to happen in
+      // owns, and it bought nothing: the read it skipped had to happen in
       // `loadSettings` instead.
       var apiKey = await _loadApiKey(storageKeys.secureApiKey);
       if (apiKey.isEmpty && storageKeys.legacySecureApiKey != null) {
@@ -947,7 +947,7 @@ class SettingsService {
 
     // Everything the previous roster knew about and this one does not. Without
     // this pass a removed connection's API key stays in the keychain for the
-    // life of the install — invisible, unreachable, and still a secret.
+    // life of the install: invisible, unreachable, and still a secret.
     for (final entry in _readRoster()) {
       if (live.contains(entry.id)) continue;
       await _forgetInstance(
@@ -956,7 +956,7 @@ class SettingsService {
     }
 
     // Primary slots with nothing in them. They predate the roster, so no
-    // roster entry proves they were ever written — the enum is their only
+    // roster entry proves they were ever written; the enum is their only
     // record, and leaving a stale address here would have the legacy walk in
     // [loadSettings] resurrect a connection the user removed.
     for (final service in ServiceKey.values) {
@@ -986,7 +986,7 @@ class SettingsService {
   /// Removes every value belonging to [instance].
   ///
   /// Deliberately does not touch `plex_client_id`: that key is not derived from
-  /// an instance and does not belong to one — it identifies the install, and
+  /// an instance and does not belong to one. It identifies the install, and
   /// clearing it would hand the user's Plex server a new device row.
   Future<void> _forgetInstance(ServiceInstance instance) async {
     await _prefs.remove(instance.urlStorageKey);
@@ -1283,7 +1283,7 @@ class _ServiceStorageKeys {
 
   /// Prefs key for the persisted per-install client identifier (Plex).
   ///
-  /// Machine-generated exactly once and then immutable — the opposite lifecycle
+  /// Machine-generated exactly once and then immutable: the opposite lifecycle
   /// to [userId]. Regenerating it registers a new device against the user's
   /// server, so it must survive every launch, update and settings edit.
   final String? clientId;

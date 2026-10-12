@@ -16,7 +16,7 @@ typedef SettingsSection = ({String label, String location, IconData icon});
 /// Settings, side by side: the sections on the left, the one you picked on the
 /// right.
 ///
-/// On a phone Settings is a drill-down, and that is correct — one screen, one
+/// On a phone Settings is a drill-down, and that is correct: one screen, one
 /// job, a back button. On a desktop window the same structure means Connections
 /// is three taps from Appearance and you can never see both, so the sections
 /// become a list that stays put and the page beside it changes.
@@ -38,7 +38,7 @@ class SettingsMasterDetail extends ConsumerWidget {
   /// 300 for the list and the rest for the page: below this the page would be
   /// narrower than the forms it holds, which is the point at which a
   /// master-detail stops being a convenience and starts being a squeeze. It was
-  /// 232, which is what a label-only row needs — the rows are readouts now
+  /// 232, which is what a label-only row needs. The rows are readouts now
   /// ("16 of 17 set up · 14 answering"), and 232 truncated every one of them.
   static const double _listWidth = 300;
 

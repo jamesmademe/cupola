@@ -33,7 +33,7 @@ void main() {
 
       test('reads the service\u2019s own word for it', () {
         // A sample is matched exactly like the rip beside it, so nothing else
-        // in the payload tells them apart — only the rejection does.
+        // in the payload tells them apart; only the rejection does.
         expect(itemWith('Sample').isSample, isTrue);
         expect(itemWith('File is a sample').isSample, isTrue);
         expect(itemWith('Sample file').isSample, isTrue);
@@ -55,7 +55,7 @@ void main() {
       });
 
       test('stays importable: the badge removes a default, not a choice', () {
-        // The row keeps its match and its checkbox — a user who wants the
+        // The row keeps its match and its checkbox. A user who wants the
         // sample taken can still take it. Only the preselect changed.
         final sample = itemWith('Sample');
         expect(sample.isReadyForImportFor(ServiceKey.radarr), isTrue);

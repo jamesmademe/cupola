@@ -36,7 +36,7 @@ class UrlUtils {
   ///
   /// Qualifying the scheme is not cosmetic: `BaseOptions(baseUrl: 'host:7878')`
   /// throws `ArgumentError` from Dio's own setter, and the onboarding and
-  /// settings fields both accept a bare host — so without this a plausible
+  /// settings fields both accept a bare host; so without this a plausible
   /// address wedged the caller instead of failing as a connection error.
   static String normalizeBaseUrl(String url) {
     var normalized = url.trim();
@@ -57,7 +57,7 @@ class UrlUtils {
   /// so nothing reaches storage with them today. This is
   /// the belt to that braces, and it belongs here rather than only in the
   /// validator because *this* is the function whose output becomes
-  /// `BaseOptions.baseUrl` — a credential that ever slipped past the form would
+  /// `BaseOptions.baseUrl`: a credential that ever slipped past the form would
   /// be interpolated into every request URI, land in `HttpException`'s
   /// `uri = …` text on any transport failure, and be persisted in plain
   /// `SharedPreferences` rather than the Keychain.
@@ -86,15 +86,15 @@ class UrlUtils {
   ///
   /// [normalizeBaseUrl] turns a scheme-less host into `https://`, so accepting
   /// it here matches what actually happens on connect. Anything that is not a
-  /// plausible host — an unknown scheme, embedded whitespace, embedded
-  /// credentials, characters no hostname may contain — is rejected up front so
+  /// plausible host (an unknown scheme, embedded whitespace, embedded
+  /// credentials, characters no hostname may contain) is rejected up front so
   /// the user is told the address is malformed instead of being told the server
   /// is unreachable.
   ///
   /// A bare single-label host (`nas`, a Docker Compose service name) is
   /// deliberately accepted: on a home network those resolve, and the previous
   /// "must look like a domain" rule turned working addresses into form errors.
-  /// So is an internationalised name (`münchen.de`) — same class of input, and
+  /// So is an internationalised name (`münchen.de`): same class of input, and
   /// telling the user their address is malformed because it is not ASCII is the
   /// same false report the character rule exists to prevent.
   ///
@@ -190,14 +190,14 @@ class UrlUtils {
   /// One host label: letters, digits, hyphens and underscores, never starting
   /// or ending with a hyphen.
   ///
-  /// Underscore is tolerated on purpose — it is illegal in a hostname per
+  /// Underscore is tolerated on purpose: it is illegal in a hostname per
   /// RFC 1123 but legal in a Docker/Compose service name, and reaching a
   /// container by its service name is a normal way to run this stack.
   ///
   /// "Letter" is `\p{L}`, not `A-Za-z`, so an internationalised name
   /// (`münchen.de`, a Cyrillic or CJK host) is a valid address rather than a
-  /// malformed one. It is matched against the *decoded* label — see
-  /// [_isPlausibleHost] — because `Uri.host` percent-encodes anything
+  /// malformed one. It is matched against the *decoded* label; see
+  /// [_isPlausibleHost], because `Uri.host` percent-encodes anything
   /// non-ASCII, and `%` is not a character any host may contain.
   static final _hostLabel = RegExp(
     r'^[\p{L}\p{N}_]([\p{L}\p{N}_\-]*[\p{L}\p{N}_])?$',
@@ -217,7 +217,7 @@ class UrlUtils {
   static bool _isPlausibleHost(String host) {
     if (host.isEmpty || host.length > 253) return false;
     // `Uri.host` strips the brackets from an IPv6 literal, and a DNS name can
-    // never contain a colon — so this is an exact test, not a guess.
+    // never contain a colon; so this is an exact test, not a guess.
     if (host.contains(':')) return _parseIpv6(host) != null;
 
     // A single trailing dot is a legal fully-qualified name.
@@ -248,7 +248,7 @@ class UrlUtils {
   /// The 16 bytes of [host] as an IPv6 literal, or null when it is not one.
   ///
   /// Strips a zone id (`fe80::1%eth0`, which `Uri.host` hands back percent-
-  /// encoded as `%25eth0`) — `Uri.parseIPv6Address` rejects it, and the zone
+  /// encoded as `%25eth0`); `Uri.parseIPv6Address` rejects it, and the zone
   /// says nothing about which range the address is in.
   static List<int>? _parseIpv6(String host) {
     final zone = host.indexOf('%');
@@ -340,7 +340,7 @@ class UrlUtils {
   static bool isLaunchableWebUrl(String url) =>
       isLaunchableWebUri(Uri.tryParse(url.trim()));
 
-  /// [isLaunchableWebUrl] for a caller that has already parsed the string —
+  /// [isLaunchableWebUrl] for a caller that has already parsed the string:
   /// notably one using `Uri.tryParse` to keep a `FormatException` out of a tap
   /// handler, which then holds a nullable [Uri] rather than the raw text.
   static bool isLaunchableWebUri(Uri? uri) {
@@ -364,12 +364,12 @@ class UrlUtils {
   /// explicit `http://`/`ws://`).
   ///
   /// A certificate is a property of the host that presents it, not of any one
-  /// service reached through it — this is the single place that turns a
+  /// service reached through it: this is the single place that turns a
   /// service's saved URL into the key trusted-certificate pins are stored
   /// under, so two services behind the same reverse proxy resolve to the same
-  /// key and share one trust decision. Every saved service URL is http(s) —
+  /// key and share one trust decision. Every saved service URL is http(s):
   /// the WebSocket-based clients (TrueNAS, Dockge) derive their own `wss://`
-  /// internally — so only that pair needs handling here.
+  /// internally; so only that pair needs handling here.
   static String? certOrigin(String rawUrl) {
     var raw = rawUrl.trim();
     if (raw.isEmpty) return null;

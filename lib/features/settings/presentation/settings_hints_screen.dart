@@ -11,7 +11,7 @@ import 'package:cupola/features/settings/presentation/widgets/settings_master_de
 
 /// Settings → Hints: one switch per feature that teaches itself.
 ///
-/// One row today — the Portal — because it is the only gesture the app has to
+/// One row today, the Portal, because it is the only gesture the app has to
 /// introduce. A row is a *feature*, not a mechanism: the Portal's demo bounce
 /// and coach mark are two beats of one lesson and answer to one switch. When
 /// another feature earns hints, it joins as its own row.

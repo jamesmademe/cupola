@@ -65,7 +65,7 @@ typedef ServiceTransport = ({
   /// cut a request in flight.
   String session,
 
-  /// Which connection this transport describes. Not used to reach the server —
+  /// Which connection this transport describes. Not used to reach the server;
   /// it is here so a client rebuilds when the lens moves to a *different*
   /// instance that happens to share an address, which is a real shape while
   /// someone is mid-edit adding the second one.
@@ -76,7 +76,7 @@ typedef ServiceTransport = ({
 /// through, as `{service: instanceId}`.
 ///
 /// Absent for a service means "the first one". An id that no longer names one
-/// of that service's instances also means "the first one" — resolved at read
+/// of that service's instances also means "the first one", resolved at read
 /// time by [watchTransport] rather than pruned on write, so a removal cannot
 /// race the load order and silently discard a choice.
 final activeInstancesProvider =
@@ -91,7 +91,7 @@ final activeInstancesProvider =
 /// losing a lens means every service opens on its first instance, which is the
 /// documented default and what a fresh install does anyway. Making this throw
 /// would put the whole `SharedPreferences` bootstrap between any consumer and
-/// the question "which server does this talk to" — a test that overrides only
+/// the question "which server does this talk to". A test that overrides only
 /// the settings would have to stand up storage to ask it.
 final initialActiveInstancesProvider = Provider<Map<ServiceKey, String>>(
   (ref) => const {},
@@ -128,7 +128,7 @@ class ActiveInstancesNotifier extends Notifier<Map<ServiceKey, String>> {
 /// Two watches rather than one, and both are narrow on purpose: the lens map
 /// is selected down to this service's entry, and the settings model down to the
 /// four values that decide which server is reached. A client here owns a live
-/// `Dio` and is closed on dispose, so a rebuild costs real connections —
+/// `Dio` and is closed on dispose, so a rebuild costs real connections:
 /// switching theme, editing another service, or moving another service's lens
 /// must not trigger one.
 ///
@@ -216,7 +216,7 @@ final activeInstanceProvider = Provider.family<ServiceInstance?, ServiceKey>((
 
 /// The connection a screen should read, given what its route said.
 ///
-/// [named] is the `?i=` a link carried, or null when it carried none — which is
+/// [named] is the `?i=` a link carried, or null when it carried none, which is
 /// every link that predates a service being able to have two. Null falls
 /// through to the lens, so a page reached the ordinary way behaves exactly as
 /// it did.
@@ -235,8 +235,8 @@ String effectiveInstanceId(WidgetRef ref, ServiceKey service, String? named) {
 /// For the window's own furniture, which sits above the page and names what
 /// it shows: a detail page opened from the 4K's row reads the 4K, whatever
 /// the lens is on, and a readout naming the lens over it names the wrong
-/// server. An `i` that is another service's — a settings link, a requests
-/// list — says nothing about [service].
+/// server. An `i` that is another service's (a settings link, a requests
+/// list) says nothing about [service].
 String locationInstanceId(WidgetRef ref, ServiceKey service, Uri location) {
   final named = location.queryParameters['i'];
   final belongs =
@@ -256,7 +256,7 @@ final connectionNameProvider = Provider.family<String?, String>((ref, id) {
   return ref.watch(currentSettingsProvider.select((s) => s.connectionName(id)));
 });
 
-/// Whether [service] has more than one connection — the question every surface
+/// Whether [service] has more than one connection: the question every surface
 /// asks before it decides to show a label at all.
 final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((
   ref,
@@ -279,16 +279,16 @@ final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((
 ///
 /// **Watches a `select` rather than the whole [SettingsModel] on purpose.** An
 /// `ApiClient` owns a `Dio`, and this function registers `onDispose(close)`, so
-/// a rebuild is not free — it tears down live connections. Watching the whole
+/// a rebuild is not free: it tears down live connections. Watching the whole
 /// model meant *any* settings write rebuilt every service client: switching the
 /// theme, editing a different service's URL, completing onboarding. Selecting
 /// the record means the client survives everything except a change to its own
 /// URL, its own key, or the certificate pinned for its own origin.
 ///
 /// Throws `Exception('<Service> not configured')` when [service] is not
-/// configured. The exact `'not configured'` wording is load-bearing —
+/// configured. The exact `'not configured'` wording is load-bearing:
 /// `AsyncValueWidget` string-matches it to render `NotConfiguredPlaceholder`
-/// rather than an error — and the service name comes from
+/// rather than an error, and the service name comes from
 /// [ServiceKeyExtension.title] so it stays the name the rest of the app uses.
 ///
 /// A plain function taking [ref] rather than a provider: the callers already

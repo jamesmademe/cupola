@@ -10,7 +10,7 @@ import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 /// motionless grey slab is what this app draws for an *empty* well, so a
 /// stalled-looking dashboard was indistinguishable from one that had finished
 /// loading and found nothing. The sweep is the only part that says "still
-/// coming", and it is also the accessible choice — [ShimmerPlaceholder] drops to
+/// coming", and it is also the accessible choice: [ShimmerPlaceholder] drops to
 /// a flat fill under `MediaQuery.disableAnimationsOf`, so Reduce Motion gets the
 /// calm version by asking for it rather than by accident of which screen it
 /// landed on.

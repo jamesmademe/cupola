@@ -9,13 +9,13 @@ import 'package:cupola/core/theme.dart';
 ///
 /// The rule this widget exists to keep in one place: a connection is named
 /// **only when there is more than one to tell apart**. Callers pass an empty
-/// [label] for a service with a single connection and get nothing back — a
+/// [label] for a service with a single connection and get nothing back: a
 /// stack with one Radarr must not grow a badge naming the only Radarr there is.
 /// That is the same rule `ServiceConnectionRow` follows on the Connections
 /// screen and `ServiceMatrixCell` follows on the Portal.
 ///
 /// Tinted by the service accent and set in the micro role as the connection is
-/// named — never recased, since the name is the user's — matching the badge
+/// named, never recased, since the name is the user's, matching the badge
 /// the global search puts on a section heading. Search can say it once per
 /// section because one leg queries one server; the Activity feed interleaves
 /// connections inside one service group, so its badge belongs on the row.

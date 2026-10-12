@@ -15,7 +15,7 @@ const jellyfinNeedsAdministratorTitle = 'Needs a Jellyfin administrator';
 /// credential that is not one.
 ///
 /// **Not an error.** A household member's token is a legitimate way to connect
-/// — it plays, browses and controls its own sessions — and the server refusing
+/// (it plays, browses and controls its own sessions), and the server refusing
 /// `/Devices`, `/ScheduledTasks` or `/Library/VirtualFolders` to it is policy
 /// working as configured. So this speaks in [NotConfiguredPlaceholder]'s calm
 /// voice, not [AppErrorState]'s: what this credential is, what the tab needs,

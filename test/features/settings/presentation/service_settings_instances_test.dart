@@ -116,8 +116,8 @@ void main() {
   group('a form speaks for the connection it edits, not for the service', () {
     testWidgets('the add form offers no Remove for a connection that is not '
         'there yet', (tester) async {
-      // Gated on `isServiceConfigured` — true as soon as *any* instance is set
-      // up — the add form showed the destructive row, and confirming it removed
+      // Gated on `isServiceConfigured`, true as soon as *any* instance is set
+      // up. The add form showed the destructive row, and confirming it removed
       // nothing and silently popped the screen.
       await _pump(
         tester,
@@ -132,7 +132,7 @@ void main() {
       tester,
     ) async {
       // "Connected" over an empty address field, because the header read
-      // `serviceDiagnosisProvider(radarr)` — the first Radarr, which is up.
+      // `serviceDiagnosisProvider(radarr)`: the first Radarr, which is up.
       await _pump(
         tester,
         settings: const SettingsModel(instances: [_fourK]),
@@ -147,7 +147,7 @@ void main() {
     ) async {
       // Read and written through `settings.jellyfinUserId` / `copyWithViewer`,
       // both of which resolve to the FIRST instance, this control listed the
-      // users of the server on screen and saved the choice onto the other one —
+      // users of the server on screen and saved the choice onto the other one,
       // leaving that one bound to an id from a user table it has never seen.
       final container = await _pump(
         tester,
@@ -307,7 +307,7 @@ void main() {
 
     final saved = container.read(currentSettingsProvider);
     expect(saved.instancesOf(ServiceKey.radarr), hasLength(2));
-    // Same host, different port — so the port is what tells them apart.
+    // Same host, different port, so the port is what tells them apart.
     expect(saved.primaryOf(ServiceKey.radarr)?.label, '7878');
     expect(saved.instancesOf(ServiceKey.radarr).last.label, 'HD');
   });
@@ -315,7 +315,7 @@ void main() {
   testWidgets('behind one reverse proxy the path is what differs', (
     tester,
   ) async {
-    // Same host, same port, two paths — one proxy fronting both. Naming them by
+    // Same host, same port, two paths: one proxy fronting both. Naming them by
     // hostname gave both "nas", which is what they have in COMMON, and it is
     // the deployment ADR-6 exists to serve: those two necessarily share a
     // single certificate pin, so the label is the only thing left to tell them
@@ -351,7 +351,7 @@ void main() {
     tester,
   ) async {
     // The field validator compares against siblings as they stand in the model,
-    // where the one being derived still has an empty label — so a collision
+    // where the one being derived still has an empty label, so a collision
     // introduced BY the derivation slipped through it entirely, and two
     // connections shared a name in the badge, the sheet and every chip.
     const nameless = ServiceInstance(
@@ -393,8 +393,8 @@ void main() {
     // The flow that broke on the device: this form is open on the only
     // connection, the user adds a second from the form pushed on top of it,
     // and saving that one derives a name for THIS one. Coming back, the field
-    // the validator now insists on was empty — the controller still held what
-    // it loaded, an empty string — so a connection the user never touched, and
+    // the validator now insists on was empty; the controller still held what
+    // it loaded, an empty string, so a connection the user never touched, and
     // which already had a persisted name showing in the badge, in the lens
     // sheet and above its search section, refused to save.
     const nameless = ServiceInstance(

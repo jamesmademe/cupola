@@ -25,11 +25,11 @@ class TrueNasDataProtectionApi extends TrueNasApiBase {
   ///
   /// The RPC *and* its parameters differ per kind, so this takes the whole task
   /// rather than a bare id:
-  /// * replication / rsync — `<namespace>.run(id)`, a job we wait on.
-  /// * cloud sync — `cloudsync.sync(id)`, a job. (`cloudsync.run` does not
+  /// * replication / rsync: `<namespace>.run(id)`, a job we wait on.
+  /// * cloud sync: `cloudsync.sync(id)`, a job. (`cloudsync.run` does not
   ///   exist; sending it made every "Run now" fail server-side.)
-  /// * snapshot — `pool.snapshottask.run(id)`, fire-and-forget.
-  /// * scrub — `pool.scrub.run(name, threshold)`, keyed by *pool name*, not by
+  /// * snapshot: `pool.snapshottask.run(id)`, fire-and-forget.
+  /// * scrub: `pool.scrub.run(name, threshold)`, keyed by *pool name*, not by
   ///   task id. `threshold` is "skip if scrubbed within N days", so an explicit
   ///   0 is what makes "Run now" actually run now. Fire-and-forget: a scrub
   ///   runs for hours and the UI must not block on it.

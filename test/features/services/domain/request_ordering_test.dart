@@ -22,7 +22,7 @@ void main() {
       // The trap: `displayStatus` lets media availability override request state,
       // so this request reads "Available" while still needing a human. Keying the
       // actionable set off displayStatus would silently drop exactly the
-      // approvals that matter most — the ones for media already on disk.
+      // approvals that matter most: the ones for media already on disk.
       final pendingButAvailable = _request(
         id: 1,
         status: RequestStatus.pendingApproval,
@@ -100,7 +100,7 @@ void main() {
       expect(sorted.map((request) => request.id), [2, 1]);
     });
 
-    test('never filters — resolved requests survive alongside pending', () {
+    test('never filters: resolved requests survive alongside pending', () {
       // The whole reason this is one region and not two.
       final sorted = sortRequestsPendingFirst([
         _request(id: 1, status: RequestStatus.pendingApproval),

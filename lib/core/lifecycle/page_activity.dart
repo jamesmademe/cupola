@@ -8,7 +8,7 @@ import 'package:cupola/features/release_search/presentation/release_search_lifec
 /// Why a page is not allowed to spend anything.
 ///
 /// Ordered by how far the page is from the user's eye, so [PageActivity.reason]
-/// names the outermost cause — the one worth logging when a poller went quiet.
+/// names the outermost cause: the one worth logging when a poller went quiet.
 enum PageInactiveReason {
   appBackgrounded,
   branchInactive,
@@ -20,7 +20,7 @@ enum PageInactiveReason {
 ///
 /// Four independent facts, resolved at the widget that asks. Anything costing
 /// network, battery or frame budget is expected to consult this and stop when it
-/// says no — see [watchPageActivity] for the contract that makes the dependency
+/// says no; see [watchPageActivity] for the contract that makes the dependency
 /// automatic.
 @immutable
 class PageActivity {
@@ -31,7 +31,7 @@ class PageActivity {
     required this.portalCovering,
   });
 
-  /// Live, with nothing in the way — the default a screen sees outside the shell.
+  /// Live, with nothing in the way: the default a screen sees outside the shell.
   const PageActivity.live()
     : this(
         branchActive: true,
@@ -87,7 +87,7 @@ class PageActivity {
 /// leaves the foreground, the caller rebuilds and re-decides. Nothing polls the
 /// gate; the gate pushes.
 ///
-/// The defaults are deliberately permissive — no scope found means live — so a
+/// The defaults are deliberately permissive: no scope found means live, so a
 /// screen under test in isolation, or hosted outside the shell (`/activity/:type`,
 /// `/import/*`, `/onboarding`), behaves exactly as it does today.
 PageActivity watchPageActivity(BuildContext context, WidgetRef ref) =>
@@ -122,7 +122,7 @@ extension PageGatedWatch on WidgetRef {
 
 /// Marks a branch subtree as the active one.
 ///
-/// Emitted by the shell's branch container next to — never instead of —
+/// Emitted by the shell's branch container next to, never instead of,
 /// [TickerMode]. Deliberately its own widget rather than reading
 /// `TickerMode.of`: `TickerMode` means "animations are muted here", which is a
 /// superset of "this branch is hidden" that any widget is free to switch off for
@@ -159,7 +159,7 @@ class BranchActivityScope extends InheritedWidget {
 ///
 /// Today that is exactly one thing: the Portal. It is not a route, so
 /// [ModalRoute.isCurrentOf] cannot see it, and the snapshot it takes freezes the
-/// page's *pixels* while its timers keep running — a poller behind an open Portal
+/// page's *pixels* while its timers keep running; a poller behind an open Portal
 /// would go on hitting the network to update something nobody can see.
 ///
 /// An [InheritedNotifier] over a boolean, not over the open/close animation:
