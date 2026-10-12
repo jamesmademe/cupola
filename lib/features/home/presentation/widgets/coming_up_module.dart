@@ -50,17 +50,34 @@ class HomeComingUpModule extends ConsumerWidget {
     final calendar = read.value;
     final known = read.asOf;
 
-    /// The whole read failed: every connection named, in the words of why.
-    SourceCoverage failed() => SourceCoverage.merge([
-      for (final instance in ref.watch(calendarConnectionsProvider))
+    /// Each connection that did not answer a read, in the words of why.
+    SourceCoverage silenceOf(LibraryCalendar read) => SourceCoverage.merge([
+      for (final source in read.silent)
         SourceCoverage.failure(
-          instance.service,
-          live.error,
-          instanceId: instance.id,
-          name: settings.connectionName(instance.id),
+          source.service,
+          source.error,
+          instanceId: source.connectionId,
+          name: settings.connectionName(source.connectionId),
         ),
     ]);
-    Widget unanswered() => live.hasError
+
+    // The live read failed, or answered with no connection answering (a
+    // drawing then stands over it, in the live read's words).
+    final liveFailed = live.hasError || read.silent;
+
+    /// The whole read failed: every connection named, in the words of why.
+    SourceCoverage failed() => read.silent
+        ? silenceOf(live.value!)
+        : SourceCoverage.merge([
+            for (final instance in ref.watch(calendarConnectionsProvider))
+              SourceCoverage.failure(
+                instance.service,
+                live.error,
+                instanceId: instance.id,
+                name: settings.connectionName(instance.id),
+              ),
+          ]);
+    Widget unanswered() => liveFailed
         ? HomeModuleFrame.silent(
             title: _title,
             coverage: failed(),
@@ -70,15 +87,7 @@ class HomeComingUpModule extends ConsumerWidget {
 
     if (calendar == null) return unanswered();
 
-    final silent = SourceCoverage.merge([
-      for (final source in calendar.silent)
-        SourceCoverage.failure(
-          source.service,
-          source.error,
-          instanceId: source.connectionId,
-          name: settings.connectionName(source.connectionId),
-        ),
-    ]);
+    final silent = silenceOf(calendar);
     if (calendar.answered.isEmpty && calendar.silent.isNotEmpty) {
       return HomeModuleFrame.silent(
         title: _title,
@@ -118,7 +127,7 @@ class HomeComingUpModule extends ConsumerWidget {
 
     // The last drawing whose live read failed: the rows it knew, at full ink,
     // over the failure in its own words.
-    if (known != null && live.hasError) {
+    if (known != null && liveFailed) {
       return LastKnownMark(
         asOf: known,
         checking: false,

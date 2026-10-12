@@ -184,6 +184,28 @@ void main() {
       await run(tester, () => Completer<ArrHistory>().future);
       expect(find.text('Sintel'), findsOne);
     });
+
+    testWidgets('a read no library answered keeps the drawing over the '
+        'failure, as a failed read does', (tester) async {
+      // The Home's reads do not fail: they answer with every source silent.
+      // That is the cold start with no network, the one a drawing is for.
+      await firstRun(tester);
+      await run(
+        tester,
+        () async => (
+          entries: const <ArrHistoryEntry>[],
+          coverage: SourceCoverage.failure(
+            ServiceKey.radarr,
+            const ClassifiedFailure(ServiceFailureReason.unreachable),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sintel'), findsOne);
+      expect(find.textContaining('did not answer'), findsOne);
+      expect(find.text('As of 20:53'), findsOne);
+    });
   });
 
   group('the line', () {

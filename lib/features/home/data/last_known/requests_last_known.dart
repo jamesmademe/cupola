@@ -46,6 +46,7 @@ final requestsLastKnown = HomeLastKnownSlot<HomeRequests>(
       ],
     };
   },
+  silent: (read) => read.settled && read.coverage.everySourceFailed,
   decode: (data, _) {
     if (data is! Map) return null;
     final count = data['count'];

@@ -35,6 +35,7 @@ final arrivedLastKnown = HomeLastKnownSlot<ArrHistory>(
       ],
     };
   },
+  silent: (history) => history.coverage.everySourceFailed,
   decode: (data, _) {
     if (data is! Map || data['entries'] is! List) return null;
     return (

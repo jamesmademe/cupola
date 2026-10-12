@@ -76,13 +76,10 @@ class HomeFeaturedModule extends ConsumerWidget {
           ? const SizedBox.shrink()
           : placed(const FeaturedSkeleton());
     }
-    if (slides.isEmpty) {
-      // A drawing with nothing left to show waits for the live answer, as if
-      // there were none; Featured never says a failure of its own.
-      return known != null && !live.hasError
-          ? placed(const FeaturedSkeleton())
-          : const SizedBox.shrink();
-    }
+    // Nothing to feature, live or as last drawn: no place is kept for it, so
+    // a cold start whose drawing had none draws none rather than a skeleton
+    // that would leave the page with a jump.
+    if (slides.isEmpty) return const SizedBox.shrink();
 
     final view = ref.watch(featuredViewProvider);
     final views = ref.read(featuredViewProvider.notifier);

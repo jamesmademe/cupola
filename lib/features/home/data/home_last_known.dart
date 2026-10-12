@@ -51,6 +51,7 @@ class HomeLastKnownSlot<T> {
     required this.services,
     required this.encode,
     required this.decode,
+    this.silent,
   });
 
   final String id;
@@ -58,12 +59,25 @@ class HomeLastKnownSlot<T> {
   final Set<ServiceKey> services;
   final Object? Function(T value) encode;
   final T? Function(Object? data, StoredImageResolver image) decode;
+
+  /// Whether a live value is a read that no source answered: the Home's reads
+  /// do not fail, they answer with every source silent. Such a value is a
+  /// failure to a module that has a last drawing, which it keeps over the
+  /// failure ([HomeRead.silent]). Null for a read that fails as an error.
+  final bool Function(T value)? silent;
 }
 
 /// A module's value with where it came from: live ([asOf] null), or the last
 /// drawing, as of [asOf]; and the live read itself, for whether it is still
-/// being asked for or failed.
-typedef HomeRead<T> = ({T? value, DateTime? asOf, AsyncValue<T> live});
+/// being asked for or failed. [silent]: the live read answered with no source
+/// answering, and [value] is the drawing kept over that failure (its words
+/// are the live value's coverage).
+typedef HomeRead<T> = ({
+  T? value,
+  DateTime? asOf,
+  AsyncValue<T> live,
+  bool silent,
+});
 
 /// What the drawings of [services] are valid for: each of their connections
 /// as it is set up (service, id, address, user, viewer, the Seerr account),
@@ -181,12 +195,34 @@ extension HomeLastKnownWatch on WidgetRef {
   ) {
     final read = watch(live);
     if (read.value case final T value?) {
-      _keep(this, slot, value);
-      return (value: value, asOf: null, live: read);
+      final silent = slot.silent?.call(value) ?? false;
+      if (silent) {
+        // No source answered: the last drawing, if there is one, stands
+        // over the failure rather than giving way to nothing.
+        final known = watch(homeLastKnownProvider(slot));
+        if (known != null) {
+          return (
+            value: known.value as T,
+            asOf: known.asOf,
+            live: read,
+            silent: true,
+          );
+        }
+      } else {
+        _keep(this, slot, value);
+      }
+      return (value: value, asOf: null, live: read, silent: false);
     }
     final known = watch(homeLastKnownProvider(slot));
-    if (known == null) return (value: null, asOf: null, live: read);
-    return (value: known.value as T, asOf: known.asOf, live: read);
+    if (known == null) {
+      return (value: null, asOf: null, live: read, silent: false);
+    }
+    return (
+      value: known.value as T,
+      asOf: known.asOf,
+      live: read,
+      silent: false,
+    );
   }
 }
 

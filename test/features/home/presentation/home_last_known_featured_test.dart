@@ -19,6 +19,8 @@ import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/featured.dart';
 import 'package:cupola/features/home/presentation/widgets/continue_watching_module.dart';
 import 'package:cupola/features/home/presentation/widgets/featured_module.dart';
+import 'package:cupola/features/home/presentation/widgets/featured_pager.dart'
+    show FeaturedSkeleton;
 import 'package:cupola/features/home/presentation/widgets/home_as_of_line.dart';
 import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
@@ -162,7 +164,7 @@ void main() {
   }) async {
     await run(tester, () async => slides ?? _evening());
     await tester.pumpAndSettle();
-    expect(find.text('Spring'), findsWidgets);
+    if (slides == null) expect(find.text('Spring'), findsWidgets);
   }
 
   testWidgets('draws the last slides at once, with their Play, then the live '
@@ -179,6 +181,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Spring'), findsNothing);
     expect(find.textContaining('As of'), findsNothing);
+  });
+
+  testWidgets('no source answering keeps the slides, and the line stops '
+      'checking', (tester) async {
+    await firstRun(tester);
+    await run(tester, () async => throw const FeaturedSourcesSilent());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Spring'), findsWidgets);
+    expect(find.text('As of 20:53'), findsOne);
+  });
+
+  testWidgets('a drawing with no slide keeps no place for one', (tester) async {
+    await firstRun(tester, slides: const []);
+    await run(tester, () => Completer<List<FeaturedSlide>>().future);
+
+    expect(find.byType(FeaturedSkeleton), findsNothing);
   });
 
   testWidgets('a download of today says no figure from a drawing', (

@@ -73,6 +73,12 @@ class HomeRequestsModule extends ConsumerWidget {
       }
       return const HomeModuleFrame.loading(title: _title);
     }
+    // The live read failed, or answered with no Seerr answering: a drawing
+    // stands over it, in the live read's words.
+    final liveFailed = live.hasError || read.silent;
+    SourceCoverage failure() =>
+        read.silent ? live.value!.coverage : silentOf(live.error);
+
     final coverage = value.coverage;
     final waiting = [
       for (final decision in value.decisions)
@@ -85,10 +91,10 @@ class HomeRequestsModule extends ConsumerWidget {
       // A last drawing with nothing waiting says nothing: loading, as if
       // there were none.
       if (known != null) {
-        return live.hasError
+        return liveFailed
             ? HomeModuleFrame.silent(
                 title: _title,
-                coverage: silentOf(live.error),
+                coverage: failure(),
                 onRetry: () =>
                     retryDashboardServices(ref, const [ServiceKey.seerr]),
               )
@@ -139,13 +145,13 @@ class HomeRequestsModule extends ConsumerWidget {
 
     // The last drawing whose live read failed: the rows it knew, with their
     // controls, at full ink, over the failure in its own words.
-    if (known != null && live.hasError) {
+    if (known != null && liveFailed) {
       return LastKnownMark(
         asOf: known,
         checking: false,
         child: HomeModuleFrame.silent(
           title: _title,
-          coverage: silentOf(live.error),
+          coverage: failure(),
           onRetry: () => retryDashboardServices(ref, const [ServiceKey.seerr]),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -36,6 +36,7 @@ final continueWatchingLastKnown = HomeLastKnownSlot<HomeResume>(
       'viewerMissing': resume.viewerMissing,
     };
   },
+  silent: (resume) => resume.coverage.everySourceFailed,
   decode: (data, _) {
     if (data is! Map) return null;
     final rows = data['rows'];

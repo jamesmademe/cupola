@@ -75,6 +75,12 @@ class HomeContinueWatchingModule extends ConsumerWidget {
       return const HomeModuleFrame.loading(title: _title);
     }
 
+    // The live read failed, or answered with no server answering: a drawing
+    // stands over it, in the live read's words.
+    final liveFailed = live.hasError || read.silent;
+    SourceCoverage failure() =>
+        read.silent ? live.value!.coverage : silentOf(live.error);
+
     final coverage = resume.coverage;
     final asking = resume.viewerMissing.isEmpty
         ? null
@@ -95,10 +101,10 @@ class HomeContinueWatchingModule extends ConsumerWidget {
       // A last drawing with nothing in it says nothing: loading, as if there
       // were none.
       if (known != null) {
-        return live.hasError
+        return liveFailed
             ? HomeModuleFrame.silent(
                 title: _title,
-                coverage: silentOf(live.error),
+                coverage: failure(),
                 onRetry: retry,
               )
             : const HomeModuleFrame.loading(title: _title);
@@ -139,13 +145,13 @@ class HomeContinueWatchingModule extends ConsumerWidget {
 
     // The last drawing whose live read failed: the rows it knew, at full ink,
     // over the failure in its own words.
-    if (known != null && live.hasError) {
+    if (known != null && liveFailed) {
       return LastKnownMark(
         asOf: drawnAsOf,
         checking: false,
         child: HomeModuleFrame.silent(
           title: _title,
-          coverage: silentOf(live.error),
+          coverage: failure(),
           onRetry: retry,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

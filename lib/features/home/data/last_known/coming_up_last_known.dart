@@ -36,6 +36,7 @@ final comingUpLastKnown = HomeLastKnownSlot<LibraryCalendar>(
       ],
     };
   },
+  silent: (calendar) => calendar.answered.isEmpty && calendar.silent.isNotEmpty,
   decode: (data, image) {
     if (data is! Map || data['events'] is! List) return null;
     final readAt = switch (data['readAt']) {

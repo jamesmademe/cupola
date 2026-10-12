@@ -79,7 +79,10 @@ class HomeDownloadsModule extends ConsumerWidget {
           context,
           ref,
           settings: settings,
-          live: inFlight,
+          failure: inFlight.hasError
+              ? _silentOf(settings, inFlight.error)
+              : null,
+          onRetry: () => ref.invalidate(servicesQueueProvider),
           drawing: drawing,
           asOf: read.asOf!,
         );
@@ -96,6 +99,21 @@ class HomeDownloadsModule extends ConsumerWidget {
     }
     final coverage = data.coverage;
     if (coverage.everySourceFailed) {
+      // No queue answered: the last drawing, if there is one, stands over
+      // the failure rather than giving way to it.
+      final drawn = ref.watch(homeLastKnownProvider(downloadsLastKnown));
+      if (drawn != null) {
+        final known = _known(
+          context,
+          ref,
+          settings: settings,
+          failure: coverage,
+          onRetry: () => retryDashboardServices(ref, coverage.failedServices),
+          drawing: drawn.value as DownloadsDrawing,
+          asOf: drawn.asOf,
+        );
+        if (known != null) return known;
+      }
       return HomeModuleFrame.silent(
         title: _title,
         coverage: coverage,
@@ -201,7 +219,8 @@ class HomeDownloadsModule extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required SettingsModel settings,
-    required AsyncValue<ServicesInFlight> live,
+    required SourceCoverage? failure,
+    required VoidCallback onRetry,
     required DownloadsDrawing drawing,
     required DateTime asOf,
   }) {
@@ -232,16 +251,17 @@ class HomeDownloadsModule extends ConsumerWidget {
         ),
     ];
 
-    // The live read failed: the rows it knew, at full ink, over the failure
-    // in its own words, and the line says it is as of then.
-    if (live.hasError) {
+    // The live read failed, or no queue answered it: the rows it knew, at
+    // full ink, over the failure in its own words, and the line says it is
+    // as of then.
+    if (failure != null) {
       return LastKnownMark(
         asOf: asOf,
         checking: false,
         child: HomeModuleFrame.silent(
           title: _title,
-          coverage: _silentOf(settings, live.error),
-          onRetry: () => ref.invalidate(servicesQueueProvider),
+          coverage: failure,
+          onRetry: onRetry,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: list,

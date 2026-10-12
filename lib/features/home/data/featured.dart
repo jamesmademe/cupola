@@ -69,6 +69,20 @@ final featuredProvider = FutureProvider.autoDispose<List<FeaturedSlide>>((
   ).wait;
   if (!ref.mounted) return const [];
 
+  // Every source it asked was silent: that is not "nothing to feature", it
+  // is not knowing. Featured says no failure of its own (the modules below
+  // name the servers), but a module with a last drawing keeps it over this.
+  final silent = [
+    if (players) resume == null || resume.coverage.everySourceFailed,
+    if (arrs) arrivals == null || arrivals.coverage.everySourceFailed,
+    if (arrs)
+      calendar == null ||
+          (calendar.answered.isEmpty && calendar.silent.isNotEmpty),
+  ];
+  if (silent.isNotEmpty && silent.every((source) => source)) {
+    throw const FeaturedSourcesSilent();
+  }
+
   final slides = featuredSlidesOf(
     resume: [
       for (final row in resume?.rows ?? const <ResumeRow>[])
@@ -101,6 +115,14 @@ final featuredProvider = FutureProvider.autoDispose<List<FeaturedSlide>>((
   }
   return slides;
 }, retry: noProviderRetry);
+
+/// Featured's read when every source it asked did not answer.
+class FeaturedSourcesSilent implements Exception {
+  const FeaturedSourcesSilent();
+
+  @override
+  String toString() => 'No source of Featured answered';
+}
 
 /// A row's wide artwork through its server, which owns the credential.
 ImageSource? _resumeArt(Ref ref, ResumeRow row) {

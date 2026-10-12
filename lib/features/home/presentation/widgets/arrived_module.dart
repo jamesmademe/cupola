@@ -78,6 +78,15 @@ class HomeArrivedModule extends ConsumerWidget {
       );
     }
 
+    // A drawing over a failure: the live read failed, or answered with no
+    // library answering; its words are the live read's own.
+    final failed = live.hasError || read.silent;
+    SourceCoverage failure() =>
+        read.silent ? live.value!.coverage : _silentOf(libraries, live.error);
+    void retryFailed() => read.silent
+        ? retryDashboardServices(ref, live.value!.coverage.failedServices)
+        : ref.invalidate(servicesArrivalsProvider);
+
     final now = ref.watch(arrivalsClockProvider)();
     final cards = arrivedOf(
       history.entries,
@@ -88,11 +97,11 @@ class HomeArrivedModule extends ConsumerWidget {
       // A last drawing whose week has gone by says nothing: loading, as if
       // there were none.
       if (known != null) {
-        return live.hasError
+        return failed
             ? HomeModuleFrame.silent(
                 title: _title,
-                coverage: _silentOf(libraries, live.error),
-                onRetry: () => ref.invalidate(servicesArrivalsProvider),
+                coverage: failure(),
+                onRetry: retryFailed,
               )
             : const HomeModuleFrame.loading(
                 title: _title,
@@ -119,14 +128,14 @@ class HomeArrivedModule extends ConsumerWidget {
 
     // The last drawing whose live read failed: the cards it knew, at full
     // ink, over the failure in its own words.
-    if (known != null && live.hasError) {
+    if (known != null && failed) {
       return LastKnownMark(
         asOf: known,
         checking: false,
         child: HomeModuleFrame.silent(
           title: _title,
-          coverage: _silentOf(libraries, live.error),
-          onRetry: () => ref.invalidate(servicesArrivalsProvider),
+          coverage: failure(),
+          onRetry: retryFailed,
           child: Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: rail,
