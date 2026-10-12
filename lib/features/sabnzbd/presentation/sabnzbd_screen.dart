@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/read_age.dart';
+import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -64,12 +65,20 @@ class _SabnzbdDashboard extends ConsumerWidget {
     final failed = summaryAsync.whenOrNull(
       data: (summary) => summary.isOnline ? null : summary,
     );
+    // How long the connection has not answered, said only when that is what
+    // the probe found: a fault is an answer, and carries no span.
+    final silentFor = ref.watchSilence(
+      context,
+      ServiceKey.sabnzbd,
+      silent: failed?.didNotAnswer ?? false,
+    );
 
     // With nothing to keep the failure is the page. Over a queue already read
     // it is a band, and the queue stays under it as it was last said.
     if (failed != null && !watched.hasValue) {
       return ServiceOfflineState.fromSummary(
         summary: failed,
+        since: silentFor,
         onRetry: () => _invalidateAll(ref),
       );
     }
@@ -105,6 +114,7 @@ class _SabnzbdDashboard extends ConsumerWidget {
               if (failed != null)
                 FaultBand.fromSummary(
                   summary: failed,
+                  since: silentFor,
                   onRetry: () => _invalidateAll(ref),
                 ),
               ServiceKpiPeek(

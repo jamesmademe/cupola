@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
@@ -141,6 +142,15 @@ class AsyncValueWidget<T> extends StatelessWidget {
   /// The connection the read went to, when the section knows it.
   final String? instanceId;
 
+  /// The service whose connection this read went to, when the widget knows
+  /// it: a section always does ([service]), a page names it through
+  /// [AsyncValueWidget.new]'s `silentService`. The band over a retained read
+  /// that did not come back then says since when the connection stopped
+  /// answering (`SilenceClock`), for [instanceId] when it names one and for the
+  /// connection the lens rests on when it does not. Null says no span, as it
+  /// always did.
+  final ServiceKey? _silentService;
+
   /// True for [AsyncValueWidget.bleedSection]: the body runs to the window
   /// edge, so the failure line keeps its own margin to reach the column.
   final bool _bleeds;
@@ -156,9 +166,11 @@ class AsyncValueWidget<T> extends StatelessWidget {
     this.isEmpty,
     this.emptyBuilder,
     this.loadingLabel,
+    ServiceKey? silentService,
+    this.instanceId,
   }) : service = null,
        consequence = null,
-       instanceId = null,
+       _silentService = silentService,
        _bleeds = false;
 
   /// One region of a page whose other regions stand: a section of an
@@ -187,6 +199,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
     this.loadingLabel,
   }) : serviceName = service.title,
        loadingWidget = null,
+       _silentService = service,
        _bleeds = false;
 
   /// [AsyncValueWidget.section] for a body that runs to the window edge (a
@@ -206,7 +219,22 @@ class AsyncValueWidget<T> extends StatelessWidget {
     this.loadingLabel,
   }) : serviceName = service.title,
        loadingWidget = null,
+       _silentService = service,
        _bleeds = true;
+
+  /// The band for a connection that did not answer, with since when if the
+  /// connection is known and something recorded a silence: the span the
+  /// `SilenceClock` holds, never one the widget invents.
+  Widget _unreachableBand() {
+    Widget band(Duration? since) => FaultBand.unreachable(
+      serviceName: serviceName,
+      since: since,
+      onRetry: onRetry,
+    );
+    final silent = _silentService;
+    if (silent == null) return band(null);
+    return _SilenceSpan(service: silent, instanceId: instanceId, builder: band);
+  }
 
   Widget _data(T value) {
     if (isEmpty != null && isEmpty!(value) && emptyBuilder != null) {
@@ -269,14 +297,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (failureDidNotAnswer(reason))
-                FaultBand.unreachable(
-                  serviceName: serviceName,
-                  // No `since`: nothing in the tree records a first-failure
-                  // time yet, and the band drops the span rather than
-                  // inventing one. When that notifier lands this is where it
-                  // is plumbed in.
-                  onRetry: onRetry,
-                )
+                _unreachableBand()
               else
                 FaultBand.fault(
                   serviceName: serviceName,
@@ -321,6 +342,42 @@ class AsyncValueWidget<T> extends StatelessWidget {
           serviceName: serviceName,
         );
       },
+    );
+  }
+}
+
+/// Builds with how long the connection of [service] has not answered, or null.
+///
+/// A widget of its own so [AsyncValueWidget] stays a plain widget that draws
+/// without a provider scope when it knows no service (a bare widget test of a
+/// band); the span is read only where there is a scope to read it from.
+class _SilenceSpan extends StatelessWidget {
+  const _SilenceSpan({
+    required this.service,
+    required this.instanceId,
+    required this.builder,
+  });
+
+  final ServiceKey service;
+  final String? instanceId;
+  final Widget Function(Duration? since) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+      ProviderScope.containerOf(context, listen: false);
+    } catch (_) {
+      return builder(null);
+    }
+    return Consumer(
+      builder: (context, ref, _) => builder(
+        ref.watchSilence(
+          context,
+          service,
+          silent: true,
+          instanceId: instanceId,
+        ),
+      ),
     );
   }
 }

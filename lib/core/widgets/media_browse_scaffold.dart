@@ -577,6 +577,7 @@ class _MediaBrowseScaffoldState<T>
       child: AsyncValueWidget<List<T>>(
         value: libraryAsync,
         serviceName: widget.serviceName,
+        silentService: service,
         loadingWidget: Center(
           child: CircularProgressIndicator(color: _spinnerInk(context)),
         ),

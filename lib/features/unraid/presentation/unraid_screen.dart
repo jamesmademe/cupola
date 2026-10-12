@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_action.dart';
@@ -165,6 +166,13 @@ class _UnraidSection extends ConsumerWidget {
     final failed = summaryAsync.whenOrNull(
       data: (summary) => summary.isOnline ? null : summary,
     );
+    // How long the connection has not answered, said only when that is what
+    // the probe found: a fault is an answer, and carries no span.
+    final silentFor = ref.watchSilence(
+      context,
+      ServiceKey.unraid,
+      silent: failed?.didNotAnswer ?? false,
+    );
 
     // What this section has already read, if anything. With nothing to keep
     // the failure is the page; over a read it is a band, and the read stays
@@ -179,6 +187,7 @@ class _UnraidSection extends ConsumerWidget {
     if (failed != null && !read.hasValue) {
       return ServiceOfflineState.fromSummary(
         summary: failed,
+        since: silentFor,
         onRetry: () => _invalidate(ref, section),
       );
     }
@@ -200,6 +209,7 @@ class _UnraidSection extends ConsumerWidget {
           if (failed != null)
             FaultBand.fromSummary(
               summary: failed,
+              since: silentFor,
               onRetry: () => _invalidate(ref, section),
             ),
           ...switch (section) {

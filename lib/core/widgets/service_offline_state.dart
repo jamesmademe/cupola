@@ -5,6 +5,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -134,8 +135,12 @@ class ServiceOfflineState extends StatelessWidget {
 
   final VoidCallback onRetry;
 
-  /// How long it has been quiet. Absent until something records a first-failure
-  /// time; the sentence drops the span rather than inventing one.
+  /// How long it has been quiet: since the first probe that did not answer
+  /// (`SilenceClock`). Absent when none was recorded, and the sentence drops
+  /// the span rather than inventing one.
+  ///
+  /// [ServiceOfflineState.failure] reads it itself from the connection it
+  /// shows when none is given, as it reads that connection's host.
   final Duration? since;
 
   /// The second half of "the action is the fix". Optional only because not
@@ -187,7 +192,6 @@ class ServiceOfflineState extends StatelessWidget {
       subject: serviceName,
       gateway: gateway,
     );
-    final span = since == null ? null : formatElapsedSpan(since!);
     final silent = presentation.didNotAnswer;
     // From the failure, not its reason: a web page that answered in the
     // service's place names where, as Home and the connection test do.
@@ -196,6 +200,11 @@ class ServiceOfflineState extends StatelessWidget {
 
     return Consumer(
       builder: (context, ref, _) {
+        // How long, from the connection the host below belongs to, when the
+        // caller did not say: only a silence has one.
+        final quiet =
+            since ?? ref.watchSilence(context, service, silent: silent);
+        final span = quiet == null ? null : formatElapsedSpan(quiet);
         final host = service.extractHost(
           ref.watch(activeInstanceProvider(service))?.url,
         );

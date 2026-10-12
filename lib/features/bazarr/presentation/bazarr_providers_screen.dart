@@ -73,6 +73,7 @@ class BazarrProvidersScreen extends ConsumerWidget {
             AsyncValueWidget<BazarrProviderSummary>(
               value: summary,
               serviceName: 'Bazarr providers',
+              silentService: ServiceKey.bazarr,
               loadingLabel: 'Loading Bazarr provider summary',
               onRetry: () => ref.invalidate(bazarrProviderSummaryProvider),
               data: (value) => _ProviderSummaryCard(summary: value),
@@ -89,6 +90,7 @@ class BazarrProvidersScreen extends ConsumerWidget {
             AsyncValueWidget<List<BazarrProviderStatus>>(
               value: ref.watch(bazarrProviderStatusesProvider),
               serviceName: 'Bazarr provider status',
+              silentService: ServiceKey.bazarr,
               loadingLabel: 'Loading provider status',
               onRetry: () => ref.invalidate(bazarrProviderStatusesProvider),
               isEmpty: (items) => items.isEmpty,

@@ -85,6 +85,7 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
     return AsyncValueWidget<List<Torrent>>(
       value: torrentAsync,
       serviceName: 'qBittorrent',
+      silentService: ServiceKey.qbittorrent,
       onRetry: () {
         clearQbittorrentLoginRefusal(ref);
         ref.invalidate(qbittorrentTorrentsProvider(widget.hash));

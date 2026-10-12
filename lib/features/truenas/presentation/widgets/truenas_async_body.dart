@@ -128,6 +128,7 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
       well = AsyncValueWidget<T>(
         value: value,
         serviceName: ServiceKey.truenas.title,
+        silentService: ServiceKey.truenas,
         onRetry: onRetry,
         loadingLabel: loadingLabel,
         skeleton: skeleton ?? _defaultSkeleton,

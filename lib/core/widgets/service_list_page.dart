@@ -118,6 +118,7 @@ class ServiceListPage<T> extends StatelessWidget {
     final page = AsyncValueWidget<List<T>>(
       value: value,
       serviceName: serviceName,
+      silentService: service,
       onRetry: onRetry,
       isEmpty: (items) => items.isEmpty,
       emptyBuilder: AppEmptyStatePage(

@@ -6,6 +6,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
+import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -227,6 +228,13 @@ class _NpmSection extends ConsumerWidget {
     final failed = summaryAsync.whenOrNull(
       data: (summary) => summary.isOnline ? null : summary,
     );
+    // How long the connection has not answered, said only when that is what
+    // the probe found: a fault is an answer, and carries no span.
+    final silentFor = ref.watchSilence(
+      context,
+      ServiceKey.nginxProxyManager,
+      silent: failed?.didNotAnswer ?? false,
+    );
 
     // What this section has already read, if anything. With nothing to keep
     // the failure is the page; over a read it is a band, and the read stays
@@ -241,6 +249,7 @@ class _NpmSection extends ConsumerWidget {
     if (failed != null && !read.hasValue) {
       return ServiceOfflineState.fromSummary(
         summary: failed,
+        since: silentFor,
         onRetry: () => _invalidate(ref, section),
       );
     }
@@ -261,6 +270,7 @@ class _NpmSection extends ConsumerWidget {
           if (failed != null)
             FaultBand.fromSummary(
               summary: failed,
+              since: silentFor,
               onRetry: () => _invalidate(ref, section),
             ),
           if (section == NpmSection.everything)

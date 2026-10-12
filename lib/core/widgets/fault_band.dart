@@ -63,11 +63,12 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 class FaultBand extends StatelessWidget {
   /// Level 1: the service did not answer at all.
   ///
-  /// [since] is when it was last seen answering; it turns the sentence from a
-  /// fact into a measurement ("has not answered for 6 minutes"), which is what
-  /// tells the operator whether this is a restart or an outage. Under a minute,
-  /// or absent entirely, the sentence drops the span rather than printing a
-  /// number nobody can act on.
+  /// [since] is how long it has been silent: since the first probe that did
+  /// not answer (`SilenceClock`), not since a read last came back. It turns
+  /// the sentence from a fact into a measurement ("has not answered for 6
+  /// minutes"), which is what tells the operator whether this is a restart or
+  /// an outage. Under a minute, or absent entirely, the sentence drops the
+  /// span rather than printing a number nobody can act on.
   ///
   /// [onOpenSettings] is the second half of "the action is the fix": Retry
   /// re-probes, and when the *address* is what changed no number of retries
@@ -94,9 +95,14 @@ class FaultBand extends StatelessWidget {
   /// the cold open with nothing to keep. A client's page used to give way to
   /// that full state on any failed probe, throwing away a queue that was on
   /// screen a moment before.
+  ///
+  /// [since] is how long the connection has not answered, and only the
+  /// silence reads it ([FaultBand.unreachable] says what it does with it): a
+  /// fault is an answer, and carries no span.
   factory FaultBand.fromSummary({
     Key? key,
     required ServiceSummary summary,
+    Duration? since,
     required VoidCallback onRetry,
   }) {
     final name = summary.service.title;
@@ -109,7 +115,12 @@ class FaultBand extends StatelessWidget {
         onRetry: onRetry,
       );
     }
-    return FaultBand.unreachable(key: key, serviceName: name, onRetry: onRetry);
+    return FaultBand.unreachable(
+      key: key,
+      serviceName: name,
+      since: since,
+      onRetry: onRetry,
+    );
   }
 
   /// Level 1, when the service **answered**: the read failed with a refusal

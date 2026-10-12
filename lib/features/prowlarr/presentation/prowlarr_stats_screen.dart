@@ -37,6 +37,7 @@ class _ProwlarrStatsScreenState extends ConsumerState<ProwlarrStatsScreen> {
     final page = AsyncValueWidget<ProwlarrIndexerStats>(
       value: stats,
       serviceName: 'Prowlarr stats',
+      silentService: ServiceKey.prowlarr,
       onRetry: () =>
           ref.invalidate(prowlarrIndexerStatsForWindowProvider(_window)),
       isEmpty: (value) => value.indexers.isEmpty,

@@ -131,6 +131,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
     return AsyncValueWidget<List<Torrent>>(
       value: torrentsAsync,
       serviceName: 'qBittorrent',
+      silentService: ServiceKey.qbittorrent,
       onRetry: () {
         clearQbittorrentLoginRefusal(ref);
         ref.invalidate(allTorrentsProvider);
