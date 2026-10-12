@@ -76,6 +76,11 @@ Profiles can be varied:
   download folder and every slot reporting its job's own status. NZBGet
   answers `DownloadPaused` with 180 MB free and its groups `QUEUED`.
 
+A server that goes quiet, or comes back, in the middle of a test is
+`harness.network.behave(id, behaviour)`: from then on the network answers it
+as that behaviour. The profile's own record of how the connection starts is
+not touched.
+
 A test can answer ahead of the world with
 `harness.network.on(id, 'GET', path, (request) => NetworkReply.json(…))`,
 or `onRpc` for TrueNAS. Anything no route answers is served `404` and

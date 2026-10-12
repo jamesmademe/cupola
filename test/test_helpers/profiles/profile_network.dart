@@ -427,6 +427,22 @@ class ProfileNetwork {
 
   ProfileServer? serverAt(Uri uri) => _servers[ProfileServer.originOf(uri)];
 
+  /// From now on connection [id] behaves as [behaviour]: a server that went
+  /// quiet mid-test, or came back. The profile's own record of how it starts
+  /// is not touched; what changes is how the network answers it.
+  void behave(String id, ConnectionBehaviour behaviour) {
+    final was = server(id);
+    _servers[was.origin] = ProfileServer(
+      id: was.id,
+      service: was.service,
+      url: was.url,
+      label: was.label,
+      behaviour: behaviour,
+      configuredInCupola: was.configuredInCupola,
+      latency: was.latency,
+    );
+  }
+
   /// The requests that reached connection [id].
   List<NetworkRequest> requestsTo(String id) =>
       requests.where((r) => r.server?.id == id).toList(growable: false);

@@ -10,6 +10,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_names.dart';
+import 'package:cupola/core/status/silence_clock.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -338,7 +339,18 @@ Future<ServiceSummary> _loadServiceSummary(
 ) async {
   final service = instance.service;
   final host = service.extractHost(instance.url) ?? '';
+  // The connection this probe is about, by the instance it was built for and
+  // never "the active one" read again later, and the clock it will note
+  // into, taken now: a probe invalidated while its request is in flight is
+  // disposed by the time the answer lands, and a disposed `ref` can no longer
+  // be read. The answer is still an answer, and is still noted.
+  final silence = ref.read(silenceClockProvider);
+  final silenceOf = silenceKey(service, instance.id);
   if (!instance.isConfigured) {
+    // Nothing is asked of a connection that is not set up, so nothing
+    // answered and nothing was silent: a silence kept from before it was
+    // emptied is not this connection's any more.
+    silence.noteAnswered(silenceOf);
     // Signed out is not a dark box: nothing was asked, and the one step left
     // is the person's own. Read as the ended session, blue.
     if (instance.isSignedOut) {
@@ -367,9 +379,17 @@ Future<ServiceSummary> _loadServiceSummary(
     // Classified, never flattened: a refused key is the service answering, and
     // painting it with the same red as a box that is switched off sent people
     // to check a cable when the fix was the key in the form.
-    return ServiceSummary.failed(service, host: host, error: error);
+    final failed = ServiceSummary.failed(service, host: host, error: error);
+    // The one place the app asks whether a server answers, so the one place
+    // that notes since when it did not. A client closed under the probe by a
+    // settings change asked nobody, and notes nothing.
+    if (!isClosedClientFailure(error)) {
+      silence.noteProbe(silenceOf, failed.failureReason);
+    }
+    return failed;
   }
 
+  silence.noteAnswered(silenceOf);
   return ServiceSummary(
     service: service,
     status: ServiceSummaryStatus.online,
