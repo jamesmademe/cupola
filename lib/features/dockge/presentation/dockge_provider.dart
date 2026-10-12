@@ -80,9 +80,22 @@ DockgeClient _dockgeClient(Ref ref, {required String? instanceId}) {
 /// concept rather than a Cupola one: one login, several instances relayed
 /// through it, so it lives beside the client instead of in the settings lens,
 /// which picks between *connections* the user configured.
+///
+/// Back on the hub whenever the connection lens moves to another Dockge, or
+/// the connection is pointed at another address: the agents belong to the
+/// login they were listed through, and an endpoint kept across the move is
+/// asked of a hub that may not relay it, or relay another machine by that
+/// name.
 class DockgeAgentLens extends Notifier<String> {
   @override
-  String build() => DockgeAgent.local.endpoint;
+  String build() {
+    ref.watch(
+      activeInstanceProvider(
+        ServiceKey.dockge,
+      ).select((instance) => (instance?.id, instance?.url)),
+    );
+    return DockgeAgent.local.endpoint;
+  }
 
   void select(String endpoint) {
     if (state == endpoint) return;
