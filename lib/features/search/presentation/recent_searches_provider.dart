@@ -26,12 +26,22 @@ class RecentSearchesNotifier extends Notifier<List<String>> {
   }
 
   /// Records a query at the front of the list (deduped, capped).
+  ///
+  /// The field searches as it is typed, so one search arrives here as a run
+  /// of queries: `mat`, `matri`, `matrix`. A query that extends or shortens
+  /// the latest entry is the same search, still being typed, and takes its
+  /// place; without that the recents filled with the prefixes of one title.
   void add(String query) {
     final trimmed = query.trim();
     if (trimmed.length < 2) return;
+    final lower = trimmed.toLowerCase();
+    final latest = state.isEmpty ? null : state.first.toLowerCase();
+    final sameSearch =
+        latest != null &&
+        (lower.startsWith(latest) || latest.startsWith(lower));
     final next = [
       trimmed,
-      ...state.where((q) => q.toLowerCase() != trimmed.toLowerCase()),
+      ...state.skip(sameSearch ? 1 : 0).where((q) => q.toLowerCase() != lower),
     ].take(_maxEntries).toList(growable: false);
     _persist(next);
   }
