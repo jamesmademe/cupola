@@ -450,12 +450,6 @@ String mediaAiringDay(MediaNextAiring next, DateTime now) {
   final days = DateTime(at.year, at.month, at.day).difference(today).inDays;
   if (days <= 0) return 'Today';
   if (days == 1) return 'Tomorrow';
-  final short = formatShortDate(
-    '${at.year.toString().padLeft(4, '0')}-'
-    '${at.month.toString().padLeft(2, '0')}-'
-    '${at.day.toString().padLeft(2, '0')}',
-    now: now,
-  );
-  // `Fri 9 Oct`: the weekday alone within the week, the date beyond it.
-  return days < 7 ? short.split(' ').first : short.substring(4);
+  // `Fri` within the week, `9 Oct` beyond it (`9 Oct 2027` in another year).
+  return days < 7 ? shortWeekdayName(at) : formatDayMonth(at, now: now);
 }
