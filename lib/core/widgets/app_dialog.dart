@@ -97,7 +97,15 @@ Future<AppConfirmResult> showAppConfirmDialog({
             confirmLabel;
 
         return AlertDialog(
+          // The title scrolls with the content, and is never cut. A title
+          // names what the action will touch (`Remove Big.Buck.Bunny…?`),
+          // and capped at two lines it hid the very name the confirmation
+          // is there to show. Scrolling keeps what the cap protected: the
+          // buttons stay in view at any length.
+          scrollable: true,
+          semanticLabel: title,
           title: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (icon != null) ...[
                 Icon(icon, color: colorScheme.onSurface),
@@ -106,13 +114,6 @@ Future<AppConfirmResult> showAppConfirmDialog({
               Expanded(
                 child: Text(
                   title,
-                  // An `AlertDialog` title sits *above* the scrollable content,
-                  // so an unbounded one grows the dialog until the buttons
-                  // leave the viewport: there is no scroll to reach them by.
-                  // Callers still cap the interpolated title; this is the floor
-                  // under them.
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleLarge!.weight(FontWeight.w600),
                 ),
               ),
@@ -267,7 +268,11 @@ class _TypedConfirmDialogState extends State<_TypedConfirmDialog> {
     final colorScheme = theme.colorScheme;
     final icon = widget.icon;
     return AlertDialog(
+      // As [showAppConfirmDialog]: the title scrolls, whole, with the field.
+      scrollable: true,
+      semanticLabel: widget.title,
       title: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
             Icon(icon, color: colorScheme.onSurface),
@@ -276,8 +281,6 @@ class _TypedConfirmDialogState extends State<_TypedConfirmDialog> {
           Expanded(
             child: Text(
               widget.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.titleLarge!.weight(FontWeight.w600),
             ),
           ),

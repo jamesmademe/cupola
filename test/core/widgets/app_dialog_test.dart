@@ -245,4 +245,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(confirmed, isTrue);
   });
+
+  testWidgets('a long title is shown whole, and the buttons stay in view', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    const name =
+        'Big.Buck.Bunny.2008.Remastered.Directors.Cut.2160p.UHD.BluRay.'
+        'REMUX.HDR10.HEVC.DTS-HD.MA.7.1-SomeReleaseGroupWithALongName';
+    await _open(tester, AppTheme.darkTheme(), (context) {
+      showAppConfirmDialog(
+        context: context,
+        title: 'Remove $name?',
+        confirmLabel: 'Remove torrent',
+      );
+    });
+
+    final title = tester.widget<Text>(find.text('Remove $name?'));
+    expect(title.maxLines, isNull);
+    expect(title.overflow, isNot(TextOverflow.ellipsis));
+    final button = tester.getRect(
+      find.widgetWithText(FilledButton, 'Remove torrent'),
+    );
+    expect(button.bottom, lessThanOrEqualTo(600));
+    expect(tester.takeException(), isNull);
+  });
 }
