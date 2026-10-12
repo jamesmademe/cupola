@@ -41,6 +41,17 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      # The donation plugin still speaks StoreKit 1, which Apple deprecated:
+      # hundreds of deprecation warnings from code that is not ours, burying
+      # the ones that are. Only that pod's Objective-C deprecations go quiet;
+      # its Swift, every other warning and every error still print.
+      if target.name == 'in_app_purchase_storekit'
+        config.build_settings['GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS'] = 'NO'
+        # The same headers again, as Swift's importer reads them for the
+        # module: clang's flag, passed through, and nothing else.
+        config.build_settings['OTHER_SWIFT_FLAGS'] =
+          '$(inherited) -Xcc -Wno-deprecated-declarations'
+      end
     end
   end
 end
