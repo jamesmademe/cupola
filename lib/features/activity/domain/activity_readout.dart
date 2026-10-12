@@ -5,7 +5,7 @@ library;
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart' show StatusTone;
 import 'package:cupola/core/utils/byte_format.dart';
-import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 
 /// One fact of the readout: a figure, set large, and its words after it.

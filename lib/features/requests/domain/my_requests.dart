@@ -14,10 +14,10 @@ import 'package:flutter/foundation.dart';
 import 'package:cupola/core/models/rating_source.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/sample_age.dart';
-import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_download.dart';
 

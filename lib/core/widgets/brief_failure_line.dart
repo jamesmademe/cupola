@@ -7,7 +7,7 @@ import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';

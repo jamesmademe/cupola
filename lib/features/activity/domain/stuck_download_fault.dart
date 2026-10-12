@@ -5,6 +5,7 @@ library;
 
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';

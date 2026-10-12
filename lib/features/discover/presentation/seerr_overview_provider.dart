@@ -19,7 +19,7 @@ import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
-import 'package:cupola/core/utils/string_utils.dart' show formatShortDate;
+import 'package:cupola/core/utils/date_format.dart' show formatShortDate;
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show formatRelativeDateTime;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';

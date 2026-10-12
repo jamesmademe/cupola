@@ -2,7 +2,7 @@
 /// three days on, read off the calendar Discover's band and page read.
 library;
 
-import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 
 /// The days Coming up looks at after today: Tuesday to Friday.

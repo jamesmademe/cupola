@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/string_utils.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/media/domain/media_facts.dart';

@@ -1,5 +1,6 @@
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, mapOrNull, stringOrNull;
@@ -12,7 +13,7 @@ import 'package:cupola/features/activity/domain/service_type.dart';
 
 export 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, stringOrNull;
-export 'package:cupola/core/utils/string_utils.dart'
+export 'package:cupola/core/utils/date_format.dart'
     show formatIsoDate, formatShortDate;
 // The status resolvers moved to the domain layer; re-exported so the existing
 // presentation call sites keep one import.
