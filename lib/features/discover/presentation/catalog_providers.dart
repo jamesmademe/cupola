@@ -107,6 +107,38 @@ typedef CatalogPerson = ({
   String title,
 });
 
+/// The faces on the atrium's People door: who leads the cast of the first
+/// trending title, and who directed or created it, those with a photo, three
+/// at most.
+///
+/// One read, of the one title, where the index reads ten: a door is a glance,
+/// and three faces from one title say what is behind it as well as ten.
+final atriumFacesProvider = FutureProvider.autoDispose<List<String>>((
+  ref,
+) async {
+  final first = (await ref.watch(atriumTrendingProvider.future)).firstOrNull;
+  if (first == null) return const [];
+  final service = ref.watch(seerrServiceProvider);
+  final detail = first.mediaType == 'tv'
+      ? await service.getTv(first.id)
+      : await service.getMovie(first.id);
+  final credits = detail['credits'];
+  final cast = credits is Map ? credits['cast'] : null;
+  final crew = credits is Map ? credits['crew'] : null;
+  final people = [
+    if (cast is List) ...cast.take(4),
+    if (crew is List)
+      ...crew.where((member) => member is Map && member['job'] == 'Director'),
+    if (detail['createdBy'] case final List creators) ...creators,
+  ];
+  return <String>{
+    for (final person in people)
+      if (person is Map)
+        if (person['profilePath'] case final String path when path.isNotEmpty)
+          path,
+  }.take(3).toList(growable: false);
+}, retry: noProviderRetry);
+
 /// How many trending titles the People index reads the credits of.
 const int _peopleTitles = 10;
 

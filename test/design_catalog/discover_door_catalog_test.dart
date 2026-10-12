@@ -67,6 +67,7 @@ Widget _lobby({int columns = 3}) => _rows(columns: columns, [
     title: 'People',
     subtitle: 'Directors, cast',
     lightUrl: _poster,
+    faceUrls: [_poster, _poster, _poster],
     onTap: () {},
   ),
   DiscoverDoor.lobby(title: 'Decades', subtitle: '1920s to now', onTap: () {}),
@@ -80,7 +81,7 @@ void main() {
     scenes: [
       CatalogScene(
         'DiscoverDoor.lobby · the atrium\'s six: lit with leaning posters, '
-        'lit alone, names stacked and fading, plain',
+        'names stacked and fading, faces overlapping, plain',
         (_) => _lobby(),
         width: 390,
       ),

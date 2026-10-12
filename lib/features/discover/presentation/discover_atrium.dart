@@ -69,6 +69,7 @@ class DiscoverAtrium extends ConsumerStatefulWidget {
     ref.invalidate(comingSoonProvider);
     ref.invalidate(catalogGenresProvider);
     ref.invalidate(trendingPeopleProvider);
+    ref.invalidate(atriumFacesProvider);
     ref.invalidate(seerrNumberingProvider);
     ref.invalidate(completeTheCollectionProvider);
     ref.invalidate(becauseYouWatchedProvider);
@@ -318,6 +319,7 @@ class _Doors extends ConsumerWidget {
     final genres = ref.watch(catalogGenresProvider(CatalogKind.movie)).value;
     final networks = _libraryNetworks(ref);
     final studios = _libraryStudios(ref);
+    final faces = ref.watch(atriumFacesProvider).value ?? const <String>[];
     MediaPreview? at(List<MediaPreview> list, int i) =>
         i < list.length ? list[i] : null;
     void open(DiscoverIndex index) =>
@@ -368,6 +370,12 @@ class _Doors extends ConsumerWidget {
             title: 'People',
             subtitle: 'Directors, cast',
             lightUrl: _poster(at(trending, 3), size: 'w92'),
+            // Faces, as Trending and Decades lean posters: the light alone
+            // left the one door with nothing in it.
+            faceUrls: [
+              for (final path in faces)
+                ImageUtils.buildTmdbPosterUrl(path, size: 'w185'),
+            ],
             onTap: () => open(DiscoverIndex.people),
           ),
           DiscoverDoor.lobby(

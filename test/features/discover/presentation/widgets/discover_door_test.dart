@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -77,5 +78,64 @@ void main() {
 
     expect(find.text('Prime Video'), findsOneWidget);
     expectUnderTheWords(tester);
+  });
+
+  group('the People door', () {
+    Future<void> pumpFaces(WidgetTester tester, {double textScale = 1}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+            child: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: 118,
+                  child: DiscoverDoor.lobby(
+                    title: 'People',
+                    subtitle: 'Directors, cast',
+                    faceUrls: const [
+                      'https://image.tmdb.org/t/p/w185/a.jpg',
+                      'https://image.tmdb.org/t/p/w185/b.jpg',
+                      'https://image.tmdb.org/t/p/w185/c.jpg',
+                      'https://image.tmdb.org/t/p/w185/d.jpg',
+                    ],
+                    onTap: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('three faces at most, under the words, silenced', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pumpFaces(tester);
+
+      final faces = find.byType(CachedNetworkImage);
+      expect(faces, findsNWidgets(3));
+      final foot = tester.getBottomLeft(find.text('Directors, cast')).dy;
+      for (final face in faces.evaluate()) {
+        expect(
+          tester.getTopLeft(find.byWidget(face.widget)).dy,
+          greaterThan(foot),
+        );
+      }
+      expect(find.bySemanticsLabel('People, Directors, cast'), findsOne);
+      semantics.dispose();
+    });
+
+    testWidgets('a larger reading size drops the faces off the name', (
+      tester,
+    ) async {
+      await pumpFaces(tester, textScale: 1.6);
+
+      expect(find.byType(CachedNetworkImage), findsNothing);
+    });
   });
 }

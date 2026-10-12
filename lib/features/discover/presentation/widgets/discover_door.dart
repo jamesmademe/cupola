@@ -32,6 +32,7 @@ class DiscoverDoor extends StatelessWidget {
     this.lightUrl,
     this.posterUrls = const [],
     this.names = const [],
+    this.faceUrls = const [],
   }) : _index = false;
 
   /// A tile of an index: the name alone, in the display face, at the foot
@@ -44,6 +45,7 @@ class DiscoverDoor extends StatelessWidget {
     this.lightUrl,
     this.posterUrls = const [],
   }) : names = const [],
+       faceUrls = const [],
        _index = true;
 
   final String title;
@@ -60,6 +62,10 @@ class DiscoverDoor extends StatelessWidget {
   /// studios a door leads to.
   final List<String> names;
 
+  /// Up to three faces overlapping in the corner: the people a door leads
+  /// to.
+  final List<String> faceUrls;
+
   final bool _index;
 
   /// The reading size past which a door drops its corner (the posters, the
@@ -74,6 +80,11 @@ class DiscoverDoor extends StatelessWidget {
   static const double _plainHeight = 92;
 
   static const double _posterWidth = 38;
+
+  /// A face in the People door's corner, and how far the next one sits over
+  /// it.
+  static const double _faceSize = 34;
+  static const double _faceOverlap = 12;
 
   /// How far the light's picture is blurred, in logical pixels.
   static const double _blur = 18;
@@ -277,6 +288,19 @@ class DiscoverDoor extends StatelessWidget {
         ),
       ];
     }
+    if (faceUrls.isNotEmpty) {
+      // Overlapping from the right, the first on top: a row of people, not
+      // a stack of posters, so upright.
+      final faces = faceUrls.take(3).toList(growable: false);
+      return [
+        for (var i = faces.length - 1; i >= 0; i--)
+          Positioned(
+            right: AppSpacing.md + i * (_faceSize - _faceOverlap),
+            bottom: AppSpacing.md,
+            child: _Face(url: faces[i]),
+          ),
+      ];
+    }
     if (posterUrls.isEmpty) return const [];
     if (_index) {
       return [
@@ -357,6 +381,49 @@ class _LeaningPoster extends StatelessWidget {
             fit: BoxFit.cover,
             errorWidget: (_, _, _) => const SizedBox.shrink(),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One face in a door's corner: round, ringed in the door's own fill so the
+/// faces it overlaps read apart.
+class _Face extends StatelessWidget {
+  const _Face({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: DiscoverDoor._faceSize,
+      height: DiscoverDoor._faceSize,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.plateSurface,
+        border: Border.all(color: room.door, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.5),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+            spreadRadius: -6,
+          ),
+        ],
+      ),
+      child: ArtworkDecodeBox(
+        box: const Size.square(DiscoverDoor._faceSize),
+        builder: (context, decode) => CachedNetworkImage(
+          imageUrl: url,
+          cacheManager: pinnedImageCacheFor(url),
+          memCacheWidth: decode.width,
+          memCacheHeight: decode.height,
+          fit: BoxFit.cover,
+          errorWidget: (_, _, _) => const SizedBox.shrink(),
         ),
       ),
     );
