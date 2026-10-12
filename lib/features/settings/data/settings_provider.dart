@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/last_known/last_known_store.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -329,6 +330,9 @@ class SettingsNotifier extends Notifier<SettingsModel> {
 
   Future<void> resetSettings() async {
     await _service.clearAll();
+    // The Home's last drawings go with the connections they were read from,
+    // on disk too: a reset leaves nothing of what the app showed.
+    await ref.read(lastKnownStoreProvider).clear();
     state = const SettingsModel();
   }
 }
