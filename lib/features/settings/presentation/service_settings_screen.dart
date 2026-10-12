@@ -760,7 +760,22 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             ],
             _buildUrlField(),
             _buildTrustedCertificateIndicator(settings),
+            // Under the address, above who you are: a gateway answers before
+            // the service does, so its token is part of reaching the address.
+            // Below the credentials it sat under a Seerr account's Continue,
+            // which signs in through that gateway and failed before the
+            // token field was in view.
             const SizedBox(height: AppSpacing.lg),
+            KeyedSubtree(
+              key: _accessKey,
+              child: ConnectionAccessFields(
+                controller: _access,
+                onMoveToCredential: (value) {
+                  if (value.isNotEmpty) _apiKeyController.text = value;
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
             if (service == ServiceKey.seerr) ...[
               _buildSignInWithChoice(),
               const SizedBox(height: AppSpacing.md),
@@ -782,16 +797,6 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               const SizedBox(height: AppSpacing.lg),
               _buildPasswordField(),
             ],
-            const SizedBox(height: AppSpacing.xl),
-            KeyedSubtree(
-              key: _accessKey,
-              child: ConnectionAccessFields(
-                controller: _access,
-                onMoveToCredential: (value) {
-                  if (value.isNotEmpty) _apiKeyController.text = value;
-                },
-              ),
-            ),
             const SizedBox(height: AppSpacing.xl),
             // An account not signed in yet has nothing to test: signing in
             // is its test.

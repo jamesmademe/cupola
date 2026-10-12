@@ -143,6 +143,25 @@ void _expectChoicesWhole(WidgetTester tester, double width) {
 
 void main() {
   group('the Access row', () {
+    testWidgets('sits under the address, above the credentials', (
+      tester,
+    ) async {
+      // A gateway answers before the service does, so its token is part of
+      // reaching the address. Under the credentials it sat below a Seerr
+      // account's Continue, which signs in through that gateway.
+      final (harness, _) = await _pumpForm(
+        tester,
+        Profiles.p3,
+        WorldIds.radarr,
+      );
+
+      final access = tester.getTopLeft(find.text('Access')).dy;
+      final key = tester.getTopLeft(find.text('API key').first).dy;
+      expect(access, lessThan(key));
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('offers four choices, None by default', (tester) async {
       final (harness, _) = await _pumpForm(
         tester,
