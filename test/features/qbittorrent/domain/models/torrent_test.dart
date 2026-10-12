@@ -40,9 +40,11 @@ void main() {
       expect(TorrentState.fromString('garbage'), TorrentState.unknown);
     });
 
-    test('parses transient states as downloading', () {
-      expect(TorrentState.fromString('moving'), TorrentState.downloading);
+    test('space claimed for a download is downloading; files on their way '
+        'to another folder say so', () {
       expect(TorrentState.fromString('allocating'), TorrentState.downloading);
+      expect(TorrentState.fromString('moving'), TorrentState.movingFiles);
+      expect(TorrentState.movingFiles.label, 'Moving files');
     });
   });
 

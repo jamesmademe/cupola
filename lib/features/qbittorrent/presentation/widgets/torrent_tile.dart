@@ -54,11 +54,13 @@ class TorrentTile extends StatelessWidget {
     return DownloadQueueTile(
       title: torrent.name,
       // What the old row put on its second line, in the plate's own order. The
-      // ETA is dropped rather than printed empty: qB answers 8640000 seconds for
-      // "unknown", and `etaFormatted` already returns '' for that.
+      // ETA only when there is one: qB answers 8640000 seconds for "never",
+      // which `etaFormatted` renders `∞` for the detail page, and that is
+      // every seeding torrent. Beside a size it read as a figure about the
+      // size, and a screen reader said "infinity".
       subtitle: <String>[
         torrent.sizeFormatted,
-        if (eta.isNotEmpty) eta,
+        if (eta.isNotEmpty && eta != '∞') eta,
       ].join(' · '),
       // Null, not zero, for a torrent that has not started. A checking, queued
       // or errored torrent has no meaningful bar, and the old row expressed that
@@ -103,7 +105,7 @@ class TorrentTile extends StatelessWidget {
       state != TorrentState.error;
 }
 
-/// qBittorrent's ten states, in the app's five tones.
+/// qBittorrent's states, in the app's five tones.
 ///
 /// The private tile painted these from the palette directly: accent for
 /// downloading, `AppColors.success` for seeding, `AppColors.warning` for
@@ -115,10 +117,11 @@ class TorrentTile extends StatelessWidget {
 ///  * **amber** for stalled and error, both *faults*: something that should be
 ///    moving and is not. Red would claim the client did not answer, and it did:
 ///    it answered by telling us the torrent is stuck;
-///  * **blue** for a live download, which is work in flight, and for a
-///    torrent queued for its turn: it is in line, as a queued grab is in an
-///    arr's queue, a queued job in SABnzbd's and NZBGet's. It used to be
-///    neutral here and in Transmission alone, so one word read in two tones;
+///  * **blue** for a live download, which is work in flight, for files on
+///    their way to another folder, and for a torrent queued for its turn: it
+///    is in line, as a queued grab is in an arr's queue, a queued job in
+///    SABnzbd's and NZBGet's. It used to be neutral here and in Transmission
+///    alone, so one word read in two tones;
 ///  * **neutral** for paused and unknown: deliberate stops, which are the
 ///    normal resting state of a torrent client and must not compete for
 ///    attention with the two states that are actually wrong.
@@ -132,6 +135,7 @@ StatusTone _toneFor(TorrentState state) => switch (state) {
   TorrentState.downloading ||
   TorrentState.metaDownloading ||
   TorrentState.checking ||
+  TorrentState.movingFiles ||
   TorrentState.queuedDl ||
   TorrentState.queuedUp => StatusTone.info,
   TorrentState.paused || TorrentState.unknown => StatusTone.neutral,

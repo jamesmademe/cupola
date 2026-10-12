@@ -423,6 +423,7 @@ QbittorrentQueueCounts qbittorrentQueueCounts(List<Torrent> torrents) {
       case TorrentState.error:
         errored++;
       case TorrentState.checking:
+      case TorrentState.movingFiles:
       case TorrentState.queuedUp:
       case TorrentState.queuedDl:
       case TorrentState.unknown:

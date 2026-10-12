@@ -144,9 +144,9 @@ InFlightReading? transmissionInFlight(
 /// vanish from Home with nothing saying so. `missingFiles` says why; a bare
 /// `error` does not, and the API carries no message for it. A download paused
 /// or stopped on purpose (`pausedDL`, `stoppedDL`) is held, and one waiting
-/// its turn behind the client's active limit (`queuedDL`) is queued. Seeding, checking
-/// and a finished torrent stopped (`pausedUP`, `stoppedUP`) are not in
-/// flight.
+/// its turn behind the client's active limit (`queuedDL`) is queued. Seeding, checking,
+/// a finished torrent stopped (`pausedUP`, `stoppedUP`) and one whose files
+/// are moving to their folder (`moving`) are not in flight.
 InFlightReading? qbittorrentInFlight(Torrent torrent, {required DateTime now}) {
   final state = torrent.state;
   if (state == 'pausedDL' || state == 'stoppedDL') {
@@ -175,6 +175,10 @@ InFlightReading? qbittorrentInFlight(Torrent torrent, {required DateTime now}) {
     // `stalled` is only ever `stalledDL`: a stalled upload parses as seeding.
     TorrentState.stalled => _stuckOnceIdle(idle, now, unknownIsStuck: true),
     TorrentState.error => const InFlightReading.fault(InFlightFault.failed),
+    // A pause for the move, not an end: a download with bytes still to come
+    // stays in flight, a finished one leaving its incomplete folder is done.
+    TorrentState.movingFiles =>
+      torrent.progress < 1 ? const InFlightReading.moving() : null,
     TorrentState.seeding ||
     TorrentState.checking ||
     TorrentState.paused ||

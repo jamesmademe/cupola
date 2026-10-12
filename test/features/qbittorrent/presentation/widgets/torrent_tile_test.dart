@@ -168,6 +168,8 @@ void main() {
         'queuedUP': StatusTone.info,
         'pausedDL': StatusTone.neutral,
         'downloading': StatusTone.info,
+        // Files on their way to their folder: work, not a fault.
+        'moving': StatusTone.info,
       };
       for (final entry in expected.entries) {
         await _pump(tester, TorrentTile(torrent: _torrent(state: entry.key)));
@@ -177,6 +179,30 @@ void main() {
         );
         expect(plate.statusTone, entry.value, reason: entry.key);
       }
+    });
+
+    testWidgets('a seeding torrent says its size, not a never ETA', (
+      tester,
+    ) async {
+      // qB's 8640000 seconds, "never": every seeding torrent sends it.
+      await _pump(
+        tester,
+        TorrentTile(
+          torrent: Torrent.fromJson({
+            'hash': 'abc123',
+            'name': 'Ubuntu 24.04 LTS',
+            'size': 1024 * 1024 * 1024,
+            'progress': 1,
+            'state': 'uploading',
+            'eta': 8640000,
+          }),
+        ),
+      );
+
+      final plate = tester.widget<DownloadQueueTile>(
+        find.byType(DownloadQueueTile),
+      );
+      expect(plate.subtitle, '1.0\u00A0GB');
     });
 
     // A torrent that has not started has *no* progress, which is a different

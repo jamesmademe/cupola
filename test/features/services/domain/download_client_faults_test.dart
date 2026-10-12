@@ -34,14 +34,19 @@ TransmissionTorrent _torrent({
   'addedDate': addedDate,
 });
 
-Torrent _qb(String state, {int lastActivity = 0, int addedOn = 0}) =>
-    Torrent.fromJson({
-      'hash': 'abc',
-      'name': 'Big.Buck.Bunny.2008.1080p.BluRay',
-      'state': state,
-      'last_activity': lastActivity,
-      'added_on': addedOn,
-    });
+Torrent _qb(
+  String state, {
+  int lastActivity = 0,
+  int addedOn = 0,
+  double progress = 0,
+}) => Torrent.fromJson({
+  'hash': 'abc',
+  'name': 'Big.Buck.Bunny.2008.1080p.BluRay',
+  'state': state,
+  'progress': progress,
+  'last_activity': lastActivity,
+  'added_on': addedOn,
+});
 
 void main() {
   group('transmissionInFlight', () {
@@ -193,6 +198,13 @@ void main() {
           reason: state,
         );
       }
+    });
+
+    test('a finished download whose files move to their folder is done', () {
+      expect(
+        qbittorrentInFlight(_qb('moving', progress: 1), now: _now),
+        isNull,
+      );
     });
 
     test('a download waiting its turn (queuedDL) is queued, not moving', () {

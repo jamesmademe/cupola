@@ -9,6 +9,11 @@ enum TorrentState {
   seeding,
   stalled,
   checking,
+
+  /// qBittorrent moving the data to another folder (`moving`): a change of
+  /// save path, or a finished download leaving its incomplete folder. Neither
+  /// a transfer nor a fault, and over in a moment.
+  movingFiles,
   paused,
   queuedUp,
   queuedDl,
@@ -27,6 +32,8 @@ enum TorrentState {
         return StateWord.stuck.label;
       case TorrentState.checking:
         return 'Checking';
+      case TorrentState.movingFiles:
+        return 'Moving files';
       case TorrentState.paused:
         return StateWord.stopped.label;
       case TorrentState.queuedUp:
@@ -61,7 +68,9 @@ enum TorrentState {
       'stoppedUP' || 'stoppedDL' || 'stopped' => TorrentState.paused,
       'queuedUP' => TorrentState.queuedUp,
       'queuedDL' => TorrentState.queuedDl,
-      'moving' || 'allocating' => TorrentState.downloading,
+      // Space claimed for a download about to begin.
+      'allocating' => TorrentState.downloading,
+      'moving' => TorrentState.movingFiles,
       'error' || 'missingFiles' => TorrentState.error,
       _ => TorrentState.unknown,
     };
