@@ -23,6 +23,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// One connection's calendar, asked for the thirty days from [from]'s day.
 typedef CalendarSourceKey = ({
@@ -113,7 +114,7 @@ final calendarSourceProvider = FutureProvider.autoDispose
       final settings = ref.watch(currentSettingsProvider);
       final instance = settings.instanceById(id);
       if (instance == null || !instance.isConfigured) {
-        throw Exception('${key.service.title} not configured');
+        throw ServiceNotConfigured(key.service);
       }
       final ArrActivityMixin service = switch (key.service) {
         ServiceKey.radarr => ref.watch(radarrServiceForProvider(id)),
@@ -249,7 +250,7 @@ final requesterCalendarProvider = FutureProvider.autoDispose<LibraryCalendar>((
   final window = CalendarWindow.from(from);
   final seerr = ref.watch(activeInstanceProvider(ServiceKey.seerr));
   if (seerr == null || !seerr.isConfigured) {
-    throw Exception('Seerr not configured');
+    throw const ServiceNotConfigured(ServiceKey.seerr);
   }
   final service = ref.watch(seerrServiceForProvider(seerr.id));
   final region = ref.watch(regionProvider);

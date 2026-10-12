@@ -5,6 +5,7 @@ import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
@@ -14,9 +15,9 @@ import 'package:cupola/core/providers/provider_retry.dart';
 /// Jellyfin client bound to the current settings.
 ///
 /// Throws if Jellyfin is not configured; widgets must check
-/// `settings.isServiceConfigured(ServiceKey.jellyfin)` before reading. The
-/// `'not configured'` substring is load-bearing: `AsyncValueWidget` string-matches
-/// it to render `NotConfiguredPlaceholder` instead of an error.
+/// `settings.isServiceConfigured(ServiceKey.jellyfin)` before reading. The throw
+/// is a `ServiceNotConfigured`, which `AsyncValueWidget` answers with
+/// `NotConfiguredPlaceholder` instead of an error.
 ///
 /// Follows the **lens**, like every other service's client. It used to read the
 /// flat `jellyfinUrl`/`jellyfinApiKey`/`jellyfinUserId` projections, which are
@@ -77,7 +78,7 @@ JellyfinClient _jellyfinClient(Ref ref, {required String? instanceId}) {
     instanceId: instanceId,
   );
   if (!transport.configured) {
-    throw Exception('Jellyfin not configured');
+    throw const ServiceNotConfigured(ServiceKey.jellyfin);
   }
   final viewerId = ref.watch(
     currentSettingsProvider.select(

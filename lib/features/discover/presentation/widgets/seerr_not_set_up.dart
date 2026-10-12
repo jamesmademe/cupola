@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/widgets/media_detail_placeholder_view.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// Whether there is a Seerr to ask: the question every Seerr page settles
 /// **before** it reads a provider.
@@ -38,7 +39,7 @@ class SeerrDetailNotSetUpView extends StatelessWidget {
       // The missing-config marker, which the placeholder turns into "Seerr is
       // not set up" and its "Set up Seerr". No Retry: the fix is a form, and
       // asking again would only ask nobody.
-      error: '${ServiceKey.seerr.title} not configured',
+      error: const ServiceNotConfigured(ServiceKey.seerr),
       serviceName: ServiceKey.seerr.title,
       accent: ServiceKey.seerr.accent,
     );

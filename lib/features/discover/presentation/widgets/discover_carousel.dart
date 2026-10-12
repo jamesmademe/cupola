@@ -12,6 +12,7 @@ import 'package:cupola/core/widgets/staggered_entrance.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// A single premium discover row: a section header + horizontal poster
 /// carousel. Collapses to nothing when Seerr answered with nothing (an empty
@@ -80,8 +81,8 @@ class DiscoverCarousel extends StatelessWidget {
       ),
       error: (error, _) {
         // A Seerr nobody set up is the page's to say, once, not every row's.
-        // Matched on the phrase the app throws for it; see `AsyncValueWidget`.
-        if (error.toString().contains('not configured')) {
+        // Matched on the type the app throws for it, as `AsyncValueWidget` does.
+        if (error is ServiceNotConfigured) {
           return const SizedBox.shrink();
         }
         final message =

@@ -15,6 +15,7 @@ import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// What the app keeps about a Seerr account between requests, written to the
 /// connection it belongs to.
@@ -261,7 +262,7 @@ final seerrServerFactsProvider = FutureProvider.autoDispose
         ),
       );
       if (instance == null || instance.url.isEmpty) {
-        throw Exception('${ServiceKey.seerr.title} not configured');
+        throw const ServiceNotConfigured(ServiceKey.seerr);
       }
       final service = SeerrAuthService.forConnection(
         instance,

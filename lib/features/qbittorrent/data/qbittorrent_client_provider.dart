@@ -7,6 +7,7 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart'
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// The one qBittorrent client of each connection, keyed by the connection's id.
 ///
@@ -33,7 +34,9 @@ final ProviderFamily<QbittorrentClient, String> qbittorrentClientForProvider =
             ServiceKey.qbittorrent,
           ).select((instance) => instance?.id ?? ''),
         );
-        if (lens.isEmpty) throw Exception('qBittorrent not configured');
+        if (lens.isEmpty) {
+          throw const ServiceNotConfigured(ServiceKey.qbittorrent);
+        }
         return ref.watch(qbittorrentClientForProvider(lens));
       }
 
@@ -43,7 +46,7 @@ final ProviderFamily<QbittorrentClient, String> qbittorrentClientForProvider =
         instanceId: instanceId,
       );
       if (!transport.configured) {
-        throw Exception('qBittorrent not configured');
+        throw const ServiceNotConfigured(ServiceKey.qbittorrent);
       }
       final client = QbittorrentClient(
         url: transport.url,

@@ -14,6 +14,7 @@ import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// The rule: **nothing the service already said is thrown away because it
 /// stopped answering.**
@@ -251,7 +252,7 @@ void main() {
     // outage band. The answer there is "go set this up".
     final failed = _failedOver(
       'stale',
-      error: Exception('TrueNAS not configured'),
+      error: const ServiceNotConfigured(ServiceKey.truenas),
     );
     await _pump(tester, failed);
 

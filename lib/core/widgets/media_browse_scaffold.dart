@@ -29,6 +29,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// What the grid keys its artwork on: the connection's address, its
@@ -556,7 +557,7 @@ class _MediaBrowseScaffoldState<T>
     if (service != null &&
         libraryAsync.hasError &&
         !libraryAsync.hasValue &&
-        !libraryAsync.error.toString().contains('not configured')) {
+        libraryAsync.error is! ServiceNotConfigured) {
       return ServiceOfflineState.failure(
         service: service,
         error: libraryAsync.error!,

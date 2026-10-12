@@ -9,6 +9,7 @@ import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sectio
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// Bazarr movie subtitle detail, on the shared media-detail scaffold.
 class BazarrMovieDetailScreen extends ConsumerWidget {
@@ -27,7 +28,9 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
     if (!settings.isServiceConfigured(ServiceKey.bazarr)) {
       // The missing-config marker, which the placeholder turns into
       // "Bazarr is not set up".
-      return const BazarrDetailErrorState(error: 'Bazarr not configured');
+      return const BazarrDetailErrorState(
+        error: ServiceNotConfigured(ServiceKey.bazarr),
+      );
     }
 
     final movieAsync = ref.watch(bazarrMovieByIdProvider(radarrId));

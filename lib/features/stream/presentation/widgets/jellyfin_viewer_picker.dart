@@ -10,6 +10,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
@@ -84,7 +85,7 @@ class JellyfinViewerPicker extends ConsumerWidget {
           // the user may simply not have saved one yet. Saying so is more useful
           // than an exception they cannot act on from here.
           error: (error, _) => Text(
-            error.toString().contains('not configured')
+            error is ServiceNotConfigured
                 ? '${Lexicon.setUp(ServiceKey.jellyfin.title)} first, then '
                       'come back to choose a viewer.'
                 : sectionFailureMessage(

@@ -7,6 +7,7 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_detail_back_button.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// The full-page state a media detail route shows when it has no media to show.
 ///
@@ -19,8 +20,8 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 ///
 /// Two cases, one shape:
 /// - [MediaDetailPlaceholderView.error]: the lookup failed. A
-///   `<Service> not configured` throw routes to [NotConfiguredPlaceholder],
-///   matching the detection `AsyncValueWidget` already uses, because an
+///   [ServiceNotConfigured] routes to [NotConfiguredPlaceholder], matching
+///   the detection `AsyncValueWidget` already uses, because an
 ///   unconfigured service is a normal daily condition rather than a fault.
 /// - [MediaDetailPlaceholderView.notFound]: the service answered and does not
 ///   have this item. Also not a fault, so it gets the empty-state voice.
@@ -83,7 +84,7 @@ class MediaDetailPlaceholderView extends StatelessWidget {
     if (error != null) {
       // A missing configuration is not retryable: the fix is in Settings, so
       // that branch keeps its own call to action and drops [onRetry].
-      body = error.toString().contains('not configured')
+      body = error is ServiceNotConfigured
           ? NotConfiguredPlaceholder(serviceName: serviceName)
           : AppErrorState(
               error: error!,

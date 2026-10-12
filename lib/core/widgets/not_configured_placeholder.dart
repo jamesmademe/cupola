@@ -27,8 +27,8 @@ import 'package:cupola/features/settings/domain/unread_secret.dart';
 class NotConfiguredPlaceholder extends StatelessWidget {
   /// The generic form, for callers that know only the service's display name:
   /// notably [AsyncValueWidget] and [MediaDetailPlaceholderView], which reach
-  /// this state by string-matching a `<Service> not configured` throw and so
-  /// never hold a [ServiceKey]. The name is resolved back to its service, so
+  /// this state from a `ServiceNotConfigured` throw and draw it under the name
+  /// their caller gave them. The name is resolved back to its service, so
   /// its button is the same `Set up X` into the same form; only a name that is
   /// no service's lands on the Settings root.
   const NotConfiguredPlaceholder({super.key, required this.serviceName})
@@ -57,7 +57,7 @@ class NotConfiguredPlaceholder extends StatelessWidget {
 
   /// The service this names: the key it was given, or the one whose title
   /// the generic form was handed: `AsyncValueWidget` passes the name its
-  /// `<Service> not configured` throw carried.
+  /// caller gave it.
   ServiceKey? get _resolved {
     final key = service;
     if (key != null) return key;

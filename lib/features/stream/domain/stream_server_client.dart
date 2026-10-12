@@ -8,8 +8,8 @@
 /// widget.
 ///
 /// Errors follow the project convention: a missing configuration throws
-/// `Exception('<Service> not configured')`, which `AsyncValueWidget` detects to
-/// render `NotConfiguredPlaceholder`. Write actions surface their failure so
+/// `ServiceNotConfigured`, which `AsyncValueWidget` answers with
+/// `NotConfiguredPlaceholder`. Write actions surface their failure so
 /// the UI can report them.
 ///
 /// Reads come in two kinds, and which kind a read is decides whether it may

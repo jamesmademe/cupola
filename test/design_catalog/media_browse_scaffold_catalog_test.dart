@@ -19,6 +19,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 import '../test_helpers/settings_scope.dart';
 import 'catalog.dart';
@@ -159,7 +160,7 @@ final _failingProvider = FutureProvider<List<_Film>>(
   retry: noProviderRetry,
 );
 final _unconfiguredProvider = FutureProvider<List<_Film>>(
-  (ref) async => throw Exception('Radarr not configured'),
+  (ref) async => throw const ServiceNotConfigured(ServiceKey.radarr),
   retry: noProviderRetry,
 );
 

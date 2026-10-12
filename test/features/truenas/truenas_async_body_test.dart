@@ -11,6 +11,7 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/presentation/reporting/truenas_reporting_screen.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
@@ -65,7 +66,7 @@ void main() {
       await _pump(
         tester,
         AsyncValue.error(
-          const TrueNasException('TrueNAS not configured'),
+          const ServiceNotConfigured(ServiceKey.truenas),
           StackTrace.empty,
         ),
       );
@@ -86,7 +87,7 @@ void main() {
       await _pump(
         tester,
         AsyncValue.error(
-          const TrueNasException('TrueNAS not configured'),
+          const ServiceNotConfigured(ServiceKey.truenas),
           StackTrace.empty,
         ),
       );

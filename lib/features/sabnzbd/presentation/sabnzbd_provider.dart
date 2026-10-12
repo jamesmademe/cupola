@@ -5,6 +5,7 @@ import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// SABnzbd client bound to the current settings.
 ///
@@ -50,7 +51,7 @@ SabnzbdClient _sabnzbdClient(Ref ref, {required String? instanceId}) {
     instanceId: instanceId,
   );
   if (!transport.configured) {
-    throw Exception('SABnzbd not configured');
+    throw const ServiceNotConfigured(ServiceKey.sabnzbd);
   }
   final client = SabnzbdClient(
     url: transport.url,

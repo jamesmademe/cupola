@@ -4,6 +4,7 @@ import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
@@ -14,9 +15,9 @@ import 'package:cupola/core/providers/provider_retry.dart';
 /// Plex client bound to the current settings.
 ///
 /// Throws if Plex is not configured; widgets must check
-/// `settings.isServiceConfigured(ServiceKey.plex)` before reading. The exact
-/// `'not configured'` wording is load-bearing: `AsyncValueWidget` matches on it
-/// to render `NotConfiguredPlaceholder` instead of an error.
+/// `settings.isServiceConfigured(ServiceKey.plex)` before reading. The throw is
+/// a `ServiceNotConfigured`, which `AsyncValueWidget` answers with
+/// `NotConfiguredPlaceholder` instead of an error.
 ///
 /// Follows the **lens**. It used to read the flat `plexUrl`/`plexToken`
 /// projections, which are always the *first* connection, so a second Plex could
@@ -66,7 +67,7 @@ PlexClient _plexClient(Ref ref, {required String? instanceId}) {
     currentSettingsProvider.select((s) => s.plexClientId),
   );
   if (!transport.configured) {
-    throw Exception('Plex not configured');
+    throw const ServiceNotConfigured(ServiceKey.plex);
   }
   final client = PlexClient(
     url: transport.url,

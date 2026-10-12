@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 import '../../test_helpers/reel_finders.dart';
 
@@ -105,7 +107,10 @@ void main() {
       // rather than a service they never set up.
       await _pump(
         tester,
-        AsyncValue.error(Exception('Sonarr not configured'), StackTrace.empty),
+        AsyncValue.error(
+          const ServiceNotConfigured(ServiceKey.sonarr),
+          StackTrace.empty,
+        ),
       );
 
       expect(find.byType(ListView), findsNothing);

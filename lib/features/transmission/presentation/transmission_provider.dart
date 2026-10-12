@@ -4,6 +4,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
@@ -27,7 +28,7 @@ final transmissionClientProvider = Provider<TransmissionClient>((ref) {
   // every torrent on screen came from the other.
   final transport = watchTransport(ref, ServiceKey.transmission);
   if (!transport.configured) {
-    throw Exception('Transmission not configured');
+    throw const ServiceNotConfigured(ServiceKey.transmission);
   }
   final client = TransmissionClient(
     url: transport.url,
@@ -61,7 +62,7 @@ final transmissionClientForProvider =
         instanceId: instanceId,
       );
       if (!transport.configured) {
-        throw Exception('Transmission not configured');
+        throw const ServiceNotConfigured(ServiceKey.transmission);
       }
       final client = TransmissionClient(
         url: transport.url,

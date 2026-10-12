@@ -11,6 +11,7 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// Long-lived Socket.IO client for Dockge, rebuilt when its URL/credentials
 /// change. Closed automatically when disposed.
@@ -21,7 +22,7 @@ final dockgeClientProvider = Provider<DockgeClient>((ref) {
   // named in the app bar and never reached.
   final transport = watchTransport(ref, ServiceKey.dockge);
   if (transport.url.isEmpty) {
-    throw const DockgeException('Dockge not configured');
+    throw const ServiceNotConfigured(ServiceKey.dockge);
   }
   final client = DockgeClient(
     baseUrl: transport.url,
@@ -60,7 +61,7 @@ DockgeClient _dockgeClient(Ref ref, {required String? instanceId}) {
     instanceId: instanceId,
   );
   if (!transport.configured) {
-    throw const DockgeException('Dockge not configured');
+    throw const ServiceNotConfigured(ServiceKey.dockge);
   }
   final client = DockgeClient(
     baseUrl: transport.url,

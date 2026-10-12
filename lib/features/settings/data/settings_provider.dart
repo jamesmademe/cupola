@@ -6,6 +6,7 @@ import 'package:cupola/features/settings/data/settings_service.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
@@ -285,11 +286,9 @@ final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((
 /// the record means the client survives everything except a change to its own
 /// URL, its own key, or the certificate pinned for its own origin.
 ///
-/// Throws `Exception('<Service> not configured')` when [service] is not
-/// configured. The exact `'not configured'` wording is load-bearing:
-/// `AsyncValueWidget` string-matches it to render `NotConfiguredPlaceholder`
-/// rather than an error, and the service name comes from
-/// [ServiceKeyExtension.title] so it stays the name the rest of the app uses.
+/// Throws [ServiceNotConfigured] when [service] is not configured, which
+/// `AsyncValueWidget` answers with `NotConfiguredPlaceholder` rather than an
+/// error.
 ///
 /// A plain function taking [ref] rather than a provider: the callers already
 /// are providers, and a second provider layer would add a rebuild edge without
@@ -300,7 +299,7 @@ ApiClient watchApiClient(Ref ref, ServiceKey service, {String? instanceId}) {
   assert(service != ServiceKey.seerr, 'Seerr clients come from seerrClientFor');
   final transport = watchTransport(ref, service, instanceId: instanceId);
   if (!transport.configured) {
-    throw Exception('${service.title} not configured');
+    throw ServiceNotConfigured(service);
   }
   final client = ApiClient(
     baseUrl: transport.url,

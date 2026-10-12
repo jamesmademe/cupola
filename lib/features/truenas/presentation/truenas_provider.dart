@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/truenas/data/apps_api.dart';
 import 'package:cupola/features/truenas/data/credentials_api.dart';
 import 'package:cupola/features/truenas/data/data_protection_api.dart';
@@ -48,7 +49,7 @@ import 'package:cupola/features/truenas/domain/truenas_version.dart';
 final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
   final transport = watchTransport(ref, ServiceKey.truenas);
   if (!transport.configured) {
-    throw const TrueNasException('TrueNAS not configured');
+    throw const ServiceNotConfigured(ServiceKey.truenas);
   }
   final client = TrueNasWsClient(
     baseUrl: transport.url,
@@ -84,7 +85,7 @@ TrueNasWsClient _truenasClient(Ref ref, {required String? instanceId}) {
     instanceId: instanceId,
   );
   if (!transport.configured) {
-    throw const TrueNasException('TrueNAS not configured');
+    throw const ServiceNotConfigured(ServiceKey.truenas);
   }
   final client = TrueNasWsClient(
     baseUrl: transport.url,

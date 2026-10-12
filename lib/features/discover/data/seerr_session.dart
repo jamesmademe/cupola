@@ -29,6 +29,7 @@ import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// The session cookie: `express-session`'s default name, which Seerr keeps.
 const _sessionCookie = 'connect.sid';
@@ -180,7 +181,7 @@ final seerrClientFactoryProvider = Provider<SeerrClientFactory>(
 /// emptied in storage ([SeerrAccounts.sessionEnded]), and the permissions an
 /// `/auth/me` answered are written back ([SeerrAccounts.recordWhoAmI]).
 ///
-/// Throws `Exception('Seerr not configured')`, which `AsyncValueWidget`
+/// Throws `ServiceNotConfigured(ServiceKey.seerr)`, which `AsyncValueWidget`
 /// turns into its placeholder, as `watchApiClient` does for the other
 /// services; for an account that signed out, [SeerrSessionEnded].
 ApiClient watchSeerrClient(
@@ -200,7 +201,7 @@ ApiClient watchSeerrClient(
         .read(currentSettingsProvider)
         .instanceById(transport.instanceId);
     if (named?.isSignedOut ?? false) throw const SeerrSessionEnded();
-    throw Exception('${ServiceKey.seerr.title} not configured');
+    throw const ServiceNotConfigured(ServiceKey.seerr);
   }
   // The user the key acts as is part of the key the client is rebuilt on:
   // choosing another one must not leave requests signed as the first.

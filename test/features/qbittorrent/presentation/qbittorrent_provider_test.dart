@@ -10,6 +10,8 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/settings_scope.dart';
@@ -88,7 +90,7 @@ ProviderContainer _container({
       qbittorrentServiceProvider.overrideWith((ref) {
         final s = ref.watch(currentSettingsProvider);
         if (s.qbittorrentUrl.isEmpty) {
-          throw Exception('qBittorrent not configured');
+          throw const ServiceNotConfigured(ServiceKey.qbittorrent);
         }
         final dio = Dio(BaseOptions(baseUrl: s.qbittorrentUrl));
         final stub = adapter ?? _StubAdapter();

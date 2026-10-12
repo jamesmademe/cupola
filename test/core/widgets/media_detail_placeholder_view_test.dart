@@ -8,6 +8,8 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_detail_back_button.dart';
 import 'package:cupola/core/widgets/media_detail_placeholder_view.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 Widget _wrap(Widget child, {double textScale = 1.0}) {
   return MaterialApp(
@@ -30,7 +32,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           MediaDetailPlaceholderView.error(
-            error: Exception('Sonarr not configured'),
+            error: const ServiceNotConfigured(ServiceKey.sonarr),
             serviceName: 'Sonarr',
             accent: Colors.purple,
           ),
@@ -157,7 +159,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           MediaDetailPlaceholderView.error(
-            error: Exception('Sonarr not configured'),
+            error: const ServiceNotConfigured(ServiceKey.sonarr),
             serviceName: 'Sonarr',
             onRetry: () {},
           ),
@@ -334,7 +336,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           MediaDetailPlaceholderView.error(
-            error: Exception('Lidarr not configured'),
+            error: const ServiceNotConfigured(ServiceKey.lidarr),
             serviceName: 'Lidarr',
             accent: Colors.pink,
           ),

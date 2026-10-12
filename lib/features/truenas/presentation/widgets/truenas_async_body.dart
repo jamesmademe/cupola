@@ -11,6 +11,7 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 
 /// The connection well every TrueNAS section reads its failures through.
@@ -19,7 +20,7 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 /// [AsyncValueWidget], [NotConfiguredPlaceholder] or [ServiceOfflineState];
 /// twenty-three call sites hand-rolled `.when(error: AppErrorState)` instead.
 /// That is not a styling difference. `truenasClientProvider` throws
-/// `TrueNasException('TrueNAS not configured')` *before* it opens a socket, so
+/// `ServiceNotConfigured(ServiceKey.truenas)` *before* it opens a socket, so
 /// a NAS nobody had set up rendered as a generic red failure card with a Retry
 /// button that could never succeed: retrying a form that has not been filled
 /// in. Every other service in the app answered the same condition with an
@@ -161,9 +162,9 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
         );
 
   static _TrueNasWell? _connectionFailure(Object error) {
-    // The same string `AsyncValueWidget` matches on, tested here first so the
+    // The same type `AsyncValueWidget` matches on, tested here first so the
     // placeholder can name the service instead of pointing at Settings at large.
-    if (error.toString().contains('not configured')) {
+    if (error is ServiceNotConfigured) {
       return _TrueNasWell.notConfigured;
     }
     // Before the reason switch: it reports `notFound` only because the enum has

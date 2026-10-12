@@ -9,6 +9,7 @@ import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 import 'catalog.dart';
 
@@ -200,7 +201,7 @@ void main() {
         '(the scene is the empty box)',
         (_) => ServiceKpiPeek(
           kpis: AsyncValue.error(
-            Exception('Radarr not configured'),
+            const ServiceNotConfigured(ServiceKey.radarr),
             StackTrace.empty,
           ),
           accent: ServiceKey.radarr.accent,

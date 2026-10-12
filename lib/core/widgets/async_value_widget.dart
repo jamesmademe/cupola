@@ -7,6 +7,7 @@ import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// A widget that handles AsyncValue states with premium, consistent styling.
 ///
@@ -237,7 +238,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
       data: _data,
       loading: _loading,
       error: (e, stack) {
-        if (e.toString().contains('not configured')) {
+        if (e is ServiceNotConfigured) {
           return NotConfiguredPlaceholder(serviceName: serviceName);
         }
 

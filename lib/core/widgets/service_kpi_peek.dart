@@ -13,6 +13,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// A premium horizontal rail of KPI "stat cards" shown at the top of a service
 /// page. Replaces the ad-hoc per-service stat rows with one shared component.
@@ -71,9 +72,9 @@ class ServiceKpiPeek extends StatelessWidget {
         // A service that was never set up is answered by the page below:
         // `NotConfiguredPlaceholder`, and a rail of em dashes over it would
         // read as a fault to go and fix rather than a service nobody
-        // configured. Matched on the string the app throws everywhere for it;
-        // see `AsyncValueWidget`.
-        if (error.toString().contains('not configured')) {
+        // configured. Matched on the type the app throws everywhere for it
+        // ([ServiceNotConfigured]), as `AsyncValueWidget` does.
+        if (error is ServiceNotConfigured) {
           return const SizedBox.shrink();
         }
         // Everything else: the figures could not be read, and *that* is the

@@ -6,6 +6,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/domain/models/data_protection.dart';
@@ -83,7 +84,7 @@ final _defaultRetryPools = FutureProvider.autoDispose((ref) async {
 
 /// The client provider's "not configured" throw, under the default policy.
 final _defaultRetryClient = Provider<TrueNasWsClient>(
-  (ref) => throw const TrueNasException('TrueNAS not configured'),
+  (ref) => throw const ServiceNotConfigured(ServiceKey.truenas),
 );
 
 /// Shorter than Riverpod's first retry delay (200 ms): a provider that is

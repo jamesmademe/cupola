@@ -5,6 +5,7 @@ import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// NZBGet client bound to the current settings.
 ///
@@ -50,7 +51,7 @@ NzbgetClient _nzbgetClient(Ref ref, {required String? instanceId}) {
     instanceId: instanceId,
   );
   if (!transport.configured) {
-    throw Exception('NZBGet not configured');
+    throw const ServiceNotConfigured(ServiceKey.nzbget);
   }
   final client = NzbgetClient(
     url: transport.url,

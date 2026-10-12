@@ -14,13 +14,14 @@ import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
   // Selected rather than watching the whole model: only this service's own
   // address and credentials, and the lens, decide which connection this is.
   final transport = watchTransport(ref, ServiceKey.qbittorrent);
   if (!transport.configured) {
-    throw Exception('qBittorrent not configured');
+    throw const ServiceNotConfigured(ServiceKey.qbittorrent);
   }
   // The connection's one client, which holds the WebUI SID cookie and any
   // refused sign-in, and which the Dashboard's probe and Home's reads share.
@@ -53,7 +54,7 @@ final qbittorrentServiceForProvider =
         instanceId: instanceId,
       );
       if (!transport.configured) {
-        throw Exception('qBittorrent not configured');
+        throw const ServiceNotConfigured(ServiceKey.qbittorrent);
       }
       return QbittorrentService(
         ref.watch(qbittorrentClientForProvider(instanceId)),

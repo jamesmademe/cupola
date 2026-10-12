@@ -36,6 +36,8 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
@@ -288,7 +290,10 @@ void main() {
       expect(noProviderRetry(0, closed!), Duration.zero);
       expect(noProviderRetry(2, closed), Duration.zero);
       expect(noProviderRetry(3, closed), isNull);
-      expect(noProviderRetry(0, Exception('Radarr not configured')), isNull);
+      expect(
+        noProviderRetry(0, const ServiceNotConfigured(ServiceKey.radarr)),
+        isNull,
+      );
     });
   });
 
