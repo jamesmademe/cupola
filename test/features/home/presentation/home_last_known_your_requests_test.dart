@@ -153,10 +153,10 @@ void main() {
     tester,
   ) async {
     await firstRun(tester);
-    expect(find.text('Asked 2 h ago · Standard'), findsOne);
+    expect(find.text('Asked 2\u00A0h ago · Standard'), findsOne);
 
     await run(tester, now: requesterNow.add(const Duration(hours: 1)));
-    expect(find.text('Asked 3 h ago · Standard'), findsOne);
+    expect(find.text('Asked 3\u00A0h ago · Standard'), findsOne);
   });
 
   testWidgets('a live read that fails keeps the rows over the failure and '

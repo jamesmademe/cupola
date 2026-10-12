@@ -187,7 +187,7 @@ void main() {
       expect(find.byTooltip('Approve Metropolis'), findsOne);
       expect(find.text('See all requests'), findsOne);
       // Who asked, and how long ago, made again against now.
-      expect(find.textContaining('Anna · 2 h ago'), findsOne);
+      expect(find.textContaining('Anna · 2\u00A0h ago'), findsOne);
 
       answer.complete(_decisions([_request('Spring', 3)]));
       count.complete((count: 1, floor: false));

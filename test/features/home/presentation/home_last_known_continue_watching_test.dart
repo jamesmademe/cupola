@@ -149,7 +149,7 @@ void main() {
       expect(find.text('As of 20:53 · checking now'), findsOne);
       // Where each stopped is a fact of then, drawn as it was: the time left
       // and the bar.
-      expect(find.text('5 min left'), findsOne);
+      expect(find.text('5\u00A0min left'), findsOne);
       expect(find.byType(LinearProgressIndicator), findsNWidgets(2));
 
       answer.complete(

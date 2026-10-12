@@ -110,7 +110,7 @@ void main() {
       expect(find.text('Trending this week'), findsOne);
       expect(find.text('Dune'), findsOne);
       expect(find.text('Severance'), findsOne);
-      expect(find.text('TMDB 7.9'), findsOne);
+      expect(find.text('TMDB\u00A07.9'), findsOne);
       expect(find.text('Coming soon'), findsOne);
       expect(find.text('Tron'), findsOne);
       expect(find.text('Wed 14 Oct'), findsOne);
