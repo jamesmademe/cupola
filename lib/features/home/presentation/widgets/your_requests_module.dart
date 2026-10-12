@@ -10,10 +10,11 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
     show calendarClockProvider;
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/home/data/last_known/my_requests_last_known.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
-import 'package:cupola/features/requests/data/my_requests_provider.dart';
 import 'package:cupola/features/requests/presentation/my_request_actions.dart';
 import 'package:cupola/features/requests/presentation/widgets/requester_request_row.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -30,6 +31,12 @@ const yourRequestsLimit = 3;
 /// With nothing on its way, a calm line points to Discover. When the server
 /// does not answer the Home's one line says so and the rows stay, read as
 /// they were and without a figure that no longer moves.
+///
+/// At a cold start the rows are the last drawing's until her Seerr answers
+/// (`watchMyRequestsOrLastKnown`), read the same way: no percentage and no
+/// `Ready around 21:10`, since a drawing does not run, so a download reads
+/// `On its way`. A drawing with nothing left to list is the skeleton, never
+/// `Nothing on its way`, which is a claim about now.
 class HomeYourRequestsModule extends ConsumerWidget {
   const HomeYourRequestsModule({super.key});
 
@@ -37,7 +44,7 @@ class HomeYourRequestsModule extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final read = ref.watch(myRequestsProvider);
+    final (:read, :asOf) = ref.watchMyRequestsOrLastKnown();
     final mine = read.requests;
     if (mine == null) {
       return read.error != null
@@ -53,6 +60,14 @@ class HomeYourRequestsModule extends ConsumerWidget {
       _ => '$coming on the way',
     };
     if (rows.isEmpty) {
+      if (asOf != null) {
+        // Nothing left of a drawing is not "nothing on its way": the
+        // skeleton, as before an answer, and nothing under a failure the
+        // page already says.
+        return read.error == null
+            ? HomeModuleFrame.loading(title: _title)
+            : const SizedBox.shrink();
+      }
       return HomeModuleFrame(
         title: _title,
         semanticLabel: joinSpokenParts([_title, 'Nothing on its way']),
@@ -60,25 +75,29 @@ class HomeYourRequestsModule extends ConsumerWidget {
       );
     }
     final shown = rows.take(yourRequestsLimit).toList(growable: false);
-    return HomeModuleFrame(
-      title: _title,
-      subtitle: subtitle,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (index, row) in shown.indexed)
-            RequesterRequestRow.home(
-              key: ValueKey(row.request.id),
-              mine: row,
-              now: now,
-              divided: index > 0,
-              onTap: () => openMyRequest(context, row),
+    return LastKnownMark(
+      asOf: asOf,
+      checking: read.error == null,
+      child: HomeModuleFrame(
+        title: _title,
+        subtitle: subtitle,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (index, row) in shown.indexed)
+              RequesterRequestRow.home(
+                key: ValueKey(row.request.id),
+                mine: row,
+                now: now,
+                divided: index > 0,
+                onTap: () => openMyRequest(context, row),
+              ),
+            HomeModuleLink(
+              label: 'All your requests',
+              onTap: () => context.go(ServiceRoutes.requests),
             ),
-          HomeModuleLink(
-            label: 'All your requests',
-            onTap: () => context.go(ServiceRoutes.requests),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

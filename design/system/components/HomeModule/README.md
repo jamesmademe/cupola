@@ -199,7 +199,10 @@ Everything comes from her own Seerr session; no fault, no service named but her 
 - **Your requests** (`HomeYourRequestsModule`): `Your requests`, `3 on the way`, up to three
   [RequesterRequestRow](../RequesterRequestRow/README.md)s, what moves first, then what waits, then a no of the last
   seven days; `All your requests` to her tab. Nothing on its way: `Nothing on its way` · `Find something to ask for in
-  Discover.` and `Discover`.
+  Discover.` and `Discover`. At a cold start the rows are the last drawing's, read as the list reads after a
+  failure: no `62%` and no `Ready around 21:10`, since a drawing does not run, so a download reads `On its way` ·
+  `Being fetched`; a time is said again against the moment of drawing (`Asked 3 h ago`), a no the week has left behind
+  is gone, and a drawing with nothing left to list is the skeleton, never `Nothing on its way`.
 - **Trending this week** and **Coming soon**: Seerr's shelves as Discover draws them, the heading the way into
   Discover and into her calendar; Coming soon says each poster's day (`Fri 2 Oct`), no region and no count.
 - **The server**: one line above everything when any of her reads did not come back, `Can't reach the server since
