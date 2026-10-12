@@ -329,6 +329,44 @@ void main() {
       expect(find.text('Missing Item'), findsOneWidget);
     });
 
+    testWidgets('a chip that hides every title says so and offers Show all', (
+      tester,
+    ) async {
+      final libraryProvider = FutureProvider<List<String>>(
+        (ref) async => ['Available Item'],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: libraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          titleExtractor: (item) => item,
+          statusExtractor: (_) =>
+              const MediaStatusInfo(availability: MediaAvailability.available),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Missing'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nothing is missing'), findsOneWidget);
+      expect(find.textContaining('library is empty'), findsNothing);
+
+      await tester.tap(find.text('Show all'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Available Item'), findsOneWidget);
+    });
+
     testWidgets('lists a series the server never resolved under Missing', (
       tester,
     ) async {
@@ -444,7 +482,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('No results'), findsOneWidget);
+      expect(find.textContaining('found nothing for'), findsOneWidget);
       expect(find.byType(MediaGrid<String>), findsNothing);
     });
 
@@ -479,7 +517,7 @@ void main() {
       expect(find.textContaining('Error:'), findsNothing);
       expect(find.textContaining('SocketException'), findsNothing);
       expect(find.text('The server did not answer'), findsOneWidget);
-      expect(find.text('No results'), findsNothing);
+      expect(find.textContaining('found nothing for'), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
     });
 

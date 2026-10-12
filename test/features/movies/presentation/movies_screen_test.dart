@@ -53,8 +53,8 @@ void main() {
       );
     await _pump(tester, api);
 
-    // "No items found" was the whole wall for a server that never answered.
-    expect(find.text('No items found'), findsNothing);
+    // An empty library was the whole wall for a server that never answered.
+    expect(find.textContaining('library is empty'), findsNothing);
     // The service's own leaf, in plain words: who, where, and the two ways out.
     expect(find.byType(ServiceOfflineState), findsOneWidget);
     expect(find.byType(AppErrorState), findsNothing);
@@ -74,7 +74,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.getCallCount, greaterThan(before));
     expect(find.byType(ServiceOfflineState), findsNothing);
-    expect(find.text('No items found'), findsOneWidget);
+    expect(find.text('Your Radarr library is empty'), findsOneWidget);
   });
 
   testWidgets('a Radarr that answers and refuses the key is an amber fault, '

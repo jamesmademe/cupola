@@ -106,7 +106,7 @@ void main() {
 
         expect(find.byType(ServiceOfflineState), findsOneWidget);
         expect(find.text('$name is not at this address'), findsOneWidget);
-        expect(find.text('No items found'), findsNothing);
+        expect(find.textContaining('library is empty'), findsNothing);
         final glyph = tester.widget<Icon>(
           find
               .descendant(
@@ -697,7 +697,7 @@ void main() {
         expect(leaf, findsOneWidget);
         expect(find.text(headline), findsOneWidget);
         expect(find.textContaining(sentence), findsOneWidget);
-        expect(find.text('No items found'), findsNothing);
+        expect(find.textContaining('library is empty'), findsNothing);
         final button = find.widgetWithText(FilledButton, remedy);
         expect(button, findsOneWidget);
         final style = tester.widget<FilledButton>(button).style;

@@ -15,6 +15,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/content_card.dart';
@@ -56,6 +57,18 @@ enum MediaBrowseFilter {
   /// chip, and the only one that says nothing about the file.
   unmonitored,
 }
+
+/// What an empty grid says under a chip that hides every title.
+@visibleForTesting
+String mediaBrowseFilterEmptyTitle(MediaBrowseFilter filter) =>
+    switch (filter) {
+      MediaBrowseFilter.all => 'Nothing to show',
+      MediaBrowseFilter.available => 'Nothing is available yet',
+      MediaBrowseFilter.missing => 'Nothing is missing',
+      MediaBrowseFilter.inQueue => 'Nothing is in the queue',
+      MediaBrowseFilter.cutoffUnmet => 'Nothing is below its cutoff',
+      MediaBrowseFilter.unmonitored => 'Everything is monitored',
+    };
 
 /// Which library chip a resolved status belongs under.
 ///
@@ -609,7 +622,12 @@ class _MediaBrowseScaffoldState<T>
         // Only after an answer: a lookup that failed reaches the error state
         // above, never this line.
         if (results == null || results.isEmpty) {
-          return const Center(child: Text('No results'));
+          return AppEmptyState.compact(
+            icon: Icons.search_off_rounded,
+            title:
+                '${widget.serviceName} found nothing for '
+                '“${ref.watch(widget.searchQueryProvider).trim()}”',
+          );
         }
 
         return _buildGrid(
@@ -642,9 +660,26 @@ class _MediaBrowseScaffoldState<T>
               AppSpacing.lg +
               FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
-        children: const [
-          SizedBox(height: 160),
-          Center(child: Text('No items found')),
+        children: [
+          const SizedBox(height: AppSpacing.xxl),
+          // The two absences are different facts: a library with nothing in
+          // it, and a chip that hides everything there is. The second one
+          // says which chip and offers the way back.
+          if (_selectedFilter == MediaBrowseFilter.all)
+            AppEmptyState.compact(
+              icon: Icons.video_library_outlined,
+              title: 'Your ${widget.serviceName} library is empty',
+            )
+          else
+            AppEmptyState.compact(
+              icon: Icons.filter_list_off_rounded,
+              title: mediaBrowseFilterEmptyTitle(_selectedFilter),
+              action: TextButton(
+                onPressed: () =>
+                    setState(() => _selectedFilter = MediaBrowseFilter.all),
+                child: const Text('Show all'),
+              ),
+            ),
         ],
       );
     }
