@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_admin_placeholder.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';

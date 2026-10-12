@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';

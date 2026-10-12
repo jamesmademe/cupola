@@ -7,14 +7,11 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart'
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
-import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 
 export 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, stringOrNull;
-export 'package:cupola/core/utils/date_format.dart'
-    show formatIsoDate, formatShortDate;
 // The status resolvers moved to the domain layer; re-exported so the existing
 // presentation call sites keep one import.
 export 'package:cupola/features/activity/domain/global_activity_status.dart'
@@ -62,6 +59,8 @@ String formatActivityDuration(String? value) {
   );
 }
 
+/// [formatRelativeDateTime] for an ISO string out of an \*arr payload: `—` when
+/// there is none, and the string itself when it cannot be parsed.
 String formatRelativeActivityDate(String? isoDate, {DateTime? now}) {
   if (isoDate == null || isoDate.trim().isEmpty) return '—';
 
@@ -72,59 +71,10 @@ String formatRelativeActivityDate(String? isoDate, {DateTime? now}) {
   }
 }
 
-/// Relative label for an already-parsed timestamp: `just now`, `20 min ago`,
-/// `3 h ago`, `2 days ago`, then the day beyond a week (`Tue 29 Sep`).
-///
-/// Split out from [formatRelativeActivityDate] so callers holding a `DateTime`
-/// (the global activity feed keeps one as `sortDate`) do not have to
-/// round-trip it through an ISO string to display it.
-String formatRelativeDateTime(DateTime date, {DateTime? now}) {
-  final local = date.toLocal();
-  final reference = (now ?? DateTime.now()).toLocal();
-  final difference = reference.difference(local);
-  final isFuture = difference.isNegative;
-  final delta = isFuture ? local.difference(reference) : difference;
-
-  if (delta < const Duration(minutes: 1)) {
-    return isFuture ? 'in < ${withUnit(1, 'min')}' : 'just now';
-  }
-  if (delta < const Duration(hours: 1)) {
-    final minutes = delta.inMinutes;
-    final age = withUnit(minutes, 'min');
-    return isFuture ? 'in $age' : '$age ago';
-  }
-  if (delta < const Duration(days: 1)) {
-    final hours = delta.inHours;
-    final age = withUnit(hours, 'h');
-    return isFuture ? 'in $age' : '$age ago';
-  }
-  if (delta < const Duration(days: 7)) {
-    final days = delta.inDays;
-    final unit = days == 1 ? 'day' : 'days';
-    return isFuture ? 'in $days $unit' : '$days $unit ago';
-  }
-
-  // The app's date, `Tue 29 Sep`, with the year only when it is another.
-  return formatShortDate(local.toIso8601String(), now: reference);
-}
-
 String formatActivityDateTime(String? isoDate) {
   if (isoDate == null || isoDate.trim().isEmpty) return '—';
   final parsed = DateTime.tryParse(isoDate);
   return parsed == null ? isoDate : formatDateTimeStamp(parsed);
-}
-
-/// `2026-09-20 14:03`: the same stamp from an already-parsed timestamp.
-///
-/// The [DateTime] sibling of [formatActivityDateTime], which now delegates to
-/// it. Two byte-identical private copies of this body were written in one pass
-/// (NZBGet and SABnzbd), which is the point at which it belongs here instead:
-/// a clock that disagrees with the rest of the app by one surface reads as a
-/// different kind of timestamp rather than as a bug.
-String formatDateTimeStamp(DateTime? value) {
-  if (value == null) return '—';
-  final local = value.toLocal();
-  return '${formatIsoDate(local.toIso8601String())} ${formatTimeOnly(local)}';
 }
 
 /// `08:12`: the clock and nothing else.
@@ -140,15 +90,7 @@ String formatDateTimeStamp(DateTime? value) {
 String formatActivityTimeOnly(String? isoDate) {
   if (isoDate == null || isoDate.trim().isEmpty) return '—';
   final parsed = DateTime.tryParse(isoDate);
-  return parsed == null ? isoDate : formatTimeOnly(parsed);
-}
-
-/// The same clock from an already-parsed timestamp.
-String formatTimeOnly(DateTime date) {
-  final local = date.toLocal();
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
+  return parsed == null ? isoDate : formatClockTime(parsed);
 }
 
 String formatDateOnly(String? isoDate) {

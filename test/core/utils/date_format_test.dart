@@ -255,4 +255,97 @@ void main() {
       expect(formatDayLabel(DateTime(2026, 10, 1, 21), now), 'Thu 1');
     });
   });
+
+  group('formatIsoDay', () {
+    test(
+      'pads the month and the day, and keeps the components it was given',
+      () {
+        expect(formatIsoDay(DateTime(2026, 9, 2)), '2026-09-02');
+        expect(formatIsoDay(DateTime.utc(2026, 12, 31, 23, 59)), '2026-12-31');
+      },
+    );
+  });
+
+  group('formatDateTimeStamp', () {
+    test('is the sortable day and the 24 h clock', () {
+      expect(
+        formatDateTimeStamp(DateTime(2026, 9, 20, 14, 3)),
+        '2026-09-20 14:03',
+      );
+      expect(
+        formatDateTimeStamp(DateTime(2026, 1, 2, 3, 4)),
+        '2026-01-02 03:04',
+      );
+    });
+
+    test('reads this device\'s clock, whatever zone the value carries', () {
+      final utc = DateTime.utc(2026, 9, 20, 14, 3);
+      expect(formatDateTimeStamp(utc), formatDateTimeStamp(utc.toLocal()));
+    });
+
+    test('answers the em dash when there is no timestamp', () {
+      expect(formatDateTimeStamp(null), '—');
+    });
+  });
+
+  group('formatRelativeDateTime', () {
+    final now = DateTime(2026, 10, 9, 20, 30);
+
+    test('says just now under a minute', () {
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 9, 20, 29, 30), now: now),
+        'just now',
+      );
+    });
+
+    test('counts back within the week', () {
+      // The figure and its unit are held together by a no-break space.
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 9, 20, 10), now: now),
+        '20\u00A0min ago',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 9, 18, 30), now: now),
+        '2\u00A0h ago',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 8, 20, 30), now: now),
+        '1 day ago',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 6, 20, 0), now: now),
+        '3 days ago',
+      );
+    });
+
+    test('counts forward the same way for a time ahead', () {
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 9, 20, 30, 40), now: now),
+        'in < 1\u00A0min',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 9, 20, 50), now: now),
+        'in 20\u00A0min',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 9, 23, 30), now: now),
+        'in 3\u00A0h',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2026, 10, 12, 20, 30), now: now),
+        'in 3 days',
+      );
+    });
+
+    test('names the day past a week, as the app dates, never ISO', () {
+      expect(
+        formatRelativeDateTime(DateTime(2026, 9, 29, 12), now: now),
+        'Tue 29 Sep',
+      );
+      expect(
+        formatRelativeDateTime(DateTime(2025, 9, 29, 12), now: now),
+        'Mon 29 Sep 2025',
+      );
+    });
+  });
 }

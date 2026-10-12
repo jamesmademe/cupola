@@ -12,6 +12,8 @@
 /// debt, so there is no `intl` dependency to reach for.
 library;
 
+import 'package:cupola/core/utils/unit_space.dart';
+
 /// Formats an ISO-8601 date string to `YYYY-MM-DD`.
 ///
 /// Returns the original string if parsing fails.
@@ -22,12 +24,17 @@ library;
 /// [formatMediumDate].
 String formatIsoDate(String isoDate) {
   try {
-    final date = DateTime.parse(isoDate);
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return formatIsoDay(DateTime.parse(isoDate));
   } catch (_) {
     return isoDate;
   }
 }
+
+/// `2026-09-02`: the sortable form of a day that is already a [DateTime], the
+/// components as they stand and each padded to a fixed width.
+String formatIsoDay(DateTime day) =>
+    '${day.year}-${day.month.toString().padLeft(2, '0')}-'
+    '${day.day.toString().padLeft(2, '0')}';
 
 /// Formats an ISO-8601 date as `Jul 17, 2026`: the one date voice every media
 /// detail page speaks.
@@ -178,6 +185,55 @@ String formatClockTime(DateTime time) {
   final local = time.toLocal();
   return '${local.hour.toString().padLeft(2, '0')}:'
       '${local.minute.toString().padLeft(2, '0')}';
+}
+
+/// `2026-09-20 14:03`: a timestamp on this device's clock, the sortable day and
+/// the 24 h clock, or `—` when there is none.
+///
+/// The dense-row stamp of a feed row or a detail grid. Written twice verbatim
+/// (NZBGet and SABnzbd), then a third time for qBittorrent's epoch dates, which
+/// is the point at which it belongs here instead: a clock that disagrees with
+/// the rest of the app by one surface reads as a different kind of timestamp
+/// rather than as a bug.
+String formatDateTimeStamp(DateTime? value) {
+  if (value == null) return '—';
+  final local = value.toLocal();
+  return '${formatIsoDay(local)} ${formatClockTime(local)}';
+}
+
+/// Relative label for an already-parsed timestamp: `just now`, `20 min ago`,
+/// `3 h ago`, `2 days ago`, then the day beyond a week (`Tue 29 Sep`).
+///
+/// A timestamp ahead of [now] reads the same ladder the other way round
+/// (`in 20 min`, `in 2 days`). [now] is for tests; it defaults to the clock.
+String formatRelativeDateTime(DateTime date, {DateTime? now}) {
+  final local = date.toLocal();
+  final reference = (now ?? DateTime.now()).toLocal();
+  final difference = reference.difference(local);
+  final isFuture = difference.isNegative;
+  final delta = isFuture ? local.difference(reference) : difference;
+
+  if (delta < const Duration(minutes: 1)) {
+    return isFuture ? 'in < ${withUnit(1, 'min')}' : 'just now';
+  }
+  if (delta < const Duration(hours: 1)) {
+    final minutes = delta.inMinutes;
+    final age = withUnit(minutes, 'min');
+    return isFuture ? 'in $age' : '$age ago';
+  }
+  if (delta < const Duration(days: 1)) {
+    final hours = delta.inHours;
+    final age = withUnit(hours, 'h');
+    return isFuture ? 'in $age' : '$age ago';
+  }
+  if (delta < const Duration(days: 7)) {
+    final days = delta.inDays;
+    final unit = days == 1 ? 'day' : 'days';
+    return isFuture ? 'in $days $unit' : '$days $unit ago';
+  }
+
+  // The app's date, `Tue 29 Sep`, with the year only when it is another.
+  return formatShortDay(local, now: reference);
 }
 
 /// [formatMediumDate] for a nullable field, answering null rather than echoing

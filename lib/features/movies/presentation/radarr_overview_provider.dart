@@ -20,11 +20,10 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
+import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
-    show formatRelativeDateTime;
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';

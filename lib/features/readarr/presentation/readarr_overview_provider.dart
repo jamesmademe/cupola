@@ -33,11 +33,10 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
-    show formatRelativeDateTime;
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';

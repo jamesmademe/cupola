@@ -109,30 +109,33 @@ void main() {
     });
   });
 
-  group('formatRelativeDateTime', () {
-    final now = DateTime(2026, 10, 9, 20, 30);
-
-    test('counts back within the week', () {
-      // The figure and its unit are held together by a no-break space.
-      expect(
-        formatRelativeDateTime(DateTime(2026, 10, 9, 18, 30), now: now),
-        '2\u00A0h ago',
-      );
-      expect(
-        formatRelativeDateTime(DateTime(2026, 10, 6, 20, 0), now: now),
-        '3 days ago',
-      );
+  group('the stamp and the relative date', () {
+    test('formatActivityDateTime prints the sortable day and the clock', () {
+      final stamp = DateTime(2026, 9, 20, 14, 3).toIso8601String();
+      expect(formatActivityDateTime(stamp), '2026-09-20 14:03');
     });
 
-    test('names the day past a week, as the app dates, never ISO', () {
-      expect(
-        formatRelativeDateTime(DateTime(2026, 9, 29, 12), now: now),
-        'Tue 29 Sep',
-      );
-      expect(
-        formatRelativeDateTime(DateTime(2025, 9, 29, 12), now: now),
-        'Mon 29 Sep 2025',
-      );
+    test('formatActivityDateTime answers the em dash for nothing', () {
+      expect(formatActivityDateTime(null), '—');
+      expect(formatActivityDateTime('  '), '—');
+    });
+
+    test('formatActivityDateTime hands back what it cannot read', () {
+      expect(formatActivityDateTime('soon'), 'soon');
+    });
+
+    test('formatDateOnly prints the sortable day and nothing else', () {
+      expect(formatDateOnly('2026-09-20T14:03:00'), '2026-09-20');
+      expect(formatDateOnly(null), '—');
+      expect(formatDateOnly(''), '—');
+    });
+
+    test('formatRelativeActivityDate counts back from the injected clock', () {
+      final now = DateTime(2026, 10, 9, 20, 30);
+      final stamp = DateTime(2026, 10, 9, 18, 30).toIso8601String();
+      expect(formatRelativeActivityDate(stamp, now: now), '2\u00A0h ago');
+      expect(formatRelativeActivityDate(null, now: now), '—');
+      expect(formatRelativeActivityDate('soon', now: now), 'soon');
     });
   });
 }

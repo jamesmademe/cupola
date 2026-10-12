@@ -22,9 +22,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
 import 'package:cupola/core/utils/unit_space.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
-    show formatRelativeDateTime;
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
