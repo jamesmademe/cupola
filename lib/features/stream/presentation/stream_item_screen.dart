@@ -10,8 +10,10 @@ import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
 import 'package:cupola/features/stream/presentation/play_with.dart';
+import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
 
 /// One item on a media server, at any depth of the tree.
@@ -88,17 +90,23 @@ class _Body extends ConsumerWidget {
   final ServiceKey service;
   final StreamItem item;
 
+  /// The poster's width beside the words: the library grid's tile, a little
+  /// narrower, so the page reads as the tile it was opened from.
+  static const double _posterWidth = 112;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final client = service == ServiceKey.jellyfin
+        ? ref.watch(jellyfinServerProvider)
+        : ref.watch(plexServerProvider);
+    final art = item.posterPath == null
+        ? null
+        : client.imageFor(item.posterPath!, width: 360);
+    final overview = item.overview?.trim();
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-      ),
+    final words = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(item.title, style: theme.textTheme.headlineSmall),
         if (item.subtitle != null && item.subtitle!.isNotEmpty)
@@ -113,12 +121,104 @@ class _Body extends ConsumerWidget {
           ),
         const SizedBox(height: AppSpacing.md),
         _StateRow(item: item, accent: service.accent),
-        const SizedBox(height: AppSpacing.lg),
-        _HandoffButton(service: service, item: item),
+      ],
+    );
+
+    // Flush to the window, each block inset on its own: `SectionHeader` brings
+    // its own inset, and inside a padded list it stood a step in from the
+    // poster and the grid it heads.
+    return ListView(
+      padding: EdgeInsets.only(
+        top: AppSpacing.md,
+        bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Head(item: item, art: art, words: words),
+              const SizedBox(height: AppSpacing.lg),
+              _HandoffButton(service: service, item: item),
+              if (overview != null && overview.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Text(overview, style: theme.textTheme.bodyMedium),
+              ],
+            ],
+          ),
+        ),
         if (item.kind.hasChildren) ...[
           const SizedBox(height: AppSpacing.xl),
           _Children(service: service, itemId: item.id),
         ],
+      ],
+    );
+  }
+}
+
+/// The artwork and the words beside it, the way the item's own tile showed
+/// it: a poster for a show or a season, a square for an album or a track, the
+/// frame across the page for an episode, whose picture is a still.
+///
+/// With no artwork a show or an album keeps its plate, with the glyph of what
+/// it is, so the page has the same shape whatever the server holds; an
+/// episode without a still goes straight to its words. At a large reading size
+/// the words go under the poster rather than into a third of the width.
+class _Head extends StatelessWidget {
+  const _Head({required this.item, required this.art, required this.words});
+
+  final StreamItem item;
+  final StreamImageSource? art;
+  final Widget words;
+
+  @override
+  Widget build(BuildContext context) {
+    final card = ContentCard(
+      imageUrl: art?.url,
+      httpHeaders: art?.headers,
+      fallbackIcon: streamItemGlyph(item.kind),
+    );
+    // Decoration: the title beside it says what it shows.
+    Widget plate(double aspectRatio) => ExcludeSemantics(
+      child: AspectRatio(aspectRatio: aspectRatio, child: card),
+    );
+
+    if (item.kind == StreamItemKind.episode) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (art != null) ...[
+            plate(16 / 9),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+          words,
+        ],
+      );
+    }
+
+    final square =
+        item.kind == StreamItemKind.album || item.kind == StreamItemKind.track;
+    final poster = SizedBox(
+      width: _Body._posterWidth,
+      child: plate(square ? 1 : 2 / 3),
+    );
+    if (MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          poster,
+          const SizedBox(height: AppSpacing.lg),
+          words,
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        poster,
+        const SizedBox(width: AppSpacing.lg),
+        Expanded(child: words),
       ],
     );
   }
@@ -289,36 +389,40 @@ class _Children extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SectionHeader(title: 'Contents', showChevron: false),
-        AsyncValueWidget<List<StreamItem>>(
-          value: childrenAsync,
-          serviceName: service.title,
-          onRetry: () {
-            if (service == ServiceKey.jellyfin) {
-              ref.invalidate(jellyfinItemChildrenProvider(itemId));
-            } else {
-              ref.invalidate(plexChildrenProvider(itemId));
-            }
-          },
-          isEmpty: (list) => list.isEmpty,
-          emptyBuilder: const AppEmptyState.compact(
-            icon: Icons.inbox_outlined,
-            title: 'Nothing inside',
-          ),
-          data: (list) => GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemCount: list.length,
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 130 + AppSpacing.gridGap,
-              childAspectRatio: 2 / 3,
-              crossAxisSpacing: AppSpacing.gridGap,
-              mainAxisSpacing: AppSpacing.gridGap,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: AsyncValueWidget<List<StreamItem>>.section(
+            value: childrenAsync,
+            service: service,
+            consequence: 'what is inside is not shown',
+            onRetry: () {
+              if (service == ServiceKey.jellyfin) {
+                ref.invalidate(jellyfinItemChildrenProvider(itemId));
+              } else {
+                ref.invalidate(plexChildrenProvider(itemId));
+              }
+            },
+            isEmpty: (list) => list.isEmpty,
+            emptyBuilder: const AppEmptyState.compact(
+              icon: Icons.inbox_outlined,
+              title: 'Nothing inside',
             ),
-            itemBuilder: (context, index) => StreamPosterTile(
-              service: service,
-              item: list[index],
-              index: index,
+            data: (list) => GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: list.length,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 130 + AppSpacing.gridGap,
+                childAspectRatio: 2 / 3,
+                crossAxisSpacing: AppSpacing.gridGap,
+                mainAxisSpacing: AppSpacing.gridGap,
+              ),
+              itemBuilder: (context, index) => StreamPosterTile(
+                service: service,
+                item: list[index],
+                index: index,
+              ),
             ),
           ),
         ),

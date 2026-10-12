@@ -50,8 +50,11 @@ void main() {
       );
 
       expect(find.text('Nothing inside'), findsNothing);
-      final failure = find.byType(AppErrorState);
+      final failure = find.byType(InlineErrorRetry);
       expect(failure, findsOneWidget);
+      // The page heads with its artwork, the one picture left on it while
+      // the contents did not load.
+      expect(find.byType(ContentCard), findsOneWidget);
 
       // Retry asks again, and an answer with nothing in it is "Nothing inside".
       failing = false;
@@ -85,7 +88,7 @@ void main() {
 
     expect(find.text('The server did not describe itself'), findsNothing);
     // The one read that failed is the one section that says so.
-    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.byType(InlineErrorRetry), findsOneWidget);
 
     await harness.unmount(tester);
   });
