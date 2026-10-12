@@ -110,6 +110,9 @@ class DownloadQueueTile extends StatelessWidget {
   /// The bar itself stays, at its last position. It is still what the service
   /// last said, and dropping it would throw away the readout the operator came
   /// for. See `FaultBand.stale`, which carries the same condition for the page.
+  ///
+  /// The four client queue pages pass it while they show their last read under
+  /// a fault band, measured from when that read came back (`ReadClock`).
   final Duration? sampleAge;
 
   /// Whether this row is part of a multi-select.

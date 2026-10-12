@@ -26,7 +26,7 @@ As qBittorrent maps them (the tone rule, applied once in `_toneFor`):
 
 Across clients:
 
-- **Stale** (`sampleAge` set): the second line becomes *as of 6 min ago* (`formatDurationAge`) and the bar keeps its position but drains to `onSurfaceVariant`.
+- **Stale** (`sampleAge` set): the second line becomes *as of 6 min ago* (`formatDurationAge`) and the bar keeps its position but drains to `onSurfaceVariant`. The four client queue pages pass it while they show their last read under a fault band, as the time since that read came back (`ReadClock`, `lib/core/status/read_clock.dart`), and nowhere else.
 - **Transmission** prints the remaining size while downloading and *Ratio …* while seeding, and a blocking error (the client's own error string) or *Stuck* replaces the chip's label.
 - **Usenet rows** (SABnzbd, NZBGet) carry no chip and no metrics: the state heads the second line (SABnzbd *Downloading · 0:12:00 · 1.2 GB left of 3.4 GB*, passing its raw `timeleft`; NZBGet *status · category · remaining*, or *progress unknown* with a null percentage and no bar), and `DownloadQueueActionsMenu` trails the first line.
 
