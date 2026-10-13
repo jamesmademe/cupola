@@ -1208,6 +1208,36 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('a remedy and a certificate decision name their row', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final diagnose = _Diagnose()
+        ..on('http://nas.home.arpa:7878', (_) => _refused())
+        ..on('https://nas.home.arpa:7879', (_) => _untrusted(_probe()));
+      await _pump(
+        tester,
+        known: [
+          _radarr(),
+          _radarr(
+            name: 'Radarr 4K',
+            url: 'https://nas.home.arpa:7879',
+            key: _radarr4kKey,
+          ),
+        ],
+        diagnose: diagnose,
+      );
+      await _settle(tester);
+
+      expect(find.bySemanticsLabel('Type its address for Radarr'), findsOne);
+      expect(
+        find.bySemanticsLabel('Trust the certificate of Radarr 4K'),
+        findsOne,
+      );
+      expect(find.bySemanticsLabel('Not now for Radarr 4K'), findsOne);
+      handle.dispose();
+    });
+
     testWidgets('a Docker row says where the source has it', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester, known: [_radarr(url: 'http://radarr:7878')]);

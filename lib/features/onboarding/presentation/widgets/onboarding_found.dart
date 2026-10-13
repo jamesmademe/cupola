@@ -1235,7 +1235,10 @@ class _FailureBlock extends StatelessWidget {
                 FilledButton(
                   onPressed: onRemedy,
                   style: remedyFillStyle(context, compact: true),
-                  child: Text(remedy.$2, semanticsLabel: '${remedy.$2}: $name'),
+                  child: Text(
+                    remedy.$2,
+                    semanticsLabel: '${remedy.$2} for $name',
+                  ),
                 ),
               if (remedy == null && tone == StatusTone.warning)
                 FilledButton(
