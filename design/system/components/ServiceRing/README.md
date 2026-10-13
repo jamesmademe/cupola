@@ -15,7 +15,7 @@ Monochrome: every node is the same ink and every halo the same lamp; which servi
 
 The ring speaks one sentence and excludes everything beneath it: *8 of 17 chosen, 4 answering, 1 did not answer*, or *17 services, none set up yet*.
 
-The same file carries `OnePunchline`, the claim beside the ring on onboarding: *A Cupola over / your lab.* in `displayMedium` (42, w600) at 1.10 leading unless a `style` is passed, all in `onSurface`: the display face and the line break carry the claim, not a hue (it used to set *Cupola* in the brand indigo and the second line in a section cyan). It speaks the sentence once.
+The same file carries `OnePunchline`, the claim beside the ring on the Welcome: *Your server, like a streaming service.* in `displayMedium` (42, w600) at 1.10 leading unless a `style` is passed, in `onSurface`: the display face carries the claim, not a hue. It is the screen's heading and speaks the sentence once.
 
 ## States in the catalog
 

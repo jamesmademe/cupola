@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// Initial onboarding-complete value loaded from SharedPreferences before
 /// the app starts. Must be overridden in main.dart.
@@ -19,6 +21,21 @@ final initialOnboardingCompletedProvider = Provider<bool>((ref) {
 final onboardingCompletedProvider = StateProvider<bool>((ref) {
   return ref.watch(initialOnboardingCompletedProvider);
 });
+
+/// Whether a launch opens on the Welcome: the way in was never finished and
+/// nothing is set up. A connection saved by a run that was cut short opens the
+/// Home instead, which already says what to set up next.
+///
+/// "Nothing is set up" is the Home at zero's own question
+/// (`hasServiceConnection`), not an empty list: an instance can outlive its
+/// address, a secret left behind in the keychain, and still be nothing anyone
+/// could talk to.
+bool showsWelcome({
+  required bool onboardingCompleted,
+  required SettingsModel settings,
+}) =>
+    !onboardingCompleted &&
+    ServiceKey.values.every((s) => !settings.hasServiceConnection(s));
 
 /// [ChangeNotifier] that bridges [onboardingCompletedProvider] to
 /// [GoRouter.refreshListenable]. Whenever the onboarding flag flips the

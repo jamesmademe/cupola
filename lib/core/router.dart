@@ -18,6 +18,7 @@ import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/media/presentation/arr_title_opener.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
@@ -3126,22 +3127,34 @@ String? _audienceRedirect(Uri uri, Audience audience) {
   };
 }
 
+bool _showsWelcome(Ref ref) => showsWelcome(
+  onboardingCompleted: ref.read(onboardingCompletedProvider),
+  settings: ref.read(currentSettingsProvider),
+);
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerRefreshNotifierProvider);
-  final onboardingDone = ref.read(onboardingCompletedProvider);
   // The routes a person may reach follow the bar they see.
   ref.listen<Audience>(shellAudienceProvider, (_, _) => notifier.refresh());
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     refreshListenable: notifier,
-    initialLocation: onboardingDone ? ServiceRoutes.home : '/onboarding',
+    initialLocation: _showsWelcome(ref)
+        ? ServiceRoutes.welcome
+        : ServiceRoutes.home,
     redirect: (context, state) {
-      final done = ref.read(onboardingCompletedProvider);
-      final isOnboarding = state.matchedLocation == '/onboarding';
-      if (!done && !isOnboarding) return '/onboarding';
-      if (done && isOnboarding) return ServiceRoutes.home;
-      if (state.uri.path == '/') return ServiceRoutes.home;
+      final path = state.uri.path;
+      if (path == ServiceRoutes.legacyOnboarding) return ServiceRoutes.welcome;
+      // Never away from the way in: a run saves its first connection before
+      // it is over, "Revisit onboarding" arrives with the flag already on,
+      // and the flow leaves for the Home on its own.
+      if (path == ServiceRoutes.welcome ||
+          path.startsWith('${ServiceRoutes.welcome}/')) {
+        return null;
+      }
+      if (_showsWelcome(ref)) return ServiceRoutes.welcome;
+      if (path == '/') return ServiceRoutes.home;
 
       // Everything that used to live under `/dashboard` or `/services` still
       // resolves.
@@ -3160,8 +3173,19 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(
-        path: '/onboarding',
+        path: ServiceRoutes.welcome,
         builder: (context, state) => const OnboardingScreen(),
+        routes: [
+          GoRoute(
+            path: 'connect',
+            builder: (context, state) =>
+                const OnboardingScreen(entry: OnboardingEntry.connect),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: ServiceRoutes.legacyOnboarding,
+        redirect: (context, state) => ServiceRoutes.welcome,
       ),
       // One Navigator per tab, all alive at once behind a cross-fade.
       //

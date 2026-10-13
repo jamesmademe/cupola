@@ -113,7 +113,11 @@ class HomeScreen extends ConsumerWidget {
         accent: allUnconfigured ? null : ref.watch(featuredRoomLightProvider),
         accentDuration: AppAnimation.light,
         body: allUnconfigured
-            ? NothingSetUpView(bottomPadding: bottomPadding)
+            ? NothingSetUpView(
+                bottomPadding: bottomPadding,
+                // The date stays: it is the Home's, whatever is set up.
+                header: const HomeHeader(showsHealth: false),
+              )
             : Stack(
                 children: [
                   RefreshIndicator(

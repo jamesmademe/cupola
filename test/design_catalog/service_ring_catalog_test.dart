@@ -125,7 +125,7 @@ void main() {
       ),
       CatalogScene(
         'OnePunchline · displayMedium at w600, 1.10 leading; one ink: the '
-        'display face and the line break carry the claim, not a hue',
+        'display face carries the claim, not a hue',
         (_) => const OnePunchline(),
         width: 390,
       ),

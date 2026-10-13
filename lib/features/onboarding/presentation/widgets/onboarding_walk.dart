@@ -26,87 +26,66 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
 
-// ── Beat 3: the walk ────────────────────────────────────────────────────────
+// ── Connect ─────────────────────────────────────────────────────────────────
 
-/// Which service this step is about, and how far in: hoisted out of the pager
-/// so it can *roll* from one service to the next.
+/// Which service Connect is setting up: hoisted out of the pager so it can
+/// *roll* from one service to the next.
 ///
 /// It sits beside the ring for the same reason the ring sits outside the
-/// `PageView`: a `PageView` builds one child per page, so the walk's nine steps
-/// are nine separate elements and nothing in one can animate into its
-/// counterpart in the next. Held here it is a single widget across the whole
-/// walk, and advancing rolls `Where does Radarr live?` into `Where does Sonarr
-/// live?`: one word moving inside a sentence that holds still, on the same beat
-/// as the ring rotating that service to noon. Two instruments, one clock,
-/// answering the same question.
+/// `PageView`: a `PageView` builds one child per page, so nothing in one page
+/// can animate into its counterpart in the next. Held here it is one widget,
+/// and choosing another service rolls `Set up Seerr` into `Set up Radarr`: one
+/// word moving inside a sentence that holds still, on the same beat as the ring
+/// rotating that service to noon.
 ///
-/// The service's accent travels with it, but no longer as the eyebrow's ink:
-/// the counter is neutral type and the identity moves into the glyph tile
-/// beside it (see [_ServiceGlyph]). A counter is a counter in every service's
-/// step, and seventeen differently-coloured ones taught the eye to read the
-/// colour rather than the number.
+/// The service's identity is the glyph tile beside the step, never the ink of
+/// the words: a counter is a counter in every service's step.
 class OnboardingWalkSubject extends StatelessWidget {
   const OnboardingWalkSubject({
     super.key,
     required this.service,
-    required this.position,
-    required this.total,
+    this.step,
+    this.onStartElsewhere,
   }) : _eyebrowOnly = false;
 
-  /// The eyebrow on its own, for the ring's compact register: see
-  /// [OnboardingInstrument].
+  /// The service and the step on one line, for the ring's compact register:
+  /// see [OnboardingInstrument].
   ///
-  /// The question goes, and only the question. While the keyboard is up the user
-  /// is already answering it, with a field labelled `Address` under the cursor;
-  /// what they still need is which service they are answering *for* and how much
-  /// is left, which is exactly what the eyebrow says. Dropping the headline is
-  /// also what makes the header row cost the height of the medallion and no more.
+  /// While the keyboard is up the person is already answering the form, with a
+  /// field labelled `Address` under the cursor; what they still need is which
+  /// service they are answering for, which is exactly what this line says.
   const OnboardingWalkSubject.eyebrow({
     super.key,
     required this.service,
-    required this.position,
-    required this.total,
-  }) : _eyebrowOnly = true;
+    this.step,
+  }) : onStartElsewhere = null,
+       _eyebrowOnly = true;
 
   final ServiceKey service;
 
-  /// 1-based position in the walk, and how many services are in it.
-  final int position;
-  final int total;
+  /// Where Connect sits in the way in (`Step 1 of 2`), or null when this
+  /// service is the whole of it: only Seerr and Prowlarr lead somewhere.
+  final String? step;
+
+  /// Opens "Start with another service", or null to leave the link out.
+  final VoidCallback? onStartElsewhere;
 
   final bool _eyebrowOnly;
-
-  /// Which beat of the four the walk is. Fixed: the walk is always the third,
-  /// however many services it turns out to hold.
-  static const _beat = 'Step 3 of 4';
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // The flow's spoken landmark, and the only counter left in it (decision
-    // 47). Compound because that is what earns it a place: the ring already
-    // says how far in, so a bare "2 of 8" was the instrument's own answer in
-    // words, while "step 3 of 4 · service 2 of 8" says the thing the ring
-    // cannot: which service, out of how many, inside which beat.
-    final eyebrow = ReelLine(
-      '$_beat · service $position of $total',
-      style: AppTheme.chrome(context, color: scheme.onSurfaceVariant),
-      // The word holds still and the digit moves, which is precisely what
-      // `figure` is for: `word` rolled the whole line when only a numeral
-      // changed.
-      options: ReelMotion.figure,
-      // The service is named here rather than drawn, because in the compact register the glyph tile and
-      // the headline are both gone and this line is the only orientation left.
-      semanticsLabel:
-          '${service.title}, step 3 of 4, service $position of $total',
-    );
-    // Beside the ring the row supplies the gutters, and there is no second line
-    // to align to. The glyph stays behind as well: the medallion it would sit
-    // next to is already showing this service with a collar on it, and a second
-    // accent tile in a 44pt row is the row competing with the form it exists to
-    // make space for.
-    if (_eyebrowOnly) return eyebrow;
+    if (_eyebrowOnly) {
+      final words = step == null
+          ? 'Set up ${service.title}'
+          : 'Set up ${service.title} · ${step!.toLowerCase()}';
+      return ReelLine(
+        words,
+        style: AppTheme.chrome(context, color: scheme.onSurfaceVariant),
+        options: ReelMotion.word,
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
@@ -115,41 +94,73 @@ class OnboardingWalkSubject extends StatelessWidget {
           Row(
             children: [
               _ServiceGlyph(service: service),
-              const SizedBox(width: AppSpacing.md),
-              Flexible(child: eyebrow),
+              if (step case final step?) ...[
+                const SizedBox(width: AppSpacing.md),
+                Flexible(
+                  child: Text(
+                    step,
+                    style: AppTheme.chrome(
+                      context,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          ReelLine(
-            'Where does ${service.title} live?',
-            style: theme.textTheme.headlineSmall!.copyWith(
-              color: scheme.onSurface,
+          Semantics(
+            header: true,
+            child: ReelLine(
+              'Set up ${service.title}',
+              style: theme.textTheme.headlineSmall!.copyWith(
+                color: scheme.onSurface,
+              ),
+              options: ReelMotion.word,
+              fallbackMaxLines: null,
             ),
-            options: ReelMotion.word,
-            // Wraps rather than rolls once the sentence stops fitting one line,
-            // which for the longest service name happens well inside the
-            // reading sizes this app supports.
-            fallbackMaxLines: null,
           ),
-          // What the step wants, before it has been given anything to react to.
-          // It used to exist only as the outcome of pressing Test on an empty
-          // form, i.e. as the answer to a question the user had already had to
-          // guess. Dropped on the compact frame, where the two 308pt columns
-          // spend their height on the form and the certificate instead.
+          // What the step wants, before it has been given anything to react
+          // to. Dropped on the compact frame, where the two 308pt columns spend
+          // their height on the form and the certificate instead.
           if (!AppBreakpoints.isCompactDesktop(context)) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              walkInstruction(service),
+              connectLead(service),
               style: theme.textTheme.bodyMedium!.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
             ),
           ],
+          if (onStartElsewhere case final open?)
+            TextButton.icon(
+              onPressed: open,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 44),
+                visualDensity: VisualDensity.standard,
+                foregroundColor: scheme.onSurfaceVariant,
+              ),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.chevron_right_rounded, size: 18),
+              label: const Text('Start with another service'),
+            ),
         ],
       ),
     );
   }
 }
+
+/// What Connect says under "Set up X": why to start here, for the two
+/// services that know the others, and what to type for every other one.
+String connectLead(ServiceKey service) => switch (service) {
+  ServiceKey.seerr =>
+    'Seerr already knows your Radarr and Sonarr, keys included, so it is the '
+        'quickest place to start.',
+  ServiceKey.prowlarr =>
+    "Prowlarr knows your arrs' addresses, so you only add their keys.",
+  _ => walkInstruction(service),
+};
 
 /// What this step is asking for, in one line: the walk's subtitle.
 ///
@@ -239,11 +250,10 @@ class OnboardingWalk extends StatefulWidget {
     required this.certificateProbe,
     required this.trustedFingerprint,
     this.affectedServices = const [],
-    required this.next,
+    required this.advanceLabel,
     required this.onTest,
     required this.onTrustCertificate,
     required this.onSuggestPort,
-    required this.onSkip,
     required this.onAdvance,
     required this.onBack,
   });
@@ -302,13 +312,13 @@ class OnboardingWalk extends StatefulWidget {
   /// origin: trusting or forgetting the certificate here covers them too.
   final List<ServiceKey> affectedServices;
 
-  /// The next service in the walk, so the step can say how far there is to go.
-  final ServiceKey? next;
+  /// What the primary says once the service has answered: `Continue` where
+  /// Found follows, `Go to Home` where it does not.
+  final String advanceLabel;
 
   final Future<void> Function() onTest;
   final VoidCallback onTrustCertificate;
   final VoidCallback onSuggestPort;
-  final VoidCallback onSkip;
   final VoidCallback onAdvance;
   final VoidCallback onBack;
 
@@ -406,15 +416,13 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
             ? CrossAxisAlignment.start
             : CrossAxisAlignment.center,
         children: [
+          // No Skip: a service is saved only once it answers, and Back is the
+          // other way out.
           OnboardingFooter(
-            secondary: OutlinedButton(
-              onPressed: widget.onSkip,
-              child: Text('Skip ${widget.service.title}'),
-            ),
             primary: _TestOrAdvance(
               status: widget.status,
               verifying: widget.verifying,
-              isLast: widget.next == null,
+              advanceLabel: widget.advanceLabel,
               onTest: widget.onTest,
               onAdvance: widget.onAdvance,
             ),
@@ -611,28 +619,6 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           ),
         ),
       ],
-      if (widget.next case final upcoming?) ...[
-        const SizedBox(height: AppSpacing.xl),
-        Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              'Next: ${upcoming.title}',
-              style: theme.textTheme.bodySmall!.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ],
     ];
   }
 }
@@ -642,7 +628,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
 ///
 /// It is a **single** [ReelCommandButton] across that change rather than two
 /// widgets swapped by a conditional, and that is the whole point: the same
-/// control rolls `Test connection` → `Testing…` → `Next service`, so the reward
+/// control rolls `Test connection` → `Testing…` → `Continue`, so the reward
 /// for a service answering is the button itself turning into the way forward.
 /// Swapping widgets would reset the label controller and replace the text
 /// instead of rolling it.
@@ -655,21 +641,20 @@ class _TestOrAdvance extends StatelessWidget {
   const _TestOrAdvance({
     required this.status,
     required this.verifying,
-    required this.isLast,
+    required this.advanceLabel,
     required this.onTest,
     required this.onAdvance,
   });
 
   final ServiceConnectionStatus? status;
   final bool verifying;
-  final bool isLast;
+  final String advanceLabel;
   final Future<void> Function() onTest;
   final VoidCallback onAdvance;
 
   @override
   Widget build(BuildContext context) {
     final connected = status == ServiceConnectionStatus.connected;
-    final advanceLabel = isLast ? 'Finish' : 'Next service';
 
     return ReelCommandButton(
       label: connected ? advanceLabel : 'Test connection',

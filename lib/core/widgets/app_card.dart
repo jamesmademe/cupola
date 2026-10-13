@@ -422,6 +422,11 @@ class SettingsCard extends StatelessWidget {
   /// Optional subtitle color override.
   final Color? subtitleColor;
 
+  /// How many lines the subtitle may wrap to before it is cut. Null keeps it
+  /// to the one line a settings row has; a row whose subtitle is the reason
+  /// to choose it (a list to pick from) lets it wrap.
+  final int? subtitleMaxLines;
+
   /// What [subtitleLeading] means, in words.
   ///
   /// Callers pass a bare `Icon` or spinner whose entire meaning is its glyph: a
@@ -452,6 +457,7 @@ class SettingsCard extends StatelessWidget {
     this.onTap,
     this.accentColor,
     this.subtitleColor,
+    this.subtitleMaxLines,
     this.semanticLabel,
     this.semanticHint,
   }) : grouped = false;
@@ -467,6 +473,7 @@ class SettingsCard extends StatelessWidget {
     this.onTap,
     this.accentColor,
     this.subtitleColor,
+    this.subtitleMaxLines,
     this.semanticLabel,
     this.semanticHint,
   }) : grouped = true;
@@ -535,6 +542,7 @@ class SettingsCard extends StatelessWidget {
                             color:
                                 subtitleColor ?? colorScheme.onSurfaceVariant,
                           ),
+                          maxLines: subtitleMaxLines,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

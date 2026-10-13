@@ -87,6 +87,7 @@ import 'package:cupola/features/settings/presentation/service_settings_screen.da
 import '../test_helpers/fake_api_client.dart';
 import '../test_helpers/fake_services.dart';
 import '../test_helpers/model_builders.dart';
+import '../test_helpers/settings_scope.dart';
 
 void main() {
   group('routerProvider', () {
@@ -98,43 +99,57 @@ void main() {
       expect(find.byType(HomeScreen), findsOneWidget);
     });
 
-    testWidgets('starts on onboarding when onboarding is incomplete', (
+    testWidgets('a first run with nothing set up starts on the Welcome', (
       tester,
     ) async {
       final container = await _pumpRouter(tester, onboardingCompleted: false);
       final router = container.read(routerProvider);
 
-      expect(router.state.uri.toString(), '/onboarding');
+      expect(router.state.uri.toString(), ServiceRoutes.welcome);
       expect(find.byType(OnboardingScreen), findsOneWidget);
     });
 
-    testWidgets(
-      'redirects protected routes to onboarding when onboarding is incomplete',
-      (tester) async {
-        final container = await _pumpRouter(tester, onboardingCompleted: false);
-        final router = container.read(routerProvider);
-
-        router.go('/discover');
-        await tester.pumpAndSettle();
-
-        expect(router.state.uri.toString(), '/onboarding');
-        expect(find.byType(OnboardingScreen), findsOneWidget);
-        expect(find.byType(DiscoverPage), findsNothing);
-      },
-    );
-
-    testWidgets('redirects to the Home when onboarding completes', (
+    testWidgets('every other route waits for the Welcome on a first run', (
       tester,
     ) async {
       final container = await _pumpRouter(tester, onboardingCompleted: false);
       final router = container.read(routerProvider);
 
-      container.read(onboardingCompletedProvider.notifier).state = true;
+      router.go('/discover');
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), ServiceRoutes.home);
-      expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.byType(OnboardingScreen), findsNothing);
+      expect(router.state.uri.toString(), ServiceRoutes.welcome);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+      expect(find.byType(DiscoverPage), findsNothing);
+    });
+
+    testWidgets('the Welcome is never sent away from', (tester) async {
+      // The first connection is saved before the run is over, and "Revisit
+      // onboarding" arrives with the flag on: neither may bounce off it.
+      final container = await _pumpRouter(
+        tester,
+        settings: settingsWithServices([ServiceKey.seerr]),
+      );
+      final router = container.read(routerProvider);
+
+      router.go(ServiceRoutes.welcome);
+      await tester.pumpAndSettle();
+      expect(router.state.uri.toString(), ServiceRoutes.welcome);
+
+      router.go(ServiceRoutes.welcomeConnect);
+      await tester.pumpAndSettle();
+      expect(router.state.uri.toString(), ServiceRoutes.welcomeConnect);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+    });
+
+    testWidgets('the old onboarding address opens the Welcome', (tester) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go(ServiceRoutes.legacyOnboarding);
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ServiceRoutes.welcome);
     });
 
     testWidgets('redirects invalid discover detail ids back to Discover', (

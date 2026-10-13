@@ -3,12 +3,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/platform/local_network_access.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
@@ -25,18 +27,31 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
-/// First run, in four beats: the claim, the choice, one service at a time, and
-/// what it actually achieved.
+/// Where a visit to the way in starts.
+enum OnboardingEntry {
+  /// The Welcome: a first run, or "Revisit onboarding".
+  welcome,
+
+  /// Connect, with Seerr proposed: the Home at zero's "Set up a service",
+  /// which is already past the claim.
+  connect,
+}
+
+/// The way in: the Welcome, Connect (one service, Seerr proposed), and what
+/// that service already knows of the others.
 ///
-/// The flow's length is the user's: two fixed beats plus one page per chosen
-/// service plus the close, which is why progress is the ring closing rather
-/// than a fixed bar of segments.
+/// One ring for the whole of it, outside the pager: it greets on the Welcome,
+/// turns the service being set up to noon on Connect, and lights each node that
+/// answers.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({
     super.key,
+    this.entry = OnboardingEntry.welcome,
     this.certificateProber = probeUntrustedCertificate,
     this.localNetworkProbe = probeLocalNetworkAccess,
   });
+
+  final OnboardingEntry entry;
 
   /// Injectable so a widget test can stay off a real socket: see
   /// [CertificateProber].
@@ -52,11 +67,14 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
-  static const _doorPage = 0;
-  static const _pickPage = 1;
-  static const _firstWalkPage = 2;
+  static const _welcomePage = 0;
+  static const _startPage = 1;
+  static const _connectPage = 2;
 
-  final _pageController = PageController();
+  late final _pageController = PageController(initialPage: _page);
+
+  /// The service Connect is setting up: Seerr unless the person chose another.
+  ServiceKey _target = ServiceKey.seerr;
 
   /// The ring's entrance. One authored moment on the door, then stillness.
   late final AnimationController _entrance = AnimationController(
@@ -154,8 +172,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// instance that is no longer the one configured.
   final Map<ServiceKey, String> _verifiedAgainst = {};
 
-  /// Services the user explicitly walked past. They keep their place in the ring
-  /// but are not written to settings.
+  /// Services left behind by choosing another one in Connect. They keep their
+  /// place in the ring but are not written to settings.
   final Set<ServiceKey> _skipped = {};
 
   @override
@@ -174,7 +192,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     for (final k in ServiceKey.values) {
       final url = settings.urlFor(k);
       if (url.isEmpty) continue;
-      _picked.add(k);
       _urlCtrl[k]!.text = url;
       // Which fields a service even has is the registry's answer, so a new
       // credential-authenticated service resumes correctly without an arm here.
@@ -190,6 +207,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         _certFingerprint[k] = pin;
         _certOriginOf[k] = origin;
       }
+    }
+    if (widget.entry == OnboardingEntry.connect) {
+      _page = _connectPage;
+      _picked.add(_target);
     }
     // Reduce Motion removes the animator rather than shortening it: the ring
     // simply starts seated.
@@ -231,25 +252,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   List<ServiceKey> get _walk =>
       ServiceRing.order.where(_picked.contains).toList(growable: false);
 
-  int get _closePage => _firstWalkPage + _walk.length;
-
   bool _isReady(ServiceKey k) {
     if (!_picked.contains(k) || _skipped.contains(k)) return false;
     if (_urlCtrl[k]!.text.trim().isEmpty) return false;
     if (!k.usesApiKey) return true;
     return _apiKeyCtrl[k]!.text.trim().isNotEmpty;
   }
-
-  List<ServiceKey> get _configured =>
-      ServiceRing.order.where(_isReady).toList(growable: false);
-
-  List<ServiceKey> get _answering => _configured
-      .where((k) => _status[k] == ServiceConnectionStatus.connected)
-      .toList(growable: false);
-
-  List<ServiceKey> get _silent => _configured
-      .where((k) => _status[k] != ServiceConnectionStatus.connected)
-      .toList(growable: false);
 
   /// The ring's state, derived rather than stored: one map, four beats.
   Map<ServiceKey, ServiceRingState> get _ringStates => {
@@ -283,9 +291,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // By its hash, so the fingerprint never holds a secret.
     '${_accessCtrl[k]!.access.hashCode}',
   ].join(' ');
-
-  bool _needsCheck(ServiceKey k) =>
-      _status[k] == null || _verifiedAgainst[k] != _fingerprintOf(k);
 
   /// Every service in this walk whose typed address shares [service]'s TLS
   /// origin: the set a trust decision on it actually covers, computed from
@@ -549,17 +554,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     await _test(service);
   }
 
-  /// Checks every configured service the user did not test by hand.
-  ///
-  /// The close is the last chance to learn that an address or a key is wrong
-  /// while the fields are still one tap away. Runs non-interactively: the result
-  /// is information, not a gate.
-  Future<void> _testUntested() async {
-    final pending = _configured.where(_needsCheck).toList();
-    if (pending.isEmpty) return;
-    await Future.wait(pending.map(_test));
-  }
-
   // ── Persistence ───────────────────────────────────────────────────────────
 
   /// Writes what this walk actually configured, and **only** that.
@@ -650,7 +644,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     }
   }
 
-  /// Marks onboarding complete; the router redirect to /services follows from it.
+  /// Marks the way in finished and goes to the Home. The router never sends
+  /// anyone away from the way in, so leaving it is this method's to do.
   Future<void> _finish() async {
     HapticFeedback.mediumImpact();
     try {
@@ -662,7 +657,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         "Could not finish setup. Retry, and restart Cupola if it keeps "
         'failing.',
       );
+      return;
     }
+    if (mounted) context.go(ServiceRoutes.home);
   }
 
   // ── Navigation ────────────────────────────────────────────────────────────
@@ -670,7 +667,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// The beat on screen. Held in state rather than read off the controller
   /// because `PageController.page` is fractional mid-flight, and the ring above
   /// the pager needs the destination to aim at, not the halfway point.
-  int _page = _doorPage;
+  int _page = _welcomePage;
 
   void _goTo(int page) {
     if (!_pageController.hasClients) return;
@@ -701,70 +698,48 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     );
   }
 
-  Future<void> _enterWalk() async {
-    if (_walk.isEmpty) {
-      // Nothing chosen is a legitimate outcome; the close says so plainly.
-      await _save();
-      if (!mounted) return;
-      setState(() {});
-      _goTo(_closePage);
-      return;
-    }
-    _goTo(_firstWalkPage);
-  }
-
-  /// Saves what has been entered so far, then moves on. Saving per service
-  /// rather than once at the end is what makes an interrupted setup resumable.
-  Future<void> _advanceFrom(ServiceKey service) async {
-    final index = _walk.indexOf(service);
-    await _save();
-    if (!mounted) return;
-    if (index >= 0 && index + 1 < _walk.length) {
-      _goTo(_firstWalkPage + index + 1);
-      return;
-    }
-    setState(() {});
-    _goTo(_closePage);
-    // Not awaited: the close is on screen while the checks run, and the way out
-    // stays usable throughout.
-    _testUntested();
-  }
-
-  void _skip(ServiceKey service) {
+  /// Connect for [service]: the one this visit sets up. A service set aside
+  /// by choosing another stays in the ring and out of settings.
+  void _connect(ServiceKey service) {
     setState(() {
-      _skipped.add(service);
-      _testedAccess.remove(service);
-      _status.remove(service);
-      _reason.remove(service);
-      _gateway.remove(service);
-      _forgetPassedToken(service);
-      _failureDetail.remove(service);
-      _serverVersion.remove(service);
-      _pendingCert.remove(service);
+      if (service != _target && _picked.remove(_target)) {
+        _skipped.add(_target);
+        _forgetPassedToken(_target);
+      }
+      _target = service;
+      _picked.add(service);
+      _skipped.remove(service);
     });
-    _advanceFrom(service);
+    _goTo(_connectPage);
   }
 
-  void _backFrom(ServiceKey service) {
-    final index = _walk.indexOf(service);
-    _goTo(index <= 0 ? _pickPage : _firstWalkPage + index - 1);
+  /// Seerr and Prowlarr lead somewhere: they know the others.
+  bool get _targetKnowsOthers => _target.knowsOthers != null;
+
+  /// The service answered: saved, then on to what it knows, or home.
+  Future<void> _advance() async {
+    final saved = await _save();
+    if (!saved || !mounted) return;
+    await _finish();
   }
 
-  Future<void> _skipEverything() async {
-    await _save();
-    if (!mounted) return;
-    setState(() {});
-    _goTo(_closePage);
-  }
-
-  void _fix(ServiceKey service) {
-    final index = _walk.indexOf(service);
-    if (index < 0) {
-      _goTo(_pickPage);
+  /// Out of Connect: to the Welcome on a first run, back where the visit came
+  /// from when it started at Connect.
+  void _backFromConnect() {
+    if (widget.entry == OnboardingEntry.connect) {
+      _leave();
       return;
     }
-    setState(() => _skipped.remove(service));
-    _goTo(_firstWalkPage + index);
+    _goTo(_welcomePage);
+  }
+
+  /// Back where a visit from inside the app came from.
+  void _leave() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(ServiceRoutes.home);
+    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -784,7 +759,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// the screen empty with no ring in it, and a tall phone with the software
   /// keyboard up has room for a reduced one.
   double _fullRingDiameter(BuildContext context, double available) {
-    final preferred = _page == _doorPage || _page >= _closePage ? 300.0 : 190.0;
+    final preferred = _page == _welcomePage ? 300.0 : 190.0;
     final wanted = serviceRingDiameter(context, preferred: preferred);
     if (!available.isFinite) return wanted;
 
@@ -869,13 +844,47 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// legible, so it leaves instead.
   static const double _ringFloor = 96;
 
+  /// Connect's form for [service]: the step every way in goes through.
+  Widget _connectStep(ServiceKey service) => OnboardingWalk(
+    key: ValueKey(service),
+    service: service,
+    urlController: _urlCtrl[service]!,
+    apiKeyController: _apiKeyCtrl[service]!,
+    usernameController: _usernameCtrl[service]!,
+    passwordController: _passwordCtrl[service]!,
+    accessController: _accessCtrl[service]!,
+    accessFormKey: _accessForm[service]!,
+    showAccess: _accessShown.contains(service),
+    testedAccess: _testedAccess[service],
+    onShowAccess: (kind) => _showAccess(service, kind),
+    status: _status[service],
+    reason: _reason[service],
+    gateway: _gateway[service],
+    sharedTokenFrom: _sharedTokenFor(service)?.from,
+    onUseSharedToken: () {
+      final shared = _sharedTokenFor(service);
+      if (shared == null) return;
+      _useSharedToken(service, shared.token);
+    },
+    failureDetail: _failureDetail[service],
+    serverVersion: _serverVersion[service],
+    verifying: _verifying[service] ?? false,
+    certificateProbe: _pendingCert[service],
+    trustedFingerprint: _pinFor(service),
+    affectedServices: _servicesSharingOrigin(service),
+    advanceLabel: service.knowsOthers != null ? 'Continue' : 'Go to Home',
+    onTest: () => _test(service),
+    onTrustCertificate: () => _trustCertificate(service),
+    onSuggestPort: () => _suggestPort(service),
+    onAdvance: _advance,
+    onBack: _backFromConnect,
+  );
+
   @override
   Widget build(BuildContext context) {
-    final walk = _walk;
     final ringStates = _ringStates;
-    final activeWalk = _page >= _firstWalkPage && _page < _closePage
-        ? walk[_page - _firstWalkPage]
-        : null;
+    final activeWalk = _page == _connectPage ? _target : null;
+    final step = _targetKnowsOthers ? 'Step 1 of 2' : null;
 
     // Resolved here, outside the `Scaffold`: a Scaffold that resizes for the
     // keyboard removes the bottom inset from the MediaQuery it hands its body,
@@ -978,13 +987,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                   entrance: AppAnimation.emphasizedCurve
                                       .transform(_entrance.value),
                                   activeService: activeWalk,
-                                  progress: activeWalk == null
-                                      ? (_page >= _closePage &&
-                                                _silent.isEmpty &&
-                                                _answering.isNotEmpty
-                                            ? 1
-                                            : 0)
-                                      : (_page - _firstWalkPage) / walk.length,
+                                  progress: 0,
                                   spin: true,
                                 ),
                               );
@@ -1010,8 +1013,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                   ),
                                   child: OnboardingWalkSubject(
                                     service: service,
-                                    position: _page - _firstWalkPage + 1,
-                                    total: walk.length,
+                                    step: step,
+                                    onStartElsewhere: () => _goTo(_startPage),
                                   ),
                                 ),
                               ),
@@ -1020,83 +1023,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                 controller: _pageController,
                                 physics: const NeverScrollableScrollPhysics(),
                                 children: [
-                                  OnboardingDoor(
-                                    onStart: () => _goTo(_pickPage),
-                                    onSkip: _skipEverything,
+                                  OnboardingWelcome(
+                                    onSetUp: () => _connect(ServiceKey.seerr),
+                                    onBack: context.canPop() ? _leave : null,
                                   ),
-                                  OnboardingPick(
-                                    picked: _picked,
-                                    onToggle: (service) => setState(() {
-                                      if (_picked.remove(service)) {
-                                        _status.remove(service);
-                                        _reason.remove(service);
-                                        _gateway.remove(service);
-                                        _forgetPassedToken(service);
-                                        _serverVersion.remove(service);
-                                        _pendingCert.remove(service);
-                                      } else {
-                                        _picked.add(service);
-                                        _skipped.remove(service);
-                                      }
-                                    }),
-                                    onContinue: _enterWalk,
-                                    onBack: () => _goTo(_doorPage),
+                                  OnboardingStart(
+                                    onPick: _connect,
+                                    onBack: () => _goTo(_connectPage),
                                   ),
-                                  for (var i = 0; i < walk.length; i++)
-                                    OnboardingWalk(
-                                      service: walk[i],
-                                      urlController: _urlCtrl[walk[i]]!,
-                                      apiKeyController: _apiKeyCtrl[walk[i]]!,
-                                      usernameController:
-                                          _usernameCtrl[walk[i]]!,
-                                      passwordController:
-                                          _passwordCtrl[walk[i]]!,
-                                      accessController: _accessCtrl[walk[i]]!,
-                                      accessFormKey: _accessForm[walk[i]]!,
-                                      showAccess: _accessShown.contains(
-                                        walk[i],
-                                      ),
-                                      testedAccess: _testedAccess[walk[i]],
-                                      onShowAccess: (kind) =>
-                                          _showAccess(walk[i], kind),
-                                      status: _status[walk[i]],
-                                      reason: _reason[walk[i]],
-                                      gateway: _gateway[walk[i]],
-                                      sharedTokenFrom: _sharedTokenFor(
-                                        walk[i],
-                                      )?.from,
-                                      onUseSharedToken: () {
-                                        final shared = _sharedTokenFor(walk[i]);
-                                        if (shared == null) return;
-                                        _useSharedToken(walk[i], shared.token);
-                                      },
-                                      failureDetail: _failureDetail[walk[i]],
-                                      serverVersion: _serverVersion[walk[i]],
-                                      verifying: _verifying[walk[i]] ?? false,
-                                      certificateProbe: _pendingCert[walk[i]],
-                                      trustedFingerprint: _pinFor(walk[i]),
-                                      affectedServices: _servicesSharingOrigin(
-                                        walk[i],
-                                      ),
-                                      next: i + 1 < walk.length
-                                          ? walk[i + 1]
-                                          : null,
-                                      onTest: () => _test(walk[i]),
-                                      onTrustCertificate: () =>
-                                          _trustCertificate(walk[i]),
-                                      onSuggestPort: () =>
-                                          _suggestPort(walk[i]),
-                                      onSkip: () => _skip(walk[i]),
-                                      onAdvance: () => _advanceFrom(walk[i]),
-                                      onBack: () => _backFrom(walk[i]),
-                                    ),
-                                  OnboardingClose(
-                                    connected: _answering,
-                                    silent: _silent,
-                                    onFix: _fix,
-                                    onFinish: _finish,
-                                    onReview: () => _goTo(_pickPage),
-                                  ),
+                                  _connectStep(_target),
                                 ],
                               ),
                             ),
@@ -1123,8 +1058,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                     ? null
                                     : OnboardingWalkSubject.eyebrow(
                                         service: activeWalk,
-                                        position: _page - _firstWalkPage + 1,
-                                        total: walk.length,
+                                        step: step,
                                       ),
                                 child: still
                                     ? ringAt(diameter, settledMark)

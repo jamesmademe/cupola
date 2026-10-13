@@ -8,6 +8,7 @@ import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/settings/data/donation_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -110,16 +111,16 @@ class SettingsRevisitOnboardingRow extends ConsumerWidget {
       icon: Icons.replay_rounded,
       title: 'Revisit onboarding?',
       message:
-          "You'll go through the intro screens again for this session. "
-          'Nothing about your services or settings is changed or removed.',
+          "You'll see the Welcome again. Nothing about your services or "
+          'settings is changed or removed.',
       confirmLabel: 'Revisit onboarding',
     );
 
     if (!result.confirmed) return;
-
-    await markOnboardingIncomplete(ref);
     if (!context.mounted) return;
-    context.go('/onboarding');
+    // Pushed, so Back returns here: the Welcome is never redirected away
+    // from, and nothing about the connections or the flag changes.
+    context.push(ServiceRoutes.welcome);
   }
 }
 

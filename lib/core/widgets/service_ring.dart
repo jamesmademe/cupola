@@ -626,22 +626,14 @@ class _ServiceRingPainter extends CustomPainter {
       old.entrance != entrance || old.sweep != sweep || old.frame != frame;
 }
 
-/// The punchline, and the reason it is here rather than inlined in onboarding:
-/// the claim is meant to be *shared*: the same two lines in the same two inks
-/// carry the dashboard's empty state, so the door prints a claim rather than
-/// owning one.
+/// The claim the Welcome makes: what Cupola is, in one line.
 ///
-/// It used to assert that the empty state already did; it does not. That screen
-/// still prints a headline of its own, and swapping it belongs to the dashboard
-/// rather than here: a doc that describes an intention as a fact is worse than
-/// no doc, because it is the one place a reader would check before changing
-/// either side.
+/// Kept beside the ring rather than inlined in the Welcome because the two are
+/// one composition, drawn together in the catalog: the instrument, then the
+/// sentence that says what it is for.
 ///
-/// **One ink.** The claim used to colour "Cupola" and "your lab." in two hues
-/// of their own; the room is monochrome now (principle 3 of the brand book: colour is
-/// information), so the display face and the line break carry the claim, and
-/// both lines are the primary ink. The span that sets "Cupola" is kept, so the
-/// word stays the unit the line is built around.
+/// **One ink.** The room is monochrome (principle 3 of the brand book: colour
+/// is information), so the display face carries the claim, in the primary ink.
 class OnePunchline extends StatelessWidget {
   const OnePunchline({super.key, this.style});
 
@@ -652,38 +644,20 @@ class OnePunchline extends StatelessWidget {
   /// at the display role's weight and a caption keeps its own.
   final TextStyle? style;
 
-  static const _spoken = 'A Cupola over your lab.';
-  static const _markedLine = 'your lab.';
+  static const claim = 'Your server, like a streaming service.';
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // 1.10 is the display leading floor; two lines of heavy type tighter than
-    // that start to touch.
-    final base = (style ?? theme.textTheme.displayMedium!).copyWith(
-      color: scheme.onSurface,
-      height: 1.10,
-    );
-
     return Semantics(
-      label: _spoken,
-      excludeSemantics: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text.rich(
-            const TextSpan(
-              children: [
-                TextSpan(text: 'A '),
-                TextSpan(text: 'Cupola'),
-                TextSpan(text: ' over'),
-              ],
-            ),
-            style: base,
-          ),
-          Text(_markedLine, style: base),
-        ],
+      header: true,
+      child: Text(
+        claim,
+        style: (style ?? theme.textTheme.displayMedium!).copyWith(
+          color: scheme.onSurface,
+          height: 1.10,
+        ),
       ),
     );
   }

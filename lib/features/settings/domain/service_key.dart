@@ -110,6 +110,34 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.plex => 'Plex',
   };
 
+  /// What the service is for, in a word or two: the line under "Set up X"
+  /// where someone choosing where to start reads the list by role.
+  String get role => switch (this) {
+    ServiceKey.seerr => 'Requests',
+    ServiceKey.radarr => 'Movies',
+    ServiceKey.sonarr => 'Series',
+    ServiceKey.lidarr => 'Music',
+    ServiceKey.bazarr => 'Subtitles',
+    ServiceKey.readarr => 'Books · no longer maintained upstream',
+    ServiceKey.prowlarr => 'Indexers',
+    ServiceKey.qbittorrent || ServiceKey.transmission => 'Torrent client',
+    ServiceKey.sabnzbd || ServiceKey.nzbget => 'Usenet client',
+    ServiceKey.jellyfin || ServiceKey.plex => 'Streaming',
+    ServiceKey.truenas || ServiceKey.unraid => 'Server',
+    ServiceKey.dockge => 'Containers',
+    ServiceKey.nginxProxyManager => 'Reverse proxy',
+  };
+
+  /// What a service knows of the others, for the two that know most of a
+  /// stack: Seerr has its Radarr and Sonarr with their keys, Prowlarr has
+  /// the arrs' addresses and hides their keys. Null for every other service,
+  /// which is set up on its own.
+  String? get knowsOthers => switch (this) {
+    ServiceKey.seerr => 'Knows your Radarr and Sonarr, keys included',
+    ServiceKey.prowlarr => "Knows your arrs' addresses · you add their keys",
+    _ => null,
+  };
+
   /// The service's own mark, from `ServiceGlyphs`.
   ///
   /// A category glyph named what a service *does*: a download arrow, a play

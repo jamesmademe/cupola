@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/reel_motion.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/url_utils.dart';
-import 'package:cupola/core/widgets/reel_command_button.dart';
-import 'package:cupola/core/widgets/reel_line.dart';
+import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/core/widgets/setup_doors.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/onboarding/presentation/widgets/onboarding_glyph_row.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Screen padding for every beat. Wider than the app's 16dp because a beat is a
@@ -512,46 +509,44 @@ class OnboardingFooter extends StatelessWidget {
   }
 }
 
-// ── Beat 1: the door ────────────────────────────────────────────────────────
+// ── The Welcome ─────────────────────────────────────────────────────────────
 
-/// The claim, the ring, and one way in.
-class OnboardingDoor extends StatelessWidget {
-  const OnboardingDoor({
-    super.key,
-    required this.onStart,
-    required this.onSkip,
-  });
+/// The claim and the way in: what a first run opens on.
+///
+/// There is no way past it. With nothing set up the shell has nothing to show,
+/// and the Home at zero would only say the same thing again inside the tabs.
+class OnboardingWelcome extends StatelessWidget {
+  const OnboardingWelcome({super.key, required this.onSetUp, this.onBack});
 
-  final VoidCallback onStart;
-  final VoidCallback onSkip;
+  /// Opens Connect, with Seerr proposed.
+  final VoidCallback onSetUp;
+
+  /// Back where the visit came from, for a Welcome opened from inside the app
+  /// ("Revisit onboarding"). Null on a first run, which came from nowhere.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OnboardingBeat(
       alignment: MainAxisAlignment.end,
-      // Through the footer, not a hand-rolled Column. The door was the one beat
-      // that stacked its pair unconditionally: a full-width primary over a
-      // text button, so it kept a composition the other three give up as soon
-      // as the reading size allows a row, and it would not have inherited the
-      // footer's stacking rule if that rule ever changed.
-      actions: OnboardingFooter(
-        secondary: TextButton(
-          onPressed: onSkip,
-          child: const Text('Skip for now'),
-        ),
-        primary: FilledButton(
-          onPressed: onStart,
-          child: const Text('Set up my stack'),
-        ),
+      actions: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SetupDoors(onSetUp: onSetUp),
+          if (onBack case final back?) ...[
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(onPressed: back, child: const Text('Back')),
+          ],
+        ],
       ),
       children: [
         const OnePunchline(),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          '${ServiceKey.values.length} self-hosted services: media, downloads '
-          'and storage, all on one screen, talking straight to your own '
-          'boxes. No cloud in the middle.',
+          'Cupola talks straight to the services you run at home. No Cupola '
+          'account, no cloud in between.',
           style: theme.textTheme.bodyLarge!.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -561,384 +556,96 @@ class OnboardingDoor extends StatelessWidget {
   }
 }
 
-/// A headline with the one word the claim leans on, set like [OnePunchline]'s
-/// "Cupola" and "your lab.".
+// ── Start with another service ──────────────────────────────────────────────
+
+/// Every service by what it is for, with the two that know the others first:
+/// where Connect goes when the person would rather not start with Seerr.
 ///
-/// In the headline's own ink: the room is monochrome (the brand book's principle 3), so the
-/// word is carried by the display face and its place in the line, never by a
-/// hue. A section's cyan here was decoration, and it measured 2.2:1 on paper
-/// before it was walked.
-class _AccentedHeadline extends StatelessWidget {
-  const _AccentedHeadline({
-    required this.before,
-    required this.accent,
-    required this.after,
-    required this.style,
-  });
-
-  final String before;
-  final String accent;
-  final String after;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        children: [
-          if (before.isNotEmpty) TextSpan(text: before),
-          TextSpan(text: accent),
-          if (after.isNotEmpty) TextSpan(text: after),
-        ],
-      ),
-      style: style,
-    );
-  }
-}
-
-// ── Beat 2: the pick ────────────────────────────────────────────────────────
-
-/// Every service as a chip in four labelled sectors, and the ring above as a
-/// live readout of the choice.
-class OnboardingPick extends StatelessWidget {
-  const OnboardingPick({
+/// A list to choose one from, not a set to tick: each service is set up on its
+/// own, and the ones Seerr or Prowlarr know follow from them.
+class OnboardingStart extends StatelessWidget {
+  const OnboardingStart({
     super.key,
-    required this.picked,
-    required this.onToggle,
-    required this.onContinue,
+    required this.onPick,
     required this.onBack,
   });
 
-  final Set<ServiceKey> picked;
-  final void Function(ServiceKey) onToggle;
-  final VoidCallback onContinue;
+  final ValueChanged<ServiceKey> onPick;
   final VoidCallback onBack;
+
+  static const _knowTheOthers = [ServiceKey.seerr, ServiceKey.prowlarr];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return OnboardingBeat(
-      actions: OnboardingFooter(
-        secondary: OutlinedButton(onPressed: onBack, child: const Text('Back')),
-        // The count is the only thing on this beat that reports the choice back,
-        // and it changes on every chip tap, so it rolls. The slot is reserved
-        // for the longest label the button can ever hold, which is why tapping
-        // the fifteenth service moves a digit rather than the whole word.
-        primary: ReelCommandButton(
-          label: picked.isEmpty ? 'Continue' : 'Continue with ${picked.length}',
-          slotLabels: ['Continue with ${ServiceKey.values.length}'],
-          onPressed: () async => onContinue(),
-        ),
+    final dim = CupolaThemeColors.of(context).dimText;
+    Widget label(String text) => Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.sm),
+      child: Semantics(
+        header: true,
+        child: Text(text, style: AppTheme.chrome(context, color: dim)),
       ),
+    );
+    Widget row(ServiceKey service, {required bool named}) {
+      final title = named ? service.title : 'Set up ${service.title}';
+      final subtitle = service.knowsOthers ?? service.role;
+      return SettingsCard.grouped(
+        leading: Icon(service.icon),
+        title: title,
+        subtitle: subtitle,
+        subtitleMaxLines: 3,
+        trailing: const Icon(Icons.chevron_right_rounded),
+        semanticLabel: '$title. $subtitle',
+        semanticHint: 'opens its address and key',
+        onTap: () => onPick(service),
+      );
+    }
+
+    return OnboardingBeat(
+      actions: TextButton(onPressed: onBack, child: const Text('Back')),
       children: [
-        // Plain, and deliberately so: the leaning headline is the door's and
-        // the close's device, and this beat's own voice is its seventeen chips
-        // and the lit nodes above them.
-        Text(
-          'Pick your services',
-          style: theme.textTheme.headlineMedium!.copyWith(
-            color: theme.colorScheme.onSurface,
+        Semantics(
+          header: true,
+          child: Text(
+            'Start with another service',
+            style: theme.textTheme.headlineMedium!.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Pick what you actually run. Nothing here is permanent. Services '
-          'can be added or dropped any time in Settings.',
+          'Two services already know most of your stack. Any other one is set '
+          'up on its own.',
           style: theme.textTheme.bodyMedium!.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: AppSpacing.xl),
+        label('They know the others'),
+        SettingsGroupCard(
+          children: [
+            for (final service in _knowTheOthers) row(service, named: true),
+          ],
+        ),
         for (final domain in ServiceDomain.values) ...[
-          Text(
-            domain.label,
-            style: AppTheme.chrome(
-              context,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+          label(domain.label),
+          SettingsGroupCard(
             children: [
               for (final service in domain.services)
-                _PickChip(
-                  service: service,
-                  selected: picked.contains(service),
-                  onTap: () => onToggle(service),
-                ),
+                if (!_knowTheOthers.contains(service))
+                  row(service, named: false),
             ],
           ),
-          const SizedBox(height: AppSpacing.xl),
         ],
-      ],
-    );
-  }
-}
-
-class _PickChip extends StatelessWidget {
-  const _PickChip({
-    required this.service,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final ServiceKey service;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    // The brand book's selected chip: the ink fill with the on-ink label, the same for every
-    // service: the chip names the service in words, and a hue per chip turned
-    // the beat into a seventeen-colour legend with nothing to decode.
-    final labelColor = selected ? scheme.onPrimary : scheme.onSurfaceVariant;
-    // 44pt is the iOS minimum target; the label grows the box past it.
-    const constraints = BoxConstraints(minHeight: 44);
-    const padding = EdgeInsets.symmetric(horizontal: AppSpacing.md);
-    final decoration = BoxDecoration(
-      color: selected ? scheme.primary : scheme.surfaceContainer,
-      borderRadius: AppRadius.borderRadiusMd,
-      border: Border.all(
-        color: selected ? scheme.primary : scheme.outlineVariant,
-      ),
-    );
-    // Seventeen of these, and picking a stack means tapping most of them, so
-    // under Reduce Motion the animator goes entirely rather than running short:
-    // this is the beat's most-repeated movement, and the chip's state is
-    // already legible from its fill and its lit node.
-    final still = MediaQuery.disableAnimationsOf(context);
-
-    return Semantics(
-      container: true,
-      button: true,
-      selected: selected,
-      label: service.title,
-      onTap: onTap,
-      child: ExcludeSemantics(
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap();
-          },
-          borderRadius: AppRadius.borderRadiusMd,
-          child: still
-              ? Container(
-                  constraints: constraints,
-                  padding: padding,
-                  decoration: decoration,
-                  child: _label(theme, labelColor),
-                )
-              : AnimatedContainer(
-                  duration: AppAnimation.durationSm,
-                  curve: AppAnimation.emphasizedCurve,
-                  constraints: constraints,
-                  padding: padding,
-                  decoration: decoration,
-                  child: _label(theme, labelColor),
-                ),
-        ),
-      ),
-    );
-  }
-
-  Widget _label(ThemeData theme, Color labelColor) {
-    final scheme = theme.colorScheme;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: selected
-                ? scheme.onPrimary
-                : scheme.onSurfaceVariant.withValues(alpha: 0.40),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        // Flexible, so a long name at an accessibility reading size wraps
-        // onto a second line and the chip grows taller. Unflexed, the
-        // Row overflowed the wrap's available width by exactly its own
-        // padding; and eliding "qBittor…" is not an option: the name is
-        // the only thing the chip says.
-        Flexible(
-          child: Text(
-            service.title,
-            style: theme.textTheme.titleSmall!
-                .weight(FontWeight.w600)
-                .copyWith(color: labelColor),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Beat 4: the close ───────────────────────────────────────────────────────
-
-/// What the walk actually achieved, in words, plus a way to fix the one thing
-/// that did not answer.
-class OnboardingClose extends StatelessWidget {
-  const OnboardingClose({
-    super.key,
-    required this.connected,
-    required this.silent,
-    required this.onFix,
-    required this.onFinish,
-    required this.onReview,
-  });
-
-  final List<ServiceKey> connected;
-  final List<ServiceKey> silent;
-  final void Function(ServiceKey) onFix;
-  final Future<void> Function() onFinish;
-  final VoidCallback onReview;
-
-  /// The mixed outcome as its two painted lines.
-  ///
-  /// Two strings rather than one with a `\n` because these are the only headline
-  /// in the app that **changes while it is being read**: the close mounts and
-  /// *then* `_testUntested` checks everything the user never tested by hand, so
-  /// the first painted value is "0 answer." and the truth arrives a second later.
-  /// That used to be a hard swap: a headline that was briefly, visibly wrong.
-  /// Rolled, the close reports as it learns, which is what it was always meant
-  /// to do. A rolling line cannot contain a newline, so the split is required as
-  /// well as clearer.
-  List<String>? get _countLines {
-    if (connected.isEmpty && silent.isEmpty) return null;
-    if (silent.isEmpty) return null;
-    final many = silent.length == 1
-        ? "One doesn't."
-        : "${silent.length} don't.";
-    return ['${connected.length} answer.', many];
-  }
-
-  /// The service the close offers as the example of what can still be added.
-  ///
-  /// Lidarr by preference, and explicitly **not** Readarr: Readarr is retired
-  /// upstream, so naming it as the thing to add later is advice with a dead end.
-  /// When Lidarr is itself already in the stack the example falls to the first
-  /// registry service that is not: offering to add something the user set up
-  /// two minutes ago is the same defect wearing different clothes. Null when
-  /// there is genuinely nothing left, which is the one case the sentence has to
-  /// drop the name rather than pick a wrong one.
-  ServiceKey? get _exampleToAdd {
-    final missing = ServiceKey.values
-        .where(
-          (s) =>
-              s != ServiceKey.readarr &&
-              !connected.contains(s) &&
-              !silent.contains(s),
-        )
-        .toList(growable: false);
-    if (missing.isEmpty) return null;
-    return missing.contains(ServiceKey.lidarr)
-        ? ServiceKey.lidarr
-        : missing.first;
-  }
-
-  String get _body {
-    if (connected.isEmpty && silent.isEmpty) {
-      // Dashboard, not Services: the home is `/dashboard` and the cards the
-      // sentence points at are the ones on it.
-      return 'Cupola will stay empty until you add a service. You can do '
-          'that any time in Settings, or from any dark card on the Dashboard.';
-    }
-    if (silent.isEmpty) {
-      // The count first, then the reassurance, then the honest sentence. The
-      // reassurance used to sit in the headline's neighbourhood with nothing
-      // behind it: a user who connected three of seventeen was told their
-      // whole stack was in one place, which is the sort of claim that teaches
-      // someone not to read the next one.
-      final example = _exampleToAdd;
-      final rest = example == null
-          ? 'Anything you add later goes in Settings, or on any dark card on '
-                'the Dashboard.'
-          : '${example.title} and the rest can be added any time in Settings, '
-                'or from any dark card on the Dashboard.';
-      return '${connected.length}/${ServiceKey.values.length} services '
-          'answered. Everything you set up is ready to use. $rest';
-    }
-    final names = silent.map((s) => s.title).join(', ');
-    final verb = silent.length == 1 ? 'is' : 'are';
-    return '$names $verb configured but nothing came back. Cupola will keep '
-        'trying, or you can look at it now.';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final headlineStyle = theme.textTheme.displaySmall!.copyWith(
-      color: scheme.onSurface,
-    );
-    return OnboardingBeat(
-      alignment: MainAxisAlignment.end,
-      actions: OnboardingFooter(
-        secondary: silent.isEmpty
-            ? OutlinedButton(onPressed: onReview, child: const Text('Review'))
-            : OutlinedButton(
-                onPressed: () => onFix(silent.first),
-                child: Text('Fix ${silent.first.title}'),
-              ),
-        primary: _FinishButton(onFinish: onFinish),
-      ),
-      children: [
-        if (_countLines case final lines?)
-          for (final line in lines)
-            ReelLine(
-              line,
-              style: headlineStyle,
-              options: ReelMotion.figure,
-              // Wrapping is what the plain headline did at accessibility sizes
-              // and it stays the fallback, so a reading size that cannot hold
-              // "12 don't." on one line loses the roll rather than the line.
-              fallbackMaxLines: null,
-            )
-        else if (connected.isEmpty && silent.isEmpty)
-          Text('Nothing set up yet.', style: headlineStyle)
-        else
-          _AccentedHeadline(
-            before: 'Nothing left in the ',
-            accent: 'dark',
-            after: '.',
-            style: headlineStyle,
-          ),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          _body,
-          style: theme.textTheme.bodyLarge!.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
+          'Each one asks for its address and key, and is saved only once it '
+          'answers.',
+          style: theme.textTheme.bodySmall!.copyWith(color: dim),
         ),
-        // The ring resolved into a result. It is the services that *answered*
-        // and not the ones that were picked: a lit tile for a service that
-        // never replied would be the close contradicting its own headline, and
-        // the mixed-outcome arm already names those in the body.
-        if (connected.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.xl),
-          OnboardingGlyphRow(services: connected),
-        ],
       ],
     );
   }
-}
-
-class _FinishButton extends StatelessWidget {
-  const _FinishButton({required this.onFinish});
-  final Future<void> Function() onFinish;
-
-  @override
-  Widget build(BuildContext context) => ReelCommandButton(
-    label: 'Enter Cupola',
-    busyLabel: 'Opening',
-    onPressed: onFinish,
-  );
 }
 
 // ── Fields ──────────────────────────────────────────────────────────────────

@@ -14,6 +14,18 @@ class ServiceRoutes {
   /// Edit Home, from the foot of the Home: its modules reordered and hidden.
   static const homeEdit = '$home/edit';
 
+  /// The way in, outside the shell: the Welcome, then Connect and Found.
+  /// Reachable at any time ("Revisit onboarding", the Home at zero), so the
+  /// router never sends anyone away from it.
+  static const welcome = '/welcome';
+
+  /// Connect, without the Welcome before it: the Home at zero's
+  /// "Set up a service", which is already past the claim.
+  static const welcomeConnect = '$welcome/connect';
+
+  /// Where the way in lived before the Welcome. Rewrites onto [welcome].
+  static const legacyOnboarding = '/onboarding';
+
   /// The Stack tab, and the prefix every service's room hangs off: one
   /// service is a *service home* at `/stack/{key}`. TrueNAS keeps the word
   /// "dashboard" for its own console section because the app does not rename
