@@ -145,6 +145,9 @@ bool _isConnected(ConnectionCandidate candidate, SettingsModel settings) {
       ? _addressKey(candidate.proposal?.url)
       : null;
   for (final connection in settings.instancesOf(candidate.service)) {
+    // A key the keychain kept after its address went is nothing anyone could
+    // talk to, and must not hide the server it belongs to.
+    if (connection.url.trim().isEmpty) continue;
     if (key != null && key.isNotEmpty && connection.credential == key) {
       return true;
     }

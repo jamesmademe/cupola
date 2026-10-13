@@ -271,6 +271,32 @@ void main() {
       expect([for (final c in candidates) c.displayName], ['Radarr', 'Sonarr']);
     });
 
+    test('a key left behind with no address matches nothing', () async {
+      // The keychain can outlive an address: a key on its own is nothing
+      // anyone could talk to, and must not hide the server it belongs to.
+      final (_, container) = await start(Profiles.p5);
+      final radarrKey = (await known(
+        container,
+        WorldIds.seerr,
+      )).firstWhere((c) => c.service == ServiceKey.radarr).apiKey!;
+      final settings = container.read(currentSettingsProvider);
+      await container
+          .read(settingsProvider.notifier)
+          .updateSettings(
+            settings.copyWithInstance(
+              ServiceInstance(
+                id: ServiceInstance.primaryIdFor(ServiceKey.radarr),
+                service: ServiceKey.radarr,
+                credential: radarrKey,
+              ),
+            ),
+          );
+
+      final candidates = await known(container, WorldIds.seerr);
+
+      expect([for (final c in candidates) c.displayName], ['Radarr', 'Sonarr']);
+    });
+
     test('adding a connection re-filters the list and does not ask the source '
         'again', () async {
       final (harness, container) = await start(Profiles.p5);
