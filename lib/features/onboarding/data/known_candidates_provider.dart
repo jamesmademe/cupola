@@ -43,6 +43,64 @@ final knownCandidatesProvider = FutureProvider.autoDispose
       return withoutConnected(all, settings);
     }, retry: noProviderRetry);
 
+/// Everything still to be added that any connection knows of: what every
+/// Seerr and Prowlarr says, in that order, each server once. What Set up next
+/// and Connections offer first.
+///
+/// **A source that does not answer is left out, never the whole list.** These
+/// are offers on surfaces that stand without them: a Seerr that is down
+/// removes its own lines and nothing else, and the failure is said where that
+/// Seerr is, not here.
+///
+/// Each server once: a Radarr Seerr lists with its key and Prowlarr lists
+/// without one is offered once, from Seerr, which is first because it brings
+/// the key (see [isSameServer]).
+final foundCandidatesProvider =
+    FutureProvider.autoDispose<List<ConnectionCandidate>>((ref) async {
+      final sources = ref
+          .watch(currentSettingsProvider.select(_sourcesOf))
+          .split(' ')
+          .where((id) => id.isNotEmpty);
+      // Watched before the first wait, so every source is asked at once and
+      // each one is a dependency whatever answers first.
+      final asked = [
+        for (final id in sources) ref.watch(knownCandidatesProvider(id).future),
+      ];
+      final found = <ConnectionCandidate>[];
+      for (final answer in asked) {
+        final List<ConnectionCandidate> known;
+        try {
+          known = await answer;
+        } catch (_) {
+          continue;
+        }
+        for (final candidate in known) {
+          if (!found.any((kept) => isSameServer(kept, candidate))) {
+            found.add(candidate);
+          }
+        }
+      }
+      return found;
+    }, retry: noProviderRetry);
+
+/// The connections that know others, Seerrs before Prowlarrs, as one string
+/// of ids: a value the `select` above compares by equality, so a change to any
+/// other connection asks nothing again.
+String _sourcesOf(SettingsModel settings) => [
+  for (final service in const [ServiceKey.seerr, ServiceKey.prowlarr])
+    for (final connection in settings.instancesOf(service))
+      if (connection.isConfigured) connection.id,
+].join(' ');
+
+/// Whether [a] and [b], heard of from two sources, are one server: the same
+/// service with the same key, or reported at the same address.
+bool isSameServer(ConnectionCandidate a, ConnectionCandidate b) {
+  if (a.service != b.service) return false;
+  final key = a.apiKey;
+  if (key != null && key.isNotEmpty && key == b.apiKey) return true;
+  return isSameAddress(a.reportedUrl, b.reportedUrl);
+}
+
 /// What the source says, before anything is dropped: the one read of the
 /// network. Watches the source connection alone (its address, its way in), so
 /// a change to another connection does not ask again.

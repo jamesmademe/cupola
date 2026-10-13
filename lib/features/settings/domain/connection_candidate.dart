@@ -103,6 +103,16 @@ class ConnectionCandidate {
   /// Whether the source gave a key, so nothing has to be typed if it works.
   bool get hasKey => apiKey != null;
 
+  /// What it is called beside its service once it is a connection, as a label
+  /// typed in Connections would be: see [foundLabel].
+  String get labelBesideService => foundLabel(service, displayName);
+
+  /// Where it was heard of, and what is left to do: `Seerr knows it · key
+  /// found`, or `Prowlarr knows it · paste its key`.
+  String get knownLine =>
+      '${source.service.title} knows it · '
+      '${hasKey ? 'key found' : 'paste its key'}';
+
   /// Where this device should try it: [reportedUrl], or the source's own
   /// host with the reported port when the reported host is one only the
   /// source resolves. Null when the source reported no address that names a
@@ -141,4 +151,18 @@ class ConnectionCandidate {
       'from ${source.service.name} ${source.connectionId}, '
       'key: ${hasKey ? 'given' : 'none'}'
       '${is4k ? ', 4K' : ''}${isDefault ? ', default' : ''})';
+}
+
+/// What a found connection is called beside its service, as a label typed in
+/// Connections would be: Seerr's "Radarr 4K" is "4K" next to Radarr, and a
+/// name that is only the service's own says nothing to add.
+String foundLabel(ServiceKey service, String name) {
+  final trimmed = name.trim();
+  final title = service.title.toLowerCase();
+  final lower = trimmed.toLowerCase();
+  if (lower == title) return '';
+  if (lower.startsWith('$title ')) {
+    return trimmed.substring(title.length).trim();
+  }
+  return trimmed;
 }

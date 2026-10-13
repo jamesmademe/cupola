@@ -326,4 +326,45 @@ void main() {
       expect(settingsPaths(harness, WorldIds.seerr), hasLength(asked));
     });
   });
+
+  group('everything known, for Set up next and Connections', () {
+    test('Seerr first, then Prowlarr, each server once', () async {
+      final (_, container) = await start(
+        Profiles.p5.withConnection(WorldConnections.prowlarr),
+      );
+
+      final found = await container.read(foundCandidatesProvider.future);
+
+      expect(
+        [for (final c in found) (c.displayName, c.source.service)],
+        [
+          ('Radarr', ServiceKey.seerr),
+          ('Sonarr', ServiceKey.seerr),
+          ('Radarr 4K', ServiceKey.prowlarr),
+          ('Lidarr', ServiceKey.prowlarr),
+        ],
+      );
+      // Seerr's listing is the one kept, because it brings the key.
+      expect(found.first.hasKey, isTrue);
+    });
+
+    test(
+      'a source that does not answer leaves out its own lines only',
+      () async {
+        final (_, container) = await start(
+          Profiles.p5
+              .withConnection(WorldConnections.prowlarr)
+              .withBehaviour(WorldIds.seerr, ConnectionBehaviour.didNotAnswer),
+        );
+
+        final found = await container.read(foundCandidatesProvider.future);
+
+        expect(
+          {for (final c in found) c.source.service},
+          {ServiceKey.prowlarr},
+        );
+        expect(found, isNotEmpty);
+      },
+    );
+  });
 }

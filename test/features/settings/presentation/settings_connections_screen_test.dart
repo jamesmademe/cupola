@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_candidate.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -43,6 +45,58 @@ void main() {
       expect(find.text('seerr.local'), findsOneWidget);
       expect(find.text('radarr.local:7878'), findsOneWidget);
       expect(find.text('Not set up'), findsNWidgets(total - 2));
+    });
+
+    testWidgets('offers first what the connections already know, filled in', (
+      tester,
+    ) async {
+      await _pumpConnectionsScreen(
+        tester,
+        settings: settingsWith(
+          seerrUrl: 'https://seerr.local',
+          seerrApiKey: 'key',
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'key',
+        ),
+        diagnosis: const ServiceDiagnosis.connected(),
+        found: const [
+          ConnectionCandidate(
+            service: ServiceKey.radarr,
+            name: 'Radarr 4K',
+            reportedUrl: 'https://radarr.local:7879',
+            source: CandidateSource(
+              service: ServiceKey.seerr,
+              connectionId: 'seerr',
+              url: 'https://seerr.local',
+            ),
+            apiKey: 'found-key',
+          ),
+        ],
+      );
+
+      expect(find.text('Ready to add'), findsOneWidget);
+      expect(find.text('Add Radarr 4K'), findsOneWidget);
+      expect(find.text('Seerr knows it · key found'), findsOneWidget);
+      // Above what is set up.
+      expect(
+        tester.getTopLeft(find.text('Ready to add')).dy,
+        lessThan(tester.getTopLeft(find.text('Your services')).dy),
+      );
+
+      await tester.tap(find.text('Add Radarr 4K'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ServicePage:radarr'), findsOneWidget);
+      // A second Radarr, beside the one set up; only names in the location.
+      expect(
+        find.text('Query:new=1&from=seerr&known=Radarr+4K'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('with nothing known, there is no such section', (tester) async {
+      await _pumpConnectionsScreen(tester);
+      expect(find.text('Ready to add'), findsNothing);
     });
 
     testWidgets('groups connected services by domain', (tester) async {
@@ -204,6 +258,7 @@ Future<void> _pumpConnectionsScreen(
   WidgetTester tester, {
   SettingsModel settings = const SettingsModel(),
   ServiceDiagnosis? diagnosis,
+  List<ConnectionCandidate> found = const [],
 }) async {
   final router = GoRouter(
     initialLocation: '/settings/connections',
@@ -216,7 +271,14 @@ Future<void> _pumpConnectionsScreen(
         path: '/settings/service/:service',
         builder: (context, state) {
           final service = state.pathParameters['service'] ?? 'unknown';
-          return Scaffold(body: Text('ServicePage:$service'));
+          return Scaffold(
+            body: Column(
+              children: [
+                Text('ServicePage:$service'),
+                Text('Query:${state.uri.query}'),
+              ],
+            ),
+          );
         },
       ),
     ],
@@ -235,6 +297,7 @@ Future<void> _pumpConnectionsScreen(
     ProviderScope(
       overrides: [
         currentSettingsProvider.overrideWith((ref) => settings),
+        foundCandidatesProvider.overrideWith((ref) async => found),
         if (diagnosis != null)
           serviceDiagnosisProvider.overrideWith((ref, service) async {
             return diagnosis;

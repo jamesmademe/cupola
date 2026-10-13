@@ -738,6 +738,23 @@ class ServiceRoutes {
   /// `Lexicon.setUp`) navigates here, and nowhere else.
   static String setUp(ServiceKey service) => settingsFor(service);
 
+  /// The form for a connection of [service], filled in from what the
+  /// connection [sourceId] (a Seerr or a Prowlarr) says of the server it
+  /// calls [name]. Only names travel: the form asks the source for the rest.
+  ///
+  /// [alongside] when the service has a connection already: the form adds a
+  /// second one, and asks for the name that tells the two apart.
+  static String addFound(
+    ServiceKey service, {
+    required String sourceId,
+    required String name,
+    required bool alongside,
+  }) => _withQuery(settingsFor(service), {
+    'new': alongside ? '1' : null,
+    'from': sourceId,
+    'known': name,
+  });
+
   /// The settings form of one saved connection of [service], where a
   /// too-narrow credential is replaced.
   ///

@@ -3033,6 +3033,8 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
             initialAccess: AccessKind.byName(
               state.uri.queryParameters['access'],
             ),
+            foundFrom: state.uri.queryParameters['from'],
+            foundName: state.uri.queryParameters['known'],
           );
         },
         // A service the app does not know is no service's form. It used to

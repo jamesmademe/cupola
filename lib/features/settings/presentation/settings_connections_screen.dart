@@ -4,13 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/domain_section.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_candidate.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/service_connection_row.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
@@ -38,6 +41,11 @@ class SettingsConnectionsScreen extends ConsumerWidget {
     final available = ServiceKey.values
         .where((service) => !settings.hasServiceConnection(service))
         .toList(growable: false);
+    // What the connections that know others say, still to be added: offered
+    // first, and simply absent while they have not answered or if they do not.
+    final found =
+        ref.watch(foundCandidatesProvider).asData?.value ??
+        const <ConnectionCandidate>[];
 
     return AmbientScaffold(
       // No accent: a settings pane has no artwork, so its room is lit by the
@@ -54,6 +62,47 @@ class SettingsConnectionsScreen extends ConsumerWidget {
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
+            if (found.isNotEmpty) ...[
+              const SectionHeader(
+                title: 'Ready to add',
+                showChevron: false,
+                subtitle:
+                    'Your services already know these: the address, and the '
+                    'key when they have it, are filled in.',
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SettingsGroupCard(
+                children: [
+                  for (final candidate in found)
+                    SettingsCard.grouped(
+                      leading: Icon(candidate.service.icon),
+                      title: 'Add ${candidate.displayName}',
+                      subtitle: candidate.knownLine,
+                      // The add of the rows under it: this one only comes
+                      // filled in.
+                      trailing: Icon(
+                        Icons.add_rounded,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      semanticLabel:
+                          'Add ${candidate.displayName}. '
+                          '${candidate.knownLine}',
+                      semanticHint: 'opens its form, filled in',
+                      onTap: () => context.push(
+                        ServiceRoutes.addFound(
+                          candidate.service,
+                          sourceId: candidate.source.connectionId,
+                          name: candidate.displayName,
+                          alongside: settings.hasServiceConnection(
+                            candidate.service,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
             if (configured.isNotEmpty) ...[
               SectionHeader.action(
                 // Not "Answering": this section is what has an address saved,

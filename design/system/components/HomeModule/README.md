@@ -225,10 +225,13 @@ Everything comes from her own Seerr session; no fault, no service named but her 
 
 ## Set up next and Edit Home
 
-- **Set up next** (`SetUpNextModule`): at most three services the stack lacks, each with what it adds (`Set up
-  Jellyfin · Play, Continue watching and Now playing`), ordered by how much, then `All services`. A Plex stands for
-  Jellyfin, any download client for the four. Absent when nothing it knows of is missing. Each row opens that service's
-  setup form in Settings, whose way back leads to the Home.
+- **Set up next** (`SetUpNextModule`): at most three lines, then `All services`. First what another connection already
+  knows (`foundCandidatesProvider`: every Seerr and Prowlarr, each server once): `Add Radarr 4K`, its line led by a key,
+  `Seerr knows it · key found` (`Prowlarr knows it · paste its key`), opening the service's form filled in from the
+  source (`ServiceRoutes.addFound`). Then the services the stack lacks, each with what it adds (`Set up Jellyfin · Play,
+  Continue watching and Now playing`), ordered by how much; a service a known server stands for is not suggested again.
+  A Plex stands for Jellyfin, any download client for the four. Each row carries its service's mark in a 36pt tile.
+  Absent when nothing is missing. Each row opens its form in Settings, whose way back leads to the Home.
 - **EditHomeRow**: the last thing on the operator's Home, a dashed `edge` around `Edit Home · Reorder and hide
   modules`, opening `/home/edit`.
 
@@ -241,7 +244,7 @@ need you. Review`), announced when it appears. Each Set up next row is one butto
 ## States in the catalog
 
 Each sheet is drawn in the dark and the light room: the frame ready, loading, silent and needing a service; Needs
-you led by a group, by one fault and by a silent service; Set up next over Radarr, Sonarr and Seerr; Downloads moving
+you led by a group, by one fault and by a silent service; Set up next over Radarr, Sonarr and Seerr, and with what Seerr and Prowlarr know first; Downloads moving
 with one stuck and one queued, with qBittorrent silent, and with nothing moving; Requests with one row answered; Now playing with two
 playbacks; Continue watching with two titles and asking who you are; Coming up over three days, and with Lidarr silent
 and nothing by Friday; Arrived over a week, with Radarr 4K silent, and as last drawn at a cold start under the Home's line; Stack health with three faults, with Radarr

@@ -10,18 +10,30 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/domain/set_up_next.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
+import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_candidate.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
 
 /// Set up next: the services that would add the most to this Home, at its
-/// foot, then the whole list. Absent when nothing it knows of is missing.
+/// foot, then the whole list. What another connection already knows comes
+/// first, and opens its form filled in. Absent when nothing is missing.
 class SetUpNextModule extends ConsumerWidget {
   const SetUpNextModule({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
-    final suggestions = setUpNextOf(settings.hasServiceConnection);
+    // An offer, not a fact: until the sources answer, and if they do not, the
+    // module is what it always was.
+    final found =
+        ref.watch(foundCandidatesProvider).asData?.value ??
+        const <ConnectionCandidate>[];
+    final suggestions = setUpNextOf(
+      settings.hasServiceConnection,
+      found: found,
+    );
     if (suggestions.isEmpty) return const SizedBox.shrink();
 
     return HomeModuleFrame(
@@ -34,13 +46,21 @@ class SetUpNextModule extends ConsumerWidget {
             _SetUpRow(
               title: suggestion.title,
               line: suggestion.line,
+              icon: suggestion.service?.icon ?? Icons.download_rounded,
+              keyed: suggestion.found != null,
               divided: index > 0,
               onTap: () => openSettings(
                 context,
                 ref,
-                to: switch (suggestion.service) {
-                  final service? => ServiceRoutes.setUp(service),
-                  null => ServiceRoutes.settingsConnections,
+                to: switch ((suggestion.found, suggestion.service)) {
+                  (final found?, _) => ServiceRoutes.addFound(
+                    found.service,
+                    sourceId: found.source.connectionId,
+                    name: found.displayName,
+                    alongside: settings.hasServiceConnection(found.service),
+                  ),
+                  (null, final service?) => ServiceRoutes.setUp(service),
+                  (null, null) => ServiceRoutes.settingsConnections,
                 },
               ),
             ),
@@ -64,11 +84,19 @@ class _SetUpRow extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.line,
+    this.icon,
+    this.keyed = false,
     this.divided = false,
   });
 
   final String title;
   final String? line;
+
+  /// The service's mark, in a tile before the title; none on `All services`.
+  final IconData? icon;
+
+  /// A server another connection knows: its line leads with a key.
+  final bool keyed;
   final bool divided;
   final VoidCallback onTap;
 
@@ -85,11 +113,24 @@ class _SetUpRow extends StatelessWidget {
         semanticValue: line,
         excludeChildSemantics: true,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 52),
+          constraints: BoxConstraints(minHeight: icon == null ? 52 : 64),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
             child: Row(
               children: [
+                if (icon case final icon?) ...[
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: room.fillQuiet,
+                      borderRadius: AppRadius.borderRadiusSm,
+                      border: Border.all(color: room.hair),
+                    ),
+                    child: Icon(icon, size: 19, color: room.ink),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,8 +138,26 @@ class _SetUpRow extends StatelessWidget {
                     children: [
                       Text(title, style: AppType.row.copyWith(color: room.ink)),
                       if (line case final line?)
-                        Text(
-                          line,
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              if (keyed)
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      right: AppSpacing.xs,
+                                    ),
+                                    child: Icon(
+                                      Icons.key_rounded,
+                                      size: 15,
+                                      color: room.inkSecondary,
+                                    ),
+                                  ),
+                                ),
+                              TextSpan(text: line),
+                            ],
+                          ),
                           style: AppType.meta.copyWith(
                             color: room.inkSecondary,
                           ),

@@ -42,7 +42,9 @@ import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_candidate.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
@@ -532,6 +534,39 @@ void main() {
         'service adds, then All services',
         (_) => const SetUpNextModule(),
         width: 390,
+      ),
+      CatalogScene(
+        'Set up next · what Seerr and Prowlarr know comes first, its line led '
+        'by a key; Radarr 4K is added beside the Radarr set up',
+        (_) => const SetUpNextModule(),
+        width: 390,
+        overrides: [
+          foundCandidatesProvider.overrideWith(
+            (ref) async => const [
+              ConnectionCandidate(
+                service: ServiceKey.radarr,
+                name: 'Radarr 4K',
+                reportedUrl: 'http://nas.lan:7879',
+                source: CandidateSource(
+                  service: ServiceKey.seerr,
+                  connectionId: 'seerr',
+                  url: 'http://nas.lan:5055',
+                ),
+                apiKey: 'catalog-key',
+              ),
+              ConnectionCandidate(
+                service: ServiceKey.lidarr,
+                name: 'Lidarr',
+                reportedUrl: 'http://nas.lan:8686',
+                source: CandidateSource(
+                  service: ServiceKey.prowlarr,
+                  connectionId: 'prowlarr',
+                  url: 'http://nas.lan:9696',
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       CatalogScene(
         'Downloads · what moves, how far and how long; the stuck one in '

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/onboarding/presentation/widgets/onboarding_found.dart';
+import 'package:cupola/features/settings/domain/connection_candidate.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {

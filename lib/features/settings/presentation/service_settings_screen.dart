@@ -37,7 +37,9 @@ import 'package:cupola/features/stream/presentation/widgets/jellyfin_viewer_pick
 import 'package:go_router/go_router.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_candidate.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/connection_access_rules.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -84,6 +86,13 @@ class ServiceSettingsScreen extends ConsumerStatefulWidget {
   /// its Access row, with this choice made when the connection has none yet.
   final AccessKind? initialAccess;
 
+  /// A server another connection knows, to add: the connection that knows it
+  /// ([foundFrom], a Seerr or a Prowlarr) and the name it gives it
+  /// ([foundName]). The form asks that connection again and fills in what it
+  /// says (address, key, name), so nothing secret travels in the location.
+  final String? foundFrom;
+  final String? foundName;
+
   const ServiceSettingsScreen({
     super.key,
     required this.service,
@@ -92,6 +101,8 @@ class ServiceSettingsScreen extends ConsumerStatefulWidget {
     this.certificateProber = probeUntrustedCertificate,
     this.localNetworkProbe = probeLocalNetworkAccess,
     this.initialAccess,
+    this.foundFrom,
+    this.foundName,
   });
 
   @override
@@ -140,6 +151,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// Result of the last "Test connection", or null when it has not been run
   /// since the fields last changed.
   ServiceDiagnosis? _testResult;
+
+  /// The server this form was opened to add, once the connection that knows
+  /// it has said so; see [ServiceSettingsScreen.foundFrom].
+  ConnectionCandidate? _found;
+  ProviderSubscription<AsyncValue<List<ConnectionCandidate>>>? _foundAsked;
 
   /// Field values as loaded, so leaving with edits can warn instead of silently
   /// discarding them.
@@ -208,6 +224,42 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     for (final controller in _controllers.values) {
       controller.addListener(_onFieldChanged);
     }
+
+    if ((widget.foundFrom, widget.foundName) case (final from?, final name?)) {
+      // After the first frame: an answer already held arrives at once, and
+      // filling the fields rebuilds the form.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _foundAsked = ref.listenManual(
+          knownCandidatesProvider(from),
+          (_, next) => _fillFound(next, name),
+          fireImmediately: true,
+        );
+      });
+    }
+  }
+
+  /// Fills the fields with what the connection that knows the server says,
+  /// once: the address proposed for this device, the key when it gave one,
+  /// and the name it uses beside the service. The fields stay the person's
+  /// to change, and are unsaved until saved.
+  void _fillFound(AsyncValue<List<ConnectionCandidate>> answer, String name) {
+    if (answer is AsyncLoading) return;
+    _foundAsked?.close();
+    _foundAsked = null;
+    final known = answer.asData?.value ?? const <ConnectionCandidate>[];
+    final candidate = known
+        .where((c) => c.service == service && c.displayName == name)
+        .firstOrNull;
+    if (candidate == null || !mounted) return;
+    _urlController.text = candidate.proposal?.url ?? candidate.reportedUrl;
+    if (candidate.apiKey case final key? when key.isNotEmpty) {
+      _apiKeyController.text = key;
+    }
+    if (_labelController.text.trim().isEmpty) {
+      _labelController.text = candidate.labelBesideService;
+    }
+    setState(() => _found = candidate);
   }
 
   Map<String, TextEditingController> get _controllers => {
@@ -298,6 +350,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   @override
   void dispose() {
+    _foundAsked?.close();
     for (final controller in _controllers.values) {
       controller.removeListener(_onFieldChanged);
     }
@@ -755,6 +808,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             ),
             // Setup guidance is registry data, alongside the default port and
             // the credential breadcrumb this screen already reads from there.
+            if (_found case final found?) ...[
+              const SizedBox(height: AppSpacing.md),
+              _buildInfoNote(context, _foundNote(found)),
+            ],
             if (service.setupNote case final note?) ...[
               const SizedBox(height: AppSpacing.md),
               _buildInfoNote(context, note),
@@ -1470,6 +1527,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   /// A neutral, icon-led information banner used for per-service setup hints.
+  /// What the form was filled in from, and what is left to do.
+  String _foundNote(ConnectionCandidate found) {
+    final source = found.source.service.title;
+    return found.hasKey
+        ? '$source knows this ${service.title}: its address and key are filled '
+              'in. Test it, then save.'
+        : '$source knows this ${service.title}: its address is filled in. '
+              'Paste its key, test it, then save.';
+  }
+
   Widget _buildInfoNote(BuildContext context, String message) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
