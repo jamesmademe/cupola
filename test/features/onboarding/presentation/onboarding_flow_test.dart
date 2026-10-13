@@ -175,9 +175,8 @@ void main() {
       await flow.harness.unmount(tester);
     });
 
-    testWidgets('Continue on Seerr saves it and leaves for the Home', (
-      tester,
-    ) async {
+    testWidgets('Continue on Seerr opens what it knows, and adding them '
+        'leaves for the Home', (tester) async {
       final flow = await _pumpFlow(tester, Profiles.p3);
       await _tap(tester, flow, 'Set up a service');
       await _fill(tester, flow, WorldHosts.seerr, WorldIds.seerr);
@@ -185,11 +184,25 @@ void main() {
 
       await _tap(tester, flow, 'Continue');
 
+      // Seerr is saved before Found asks it anything; the way in is not over.
+      expect(find.text('Step 2 of 2'), findsOneWidget);
+      expect(flow.container.read(onboardingCompletedProvider), isFalse);
+      expect(flow.container.read(settingsProvider).seerrUrl, WorldHosts.seerr);
+      expect(
+        flow.container.read(settingsProvider).seerrApiKey,
+        worldKey(WorldIds.seerr),
+      );
+
+      await tester.tap(findLine('Add 2 services'));
+      await flow.harness.settle(tester);
+
       expect(flow.router.state.uri.path, ServiceRoutes.home);
       expect(flow.container.read(onboardingCompletedProvider), isTrue);
       final saved = flow.container.read(settingsProvider);
-      expect(saved.seerrUrl, WorldHosts.seerr);
-      expect(saved.seerrApiKey, worldKey(WorldIds.seerr));
+      expect(saved.radarrUrl, isNotEmpty);
+      expect(saved.radarrApiKey, worldKey(WorldIds.radarr));
+      expect(saved.sonarrUrl, isNotEmpty);
+      expect(saved.sonarrApiKey, worldKey(WorldIds.sonarr));
 
       await flow.harness.unmount(tester);
     });

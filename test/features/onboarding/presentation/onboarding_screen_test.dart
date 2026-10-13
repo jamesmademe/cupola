@@ -344,6 +344,11 @@ void main() {
     ) async {
       await _pumpOnboarding(tester);
       await _openService(tester, 'Sonarr');
+      // Nothing typed: no host to put the port on, so no chip.
+      expect(_semantics('Use port 8989'), findsNothing);
+
+      await tester.enterText(find.byType(TextField).first, 'http://nas.local');
+      await tester.pumpAndSettle();
       expect(_semantics('Use port 8989'), findsOneWidget);
 
       await tester.enterText(
@@ -618,9 +623,11 @@ void main() {
         findsWidgets,
       );
 
+      // Connect alone answers nothing yet: what was picked is not said, only
+      // what has answered.
       await _tap(tester, 'Set up a service');
       expect(
-        _semantics('1 of ${ServiceKey.values.length} chosen'),
+        _semantics('${ServiceKey.values.length} services, none set up yet'),
         findsWidgets,
       );
     });

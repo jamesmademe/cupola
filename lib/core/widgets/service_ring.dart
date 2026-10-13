@@ -203,12 +203,16 @@ class _ServiceRingState extends State<ServiceRing>
     final silent = widget.states.values
         .where((s) => s == ServiceRingState.silent)
         .length;
-    if (picked == 0) {
+    // What has answered, never what was picked: the way in sets services up
+    // one at a time, so there is no choice among the seventeen to report.
+    final parts = <String>[
+      if (connected > 0)
+        '$connected of ${ServiceKey.values.length} answering',
+      if (silent > 0) '$silent ${StateWord.didNotAnswer.inline}',
+    ];
+    if (parts.isEmpty || picked == 0) {
       return '${ServiceKey.values.length} services, none set up yet';
     }
-    final parts = <String>['$picked of ${ServiceKey.values.length} chosen'];
-    if (connected > 0) parts.add('$connected answering');
-    if (silent > 0) parts.add('$silent ${StateWord.didNotAnswer.inline}');
     return parts.join(', ');
   }
 

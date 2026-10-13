@@ -87,7 +87,7 @@ List<Widget> settingsAboutRows(
   ];
 }
 
-/// Walks the intro screens again, after asking.
+/// Opens the Welcome again, after asking: nothing set up is touched.
 class SettingsRevisitOnboardingRow extends ConsumerWidget {
   const SettingsRevisitOnboardingRow({super.key});
 
@@ -96,8 +96,8 @@ class SettingsRevisitOnboardingRow extends ConsumerWidget {
     return SettingsCard.grouped(
       leading: const Icon(Icons.replay_rounded),
       title: 'Revisit onboarding',
-      subtitle: 'Walk through the intro screens again',
-      semanticHint: 'restarts the onboarding flow for this session',
+      subtitle: 'See the Welcome again',
+      semanticHint: 'opens the Welcome',
       onTap: () => _confirmRevisitOnboarding(context, ref),
     );
   }

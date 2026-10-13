@@ -23,7 +23,6 @@ import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
-import 'package:cupola/features/settings/domain/connection_access_rules.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
@@ -129,13 +128,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   /// What answered in a service's place, when its last test met a gateway.
   final Map<ServiceKey, AccessGatewayAnswer?> _gateway = {};
-
-  /// The Cloudflare service tokens that passed a test in this walk, by the
-  /// Access team they passed (`myteam.cloudflareaccess.com`), with the service
-  /// they passed for. A later step stopped by the same team is offered the
-  /// token instead of an empty Access row: one team, one token, typed once.
-  final Map<String, ({ServiceKey from, CloudflareServiceToken token})>
-  _passedTokens = {};
 
   /// The verbatim sentence a failure carried, for the few that carry one: see
   /// `ServiceDiagnosis.detail`. Kept beside [_reason] rather than folded into it
@@ -258,10 +250,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── The walk ──────────────────────────────────────────────────────────────
 
-  /// Chosen services in registry order, the same order the ring draws.
-  List<ServiceKey> get _walk =>
-      ServiceRing.order.where(_picked.contains).toList(growable: false);
-
   bool _isReady(ServiceKey k) {
     if (!_picked.contains(k) || _skipped.contains(k)) return false;
     if (_urlCtrl[k]!.text.trim().isEmpty) return false;
@@ -352,51 +340,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── Address help ──────────────────────────────────────────────────────────
 
-  // The address is never filled in on arrival. The walk used to carry the
-  // previous service's host over on this one's default port, which assumed one
-  // box answering on bare ports. Behind a reverse proxy, one subdomain per
-  // service on TLS 443: that guess was wrong every time and had to be
-  // deleted before typing the real one. The port chip below ([_suggestPort])
-  // still offers the same guess, as a tap the user chooses to make.
-
-  String? _lastKnownHost({required ServiceKey exclude}) {
-    for (final k in _walk.reversed) {
-      if (k == exclude) continue;
-      final raw = _urlCtrl[k]!.text.trim();
-      if (raw.isEmpty) continue;
-      final host = Uri.tryParse(UrlUtils.normalizeBaseUrl(raw))?.host ?? '';
-      if (host.isNotEmpty) return host;
-    }
-    return null;
-  }
-
-  String? _lastKnownScheme({required ServiceKey exclude}) {
-    for (final k in _walk.reversed) {
-      if (k == exclude) continue;
-      final raw = _urlCtrl[k]!.text.trim();
-      if (raw.isEmpty) continue;
-      final uri = Uri.tryParse(UrlUtils.normalizeBaseUrl(raw));
-      if (uri == null || uri.scheme.isEmpty) continue;
-      return uri.scheme.toLowerCase() == 'http' ? 'http' : 'https';
-    }
-    return null;
-  }
-
   /// Puts this service's default port on whatever host is already typed.
   void _suggestPort(ServiceKey service) {
     final controller = _urlCtrl[service]!;
     final normalized = UrlUtils.normalizeBaseUrl(controller.text);
     final uri = Uri.tryParse(normalized);
     final host = uri?.host ?? '';
-    final target = host.isEmpty ? _lastKnownHost(exclude: service) ?? '' : host;
-    if (target.isEmpty) return;
-    final scheme = host.isEmpty
-        ? _lastKnownScheme(exclude: service) ?? 'https'
-        : uri?.scheme.toLowerCase() == 'http'
-        ? 'http'
-        : 'https';
+    if (host.isEmpty) return;
+    final scheme = uri?.scheme.toLowerCase() == 'http' ? 'http' : 'https';
     setState(() {
-      controller.text = '$scheme://$target:${service.defaultPort}';
+      controller.text = '$scheme://$host:${service.defaultPort}';
     });
   }
 
@@ -424,41 +377,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _accessShown.add(service);
       _accessCtrl[service]!.select(kind);
     });
-  }
-
-  /// The token another step of this walk passed with, when [service]'s last
-  /// test was stopped, with no token, by the same Access team.
-  ({ServiceKey from, CloudflareServiceToken token})? _sharedTokenFor(
-    ServiceKey service,
-  ) {
-    final gateway = _gateway[service];
-    if (gateway == null || gateway.credentialsSent) return null;
-    final team = accessTeamOf(gateway);
-    if (team == null) return null;
-    final passed = _passedTokens[team];
-    if (passed == null || passed.from == service) return null;
-    return passed;
-  }
-
-  /// A service left out of the walk is not offered as the source of a token:
-  /// "Use Radarr's token" would name a service the user dropped.
-  void _forgetPassedToken(ServiceKey service) =>
-      _passedTokens.removeWhere((_, passed) => passed.from == service);
-
-  /// Takes the token another step passed with: the Access row shows it, so
-  /// what is sent is on screen, and the step tests again with it.
-  Future<void> _useSharedToken(
-    ServiceKey service,
-    CloudflareServiceToken token,
-  ) async {
-    final access = _accessCtrl[service]!;
-    setState(() {
-      _accessShown.add(service);
-      access.select(AccessKind.cloudflare);
-      access.cloudflareId.text = token.clientId;
-      access.cloudflareSecret.text = token.clientSecret;
-    });
-    await _test(service);
   }
 
   Future<void> _test(ServiceKey service) async {
@@ -494,9 +412,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // test simply runs again, deny it and the step says so instead of blaming
     // the address the user just typed.
     final access = _accessCtrl[service]!.access;
-    // The team this step's last failure named, read before the test replaces
-    // it: a token that passes now passed that team.
-    final previousTeam = accessTeamOf(_gateway[service]);
     final result = await diagnoseThroughLocalNetworkGate(
       () => diagnoseCredentials(
         service,
@@ -548,37 +463,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _verifiedAgainst[service] = _fingerprintOf(service);
       if (certProbe != null) _pendingCert[service] = certProbe;
     });
-    if (result.status == ServiceConnectionStatus.connected &&
-        access is CloudflareServiceToken) {
-      await _rememberPassedToken(service, access, previousTeam);
-    }
-  }
-
-  /// Records that [token] passed [service]'s Access team. When no earlier
-  /// failure named the team (the token was typed before the first test), the
-  /// address is asked once without it: Access answers an unauthenticated
-  /// request by sending it to its team's sign-in, which names the team.
-  Future<void> _rememberPassedToken(
-    ServiceKey service,
-    CloudflareServiceToken token,
-    String? knownTeam,
-  ) async {
-    var team = knownTeam;
-    if (team == null) {
-      final bare = await diagnoseCredentials(
-        service,
-        access: const NoAccess(),
-        url: _urlCtrl[service]!.text,
-        apiKey: _apiKeyCtrl[service]!.text,
-        username: _usernameCtrl[service]!.text,
-        password: _passwordCtrl[service]!.text,
-        certFingerprint: _pinFor(service) ?? '',
-        clientIdentifier: ref.read(currentSettingsProvider).plexClientId,
-      );
-      team = accessTeamOf(bare.gateway);
-    }
-    if (team == null || !mounted) return;
-    setState(() => _passedTokens[team!] = (from: service, token: token));
   }
 
   Future<void> _trustCertificate(ServiceKey service) async {
@@ -747,7 +631,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     setState(() {
       if (service != _target && _picked.remove(_target)) {
         _skipped.add(_target);
-        _forgetPassedToken(_target);
       }
       _target = service;
       _picked.add(service);
@@ -942,12 +825,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     status: _verdictOf(service),
     reason: _reason[service],
     gateway: _gateway[service],
-    sharedTokenFrom: _sharedTokenFor(service)?.from,
-    onUseSharedToken: () {
-      final shared = _sharedTokenFor(service);
-      if (shared == null) return;
-      _useSharedToken(service, shared.token);
-    },
     failureDetail: _failureDetail[service],
     serverVersion: _serverVersion[service],
     verifying: _verifying[service] ?? false,

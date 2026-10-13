@@ -445,23 +445,28 @@ void main() {
       expect(sonarr.instance.credential, _sonarrKey);
     });
 
-    testWidgets('a name other than the service is its label, and ids avoid '
-        'the saved ones', (tester) async {
-      final rig = await _pump(
-        tester,
-        known: [_radarr(name: 'Radarr 4K', url: 'https://nas.home.arpa:7879')],
-        configured: [ServiceKey.radarr],
-      );
-      await _settle(tester);
+    testWidgets(
+      'what follows the service in its name is its label, and ids avoid '
+      'the saved ones',
+      (tester) async {
+        final rig = await _pump(
+          tester,
+          known: [
+            _radarr(name: 'Radarr 4K', url: 'https://nas.home.arpa:7879'),
+          ],
+          configured: [ServiceKey.radarr],
+        );
+        await _settle(tester);
 
-      await tester.tap(find.byType(ReelCommandButton));
-      await _settle(tester);
+        await tester.tap(find.byType(ReelCommandButton));
+        await _settle(tester);
 
-      final connection = rig.added.single.single;
-      expect(connection.instance.label, 'Radarr 4K');
-      expect(connection.instance.id, isNot('radarr'));
-      expect(connection.instance.id, startsWith('radarr-'));
-    });
+        final connection = rig.added.single.single;
+        expect(connection.instance.label, '4K');
+        expect(connection.instance.id, isNot('radarr'));
+        expect(connection.instance.id, startsWith('radarr-'));
+      },
+    );
 
     testWidgets('saves nothing itself', (tester) async {
       final rig = await _pump(tester, known: [_radarr(), _sonarr()]);

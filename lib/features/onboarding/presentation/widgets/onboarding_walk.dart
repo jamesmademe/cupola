@@ -466,23 +466,9 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
               ],
             )
           else
-            // No "Add another <Service>" here, and it is not an omission.
-            //
-            // It was tried, as a push to `/settings/service/<param>?new=1` the
-            // moment the server answered. The router's own redirect sends every
-            // location other than `/onboarding` back to `/onboarding` until the
-            // walk is finished (`router.dart`, `redirect:`), and go_router
-            // applies that to imperative pushes too, so the button pushed a
-            // *second* onboarding screen on top of the one in progress. Widening
-            // the redirect is not the fix either: the destination lives inside
-            // the Settings branch of the `StatefulShellRoute`, so honouring it
-            // would drop the user into the tabbed shell, nav bar and all, in the
-            // middle of a flow that has no tabs.
-            //
-            // A second connection during onboarding therefore belongs to the
-            // walk itself, another page in the flow, not a door out of it,
-            // which is its own change. Settings → Connections offers it the
-            // moment the walk ends.
+            // No "Add another <Service>" here: the services this one knows
+            // come next, in Found, and every other one is set up from
+            // Connections once the way in is over.
             TextButton(onPressed: widget.onBack, child: const Text('Back')),
         ],
       ),
@@ -508,7 +494,11 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
             'Behind a reverse proxy, use the address you reach it on.',
         trailing: ValueListenableBuilder<TextEditingValue>(
           valueListenable: widget.urlController,
-          builder: (context, value, _) => UrlUtils.offersDefaultPort(value.text)
+          // Only beside a host: with nothing typed there is no host to put
+          // the port on, and a chip that does nothing is a broken promise.
+          builder: (context, value, _) =>
+              value.text.trim().isNotEmpty &&
+                  UrlUtils.offersDefaultPort(value.text)
               ? _PortChip(
                   port: service.defaultPort,
                   onTap: widget.onSuggestPort,
