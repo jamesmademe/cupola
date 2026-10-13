@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:cupola/core/network/answer_guard.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/unreached_origins.dart';
 
 /// A service's own interceptors, built over the [Dio] they are installed on:
 /// see `guardedDio`.
@@ -282,6 +283,10 @@ class SameOriginRedirectInterceptor extends Interceptor {
 /// construction passes the connection's access
 /// (`test/core/network/access_headers_guard_test.dart`).
 ///
+/// A request that opens no connection, or none in time, is told to
+/// [UnreachedOrigins] ([reportUnreached]), so the route probe can move a
+/// connection to its other address; the route probe's own knocks say false.
+///
 /// [interceptors] are a service's own, built over this Dio (so one can send a
 /// request again through it) and installed **ahead** of the two guards: they
 /// see every answer first, a redirect's and a refusal's included, and a
@@ -296,6 +301,7 @@ Dio guardedDio({
   Map<String, String> accessHeaders = const {},
   bool nativeBasicAuth = false,
   DioInterceptors? interceptors,
+  bool reportUnreached = true,
 }) {
   if (injected != null) return injected;
 
@@ -324,10 +330,30 @@ Dio guardedDio({
     ..addAll(interceptors?.call(dio) ?? const [])
     ..add(SameOriginRedirectInterceptor(dio, nativeBasicAuth: nativeBasicAuth))
     ..add(AnswerGuardInterceptor(nativeBasicAuth: nativeBasicAuth));
+  if (reportUnreached) dio.interceptors.add(const UnreachedReporter());
   final adapter = pinnedHttpClientAdapterFor(
     baseUrl,
     pinnedFingerprint: certFingerprint,
   );
   if (adapter != null) dio.httpClientAdapter = adapter;
   return dio;
+}
+
+/// Tells [UnreachedOrigins] of a request that opened no connection, or none
+/// in time, and passes the failure on unchanged.
+///
+/// Off for the route probe's own knocks ([guardedDio]'s `reportUnreached`):
+/// an address that does not answer a knock is the probe's answer already,
+/// and reporting it would ask the probe again.
+class UnreachedReporter extends Interceptor {
+  const UnreachedReporter();
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.type == DioExceptionType.connectionTimeout ||
+        err.type == DioExceptionType.connectionError) {
+      UnreachedOrigins.report(err.requestOptions.uri);
+    }
+    handler.next(err);
+  }
 }
