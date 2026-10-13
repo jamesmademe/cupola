@@ -119,10 +119,7 @@ void main() {
   });
 
   test('a second connection keeps its own address away', () async {
-    final loaded = await saveAndReload([
-      radarr,
-      radarr4k.copyWith(away: away),
-    ]);
+    final loaded = await saveAndReload([radarr, radarr4k.copyWith(away: away)]);
 
     expect(loaded.instanceById('radarr')!.away, isNull);
     expect(loaded.instanceById('radarr-4k00001')!.away, away);
@@ -164,29 +161,26 @@ void main() {
     expect(secureStore.entries, isEmpty);
   });
 
-  test(
-    'a secret away the keychain will not hand over marks the access unread, '
-    'and saving leaves it where it is',
-    () async {
-      await service.saveSettings(
-        SettingsModel(instances: [radarr.copyWith(away: away)]),
-      );
-      secureStore.unreadable.add('secure_radarr_away_access_secret');
+  test('a secret away the keychain will not hand over marks the access unread, '
+      'and saving leaves it where it is', () async {
+    await service.saveSettings(
+      SettingsModel(instances: [radarr.copyWith(away: away)]),
+    );
+    secureStore.unreadable.add('secure_radarr_away_access_secret');
 
-      final loaded = await SettingsService(prefs, secureStore).loadSettings();
-      final reloaded = loaded.primaryOf(ServiceKey.radarr)!;
-      expect(reloaded.unreadSecret, UnreadSecret.access);
-      expect(reloaded.isConfigured, isFalse);
+    final loaded = await SettingsService(prefs, secureStore).loadSettings();
+    final reloaded = loaded.primaryOf(ServiceKey.radarr)!;
+    expect(reloaded.unreadSecret, UnreadSecret.access);
+    expect(reloaded.isConfigured, isFalse);
 
-      await SettingsService(prefs, secureStore).saveSettings(loaded);
-      secureStore.unreadable.clear();
+    await SettingsService(prefs, secureStore).saveSettings(loaded);
+    secureStore.unreadable.clear();
 
-      expect(
-        await secureStore.read(key: 'secure_radarr_away_access_secret'),
-        'sentinel-away-secret',
-      );
-    },
-  );
+    expect(
+      await secureStore.read(key: 'secure_radarr_away_access_secret'),
+      'sentinel-away-secret',
+    );
+  });
 
   test('the address away prints its kind of access, never a value', () {
     final printed = '${radarr.copyWith(away: away)}';
