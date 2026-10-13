@@ -105,6 +105,10 @@ answering` already answers) or before anything answered (no space is held for it
 - Otherwise the largest group of equal faults leads, the glyph amber: `18 downloads need a manual import`; a single
   fault is a sentence about it (`Big Buck Bunny is stuck`, `The media indexer is failing`, `The certificate for
   nas.home.arpa expires in 6 days`). The line is Review, which opens the place that fault is fixed today.
+- Connections that failed alike are one group, weighed as many as they are and said in one sentence, the way a module
+  says them: `Seerr, Radarr and 11 others were reached but did not reply in time`, never the first of them and `+12`.
+  Keyed on the reason, and on the credential only where it is named (two refused keys are one sentence, a key and a
+  sign-in are two); a fault whose words name more than its reason (a gateway in front) is said alone.
 - `+2` when more things need the person. A request waiting for approval is not a fault: it is never in Needs you.
 - `fillQuiet` under a `hair` edge, `AppRadius.button`, at least 52pt tall. At a large reading size the count and the
   way in go under the sentence.

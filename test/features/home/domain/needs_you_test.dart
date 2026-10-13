@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/home/domain/needs_you.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -128,6 +129,113 @@ void main() {
         floor: true,
       )!;
       expect(needs.line, '50+ downloads need a manual import');
+    });
+  });
+
+  group('connections that failed alike', () {
+    DashboardDecision connection(
+      ServiceKey service,
+      ServiceFailureReason? reason, {
+      String? name,
+    }) => DashboardDecision(
+      kind: DecisionKind.connectionFault,
+      id: 'connection-${service.name}-${name ?? ''}',
+      service: service,
+      title: '${service.title} alone',
+      detail: 'detail',
+      occurredAt: null,
+      connectionName: name,
+      failureReason: reason,
+    );
+
+    const timeout = ServiceFailureReason.timeout;
+
+    test('lead as one sentence, and are not counted again after it', () {
+      final stuck = [
+        connection(ServiceKey.seerr, timeout),
+        connection(ServiceKey.radarr, timeout, name: '4K'),
+        for (final service in [
+          ServiceKey.sonarr,
+          ServiceKey.lidarr,
+          ServiceKey.prowlarr,
+        ])
+          connection(service, timeout),
+      ];
+      final stall = decision(DecisionKind.stalledDownload, 'Sintel');
+      final needs = needsYouOf(
+        silent: const [],
+        decisions: [stall, ...stuck],
+        now: now,
+      )!;
+      expect(
+        needs.line,
+        'Seerr, Radarr 4K and 3 others were reached but did not reply in time',
+      );
+      expect(needs.lead, same(stuck.first));
+      expect(needs.more, 1);
+      expect(needs.action, 'Review');
+    });
+
+    test('weigh as many as they are against a folded group', () {
+      final stuck = [
+        connection(ServiceKey.radarr, timeout),
+        connection(ServiceKey.sonarr, timeout),
+        connection(ServiceKey.lidarr, timeout),
+      ];
+      final two = decision(DecisionKind.importBlocked, 'x', count: 2);
+      expect(
+        needsYouOf(
+          silent: const [],
+          decisions: [two, ...stuck],
+          now: now,
+        )!.line,
+        'Radarr, Sonarr and 1 other were reached but did not reply in time',
+      );
+      final eighteen = decision(DecisionKind.importBlocked, 'x', count: 18);
+      final needs = needsYouOf(
+        silent: const [],
+        decisions: [...stuck, eighteen],
+        now: now,
+      )!;
+      expect(needs.line, '18 downloads need a manual import');
+      expect(needs.more, 3);
+    });
+
+    test('a refused key and a refused sign-in are two sentences', () {
+      const refused = ServiceFailureReason.unauthorized;
+      final needs = needsYouOf(
+        silent: const [],
+        decisions: [
+          connection(ServiceKey.radarr, refused),
+          connection(ServiceKey.qbittorrent, refused),
+          connection(ServiceKey.sonarr, refused),
+        ],
+        now: now,
+      )!;
+      expect(needs.line, 'Radarr and Sonarr answered but refused their keys');
+      expect(needs.more, 1);
+    });
+
+    test('a fault whose words name more than its reason is said alone', () {
+      final needs = needsYouOf(
+        silent: const [],
+        decisions: [
+          connection(ServiceKey.radarr, null),
+          connection(ServiceKey.sonarr, null),
+        ],
+        now: now,
+      )!;
+      expect(needs.line, 'Radarr alone');
+      expect(needs.more, 1);
+    });
+
+    test('one connection keeps its own sentence', () {
+      final needs = needsYouOf(
+        silent: const [],
+        decisions: [connection(ServiceKey.seerr, timeout)],
+        now: now,
+      )!;
+      expect(needs.line, 'Seerr alone');
     });
   });
 

@@ -3752,6 +3752,8 @@ DashboardDecision _connectionFaultDecision(
       credential: credential,
       gateway: failure.gateway,
     ),
+    // A gateway's words name what answered in front, which no group shares.
+    failureReason: failure.gateway == null ? failure.reason : null,
   );
 }
 

@@ -31,6 +31,7 @@
 /// loaded: see `dashboardDecisionsProvider`.
 library;
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -224,6 +225,7 @@ class DashboardDecision {
     this.renewable = true,
     this.transferFailed = false,
     this.remedy,
+    this.failureReason,
     this.downloadKeys = const [],
     this.subject,
     this.members = const [],
@@ -235,6 +237,13 @@ class DashboardDecision {
   /// (`failureRemedy`), or null where Retry is the remedy. Null on every
   /// other kind, whose control is the kind's own.
   final String? remedy;
+
+  /// The classification a [DecisionKind.connectionFault]'s words come from,
+  /// where they come from it alone: equal faults on many connections can then
+  /// be said once (`failureGroupHeadline`). Null where the words name more
+  /// than the reason (a gateway that answered in front, a secret this device
+  /// would not hand over), and on every other kind.
+  final ServiceFailureReason? failureReason;
 
   /// Unique within its kind: used for the row's key and for nothing else.
   final String id;

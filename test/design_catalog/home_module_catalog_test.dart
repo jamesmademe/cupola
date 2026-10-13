@@ -482,6 +482,38 @@ void main() {
         width: 390,
       ),
       CatalogScene(
+        'Needs you · connections that failed alike lead as one sentence, '
+        'counted once',
+        (_) => NeedsYouLine(
+          needs: _needs(
+            decisions: [
+              for (final service in [
+                ServiceKey.seerr,
+                ServiceKey.radarr,
+                ServiceKey.sonarr,
+                ServiceKey.lidarr,
+                ServiceKey.prowlarr,
+                ServiceKey.qbittorrent,
+              ])
+                DashboardDecision(
+                  kind: DecisionKind.connectionFault,
+                  id: 'connection-${service.name}',
+                  service: service,
+                  title:
+                      '${service.title} was reached but did not reply in '
+                      'time',
+                  detail: '',
+                  occurredAt: null,
+                  failureReason: ServiceFailureReason.timeout,
+                ),
+              _fault(DecisionKind.failingIndexer, 'media'),
+            ],
+          ),
+          onTap: () {},
+        ),
+        width: 390,
+      ),
+      CatalogScene(
         'Needs you · a service that did not answer leads, in red, with its '
         'time and Retry',
         (_) => NeedsYouLine(

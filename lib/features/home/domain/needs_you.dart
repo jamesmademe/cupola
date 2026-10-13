@@ -10,7 +10,10 @@
 /// cannot be seen while it is silent; then the largest group of equal faults,
 /// because eighteen downloads that need the same import are the most work
 /// waiting in one place. Equal sizes keep the order the decisions were ranked in
-/// (`rankDecisions`: worst kind, then oldest).
+/// (`rankDecisions`: worst kind, then oldest). Connections that failed alike
+/// are one group too, said in one sentence: thirteen servers reached and stuck
+/// are `Seerr, Radarr and 11 others were reached but did not reply in time`,
+/// never the first of them and `+12`.
 ///
 /// **The way in.** The line never runs a remedy itself. Silence leads to Retry,
 /// the one thing a person can do about a service that did not answer from here;
@@ -19,11 +22,14 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 @immutable
 class NeedsYou {
@@ -38,7 +44,8 @@ class NeedsYou {
   /// The services that did not answer, when they lead. Empty when a fault does.
   final List<ServiceKey> silent;
 
-  /// The fault that leads, when no service is silent.
+  /// The fault that leads, when no service is silent: the first of them, when
+  /// the line says several connections that failed alike.
   final DashboardDecision? lead;
 
   /// What the line says: `18 downloads need a manual import`, `Radarr did not
@@ -113,21 +120,85 @@ NeedsYou? needsYouOf({
   // Largest group first; the sort is decorated with the rank, because
   // `List.sort` is not stable and equal groups would trade places between
   // builds.
+  final groups = _equalFaults(faults);
   final ranked =
       List.generate(
-        faults.length,
-        (index) => (index: index, decision: faults[index]),
+        groups.length,
+        (index) => (index: index, group: groups[index]),
         growable: false,
       )..sort((a, b) {
-        final bySize = b.decision.count.compareTo(a.decision.count);
+        final bySize = b.group.size.compareTo(a.group.size);
         return bySize != 0 ? bySize : a.index.compareTo(b.index);
       });
-  final lead = ranked.first.decision;
+  final lead = ranked.first.group;
   return NeedsYou._(
-    lead: lead,
-    line: needsYouLine(lead, now: now, floor: floor),
-    more: faults.length - 1,
+    lead: lead.members.first,
+    line:
+        lead.sentence ??
+        needsYouLine(lead.members.single, now: now, floor: floor),
+    more: faults.length - lead.members.length,
     moreIsFloor: moreFloor,
+  );
+}
+
+/// Faults Needs you weighs as one: a decision `groupDecisions` already
+/// folded, or connections that failed alike, with the [sentence] that says
+/// them together.
+typedef _EqualFaults = ({
+  List<DashboardDecision> members,
+  int size,
+  String? sentence,
+});
+
+/// [faults] in their order, the connection faults one sentence can say
+/// together gathered under the first of them.
+///
+/// Keyed as the modules' sentences are (`coverageFailureSentence`): on the
+/// reason, and on the credential only where it is named, so two refused keys
+/// group and a key and a sign-in refused do not.
+List<_EqualFaults> _equalFaults(List<DashboardDecision> faults) {
+  final buckets = <Object, List<DashboardDecision>>{};
+  for (final fault in faults) {
+    (buckets[_sharedSentenceKey(fault) ?? fault] ??= []).add(fault);
+  }
+  return [
+    for (final MapEntry(:key, value: members) in buckets.entries)
+      (
+        members: members,
+        size: members.fold(0, (sum, member) => sum + member.count),
+        sentence: switch (key) {
+          (final ServiceFailureReason reason, final String credential)
+              when members.length > 1 =>
+            failureGroupHeadline(
+              reason,
+              // As many names as a module's sentence carries.
+              subjects: servicesNamed([
+                for (final member in members)
+                  serviceWithConnection(
+                    member.service,
+                    member.connectionName,
+                    joiner: ' ',
+                  ),
+              ], maxNamed: 2),
+              credential: credential,
+            ),
+          _ => null,
+        },
+      ),
+  ];
+}
+
+/// What a connection fault shares with the others its sentence can be said
+/// with, or null when it is said alone.
+(ServiceFailureReason, String)? _sharedSentenceKey(DashboardDecision fault) {
+  final reason = fault.failureReason;
+  if (fault.kind != DecisionKind.connectionFault || reason == null) return null;
+  if (failureGroupHeadline(reason, subjects: '') == null) return null;
+  return (
+    reason,
+    reason == ServiceFailureReason.unauthorized
+        ? refusedCredentialOf(fault.service)
+        : kRefusedCredential,
   );
 }
 
