@@ -38,6 +38,7 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
@@ -400,6 +401,10 @@ class _PosterRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final instance = ref.watch(activeInstanceProvider(ServiceKey.sonarr));
+    // The posters at the address the lens's connection is reached at now.
+    final reachedAt = instance == null
+        ? ''
+        : ref.watch(connectionReachProvider(instance.id))?.url ?? '';
 
     return SizedBox(
       // 138pt poster, the gap, and two label lines, grown by the reading size
@@ -420,7 +425,7 @@ class _PosterRail extends ConsumerWidget {
               const SizedBox(width: AppSpacing.carouselGap),
           itemBuilder: (context, index) => _PosterTile(
             episode: episodes[index],
-            baseUrl: instance?.url ?? '',
+            baseUrl: reachedAt,
             apiKey: instance?.credential ?? '',
           ),
         ),

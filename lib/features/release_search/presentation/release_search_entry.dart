@@ -20,9 +20,10 @@ import 'package:cupola/features/release_search/presentation/release_search_lifec
 import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// The platform reach is resolved for. Null means "ask the host", which is what
 /// production always wants.
@@ -37,10 +38,11 @@ final releaseSearchPlatformProvider = Provider<TargetPlatform?>((ref) => null);
 /// How far a search against one **connection** can travel: see
 /// [ReleaseSearchReach].
 ///
-/// Both facts reach asks about, the saved URL's scheme and whether that origin
-/// is trusted only inside Cupola (ADR-6), are read straight from settings
-/// rather than through `serviceDiagnosisProvider`: reach must stay correct even
-/// for an instance that has never been tested this session.
+/// Both facts reach asks about, the scheme of the address the connection is
+/// reached at (its route's, at home or away) and whether that origin is
+/// trusted only inside Cupola (ADR-6), are read straight from settings rather
+/// than through `serviceDiagnosisProvider`: reach must stay correct even for
+/// an instance that has never been tested this session.
 ///
 /// **Keyed by connection, not by service, and that is a security fix rather
 /// than tidying.** It used to read `settings.urlFor(service)`: the FIRST
@@ -56,8 +58,7 @@ final releaseSearchPlatformProvider = Provider<TargetPlatform?>((ref) => null);
 /// trust.
 final releaseSearchReachProvider = Provider.autoDispose
     .family<ReleaseSearchReach, ReleaseSearchTarget>((ref, target) {
-      final settings = ref.watch(currentSettingsProvider);
-      return _reachOf(ref, target.service, _urlOf(settings, target), settings);
+      return _reachOf(ref, target.service, _connectionReachOf(ref, target));
     });
 
 /// The reach of the connection [service] is currently being READ through.
@@ -70,26 +71,31 @@ final releaseSearchReachProvider = Provider.autoDispose
 /// whole reason the job side is keyed on a target.
 final releaseSearchLensReachProvider =
     Provider.family<ReleaseSearchReach, ServiceKey>((ref, service) {
-      final instance = ref.watch(activeInstanceProvider(service));
-      final settings = ref.watch(currentSettingsProvider);
+      final id =
+          ref.watch(activeInstanceProvider(service))?.id ??
+          ref.watch(
+            currentSettingsProvider.select((s) => s.primaryOf(service)?.id),
+          );
       return _reachOf(
         ref,
         service,
-        instance?.url ?? settings.urlFor(service),
-        settings,
+        id == null ? null : ref.watch(connectionReachProvider(id)),
       );
     });
 
+/// What [reached] imposes on a search: where it goes, which is the address
+/// its connection's route is on (a cleartext address away from home is as
+/// much a reason to stay in the app as one at home), and whether that
+/// address's certificate is trusted inside Cupola alone.
 ReleaseSearchReach _reachOf(
   Ref ref,
   ServiceKey service,
-  String baseUrl,
-  SettingsModel settings,
+  ConnectionReach? reached,
 ) {
   return reachFor(
     service,
-    baseUrl: baseUrl,
-    certTrustedInApp: settings.pinForUrl(baseUrl) != null,
+    baseUrl: reached?.url ?? '',
+    certTrustedInApp: reached?.pin != null,
     backgroundEnabled: ref.watch(
       releaseSearchSettingsProvider.select((s) => s.backgroundEnabled),
     ),
@@ -130,8 +136,7 @@ final releaseSearchTransportProvider = Provider.autoDispose
         return const BackgroundReleaseSearchTransport();
       }
 
-      final settings = ref.watch(currentSettingsProvider);
-      final pin = settings.pinForUrl(_urlOf(settings, target));
+      final pin = _connectionReachOf(ref, target)?.pin;
       return ForegroundReleaseSearchTransport((
         url, {
         headers,
@@ -173,14 +178,21 @@ final releaseSearchTransportProvider = Provider.autoDispose
       });
     });
 
-/// The address of the connection [target] belongs to.
+/// Where the connection [target] belongs to is reached now: the address its
+/// route is on, with that address's pin. Null for a connection since removed.
 ///
 /// Falls back to the service's first instance only for an unstamped target,
 /// which is the shape a test can still build by hand. Everything the app itself
 /// produces has been through `showReleaseSearch` and carries an id.
-String _urlOf(SettingsModel settings, ReleaseSearchTarget target) {
-  if (target.instanceId.isEmpty) return settings.urlFor(target.service);
-  return settings.instanceById(target.instanceId)?.url ?? '';
+ConnectionReach? _connectionReachOf(Ref ref, ReleaseSearchTarget target) {
+  final id = target.instanceId.isEmpty
+      ? ref.watch(
+          currentSettingsProvider.select(
+            (s) => s.primaryOf(target.service)?.id,
+          ),
+        )
+      : target.instanceId;
+  return id == null ? null : ref.watch(connectionReachProvider(id));
 }
 
 /// Posts the "your search finished" notices, and gives their "Tap to pick one"

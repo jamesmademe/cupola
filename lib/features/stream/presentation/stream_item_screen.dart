@@ -7,6 +7,7 @@ import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -306,9 +307,14 @@ class _HandoffButton extends ConsumerWidget {
     // The connection the lens is on, not the first one saved: with two
     // Jellyfins the item on screen came from the one the lens chose, and the
     // handoff has to open that server.
-    final baseUrl =
-        ref.watch(activeInstanceProvider(service))?.url ??
-        ref.watch(currentSettingsProvider).urlFor(service);
+    // At the address that connection is reached at now: away from home, the
+    // one at home would not open.
+    final lens =
+        ref.watch(activeInstanceProvider(service))?.id ??
+        ref.watch(currentSettingsProvider).primaryOf(service)?.id;
+    final baseUrl = lens == null
+        ? ''
+        : ref.watch(connectionReachProvider(lens))?.url ?? '';
 
     // Plex's web client addresses an item by server identity as well as by key, so
     // without the machine identifier there is no URL to build. The button is absent

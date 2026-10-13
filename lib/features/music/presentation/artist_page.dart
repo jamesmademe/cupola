@@ -32,6 +32,7 @@ import 'package:cupola/features/music/presentation/music_provider.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -127,6 +128,9 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     final connection = ref.watch(
       currentSettingsProvider.select((s) => s.instanceById(_instanceId)),
     );
+    // Where the connection is reached now: its artwork is fetched there.
+    final reachedAt =
+        ref.watch(connectionReachProvider(_instanceId))?.url ?? '';
     // Not set up: nothing to read, and a read that throws would only fail.
     if (connection == null || !connection.isConfigured) {
       return Scaffold(
@@ -185,7 +189,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     ShelfArt? artOf(List<dynamic> images, List<String> types) {
       final source = ImageUtils.extractPosterUrl(
         images,
-        baseUrl: connection.url,
+        baseUrl: reachedAt,
         apiKey: connection.credential,
         coverTypes: types,
       );
@@ -663,8 +667,11 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     LidarrArtist artist, {
     required String name,
   }) async {
+    // Lidarr's own page at the address it is reached at now: away from home,
+    // the one at home would not open.
+    final base = ref.read(connectionReachProvider(connection.id))?.url ?? '';
     final target = Uri.tryParse(
-      UrlUtils.buildUrl(connection.url, '/artist/${artist.foreignArtistId}'),
+      UrlUtils.buildUrl(base, '/artist/${artist.foreignArtistId}'),
     );
     final opened =
         target != null &&

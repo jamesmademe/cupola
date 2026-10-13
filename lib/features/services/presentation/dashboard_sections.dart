@@ -34,6 +34,7 @@ import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
@@ -405,10 +406,9 @@ Future<void> runDecision(
     case DecisionKind.serviceHealth:
       // The \*arr's own status page, in the browser: a health check is
       // fixed in the \*arr's settings, which this app does not carry.
-      final base = ref
-          .read(currentSettingsProvider)
-          .instanceById(decision.instanceId)
-          ?.url;
+      // At the address the connection is reached at now: away from home,
+      // the one at home would not open.
+      final base = ref.read(connectionReachProvider(decision.instanceId))?.url;
       final page = base == null ? null : Uri.tryParse(base);
       if (page == null) return;
       await ref

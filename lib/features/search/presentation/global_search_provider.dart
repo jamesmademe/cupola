@@ -24,6 +24,7 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -127,13 +128,19 @@ final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
       final parts = <String>[];
       for (final service in globalSearchServices) {
         for (final instance in s.configuredInstancesOf(service)) {
+          // Both addresses, each with its pin and its access (by its hash,
+          // so the stamp never holds a secret): which of the two a leg asks
+          // is its route's, which each leg watches itself.
+          final addresses = [
+            for (final address in [instance.home, ?instance.away])
+              '${address.url}|${s.pinForUrl(address.url)}'
+                  '|${address.access.hashCode}',
+          ];
           // The name too: it is on the lane's heading, and a heading that
           // kept the old name after a rename would be naming nothing.
           parts.add(
-            '${instance.id}|${instance.url}|${instance.credential}'
-            '|${s.pinForUrl(instance.url)}|${s.connectionName(instance.id)}'
-            // The access by its hash, so the stamp never holds a secret.
-            '|${instance.access.hashCode}',
+            '${instance.id}|${instance.credential}'
+            '|${s.connectionName(instance.id)}|${addresses.join('|')}',
           );
         }
       }
@@ -202,6 +209,10 @@ final globalSearchLegProvider = FutureProvider.autoDispose
       // completion, a dozen servers answering a question nobody is asking.
       final cancelToken = CancelToken();
       ref.onDispose(cancelToken.cancel);
+      // Where the leg's connection is reached now, which its posters are
+      // built on; watched, so the route moving asks again there.
+      final reachedAt =
+          ref.watch(connectionReachProvider(leg.instance.id))?.url ?? '';
 
       return ref.read(_legPoolProvider).run(() {
         // Superseded while queued behind the pool. Skipping the request is the
@@ -216,7 +227,7 @@ final globalSearchLegProvider = FutureProvider.autoDispose
             ),
           );
         }
-        return _runLeg(ref, leg, query, cancelToken);
+        return _runLeg(ref, leg, query, cancelToken, reachedAt);
       });
     });
 
@@ -325,11 +336,14 @@ class _LegPool {
   }
 }
 
+/// [reachedAt] is the address [leg]'s connection is reached at now: an arr's
+/// posters are fetched from it.
 Future<GlobalSearchServiceResults> _runLeg(
   Ref ref,
   SearchLeg leg,
   String query,
   CancelToken cancelToken,
+  String reachedAt,
 ) {
   final instance = leg.instance;
   return switch (instance.service) {
@@ -362,7 +376,8 @@ Future<GlobalSearchServiceResults> _runLeg(
       loadItems: () => ref
           .read(radarrServiceForProvider(instance.id))
           .lookupMovies(query, cancelToken: cancelToken, reportFailure: true),
-      toResult: (item, index) => _radarrResult(item, instance, index),
+      toResult: (item, index) =>
+          _radarrResult(item, instance, reachedAt, index),
     ),
     ServiceKey.sonarr => _loadLeg(
       leg: leg,
@@ -370,7 +385,8 @@ Future<GlobalSearchServiceResults> _runLeg(
       loadItems: () => ref
           .read(sonarrServiceForProvider(instance.id))
           .lookupSeries(query, cancelToken: cancelToken, reportFailure: true),
-      toResult: (item, index) => _sonarrResult(item, instance, index),
+      toResult: (item, index) =>
+          _sonarrResult(item, instance, reachedAt, index),
     ),
     // The two media servers share one arm because they share one interface:
     // `StreamServerClient.search` is the whole difference between them, and it
@@ -588,13 +604,15 @@ GlobalSearchResult _personResult(
 GlobalSearchResult _radarrResult(
   RadarrMovie item,
   ServiceInstance instance,
+  String reachedAt,
   int index,
 ) {
   // This connection's address and key, not the first Radarr's. A poster the
-  // arr serves itself is fetched from the server that listed it.
+  // arr serves itself is fetched from the server that listed it, at the
+  // address it is reached at now.
   final image = ImageUtils.extractPosterUrl(
     item.images,
-    baseUrl: instance.url,
+    baseUrl: reachedAt,
     apiKey: instance.credential,
   );
   final heroTag = _heroTag(instance, 'movie', item.id, index);
@@ -648,12 +666,13 @@ GlobalSearchResult _radarrResult(
 GlobalSearchResult _sonarrResult(
   SonarrSeries item,
   ServiceInstance instance,
+  String reachedAt,
   int index,
 ) {
   final image = ImageUtils.extractPosterUrl(
     item.images,
-    // This connection's, not the first Sonarr's.
-    baseUrl: instance.url,
+    // This connection's, not the first Sonarr's, where it is reached now.
+    baseUrl: reachedAt,
     apiKey: instance.credential,
   );
   final heroTag = _heroTag(instance, 'series', item.id, index);

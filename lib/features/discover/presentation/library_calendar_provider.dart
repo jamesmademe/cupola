@@ -20,6 +20,7 @@ import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -116,6 +117,9 @@ final calendarSourceProvider = FutureProvider.autoDispose
       if (instance == null || !instance.isConfigured) {
         throw ServiceNotConfigured(key.service);
       }
+      // The posters' address is the one the calendar is read from: the
+      // connection's route, as its service's client follows it.
+      final base = ref.watch(connectionReachProvider(id))?.url ?? '';
       final ArrActivityMixin service = switch (key.service) {
         ServiceKey.radarr => ref.watch(radarrServiceForProvider(id)),
         ServiceKey.sonarr => ref.watch(sonarrServiceForProvider(id)),
@@ -156,7 +160,7 @@ final calendarSourceProvider = FutureProvider.autoDispose
         queue: queue,
         poster: (images, coverTypes) => ImageUtils.extractPosterUrl(
           images,
-          baseUrl: instance.url,
+          baseUrl: base,
           apiKey: instance.credential,
           coverTypes: coverTypes,
         ),

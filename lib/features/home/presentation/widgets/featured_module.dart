@@ -27,6 +27,7 @@ import 'package:cupola/features/home/presentation/widgets/featured_pager.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
@@ -207,9 +208,10 @@ Future<void> _play(
     server: server,
     itemId: itemId,
     title: title,
+    // The web client at the address the server is reached at now.
     webUrl: streamItemWebUrl(
       service: service,
-      baseUrl: server.url,
+      baseUrl: ref.read(connectionReachProvider(instanceId))?.url ?? '',
       itemId: itemId,
       plexMachineId: machineId,
     ),

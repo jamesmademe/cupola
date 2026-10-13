@@ -84,6 +84,7 @@ import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/media/presentation/media_manage_parts.dart';
@@ -161,9 +162,10 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               .value
               ?.machineIdentifier
         : null;
+    // The web client at the address the server is reached at now.
     final target = streamItemWebUrl(
       service: server.service,
-      baseUrl: server.url,
+      baseUrl: ref.read(connectionReachProvider(server.id))?.url ?? '',
       itemId: itemId,
       plexMachineId: machineId,
     );

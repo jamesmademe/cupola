@@ -26,6 +26,7 @@ import 'package:cupola/features/readarr/presentation/author_page_providers.dart'
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -108,6 +109,9 @@ class _AuthorPageState extends ConsumerState<AuthorPage>
     final connection = ref.watch(
       currentSettingsProvider.select((s) => s.instanceById(_instanceId)),
     );
+    // Where the connection is reached now: its artwork is fetched there.
+    final reachedAt =
+        ref.watch(connectionReachProvider(_instanceId))?.url ?? '';
     if (connection == null || !connection.isConfigured) {
       return Scaffold(
         backgroundColor: CupolaRoom.of(context).ground,
@@ -163,7 +167,7 @@ class _AuthorPageState extends ConsumerState<AuthorPage>
     ShelfArt? artOf(List<dynamic> images, List<String> types) {
       final source = ImageUtils.extractPosterUrl(
         images,
-        baseUrl: connection.url,
+        baseUrl: reachedAt,
         apiKey: connection.credential,
         coverTypes: types,
       );
@@ -507,9 +511,10 @@ class _AuthorPageState extends ConsumerState<AuthorPage>
     String slug, {
     required String name,
   }) async {
-    final target = Uri.tryParse(
-      UrlUtils.buildUrl(connection.url, '/author/$slug'),
-    );
+    // Readarr's own page at the address it is reached at now: away from
+    // home, the one at home would not open.
+    final base = ref.read(connectionReachProvider(connection.id))?.url ?? '';
+    final target = Uri.tryParse(UrlUtils.buildUrl(base, '/author/$slug'));
     final opened =
         target != null &&
         await launchUrl(target, mode: LaunchMode.externalApplication);
