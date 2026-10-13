@@ -6,6 +6,7 @@ import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/data/service_status_probe.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -27,33 +28,43 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The password and the Plex token go in one request body and are never
 /// kept, printed or put in a failure.
 class SeerrAuthService {
-  SeerrAuthService._(this._url, this._client);
+  SeerrAuthService._(this._url, this._reachedAt, this._client);
 
-  /// The service for the connection at [instance]'s address, its pin
-  /// [pinnedCertFingerprint] and its access. A key in the instance is not
-  /// sent: signing in is the account's.
+  /// The service for the connection [instance], reached at [reach] (the
+  /// address its route is on, with that address's access and pin; null for
+  /// its address at home with no pin). A key in the instance is not sent:
+  /// signing in is the account's.
   factory SeerrAuthService.forConnection(
     ServiceInstance instance, {
-    String? pinnedCertFingerprint,
+    ConnectionReach? reach,
     DateTime Function()? now,
   }) {
     late final SeerrAuthService service;
     final client = seerrClientFor(
       instance,
-      pinnedCertFingerprint: pinnedCertFingerprint,
+      reach: reach,
       signIn: const SeerrAccountSignIn(kind: SeerrAccountKind.local),
       events: SeerrSessionEvents(
         onSession: (value) => service._session = value,
       ),
     );
-    service = SeerrAuthService._(instance.url, client).._now = now;
+    service = SeerrAuthService._(
+      instance.url,
+      reach?.url ?? instance.url,
+      client,
+    ).._now = now;
     return service;
   }
 
   final String _url;
 
-  /// The address this service signs in at: the session it hands back belongs
-  /// to it, whatever the form's field says by then.
+  /// The address the requests go to, which names whatever answers there.
+  final String _reachedAt;
+
+  /// The address of the connection this service signs in to, the one it is
+  /// saved by: the session it hands back belongs to it, whatever the form's
+  /// field says by then, and whichever of the connection's addresses the
+  /// sign-in went to.
   String get url => _url;
   final ApiClient _client;
   DateTime Function()? _now;
@@ -66,7 +77,7 @@ class SeerrAuthService {
     final version = await readServiceStatus(
       _client,
       ServiceKey.seerr,
-      url: _url,
+      url: _reachedAt,
     );
     final response = await _client.get('/api/v1/settings/public');
     final json = mapOrNull(response.data);
@@ -213,15 +224,15 @@ class SeerrAuthService {
 ///
 /// Bounded at five seconds: a server that does not answer lets the session
 /// go by itself, 30 days after it was last used.
+///
+/// [reach] is where the connection is reached now (`connectionReachProvider`):
+/// the server is asked at the address that answers.
 Future<void> signOutOfSeerr(
   ServiceInstance instance, {
-  String? pinnedCertFingerprint,
+  ConnectionReach? reach,
 }) async {
   if (instance.account?.isSignedIn != true) return;
-  final client = seerrClientFor(
-    instance,
-    pinnedCertFingerprint: pinnedCertFingerprint,
-  );
+  final client = seerrClientFor(instance, reach: reach);
   try {
     await client
         .post('/api/v1/auth/logout')

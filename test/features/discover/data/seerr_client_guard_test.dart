@@ -1,6 +1,16 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/features/discover/data/seerr_session.dart';
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A Seerr client is born in one place, `seerrClientFor`
 /// (`lib/features/discover/data/seerr_session.dart`).
@@ -93,6 +103,35 @@ void main() {
     expect(offenders, isEmpty);
   });
 
+  test('every Seerr client is told where its connection is reached', () {
+    // A Seerr client built without `reach:` goes to the address at home with
+    // no pin: right for a test, and for a sign-in tried at an address being
+    // typed, and wrong for every saved connection away from home. The callers
+    // in `lib/` all say where, so a new one has to.
+    final calls = [
+      for (final MapEntry(key: path, value: code) in libFiles.entries)
+        for (final match in _seerrReachOpener.allMatches(code))
+          if (!_declares(code, match.start))
+            (
+              site: '$path:${_lineOf(code, match.start)}  ${match.group(1)}(',
+              arguments: _argumentsAt(code, match.end - 1) ?? '',
+            ),
+    ];
+    // A scanner that found nothing would pass the check below.
+    expect(calls.length, greaterThanOrEqualTo(8));
+    expect(
+      [
+        for (final call in calls)
+          if (!call.arguments.contains('reach:')) call.site,
+      ],
+      isEmpty,
+      reason:
+          'A Seerr client built without `reach:`. Pass the route\'s reach '
+          '(watchTransport, connectionReachProvider, or reachOf with the '
+          'route) so it goes where the connection answers now.',
+    );
+  });
+
   test('the session cookie is named in the session file alone', () {
     final offenders = [
       for (final MapEntry(key: path, value: code) in libFiles.entries)
@@ -101,9 +140,237 @@ void main() {
     expect(offenders, isEmpty);
     expect(libFiles[_sessionFile], contains("'connect.sid'"));
   });
+
+  group('a connection reached at two addresses', () {
+    // One Seerr, at home on the LAN and away through a tunnel whose gateway
+    // asks for a token. Its client is built where the route is, and what
+    // the server hands out stays on the connection's own two origins.
+    const home = 'http://192.168.1.30:5055';
+    const away = 'https://seerr.example.com';
+    const elsewhere = 'https://other.example.net';
+    const token = CloudflareServiceToken(
+      clientId: 'id.access',
+      clientSecret: 'tunnel-secret',
+    );
+    const reachedAway = (url: away, access: token, pin: null);
+
+    const account = ServiceInstance(
+      id: 'seerr',
+      service: ServiceKey.seerr,
+      url: home,
+      account: SeerrAccountSignIn(
+        kind: SeerrAccountKind.local,
+        login: 'anna',
+        session: 'anna-session',
+      ),
+      away: ConnectionAddress(url: away, access: token),
+    );
+    final key = account.copyWith(credential: 'seerr-key', clearAccount: true);
+
+    test(
+      'a client built away goes to the address away, with its access',
+      () async {
+        final server = _Seerr();
+        final client = seerrClientFor(account, reach: reachedAway);
+        addTearDown(client.close);
+        client.dio.httpClientAdapter = server;
+
+        await client.get('/api/v1/request');
+
+        final sent = server.sent.single;
+        expect(sent.uri.origin, away);
+        expect(sent.headers['CF-Access-Client-Secret'], 'tunnel-secret');
+      },
+    );
+
+    test('the session goes to both of its origins and to no other', () async {
+      final server = _Seerr();
+      final client = seerrClientFor(account, reach: reachedAway);
+      addTearDown(client.close);
+      client.dio.httpClientAdapter = server;
+
+      await client.get('/api/v1/request');
+      await client.dio.getUri<dynamic>(Uri.parse('$home/api/v1/request'));
+      await client.dio.getUri<dynamic>(Uri.parse('$elsewhere/api/v1/request'));
+
+      expect(
+        [for (final request in server.sent) request.cookie('connect.sid')],
+        ['anna-session', 'anna-session', null],
+      );
+    });
+
+    test('a session handed back by another origin is not kept', () async {
+      final kept = <String>[];
+      final server = _Seerr(
+        cookies: (request) => ['connect.sid=from-${request.uri.host}; Path=/'],
+      );
+      final client = seerrClientFor(
+        account.copyWith(
+          account: const SeerrAccountSignIn(kind: SeerrAccountKind.local),
+        ),
+        reach: reachedAway,
+        events: SeerrSessionEvents(onSession: kept.add),
+      );
+      addTearDown(client.close);
+      client.dio.httpClientAdapter = server;
+
+      await client.dio.getUri<dynamic>(Uri.parse('$elsewhere/api/v1/status'));
+      await client.get('/api/v1/status');
+
+      expect(kept, ['from-seerr.example.com']);
+    });
+
+    test('the CSRF answer is kept and asked for per origin, and sent to no '
+        'other', () async {
+      // Each origin hands out its own pair, and refuses a write without it.
+      final server = _Seerr(
+        cookies: (request) => switch (request.uri.path) {
+          '/api/v1/settings/public' => [
+            '_csrf=secret-${request.uri.host}; Path=/; HttpOnly',
+            'XSRF-TOKEN=token-${request.uri.host}; Path=/',
+          ],
+          _ => const [],
+        },
+        refuses: (request) =>
+            request.method == 'POST' &&
+            request.headers['X-XSRF-TOKEN'] != 'token-${request.uri.host}',
+      );
+      final client = seerrClientFor(key, reach: reachedAway);
+      addTearDown(client.close);
+      client.dio.httpClientAdapter = server;
+
+      // Away: refused, the token asked of the address away, sent again.
+      await client.post('/api/v1/request', data: const {'mediaId': 1});
+      // At home: the token away is not sent; home is asked for its own.
+      await client.dio.postUri<dynamic>(
+        Uri.parse('$home/api/v1/request'),
+        data: const {'mediaId': 2},
+      );
+      // Elsewhere: neither origin's pair goes there.
+      await client.dio.getUri<dynamic>(Uri.parse('$elsewhere/api/v1/status'));
+
+      final writes = [
+        for (final request in server.sent)
+          if (request.method == 'POST')
+            (
+              request.uri.origin,
+              request.headers['X-XSRF-TOKEN'],
+              request.cookie('_csrf'),
+            ),
+      ];
+      expect(writes, [
+        (away, null, null),
+        (away, 'token-seerr.example.com', 'secret-seerr.example.com'),
+        ('http://192.168.1.30:5055', null, null),
+        (
+          'http://192.168.1.30:5055',
+          'token-192.168.1.30',
+          'secret-192.168.1.30',
+        ),
+      ]);
+      expect(
+        [
+          for (final request in server.sent)
+            if (request.uri.path == '/api/v1/settings/public')
+              request.uri.origin,
+        ],
+        [away, 'http://192.168.1.30:5055'],
+      );
+      final third = server.sent.last;
+      expect(third.uri.origin, elsewhere);
+      expect(third.cookie('_csrf'), isNull);
+      expect(third.headers['X-XSRF-TOKEN'], isNull);
+    });
+  });
+}
+
+/// One request as the fake server saw it.
+typedef _Sent = ({String method, Uri uri, Map<String, dynamic> headers});
+
+extension on _Sent {
+  /// The value of cookie [name] the request carried, or null.
+  String? cookie(String name) {
+    final header = headers.entries
+        .where((entry) => entry.key.toLowerCase() == 'cookie')
+        .map((entry) => '${entry.value}')
+        .firstOrNull;
+    for (final pair in (header ?? '').split(';')) {
+      final at = pair.indexOf('=');
+      if (at > 0 && pair.substring(0, at).trim() == name) {
+        return pair.substring(at + 1).trim();
+      }
+    }
+    return null;
+  }
+}
+
+/// A Seerr that answers every request with `{}`, the cookies [cookies] hands
+/// it, and `403 invalid csrf token` for the requests [refuses] picks.
+class _Seerr implements HttpClientAdapter {
+  _Seerr({List<String> Function(_Sent request)? cookies, this.refuses})
+    : cookies = cookies ?? ((_) => const []);
+
+  final List<String> Function(_Sent request) cookies;
+  final bool Function(_Sent request)? refuses;
+  final sent = <_Sent>[];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    await requestStream?.drain<void>();
+    final request = (
+      method: options.method,
+      uri: options.uri,
+      headers: Map<String, dynamic>.of(options.headers),
+    );
+    sent.add(request);
+    final refused = refuses?.call(request) ?? false;
+    return ResponseBody.fromString(
+      jsonEncode(refused ? {'message': 'invalid csrf token'} : {}),
+      refused ? 403 : 200,
+      headers: {
+        Headers.contentTypeHeader: ['application/json; charset=utf-8'],
+        'set-cookie': cookies(request),
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 const _sessionFile = 'lib/features/discover/data/seerr_session.dart';
+
+/// Every way a Seerr client is built for a connection, which says where.
+final _seerrReachOpener = RegExp(
+  r'(?<!\w)(seerrClientFor|SeerrAuthService\.forConnection|signOutOfSeerr|'
+  r'diagnoseSeerr|seerrClientFactoryProvider\)|seerrClientFactory)\(',
+);
+
+/// Whether the name at [offset] is being declared rather than called: a
+/// return type (`ApiClient seerrClientFor(`) or `factory` before it.
+bool _declares(String code, int offset) {
+  final before = code
+      .substring(code.lastIndexOf('\n', offset) + 1, offset)
+      .trim();
+  return before == 'factory' || RegExp(r'^[A-Z][\w<>?, ]*$').hasMatch(before);
+}
+
+/// The text between the parenthesis at [open] and the one that closes it.
+String? _argumentsAt(String code, int open) {
+  var depth = 0;
+  for (var i = open; i < code.length; i++) {
+    if (code[i] == '(') depth++;
+    if (code[i] == ')') {
+      depth--;
+      if (depth == 0) return code.substring(open + 1, i);
+    }
+  }
+  return null;
+}
 
 /// Where an `ApiClient` is built, and whose it is.
 const _apiClientSites = <String, String>{

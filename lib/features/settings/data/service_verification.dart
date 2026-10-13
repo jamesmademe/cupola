@@ -17,10 +17,13 @@ import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_status_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -327,7 +330,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
         credential: apiKey.trim(),
         access: access,
       ),
-      pin: pin,
+      reach: (url: urlTrimmed, access: access, pin: pin),
     );
   }
 
@@ -490,17 +493,22 @@ Future<ServiceDiagnosis> diagnoseCredentials(
 /// as answering, then who answered.
 ///
 /// [instance] signs in its own way, the key or an account's session
-/// (`seerrClientFor`); [pin] is the certificate trusted for its origin.
+/// (`seerrClientFor`); [reach] is the address asked, with its access and the
+/// certificate trusted for its origin (null: the address at home, no pin).
 Future<ServiceDiagnosis> diagnoseSeerr(
   ServiceInstance instance, {
-  String? pin,
+  ConnectionReach? reach,
 }) async {
-  final client = seerrClientFor(instance, pinnedCertFingerprint: pin);
+  final client = seerrClientFor(instance, reach: reach);
   try {
     await SeerrService(
       client,
     ).testConnection().timeout(const Duration(seconds: 5));
-    await readServiceStatus(client, ServiceKey.seerr, url: instance.url.trim());
+    await readServiceStatus(
+      client,
+      ServiceKey.seerr,
+      url: (reach?.url ?? instance.url).trim(),
+    );
     return const ServiceDiagnosis.connected();
   } catch (e) {
     return ServiceDiagnosis.failed(e);
@@ -650,7 +658,8 @@ Future<ServiceDiagnosis> diagnoseService(
 
   final pending = [
     for (final instance in instances)
-      diagnose?.call(instance) ?? diagnoseInstance(instance, settings),
+      diagnose?.call(instance) ??
+          diagnoseInstance(instance, settings, route: ConnectionRoute.home),
   ];
   return worstDiagnosis(await Future.wait(pending));
 }
@@ -683,10 +692,17 @@ int _attention(ServiceConnectionStatus status) => switch (status) {
 /// [settings] is still
 /// needed for the two values that are not the instance's own: the pin, which
 /// belongs to a TLS origin, and the Plex client id, which belongs to the install.
+///
+/// [route] says which of the connection's addresses is asked ([reachOf]), and
+/// every caller says it: [ConnectionRoute.home] for a form testing what is
+/// typed (the address in the field is the one to verify), the connection's
+/// own route for a readout of a saved one ([diagnoseSavedInstance]), which
+/// reports whether the connection answers where the app reaches it.
 Future<ServiceDiagnosis> diagnoseInstance(
   ServiceInstance instance,
-  SettingsModel settings,
-) {
+  SettingsModel settings, {
+  required ConnectionRoute route,
+}) {
   // Signed out: nothing to ask the server, the person has a step to take.
   if (instance.isSignedOut) {
     return Future.value(
@@ -700,21 +716,22 @@ Future<ServiceDiagnosis> diagnoseInstance(
     return Future.value(const ServiceDiagnosis.notConfigured());
   }
   final service = instance.service;
+  final reach = reachOf(settings, instance, route);
   // An account has no key to hand over: the connection signs in its own way.
   if (service == ServiceKey.seerr && instance.account != null) {
-    return diagnoseSeerr(instance, pin: settings.pinForUrl(instance.url));
+    return diagnoseSeerr(instance, reach: reach);
   }
   return diagnoseCredentials(
     service,
-    url: instance.url,
+    url: reach.url,
     // The credential sits in one slot and which vocabulary it answers to is the
     // registry's call, exactly as it is in storage.
     apiKey: service.usesApiKey ? instance.credential : '',
     username: instance.username,
     password: service.usesApiKey ? '' : instance.credential,
-    certFingerprint: settings.pinForUrl(instance.url) ?? '',
+    certFingerprint: reach.pin ?? '',
     clientIdentifier: settings.plexClientId,
-    access: instance.access,
+    access: reach.access,
   );
 }
 
@@ -732,11 +749,20 @@ Future<ServiceDiagnosis> diagnoseInstance(
 ///
 /// A form testing what is typed keeps [diagnoseInstance]: that is the person
 /// asking, once per press, about values that may not be saved yet.
+///
+/// Asked where the connection is reached now: the route is watched, so a
+/// readout that read `Unreachable` at home asks again at the address away
+/// once the route moves there.
 Future<ServiceDiagnosis> diagnoseSavedInstance(
   Ref ref,
   ServiceInstance instance,
   SettingsModel settings,
 ) {
+  final route = watchConnectionRoute(
+    ref,
+    instance.id,
+    hasAway: instance.away != null,
+  );
   if (instance.service == ServiceKey.qbittorrent && instance.isConfigured) {
     final client = ref.watch(qbittorrentClientForProvider(instance.id));
     // Two round trips (login + version) on a cold client.
@@ -746,7 +772,7 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
       close: () {},
     );
   }
-  return diagnoseInstance(instance, settings);
+  return diagnoseInstance(instance, settings, route: route);
 }
 
 /// Whether a blocked local network could still explain this failure.
@@ -857,7 +883,12 @@ Future<ServiceDiagnosis> diagnoseInstanceWithCertProbe(
   SettingsModel settings, {
   CertificateProber probe = probeUntrustedCertificate,
 }) async {
-  final diagnosis = await diagnoseInstance(instance, settings);
+  // The form's own address, the one in its field.
+  final diagnosis = await diagnoseInstance(
+    instance,
+    settings,
+    route: ConnectionRoute.home,
+  );
   if (!diagnosis.isDisconnected || !certProbeWorthwhile(diagnosis.reason)) {
     return diagnosis;
   }
@@ -1001,15 +1032,23 @@ ServiceInstance? _askedWith(ServiceInstance? instance) {
 /// something it is asked with changes.
 typedef _DiagnosisInputs = ({
   ServiceInstance? instance,
-  String? pin,
+  ConnectionReach? home,
+  ConnectionReach? away,
   String plexClientId,
 });
 
+/// Both addresses with their pins: which of the two is asked is the route's,
+/// watched beside this ([diagnoseSavedInstance]).
 _DiagnosisInputs _diagnosisInputs(SettingsModel settings, String instanceId) {
   final instance = settings.instanceById(instanceId);
   return (
     instance: _askedWith(instance),
-    pin: instance == null ? null : settings.pinForUrl(instance.url),
+    home: instance == null
+        ? null
+        : reachOf(settings, instance, ConnectionRoute.home),
+    away: instance?.away == null
+        ? null
+        : reachOf(settings, instance!, ConnectionRoute.away),
     plexClientId: settings.plexClientId,
   );
 }

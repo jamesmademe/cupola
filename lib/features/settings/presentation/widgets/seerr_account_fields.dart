@@ -20,9 +20,12 @@ import 'package:cupola/features/discover/data/seerr_auth_service.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/discover/presentation/seerr_sign_in_notice.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_dialog.dart';
@@ -139,13 +142,26 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
 
   SeerrAuthService _authService() {
     _auth?.close();
+    final reach = _authReach = _reach;
+    return _auth = SeerrAuthService.forConnection(_connection, reach: reach);
+  }
+
+  /// Where the last [_authService] sends its requests: the address a failure
+  /// it met belongs to.
+  ConnectionReach? _authReach;
+
+  /// Where a sign-in goes now. The saved connection, at the address it was
+  /// saved with, is reached where its route is: signing in again away from
+  /// home goes to the address away. An address being typed is tried where it
+  /// is typed, as every connection test is.
+  ConnectionReach get _reach {
     final connection = _connection;
-    return _auth = SeerrAuthService.forConnection(
-      connection,
-      pinnedCertFingerprint: ref
-          .read(currentSettingsProvider)
-          .pinForUrl(connection.url),
-    );
+    final settings = ref.read(currentSettingsProvider);
+    final saved = settings.instanceById(connection.id);
+    final route = saved != null && saved.url == connection.url
+        ? ref.read(connectionRouteProvider(connection.id))
+        : ConnectionRoute.home;
+    return reachOf(settings, connection, route);
   }
 
   // === Reading the server ==================================================
@@ -195,14 +211,16 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
   /// cannot tell is on the local network, and the person has not read the
   /// warning yet.
   bool get _cleartextGate =>
-      !_cleartextAccepted && passwordTravelsInClear(_connection.url);
+      !_cleartextAccepted && passwordTravelsInClear(_reach.url);
 
   /// When the server's certificate is one nothing trusts, asks the person to
   /// trust it before anything secret is sent. True when it is now trusted.
   Future<bool> _trustedCertificateFor(Object error) async {
     if (!certProbeWorthwhile(classifyConnectionFailure(error))) return false;
     final settings = ref.read(currentSettingsProvider);
-    final url = _connection.url;
+    // The address the request that failed went to: away from home, the
+    // certificate in question is the one in front of the address away.
+    final url = _authReach?.url ?? _reach.url;
     final previous = settings.pinForUrl(url);
     final probe = await widget.certificateProber(
       url,
@@ -778,10 +796,13 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
     final method = _method!;
     final theme = Theme.of(context);
     final local = method == SeerrSignInMethod.local;
+    // Seerr's own page, at the address the server was read at: away from
+    // home, the one at home would not open.
     final forgot = local
         ? (facts.emailEnabled
               ? Uri.tryParse(
-                  '${UrlUtils.normalizeBaseUrl(_connection.url)}/resetpassword',
+                  '${UrlUtils.normalizeBaseUrl(_authReach?.url ?? _reach.url)}'
+                  '/resetpassword',
                 )
               : null)
         : Uri.tryParse(facts.jellyfinForgotPasswordUrl ?? '');

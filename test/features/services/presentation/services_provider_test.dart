@@ -31,6 +31,7 @@ import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -1395,7 +1396,7 @@ ProviderContainer _container({
           (ref) =>
               (
                 instance, {
-                String? pinnedCertFingerprint,
+                ConnectionReach? reach,
                 SeerrSessionEvents events = const SeerrSessionEvents(),
               }) => statusClient,
         ),
@@ -1544,7 +1545,7 @@ ProviderContainer _mutableSettingsContainer({
           (ref) =>
               (
                 instance, {
-                String? pinnedCertFingerprint,
+                ConnectionReach? reach,
                 SeerrSessionEvents events = const SeerrSessionEvents(),
               }) => statusClient,
         ),

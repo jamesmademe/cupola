@@ -38,6 +38,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/connection_access_rules.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -349,8 +350,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       // the user allows while the alert is up is simply tested again. The
       // retest that used to be theirs to work out.
       final candidateInstance = candidate.instanceById(_target.id) ?? _target;
+      // At home, every time: the test is of the address in the field, never
+      // of the one the connection's route happens to be on.
       var result = await diagnoseThroughLocalNetworkGate(
-        () => diagnoseInstance(candidateInstance, candidate),
+        () => diagnoseInstance(
+          candidateInstance,
+          candidate,
+          route: ConnectionRoute.home,
+        ),
         url: candidateInstance.url,
         probe: widget.localNetworkProbe,
       );
@@ -402,6 +409,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             result = await diagnoseInstance(
               retried.instanceById(_target.id) ?? candidateInstance,
               retried,
+              route: ConnectionRoute.home,
             );
           }
         }
@@ -419,6 +427,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         final bare = await diagnoseInstance(
           candidateInstance.copyWith(access: const NoAccess()),
           candidate,
+          route: ConnectionRoute.home,
         );
         shareTeam = accessTeamOf(bare.gateway);
       }
@@ -628,7 +637,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (!result.confirmed || !mounted) return;
 
     final before = ref.read(currentSettingsProvider);
-    final priorUrl = before.instanceById(_target.id)?.url ?? '';
+    final prior = before.instanceById(_target.id);
     final cleared = before
         // Drops the whole connection rather than blanking its fields, which
         // takes the chosen viewer with it. `copyWithoutServiceExtras` used to
@@ -636,11 +645,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         // viewer on *every* instance of the service, so removing one Jellyfin
         // would have reset which person the other one reads through.
         .copyWithoutInstance(_target.id)
-        // Forget this origin's pin too, but only when nothing else configured
-        // still reaches it: removing Sonarr must never break Radarr's trust
-        // in the same reverse proxy, and with instances that includes the
-        // service's own second connection behind it.
-        .copyWithoutUnusedCertificate(priorUrl);
+        // Forget its origins' pins too, at home and away, but only when
+        // nothing else configured still reaches them: removing Sonarr must
+        // never break Radarr's trust in the same reverse proxy, and with
+        // instances that includes the service's own second connection behind
+        // it.
+        .copyWithoutUnusedCertificatesOf(prior);
 
     await ref.read(settingsProvider.notifier).updateSettings(cleared);
 

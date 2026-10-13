@@ -13,6 +13,7 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -310,7 +311,7 @@ Future<void> _pump(
           (ref) =>
               (
                 instance, {
-                String? pinnedCertFingerprint,
+                ConnectionReach? reach,
                 SeerrSessionEvents events = const SeerrSessionEvents(),
               }) => _StatusClient(version),
         ),

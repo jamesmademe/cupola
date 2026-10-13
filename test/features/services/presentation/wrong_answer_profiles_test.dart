@@ -25,6 +25,7 @@ import 'package:cupola/features/series/presentation/series_screen.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/services/presentation/stack_screen.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -47,7 +48,11 @@ Future<ServiceSummary> _probe(
 /// What the connection test says about [id] on [profile].
 Future<ServiceDiagnosis> _test(ConfigProfile profile, String id) async {
   await ProfileHarness.start(profile);
-  return diagnoseInstance(profile.connection(id).instance, profile.settings);
+  return diagnoseInstance(
+    profile.connection(id).instance,
+    profile.settings,
+    route: ConnectionRoute.home,
+  );
 }
 
 Color _amber() {
@@ -160,6 +165,7 @@ void main() {
           await diagnoseInstance(
             profile.connection(WorldIds.radarr).instance,
             profile.settings,
+            route: ConnectionRoute.home,
           ),
         ),
       ))!;
@@ -210,6 +216,7 @@ void main() {
       final diagnosis = await diagnoseInstance(
         Profiles.p1.connection(WorldIds.radarr).instance,
         Profiles.p1.settings,
+        route: ConnectionRoute.home,
       );
 
       expect(summary.failureReason, ServiceFailureReason.invalidResponse);

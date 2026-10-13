@@ -23,10 +23,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_not_configured.dart';
@@ -92,10 +94,14 @@ class SeerrSessionEvents {
 ///   with no session yet is a client to sign in with: it sends no cookie and
 ///   keeps the one the sign-in answers with ([SeerrSessionEvents.onSession]).
 ///
-/// Both carry the certificate pinned for the origin
-/// ([pinnedCertFingerprint], ADR-6) and the connection's access to a gateway
-/// in front ([ServiceInstance.access]). Redirects stay on the configured
-/// origin, so the cookie never leaves the host.
+/// Both go to [reach]: the address the connection's route is on, the access
+/// its gateway asks for and the certificate pinned for its origin (ADR-6),
+/// as `reachOf` answers it (through `watchTransport` or
+/// `connectionReachProvider`). Null means the address at home with no pin:
+/// what a test, and a sign-in tried at an address just typed, mean. Redirects
+/// stay on the configured origin, and the session and the CSRF answer go to
+/// the connection's own origins alone ([seerrOriginsOf]): the cookie never
+/// leaves the server.
 ///
 /// [signIn] overrides the instance's own way in
 /// ([ServiceInstance.seerrSignIn]): the sign-in sequences pass the account
@@ -105,43 +111,70 @@ class SeerrSessionEvents {
 /// Seerr client is born anywhere else.
 ApiClient seerrClientFor(
   ServiceInstance instance, {
-  String? pinnedCertFingerprint,
+  ConnectionReach? reach,
   SeerrSignIn? signIn,
   SeerrSessionEvents events = const SeerrSessionEvents(),
 }) {
   assert(instance.service == ServiceKey.seerr, 'not a Seerr connection');
   final way = signIn ?? instance.seerrSignIn;
-  final accessHeaders = instance.access.headers();
+  final at = reach ?? (url: instance.url, access: instance.access, pin: null);
+  final accessHeaders = at.access.headers();
+  final origins = seerrOriginsOf(instance, at.url);
   final actsAs = instance.seerrActsAs;
   return switch (way) {
     SeerrApiKeySignIn(:final key) when actsAs.isEmpty => ApiClient(
-      baseUrl: instance.url,
+      baseUrl: at.url,
       apiKey: key.trim(),
-      pinnedCertFingerprint: pinnedCertFingerprint,
+      pinnedCertFingerprint: at.pin,
       accessHeaders: accessHeaders,
-      interceptors: (dio) => [SeerrCsrfInterceptor(dio)],
+      interceptors: (dio) => [SeerrCsrfInterceptor(dio, origins: origins)],
     ),
     // The key acting as another administrator of the household: Seerr reads
     // `X-API-User` only beside its key, and the header stays on the
     // configured origin with the key.
     SeerrApiKeySignIn(:final key) => ApiClient.authenticatedBy(
-      baseUrl: instance.url,
+      baseUrl: at.url,
       headers: {'X-Api-Key': key.trim(), _actsAsHeader: actsAs},
-      pinnedCertFingerprint: pinnedCertFingerprint,
+      pinnedCertFingerprint: at.pin,
       accessHeaders: accessHeaders,
-      interceptors: (dio) => [SeerrCsrfInterceptor(dio)],
+      interceptors: (dio) => [SeerrCsrfInterceptor(dio, origins: origins)],
     ),
     SeerrAccountSignIn(:final session) => ApiClient.authenticatedBy(
-      baseUrl: instance.url,
+      baseUrl: at.url,
       headers: const {},
-      pinnedCertFingerprint: pinnedCertFingerprint,
+      pinnedCertFingerprint: at.pin,
       accessHeaders: accessHeaders,
       interceptors: (dio) => [
-        SeerrSessionInterceptor(dio, session: session, events: events),
-        SeerrCsrfInterceptor(dio),
+        SeerrSessionInterceptor(
+          dio,
+          session: session,
+          origins: origins,
+          events: events,
+        ),
+        SeerrCsrfInterceptor(dio, origins: origins),
       ],
     ),
   };
+}
+
+/// The origins Seerr's session and CSRF answer may go to for [instance]:
+/// its address at home, its address away from home when it has one, and
+/// [baseUrl], the one its client is built on.
+///
+/// The same server behind two addresses: a session signed in at home is the
+/// account's away from home too, and neither ever goes to a third origin,
+/// another connection's included.
+Set<String> seerrOriginsOf(ServiceInstance instance, String baseUrl) => {
+  for (final address in [...instance.addresses, baseUrl])
+    ?_originOf(Uri.tryParse(UrlUtils.normalizeBaseUrl(address))),
+};
+
+/// `scheme://host:port` of [uri], the port spelled out even when it is the
+/// scheme's default, so `https://seerr.lan` and `https://seerr.lan:443` are
+/// one origin. Null for an address with no host.
+String? _originOf(Uri? uri) {
+  if (uri == null || uri.host.isEmpty) return null;
+  return '${uri.scheme.toLowerCase()}://${uri.host.toLowerCase()}:${uri.port}';
 }
 
 /// What a client of connection [connectionId] reports about its saved
@@ -165,7 +198,7 @@ SeerrSessionEvents seerrAccountEvents(Ref ref, String connectionId) {
 typedef SeerrClientFactory =
     ApiClient Function(
       ServiceInstance instance, {
-      String? pinnedCertFingerprint,
+      ConnectionReach? reach,
       SeerrSessionEvents events,
     });
 
@@ -224,7 +257,9 @@ ApiClient watchSeerrClient(
           credential: transport.apiKey,
           access: transport.access,
         ),
-    pinnedCertFingerprint: transport.pin,
+    // The transport's: the address its route is on, with that address's
+    // access and pin.
+    reach: (url: transport.url, access: transport.access, pin: transport.pin),
     events: events ?? seerrAccountEvents(ref, transport.instanceId),
   );
   ref.onDispose(client.close);
@@ -256,15 +291,23 @@ ApiClient watchSeerrClient(
 ///   `/auth/me`.
 ///
 /// The CSRF cookie is [SeerrCsrfInterceptor]'s, in both ways in.
+///
+/// The session goes to [origins] alone ([seerrOriginsOf]): the connection's
+/// address at home and its address away, which reach the one server the
+/// session belongs to. A request to any other origin goes without it, and a
+/// session one hands back is not kept.
 class SeerrSessionInterceptor extends Interceptor {
   SeerrSessionInterceptor(
     this._dio, {
     required String session,
+    required Set<String> origins,
     this.events = const SeerrSessionEvents(),
-  }) : _session = session;
+  }) : _session = session,
+       _origins = origins;
 
   final Dio _dio;
   final SeerrSessionEvents events;
+  final Set<String> _origins;
   String _session;
 
   /// Set on the `/auth/me` this interceptor sends itself, so its own refusal
@@ -276,7 +319,8 @@ class SeerrSessionInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final signIn = _signInRoute.hasMatch(options.uri.path);
-    _putCookie(options, _sessionCookie, signIn ? null : _session);
+    final ours = _origins.contains(_originOf(options.uri));
+    _putCookie(options, _sessionCookie, signIn || !ours ? null : _session);
     handler.next(options);
   }
 
@@ -381,6 +425,10 @@ class SeerrSessionInterceptor extends Interceptor {
   }
 
   void _keepSession(Response? response) {
+    if (response == null ||
+        !_origins.contains(_originOf(response.requestOptions.uri))) {
+      return;
+    }
     final value = _setCookiesOf(response)[_sessionCookie];
     if (value == null || value.isEmpty || value == _session) return;
     _session = value;
@@ -404,24 +452,41 @@ class SeerrSessionInterceptor extends Interceptor {
 /// - a write refused for its token fetches one (`GET /settings/public`, a
 ///   public route) and is sent **once** more. Refused again, it fails as
 ///   [SeerrCsrfRefused].
+///
+/// Kept and asked **per origin**, as a browser keeps a cookie per host: the
+/// pair an answer at home handed out goes back home, and the address away
+/// asks for its own. Only to [origins] ([seerrOriginsOf]): a request to any
+/// other origin carries neither, and nothing it answers is kept.
 class SeerrCsrfInterceptor extends Interceptor {
-  SeerrCsrfInterceptor(this._dio);
+  SeerrCsrfInterceptor(this._dio, {required Set<String> origins})
+    : _origins = origins;
 
   final Dio _dio;
-  String? _secret;
-  String? _token;
+  final Set<String> _origins;
+  final Map<String, String> _secrets = {};
+  final Map<String, String> _tokens = {};
 
   /// Set on a write sent the second time.
   static const _againExtra = 'cupola.seerrCsrfAgain';
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    _putCookie(options, _csrfSecretCookie, _secret);
-    final token = _token;
+    final origin = _ownOrigin(options.uri);
+    _putCookie(options, _csrfSecretCookie, _secrets[origin]);
+    final token = _tokens[origin];
     if (_isWrite(options) && token != null) {
       options.headers[_csrfTokenHeader] = token;
+    } else {
+      options.headers.remove(_csrfTokenHeader);
     }
     handler.next(options);
+  }
+
+  /// [uri]'s origin when it is one of the connection's, else null: nothing
+  /// is kept under, or sent to, an origin that is not.
+  String? _ownOrigin(Uri uri) {
+    final origin = _originOf(uri);
+    return _origins.contains(origin) ? origin : null;
   }
 
   @override
@@ -441,18 +506,27 @@ class SeerrCsrfInterceptor extends Interceptor {
       handler.next(err);
       return;
     }
-    if (options.extra[_againExtra] == true) {
+    final origin = _ownOrigin(options.uri);
+    if (options.extra[_againExtra] == true || origin == null) {
       handler.next(_withVerdict(err, const SeerrCsrfRefused()));
       return;
     }
     try {
       // Any answer past the guard carries the token; this one is public, so
-      // it costs neither a session nor the key.
-      await _dio.get<dynamic>('/api/v1/settings/public');
+      // it costs neither a session nor the key. Asked of the origin that
+      // refused, which is the client's own unless the write named another
+      // of the connection's addresses whole.
+      if (_originOf(Uri.tryParse(options.baseUrl)) == origin) {
+        await _dio.get<dynamic>('/api/v1/settings/public');
+      } else {
+        await _dio.getUri<dynamic>(
+          Uri.parse(origin).replace(path: '/api/v1/settings/public'),
+        );
+      }
     } on DioException {
       // Nothing to send the write with: the refusal stands.
     }
-    if (_token == null) {
+    if (_tokens[origin] == null) {
       handler.next(_withVerdict(err, const SeerrCsrfRefused()));
       return;
     }
@@ -467,11 +541,14 @@ class SeerrCsrfInterceptor extends Interceptor {
   }
 
   void _keep(Response? response) {
+    if (response == null) return;
+    final origin = _ownOrigin(response.requestOptions.uri);
+    if (origin == null) return;
     final cookies = _setCookiesOf(response);
     final secret = cookies[_csrfSecretCookie];
-    if (secret != null && secret.isNotEmpty) _secret = secret;
+    if (secret != null && secret.isNotEmpty) _secrets[origin] = secret;
     final token = cookies[_csrfTokenCookie];
-    if (token != null && token.isNotEmpty) _token = token;
+    if (token != null && token.isNotEmpty) _tokens[origin] = token;
   }
 
   static bool _refusedForToken(DioException err) {

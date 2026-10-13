@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/misc.dart' show ProviderFamily;
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_not_configured.dart';
@@ -105,6 +107,10 @@ void liftQbittorrentRefusals(WidgetRef ref, Iterable<String> connectionIds) {
 /// and access: a test that failed changes nothing, and one that passed with
 /// values not saved yet says nothing about the saved ones (saving them builds
 /// a new client, which asks on its own).
+///
+/// The test asks the address in the form's field, at home; the saved client
+/// asks the address its route is on. Away from home the two differ, and a
+/// pass at home says nothing about the address away: the refusal stays.
 void liftQbittorrentRefusalAfterPassingTest(
   WidgetRef ref,
   ServiceInstance tested,
@@ -112,14 +118,19 @@ void liftQbittorrentRefusalAfterPassingTest(
   if (tested.service != ServiceKey.qbittorrent) return;
   final saved = ref.read(currentSettingsProvider).instanceById(tested.id);
   if (saved == null || !saved.isConfigured) return;
-  if (_markOf(saved) != _markOf(tested)) return;
+  final route = ref.read(connectionRouteProvider(saved.id));
+  if (_markOf(saved, saved.addressOn(route)) != _markOf(tested, tested.home)) {
+    return;
+  }
   ref.read(qbittorrentClientForProvider(saved.id)).clearLoginRefusal();
 }
 
-/// What a client built from [instance] would present at the login.
-String _markOf(ServiceInstance instance) => qbittorrentCredentialMark(
-  baseUrl: UrlUtils.normalizeBaseUrl(instance.url),
-  username: instance.username.isNotEmpty ? instance.username : null,
-  password: instance.credential.isNotEmpty ? instance.credential : null,
-  accessHeaders: instance.access.headers(),
-);
+/// What a client built from [instance] at [address] would present at the
+/// login.
+String _markOf(ServiceInstance instance, ConnectionAddress address) =>
+    qbittorrentCredentialMark(
+      baseUrl: UrlUtils.normalizeBaseUrl(address.url),
+      username: instance.username.isNotEmpty ? instance.username : null,
+      password: instance.credential.isNotEmpty ? instance.credential : null,
+      accessHeaders: address.access.headers(),
+    );

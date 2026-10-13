@@ -64,9 +64,12 @@ import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/service_status_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -189,10 +192,13 @@ final instanceSummaryProvider =
     FutureProvider.family<ServiceSummary, InstanceRef>((ref, key) async {
       // Watch the narrow key; read the whole model for the work. The
       // per-client branches in [_loadVersion] each reach for their own fields,
-      // and none of them is anything but a projection of the key below.
-      ref.watch(
+      // and none of them is anything but a projection of the key below. The
+      // route is part of the key: a probe that found home silent asks again
+      // at the address away once the route moves there.
+      final route = ref.watch(connectionRouteProvider(key.instanceId));
+      final reached = ref.watch(
         currentSettingsProvider.select(
-          (s) => _connectionOfInstance(s, key.instanceId),
+          (s) => _connectionOfInstance(s, key.instanceId, route),
         ),
       );
       final settings = ref.read(currentSettingsProvider);
@@ -200,7 +206,11 @@ final instanceSummaryProvider =
       if (instance == null) {
         return _offlineSummary(key.service, host: '');
       }
-      return _loadServiceSummary(ref, instance, settings);
+      return _loadServiceSummary(ref, instance, settings, (
+        url: reached.url,
+        access: reached.access,
+        pin: reached.certFingerprint,
+      ));
     });
 
 /// The health of the connection [service] is currently seen through.
@@ -234,7 +244,9 @@ final serviceSummaryProvider =
 ///
 /// A record, so `select` gets structural equality for free. The password is not
 /// a separate field on purpose: `SettingsModel.passwordFor` *is* `apiKeyFor` for
-/// the credential-authenticated services, so [apiKey] already covers it.
+/// the credential-authenticated services, so [apiKey] already covers it. The
+/// address, its pin and its access are the route's ([reachOf]): every read
+/// and every poster built from this goes where the connection answers now.
 typedef _ServiceConnection = ({
   bool configured,
   String url,
@@ -275,8 +287,11 @@ List<_MergeConnection> _watchMergeConnections(Ref ref, ServiceKey service) {
   final lens = ref.watch(activeInstanceProvider(service))?.id ?? '';
   final merged = <_MergeConnection>[];
   for (final id in ids) {
+    final route = ref.watch(connectionRouteProvider(id));
     final connection = ref.watch(
-      currentSettingsProvider.select((s) => _connectionOfInstance(s, id)),
+      currentSettingsProvider.select(
+        (s) => _connectionOfInstance(s, id, route),
+      ),
     );
     if (!connection.configured) continue;
     merged.add((
@@ -293,6 +308,7 @@ List<_MergeConnection> _watchMergeConnections(Ref ref, ServiceKey service) {
 _ServiceConnection _connectionOfInstance(
   SettingsModel settings,
   String instanceId,
+  ConnectionRoute route,
 ) {
   final instance = settings.instanceById(instanceId);
   if (instance == null) {
@@ -306,13 +322,14 @@ _ServiceConnection _connectionOfInstance(
       session: '',
     );
   }
+  final reach = reachOf(settings, instance, route);
   return (
     configured: instance.isConfigured,
-    url: instance.url,
+    url: reach.url,
     apiKey: instance.credential,
     username: instance.username,
-    certFingerprint: settings.pinForUrl(instance.url),
-    access: instance.access,
+    certFingerprint: reach.pin,
+    access: reach.access,
     session: instance.account?.session ?? '',
   );
 }
@@ -340,10 +357,14 @@ final serviceStatusClientFactoryProvider = Provider<ServiceStatusClientFactory>(
       ),
 );
 
+/// [reach] is where the connection is asked: the address its route is on,
+/// with that address's access and pin. The host the summary names stays the
+/// connection's own address, the one it is known by.
 Future<ServiceSummary> _loadServiceSummary(
   Ref ref,
   ServiceInstance instance,
   SettingsModel settings,
+  ConnectionReach reach,
 ) async {
   final service = instance.service;
   final host = service.extractHost(instance.url) ?? '';
@@ -354,7 +375,7 @@ Future<ServiceSummary> _loadServiceSummary(
   // be read. The answer is still an answer, and is still noted.
   final silence = ref.read(silenceClockProvider);
   final silenceOf = silenceKey(service, instance.id);
-  final reach = ref.read(hostReachProvider);
+  final hostReach = ref.read(hostReachProvider);
   if (!instance.isConfigured) {
     // Nothing is asked of a connection that is not set up, so nothing
     // answered and nothing was silent: a silence kept from before it was
@@ -383,7 +404,7 @@ Future<ServiceSummary> _loadServiceSummary(
 
   final String? version;
   try {
-    version = await _loadVersion(ref, settings, instance);
+    version = await _loadVersion(ref, settings, instance, reach);
   } catch (error) {
     // Classified, never flattened: a refused key is the service answering, and
     // painting it with the same red as a box that is switched off sent people
@@ -395,7 +416,7 @@ Future<ServiceSummary> _loadServiceSummary(
     // them apart.
     final stuck =
         error is TimeoutException &&
-        await reach(Uri.tryParse(instance.url) ?? Uri());
+        await hostReach(Uri.tryParse(reach.url) ?? Uri());
     final failed = ServiceSummary.failed(
       service,
       host: host,
@@ -434,6 +455,7 @@ Future<String?> _loadVersion(
   Ref ref,
   SettingsModel settings,
   ServiceInstance instance,
+  ConnectionReach reach,
 ) async {
   final service = instance.service;
   if (service == ServiceKey.qbittorrent) {
@@ -463,10 +485,10 @@ Future<String?> _loadVersion(
   // reads its connection's own client, which is per connection too.)
   if (service == ServiceKey.truenas) {
     final client = TrueNasWsClient(
-      baseUrl: instance.url,
+      baseUrl: reach.url,
       apiKey: instance.credential,
-      certFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      certFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     return _versionOrNull(
       () async => (await TrueNasService(client).getSystemInfo()).version ?? '',
@@ -477,11 +499,11 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.dockge) {
     final client = DockgeClient(
-      baseUrl: instance.url,
+      baseUrl: reach.url,
       username: instance.username.isEmpty ? null : instance.username,
       password: instance.credential.isEmpty ? null : instance.credential,
-      certFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      certFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     return _versionOrNull(
       () async => await DockgeService(client).fetchVersion() ?? '',
@@ -492,10 +514,10 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.sabnzbd) {
     final client = SabnzbdClient(
-      url: instance.url,
+      url: reach.url,
       apiKey: instance.credential,
-      certFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      certFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     // Keyed, not `mode=version`: that one needs no key, and a probe that
     // cannot see a wrong key paints it as answering. Two hops, hence the room.
@@ -511,10 +533,10 @@ Future<String?> _loadVersion(
   // is anonymous, so the generic branch below read any token as answering.
   if (service == ServiceKey.jellyfin) {
     final client = JellyfinClient(
-      baseUrl: instance.url,
+      baseUrl: reach.url,
       apiKey: instance.credential,
-      pinnedCertFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      pinnedCertFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     return _versionOrNull(
       () async => await client.checkCredentialAndVersion() ?? '',
@@ -525,11 +547,11 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.plex) {
     final client = PlexClient(
-      url: instance.url,
+      url: reach.url,
       token: instance.credential,
       clientIdentifier: settings.plexClientId,
-      pinnedCertFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      pinnedCertFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     return _versionOrNull(
       () async => await client.checkCredentialAndVersion() ?? '',
@@ -540,11 +562,11 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.nzbget) {
     final client = NzbgetClient(
-      url: instance.url,
+      url: reach.url,
       username: instance.username.isEmpty ? null : instance.username,
       password: instance.credential.isEmpty ? null : instance.credential,
-      certFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      certFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     return _versionOrNull(
       client.version,
@@ -555,11 +577,11 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.transmission) {
     final client = TransmissionClient(
-      url: instance.url,
+      url: reach.url,
       username: instance.username.isEmpty ? null : instance.username,
       password: instance.credential.isEmpty ? null : instance.credential,
-      certFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      certFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     // Two hops on a cold client: the 409 handshake, then the real call, so
     // this gets the same headroom as qBittorrent's login-then-version pair.
@@ -572,11 +594,11 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.nginxProxyManager) {
     final client = NpmClient(
-      url: instance.url,
+      url: reach.url,
       identity: instance.username.isEmpty ? null : instance.username,
       secret: instance.credential.isEmpty ? null : instance.credential,
-      certFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      certFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     // `GET /api/` is unauthenticated, so on its own it read a wrong password
     // as answering. The token exchange is what proves the account, and it is
@@ -592,10 +614,10 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.unraid) {
     final client = UnraidClient(
-      url: instance.url,
+      url: reach.url,
       apiKey: instance.credential,
-      certFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
+      certFingerprint: reach.pin,
+      accessHeaders: reach.access.headers(),
     );
     return _versionOrNull(
       client.version,
@@ -604,13 +626,13 @@ Future<String?> _loadVersion(
     );
   }
 
-  final url = instance.url;
+  final url = reach.url;
   if (service == ServiceKey.seerr) {
     // Seerr's own client: the key or the account's session, never a client
     // that knows only the key.
     final client = ref.watch(seerrClientFactoryProvider)(
       instance,
-      pinnedCertFingerprint: settings.pinForUrl(url),
+      reach: reach,
       // A session the probe finds ended is emptied, as any request's is.
       events: seerrAccountEvents(ref, instance.id),
     );
@@ -631,8 +653,8 @@ Future<String?> _loadVersion(
   final client = createClient(
     baseUrl: url,
     apiKey: instance.credential,
-    pinnedCertFingerprint: settings.pinForUrl(url),
-    accessHeaders: instance.access.headers(),
+    pinnedCertFingerprint: reach.pin,
+    accessHeaders: reach.access.headers(),
   );
 
   try {

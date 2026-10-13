@@ -12,7 +12,9 @@ import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/domain/seerr_quota.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_not_configured.dart';
@@ -73,10 +75,7 @@ class SeerrAccounts {
     final settings = _ref.read(currentSettingsProvider);
     final instance = settings.instanceById(connectionId);
     if (instance == null || instance.account == null) return;
-    await signOutOfSeerr(
-      instance,
-      pinnedCertFingerprint: settings.pinForUrl(instance.url),
-    );
+    await signOutOfSeerr(instance, reach: _reachOf(connectionId));
     await sessionEnded(connectionId);
   }
 
@@ -89,22 +88,24 @@ class SeerrAccounts {
     final settings = _ref.read(currentSettingsProvider);
     final instance = settings.instanceById(connectionId);
     if (instance == null) return;
-    await signOutOfSeerr(
-      instance,
-      pinnedCertFingerprint: settings.pinForUrl(instance.url),
-    );
+    await signOutOfSeerr(instance, reach: _reachOf(connectionId));
     final now = _ref.read(currentSettingsProvider);
     await _ref
         .read(settingsProvider.notifier)
         .updateSettings(
           now
               .copyWithoutInstance(connectionId)
-              .copyWithoutUnusedCertificate(instance.url),
+              .copyWithoutUnusedCertificatesOf(instance),
         );
     if (_ref.read(activeInstancesProvider)[ServiceKey.seerr] == connectionId) {
       await _ref.read(activeInstancesProvider.notifier).clear(ServiceKey.seerr);
     }
   }
+
+  /// Where connection [connectionId] is reached now: a request sent once
+  /// goes to the address that answers.
+  ConnectionReach? _reachOf(String connectionId) =>
+      _ref.read(connectionReachProvider(connectionId));
 
   /// The server no longer knows [connectionId]'s session: it is emptied, and
   /// the connection is signed out. Everything else stays.
@@ -132,7 +133,7 @@ class SeerrAccounts {
     if (instance?.account?.isSignedIn != true) return;
     final client = seerrClientFor(
       instance!,
-      pinnedCertFingerprint: settings.pinForUrl(instance.url),
+      reach: _reachOf(connectionId),
       events: SeerrSessionEvents(
         onSessionEnded: () => unawaited(sessionEnded(connectionId)),
       ),
@@ -255,19 +256,16 @@ final seerrQuotaProvider = FutureProvider.autoDispose
 /// signs in: its title, its ways in, its 4K servers. Public routes only.
 final seerrServerFactsProvider = FutureProvider.autoDispose
     .family<SeerrServerFacts, String>((ref, connectionId) async {
-      final settings = ref.read(currentSettingsProvider);
       final instance = ref.watch(
         currentSettingsProvider.select(
           (settings) => settings.instanceById(connectionId),
         ),
       );
-      if (instance == null || instance.url.isEmpty) {
+      final reach = ref.watch(connectionReachProvider(connectionId));
+      if (instance == null || reach == null || reach.url.isEmpty) {
         throw const ServiceNotConfigured(ServiceKey.seerr);
       }
-      final service = SeerrAuthService.forConnection(
-        instance,
-        pinnedCertFingerprint: settings.pinForUrl(instance.url),
-      );
+      final service = SeerrAuthService.forConnection(instance, reach: reach);
       try {
         return await service.readServer();
       } finally {
