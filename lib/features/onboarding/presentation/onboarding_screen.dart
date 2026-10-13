@@ -923,7 +923,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   static const double _ringFloor = 96;
 
   /// Connect's form for [service]: the step every way in goes through.
-  Widget _connectStep(ServiceKey service) => OnboardingWalk(
+  ///
+  /// [compact] is the instrument's short-screen register, where the subject
+  /// above the form is folded away: the link to another service goes to the
+  /// foot of the form then, rather than with it.
+  Widget _connectStep(ServiceKey service, bool compact) => OnboardingWalk(
     key: ValueKey(service),
     service: service,
     urlController: _urlCtrl[service]!,
@@ -956,6 +960,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     onSuggestPort: () => _suggestPort(service),
     onAdvance: _advance,
     onBack: _backFromConnect,
+    onStartElsewhere: compact ? () => _goTo(_startPage) : null,
   );
 
   @override
@@ -1109,7 +1114,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                     onPick: _connect,
                                     onBack: () => _goTo(_connectPage),
                                   ),
-                                  _connectStep(_target),
+                                  _connectStep(_target, compact),
                                   if (_foundSource case final source?)
                                     OnboardingFound(
                                       key: ValueKey(source.id),

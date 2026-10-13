@@ -697,10 +697,44 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(_button('Test connection'), findsOneWidget);
 
+      await _reachAndTapStartElsewhere(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(TextButton, 'Back'), findsOneWidget);
+
+      await _tap(tester, 'Back');
+      expect(tester.takeException(), isNull);
+      expect(_button('Test connection'), findsOneWidget);
+
       await _tap(tester, 'Back');
       expect(tester.takeException(), isNull);
       expect(_button('Set up a service'), findsOneWidget);
     });
+
+    for (final (size, name) in [
+      (const Size(390, 844), 'a tall phone'),
+      (const Size(375, 667), 'a short one'),
+    ]) {
+      testWidgets('another service stays reachable at an accessibility size, '
+          'on $name', (tester) async {
+        // At this reading size the instrument takes the short screen's
+        // register, which folds the headline, the lead and the link under
+        // them away to leave the form its room. The link goes to the foot of
+        // the form then, so Radarr is not out of reach for a person who needs
+        // the text this large: the door only ever opens Seerr.
+        await _pumpOnboarding(tester, textScale: 2.0, viewport: size);
+        await _tap(tester, 'Set up a service');
+        expect(find.text(connectLead(ServiceKey.seerr)), findsNothing);
+        expect(find.text('Start with another service'), findsOneWidget);
+
+        await _reachAndTapStartElsewhere(tester);
+
+        expect(
+          find.byType(SettingsCard),
+          findsNWidgets(ServiceKey.values.length),
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets('Connect keeps its action and Back at an accessibility size', (
       tester,
@@ -839,6 +873,32 @@ void main() {
       // The lead is what pays for the row: while the keyboard is up the user is
       // already answering it, into a field labelled Address.
       expect(find.text(connectLead(ServiceKey.sonarr)), findsNothing);
+    });
+
+    testWidgets('the way to another service moves to the foot of the form', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      expect(find.text('Start with another service'), findsOneWidget);
+      final under = tester.getRect(find.text('Start with another service'));
+      expect(
+        under.bottom,
+        lessThan(tester.getRect(find.text('Address')).top),
+        reason: 'under the headline, above the form',
+      );
+
+      await raiseKeyboard(tester);
+
+      // Folded away with the subject it sat under, and still there: once,
+      // below the fields, for a person who hides the keyboard and wants
+      // another service.
+      expect(find.text('Start with another service'), findsOneWidget);
+      final foot = tester.getRect(find.text('Start with another service'));
+      expect(
+        foot.top,
+        greaterThan(tester.getRect(find.text('API key')).bottom),
+      );
     });
 
     testWidgets('the eyebrow of a service with a second step says so', (
@@ -1078,6 +1138,27 @@ Future<void> _openService(WidgetTester tester, String title) async {
         .first,
   );
   await tester.tap(row);
+  await tester.pumpAndSettle();
+}
+
+/// Taps "Start with another service" wherever Connect keeps it: under the
+/// headline, or at the foot of the form once the subject is folded away.
+///
+/// Scrolled to by the form's own scrollable, so the pager is never asked to
+/// move.
+Future<void> _reachAndTapStartElsewhere(WidgetTester tester) async {
+  final link = find.text('Start with another service');
+  await tester.scrollUntilVisible(
+    link,
+    100,
+    scrollable: find
+        .descendant(
+          of: find.byType(OnboardingWalk),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.tap(link);
   await tester.pumpAndSettle();
 }
 

@@ -133,20 +133,36 @@ class OnboardingWalkSubject extends StatelessWidget {
             ),
           ],
           if (onStartElsewhere case final open?)
-            TextButton.icon(
-              onPressed: open,
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 44),
-                visualDensity: VisualDensity.standard,
-                foregroundColor: scheme.onSurfaceVariant,
-              ),
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(Icons.chevron_right_rounded, size: 18),
-              label: const Text('Start with another service'),
-            ),
+            OnboardingStartElsewhere(onPressed: open),
         ],
       ),
+    );
+  }
+}
+
+/// The way from Connect to the list of every other service.
+///
+/// Under the headline while the subject is on screen, and at the foot of the
+/// form once the register folds the subject away: see
+/// [OnboardingWalk.onStartElsewhere].
+class OnboardingStartElsewhere extends StatelessWidget {
+  const OnboardingStartElsewhere({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(0, 44),
+        visualDensity: VisualDensity.standard,
+        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      iconAlignment: IconAlignment.end,
+      icon: const Icon(Icons.chevron_right_rounded, size: 18),
+      label: const Text('Start with another service'),
     );
   }
 }
@@ -256,6 +272,7 @@ class OnboardingWalk extends StatefulWidget {
     required this.onSuggestPort,
     required this.onAdvance,
     required this.onBack,
+    this.onStartElsewhere,
   });
 
   final ServiceKey service;
@@ -321,6 +338,15 @@ class OnboardingWalk extends StatefulWidget {
   final VoidCallback onSuggestPort;
   final VoidCallback onAdvance;
   final VoidCallback onBack;
+
+  /// Opens the list of every other service, from the foot of the form, or
+  /// null while [OnboardingWalkSubject] carries the link itself.
+  ///
+  /// The subject folds away when the instrument takes the short screen's
+  /// register (an accessibility reading size, a keyboard), and the link goes
+  /// with it: without this, another service would be out of reach exactly
+  /// where the person has the least room to look for it.
+  final VoidCallback? onStartElsewhere;
 
   @override
   State<OnboardingWalk> createState() => _OnboardingWalkState();
@@ -618,6 +644,10 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
             color: scheme.onSurfaceVariant,
           ),
         ),
+      ],
+      if (widget.onStartElsewhere case final open?) ...[
+        const SizedBox(height: AppSpacing.lg),
+        OnboardingStartElsewhere(onPressed: open),
       ],
     ];
   }
