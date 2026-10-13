@@ -25,6 +25,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 
 import '../../../test_helpers/settings_scope.dart';
 
@@ -557,6 +558,7 @@ void main() {
           decoded(
                 requestsLastKnown.encode(
                   read(counted: (count: 50, floor: true)),
+                  _keep,
                 ),
               )!
               as HomeRequests;
@@ -567,8 +569,8 @@ void main() {
     });
 
     test('is made of a whole read only', () {
-      expect(requestsLastKnown.encode(read(counted: null)), isNull);
-      expect(requestsLastKnown.encode(read(settled: false)), isNull);
+      expect(requestsLastKnown.encode(read(counted: null), _keep), isNull);
+      expect(requestsLastKnown.encode(read(settled: false), _keep), isNull);
       expect(
         requestsLastKnown.encode(
           read(
@@ -581,12 +583,14 @@ void main() {
               ),
             ]),
           ),
+          _keep,
         ),
         isNull,
       );
       expect(
         requestsLastKnown.encode(
           read(coverage: SourceCoverage.pendingOf(const [ServiceKey.seerr])),
+          _keep,
         ),
         isNull,
       );
@@ -594,6 +598,7 @@ void main() {
       final empty =
           requestsLastKnown.encode(
                 read(decisions: const [], counted: (count: 0, floor: false)),
+                _keep,
               )!
               as Map;
       expect(empty['rows'], isEmpty);
@@ -603,7 +608,8 @@ void main() {
       final many = [
         for (var i = 0; i < 20; i++) _request('Title $i', i, hoursAgo: i + 1),
       ];
-      final kept = requestsLastKnown.encode(read(decisions: many))! as Map;
+      final kept =
+          requestsLastKnown.encode(read(decisions: many), _keep)! as Map;
       final titles = [
         for (final row in kept['rows'] as List) (row as Map)['title'],
       ];
@@ -613,7 +619,8 @@ void main() {
 
     test('a record it cannot read whole is not drawn', () {
       final good =
-          jsonDecode(jsonEncode(requestsLastKnown.encode(read())))! as Map;
+          jsonDecode(jsonEncode(requestsLastKnown.encode(read(), _keep)))!
+              as Map;
       Object? decode(Object? data) =>
           requestsLastKnown.decode(data, (_) => throw StateError(''));
       expect(decode(good), isNotNull);
@@ -634,3 +641,7 @@ void main() {
     });
   });
 }
+
+/// Keeps the pictures as the Home does, against no connection: a picture
+/// with headers has nothing to be kept by, and only public ones are.
+final _keep = storedImageKeeper(const SettingsModel());

@@ -25,6 +25,7 @@ import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 
 import '../../../test_helpers/settings_scope.dart';
 
@@ -622,7 +623,7 @@ void main() {
       expect(drawing.queued, 1);
       expect(drawing.whole, isTrue);
 
-      final data = downloadsLastKnown.encode(drawing);
+      final data = downloadsLastKnown.encode(drawing, _keep);
       final back = downloadsLastKnown.decode(
         jsonDecode(jsonEncode(data)),
         resolver(),
@@ -669,7 +670,7 @@ void main() {
         moving: [for (var i = 0; i < 5; i++) _item('Title $i', id: '$i')],
       );
       final data =
-          downloadsLastKnown.encode(downloadsDrawingOf(many))
+          downloadsLastKnown.encode(downloadsDrawingOf(many), _keep)
               as Map<String, Object?>;
       expect(data['rows'] as List, hasLength(downloadsRowLimit));
     });
@@ -684,12 +685,15 @@ void main() {
           ),
         ]),
       );
-      expect(downloadsLastKnown.encode(downloadsDrawingOf(silent)), isNull);
+      expect(
+        downloadsLastKnown.encode(downloadsDrawingOf(silent), _keep),
+        isNull,
+      );
 
       final cut = _inFlight(
         coverage: SourceCoverage.answeredBy(ServiceKey.radarr, cutShort: true),
       );
-      expect(downloadsLastKnown.encode(downloadsDrawingOf(cut)), isNull);
+      expect(downloadsLastKnown.encode(downloadsDrawingOf(cut), _keep), isNull);
 
       // With a row to show, a cut read is kept without its counts.
       final cutWithRow = _inFlight(
@@ -697,7 +701,7 @@ void main() {
         coverage: SourceCoverage.answeredBy(ServiceKey.radarr, cutShort: true),
       );
       final data =
-          downloadsLastKnown.encode(downloadsDrawingOf(cutWithRow))
+          downloadsLastKnown.encode(downloadsDrawingOf(cutWithRow), _keep)
               as Map<String, Object?>;
       expect(data['whole'], isFalse);
       expect(data.containsKey('moving'), isFalse);
@@ -761,3 +765,7 @@ void main() {
     });
   });
 }
+
+/// Keeps the pictures as the Home does, against no connection: a picture
+/// with headers has nothing to be kept by, and only public ones are.
+final _keep = storedImageKeeper(const SettingsModel());

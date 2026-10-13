@@ -10,6 +10,7 @@ import 'package:cupola/features/home/presentation/widgets/your_requests_module.d
 import 'package:cupola/features/requests/presentation/widgets/requester_request_row.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 
 import '../../../test_helpers/requester_cold_start.dart';
 
@@ -295,7 +296,7 @@ void main() {
   });
 
   test('the drawing keeps no figure that runs', () {
-    final data = jsonEncode(myRequestsLastKnown.encode(seerrSays()));
+    final data = jsonEncode(myRequestsLastKnown.encode(seerrSays(), _keep));
     for (final running in [
       'progress',
       'sizeLeft',
@@ -307,3 +308,7 @@ void main() {
     }
   });
 }
+
+/// Keeps the pictures as the Home does, against no connection: a picture
+/// with headers has nothing to be kept by, and only public ones are.
+final _keep = storedImageKeeper(const SettingsModel());

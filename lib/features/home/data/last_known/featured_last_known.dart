@@ -24,10 +24,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// for the live answer rather than drawing slides from before it.
 final featuredLastKnown = HomeLastKnownSlot<List<FeaturedSlide>>(
   id: 'featured',
-  schema: 1,
+  // 2: today's slide keeps its event's arr pictures by connection and path
+  // (`StoredArrImage`); an entry of 1 kept addresses and is dropped.
+  schema: 2,
   services: HomeModule.featured.services.toSet(),
-  encode: (slides) => {
-    'slides': [for (final slide in slides) ?_slideToJson(slide)],
+  encode: (slides, keep) => {
+    'slides': [for (final slide in slides) ?_slideToJson(slide, keep)],
   },
   decode: (data, image) {
     if (data is! Map || data['slides'] is! List) return null;
@@ -37,7 +39,10 @@ final featuredLastKnown = HomeLastKnownSlot<List<FeaturedSlide>>(
   },
 );
 
-Map<String, Object?>? _slideToJson(FeaturedSlide slide) => switch (slide) {
+Map<String, Object?>? _slideToJson(
+  FeaturedSlide slide,
+  StoredImageKeeper keep,
+) => switch (slide) {
   FeaturedResume(:final row) => switch (row.item.backdropPath) {
     final path? when path.isNotEmpty => {
       'kind': 'resume',
@@ -66,7 +71,7 @@ Map<String, Object?>? _slideToJson(FeaturedSlide slide) => switch (slide) {
           },
   FeaturedToday(:final event) => {
     'kind': 'today',
-    'event': calendarEventToJson(event),
+    'event': calendarEventToJson(event, keep),
   },
 };
 

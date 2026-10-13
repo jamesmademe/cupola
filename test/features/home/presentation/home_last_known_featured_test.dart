@@ -27,6 +27,8 @@ import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/settings_scope.dart';
 
@@ -259,7 +261,7 @@ void main() {
       ),
       ..._evening(),
     ];
-    final data = featuredLastKnown.encode(slides);
+    final data = featuredLastKnown.encode(slides, _keep);
     final json = jsonEncode(data);
     expect(json, isNot(contains('secret-token')));
     expect(json, isNot(contains('Authorization')));
@@ -272,7 +274,7 @@ void main() {
           url: 'https://jellyfin.test$path',
           headers: const {'Authorization': 'from the connection today'},
         ),
-        StoredArrImage(:final url) => (url: url, headers: null),
+        StoredArrImage() => noImage,
       },
     )!;
     expect(
@@ -283,3 +285,7 @@ void main() {
     expect(back[0].art.headers, {'Authorization': 'from the connection today'});
   });
 }
+
+/// Keeps the pictures as the Home does, against no connection: a picture
+/// with headers has nothing to be kept by, and only public ones are.
+final _keep = storedImageKeeper(const SettingsModel());

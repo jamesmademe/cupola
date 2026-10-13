@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A picture as a last drawing keeps it: where it is, never how to get in.
@@ -12,9 +13,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// drawn, from the connection as it is then (`resolveStoredImage`):
 ///
 ///  * [StoredUrl]: a public address (TMDB's), drawn as it is;
-///  * [StoredArrImage]: an address on an arr's own server, drawn with that
-///    connection's key and access headers, and only at that connection's own
-///    address;
+///  * [StoredArrImage]: a path on an arr's own server, kept by its
+///    connection and never by an address: it is drawn at the address that
+///    connection is reached at when it is drawn, with that connection's key
+///    and that address's access headers, so a drawing kept at home draws
+///    away from home too;
 ///  * [StoredStreamImage]: a path on a media server, which that connection's
 ///    client turns into an address (`imageFor`) the way it does live, so the
 ///    address, and the cached picture under it, are the same.
@@ -39,11 +42,14 @@ sealed class StoredImage {
         final url? => StoredUrl(url),
         null => null,
       },
-      'arr' => switch ((service(), text('connection'), text('url'))) {
-        (final service?, final connection?, final url?) => StoredArrImage(
+      // A path, never an address: an `arr` picture kept as an address (the
+      // shape before the address away) reads as nothing rather than as a
+      // picture bound to an origin.
+      'arr' => switch ((service(), text('connection'), text('path'))) {
+        (final service?, final connection?, final path?) => StoredArrImage(
           service: service,
           connectionId: connection,
-          url: url,
+          path: path,
         ),
         _ => null,
       },
@@ -63,15 +69,18 @@ sealed class StoredImage {
     };
   }
 
-  /// An [ImageSource] as it can be kept: a public address as it is, an
-  /// address on [service]'s own server by [connectionId] (headers dropped,
-  /// put back when drawn). Null when it cannot be kept: an empty address, a
-  /// credential in the address itself (SABnzbd's and Jellyfin's query keys),
-  /// or headers with no connection to put them back from.
+  /// An [ImageSource] as it can be kept: a public address as it is, a
+  /// picture on [service]'s own server by [connectionId] and its path under
+  /// whichever of [addresses] (that connection's, at home and away) it was
+  /// built on (headers dropped, put back when drawn). Null when it cannot be
+  /// kept: an empty address, a credential in the address itself (SABnzbd's
+  /// and Jellyfin's query keys), or headers with no connection, or no address
+  /// of it, to put them back from.
   static StoredImage? ofSource(
     ImageSource source, {
     ServiceKey? service,
     String? connectionId,
+    Iterable<String> addresses = const [],
   }) {
     final url = source.url;
     if (url.isEmpty || carriesCredential(url)) return null;
@@ -81,11 +90,46 @@ sealed class StoredImage {
     if (service == null || connectionId == null || connectionId.isEmpty) {
       return null;
     }
+    final path = _pathUnder(url, addresses);
+    if (path == null) return null;
     return StoredArrImage(
       service: service,
       connectionId: connectionId,
-      url: url,
+      path: path,
     );
+  }
+
+  /// What follows the longest of [addresses] that [url] starts with, or null
+  /// when it starts with none: the path a picture was asked at, under the
+  /// address it was built on (`UrlUtils.buildUrl`), whose own path, if any,
+  /// stays with the address.
+  static String? _pathUnder(String url, Iterable<String> addresses) {
+    String? best;
+    var bestLength = -1;
+    for (final address in addresses) {
+      for (final base in {
+        _trimmed(address),
+        UrlUtils.normalizeBaseUrl(address),
+      }) {
+        if (base.isEmpty || base.length <= bestLength) continue;
+        if (!url.startsWith(base)) continue;
+        final rest = url.substring(base.length);
+        if (rest.isNotEmpty && !rest.startsWith('/') && !rest.startsWith('?')) {
+          continue;
+        }
+        best = rest;
+        bestLength = base.length;
+      }
+    }
+    return best == null || best.isEmpty ? null : best;
+  }
+
+  static String _trimmed(String address) {
+    var trimmed = address.trim();
+    while (trimmed.endsWith('/')) {
+      trimmed = trimmed.substring(0, trimmed.length - 1);
+    }
+    return trimmed;
   }
 
   /// Whether [url] carries a key in its query, as SABnzbd's `apikey`, a
@@ -123,19 +167,23 @@ final class StoredArrImage extends StoredImage {
   const StoredArrImage({
     required this.service,
     required this.connectionId,
-    required this.url,
+    required this.path,
   });
 
   final ServiceKey service;
   final String connectionId;
-  final String url;
+
+  /// Where the picture is under the connection's address, `/MediaCover/…`
+  /// with its query: put after whichever address the connection is reached
+  /// at when it is drawn.
+  final String path;
 
   @override
   Map<String, Object?> toJson() => {
     'kind': 'arr',
     'service': service.name,
     'connection': connectionId,
-    'url': url,
+    'path': path,
   };
 
   @override
@@ -143,10 +191,10 @@ final class StoredArrImage extends StoredImage {
       other is StoredArrImage &&
       other.service == service &&
       other.connectionId == connectionId &&
-      other.url == url;
+      other.path == path;
 
   @override
-  int get hashCode => Object.hash(service, connectionId, url);
+  int get hashCode => Object.hash(service, connectionId, path);
 }
 
 final class StoredStreamImage extends StoredImage {
@@ -187,6 +235,17 @@ final class StoredStreamImage extends StoredImage {
 /// connection sends today. What a last drawing's codec receives, so a codec
 /// never reaches for a client itself.
 typedef StoredImageResolver = ImageSource Function(StoredImage image);
+
+/// Turns a picture as drawn into one that can be kept ([StoredImage.ofSource]),
+/// against the connections as they are when it is kept: what a last
+/// drawing's codec is handed to keep a picture, so a codec never reaches for
+/// the settings itself. Null for a picture that cannot be kept.
+typedef StoredImageKeeper =
+    StoredImage? Function(
+      ImageSource source, {
+      ServiceKey? service,
+      String? connectionId,
+    });
 
 /// The picture with nothing to draw.
 const ImageSource noImage = (url: '', headers: null);

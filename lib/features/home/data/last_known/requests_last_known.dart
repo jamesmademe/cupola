@@ -31,7 +31,7 @@ final requestsLastKnown = HomeLastKnownSlot<HomeRequests>(
   id: 'requests',
   schema: 1,
   services: HomeModule.requests.services.toSet(),
-  encode: (read) {
+  encode: (read, _) {
     final counted = read.counted;
     if (!read.settled || counted == null) return null;
     if (read.coverage.failed.isNotEmpty || read.coverage.pending.isNotEmpty) {

@@ -14,11 +14,13 @@ import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/last_known/calendar_event_codec.dart';
 import 'package:cupola/features/home/data/last_known/coming_up_last_known.dart';
 import 'package:cupola/features/home/presentation/widgets/coming_up_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_as_of_line.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -339,15 +341,15 @@ void main() {
     // What a drawn picture would get back from its connection today.
     ImageSource resolve(StoredImage image) => switch (image) {
       StoredUrl(:final url) => (url: url, headers: null),
-      StoredArrImage(:final url) => (
-        url: url,
+      StoredArrImage(:final path) => (
+        url: 'https://sonarr.test$path',
         headers: const {'X-Api-Key': 'put-back'},
       ),
       StoredStreamImage() => noImage,
     };
 
     CalendarEvent? roundTrip(CalendarEvent event) => calendarEventFromJson(
-      jsonDecode(jsonEncode(calendarEventToJson(event))),
+      jsonDecode(jsonEncode(calendarEventToJson(event, _keep))),
       resolve,
     );
 
@@ -413,7 +415,10 @@ void main() {
         final back = roundTrip(event)!;
         // Compared by the JSON they make, which names every field, and by
         // the fields that carry a moment.
-        expect(calendarEventToJson(back), calendarEventToJson(event));
+        expect(
+          calendarEventToJson(back, _keep),
+          calendarEventToJson(event, _keep),
+        );
         expect(back.identity, event.identity);
         expect(back.kind, event.kind);
         expect(back.day, event.day);
@@ -437,8 +442,8 @@ void main() {
       }
     });
 
-    test('keeps pictures by address, putting the key back only on an '
-        "arr's own", () {
+    test("keeps an arr's picture by its connection and its path, putting "
+        'the key back only on it', () {
       final episode = roundTrip(everything[0])!;
       expect(
         episode.poster?.url,
@@ -451,11 +456,18 @@ void main() {
     });
 
     test('keeps no credential: no header value, no key in an address', () {
-      final data = comingUpLastKnown.encode(_calendar(everything, at: airsAt));
+      final data = comingUpLastKnown.encode(
+        _calendar(everything, at: airsAt),
+        _keep,
+      );
       final json = jsonEncode(data);
       expect(json, isNot(contains('sonarr-secret')));
       expect(json, isNot(contains('X-Api-Key')));
       expect(json, contains('"kind":"arr"'));
+      // No address either: the connection's, whichever it is reached at
+      // when it is drawn, goes in front of the path.
+      expect(json, isNot(contains('sonarr.test')));
+      expect(json, contains('"path":"/mediacover/5/poster.jpg"'));
 
       // Headers with no connection to put them back from keep no picture.
       final stray = CalendarEvent(
@@ -469,7 +481,10 @@ void main() {
         ),
         state: const CalendarState.notYet(),
       );
-      expect(jsonEncode(calendarEventToJson(stray)), isNot(contains('secret')));
+      expect(
+        jsonEncode(calendarEventToJson(stray, _keep)),
+        isNot(contains('secret')),
+      );
       expect(roundTrip(stray)!.poster, isNull);
 
       // A key in the address itself is never kept either.
@@ -481,7 +496,10 @@ void main() {
         poster: (url: 'https://x.test/p.jpg?apikey=abc123', headers: null),
         state: const CalendarState.notYet(),
       );
-      expect(jsonEncode(calendarEventToJson(keyed)), isNot(contains('abc123')));
+      expect(
+        jsonEncode(calendarEventToJson(keyed, _keep)),
+        isNot(contains('abc123')),
+      );
     });
 
     test('a download keeps its state and nothing that runs', () {
@@ -504,7 +522,7 @@ void main() {
             finishesAt: DateTime(2026, 10, 12, 21, 10),
           ),
         );
-        final json = jsonEncode(calendarEventToJson(event));
+        final json = jsonEncode(calendarEventToJson(event, _keep));
         expect(json, isNot(contains('0.62')));
         expect(json, isNot(contains('62')));
         expect(json, isNot(contains('4 minutes')));
@@ -523,7 +541,7 @@ void main() {
     });
 
     test('refuses a record it cannot read whole', () {
-      final good = calendarEventToJson(everything[1]);
+      final good = calendarEventToJson(everything[1], _keep);
       Object? broken(String key, Object? value) =>
           calendarEventFromJson({...good, key: value}, resolve);
 
@@ -557,7 +575,7 @@ void main() {
     });
 
     test('an event with a time takes its day from it', () {
-      final json = calendarEventToJson(everything[0]);
+      final json = calendarEventToJson(everything[0], _keep);
       final back = calendarEventFromJson({
         ...json,
         'day': '2026-01-01',
@@ -573,7 +591,8 @@ void main() {
         for (var i = 0; i < 20; i++) _movie('Again $i', 13),
       ];
       final data =
-          comingUpLastKnown.encode(_calendar(events)) as Map<String, Object?>;
+          comingUpLastKnown.encode(_calendar(events), _keep)
+              as Map<String, Object?>;
       final kept = data['events'] as List;
       expect(kept, hasLength(12));
       final titles = [for (final event in kept) (event as Map)['title']];
@@ -598,6 +617,7 @@ void main() {
               ),
             ],
           ),
+          _keep,
         ),
         isNull,
       );
@@ -618,6 +638,7 @@ void main() {
           ],
           answered: const ['Radarr'],
         ),
+        _keep,
       );
       expect(jsonEncode(data), isNot(contains('Sonarr')));
       final back = comingUpLastKnown.decode(
@@ -642,7 +663,7 @@ void main() {
                 'readAt': _now.toUtc().toIso8601String(),
                 'events': [
                   {'kind': 'nope'},
-                  calendarEventToJson(_movie('Sprite Fright', 13)),
+                  calendarEventToJson(_movie('Sprite Fright', 13), _keep),
                 ],
               }, none)!
               .events
@@ -653,3 +674,18 @@ void main() {
     );
   });
 }
+
+/// Keeps the pictures as the Home does, against the Sonarr the events with an
+/// arr's picture were read from.
+final _keep = storedImageKeeper(
+  const SettingsModel(
+    instances: [
+      ServiceInstance(
+        id: 'sonarr-1',
+        service: ServiceKey.sonarr,
+        url: 'https://sonarr.test',
+        credential: 'sonarr-secret',
+      ),
+    ],
+  ),
+);

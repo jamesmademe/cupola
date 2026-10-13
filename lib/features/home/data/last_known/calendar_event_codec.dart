@@ -6,11 +6,11 @@
 ///    with a time takes its day from that time again, so a change of time zone
 ///    does not leave the two apart. What a row says (`Today`, `airs at 21:00`,
 ///    `not aired`) is made again against the time of the drawing.
-///  * **Pictures keep no credential** (`StoredImage`): a picture on an arr's
-///    own address is kept by the connection the event was read from (its
-///    target names it) and gets that connection's key back when it is drawn;
-///    an event that names no connection keeps only the pictures that carry no
-///    headers.
+///  * **Pictures keep no credential and no address** (`StoredImage`): a
+///    picture on an arr's own server is kept by the connection the event was
+///    read from (its target names it) and its path there, and is drawn at the
+///    address that connection is reached at then, with its key; an event that
+///    names no connection keeps only the pictures that carry no headers.
 ///  * **A download is a word, never a figure.** An event in the download queue
 ///    keeps the state it was in (`downloading`, `stuck`) and nothing that
 ///    counts or moves: no percentage, no time it would finish, no detail. It
@@ -26,12 +26,16 @@ import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// [event] as JSON a last drawing can keep, with no credential in it.
-Map<String, Object?> calendarEventToJson(CalendarEvent event) {
+/// [event] as JSON a last drawing can keep, with no credential in it: its
+/// pictures kept by [keep].
+Map<String, Object?> calendarEventToJson(
+  CalendarEvent event,
+  StoredImageKeeper keep,
+) {
   final connection = _connectionOf(event);
   Map<String, Object?>? picture(ImageSource? source) {
     if (source == null) return null;
-    return StoredImage.ofSource(
+    return keep(
       source,
       service: connection?.service,
       connectionId: connection?.id,

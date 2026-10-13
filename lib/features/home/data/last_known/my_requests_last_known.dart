@@ -47,7 +47,7 @@ final myRequestsLastKnown = HomeLastKnownSlot<List<SeerrRequest>>(
   id: 'requests',
   schema: 1,
   services: HomeModule.yourRequests.services.toSet(),
-  encode: (requests) {
+  encode: (requests, _) {
     final read = [
       for (final request in requests)
         myRequestOf(request, now: _beforeAll, stale: true),

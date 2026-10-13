@@ -15,6 +15,7 @@ import 'package:cupola/features/home/presentation/widgets/featured_pager.dart';
 import 'package:cupola/features/home/presentation/widgets/ready_to_watch_module.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 
 import '../../../test_helpers/requester_cold_start.dart';
 
@@ -324,7 +325,7 @@ void main() {
         arrived: null,
         downloads: [movingDownload(requesterNow)],
       );
-      final data = jsonEncode(myRequestsLastKnown.encode([request]));
+      final data = jsonEncode(myRequestsLastKnown.encode([request], _keep));
       for (final secret in [
         'hunter2',
         'hunter3',
@@ -378,7 +379,7 @@ void main() {
         // Long on the server and without a day: never on the Home.
         requesterRequest(id: 300, title: 'Old', arrived: null),
       ];
-      final data = myRequestsLastKnown.encode(requests)! as Map;
+      final data = myRequestsLastKnown.encode(requests, _keep)! as Map;
       final titles = [
         for (final json in data['requests'] as List)
           ((json as Map)['media'] as Map)['title'],
@@ -406,7 +407,7 @@ void main() {
               arrived: null,
             ),
         ];
-        expect(myRequestsLastKnown.encode(many), isNull);
+        expect(myRequestsLastKnown.encode(many, _keep), isNull);
       },
     );
   });
@@ -422,3 +423,7 @@ class _RoomProbe extends ConsumerWidget {
     return Text('room ${light == null ? 'none' : light.toARGB32()}');
   }
 }
+
+/// Keeps the pictures as the Home does, against no connection: a picture
+/// with headers has nothing to be kept by, and only public ones are.
+final _keep = storedImageKeeper(const SettingsModel());

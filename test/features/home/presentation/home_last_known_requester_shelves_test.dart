@@ -14,6 +14,7 @@ import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 
 import '../../../test_helpers/requester_cold_start.dart';
 
@@ -358,7 +359,7 @@ void main() {
           ],
         },
       );
-      final data = jsonEncode(trendingLastKnown.encode([item]));
+      final data = jsonEncode(trendingLastKnown.encode([item], _keep));
       for (final private in [
         'luca@example.com',
         'Luca',
@@ -377,9 +378,13 @@ void main() {
 
     test('keeps the first posters only, and nothing for an empty shelf', () {
       final many = [for (var i = 0; i < 30; i++) _title('T$i', id: i)];
-      final data = trendingLastKnown.encode(many)! as Map;
+      final data = trendingLastKnown.encode(many, _keep)! as Map;
       expect((data['items'] as List).length, 20);
-      expect(trendingLastKnown.encode(const []), isNull);
+      expect(trendingLastKnown.encode(const [], _keep), isNull);
     });
   });
 }
+
+/// Keeps the pictures as the Home does, against no connection: a picture
+/// with headers has nothing to be kept by, and only public ones are.
+final _keep = storedImageKeeper(const SettingsModel());

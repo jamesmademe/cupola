@@ -29,7 +29,7 @@ final continueWatchingLastKnown = HomeLastKnownSlot<HomeResume>(
   id: 'continue-watching',
   schema: 1,
   services: HomeModule.continueWatching.services.toSet(),
-  encode: (resume) {
+  encode: (resume, _) {
     if (resume.coverage.everySourceFailed) return null;
     return {
       'rows': [for (final row in resume.rows.take(_kept)) resumeRowToJson(row)],

@@ -22,7 +22,7 @@ final arrivedLastKnown = HomeLastKnownSlot<ArrHistory>(
   id: 'arrived',
   schema: 1,
   services: HomeModule.arrived.services.toSet(),
-  encode: (history) {
+  encode: (history, _) {
     if (history.coverage.everySourceFailed) return null;
     final imports = [
       for (final entry in history.entries)

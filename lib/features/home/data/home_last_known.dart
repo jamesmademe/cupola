@@ -20,13 +20,14 @@ import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 
 import 'package:cupola/core/last_known/last_known_store.dart';
 import 'package:cupola/core/last_known/stored_image.dart';
-import 'package:cupola/core/network/connection_access_registry.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
     show calendarClockProvider;
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -37,12 +38,13 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 /// its codec.
 ///
 /// [encode] turns the module's live value into JSON with no credential in it
-/// (pictures through `StoredImage`, times as instants), or answers null for a
-/// value not worth keeping (every source silent: the drawing before it is the
-/// better one). [decode] turns it back, with pictures resolved against the
-/// connections as they are now; null for anything it cannot read, which the
-/// module takes as nothing known. Bump [schema] whenever the JSON changes
-/// shape: an entry of another schema is dropped rather than misread.
+/// (pictures through the [StoredImageKeeper] it is handed, times as
+/// instants), or answers null for a value not worth keeping (every source
+/// silent: the drawing before it is the better one). [decode] turns it back,
+/// with pictures resolved against the connections as they are now; null for
+/// anything it cannot read, which the module takes as nothing known. Bump
+/// [schema] whenever the JSON changes shape: an entry of another schema is
+/// dropped rather than misread.
 @immutable
 class HomeLastKnownSlot<T> {
   const HomeLastKnownSlot({
@@ -57,7 +59,7 @@ class HomeLastKnownSlot<T> {
   final String id;
   final int schema;
   final Set<ServiceKey> services;
-  final Object? Function(T value) encode;
+  final Object? Function(T value, StoredImageKeeper keep) encode;
   final T? Function(Object? data, StoredImageResolver image) decode;
 
   /// Whether a live value is a read that no source answered: the Home's reads
@@ -83,6 +85,10 @@ typedef HomeRead<T> = ({
 /// as it is set up (service, id, address, user, viewer, the Seerr account),
 /// never a secret. A change to any of them is a different server or a
 /// different person, and the drawing is dropped.
+///
+/// The address is the one at home, the one the connection is known by: the
+/// route moving to the address away reaches the same server, so the drawing
+/// stays, and its pictures draw at the address away ([resolveStoredImage]).
 String homeLastKnownValidity(SettingsModel settings, Set<ServiceKey> services) {
   final parts = [
     for (final instance in settings.instances)
@@ -135,8 +141,12 @@ final homeLastKnownProvider = Provider.autoDispose
     });
 
 /// A kept picture with the headers its connection sends today; nothing, for
-/// a connection that is gone, and no credential to an address that is not the
-/// connection's own.
+/// a connection that is gone.
+///
+/// An arr's picture is drawn at the address its connection is reached at now
+/// (`connectionReachProvider`), whichever address it was kept at, with that
+/// address's access: a drawing kept at home draws away from home as the live
+/// one would. Its credential goes to that address and nowhere else.
 ImageSource resolveStoredImage(
   Ref ref,
   SettingsModel settings,
@@ -145,16 +155,15 @@ ImageSource resolveStoredImage(
   switch (image) {
     case StoredUrl(:final url):
       return (url: url, headers: null);
-    case StoredArrImage(:final connectionId, :final url):
+    case StoredArrImage(:final connectionId, :final path):
       final instance = settings.instanceById(connectionId);
       if (instance == null || instance.credential.isEmpty) return noImage;
-      if (!_sameOrigin(url, instance.url)) return (url: url, headers: null);
+      final reach = ref.watch(connectionReachProvider(connectionId));
+      final url = reach == null ? '' : UrlUtils.buildUrl(reach.url, path);
+      if (url.isEmpty) return noImage;
       return (
         url: url,
-        headers: {
-          ...ConnectionAccessRegistry.headersFor(instance.url),
-          'X-Api-Key': instance.credential,
-        },
+        headers: {...reach!.access.headers(), 'X-Api-Key': instance.credential},
       );
     case StoredStreamImage(:final service, :final connectionId, :final path):
       if (settings.instanceById(connectionId) == null) return noImage;
@@ -173,12 +182,19 @@ ImageSource resolveStoredImage(
   }
 }
 
-bool _sameOrigin(String url, String base) {
-  final a = Uri.tryParse(url);
-  final b = Uri.tryParse(base);
-  if (a == null || b == null) return false;
-  return a.scheme == b.scheme && a.host == b.host && a.port == b.port;
-}
+/// Keeps a picture against the connections of [settings]: an arr's by its
+/// connection and its path under whichever of that connection's addresses it
+/// was drawn from, at home or away ([StoredImage.ofSource]).
+StoredImageKeeper storedImageKeeper(SettingsModel settings) =>
+    (source, {service, connectionId}) => StoredImage.ofSource(
+      source,
+      service: service,
+      connectionId: connectionId,
+      addresses: switch (connectionId) {
+        final id? => settings.instanceById(id)?.addresses ?? const [],
+        null => const [],
+      },
+    );
 
 extension HomeLastKnownWatch on WidgetRef {
   /// [live]'s value when it has one, kept as [slot]'s last drawing; until it
@@ -229,15 +245,13 @@ extension HomeLastKnownWatch on WidgetRef {
 void _keep<T>(WidgetRef ref, HomeLastKnownSlot<T> slot, T value) {
   final store = ref.read(lastKnownStoreProvider);
   final key = homeLastKnownKey(ref.read(shellAudienceProvider).name, slot);
-  final validity = homeLastKnownValidity(
-    ref.read(currentSettingsProvider),
-    slot.services,
-  );
+  final settings = ref.read(currentSettingsProvider);
+  final validity = homeLastKnownValidity(settings, slot.services);
   // The same answer, rebuilt: already kept.
   if (value is Object && store.holds(key, validity: validity, source: value)) {
     return;
   }
-  final data = slot.encode(value);
+  final data = slot.encode(value, storedImageKeeper(settings));
   if (data == null) return;
   store.write(
     key,

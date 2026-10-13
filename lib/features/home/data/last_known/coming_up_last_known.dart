@@ -16,7 +16,7 @@ import 'package:cupola/features/home/domain/home_module.dart';
 ///
 /// Only the events are kept. Which connection did not answer is a fault, and a
 /// fault of an old read is a false alarm today (a drawing never says it); the
-/// pictures keep no key (`calendarEventToJson`); a download is a word and no
+/// pictures keep no key and no address (`calendarEventToJson`); a download is a word and no
 /// figure. Not kept when every connection was silent: the drawing before is
 /// better. A read that answered with nothing in the window is kept as an empty
 /// drawing, so the one before it is not drawn in its place, and an empty
@@ -24,15 +24,17 @@ import 'package:cupola/features/home/domain/home_module.dart';
 /// live answer instead).
 final comingUpLastKnown = HomeLastKnownSlot<LibraryCalendar>(
   id: 'comingUp',
-  schema: 1,
+  // 2: an arr's picture is kept by its connection and its path, not its
+  // address (`StoredArrImage`); an entry of 1 kept addresses and is dropped.
+  schema: 2,
   services: HomeModule.comingUp.services.toSet(),
-  encode: (calendar) {
+  encode: (calendar, keep) {
     if (calendar.answered.isEmpty && calendar.silent.isNotEmpty) return null;
     return {
       'readAt': calendar.readAt.toUtc().toIso8601String(),
       'events': [
         for (final event in comingUpKept(calendar.events, calendar.readAt))
-          calendarEventToJson(event),
+          calendarEventToJson(event, keep),
       ],
     };
   },

@@ -817,7 +817,7 @@ void main() {
               data: arrivedLastKnown.encode((
                 entries: _week,
                 coverage: SourceCoverage.answeredBy(ServiceKey.radarr),
-              )),
+              ), _keep),
               takenAt: _now.subtract(const Duration(minutes: 47)),
             ),
           ),
@@ -845,7 +845,10 @@ void main() {
                 comingUpLastKnown.services,
               ),
               schema: comingUpLastKnown.schema,
-              data: comingUpLastKnown.encode(_calendar(CalendarWorld.events)),
+              data: comingUpLastKnown.encode(
+                _calendar(CalendarWorld.events),
+                _keep,
+              ),
               takenAt: _now.subtract(const Duration(minutes: 47)),
             ),
           ),
@@ -875,7 +878,10 @@ void main() {
                 downloadsLastKnown.services,
               ),
               schema: downloadsLastKnown.schema,
-              data: downloadsLastKnown.encode(downloadsDrawingOf(_evening)),
+              data: downloadsLastKnown.encode(
+                downloadsDrawingOf(_evening),
+                _keep,
+              ),
               takenAt: _now.subtract(const Duration(minutes: 47)),
             ),
           ),
@@ -1091,3 +1097,6 @@ void main() {
     ],
   );
 }
+
+/// Keeps the pictures as the Home does, against the client's connections.
+final _keep = storedImageKeeper(_clientSettings);

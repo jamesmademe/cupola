@@ -22,7 +22,7 @@ HomeLastKnownSlot<List<MediaPreview>> _shelf(HomeModule module, String id) =>
       schema: 1,
       services: module.services.toSet(),
       // An empty answer is not a shelf: the drawing before it stays.
-      encode: (items) => items.isEmpty
+      encode: (items, _) => items.isEmpty
           ? null
           : {
               'items': [

@@ -172,7 +172,7 @@ LastKnownStore _drawnBefore<T>(HomeLastKnownSlot<T> slot, T drawn) =>
       homeLastKnownKey(Audience.requester.name, slot),
       validity: homeLastKnownValidity(_herSettings, slot.services),
       schema: slot.schema,
-      data: slot.encode(drawn),
+      data: slot.encode(drawn, _keep),
       takenAt: _now.subtract(const Duration(minutes: 47)),
     );
 
@@ -423,6 +423,7 @@ void main() {
                   'Glass Half': '2026-10-21',
                   'Agent 327': '2026-11-02',
                 }),
+                _keep,
               ),
               takenAt: _now.subtract(const Duration(minutes: 47)),
             ),
@@ -500,3 +501,6 @@ void main() {
     ],
   );
 }
+
+/// Keeps the pictures as the Home does, against her connection.
+final _keep = storedImageKeeper(_herSettings);

@@ -21,6 +21,7 @@ import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 
 import '../../../test_helpers/settings_scope.dart';
 
@@ -430,7 +431,8 @@ void main() {
 
       // A drawing with one row it cannot read is not drawn at all.
       final slot = continueWatchingLastKnown;
-      final data = onDisk(slot.encode(_resume([_row(_episode)])))! as Map;
+      final data =
+          onDisk(slot.encode(_resume([_row(_episode)]), _keep))! as Map;
       expect(
         slot.decode(data, (_) => throw StateError('no pictures')),
         isNotNull,
@@ -474,6 +476,7 @@ void main() {
                 ),
               ),
             ]),
+            _keep,
           ),
         );
         expect(json, contains('/Items/e1/Images/Primary?tag=abc'));
@@ -503,7 +506,8 @@ void main() {
             ),
           ),
       ];
-      final kept = continueWatchingLastKnown.encode(_resume(many))! as Map;
+      final kept =
+          continueWatchingLastKnown.encode(_resume(many), _keep)! as Map;
       expect(kept['rows'], hasLength(continueWatchingRowLimit * 2));
       expect(
         continueWatchingLastKnown.encode(
@@ -514,9 +518,14 @@ void main() {
               const ClassifiedFailure(ServiceFailureReason.unreachable),
             ),
           ),
+          _keep,
         ),
         isNull,
       );
     });
   });
 }
+
+/// Keeps the pictures as the Home does, against no connection: a picture
+/// with headers has nothing to be kept by, and only public ones are.
+final _keep = storedImageKeeper(const SettingsModel());

@@ -81,7 +81,7 @@ final downloadsLastKnown = HomeLastKnownSlot<DownloadsDrawing>(
   id: 'downloads',
   schema: 1,
   services: HomeModule.downloads.services.toSet(),
-  encode: (drawing) {
+  encode: (drawing, _) {
     if (drawing.rows.isEmpty && !drawing.whole) return null;
     return {
       'whole': drawing.whole,
