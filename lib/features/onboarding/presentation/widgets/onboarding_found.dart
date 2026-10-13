@@ -131,7 +131,7 @@ class OnboardingFound extends ConsumerStatefulWidget {
 
 /// Where a row is. Whether it is on is [_FoundRow.on], and what failed is
 /// [_FoundRow.reason].
-enum _Phase { needsKey, trying, answered, certificate, failed }
+enum _Stage { needsKey, trying, answered, certificate, failed }
 
 /// What a failure's remedy does: open the row's address field, or bring the
 /// certificate back.
@@ -140,9 +140,9 @@ enum _Remedy { address, certificate }
 class _FoundRow {
   _FoundRow(this.candidate)
     : key = candidate.apiKey ?? '',
-      phase = (candidate.apiKey ?? '').isEmpty
-          ? _Phase.needsKey
-          : _Phase.trying;
+      stage = (candidate.apiKey ?? '').isEmpty
+          ? _Stage.needsKey
+          : _Stage.trying;
 
   final ConnectionCandidate candidate;
 
@@ -153,14 +153,14 @@ class _FoundRow {
   /// one tried.
   String? typedUrl;
 
-  _Phase phase;
+  _Stage stage;
   bool on = false;
 
-  /// What failed, for [_Phase.failed].
+  /// What failed, for [_Stage.failed].
   ServiceFailureReason? reason;
   ServiceDiagnosis? diagnosis;
 
-  /// The certificate waiting to be trusted, for [_Phase.certificate] (and kept
+  /// The certificate waiting to be trusted, for [_Stage.certificate] (and kept
   /// while the person has said `Not now`, so the remedy can bring it back).
   UntrustedCertificateProbe? probe;
 
@@ -224,11 +224,11 @@ class _FoundRow {
 
   bool get keyFieldShown =>
       !candidate.hasKey &&
-      (phase == _Phase.needsKey ||
-          (phase == _Phase.failed &&
+      (stage == _Stage.needsKey ||
+          (stage == _Stage.failed &&
               reason == ServiceFailureReason.unauthorized));
 
-  bool get answeredAndOn => phase == _Phase.answered && on;
+  bool get answeredAndOn => stage == _Stage.answered && on;
 
   /// The failure as one sentence, its cause stated once.
   String get failureSentence {
@@ -258,7 +258,7 @@ class _FoundRow {
   /// What fixes the failure in this row, when it is not asking again.
   (_Remedy, String)? get remedy {
     final reason = this.reason;
-    if (phase != _Phase.failed || reason == null) return null;
+    if (stage != _Stage.failed || reason == null) return null;
     return switch (reason) {
       ServiceFailureReason.unauthorized => (
         _Remedy.address,
@@ -280,11 +280,11 @@ class _FoundRow {
 
   /// The state the row's second line says, with its tone; null where the
   /// row says it by a block of its own (a failure, a key to paste).
-  (StatusTone, String)? get state => switch (phase) {
-    _Phase.trying => (StatusTone.info, 'Trying from this device'),
-    _Phase.answered => (StateWord.answering.tone!, StateWord.answering.label),
-    _Phase.certificate => (StatusTone.info, 'Waiting for you'),
-    _Phase.needsKey || _Phase.failed => null,
+  (StatusTone, String)? get state => switch (stage) {
+    _Stage.trying => (StatusTone.info, 'Trying from this device'),
+    _Stage.answered => (StateWord.answering.tone!, StateWord.answering.label),
+    _Stage.certificate => (StatusTone.info, 'Waiting for you'),
+    _Stage.needsKey || _Stage.failed => null,
   };
 
   /// The one sentence a screen reader speaks for the row's text.
@@ -292,9 +292,9 @@ class _FoundRow {
     final subject = [name, addressLine, keyLine].where((p) => p.isNotEmpty);
     final found = foundLine;
     final head = [subject.join(', '), ?found].join('. ');
-    final tail = switch (phase) {
-      _Phase.needsKey => 'Paste its key to try it',
-      _Phase.failed => [failureSentence, ?failureNote].join('. '),
+    final tail = switch (stage) {
+      _Stage.needsKey => 'Paste its key to try it',
+      _Stage.failed => [failureSentence, ?failureNote].join('. '),
       _ => state!.$2,
     };
     return '$head. $tail';
@@ -356,7 +356,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
       if (!mounted) return;
       setState(() {});
       for (final row in rows) {
-        if (row.phase == _Phase.trying) unawaited(_run(row));
+        if (row.stage == _Stage.trying) unawaited(_run(row));
       }
     });
   }
@@ -379,7 +379,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
     final url = row.url;
     if (url == null) {
       setState(() {
-        row.phase = _Phase.failed;
+        row.stage = _Stage.failed;
         row.reason = ServiceFailureReason.notFound;
         row.diagnosis = null;
         row.addressOpen = true;
@@ -388,7 +388,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
     }
     final attempt = ++row.attempt;
     setState(() {
-      row.phase = _Phase.trying;
+      row.stage = _Stage.trying;
       row.reason = null;
       row.diagnosis = null;
       row.probe = null;
@@ -401,7 +401,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
     // nothing is sent, and the person is told why.
     if (UrlUtils.cleartextWarning(url) != null) {
       setState(() {
-        row.phase = _Phase.failed;
+        row.stage = _Stage.failed;
         row.reason = ServiceFailureReason.insecureTransport;
       });
       return;
@@ -421,7 +421,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
 
     if (diagnosis.isConnected) {
       setState(() {
-        row.phase = _Phase.answered;
+        row.stage = _Stage.answered;
         row.on = true;
       });
       unawaited(_tryAway(row, attempt));
@@ -430,10 +430,10 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
     final probe = diagnosis.certificateProbe;
     setState(() {
       if (probe != null) {
-        row.phase = _Phase.certificate;
+        row.stage = _Stage.certificate;
         row.probe = probe;
       } else {
-        row.phase = _Phase.failed;
+        row.stage = _Stage.failed;
         row.reason = diagnosis.reason ?? ServiceFailureReason.unknown;
         row.diagnosis = diagnosis;
       }
@@ -494,7 +494,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
     _trusted[origin] = probe.certificate.fingerprint;
     for (final other in _rows!) {
       final otherUrl = other.url;
-      if (other.phase == _Phase.certificate &&
+      if (other.stage == _Stage.certificate &&
           otherUrl != null &&
           UrlUtils.certOrigin(otherUrl) == origin) {
         unawaited(_run(other));
@@ -505,7 +505,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
   /// `Not now`: the row stays out, with its remedy to bring the certificate
   /// back.
   void _declineCertificate(_FoundRow row) => setState(() {
-    row.phase = _Phase.failed;
+    row.stage = _Stage.failed;
     row.reason = ServiceFailureReason.tls;
     row.diagnosis = null;
   });
@@ -518,7 +518,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
           row.addressController.text = row.url ?? '';
           row.addressOpen = true;
         case _Remedy.certificate:
-          row.phase = _Phase.certificate;
+          row.stage = _Stage.certificate;
       }
     });
   }
@@ -912,7 +912,7 @@ class _FoundTile extends StatelessWidget {
                   ),
                 ),
               ),
-              if (row.phase == _Phase.answered)
+              if (row.stage == _Stage.answered)
                 MergeSemantics(
                   child: Semantics(
                     label: 'Add ${row.name}',
@@ -924,7 +924,7 @@ class _FoundTile extends StatelessWidget {
                 ),
             ],
           ),
-          if (row.phase == _Phase.certificate && probe != null) ...[
+          if (row.stage == _Stage.certificate && probe != null) ...[
             const SizedBox(height: AppSpacing.md),
             _CertificateBlock(
               row: row,
@@ -934,7 +934,7 @@ class _FoundTile extends StatelessWidget {
               onNotNow: onNotNow,
             ),
           ],
-          if (row.phase == _Phase.failed) ...[
+          if (row.stage == _Stage.failed) ...[
             const SizedBox(height: AppSpacing.md),
             _FailureBlock(
               row: row,

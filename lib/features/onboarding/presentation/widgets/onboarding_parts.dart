@@ -801,11 +801,15 @@ class _OnboardingFieldState extends State<OnboardingField> {
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            Text(
-              widget.label,
-              style: theme.textTheme.labelMedium!
-                  .weight(FontWeight.w600)
-                  .copyWith(color: scheme.onSurfaceVariant),
+            // Flexible, so a label that names a connection (`Radarr 4K's API
+            // key`) wraps at a large reading size instead of overflowing.
+            Flexible(
+              child: Text(
+                widget.label,
+                style: theme.textTheme.labelMedium!
+                    .weight(FontWeight.w600)
+                    .copyWith(color: scheme.onSurfaceVariant),
+              ),
             ),
             if (widget.breadcrumb case final breadcrumb?) ...[
               const SizedBox(width: AppSpacing.md),

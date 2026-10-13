@@ -162,6 +162,7 @@ Future<_Rig> _pump(
   Widget? nothingKnownBody,
   Object? failure,
   List<ServiceKey> configured = const [],
+  double textScale = 1,
 }) async {
   await tester.binding.setSurfaceSize(const Size(390, 1500));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -185,6 +186,12 @@ Future<_Rig> _pump(
           container = ProviderScope.containerOf(context);
           return MaterialApp(
             theme: AppTheme.darkTheme(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!,
+            ),
             home: Scaffold(
               body: SafeArea(
                 child: OnboardingFound(
@@ -1121,6 +1128,45 @@ void main() {
       await tester.tap(find.byType(ReelCommandButton));
       await tester.pump();
       expect(rig.wentHome, [true]);
+    });
+  });
+
+  group('at twice the reading size', () {
+    testWidgets('every state still fits, and the exit stays', (tester) async {
+      final diagnose = _Diagnose()
+        ..on('http://nas.home.arpa:8989', (_) => _silent())
+        ..on('https://nas.home.arpa:7879', (call) => _untrusted(_probe()))
+        ..on(
+          'http://nas.home.arpa:7878',
+          (call) => call.key == _radarr4kKey
+              ? _refused()
+              : const ServiceDiagnosis.connected(),
+        );
+      await _pump(
+        tester,
+        textScale: 2,
+        diagnose: diagnose,
+        known: [
+          _radarr(),
+          _radarr(
+            name: 'Radarr 4K',
+            url: 'http://radarr-4k:7878',
+            key: _radarr4kKey,
+          ),
+          _radarr(
+            name: 'Radarr Anime',
+            url: 'https://nas.home.arpa:7879',
+            key: _radarr4kKey,
+          ),
+          _sonarr(),
+          _radarr(name: 'Radarr Kids', key: null, source: _prowlarr),
+        ],
+      );
+      await _settle(tester);
+
+      // An overflow is an exception in a test: reaching here is the check.
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ReelCommandButton), findsOneWidget);
     });
   });
 
