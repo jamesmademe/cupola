@@ -137,6 +137,19 @@ void main() {
     expect(probe.recheckArmed, isTrue, reason: 'it rechecks for home');
   });
 
+  test('nothing is rechecked while the app is off screen', () async {
+    knocks.answering.add('https://radarr.example.com');
+    final c = await container();
+    final probe = await started(c);
+
+    probe.onHide();
+    expect(probe.recheckArmed, isFalse);
+
+    probe.onResume();
+    await pumpEventQueue();
+    expect(probe.recheckArmed, isTrue);
+  });
+
   test('a connection with one address is never knocked on', () async {
     final c = await container();
 

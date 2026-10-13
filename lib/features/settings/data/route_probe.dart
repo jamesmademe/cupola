@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/lifecycle/gated_poll.dart';
+import 'package:cupola/core/lifecycle/poll_clock.dart';
 import 'package:cupola/core/network/unreached_origins.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
@@ -52,7 +54,7 @@ Future<ConnectionRoute?> decideRoute({
 /// Asked at start, when the app comes back to the foreground, when a request
 /// to a connection's current address opens no connection
 /// ([UnreachedOrigins]), and every [awayRecheckInterval] while a connection
-/// is away. No Wi-Fi name and no location: the knocks themselves say where
+/// is away and the app is on screen. No Wi-Fi name and no location: the knocks themselves say where
 /// the phone is. A move is not a fault and is not said: the connection's
 /// clients rebuild on the new address, and the screens keep what they last
 /// drew while they read again.
@@ -65,10 +67,17 @@ class RouteProbe {
   final _inFlight = <String, Future<void>>{};
   final _lastUnreachedProbe = <String, DateTime>{};
   StreamSubscription<String>? _unreached;
-  Timer? _recheck;
+  late final GatedPollTimer _recheck;
+  var _foreground = true;
   var _disposed = false;
 
   void _start() {
+    _recheck = GatedPollTimer(
+      id: 'route.away',
+      interval: awayRecheckInterval,
+      onTick: () => unawaited(probeAll()),
+      clock: _ref.read(pollClockProvider),
+    );
     _unreached = UnreachedOrigins.stream.listen(_onUnreached);
     _ref.listen(currentSettingsProvider.select(_awaySignature), (
       previous,
@@ -90,7 +99,16 @@ class RouteProbe {
   }
 
   /// The app came back to the foreground: where it is may have changed.
-  void onResume() => unawaited(probeAll());
+  void onResume() {
+    _foreground = true;
+    unawaited(probeAll());
+  }
+
+  /// The app left the screen: nothing is rechecked from the background.
+  void onHide() {
+    _foreground = false;
+    _recheck.setLive(false);
+  }
 
   /// Knocks on connection [id]'s two addresses and moves it to the one that
   /// answers; one probe per connection at a time.
@@ -153,8 +171,8 @@ class RouteProbe {
     }
   }
 
-  /// Rechecks every [awayRecheckInterval] while a connection is away, and
-  /// not at all otherwise.
+  /// Rechecks every [awayRecheckInterval] while a connection is away and
+  /// the app is on screen, and not at all otherwise.
   void _syncRecheck() {
     final settings = _ref.read(currentSettingsProvider);
     final routes = _ref.read(connectionRoutesProvider);
@@ -162,24 +180,16 @@ class RouteProbe {
       (instance) =>
           instance.away != null && routes[instance.id] == ConnectionRoute.away,
     );
-    if (anyAway && _recheck == null) {
-      _recheck = Timer.periodic(
-        awayRecheckInterval,
-        (_) => unawaited(probeAll()),
-      );
-    } else if (!anyAway) {
-      _recheck?.cancel();
-      _recheck = null;
-    }
+    _recheck.setLive(anyAway && _foreground);
   }
 
   /// Whether the periodic recheck is armed: for a test.
-  bool get recheckArmed => _recheck != null;
+  bool get recheckArmed => _recheck.isLive;
 
   void dispose() {
     _disposed = true;
     unawaited(_unreached?.cancel());
-    _recheck?.cancel();
+    _recheck.dispose();
   }
 }
 
@@ -194,7 +204,10 @@ String _awaySignature(SettingsModel settings) => [
 /// The app's [RouteProbe], started by the app's root and alive for the run.
 final routeProbeProvider = Provider<RouteProbe>((ref) {
   final probe = RouteProbe(ref).._start();
-  final listener = AppLifecycleListener(onResume: probe.onResume);
+  final listener = AppLifecycleListener(
+    onResume: probe.onResume,
+    onHide: probe.onHide,
+  );
   ref.onDispose(() {
     listener.dispose();
     probe.dispose();
