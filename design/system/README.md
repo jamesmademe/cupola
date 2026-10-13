@@ -55,7 +55,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Coming up` | — | The next dated things. Films carry a date only; episodes a date and a time. |
 | `in cinemas` · `on digital` · `on disc` | — | A film's three dated events, the same on the calendar and in Coming up: `Sprite Fright · on digital`. Not `digital release`, not `physical release`. |
 | `Checked 2 h ago` · `Since you opened this` · `As of 20:53` | — | When a background check ran; a history that starts when the screen opened; a widget's snapshot. |
-| `Home only` | neutral | Away, with no away address: nothing was asked. |
+| `Only at home` · `Home only` · `Home and away` | neutral · — | `Only at home` is the state: away from home, a connection with no address away is not asked, so it never reads `Did not answer` and never stands in Needs you (`Lidarr only works at home.`, `7 of 7 answering · 6 only at home`; over the last drawing `Lidarr only works at home. As of 20:41.`); its remedy is `Add an address away`. `Home only` and `Home and away` are the setup, on line two of a connection in Connections with the address in use (`Home and away · radarr.example.net`), said once any connection has an address away. |
 | `Config loaded` · `Spun down` | — / neutral | Nginx Proxy Manager has the host's configuration (it cannot see the service behind it); an Unraid disk asleep, which has no temperature. |
 
 **A stuck download's remedies**, each for its own cause: `Try another download` (it can never finish: the arr drops this one, won't pick it again, and looks for another) · `Look for peers again` (someone has the whole file but nobody is reachable) · `Keep waiting` (hides the fault for 24 hours; it comes back if nothing has moved) · `Remove download` (stops it and deletes what arrived, behind a neutral confirmation; the title stays wanted).
@@ -251,7 +251,7 @@ Pages read across services (a Media page shows one title through Seerr, Jellyfin
 11. A write the credential may not make stays visible, dimmed, with the service's own reason; a refused write says nothing changed. Never hidden, never blamed on reachability. The one exception: an option the viewer may not use at all (4K for a requester who may not ask for it) is left out.
 12. One situation, one set of words on every surface: the lexicon above.
 
-A connection reachable only at home says `Home only` while away and is never asked, so it never reads `Did not answer`. **Today** a connection has one address, so away reads as case c; capability probes exist only for Unraid, TrueNAS, Nginx Proxy Manager and Plex; and nothing is drawn from another service's knowledge (case b). The households in `test/test_helpers/profiles/` (P1 full household to P7 degraded and away, checked by `test/core/profiles/`) are the fixtures: a cross-service screen test runs the profiles its surface touches.
+A connection reachable only at home says `Only at home` while away and is never asked, so it never reads `Did not answer`; without any address away the app cannot tell away from a server that is down, and reads as case c. capability probes exist only for Unraid, TrueNAS, Nginx Proxy Manager and Plex; and nothing is drawn from another service's knowledge (case b). The households in `test/test_helpers/profiles/` (P1 full household to P7 degraded and away, checked by `test/core/profiles/`) are the fixtures: a cross-service screen test runs the profiles its surface touches.
 
 ## Failure states
 

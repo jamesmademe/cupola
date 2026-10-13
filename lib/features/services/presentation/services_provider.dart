@@ -125,12 +125,16 @@ final serviceInstanceIdsProvider = Provider.family<List<String>, ServiceKey>((
 /// refused key, a 5xx, which are amber, and which the band that names what
 /// did not answer must never name. `stuck` counts the ones reached that never
 /// replied: amber too, and answering no more than a dark one.
+///
+/// `onlyAtHome` counts the ones not asked because the app is away from home
+/// and they have no address away: neutral, and none of the above.
 typedef FoldedServiceHealth = ({
   int total,
   int offline,
   int faulted,
   int stuck,
   int checking,
+  int onlyAtHome,
 });
 
 final foldedServiceHealthProvider =
@@ -140,11 +144,14 @@ final foldedServiceHealthProvider =
       var faulted = 0;
       var stuck = 0;
       var checking = 0;
+      var onlyAtHome = 0;
       for (final id in ids) {
         final summary = ref.watch(
           instanceSummaryProvider((service: service, instanceId: id)),
         );
         switch (summary) {
+          case AsyncData(:final value) when value.isOnlyAtHome:
+            onlyAtHome++;
           case AsyncData(:final value):
             if (value.didNotAnswer) offline++;
             if (value.isStuck) {
@@ -157,7 +164,10 @@ final foldedServiceHealthProvider =
               faulted++;
             }
           case AsyncError(:final error):
-            if (failureDidNotAnswer(classifyConnectionFailure(error))) {
+            final reason = classifyConnectionFailure(error);
+            if (reason == ServiceFailureReason.onlyAtHome) {
+              onlyAtHome++;
+            } else if (failureDidNotAnswer(reason)) {
               offline++;
             } else {
               faulted++;
@@ -172,6 +182,7 @@ final foldedServiceHealthProvider =
         faulted: faulted,
         stuck: stuck,
         checking: checking,
+        onlyAtHome: onlyAtHome,
       );
     });
 
@@ -205,6 +216,20 @@ final instanceSummaryProvider =
       final instance = settings.instanceById(key.instanceId);
       if (instance == null) {
         return _offlineSummary(key.service, host: '');
+      }
+      // Away from home, a connection reached only there is not asked: the
+      // route already says what a timeout would, and silence it could not
+      // have broken is not red.
+      if (instance.away == null &&
+          instance.isConfigured &&
+          ref.watch(awayFromHomeProvider)) {
+        return ServiceSummary(
+          service: key.service,
+          status: ServiceSummaryStatus.onlyAtHome,
+          host: key.service.extractHost(instance.url) ?? '',
+          version: null,
+          failure: const ClassifiedFailure(ServiceFailureReason.onlyAtHome),
+        );
       }
       return _loadServiceSummary(ref, instance, settings, (
         url: reached.url,
@@ -3712,10 +3737,9 @@ ClassifiedFailure? _answeredWithFault(AsyncValue<ServiceSummary> summary) {
       return value.failure ?? ClassifiedFailure(reason);
     case AsyncError(:final error):
       final failure = ClassifiedFailure.of(error);
-      return failureDidNotAnswer(failure.reason) ||
-              failure.reason == ServiceFailureReason.sessionEnded
-          ? null
-          : failure;
+      // Silence, a session that ended and a connection only at home are no
+      // fault of the answer.
+      return failureIsFault(failure.reason) ? failure : null;
     default:
       return null;
   }

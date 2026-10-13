@@ -62,7 +62,9 @@ final portalFloorCensusProvider = Provider<PortalFloorCensus>((ref) {
       switch (serviceReachabilityOf(
         ref.watch(instanceSummaryProvider(subject)),
       )) {
+        // Not asked, away from home: a setup the floor paints neutral.
         case ServiceReachability.online:
+        case ServiceReachability.onlyAtHome:
           break;
         case ServiceReachability.checking:
           checking++;

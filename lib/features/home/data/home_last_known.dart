@@ -355,7 +355,31 @@ class _LastKnownMarkState extends ConsumerState<LastKnownMark> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    final asOf = widget.asOf;
+    if (asOf == null) return widget.child;
+    final now = ref.watch(calendarClockProvider)();
+    return LastKnownWords(
+      words: 'As of ${formatAsOf(asOf, now: now)}',
+      child: widget.child,
+    );
+  }
+}
+
+/// The words of the drawing a module stands on (`As of 20:41`), for a line
+/// under it that says why it is one: away from home, `Lidarr only works at
+/// home. As of 20:41.` (P-t2-5-note). Put there by [LastKnownMark].
+class LastKnownWords extends InheritedWidget {
+  const LastKnownWords({super.key, required this.words, required super.child});
+
+  final String words;
+
+  /// The words of the drawing [context] stands on, or null over a live read.
+  static String? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<LastKnownWords>()?.words;
+
+  @override
+  bool updateShouldNotify(LastKnownWords oldWidget) => oldWidget.words != words;
 }
 
 /// The Home's one line about its last known state: `As of 20:53 · checking

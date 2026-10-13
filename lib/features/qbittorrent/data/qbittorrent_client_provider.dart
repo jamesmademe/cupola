@@ -47,15 +47,14 @@ final ProviderFamily<QbittorrentClient, String> qbittorrentClientForProvider =
         ServiceKey.qbittorrent,
         instanceId: instanceId,
       );
-      if (!transport.configured) {
-        throw const ServiceNotConfigured(ServiceKey.qbittorrent);
-      }
+      transport.ensureConfigured(ServiceKey.qbittorrent);
       final client = QbittorrentClient(
         url: transport.url,
         username: transport.username.isNotEmpty ? transport.username : null,
         password: transport.apiKey.isNotEmpty ? transport.apiKey : null,
         certFingerprint: transport.pin,
         accessHeaders: transport.access.headers(),
+        onlyAtHome: transport.onlyAtHomeOf(ServiceKey.qbittorrent),
         // The refusal is the connection's, kept where the next client of it
         // (the next launch, a check in the background) reads it first.
         connectionId: instanceId,

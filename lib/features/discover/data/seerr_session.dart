@@ -114,8 +114,11 @@ ApiClient seerrClientFor(
   ConnectionReach? reach,
   SeerrSignIn? signIn,
   SeerrSessionEvents events = const SeerrSessionEvents(),
+  bool onlyAtHome = false,
 }) {
   assert(instance.service == ServiceKey.seerr, 'not a Seerr connection');
+  // Away from home with no address away: built, and refusing every request.
+  final refused = onlyAtHome ? ServiceKey.seerr : null;
   final way = signIn ?? instance.seerrSignIn;
   final at = reach ?? (url: instance.url, access: instance.access, pin: null);
   final accessHeaders = at.access.headers();
@@ -127,6 +130,7 @@ ApiClient seerrClientFor(
       apiKey: key.trim(),
       pinnedCertFingerprint: at.pin,
       accessHeaders: accessHeaders,
+      onlyAtHome: refused,
       interceptors: (dio) => [SeerrCsrfInterceptor(dio, origins: origins)],
     ),
     // The key acting as another administrator of the household: Seerr reads
@@ -137,6 +141,7 @@ ApiClient seerrClientFor(
       headers: {'X-Api-Key': key.trim(), _actsAsHeader: actsAs},
       pinnedCertFingerprint: at.pin,
       accessHeaders: accessHeaders,
+      onlyAtHome: refused,
       interceptors: (dio) => [SeerrCsrfInterceptor(dio, origins: origins)],
     ),
     SeerrAccountSignIn(:final session) => ApiClient.authenticatedBy(
@@ -144,6 +149,7 @@ ApiClient seerrClientFor(
       headers: const {},
       pinnedCertFingerprint: at.pin,
       accessHeaders: accessHeaders,
+      onlyAtHome: refused,
       interceptors: (dio) => [
         SeerrSessionInterceptor(
           dio,
@@ -261,6 +267,7 @@ ApiClient watchSeerrClient(
     // access and pin.
     reach: (url: transport.url, access: transport.access, pin: transport.pin),
     events: events ?? seerrAccountEvents(ref, transport.instanceId),
+    onlyAtHome: transport.onlyAtHome,
   );
   ref.onDispose(client.close);
   return client;

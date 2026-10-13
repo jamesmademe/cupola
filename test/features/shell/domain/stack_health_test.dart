@@ -24,6 +24,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
         StackServiceState.answering,
       );
@@ -37,6 +38,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
         StackServiceState.degraded,
       );
@@ -50,6 +52,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
         StackServiceState.unreachable,
       );
@@ -65,6 +68,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
         StackServiceState.answering,
       );
@@ -75,6 +79,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
         StackServiceState.unreachable,
       );
@@ -88,6 +93,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 1,
+          onlyAtHome: 0,
         ),
         StackServiceState.checking,
       );
@@ -100,6 +106,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 1,
+          onlyAtHome: 0,
         ),
         StackServiceState.answering,
       );
@@ -142,6 +149,44 @@ void main() {
       expect(
         health.sentence,
         '1 of 4 answering · 2 timed out · 1 did not answer',
+      );
+    });
+  });
+
+  group('away from home', () {
+    test('a service whose every connection is only at home is that', () {
+      expect(
+        foldServiceState(total: 1, offline: 0, checking: 0, onlyAtHome: 1),
+        StackServiceState.onlyAtHome,
+      );
+    });
+
+    test('a service with another connection reads by the one asked', () {
+      expect(
+        foldServiceState(total: 2, offline: 0, checking: 0, onlyAtHome: 1),
+        StackServiceState.answering,
+      );
+      expect(
+        foldServiceState(total: 2, offline: 1, checking: 0, onlyAtHome: 1),
+        StackServiceState.unreachable,
+      );
+    });
+
+    test('is out of the count and named after it, never a fault', () {
+      final health = stackHealthFrom(
+        states: [
+          for (var i = 0; i < 7; i++) StackServiceState.answering,
+          for (var i = 0; i < 6; i++) StackServiceState.onlyAtHome,
+        ],
+        registrySize: 17,
+      );
+      expect(health.configured, 7);
+      expect(health.onlyAtHome, 6);
+      expect(health.notSetUp, 4);
+      expect(health.allClear, isTrue);
+      expect(
+        health.sentence,
+        '7 of 7 answering · 6 only at home · 4 not set up',
       );
     });
   });
@@ -288,7 +333,14 @@ void main() {
           foldedServiceHealthProvider.overrideWith(
             (ref, service) =>
                 folds[service] ??
-                (total: 0, offline: 0, faulted: 0, stuck: 0, checking: 0),
+                (
+                  total: 0,
+                  offline: 0,
+                  faulted: 0,
+                  stuck: 0,
+                  checking: 0,
+                  onlyAtHome: 0,
+                ),
           ),
         ],
       );
@@ -304,6 +356,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
         ServiceKey.lidarr: (
           total: 2,
@@ -311,6 +364,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
       });
 
@@ -331,6 +385,7 @@ void main() {
           faulted: 0,
           stuck: 1,
           checking: 0,
+          onlyAtHome: 0,
         ),
         ServiceKey.sonarr: (
           total: 1,
@@ -338,6 +393,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
       });
 
@@ -361,6 +417,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 0,
+          onlyAtHome: 0,
         ),
       });
 
@@ -380,6 +437,7 @@ void main() {
           faulted: 0,
           stuck: 0,
           checking: 1,
+          onlyAtHome: 0,
         ),
       });
 

@@ -82,6 +82,7 @@ void main() {
       faulted: 0,
       stuck: 0,
       checking: 0,
+      onlyAtHome: 0,
     ));
   });
 

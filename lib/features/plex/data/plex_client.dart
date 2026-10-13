@@ -18,6 +18,7 @@ import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_external_match.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Identifies Cupola to the user's server. Plex shows this in
 /// Settings → Authorized Devices, so it is a name a stranger has to recognise as
@@ -164,6 +165,7 @@ class PlexClient implements StreamServerClient {
     String deviceName = kPlexDeviceName,
     String? pinnedCertFingerprint,
     Map<String, String> accessHeaders = const {},
+    ServiceKey? onlyAtHome,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _accessHeaders = accessHeaders,
        _token = token.trim(),
@@ -177,6 +179,7 @@ class PlexClient implements StreamServerClient {
       headers: _headers(),
       pinnedCertFingerprint: pinnedCertFingerprint,
       accessHeaders: accessHeaders,
+      onlyAtHome: onlyAtHome,
     );
   }
 

@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_only_at_home.dart';
 
 DioException _badResponse(int code) => DioException(
   requestOptions: RequestOptions(path: '/'),
@@ -374,7 +376,8 @@ void main() {
       for (final reason in ServiceFailureReason.values.where(
         (r) =>
             r != ServiceFailureReason.unreachable &&
-            r != ServiceFailureReason.sessionEnded,
+            r != ServiceFailureReason.sessionEnded &&
+            r != ServiceFailureReason.onlyAtHome,
       )) {
         // `unknown` included: a failure nobody can attribute is no evidence
         // that the host is silent.
@@ -382,6 +385,34 @@ void main() {
         expect(failureDidNotAnswer(reason), isFalse, reason: reason.name);
         expect(failureTone(reason), StatusTone.warning, reason: reason.name);
       }
+    });
+  });
+
+  group('a connection only at home, away from it', () {
+    test('is neutral, never a fault, never silence', () {
+      const reason = ServiceFailureReason.onlyAtHome;
+      expect(failureTone(reason), StatusTone.neutral);
+      expect(failureIsFault(reason), isFalse);
+      expect(failureDidNotAnswer(reason), isFalse);
+      expect(failureLabel(reason), 'Only at home');
+      expect(
+        failureHeadline(reason, subject: 'Lidarr'),
+        'Lidarr only works at home',
+      );
+      expect(
+        failureGroupHeadline(reason, subjects: 'Lidarr and SABnzbd'),
+        'Lidarr and SABnzbd only work at home',
+      );
+      expect(failureRemedy(reason), 'Add an address away');
+      // Nothing was asked, and asking again from here asks nothing.
+      expect(failureRetryHelps(reason), isFalse);
+    });
+
+    test('is what the transport throws, read by its reason', () {
+      expect(
+        classifyConnectionFailure(const ServiceOnlyAtHome(ServiceKey.lidarr)),
+        ServiceFailureReason.onlyAtHome,
+      );
     });
   });
 

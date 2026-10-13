@@ -6,6 +6,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Error thrown by [TransmissionClient]. Carries the [reason] so a caller
 /// verifying the connection can tell an unreachable host from rejected
@@ -114,6 +115,10 @@ class TransmissionClient {
     Dio? dio,
     String? certFingerprint,
     Map<String, String> accessHeaders = const {},
+
+    /// Away from home with no address away: every request is refused, and
+    /// nothing is dialled (`OnlyAtHomeRefusal`).
+    ServiceKey? onlyAtHome,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        rpcPath = resolveRpcPath(url),
        rpcUrl = resolveRpcUrl(url) {
@@ -131,6 +136,7 @@ class TransmissionClient {
       injected: dio,
       certFingerprint: certFingerprint,
       accessHeaders: accessHeaders,
+      onlyAtHome: onlyAtHome,
       // It signs in with Basic itself: a Basic 401 is its own refusal.
       nativeBasicAuth: true,
     );

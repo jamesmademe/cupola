@@ -18,6 +18,12 @@ enum ServiceSummaryStatus {
 
   /// Nothing answered. Red, and the only red.
   offline,
+
+  /// Not asked: the app is away from home and the connection has no address
+  /// away ([ServiceFailureReason.onlyAtHome]). Neutral: not answering, not
+  /// silent, not a fault, and counted apart (`7 of 7 answering · 6 only at
+  /// home`).
+  onlyAtHome,
 }
 
 /// Whether a configured service is answering, and what it says it is.
@@ -90,6 +96,9 @@ class ServiceSummary {
   /// Nothing answered: the red state.
   bool get didNotAnswer => status == ServiceSummaryStatus.offline;
 
+  /// Not asked, away from home: the neutral state.
+  bool get isOnlyAtHome => status == ServiceSummaryStatus.onlyAtHome;
+
   /// Answered with a refusal or a fault: amber.
   bool get isFault => status == ServiceSummaryStatus.fault;
 
@@ -106,6 +115,7 @@ class ServiceSummary {
       failure?.reason ?? ServiceFailureReason.unreachable,
     ServiceSummaryStatus.fault =>
       failure?.reason ?? ServiceFailureReason.unknown,
+    ServiceSummaryStatus.onlyAtHome => ServiceFailureReason.onlyAtHome,
   };
 
   String get versionLabel {

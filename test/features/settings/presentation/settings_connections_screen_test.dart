@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/connection_candidate.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -45,6 +47,61 @@ void main() {
       expect(find.text('seerr.local'), findsOneWidget);
       expect(find.text('radarr.local:7878'), findsOneWidget);
       expect(find.text('Not set up'), findsNWidgets(total - 2));
+    });
+
+    group('home and away (J-Config-Away-States e)', () {
+      const radarr = ServiceInstance(
+        id: 'radarr',
+        service: ServiceKey.radarr,
+        url: 'http://nas.home.arpa:7878',
+        credential: 'key',
+        away: ConnectionAddress(url: 'https://radarr.example.net'),
+      );
+      const sabnzbd = ServiceInstance(
+        id: 'sabnzbd',
+        service: ServiceKey.sabnzbd,
+        url: 'http://nas.home.arpa:8080',
+        credential: 'key',
+      );
+
+      testWidgets('at home, line two is the setup and the address in use', (
+        tester,
+      ) async {
+        await _pumpConnectionsScreen(
+          tester,
+          settings: const SettingsModel(instances: [radarr, sabnzbd]),
+          diagnosis: const ServiceDiagnosis.connected(),
+          routes: const {},
+        );
+        expect(find.text('Home and away · nas.home.arpa:7878'), findsOneWidget);
+        expect(find.text('Home only · nas.home.arpa:8080'), findsOneWidget);
+      });
+
+      testWidgets('away, the address follows the route and a home-only row '
+          'says its state, neutral', (tester) async {
+        await _pumpConnectionsScreen(
+          tester,
+          settings: const SettingsModel(instances: [radarr, sabnzbd]),
+          diagnosis: const ServiceDiagnosis.connected(),
+          diagnoses: const {ServiceKey.sabnzbd: ServiceDiagnosis.onlyAtHome()},
+          routes: const {'radarr': ConnectionRoute.away},
+        );
+        expect(find.text('Home and away · radarr.example.net'), findsOneWidget);
+        expect(find.text('Only at home · nas.home.arpa:8080'), findsOneWidget);
+        expect(find.textContaining('Did not answer'), findsNothing);
+      });
+
+      testWidgets('without any address away, the rows say what they said', (
+        tester,
+      ) async {
+        await _pumpConnectionsScreen(
+          tester,
+          settings: const SettingsModel(instances: [sabnzbd]),
+          diagnosis: const ServiceDiagnosis.connected(),
+        );
+        expect(find.text('nas.home.arpa:8080'), findsOneWidget);
+        expect(find.textContaining('Home only'), findsNothing);
+      });
     });
 
     testWidgets('offers first what the connections already know, filled in', (
@@ -254,10 +311,21 @@ class _UnauthorizedFailure implements HasFailureReason {
   ServiceFailureReason get reason => ServiceFailureReason.unauthorized;
 }
 
+class _Routes extends ConnectionRoutesNotifier {
+  _Routes(this._routes);
+
+  final Map<String, ConnectionRoute> _routes;
+
+  @override
+  Map<String, ConnectionRoute> build() => _routes;
+}
+
 Future<void> _pumpConnectionsScreen(
   WidgetTester tester, {
   SettingsModel settings = const SettingsModel(),
   ServiceDiagnosis? diagnosis,
+  Map<ServiceKey, ServiceDiagnosis> diagnoses = const {},
+  Map<String, ConnectionRoute>? routes,
   List<ConnectionCandidate> found = const [],
 }) async {
   final router = GoRouter(
@@ -298,10 +366,12 @@ Future<void> _pumpConnectionsScreen(
       overrides: [
         currentSettingsProvider.overrideWith((ref) => settings),
         foundCandidatesProvider.overrideWith((ref) async => found),
-        if (diagnosis != null)
+        if (diagnosis != null || diagnoses.isNotEmpty)
           serviceDiagnosisProvider.overrideWith((ref, service) async {
-            return diagnosis;
+            return diagnoses[service] ?? diagnosis!;
           }),
+        if (routes != null)
+          connectionRoutesProvider.overrideWith(() => _Routes(routes)),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),

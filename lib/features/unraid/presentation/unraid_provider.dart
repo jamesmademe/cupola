@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 
@@ -15,14 +14,13 @@ final unraidClientProvider = Provider<UnraidClient>((ref) {
   // Selected rather than watching the whole model: this provider closes a live
   // Dio on dispose, so an unrelated settings write must not rebuild it.
   final transport = watchTransport(ref, ServiceKey.unraid);
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.unraid);
-  }
+  transport.ensureConfigured(ServiceKey.unraid);
   final client = UnraidClient(
     url: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.unraid),
   );
   ref.onDispose(() => client.close());
   return client;
@@ -50,14 +48,13 @@ UnraidClient _unraidClient(Ref ref, {required String? instanceId}) {
     ServiceKey.unraid,
     instanceId: instanceId,
   );
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.unraid);
-  }
+  transport.ensureConfigured(ServiceKey.unraid);
   final client = UnraidClient(
     url: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.unraid),
   );
   ref.onDispose(client.close);
   return client;

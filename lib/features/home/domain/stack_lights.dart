@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -36,6 +37,9 @@ enum StackProbe {
 
   /// It did not answer.
   silent,
+
+  /// Not asked: away from home, with no address away.
+  onlyAtHome,
 }
 
 /// What one service's light says.
@@ -57,6 +61,10 @@ enum StackLight {
 
   /// Every connection did not answer: red.
   silent,
+
+  /// Not asked: the app is away from home and no connection has an address
+  /// away. Neutral, and out of the count.
+  onlyAtHome,
 }
 
 /// One mark of the slab.
@@ -77,8 +85,14 @@ class StackLights {
   /// which figure the lights are.
   int get faults => faulted.length;
 
-  /// The services asked.
-  int get configured => rows.length;
+  /// The services asked: not the ones only at home, away from it.
+  int get configured => rows.length - onlyAtHome.length;
+
+  /// The services not asked, away from home.
+  List<ServiceKey> get onlyAtHome => [
+    for (final row in rows)
+      if (row.light == StackLight.onlyAtHome) row.service,
+  ];
 
   /// The services that answered, a fault among them: a refused key is an
   /// answer.
@@ -125,6 +139,8 @@ class StackLights {
       if (faults > 0) '$faults ${faults == 1 ? 'fault' : 'faults'}',
       if (stuck.isNotEmpty) '${stuck.length} timed out',
       if (stillChecking > 0) '$stillChecking checking',
+      if (onlyAtHome.isNotEmpty)
+        '${onlyAtHome.length} ${StateWord.onlyAtHome.inline}',
     ];
     return parts.join(' · ');
   }
@@ -143,6 +159,7 @@ class StackLights {
         (StackLight.stuck, 'Timed out'),
         (StackLight.silent, 'Did not answer'),
         (StackLight.checking, 'Checking'),
+        (StackLight.onlyAtHome, 'Only at home'),
       ])
         if (names(light) case final list when list.isNotEmpty) '$word: $list.',
     ].join(' ');
@@ -160,9 +177,15 @@ class StackLights {
 /// The light of one service, from what each of its connections said and
 /// whether a fault of it waits for the person.
 StackLight stackLightOf(List<StackProbe> probes, {bool needsYou = false}) {
+  // Not asked is not an answer: a service whose every connection is only at
+  // home is that, and one with another connection reads by the other.
+  if (probes.isNotEmpty &&
+      probes.every((probe) => probe == StackProbe.onlyAtHome)) {
+    return StackLight.onlyAtHome;
+  }
   final heard = [
     for (final probe in probes)
-      if (probe != StackProbe.checking) probe,
+      if (probe != StackProbe.checking && probe != StackProbe.onlyAtHome) probe,
   ];
   if (heard.isEmpty) return StackLight.checking;
   if (heard.every((probe) => probe == StackProbe.silent)) {

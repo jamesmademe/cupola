@@ -53,6 +53,24 @@ void main() {
     );
   });
 
+  test('away from home, the services not asked are named after the count', () {
+    // J-Away-2: thirteen set up, six with no address away.
+    expect(
+      homeHealthLine(
+        StackHealth(
+          configured: 7,
+          answering: 7,
+          degraded: 0,
+          unreachable: 0,
+          checking: 0,
+          notSetUp: 4,
+          onlyAtHome: 6,
+        ),
+      ),
+      '7 of 7 answering · 6 only at home',
+    );
+  });
+
   test('nothing asked: no line, only the month', () {
     expect(homeHealthLine(health(configured: 0, answering: 0)), '');
   });

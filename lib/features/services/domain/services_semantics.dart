@@ -5,6 +5,7 @@
 /// says on this tab is built here, so the widget and the test read one source.
 library;
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
@@ -111,6 +112,7 @@ String serviceDomainHealthLine({
   required int clean,
   required int total,
   List<String> qualifiers = const [],
+  int onlyAtHome = 0,
   int notSetUp = 0,
   int maxNamed = 2,
 }) {
@@ -126,6 +128,8 @@ String serviceDomainHealthLine({
   return [
     '$clean of $total clean',
     ...shown,
+    // Counted, never named: away from home, not asked.
+    if (onlyAtHome > 0) '$onlyAtHome ${StateWord.onlyAtHome.inline}',
     if (notSetUp > 0) '$notSetUp not set up',
   ].join(' · ');
 }

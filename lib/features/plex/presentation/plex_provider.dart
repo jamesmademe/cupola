@@ -4,7 +4,6 @@ import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
@@ -66,15 +65,14 @@ PlexClient _plexClient(Ref ref, {required String? instanceId}) {
   final clientId = ref.watch(
     currentSettingsProvider.select((s) => s.plexClientId),
   );
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.plex);
-  }
+  transport.ensureConfigured(ServiceKey.plex);
   final client = PlexClient(
     url: transport.url,
     token: transport.apiKey,
     clientIdentifier: clientId,
     pinnedCertFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.plex),
   );
   ref.onDispose(client.close);
   return client;

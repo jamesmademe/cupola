@@ -63,6 +63,10 @@ class SabnzbdClient {
     Dio? dio,
     String? certFingerprint,
     Map<String, String> accessHeaders = const {},
+
+    /// Away from home with no address away: every request is refused, and
+    /// nothing is dialled (`OnlyAtHomeRefusal`).
+    ServiceKey? onlyAtHome,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _apiKey = apiKey.trim() {
     // Redirects are followed by hand, and this client is the one that most
@@ -78,6 +82,7 @@ class SabnzbdClient {
       injected: dio,
       certFingerprint: certFingerprint,
       accessHeaders: accessHeaders,
+      onlyAtHome: onlyAtHome,
     );
   }
 

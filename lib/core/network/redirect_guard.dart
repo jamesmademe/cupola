@@ -4,6 +4,8 @@ import 'package:cupola/core/network/answer_guard.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/unreached_origins.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_only_at_home.dart';
 
 /// A service's own interceptors, built over the [Dio] they are installed on:
 /// see `guardedDio`.
@@ -302,6 +304,7 @@ Dio guardedDio({
   bool nativeBasicAuth = false,
   DioInterceptors? interceptors,
   bool reportUnreached = true,
+  ServiceKey? onlyAtHome,
 }) {
   if (injected != null) return injected;
 
@@ -327,6 +330,9 @@ Dio guardedDio({
     ),
   );
   dio.interceptors
+    // First of all, so no interceptor of the service's own sends anything
+    // either (Seerr's token fetch would).
+    ..addAll([if (onlyAtHome != null) OnlyAtHomeRefusal(onlyAtHome)])
     ..addAll(interceptors?.call(dio) ?? const [])
     ..add(SameOriginRedirectInterceptor(dio, nativeBasicAuth: nativeBasicAuth))
     ..add(AnswerGuardInterceptor(nativeBasicAuth: nativeBasicAuth));
@@ -337,6 +343,30 @@ Dio guardedDio({
   );
   if (adapter != null) dio.httpClientAdapter = adapter;
   return dio;
+}
+
+/// Refuses every request of a connection the app may not ask: away from
+/// home, with no address away. Nothing is dialled, and the request fails the
+/// way any failed request does, as [ServiceOnlyAtHome], so every reader that
+/// already copes with a server that is down says `Only at home` instead,
+/// and a client is still built: a poster's address, a link, a row drawn from
+/// the last answer keep working. The refusal skips the error interceptors, so
+/// it is never reported to [UnreachedOrigins].
+class OnlyAtHomeRefusal extends Interceptor {
+  const OnlyAtHomeRefusal(this.service);
+
+  final ServiceKey service;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    handler.reject(
+      DioException(
+        requestOptions: options,
+        error: ServiceOnlyAtHome(service),
+        message: '${service.title} only at home',
+      ),
+    );
+  }
 }
 
 /// Tells [UnreachedOrigins] of a request that opened no connection, or none

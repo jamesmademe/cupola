@@ -89,6 +89,14 @@ class ServiceDiagnosis {
 
   const ServiceDiagnosis.checking() : this(ServiceConnectionStatus.checking);
 
+  /// Away from home, a connection with no address away: nothing was asked
+  /// ([ServiceFailureReason.onlyAtHome]). Neutral, never a fault.
+  const ServiceDiagnosis.onlyAtHome()
+    : this(
+        ServiceConnectionStatus.disconnected,
+        ServiceFailureReason.onlyAtHome,
+      );
+
   /// The service answered, but could not be reached again to confirm.
   const ServiceDiagnosis.dropped()
     : this(
@@ -672,12 +680,17 @@ Future<ServiceDiagnosis> diagnoseService(
 ServiceDiagnosis worstDiagnosis(List<ServiceDiagnosis> results) {
   var worst = results.first;
   for (final result in results.skip(1)) {
-    if (_attention(result.status) > _attention(worst.status)) worst = result;
+    if (_attention(result) > _attention(worst)) worst = result;
   }
   return worst;
 }
 
-int _attention(ServiceConnectionStatus status) => switch (status) {
+int _attention(ServiceDiagnosis diagnosis) => switch (diagnosis.status) {
+  // Only at home is not a fault: below anything that needs a hand, above a
+  // sibling that answers, so the row still says one of them is out of reach.
+  ServiceConnectionStatus.disconnected
+      when diagnosis.reason == ServiceFailureReason.onlyAtHome =>
+    1,
   ServiceConnectionStatus.disconnected => 3,
   ServiceConnectionStatus.notConfigured => 2,
   ServiceConnectionStatus.checking => 1,
@@ -758,6 +771,13 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
   ServiceInstance instance,
   SettingsModel settings,
 ) {
+  // Away from home, a connection reached only there is not asked: the route
+  // already says what a timeout would.
+  if (instance.away == null &&
+      instance.isConfigured &&
+      ref.watch(awayFromHomeProvider)) {
+    return Future.value(const ServiceDiagnosis.onlyAtHome());
+  }
   final route = watchConnectionRoute(
     ref,
     instance.id,
@@ -796,7 +816,9 @@ bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   // Refused before dialling: the OS was never asked for anything.
   ServiceFailureReason.insecureTransport ||
   // Already attributed; asking again would only re-confirm it.
-  ServiceFailureReason.localNetworkBlocked => false,
+  ServiceFailureReason.localNetworkBlocked ||
+  // Not asked, away from home: nothing was dialled.
+  ServiceFailureReason.onlyAtHome => false,
   _ => true,
 };
 
@@ -866,7 +888,10 @@ bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.localNetworkBlocked ||
   // Refused before dialling, and the probe would dial the very address the
   // refusal was protecting the key from.
-  ServiceFailureReason.insecureTransport => false,
+  ServiceFailureReason.insecureTransport ||
+  // Not asked, away from home: the probe would dial the address at home
+  // the route already found silent.
+  ServiceFailureReason.onlyAtHome => false,
   _ => true,
 };
 
@@ -959,6 +984,9 @@ String connectionFailureMessage(
     case ServiceFailureReason.sessionEnded:
       return 'This account was signed out of ${service.title}. Sign in again '
           'to keep asking for movies and series.';
+    case ServiceFailureReason.onlyAtHome:
+      return '${service.title} has no address away, so Cupola reaches it '
+          'only on your home Wi-Fi.';
     case ServiceFailureReason.secretUnread:
       return "${secureStoreName()} didn't hand over the saved "
           '${service.credentialLabel}. Paste it again.';

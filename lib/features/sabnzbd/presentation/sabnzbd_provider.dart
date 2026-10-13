@@ -6,7 +6,6 @@ import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// SABnzbd client bound to the current settings.
 ///
@@ -51,14 +50,13 @@ SabnzbdClient _sabnzbdClient(Ref ref, {required String? instanceId}) {
     ServiceKey.sabnzbd,
     instanceId: instanceId,
   );
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.sabnzbd);
-  }
+  transport.ensureConfigured(ServiceKey.sabnzbd);
   final client = SabnzbdClient(
     url: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.sabnzbd),
   );
   ref.onDispose(client.close);
   return client;

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -119,16 +120,22 @@ class HomeHeader extends ConsumerWidget {
 }
 
 /// `12 of 12 answering`, `Checking 12 services` before anything answered,
-/// `9 of 12 answering · 3 checking` while the slowest are still out. Empty
-/// when nothing set up is asked anything.
+/// `9 of 12 answering · 3 checking` while the slowest are still out, and away
+/// from home `7 of 7 answering · 6 only at home` (J-Away-2): the services
+/// not asked are out of the count and named after it. Empty when nothing set
+/// up is asked anything.
 String homeHealthLine(StackHealth health) {
   final configured = health.configured;
   if (configured == 0) return '';
   if (health.checking >= configured) {
     return 'Checking $configured ${configured == 1 ? 'service' : 'services'}';
   }
-  final head = health.headline!;
-  return health.checking > 0 ? '$head · ${health.checking} checking' : head;
+  return [
+    health.headline!,
+    if (health.checking > 0) '${health.checking} checking',
+    if (health.onlyAtHome > 0)
+      '${health.onlyAtHome} ${StateWord.onlyAtHome.inline}',
+  ].join(' · ');
 }
 
 /// [homeHealthLine] as a screen reader says it: `12 of 12 services

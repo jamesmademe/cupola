@@ -5,7 +5,6 @@ import 'package:cupola/core/status/read_clock.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
@@ -28,15 +27,14 @@ final transmissionClientProvider = Provider<TransmissionClient>((ref) {
   // the badge in the app bar and nothing else. The label said one daemon and
   // every torrent on screen came from the other.
   final transport = watchTransport(ref, ServiceKey.transmission);
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.transmission);
-  }
+  transport.ensureConfigured(ServiceKey.transmission);
   final client = TransmissionClient(
     url: transport.url,
     username: transport.username.isEmpty ? null : transport.username,
     password: transport.apiKey.isEmpty ? null : transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.transmission),
   );
   ref.onDispose(() => client.close());
   return client;
@@ -62,15 +60,14 @@ final transmissionClientForProvider =
         ServiceKey.transmission,
         instanceId: instanceId,
       );
-      if (!transport.configured) {
-        throw const ServiceNotConfigured(ServiceKey.transmission);
-      }
+      transport.ensureConfigured(ServiceKey.transmission);
       final client = TransmissionClient(
         url: transport.url,
         username: transport.username.isEmpty ? null : transport.username,
         password: transport.apiKey.isEmpty ? null : transport.apiKey,
         certFingerprint: transport.pin,
         accessHeaders: transport.access.headers(),
+        onlyAtHome: transport.onlyAtHomeOf(ServiceKey.transmission),
       );
       ref.onDispose(client.close);
       return client;

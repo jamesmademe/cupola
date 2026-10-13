@@ -222,17 +222,28 @@ List<Widget> failureLineVerbs(
     Lexicon.retry,
     semanticsLabel: subject == null ? null : '${Lexicon.retry} $subject',
   );
-  return [
-    if (remedy != null)
-      FilledButton(
-        onPressed: () => remedy.open(context),
-        style: remedyFillStyle(context, compact: true, fault: remedy.isFault),
-        child: Text(
+  final remedyLabel = remedy == null
+      ? null
+      : Text(
           remedy.label,
           semanticsLabel: subject == null
               ? null
               : '${remedy.label} for $subject',
-        ),
+        );
+  return [
+    // Away from home, a connection only at home is a setup, not a fault: its
+    // remedy (`Add an address away`) is text in ink, never a fill.
+    if (remedy != null && remedy.reason == ServiceFailureReason.onlyAtHome)
+      TextButton(
+        onPressed: () => remedy.open(context),
+        style: retryInkStyle(Theme.of(context).colorScheme),
+        child: remedyLabel!,
+      )
+    else if (remedy != null)
+      FilledButton(
+        onPressed: () => remedy.open(context),
+        style: remedyFillStyle(context, compact: true, fault: remedy.isFault),
+        child: remedyLabel!,
       ),
     if (remedy == null && fault)
       FilledButton(

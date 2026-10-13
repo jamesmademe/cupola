@@ -112,7 +112,8 @@ void main() {
       expect(away.apiKey, 'radarr-key', reason: 'the same server, same key');
     });
 
-    test('moving one route rebuilds no other connection\'s client', () async {
+    test('moving one route rebuilds another connection only to say it is '
+        'only at home', () async {
       final container = await _container();
       var sonarrBuilds = 0;
       container.listen(
@@ -120,13 +121,32 @@ void main() {
         (_, _) => sonarrBuilds++,
         fireImmediately: true,
       );
+      expect(
+        container.read(_transportProvider(ServiceKey.sonarr)).onlyAtHome,
+        isFalse,
+      );
 
+      // Radarr moving away takes the app away: Sonarr, with no address away,
+      // is now the one nothing may be sent to.
       await container
           .read(connectionRoutesProvider.notifier)
           .set('radarr', ConnectionRoute.away);
-      container.read(_transportProvider(ServiceKey.sonarr));
+      final away = container.read(_transportProvider(ServiceKey.sonarr));
+      expect(sonarrBuilds, 2);
+      expect(away.onlyAtHome, isTrue);
+      // The client built off it refuses every request without dialling.
+      expect(away.onlyAtHomeOf(ServiceKey.sonarr), ServiceKey.sonarr);
+      // Its address is untouched: the home one, for the day it comes back.
+      expect(away.url, 'http://192.168.1.20:8989');
 
-      expect(sonarrBuilds, 1);
+      await container
+          .read(connectionRoutesProvider.notifier)
+          .set('radarr', ConnectionRoute.home);
+      expect(
+        container.read(_transportProvider(ServiceKey.sonarr)).onlyAtHome,
+        isFalse,
+      );
+      expect(sonarrBuilds, 3);
     });
   });
 

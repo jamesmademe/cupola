@@ -186,6 +186,8 @@ void main() {
       // neither: blue, the person's own step.
       const red = {ServiceFailureReason.unreachable};
       const blue = {ServiceFailureReason.sessionEnded};
+      // Not asked, away from home: a setup, neutral.
+      const neutral = {ServiceFailureReason.onlyAtHome};
       for (final reason in ServiceFailureReason.values) {
         final presentation = describeConnection(
           ServiceKey.radarr,
@@ -198,6 +200,8 @@ void main() {
               ? StatusTone.error
               : blue.contains(reason)
               ? StatusTone.info
+              : neutral.contains(reason)
+              ? StatusTone.neutral
               : StatusTone.warning,
           reason: '$reason',
         );

@@ -118,6 +118,10 @@ class QbittorrentClient {
     CookieJar? cookieJar,
     String? certFingerprint,
     Map<String, String> accessHeaders = const {},
+
+    /// Away from home with no address away: every request is refused, and
+    /// nothing is dialled (`OnlyAtHomeRefusal`).
+    ServiceKey? onlyAtHome,
     this.connectionId = '',
     QbittorrentRefusalStore? refusalStore,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
@@ -141,6 +145,7 @@ class QbittorrentClient {
       injected: dio,
       certFingerprint: certFingerprint,
       accessHeaders: accessHeaders,
+      onlyAtHome: onlyAtHome,
       sendTimeout: const Duration(seconds: 10),
     );
 

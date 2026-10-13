@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -53,8 +54,15 @@ class StackHealth {
     this.faulted = 0,
     this.stuck = 0,
     this.signedOut = 0,
+    this.onlyAtHome = 0,
     this.checkedAt,
   });
+
+  /// Services not asked because the app is away from home and none of their
+  /// connections has an address away. Set up, so never among [notSetUp];
+  /// asked nothing, so not in [configured] either; and not a fault: `7 of 7
+  /// answering · 6 only at home` (J-Away-2).
+  final int onlyAtHome;
 
   /// Services reached that never replied: every connection took the
   /// connection and said nothing in time, or some did and the rest did not
@@ -128,6 +136,7 @@ class StackHealth {
     // Ahead of "not set up" because a probe in flight is about to change the
     // headline and an unconfigured service never will.
     if (checking > 0) '$checking checking',
+    if (onlyAtHome > 0) '$onlyAtHome ${StateWord.onlyAtHome.inline}',
     if (signedOut > 0) '$signedOut signed out',
     if (notSetUp > 0) '$notSetUp not set up',
   ];
@@ -185,6 +194,10 @@ enum StackServiceState {
 
   /// The probe has not come back.
   checking,
+
+  /// Not asked: the app is away from home, and none of its connections has
+  /// an address away. Neutral, and out of the denominator.
+  onlyAtHome,
 }
 
 /// Folds one service's connection counts into a single state.
@@ -198,7 +211,14 @@ StackServiceState foldServiceState({
   required int checking,
   int faulted = 0,
   int stuck = 0,
+  int onlyAtHome = 0,
 }) {
+  // What was not asked is not part of the answer: a service with one
+  // connection away and one only at home reads by the one asked.
+  if (onlyAtHome > 0) {
+    if (onlyAtHome >= total) return StackServiceState.onlyAtHome;
+    total -= onlyAtHome;
+  }
   if (total <= 0) return StackServiceState.checking;
   // Asked before "unreachable": with one answer outstanding we do not yet know
   // whether the disagreement is real, and an unreachable count that flickers on
@@ -235,8 +255,13 @@ StackHealth stackHealthFrom({
   var stuck = 0;
   var checking = 0;
   var configured = 0;
+  var onlyAtHome = 0;
 
   for (final state in states) {
+    if (state == StackServiceState.onlyAtHome) {
+      onlyAtHome++;
+      continue;
+    }
     configured++;
     switch (state) {
       case StackServiceState.answering:
@@ -256,6 +281,8 @@ StackHealth stackHealthFrom({
         unreachable++;
       case StackServiceState.checking:
         checking++;
+      case StackServiceState.onlyAtHome:
+        break;
     }
   }
 
@@ -268,7 +295,8 @@ StackHealth stackHealthFrom({
     unreachable: unreachable,
     checking: checking,
     signedOut: signedOut,
-    notSetUp: registrySize - configured - signedOut,
+    onlyAtHome: onlyAtHome,
+    notSetUp: registrySize - configured - signedOut - onlyAtHome,
     checkedAt: checkedAt,
   );
 }
@@ -304,6 +332,7 @@ final unreachableServicesProvider = Provider<List<ServiceKey>>((ref) {
               faulted: folded.faulted,
               stuck: folded.stuck,
               checking: folded.checking,
+              onlyAtHome: folded.onlyAtHome,
             ) ==
             StackServiceState.unreachable;
       })
@@ -349,6 +378,7 @@ class StackHealthNotifier extends Notifier<StackHealth> {
           faulted: folded.faulted,
           stuck: folded.stuck,
           checking: folded.checking,
+          onlyAtHome: folded.onlyAtHome,
         ),
       );
     }

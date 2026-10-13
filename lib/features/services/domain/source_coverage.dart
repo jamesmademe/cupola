@@ -207,6 +207,15 @@ class SourceCoverage {
   bool get everySourceFailed =>
       answered.isEmpty && pending.isEmpty && failed.isNotEmpty;
 
+  /// Whether every failed source is one not asked because the app is away
+  /// from home ([ServiceFailureReason.onlyAtHome]): a setup said in a grey
+  /// line, never a fault band, never Retry.
+  bool get onlyAtHome =>
+      failed.isNotEmpty &&
+      failed.values.every(
+        (reason) => reason == ServiceFailureReason.onlyAtHome,
+      );
+
   /// Whether any failed source did not answer at all: the one failure red is
   /// spent on. A line naming several takes red when one of them is silent.
   bool get anyDidNotAnswer => failed.values.any(failureDidNotAnswer);

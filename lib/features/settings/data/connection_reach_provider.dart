@@ -35,6 +35,36 @@ class ConnectionRoutesNotifier extends Notifier<Map<String, ConnectionRoute>> {
   }
 }
 
+/// Whether the app is away from home: at least one connection moved to its
+/// address away because the one at home did not answer.
+///
+/// What makes a connection with no address away read `Only at home` instead
+/// of `Did not answer`, and never asked meanwhile (`OnlyAtHomeRefusal`). False
+/// while no connection has an address away: without one the app cannot tell
+/// away from a server that is down, and says what it said before (spec 3.3).
+/// The routes are read only then, so a container that stands up no
+/// preferences (most tests) never reads them; they are crossed with the
+/// connections that still have an address away, because the map can keep
+/// the id of one removed, or whose address away was taken off. Remembered
+/// routes count: a cold start away is away before any probe confirms it.
+final awayFromHomeProvider = Provider<bool>((ref) {
+  final withAway = ref.watch(
+    currentSettingsProvider.select(
+      (s) => [
+        for (final instance in s.instances)
+          if (instance.away?.url.trim().isNotEmpty ?? false) instance.id,
+      ].join(' '),
+    ),
+  );
+  if (withAway.isEmpty) return false;
+  final ids = withAway.split(' ');
+  return ref.watch(
+    connectionRoutesProvider.select(
+      (routes) => ids.any((id) => routes[id] == ConnectionRoute.away),
+    ),
+  );
+});
+
 /// The route connection [id] is on: [ConnectionRoute.home] for one without
 /// an address away, whatever is remembered for its id, so a connection with
 /// one address never watches the routes at all.

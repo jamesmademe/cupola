@@ -7,6 +7,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -156,7 +157,7 @@ class HomeModuleFrame extends StatelessWidget {
           _heading(context),
           ?child,
           const SizedBox(height: AppSpacing.xs),
-          _fault(),
+          _fault(context, room),
           const SizedBox(height: AppSpacing.sm),
         ],
       ),
@@ -240,9 +241,19 @@ class HomeModuleFrame extends StatelessWidget {
     );
   }
 
-  Widget _fault() {
+  Widget _fault(BuildContext context, CupolaRoom room) {
     final coverage = this.coverage!;
     final message = coverageFailureSentence(coverage);
+    // Away from home, a source reached only there was not asked: a grey
+    // line, not a band, and no Retry, since asking from here asks nothing.
+    // Over the last drawing it says what time the rows are from.
+    if (coverage.onlyAtHome) {
+      final asOf = child == null ? null : LastKnownWords.of(context);
+      return Text(
+        asOf == null ? message : '$message $asOf.',
+        style: AppType.meta.copyWith(color: room.inkSecondary),
+      );
+    }
     // Red only when a source did not answer; amber when every one of them
     // answered with a fault. The words and the remedy are the band's.
     return coverage.anyDidNotAnswer

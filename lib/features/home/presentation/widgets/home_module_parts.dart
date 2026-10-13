@@ -72,6 +72,22 @@ class HomeCoverageNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Away from home, the sources left out are the ones reached only there:
+    // said in grey, in the state's words (`SABnzbd only works at home.`),
+    // never as a fault.
+    if (coverage.onlyAtHome) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+        child: ExcludeSemantics(
+          child: Text(
+            coverageFailureSentence(coverage),
+            style: AppType.meta.copyWith(
+              color: CupolaRoom.of(context).inkSecondary,
+            ),
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: ExcludeSemantics(

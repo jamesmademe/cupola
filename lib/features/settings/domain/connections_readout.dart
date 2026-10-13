@@ -1,3 +1,4 @@
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -51,6 +52,7 @@ class ConnectionsReadout {
     required this.setUp,
     required this.answering,
     required this.checking,
+    this.onlyAtHome = 0,
     required this.faults,
     required this.notSetUp,
   });
@@ -67,6 +69,7 @@ class ConnectionsReadout {
   }) {
     var answering = 0;
     var checking = 0;
+    var onlyAtHome = 0;
     // Insertion-ordered, so the groups come out in the order the registry lists
     // the first service of each.
     final grouped = <String, List<ServiceKey>>{};
@@ -74,6 +77,11 @@ class ConnectionsReadout {
 
     for (final entry in states.entries) {
       final presentation = entry.value;
+      // Away from home, not asked: counted apart, never a group to fix.
+      if (presentation.label == StateWord.onlyAtHome.label) {
+        onlyAtHome++;
+        continue;
+      }
       if (presentation.needsAttention) {
         grouped.putIfAbsent(presentation.label, () => []).add(entry.key);
         presentations[presentation.label] = presentation;
@@ -95,6 +103,7 @@ class ConnectionsReadout {
       setUp: states.length,
       answering: answering,
       checking: checking,
+      onlyAtHome: onlyAtHome,
       faults: [
         for (final entry in grouped.entries)
           ConnectionGroup(
@@ -114,6 +123,10 @@ class ConnectionsReadout {
   final int answering;
   final int checking;
 
+  /// Services not asked because the app is away from home and they have no
+  /// address away: `· 11 only at home`, neutral, never a fault group.
+  final int onlyAtHome;
+
   /// One group per distinct failing state, worst first is **not** imposed here:
   /// registry order is, because a stable order is what lets the eye skip a card
   /// it has already read.
@@ -131,6 +144,9 @@ class ConnectionsReadout {
     final line = StringBuffer('$setUp of $registrySize set up');
     if (setUp > 0) line.write(' · $answering answering');
     if (checking > 0) line.write(' · checking $checking');
+    if (onlyAtHome > 0) {
+      line.write(' · $onlyAtHome ${StateWord.onlyAtHome.inline}');
+    }
     return line.toString();
   }
 

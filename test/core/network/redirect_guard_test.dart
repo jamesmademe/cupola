@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_only_at_home.dart';
 
 /// Adapter that answers a redirect for the first N requests, then 200, and
 /// records every (uri, method, headers) triple it saw.
@@ -402,6 +404,40 @@ void main() {
         expect(classifyConnectionFailure(e), ServiceFailureReason.redirected);
         expect(connectionFailureDetail(e), isNull);
       }
+    });
+  });
+
+  group('a connection only at home, away from it', () {
+    test(
+      'every request is refused before it is sent, in the state\'s words',
+      () async {
+        // A TEST-NET address nothing answers: a request that went out would
+        // hang the case for the connect timeout instead of failing it at once.
+        final dio = guardedDio(
+          baseUrl: 'http://192.0.2.10:8080',
+          onlyAtHome: ServiceKey.sabnzbd,
+        );
+        final started = DateTime.now();
+        final error = await dio
+            .get<Object>('/api')
+            .then<Object?>((_) => null, onError: (Object e) => e);
+
+        expect(error, isA<DioException>());
+        expect((error! as DioException).error, isA<ServiceOnlyAtHome>());
+        expect(
+          classifyConnectionFailure(error),
+          ServiceFailureReason.onlyAtHome,
+        );
+        expect(
+          DateTime.now().difference(started),
+          lessThan(const Duration(seconds: 1)),
+        );
+      },
+    );
+
+    test('a client of a connection that may ask is left alone', () {
+      final dio = guardedDio(baseUrl: 'http://192.0.2.10:8080');
+      expect(dio.interceptors.whereType<OnlyAtHomeRefusal>(), isEmpty);
     });
   });
 }

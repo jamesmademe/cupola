@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/truenas/data/apps_api.dart';
 import 'package:cupola/features/truenas/data/credentials_api.dart';
 import 'package:cupola/features/truenas/data/data_protection_api.dart';
@@ -48,14 +47,13 @@ import 'package:cupola/features/truenas/domain/truenas_version.dart';
 /// for it like any other `Exception`: a condition no waiting changes.
 final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
   final transport = watchTransport(ref, ServiceKey.truenas);
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.truenas);
-  }
+  transport.ensureConfigured(ServiceKey.truenas);
   final client = TrueNasWsClient(
     baseUrl: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.truenas),
   );
   ref.onDispose(client.close);
   return client;
@@ -84,14 +82,13 @@ TrueNasWsClient _truenasClient(Ref ref, {required String? instanceId}) {
     ServiceKey.truenas,
     instanceId: instanceId,
   );
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.truenas);
-  }
+  transport.ensureConfigured(ServiceKey.truenas);
   final client = TrueNasWsClient(
     baseUrl: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.truenas),
   );
   ref.onDispose(client.close);
   return client;

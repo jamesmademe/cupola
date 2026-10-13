@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -60,9 +63,6 @@ class ServiceConnectionRow extends ConsumerWidget {
     // and the lens sheet follow: a stack with a single Radarr must not grow a
     // count of one.
     final connections = settings.configuredInstancesOf(service).length;
-    final hostLine = settings.hasMultipleInstances(service)
-        ? '$host · $connections connections'
-        : host;
 
     final asyncDiagnosis = ref.watch(serviceDiagnosisProvider(service));
     final diagnosis = asyncDiagnosis.when(
@@ -81,6 +81,29 @@ class ServiceConnectionRow extends ConsumerWidget {
     );
     final toneColor = statusToneColor(colorScheme, presentation.tone);
 
+    // Line two is the setup and the address in use (J-Config-Away-States e):
+    // `Home and away · radarr.example.net` follows the route without a word.
+    // The setup is said once a connection anywhere has an address away;
+    // before that every row would read `Home only`, a setup nobody chose.
+    // Away, a connection only at home says its state instead, which says
+    // the setup with it.
+    final first = settings.instancesOf(service).first;
+    final inUse =
+        service.extractHost(
+          ref.watch(connectionReachProvider(first.id))?.url ?? url,
+        ) ??
+        host;
+    final onlyAtHome = diagnosis.reason == ServiceFailureReason.onlyAtHome;
+    final setup = onlyAtHome || !settings.instances.any((i) => i.away != null)
+        ? null
+        : first.away != null
+        ? Lexicon.homeAndAway
+        : Lexicon.homeOnly;
+    final where = [?setup, inUse].join(' · ');
+    final hostLine = settings.hasMultipleInstances(service)
+        ? '$where · $connections connections'
+        : where;
+
     return SettingsCard.grouped(
       leading: Icon(service.icon),
       title: service.title,
@@ -97,9 +120,9 @@ class ServiceConnectionRow extends ConsumerWidget {
       subtitleColor: presentation.needsAttention ? toneColor : null,
       accentColor: service.accent,
       semanticLabel: settings.hasMultipleInstances(service)
-          ? '${service.title}, ${presentation.label}, $host, '
+          ? '${service.title}, ${presentation.label}, ${[?setup, inUse].join(', ')}, '
                 '$connections connections'
-          : '${service.title}, ${presentation.label}, $host',
+          : '${service.title}, ${presentation.label}, ${[?setup, inUse].join(', ')}',
       // "Connection settings", not "settings": the service's own settings are
       // a different page, and the hint is the only thing a screen reader has
       // to tell the two apart.

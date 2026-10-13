@@ -440,6 +440,26 @@ void main() {
         width: 390,
       ),
       CatalogScene(
+        'HomeModuleFrame.silent · away from home, its service has no address '
+        'away: a grey line over the last drawing, no band, no Retry',
+        (_) => LastKnownWords(
+          words: 'As of 20:41',
+          child: HomeModuleFrame.silent(
+            title: 'Arrived',
+            coverage: SourceCoverage.failure(
+              ServiceKey.lidarr,
+              const ClassifiedFailure(ServiceFailureReason.onlyAtHome),
+            ),
+            onRetry: () {},
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Sintel · Elephants Dream · Spring'),
+            ),
+          ),
+        ),
+        width: 390,
+      ),
+      CatalogScene(
         'HomeModuleFrame.needsService · switched on in Edit Home without its '
         'service: dimmed, a target, the service named',
         (_) => HomeModuleFrame.needsService(

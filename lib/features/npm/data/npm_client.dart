@@ -5,6 +5,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Error thrown by [NpmClient].
 ///
@@ -113,6 +114,10 @@ class NpmClient {
     Dio? dio,
     String? certFingerprint,
     Map<String, String> accessHeaders = const {},
+
+    /// Away from home with no address away: every request is refused, and
+    /// nothing is dialled (`OnlyAtHomeRefusal`).
+    ServiceKey? onlyAtHome,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url) {
     // Redirects are followed by hand so the bearer token (which *is* the
     // account, with no scoping and no revocation) is never replayed to a host
@@ -130,6 +135,7 @@ class NpmClient {
       injected: dio,
       certFingerprint: certFingerprint,
       accessHeaders: accessHeaders,
+      onlyAtHome: onlyAtHome,
     );
   }
 

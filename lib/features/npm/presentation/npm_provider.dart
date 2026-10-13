@@ -6,7 +6,6 @@ import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// Nginx Proxy Manager client bound to the current settings.
 ///
@@ -46,15 +45,14 @@ NpmClient _npmClient(Ref ref, {required String? instanceId}) {
     ServiceKey.nginxProxyManager,
     instanceId: instanceId,
   );
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.nginxProxyManager);
-  }
+  transport.ensureConfigured(ServiceKey.nginxProxyManager);
   final client = NpmClient(
     url: transport.url,
     identity: transport.username.isEmpty ? null : transport.username,
     secret: transport.apiKey.isEmpty ? null : transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.nginxProxyManager),
   );
   ref.onDispose(() => client.close());
   return client;

@@ -130,6 +130,8 @@ class TransmissionAddReport {
         // reached the daemon if they ever were.
         ServiceFailureReason.sessionEnded ||
         ServiceFailureReason.csrfRefused ||
+        // Away from the only network that reaches the daemon: never sent.
+        ServiceFailureReason.onlyAtHome ||
         ServiceFailureReason.notFound ||
         ServiceFailureReason.redirected ||
         // The gateway answered in the daemon's place: nothing reached it.

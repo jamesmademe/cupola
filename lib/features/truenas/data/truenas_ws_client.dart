@@ -10,6 +10,8 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/upgrade_gateway.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_only_at_home.dart';
 
 /// Error surfaced by the TrueNAS WebSocket client. Carries the [reason] so a
 /// caller verifying the connection can tell an unreachable host from a
@@ -216,6 +218,10 @@ class TrueNasWsClient {
   /// upgrade (and on the one HTTP request that names a gateway refusing it).
   final Map<String, String> accessHeaders;
 
+  /// Away from home with no address away: no socket is opened, and every call
+  /// fails as [ServiceOnlyAtHome].
+  final ServiceKey? onlyAtHome;
+
   WebSocket? _socket;
   HttpClient? _httpClient;
   bool _authed = false;
@@ -236,6 +242,7 @@ class TrueNasWsClient {
     this.certFingerprint,
     this.callTimeout = const Duration(seconds: 15),
     this.accessHeaders = const {},
+    this.onlyAtHome,
   });
 
   /// Derives the `wss://host:port/api/current` endpoint from the base URL.
@@ -277,6 +284,9 @@ class TrueNasWsClient {
   );
 
   Future<void> _ensureConnected() {
+    if (onlyAtHome case final service?) {
+      return Future.error(ServiceOnlyAtHome(service));
+    }
     // Closed under whoever still holds it: the connection changed, and the
     // provider's new client is the one to ask. Never a dial with what the
     // connection used to be.

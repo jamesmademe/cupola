@@ -65,8 +65,10 @@ enum StateWord {
   /// The remedy is [Lexicon.signInAgain].
   signedOut('Signed out', StatusTone.info),
 
-  /// Away, with no away address: nothing was asked.
-  homeOnly('Home only', StatusTone.neutral);
+  /// Away from home, a connection with no address away: nothing was asked,
+  /// so nothing failed to answer. The state; the setup it comes from is
+  /// [Lexicon.homeOnly] (P-t2-two-words, 13/10).
+  onlyAtHome('Only at home', StatusTone.neutral);
 
   const StateWord(this.label, this.tone);
 
@@ -88,6 +90,16 @@ abstract final class Lexicon {
   /// beside an `http://` address nothing was sent to. `Run again` is a
   /// different action: it re-runs a scheduled task.
   static const retry = 'Retry';
+
+  /// A connection's setup in the list of connections: reached at home only,
+  /// or at an address away too. Setup words with no tone: the state a
+  /// home-only connection reads away from home is [StateWord.onlyAtHome].
+  static const homeOnly = 'Home only';
+  static const homeAndAway = 'Home and away';
+
+  /// The remedy of [StateWord.onlyAtHome]: the connection's form, at its
+  /// address away.
+  static const addAddressAway = 'Add an address away';
 
   /// A figure whose source did not answer. Never `0`.
   static const noFigure = '—';

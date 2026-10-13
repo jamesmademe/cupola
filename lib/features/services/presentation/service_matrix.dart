@@ -112,7 +112,15 @@ import 'package:cupola/features/shell/presentation/portal_dismiss_scope.dart';
 /// to be `offline` (red, "Unreachable", unlit), which sent the user to check a
 /// cable when the fix was the key in the form. It is amber, and it stays lit:
 /// the service is there.
-enum ServiceReachability { online, checking, fault, offline }
+enum ServiceReachability {
+  online,
+  checking,
+  fault,
+  offline,
+
+  /// Not asked: away from home, with no address away. Neutral.
+  onlyAtHome,
+}
 
 /// What the matrix is being asked for.
 ///
@@ -374,6 +382,7 @@ class _DomainBand extends ConsumerWidget {
     var configured = 0;
     var clean = 0;
     var notSetUp = 0;
+    var onlyAtHome = 0;
     final qualifiers = <String>[];
 
     for (final subject in subjects) {
@@ -427,6 +436,14 @@ class _DomainBand extends ConsumerWidget {
         qualifiers.add('${service.title} needs a look');
         continue;
       }
+      if (reachability == ServiceReachability.onlyAtHome) {
+        // Not asked, away from home: a setup, never a verdict, out of the
+        // count `clean` is said against, and counted once after the rest,
+        // as the header counts it: five names said nothing a figure didn't.
+        configured--;
+        onlyAtHome++;
+        continue;
+      }
       if (reachability == ServiceReachability.checking) {
         // Not a fault and not clean: nothing has failed, we simply do not know
         // yet. Counted out of `clean` so the line cannot claim a service is fine
@@ -464,11 +481,13 @@ class _DomainBand extends ConsumerWidget {
     }
 
     if (configured == 0) {
-      // A band whose only connection signed out still says so.
-      return qualifiers.isEmpty
+      // A band whose only connection signed out still says so, and one away
+      // from home whose every service works only there.
+      return qualifiers.isEmpty && onlyAtHome == 0
           ? null
           : [
               ...qualifiers,
+              if (onlyAtHome > 0) '$onlyAtHome ${StateWord.onlyAtHome.inline}',
               if (notSetUp > 0) '$notSetUp not set up',
             ].join(' · ');
     }
@@ -476,6 +495,7 @@ class _DomainBand extends ConsumerWidget {
       clean: clean,
       total: configured,
       qualifiers: qualifiers,
+      onlyAtHome: onlyAtHome,
       notSetUp: notSetUp,
     );
   }
@@ -566,6 +586,7 @@ ServiceReachability serviceReachabilityOf(AsyncValue<ServiceSummary> summary) =>
         ServiceSummaryStatus.online => ServiceReachability.online,
         ServiceSummaryStatus.fault => ServiceReachability.fault,
         ServiceSummaryStatus.offline => ServiceReachability.offline,
+        ServiceSummaryStatus.onlyAtHome => ServiceReachability.onlyAtHome,
       },
       AsyncError(:final error) =>
         failureDidNotAnswer(classifyConnectionFailure(error))
@@ -984,6 +1005,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
             ServiceReachability.offline => failureLabel(
               ServiceFailureReason.unreachable,
             ),
+            ServiceReachability.onlyAtHome => StateWord.onlyAtHome.label,
           };
 
     // Resolved here rather than in the tap handler: an inherited lookup belongs
@@ -1222,6 +1244,11 @@ class _ReachabilityPip extends StatelessWidget {
         colorScheme,
         StatusTone.error,
       ),
+      // Not asked, away from home: a setup, neutral like a probe still out.
+      ServiceReachability.onlyAtHome => statusToneColor(
+        colorScheme,
+        StatusTone.neutral,
+      ),
     };
 
     return Container(
@@ -1295,7 +1322,8 @@ class _CellLiveLine extends StatelessWidget {
           // A fault is amber: the service answered. Only a service that did
           // not answer is red.
           color: statusToneColor(colorScheme, switch (reachability) {
-            ServiceReachability.checking => StatusTone.neutral,
+            ServiceReachability.checking ||
+            ServiceReachability.onlyAtHome => StatusTone.neutral,
             ServiceReachability.fault => faultTone,
             _ => StatusTone.error,
           }, surface: surface),

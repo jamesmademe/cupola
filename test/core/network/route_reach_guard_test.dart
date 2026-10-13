@@ -64,7 +64,48 @@ void main() {
   test('every exception still matches a read', () {
     expect(_exceptions.keys.where((site) => !reads.containsKey(site)), isEmpty);
   });
+
+  test('every client built off a transport is told when it may not ask', () {
+    // Away from home, a connection with no address away is not asked: the
+    // transport says so (`onlyAtHome`), and the client it builds refuses
+    // every request without dialling (`OnlyAtHomeRefusal`). A client built
+    // without it sends its request to the address at home and waits out a
+    // timeout to learn what the route already said, then paints it red.
+    final untold = <String>[];
+    for (final file in Directory('lib').listSync(recursive: true)) {
+      if (file is! File || !file.path.endsWith('.dart')) continue;
+      if (file.path == 'lib/features/settings/data/settings_provider.dart') {
+        continue;
+      }
+      if (_transportReaders.containsKey(file.path)) continue;
+      final code = _withoutComments(file.readAsStringSync());
+      final transports = RegExp(r'\bwatchTransport\(').allMatches(code).length;
+      final told = RegExp(
+        r'\.onlyAtHomeOf\(|\.onlyAtHome\b',
+      ).allMatches(code).length;
+      if (told < transports) {
+        untold.add('${file.path}: $transports transport(s), $told told');
+      }
+    }
+    expect(
+      untold,
+      isEmpty,
+      reason:
+          'Pass onlyAtHome: transport.onlyAtHomeOf(service) to the client '
+          'built off the transport.',
+    );
+  });
 }
+
+/// The files that read a transport without building a client from it, and
+/// why.
+const _transportReaders = <String, String>{
+  'lib/core/status/read_clock.dart':
+      'Keys a read\'s clock by the connection the request goes to.',
+  'lib/features/qbittorrent/presentation/qbittorrent_provider.dart':
+      'Reads the connection\'s one client, qbittorrentClientForProvider, '
+      'which is told.',
+};
 
 /// Where the address is defined, stored and turned into a reach: reading it
 /// is their job.
@@ -230,10 +271,11 @@ const _exceptions = <String, ({int count, String reason})>{
     reason: 'The host a picker cell names.',
   ),
   'lib/features/services/presentation/services_provider.dart  .url': (
-    count: 1,
+    count: 2,
     reason:
         'The host a probe\'s summary names; the probe asks the route\'s '
-        'address.',
+        'address. And the host a summary only at home names: nothing is '
+        'asked, and home is the only address it has.',
   ),
   'lib/features/services/presentation/services_provider.dart  urlFor(': (
     count: 1,

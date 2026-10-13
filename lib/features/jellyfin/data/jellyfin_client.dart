@@ -91,6 +91,7 @@ class JellyfinClient implements StreamServerClient {
     String appVersion = kJellyfinClientVersion,
     String? pinnedCertFingerprint,
     Map<String, String> accessHeaders = const {},
+    ServiceKey? onlyAtHome,
   }) : _baseUrl = UrlUtils.normalizeBaseUrl(baseUrl),
        _accessHeaders = accessHeaders,
        _token = apiKey.trim(),
@@ -112,6 +113,7 @@ class JellyfinClient implements StreamServerClient {
       headers: _serviceHeaders,
       pinnedCertFingerprint: pinnedCertFingerprint,
       accessHeaders: accessHeaders,
+      onlyAtHome: onlyAtHome,
       interceptors: _proxyHoldsAuthorization
           ? (_) => [_JellyfinApiKeyQuery(_token)]
           : null,

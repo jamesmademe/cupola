@@ -50,6 +50,7 @@ final stackLightsProvider = Provider.autoDispose<StackLights>((ref) {
 
 StackProbe _probeOf(AsyncValue<ServiceSummary> summary) {
   if (summary.value case final answer?) {
+    if (answer.isOnlyAtHome) return StackProbe.onlyAtHome;
     if (answer.didNotAnswer) return StackProbe.silent;
     if (answer.isStuck) return StackProbe.stuck;
     // A Seerr account that signed out beside a working one: no fault.

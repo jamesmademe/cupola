@@ -137,6 +137,8 @@ class StackLightMark extends StatelessWidget {
       StackLight.answering => StatusTone.success,
       StackLight.fault || StackLight.stuck => StatusTone.warning,
       StackLight.silent => StatusTone.error,
+      // Not asked, away from home: a setup, lit neutral.
+      StackLight.onlyAtHome => StatusTone.neutral,
     };
     final lit = tone == null
         ? Colors.transparent

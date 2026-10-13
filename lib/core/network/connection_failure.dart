@@ -25,7 +25,9 @@ import 'package:cupola/core/status/media_status.dart';
 /// made, or a request the device itself would not send, and each of those is
 /// a **fault**: amber, with one concrete thing to go and fix. One is neither:
 /// [sessionEnded] is a step that falls to the person, blue like a certificate
-/// waiting to be trusted. A surface decides nothing about tone or words on its
+/// waiting to be trusted. Nor is [onlyAtHome], neutral: nothing was asked,
+/// because the app is away from the only network that reaches it. A surface
+/// decides nothing about tone or words on its
 /// own; it asks [failureTone], [failureLabel], [failureHeadline] and
 /// [failureRemedy].
 enum ServiceFailureReason {
@@ -54,6 +56,17 @@ enum ServiceFailureReason {
   /// do is the person's own, signing in again. Never [unauthorized] either,
   /// whose remedy is a key nobody pasted.
   sessionEnded,
+
+  /// The connection has no address away from home and the app is away: at
+  /// least one other connection moved to its address away because the one at
+  /// home did not answer (`awayFromHomeProvider`). Nothing was asked, so
+  /// nothing failed to answer: the request never left the device
+  /// ([ServiceOnlyAtHome]).
+  ///
+  /// Neutral, never red and never in Needs you: a server reached only on the
+  /// home network is a setup, not a fault (Q1, 13/10). The remedy is the
+  /// operator's, an address away; no retry changes it.
+  onlyAtHome,
 
   /// This device would not hand over the connection's saved secret: secure
   /// storage refused the read when the settings were loaded. Nothing was
@@ -616,17 +629,24 @@ bool failureDidNotAnswer(ServiceFailureReason reason) =>
 /// the strength of an error nobody could read is the same lie one tone louder.
 ///
 /// [ServiceFailureReason.sessionEnded] is not one: it is the person's step,
-/// and its remedy is drawn in ink, never in the fault's amber fill.
+/// and its remedy is drawn in ink, never in the fault's amber fill. Neither is
+/// [ServiceFailureReason.onlyAtHome]: a setup, read away from home.
 bool failureIsFault(ServiceFailureReason reason) =>
-    !failureDidNotAnswer(reason) && reason != ServiceFailureReason.sessionEnded;
+    !failureDidNotAnswer(reason) &&
+    reason != ServiceFailureReason.sessionEnded &&
+    reason != ServiceFailureReason.onlyAtHome;
 
 /// The tone a failure carries: red for [ServiceFailureReason.unreachable],
-/// blue for [ServiceFailureReason.sessionEnded], amber for every fault.
-/// Resolve it to a colour through `statusToneColor`.
+/// blue for [ServiceFailureReason.sessionEnded], neutral for
+/// [ServiceFailureReason.onlyAtHome], amber for every fault. Resolve it to a
+/// colour through `statusToneColor`.
 StatusTone failureTone(ServiceFailureReason reason) {
   if (failureDidNotAnswer(reason)) return StatusTone.error;
   if (reason == ServiceFailureReason.sessionEnded) {
     return StateWord.signedOut.tone!;
+  }
+  if (reason == ServiceFailureReason.onlyAtHome) {
+    return StateWord.onlyAtHome.tone!;
   }
   return StatusTone.warning;
 }
@@ -668,6 +688,7 @@ String failureLabel(
   ServiceFailureReason.unreachable => StateWord.didNotAnswer.label,
   ServiceFailureReason.unauthorized => 'Refused the $credential',
   ServiceFailureReason.sessionEnded => StateWord.signedOut.label,
+  ServiceFailureReason.onlyAtHome => StateWord.onlyAtHome.label,
   ServiceFailureReason.secretUnread =>
     'Saved ${_secretNoun(credential)} unreadable',
   ServiceFailureReason.csrfRefused => 'Security token refused',
@@ -713,6 +734,7 @@ String failureHeadline(
   ServiceFailureReason.unauthorized =>
     '$subject answered but refused the $credential',
   ServiceFailureReason.sessionEnded => 'Signed out of $subject',
+  ServiceFailureReason.onlyAtHome => '$subject only works at home',
   ServiceFailureReason.secretUnread =>
     "Cupola could not read $subject's saved ${_secretNoun(credential)}",
   ServiceFailureReason.csrfRefused =>
@@ -767,6 +789,7 @@ String? failureGroupHeadline(
         ? '$subjects answered but refused the sign-in'
         : '$subjects answered but refused their ${_pluralCredential(credential)}',
   ServiceFailureReason.sessionEnded => 'Signed out of $subjects',
+  ServiceFailureReason.onlyAtHome => '$subjects only work at home',
   ServiceFailureReason.timeout =>
     '$subjects were reached but did not reply in time',
   ServiceFailureReason.tls =>
@@ -809,6 +832,7 @@ String? failureRemedy(
         ? Lexicon.signInAgain
         : 'Paste the $credential again',
   ServiceFailureReason.sessionEnded => Lexicon.signInAgain,
+  ServiceFailureReason.onlyAtHome => Lexicon.addAddressAway,
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected => 'Check the address',
   ServiceFailureReason.accessGateway => switch (gateway) {
@@ -851,7 +875,9 @@ bool failureRetryHelps(
   ServiceFailureReason.insecureTransport ||
   ServiceFailureReason.accessGateway ||
   ServiceFailureReason.secretUnread ||
-  ServiceFailureReason.sessionEnded => false,
+  ServiceFailureReason.sessionEnded ||
+  // Nothing was asked, and asking again from here asks nothing either.
+  ServiceFailureReason.onlyAtHome => false,
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.unreachable ||
   ServiceFailureReason.timeout ||
@@ -993,6 +1019,9 @@ String connectionFailureSentence(
                 'them in Settings.',
     ServiceFailureReason.sessionEnded =>
       'Sign in again to keep asking for movies and series.',
+    ServiceFailureReason.onlyAtHome =>
+      '${subject ?? 'It'} has no address away, so Cupola reaches it only on '
+          'your home Wi-Fi.',
     ServiceFailureReason.secretUnread =>
       "${secureStoreName()} didn't hand it over.",
     ServiceFailureReason.csrfRefused => 'Nothing changed. Retry in a moment.',

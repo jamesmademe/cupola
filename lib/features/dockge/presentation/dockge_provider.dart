@@ -30,6 +30,7 @@ final dockgeClientProvider = Provider<DockgeClient>((ref) {
     password: transport.apiKey.isEmpty ? null : transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.dockge),
   );
   ref.onDispose(client.close);
   return client;
@@ -60,15 +61,14 @@ DockgeClient _dockgeClient(Ref ref, {required String? instanceId}) {
     ServiceKey.dockge,
     instanceId: instanceId,
   );
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.dockge);
-  }
+  transport.ensureConfigured(ServiceKey.dockge);
   final client = DockgeClient(
     baseUrl: transport.url,
     username: transport.username.isEmpty ? null : transport.username,
     password: transport.apiKey.isEmpty ? null : transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.dockge),
   );
   ref.onDispose(client.close);
   return client;

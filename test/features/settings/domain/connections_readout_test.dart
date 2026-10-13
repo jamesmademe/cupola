@@ -58,6 +58,24 @@ void main() {
     });
   });
 
+  test('away from home, the ones only at home are counted apart', () {
+    final readout = ConnectionsReadout.from(
+      states: {
+        ServiceKey.radarr: answering(ServiceKey.radarr),
+        ServiceKey.sabnzbd: failed(
+          ServiceKey.sabnzbd,
+          ServiceFailureReason.onlyAtHome,
+        ),
+      },
+      notSetUp: const [],
+      registrySize: 17,
+    );
+    expect(readout.summary, '2 of 17 set up · 1 answering · 1 only at home');
+    // Never a group to fix, and the card stays green.
+    expect(readout.faults, isEmpty);
+    expect(readout.tone, StatusTone.success);
+  });
+
   group('the tone of the whole card', () {
     test('a rejected key is amber, not red', () {
       // The regression this guards: the card took its tone from a boolean:

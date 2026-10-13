@@ -5,7 +5,6 @@ import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
@@ -77,9 +76,7 @@ JellyfinClient _jellyfinClient(Ref ref, {required String? instanceId}) {
     ServiceKey.jellyfin,
     instanceId: instanceId,
   );
-  if (!transport.configured) {
-    throw const ServiceNotConfigured(ServiceKey.jellyfin);
-  }
+  transport.ensureConfigured(ServiceKey.jellyfin);
   final viewerId = ref.watch(
     currentSettingsProvider.select(
       (s) => s.instanceById(transport.instanceId)?.viewerId ?? '',
@@ -91,6 +88,7 @@ JellyfinClient _jellyfinClient(Ref ref, {required String? instanceId}) {
     userId: viewerId,
     pinnedCertFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
+    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.jellyfin),
   );
   ref.onDispose(client.close);
   return client;

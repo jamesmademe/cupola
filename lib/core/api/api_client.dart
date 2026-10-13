@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// For endpoints that do real server-side work before answering: Sonarr/Radarr/
 /// Lidarr's `manualimport` walks the folder, parses every release name and runs
@@ -53,12 +54,14 @@ class ApiClient {
     String? pinnedCertFingerprint,
     Map<String, String> accessHeaders = const {},
     DioInterceptors? interceptors,
+    ServiceKey? onlyAtHome,
   }) : this._(
          baseUrl: baseUrl,
          authHeaders: {'X-Api-Key': apiKey},
          pinnedCertFingerprint: pinnedCertFingerprint,
          accessHeaders: accessHeaders,
          interceptors: interceptors,
+         onlyAtHome: onlyAtHome,
        );
 
   /// For a service whose credential does not travel as `X-Api-Key`.
@@ -80,12 +83,14 @@ class ApiClient {
     String? pinnedCertFingerprint,
     Map<String, String> accessHeaders = const {},
     DioInterceptors? interceptors,
+    ServiceKey? onlyAtHome,
   }) : this._(
          baseUrl: baseUrl,
          authHeaders: headers,
          pinnedCertFingerprint: pinnedCertFingerprint,
          accessHeaders: accessHeaders,
          interceptors: interceptors,
+         onlyAtHome: onlyAtHome,
        );
 
   ApiClient._({
@@ -94,6 +99,7 @@ class ApiClient {
     String? pinnedCertFingerprint,
     Map<String, String> accessHeaders = const {},
     DioInterceptors? interceptors,
+    ServiceKey? onlyAtHome,
   }) : _dio = guardedDio(
          // Redirects are followed by SameOriginRedirectInterceptor instead, so
          // the credential header can never be replayed to an unconfigured host.
@@ -104,6 +110,7 @@ class ApiClient {
          certFingerprint: pinnedCertFingerprint,
          accessHeaders: accessHeaders,
          interceptors: interceptors,
+         onlyAtHome: onlyAtHome,
          headers: {
            ...authHeaders,
            'Content-Type': 'application/json',

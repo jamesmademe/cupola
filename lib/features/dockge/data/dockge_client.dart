@@ -13,6 +13,8 @@ import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_only_at_home.dart';
 
 /// Error surfaced by the Dockge client. Carries the [reason] so a caller
 /// verifying the connection can tell an unreachable host from a rejected
@@ -79,6 +81,10 @@ class DockgeClient {
   /// upgrade (and on the one HTTP request that names a gateway refusing it).
   final Map<String, String> accessHeaders;
 
+  /// Away from home with no address away: no socket is opened, and every call
+  /// fails as [ServiceOnlyAtHome].
+  final ServiceKey? onlyAtHome;
+
   /// The gateway that answered the last refused upgrade, read by the connect
   /// error that follows it.
   AccessGatewayAnswer? _gatewayAtUpgrade;
@@ -118,6 +124,7 @@ class DockgeClient {
     this.password,
     this.certFingerprint,
     this.accessHeaders = const {},
+    this.onlyAtHome,
   });
 
   /// The most recent parsed stack list (empty until the first push).
@@ -233,6 +240,9 @@ class DockgeClient {
   }
 
   Future<void> ensureConnected() {
+    if (onlyAtHome case final service?) {
+      return Future.error(ServiceOnlyAtHome(service));
+    }
     // Closed under whoever still holds it: the connection changed, and the
     // provider's new client is the one to ask, never a socket opened with
     // what the connection used to be.

@@ -8,6 +8,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Error thrown by [UnraidClient]. Carries the [reason] so a caller verifying
 /// the connection can tell an unreachable host from a rejected API key.
@@ -109,6 +110,10 @@ class UnraidClient {
     Dio? dio,
     String? certFingerprint,
     Map<String, String> accessHeaders = const {},
+
+    /// Away from home with no address away: every request is refused, and
+    /// nothing is dialled (`OnlyAtHomeRefusal`).
+    ServiceKey? onlyAtHome,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _apiKey = apiKey.trim() {
     // Redirects are followed manually so `x-api-key` is never replayed to an
@@ -118,6 +123,7 @@ class UnraidClient {
       injected: dio,
       certFingerprint: certFingerprint,
       accessHeaders: accessHeaders,
+      onlyAtHome: onlyAtHome,
     );
   }
 

@@ -75,7 +75,31 @@ typedef ServiceTransport = ({
   /// instance that happens to share an address, which is a real shape while
   /// someone is mid-edit adding the second one.
   String instanceId,
+
+  /// The app is away from home and this connection has no address away, so
+  /// nothing may be sent ([awayFromHomeProvider]). Handed to the client
+  /// through [AskableTransport.onlyAtHomeOf].
+  bool onlyAtHome,
 });
+
+/// What a client provider asks of its transport, said once.
+extension AskableTransport on ServiceTransport {
+  /// Throws [ServiceNotConfigured] when there is no connection to use.
+  void ensureConfigured(ServiceKey service) {
+    if (!configured) throw ServiceNotConfigured(service);
+  }
+
+  /// [service] away from home for a connection reached only there, else
+  /// null: what a client takes as `onlyAtHome`, refusing every request with
+  /// [ServiceOnlyAtHome] and dialling nothing (`OnlyAtHomeRefusal`).
+  ///
+  /// The client is still built, and fails where a request fails: a client
+  /// that refused to build took every reader down with it, an aggregate of
+  /// eight queues for one Lidarr and a row drawn from the last answer alike.
+  /// `test/core/network/route_reach_guard_test.dart` holds that every client
+  /// built off a transport is handed this.
+  ServiceKey? onlyAtHomeOf(ServiceKey service) => onlyAtHome ? service : null;
+}
 
 /// The lens: which instance of each service the app is currently looking
 /// through, as `{service: instanceId}`.
@@ -195,6 +219,7 @@ ServiceTransport watchTransport(
       access: const NoAccess(),
       session: '',
       instanceId: '',
+      onlyAtHome: false,
     );
   }
   // Both addresses are selected above and the route is watched here, only
@@ -209,6 +234,10 @@ ServiceTransport watchTransport(
   final reach = route == ConnectionRoute.away && away != null
       ? away
       : resolved.home;
+  // Watched only for a configured connection with one address: away from
+  // home, it is the one nothing may be sent to.
+  final onlyAtHome =
+      away == null && resolved.configured && ref.watch(awayFromHomeProvider);
   return (
     configured: resolved.configured,
     url: reach.url,
@@ -218,6 +247,7 @@ ServiceTransport watchTransport(
     access: reach.access,
     session: resolved.session,
     instanceId: resolved.instanceId,
+    onlyAtHome: onlyAtHome,
   );
 }
 
@@ -331,11 +361,10 @@ ApiClient watchApiClient(Ref ref, ServiceKey service, {String? instanceId}) {
   // Seerr signs in two ways and guards its writes with a CSRF token: its
   // client is `watchSeerrClient`'s, never this one.
   assert(service != ServiceKey.seerr, 'Seerr clients come from seerrClientFor');
-  final transport = watchTransport(ref, service, instanceId: instanceId);
-  if (!transport.configured) {
-    throw ServiceNotConfigured(service);
-  }
+  final transport = watchTransport(ref, service, instanceId: instanceId)
+    ..ensureConfigured(service);
   final client = ApiClient(
+    onlyAtHome: transport.onlyAtHomeOf(service),
     baseUrl: transport.url,
     apiKey: transport.apiKey,
     pinnedCertFingerprint: transport.pin,

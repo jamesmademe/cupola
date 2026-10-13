@@ -143,4 +143,21 @@ void main() {
       expect(servicesAlertBandMessage(['', '   ']), isEmpty);
     });
   });
+
+  test('a band away from home counts the services only at home once', () {
+    expect(
+      serviceDomainHealthLine(
+        clean: 0,
+        total: 2,
+        qualifiers: const [
+          'Radarr needs a look',
+          'Sonarr needs a look',
+          'Lidarr checking',
+        ],
+        onlyAtHome: 4,
+      ),
+      '0 of 2 clean · Radarr needs a look · Sonarr needs a look · 1 other · '
+      '4 only at home',
+    );
+  });
 }

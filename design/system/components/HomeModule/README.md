@@ -52,6 +52,11 @@ column.
 - **Its sources did not answer** (`HomeModuleFrame.silent`): the module keeps its place and says which service and why
   through the classification (`coverageFailureSentence`), as a `FaultBand.section` (red, a source did not answer) or
   `FaultBand.partial` (amber, it answered with a fault), with Retry. What was last known may sit above it, at full ink (a cold start's last drawing, see *Last known* below): nothing is dimmed for being unreachable.
+- **Away from home, its service only works there**: the same frame, but a grey `meta` line in place of the band, and no
+  Retry, since nothing was asked: `Lidarr only works at home.`, and over the last drawing `Lidarr only works at home.
+  As of 20:41.` (`LastKnownWords`, put there by `LastKnownMark`). A module whose other sources answered names the one
+  left out the same way, over its rows (`HomeCoverageNote`). The header counts it apart: `7 of 7 answering · 6 only at
+  home`.
 - **Its service is not set up** (`HomeModuleFrame.needsService`): no slab yet, a dashed `edge` outline in its place,
   the service's mark in a 36pt tile, its headline (`Set up TrueNAS to see your storage`) over what it would show, and
   `Set up TrueNAS` as a quiet pill at the end, the whole outline one target. At a large reading size the pill goes under
