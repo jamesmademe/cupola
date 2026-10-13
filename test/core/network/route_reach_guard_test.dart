@@ -192,6 +192,12 @@ const _exceptions = <String, ({int count, String reason})>{
         'The agent lens goes back to the hub when the connection is pointed '
         'elsewhere; the route moving reaches the same hub and keeps it.',
   ),
+  'lib/features/settings/data/route_probe.dart  .url': (
+    count: 1,
+    reason:
+        'Which connections have an address away, and which: what makes a '
+        'new probe worth running. The knocks themselves go through reachOf.',
+  ),
   'lib/features/home/data/home_last_known.dart  .url': (
     count: 2,
     reason:
