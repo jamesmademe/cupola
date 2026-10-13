@@ -93,6 +93,11 @@ class ServiceSummary {
   /// Answered with a refusal or a fault: amber.
   bool get isFault => status == ServiceSummaryStatus.fault;
 
+  /// Reached, and never replied in time: amber like a fault, and no more an
+  /// answer than silence is. The header does not count it as answering.
+  bool get isStuck =>
+      isFault && failure?.reason == ServiceFailureReason.timeout;
+
   /// The reason the probe failed, as the words and the tone read it. An
   /// offline summary with no classified failure did not answer.
   ServiceFailureReason? get failureReason => switch (status) {

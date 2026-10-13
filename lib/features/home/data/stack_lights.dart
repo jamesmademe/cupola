@@ -51,6 +51,7 @@ final stackLightsProvider = Provider.autoDispose<StackLights>((ref) {
 StackProbe _probeOf(AsyncValue<ServiceSummary> summary) {
   if (summary.value case final answer?) {
     if (answer.didNotAnswer) return StackProbe.silent;
+    if (answer.isStuck) return StackProbe.stuck;
     // A Seerr account that signed out beside a working one: no fault.
     if (answer.isFault &&
         answer.failureReason != ServiceFailureReason.sessionEnded) {
@@ -59,9 +60,11 @@ StackProbe _probeOf(AsyncValue<ServiceSummary> summary) {
     return StackProbe.answered;
   }
   if (summary.hasError) {
-    return failureDidNotAnswer(classifyConnectionFailure(summary.error!))
-        ? StackProbe.silent
-        : StackProbe.fault;
+    return switch (classifyConnectionFailure(summary.error!)) {
+      final reason when failureDidNotAnswer(reason) => StackProbe.silent,
+      ServiceFailureReason.timeout => StackProbe.stuck,
+      _ => StackProbe.fault,
+    };
   }
   return StackProbe.checking;
 }

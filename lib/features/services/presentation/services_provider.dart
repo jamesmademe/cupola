@@ -7,6 +7,7 @@ import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/host_reach.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_names.dart';
@@ -119,11 +120,13 @@ final serviceInstanceIdsProvider = Provider.family<List<String>, ServiceKey>((
 /// `offline` counts the connections that **did not answer**, and nothing else.
 /// `faulted` counts the ones that answered with a refusal or a fault: a
 /// refused key, a 5xx, which are amber, and which the band that names what
-/// did not answer must never name.
+/// did not answer must never name. `stuck` counts the ones reached that never
+/// replied: amber too, and answering no more than a dark one.
 typedef FoldedServiceHealth = ({
   int total,
   int offline,
   int faulted,
+  int stuck,
   int checking,
 });
 
@@ -132,6 +135,7 @@ final foldedServiceHealthProvider =
       final ids = ref.watch(serviceInstanceIdsProvider(service));
       var offline = 0;
       var faulted = 0;
+      var stuck = 0;
       var checking = 0;
       for (final id in ids) {
         final summary = ref.watch(
@@ -140,9 +144,12 @@ final foldedServiceHealthProvider =
         switch (summary) {
           case AsyncData(:final value):
             if (value.didNotAnswer) offline++;
-            // A Seerr account that signed out was asked nothing and is the
-            // person's step: beside a working connection it is no fault.
-            if (value.isFault &&
+            if (value.isStuck) {
+              stuck++;
+            } else if (value.isFault &&
+                // A Seerr account that signed out was asked nothing and is
+                // the person's step: beside a working connection it is no
+                // fault.
                 value.failureReason != ServiceFailureReason.sessionEnded) {
               faulted++;
             }
@@ -160,6 +167,7 @@ final foldedServiceHealthProvider =
         total: ids.length,
         offline: offline,
         faulted: faulted,
+        stuck: stuck,
         checking: checking,
       );
     });
@@ -346,6 +354,7 @@ Future<ServiceSummary> _loadServiceSummary(
   // be read. The answer is still an answer, and is still noted.
   final silence = ref.read(silenceClockProvider);
   final silenceOf = silenceKey(service, instance.id);
+  final reach = ref.read(hostReachProvider);
   if (!instance.isConfigured) {
     // Nothing is asked of a connection that is not set up, so nothing
     // answered and nothing was silent: a silence kept from before it was
@@ -379,7 +388,21 @@ Future<ServiceSummary> _loadServiceSummary(
     // Classified, never flattened: a refused key is the service answering, and
     // painting it with the same red as a box that is switched off sent people
     // to check a cable when the fix was the key in the form.
-    final failed = ServiceSummary.failed(service, host: host, error: error);
+    //
+    // The probe's own deadline passed: a host that is not there, or a server
+    // that took the connection and never replied, which is a fault of the
+    // server and amber, as the reads say it (13/10). One connection tells
+    // them apart.
+    final stuck =
+        error is TimeoutException &&
+        await reach(Uri.tryParse(instance.url) ?? Uri());
+    final failed = ServiceSummary.failed(
+      service,
+      host: host,
+      error: stuck
+          ? const ClassifiedFailure(ServiceFailureReason.timeout)
+          : error,
+    );
     // The one place the app asks whether a server answers, so the one place
     // that notes since when it did not. A client closed under the probe by a
     // settings change asked nobody, and notes nothing.

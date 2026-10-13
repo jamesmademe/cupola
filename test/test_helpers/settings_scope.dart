@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/network/host_reach.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
@@ -55,10 +56,14 @@ Future<SettingsScope> settingsScope({
 /// [customize] runs on the model built from [configured], for the tests that
 /// need a specific URL or key rather than the generated placeholders. It exists
 /// because a container rejects two overrides of the same provider, so such a
-/// test cannot spread these four and then re-override `initialSettingsProvider`.
+/// test cannot spread these and then re-override `initialSettingsProvider`.
+///
+/// [hostReach] answers whether a host a probe timed out on is there; by
+/// default none is, so no test opens a socket.
 Future<List<Override>> settingsScopeOverrides({
   List<ServiceKey> configured = const [],
   SettingsModel Function(SettingsModel settings)? customize,
+  HostReach hostReach = _neverReached,
 }) async {
   final scope = await settingsScope(configured: configured);
   final settings = customize?.call(scope.settings) ?? scope.settings;
@@ -68,8 +73,11 @@ Future<List<Override>> settingsScopeOverrides({
     secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
     initialSettingsProvider.overrideWith((ref) => settings),
     initialOnboardingCompletedProvider.overrideWith((ref) => true),
+    hostReachProvider.overrideWithValue(hostReach),
   ];
 }
+
+Future<bool> _neverReached(Uri url) async => false;
 
 /// A [SettingsModel] where each of [configured] has both a URL and an API key,
 /// which is what `isServiceConfigured` requires for the API-key services.

@@ -100,11 +100,22 @@ void main() {
         expect(clock.since('radarr:a'), isNull);
       });
 
+      // A server reached that never replied said nothing either: its
+      // silence runs as a dark one's does.
+      test('that was reached and never replied keeps it running', () {
+        final clock = SilenceClock(now: () => DateTime(2026, 10, 13, 9, 53))
+          ..noteProbe('radarr:a', ServiceFailureReason.timeout);
+
+        expect(clock.since('radarr:a'), DateTime(2026, 10, 13, 9, 53));
+      });
+
       // An answer that says something is wrong is still an answer: the box is
       // up, and a clock that says it has been dark would send the person to
       // check a cable.
       for (final reason in ServiceFailureReason.values.where(
-        (reason) => !failureDidNotAnswer(reason),
+        (reason) =>
+            !failureDidNotAnswer(reason) &&
+            reason != ServiceFailureReason.timeout,
       )) {
         test('that failed as ${reason.name} ends it', () {
           final clock = SilenceClock()

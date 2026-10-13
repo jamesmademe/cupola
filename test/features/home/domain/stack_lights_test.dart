@@ -56,6 +56,48 @@ void main() {
     });
   });
 
+  group('a server reached that never replied', () {
+    test('is amber, and not answering', () {
+      expect(stackLightOf([StackProbe.stuck]), StackLight.stuck);
+      // Stuck beside dark: nothing replied, and the host is there.
+      expect(
+        stackLightOf([StackProbe.stuck, StackProbe.silent]),
+        StackLight.stuck,
+      );
+      // Beside one that answered: it answers, partly.
+      expect(
+        stackLightOf([StackProbe.stuck, StackProbe.answered]),
+        StackLight.fault,
+      );
+    });
+
+    test('is out of the count, said beside it, and named apart', () {
+      final lights = stackLightsOf(
+        services: [
+          (service: ServiceKey.radarr, probes: [StackProbe.stuck]),
+          (service: ServiceKey.sonarr, probes: [StackProbe.stuck]),
+          (service: ServiceKey.lidarr, probes: [StackProbe.answered]),
+        ],
+        faults: const [],
+      );
+      expect(lights.line, '1 of 3 answering · 2 timed out');
+      // Its probe's fault is the same fact: counted once, as timed out.
+      expect(
+        stackLightsOf(
+          services: [
+            (service: ServiceKey.radarr, probes: [StackProbe.stuck]),
+          ],
+          faults: [_fault(ServiceKey.radarr, DecisionKind.connectionFault)],
+        ).line,
+        '0 of 1 answering · 1 timed out',
+      );
+      expect(lights.stuck, [ServiceKey.radarr, ServiceKey.sonarr]);
+      expect(lights.silent, isEmpty);
+      expect(lights.faultLine, isNull);
+      expect(lights.spoken, 'Answering: Lidarr. Timed out: Radarr, Sonarr.');
+    });
+  });
+
   group('the slab', () {
     test('counts faults in groups, and names the amber services', () {
       final lights = stackLightsOf(

@@ -169,10 +169,13 @@ lives a tab away. Each sits after Now playing.
 - **Stack health**: `Stack`, the line `12 of 12 answering · 3 faults` (`Checking 12` before anything answered), then
   every configured service as its monochrome mark (`ServiceKey.icon`) in a 44pt `fillStrong` tile, the Stack's order,
   six to a row on the phone. Each mark has one 9pt light at its corner: green answering, amber a fault (a refused key, a
-  connection silent beside one that answered, or a fault Needs you holds for it), red when every connection did not
-  answer, a hollow ring while it is asked. A light eases on once (`motion.standard`) and keeps its colour while the
-  probe is read again. Faults are counted in groups, as Needs you counts them. Under the marks: a service that did not
-  answer, red, with Retry; otherwise `Faults: Sonarr, qBittorrent, TrueNAS` in amber; while nothing has answered,
+  connection silent beside one that answered, or a fault Needs you holds for it), amber too when every connection was
+  reached and none replied in time (`timed out`, never among the answering), red when every connection did not answer,
+  a hollow ring while it is asked. A light eases on once (`motion.standard`) and keeps its colour while the
+  probe is read again. Faults are counted in groups, as Needs you counts them; the line says `1 of 4 answering · 2 timed
+  out`. Under the marks: a service that did not answer, red, with Retry; otherwise the ones that timed out in one amber
+  sentence with Retry (`Radarr and Sonarr were reached but did not reply in time.`); otherwise `Faults: Sonarr,
+  qBittorrent, TrueNAS` in amber; while nothing has answered,
   `Asking each service`. The marks are one target, to Stack. Switched on, it never steps aside.
 - **Storage**: `Storage`, the line `TrueNAS` (the servers it read), then each pool, up to four: its name and share in
   `row` (`tank` · `72%`), a 6pt bar in ink on `fillStrong` (usage is not a state), `31.2 of 43.6 TB` and its state

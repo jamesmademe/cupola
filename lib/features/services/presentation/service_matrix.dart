@@ -408,9 +408,9 @@ class _DomainBand extends ConsumerWidget {
         continue;
       }
 
-      if (folded.total > 1 &&
-          folded.offline > 0 &&
-          folded.offline < folded.total) {
+      // A connection reached that never replied is no answer either.
+      final silent = folded.offline + folded.stuck;
+      if (folded.total > 1 && silent > 0 && silent < folded.total) {
         qualifiers.add('${service.title} degraded');
         continue;
       }
@@ -723,7 +723,8 @@ class ServiceMatrixCell extends ConsumerWidget {
     final folded = instanceId == null
         ? ref.watch(foldedServiceHealthProvider(service))
         : null;
-    final degraded = folded != null && folded.total > 1 && folded.offline > 0;
+    final degraded =
+        folded != null && folded.total > 1 && folded.offline + folded.stuck > 0;
 
     // The lens, on a folded cell that has more than one connection to fold.
     // Watched conditionally for the same reason the signals below are: this is
@@ -962,7 +963,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
     final folded = degradedOf;
     final faulted = faultedOf;
     final statusLabel = folded != null
-        ? '${folded.offline} of ${folded.total} did not answer'
+        ? _silentOf(folded)
         : faulted != null
         ? '${faulted.faulted} of ${faulted.total} with a fault'
         : switch (reachability) {
@@ -1423,4 +1424,14 @@ class _FigureLine extends StatelessWidget {
       ],
     );
   }
+}
+
+/// How many of a folded service's connections said nothing: `1 of 3 did not
+/// answer`, `1 of 3 timed out` when they were reached and never replied, and
+/// `2 of 3 did not answer in time` when it was some of each.
+String _silentOf(FoldedServiceHealth folded) {
+  final total = folded.total;
+  if (folded.stuck == 0) return '${folded.offline} of $total did not answer';
+  if (folded.offline == 0) return '${folded.stuck} of $total timed out';
+  return '${folded.offline + folded.stuck} of $total did not answer in time';
 }

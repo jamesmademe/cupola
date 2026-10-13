@@ -34,6 +34,11 @@ DesktopRailService _serviceOf(
     tone: StatusTone.warning,
     state: 'a fault',
   ),
+  StackLight.stuck => (
+    service: row.service,
+    tone: StatusTone.warning,
+    state: 'timed out',
+  ),
   _ when row.service == ServiceKey.seerr && (waiting?.count ?? 0) > 0 => (
     service: row.service,
     tone: StatusTone.info,

@@ -87,6 +87,16 @@ void main() {
         ),
       ),
       CatalogScene(
+        '.timedOut · servers reached that never replied: amber, one '
+        'sentence for all of them, Retry in the amber fill',
+        (_) => FaultBand.timedOut(
+          message:
+              'Radarr, Sonarr and 6 others were reached but did not reply in '
+              'time.',
+          onRetry: () {},
+        ),
+      ),
+      CatalogScene(
         '.partial · the service answered part of a paged read: amber, never '
         'red, Retry only, in the amber fill',
         (_) => FaultBand.partial(

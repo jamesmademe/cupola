@@ -138,14 +138,16 @@ void main() {
 
       await _advance(tester, const Duration(seconds: 7));
       await harness.settle(tester);
-      // Dockge's own probe gave up before its list came: it is the silence
-      // that leads now. The stack it stopped raises nothing, so the rest is one
-      // fewer than before.
+      // Dockge's own probe gave up before its list came, on a host that took
+      // the connection: it timed out, amber, a fault among the others rather
+      // than a silence leading in red (13/10).
       expect(
-        _inNeedsYou(find.textContaining(RegExp(r'^Dockge did not answer at '))),
+        _inNeedsYou(find.text('18 downloads need a manual import')),
         findsOne,
       );
+      // The stall, TrueNAS's disk alert, and Dockge timing out.
       expect(_inNeedsYou(find.text('+3')), findsOne);
+      expect(_inNeedsYou(find.textContaining('did not answer')), findsNothing);
 
       await harness.unmount(tester);
       await tester.pump(const Duration(seconds: 9));

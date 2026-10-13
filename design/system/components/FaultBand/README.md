@@ -18,6 +18,7 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 |---|---|---|---|---|
 | `.unreachable` | error | `cloud_off_rounded` | *TrueNAS did not answer. Everything below is what it said last.*, and with `since` ≥ 1 minute: *TrueNAS has not answered for 6 minutes. …* | Retry · Settings (optional) |
 | `.fault` | warning (`failureTone`) | the reason's (`failureIcon`: `key_off`, `report`, `timer_off`, …) | The classified headline in the service's own word for what it refused (*key*, *sign-in*, *token*), then the same consequence: *Radarr answered but refused the key. Everything below is what it said last.* With `gateway:` (an `AccessGatewayAnswer`, which `AsyncValueWidget` reads off the failure) the headline names what answered in front: *Cloudflare Access answered instead of Radarr.* | The remedy first, in the amber fill (*Paste the key again*, *Sign in again*, *Check the address*, *Add a service token*), opening `onOpenSettings` or the lens connection's form (on its Access row for a gateway), then Retry only where retrying can still help (`failureRetryHelps`); with no form remedy, Retry in the amber fill · Settings (optional) |
+| `.timedOut` | warning (`failureTone`) | `timer_off_rounded` (`failureIcon`) | The caller's own sentence for the servers reached that never replied, named as the silence names them: *Radarr, Sonarr and 6 others were reached but did not reply in time.* Amber, never red: the host is there and the server is stuck | Retry only, in the amber fill |
 | `.section` | error | `link_off_rounded` | The caller's own sentence, naming which source inside the service did not answer and what is missing | Retry · Settings (optional) |
 | `.partial` | warning | `playlist_remove_rounded` | The caller's own sentence, saying how much of a paged or merged read arrived: *Seerr returned 50 of 300 users; later pages are unavailable.* Amber, never red: the service just answered | Retry only, in the amber fill: asking again is this fault's remedy |
 | `.stale` | warning | `history_toggle_off_rounded` | *These figures are from 6 min ago.* + the caller's `detail`; under a minute, *These figures have stopped updating.* + `detail` | Refresh only, no dismiss |
@@ -29,7 +30,7 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 
 ## The consumer provides
 
-The service name (or, for `.section` and `.partial`, the whole sentence), the stale `age` and `detail`, and the callbacks. Actions are a label and a callback (`FaultBandAction`, or `FaultBandAction.remedy` for the amber fill), never a widget, so a caller cannot restyle the verb. `.fault` needs nothing more than a `serviceName` that starts with the service to open the form itself. `primaryAction` is always present: a band with nothing to do about it should not be on screen; `secondaryAction` is `null` on `.stale`.
+The service name (or, for `.timedOut`, `.section` and `.partial`, the whole sentence), the stale `age` and `detail`, and the callbacks. Actions are a label and a callback (`FaultBandAction`, or `FaultBandAction.remedy` for the amber fill), never a widget, so a caller cannot restyle the verb. `.fault` needs nothing more than a `serviceName` that starts with the service to open the form itself. `primaryAction` is always present: a band with nothing to do about it should not be on screen; `secondaryAction` is `null` on `.stale`.
 
 ## Semantics
 
@@ -39,7 +40,7 @@ The band is one container node (`Semantics(container: true, explicitChildNodes: 
 
 Each sheet is drawn in the dark and the light room.
 
-- `.unreachable` with and without an age, `.fault` for a refused key, a qBittorrent sign-in, Cloudflare Access and a server error, `.section`, `.partial`, `.stale` (6 min and just now), `.offlinePush`.
+- `.unreachable` with and without an age, `.fault` for a refused key, a qBittorrent sign-in, Cloudflare Access and a server error, `.timedOut`, `.section`, `.partial`, `.stale` (6 min and just now), `.offlinePush`.
 - A 390pt phone at 100%: two short verbs and one stay beside, a remedy with Retry goes under.
 - Text at 200% on a 390pt phone: `.unreachable`, `.fault` with its remedy, and `.partial` with `.stale`, every verb under its sentence.
 

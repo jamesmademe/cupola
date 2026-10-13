@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
@@ -25,8 +26,9 @@ import 'package:cupola/features/shell/domain/stack_health.dart';
 /// lights on Home. Switched on, it never steps aside.
 ///
 /// The marks are one target, to Stack. Under them, a service that did not
-/// answer, in red with Retry; otherwise the services with a fault, in amber;
-/// before anything has answered, that each one is being asked.
+/// answer, in red with Retry; otherwise the services reached that never
+/// replied, in amber with Retry; otherwise the services with a fault, in
+/// amber; before anything has answered, that each one is being asked.
 class HomeStackHealthModule extends ConsumerWidget {
   const HomeStackHealthModule({super.key});
 
@@ -37,6 +39,7 @@ class HomeStackHealthModule extends ConsumerWidget {
     final lights = ref.watch(stackLightsProvider);
     if (lights.rows.isEmpty) return const SizedBox.shrink();
     final silent = lights.silent;
+    final stuck = lights.stuck;
     final faultLine = lights.faultLine;
     final Widget? under;
     if (silent.isNotEmpty) {
@@ -49,6 +52,14 @@ class HomeStackHealthModule extends ConsumerWidget {
           for (final service in silent) service.title,
         ], at: checkedAt),
         onRetry: () => retryDashboardServices(ref, silent),
+      );
+    } else if (stuck.isNotEmpty) {
+      final names = [for (final service in stuck) service.title];
+      under = FaultBand.timedOut(
+        message: stuck.length == 1
+            ? '${failureHeadline(ServiceFailureReason.timeout, subject: names.single)}.'
+            : '${failureGroupHeadline(ServiceFailureReason.timeout, subjects: servicesNamed(names))}.',
+        onRetry: () => retryDashboardServices(ref, stuck),
       );
     } else if (faultLine != null) {
       under = _Line(
@@ -124,7 +135,7 @@ class StackLightMark extends StatelessWidget {
     final tone = switch (light) {
       StackLight.checking => null,
       StackLight.answering => StatusTone.success,
-      StackLight.fault => StatusTone.warning,
+      StackLight.fault || StackLight.stuck => StatusTone.warning,
       StackLight.silent => StatusTone.error,
     };
     final lit = tone == null

@@ -548,7 +548,7 @@ void main() {
   });
 
   group('latency', () {
-    testWidgets('a source slower than the probe deadline reads offline', (
+    testWidgets('a source slower than the probe deadline is no answer', (
       tester,
     ) async {
       final harness = await ProfileHarness.start(
@@ -566,5 +566,49 @@ void main() {
       expect((await probe).isOnline, isFalse);
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    // Past its own deadline a probe asks whether the host is there: a server
+    // that took the connection and never replied is reached and stuck, amber,
+    // never `did not answer` (13/10).
+    for (final (name, profile, stuck) in [
+      (
+        'took the connection and never replied: reached, stuck',
+        Profiles.p1.withLatency(WorldIds.radarr, const Duration(hours: 1)),
+        true,
+      ),
+      (
+        'never completed the handshake: did not answer',
+        Profiles.p1.withBehaviour(
+          WorldIds.radarr,
+          ConnectionBehaviour.timesOut,
+        ),
+        false,
+      ),
+    ]) {
+      testWidgets('a probe whose host $name', (tester) async {
+        final harness = await ProfileHarness.start(profile);
+        harness.network.followFakeTime(tester.binding);
+        final container = harness.container(retry: (_, _) => null);
+        final probe = container.read(
+          instanceSummaryProvider((
+            service: ServiceKey.radarr,
+            instanceId: WorldIds.radarr,
+          )).future,
+        );
+
+        await tester.pump(const Duration(seconds: 31));
+        final summary = await probe;
+        expect(summary.isStuck, stuck);
+        expect(summary.didNotAnswer, !stuck);
+        expect(
+          summary.failureReason,
+          stuck
+              ? ServiceFailureReason.timeout
+              : ServiceFailureReason.unreachable,
+        );
+        container.dispose();
+        await tester.pump(const Duration(hours: 2));
+      });
+    }
   });
 }

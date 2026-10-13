@@ -917,6 +917,21 @@ void main() {
         ],
       ),
       CatalogScene(
+        'Stack health · reached and never replied: amber lights out of the '
+        'count, one amber sentence with Retry',
+        (_) => const HomeStackHealthModule(),
+        width: 390,
+        overrides: [
+          stackLightsProvider.overrideWithValue(
+            _lights({
+              ServiceKey.radarr: StackLight.stuck,
+              ServiceKey.sonarr: StackLight.stuck,
+              ServiceKey.qbittorrent: StackLight.answering,
+            }),
+          ),
+        ],
+      ),
+      CatalogScene(
         'Stack health · before anything answers: hollow lights',
         (_) => const HomeStackHealthModule(),
         width: 390,

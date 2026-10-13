@@ -23,10 +23,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///    hides the half that is not.
 ///
 /// The arithmetic is deliberate: a degraded service is counted inside
-/// [answering] (it *does* answer), so `answering + unreachable == configured`
-/// always holds and [degraded] is a qualifier on top rather than a third bucket
-/// that stops the numbers adding up. `14 of 16 answering · 1 degraded ·
-/// 2 unreachable` is 16 services, not 17.
+/// [answering] (it *does* answer), so `answering + stuck + unreachable ==
+/// configured` always holds and [degraded] is a qualifier on top rather than a
+/// bucket that stops the numbers adding up. `14 of 16 answering · 1 degraded ·
+/// 2 did not answer` is 16 services, not 17. A [stuck] service is a bucket of
+/// its own: reached, and never replied, it is neither answering nor dark.
 ///
 /// This used to be two classes: this one, lens-scoped and unable to say
 /// *degraded* or age itself, and a `StackReadout` the Dashboard derived beside
@@ -50,9 +51,16 @@ class StackHealth {
     required this.checking,
     required this.notSetUp,
     this.faulted = 0,
+    this.stuck = 0,
     this.signedOut = 0,
     this.checkedAt,
   });
+
+  /// Services reached that never replied: every connection took the
+  /// connection and said nothing in time, or some did and the rest did not
+  /// answer. Not [answering] (nothing replied) and not [unreachable] (the
+  /// host is there): amber, `2 timed out`.
+  final int stuck;
 
   /// Services whose only connection is a Seerr account that signed out. Set
   /// up, so never among [notSetUp]; asked nothing, so not in [configured]
@@ -97,7 +105,8 @@ class StackHealth {
   /// Nothing is wrong. Deliberately *not* "everything is green": the header is
   /// neutral when clear, because a badge that is green on almost every open is
   /// one nobody reads on the day it turns red.
-  bool get allClear => unreachable == 0 && degraded == 0 && faulted == 0;
+  bool get allClear =>
+      unreachable == 0 && degraded == 0 && faulted == 0 && stuck == 0;
 
   /// `14 of 16 answering`, or `16 of 16 answering` when nothing is wrong.
   ///
@@ -114,6 +123,7 @@ class StackHealth {
     // The lexicon's group word for faults (`3 faults`), kept apart from the
     // red count below: a refusal answered.
     if (faulted > 0) '$faulted fault${faulted == 1 ? '' : 's'}',
+    if (stuck > 0) '$stuck timed out',
     if (unreachable > 0) '$unreachable did not answer',
     // Ahead of "not set up" because a probe in flight is about to change the
     // headline and an unconfigured service never will.
@@ -166,6 +176,10 @@ enum StackServiceState {
   /// Some answered and some did not.
   degraded,
 
+  /// None replied, and at least one was reached: it took the connection and
+  /// said nothing in time.
+  stuck,
+
   /// None answered.
   unreachable,
 
@@ -183,6 +197,7 @@ StackServiceState foldServiceState({
   required int offline,
   required int checking,
   int faulted = 0,
+  int stuck = 0,
 }) {
   if (total <= 0) return StackServiceState.checking;
   // Asked before "unreachable": with one answer outstanding we do not yet know
@@ -190,13 +205,16 @@ StackServiceState foldServiceState({
   // every cold open is the wolf this whole file is avoiding.
   if (checking >= total) return StackServiceState.checking;
   // `offline` counts only what did not answer; a refused key is `faulted`,
-  // and it answered.
-  if (offline <= 0) {
+  // and it answered. `stuck` is a connection reached that never replied.
+  final silent = offline + stuck;
+  if (silent <= 0) {
     return faulted > 0 ? StackServiceState.fault : StackServiceState.answering;
   }
-  if (offline >= total) return StackServiceState.unreachable;
-  // Reachable here only when `0 < offline < total`, which is why a service with
-  // a single connection can never be degraded.
+  if (silent >= total) {
+    return stuck > 0 ? StackServiceState.stuck : StackServiceState.unreachable;
+  }
+  // Reachable here only when `0 < offline + stuck < total`, which is why a
+  // service with a single connection can never be degraded.
   return StackServiceState.degraded;
 }
 
@@ -214,6 +232,7 @@ StackHealth stackHealthFrom({
   var degraded = 0;
   var faulted = 0;
   var unreachable = 0;
+  var stuck = 0;
   var checking = 0;
   var configured = 0;
 
@@ -231,6 +250,8 @@ StackHealth stackHealthFrom({
         // doc for why the sum has to close.
         answering++;
         degraded++;
+      case StackServiceState.stuck:
+        stuck++;
       case StackServiceState.unreachable:
         unreachable++;
       case StackServiceState.checking:
@@ -243,6 +264,7 @@ StackHealth stackHealthFrom({
     answering: answering,
     degraded: degraded,
     faulted: faulted,
+    stuck: stuck,
     unreachable: unreachable,
     checking: checking,
     signedOut: signedOut,
@@ -280,6 +302,7 @@ final unreachableServicesProvider = Provider<List<ServiceKey>>((ref) {
               total: folded.total,
               offline: folded.offline,
               faulted: folded.faulted,
+              stuck: folded.stuck,
               checking: folded.checking,
             ) ==
             StackServiceState.unreachable;
@@ -324,6 +347,7 @@ class StackHealthNotifier extends Notifier<StackHealth> {
           total: folded.total,
           offline: folded.offline,
           faulted: folded.faulted,
+          stuck: folded.stuck,
           checking: folded.checking,
         ),
       );

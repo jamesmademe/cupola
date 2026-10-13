@@ -141,8 +141,9 @@ String spokenHealthLine(StackHealth health) {
       .replaceAll(' · ', ', ');
 }
 
-/// The stack's light: green while everything answers, amber over a fault,
-/// red when a service did not answer, a ring while the first answers are out.
+/// The stack's light: green while everything answers, amber over a fault or
+/// a server that timed out, red when a service did not answer, a ring while
+/// the first answers are out.
 class _HealthDot extends StatelessWidget {
   const _HealthDot({required this.health});
 
@@ -155,7 +156,7 @@ class _HealthDot extends StatelessWidget {
     final checking = health.checking >= health.configured;
     final tone = health.unreachable > 0
         ? StatusTone.error
-        : health.degraded > 0 || health.faulted > 0
+        : health.degraded > 0 || health.faulted > 0 || health.stuck > 0
         ? StatusTone.warning
         : StatusTone.success;
     return Container(

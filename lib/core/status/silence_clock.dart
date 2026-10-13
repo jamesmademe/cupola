@@ -66,10 +66,14 @@ class SilenceClock {
   void noteAnswered(String key) => _since.remove(key);
 
   /// Records the outcome of one probe of [key]: [reason] is why it failed, or
-  /// null when it succeeded. Only a failure that [failureDidNotAnswer] starts
-  /// or keeps a silence; every other outcome is an answer.
+  /// null when it succeeded. A failure that [failureDidNotAnswer], or a server
+  /// reached that never replied ([ServiceFailureReason.timeout]), starts or
+  /// keeps a silence: neither said anything. Every other outcome is an
+  /// answer, a refusal included.
   void noteProbe(String key, ServiceFailureReason? reason) =>
-      reason != null && failureDidNotAnswer(reason)
+      reason != null &&
+          (failureDidNotAnswer(reason) ||
+              reason == ServiceFailureReason.timeout)
       ? noteSilent(key)
       : noteAnswered(key);
 

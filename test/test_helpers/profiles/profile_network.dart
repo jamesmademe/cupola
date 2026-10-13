@@ -507,6 +507,15 @@ class ProfileNetwork {
     return failure;
   }
 
+  /// Whether a plain connection to [uri] opens: what the app's
+  /// `hostReachProvider` asks once a probe's own deadline has passed. A
+  /// server that is slow (`withLatency`) is reached; one that refuses or
+  /// never completes the handshake is not, nor is an address nobody serves.
+  Future<bool> reach(Uri uri) async {
+    final server = serverAt(uri);
+    return server != null && _dialVerdict(server, uri) == null;
+  }
+
   SocketException? _dialVerdict(ProfileServer? server, Uri uri) {
     if (server == null && uri.host == plexTvHost) return null;
     if (server == null) {

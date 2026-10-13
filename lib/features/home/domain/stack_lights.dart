@@ -2,9 +2,9 @@
 /// configured service as its mark with one light.
 ///
 /// The marks stay monochrome, since a service is known by its shape; only the
-/// light takes a tone, by the five-arm rule: green answering, amber a fault,
-/// red did not answer, and a hollow light while a service has not answered
-/// yet. Faults are counted in groups, as Needs you counts them: eighteen
+/// light takes a tone, by the five-arm rule: green answering, amber a fault
+/// or a server reached that never replied, red did not answer, and a hollow
+/// light while a service has not answered yet. Faults are counted in groups, as Needs you counts them: eighteen
 /// blocked imports are one fault, a refused key another.
 library;
 
@@ -24,6 +24,9 @@ enum StackProbe {
   /// It answered with a fault: a refused key, a server error.
   fault,
 
+  /// It was reached and never replied in time.
+  stuck,
+
   /// It did not answer.
   silent,
 }
@@ -40,6 +43,10 @@ enum StackLight {
   /// that did not answer beside one that did, or a fault the person has to
   /// see to. Amber.
   fault,
+
+  /// No connection replied, and at least one was reached: amber, and not
+  /// answering.
+  stuck,
 
   /// Every connection did not answer: red.
   silent,
@@ -84,10 +91,16 @@ class StackLights {
       if (row.light == StackLight.silent) row.service,
   ];
 
-  /// The services with an amber light.
+  /// The services with an amber light for a fault.
   List<ServiceKey> get faulted => [
     for (final row in rows)
       if (row.light == StackLight.fault) row.service,
+  ];
+
+  /// The services reached that never replied.
+  List<ServiceKey> get stuck => [
+    for (final row in rows)
+      if (row.light == StackLight.stuck) row.service,
   ];
 
   /// The line beside the slab's name: `12 of 12 answering · 3 faults`, or
@@ -96,7 +109,10 @@ class StackLights {
     if (checking) return 'Checking $configured';
     final parts = [
       '$answering of $configured answering',
+      // In the header's order: the faults, then what was reached and never
+      // replied.
       if (faults > 0) '$faults ${faults == 1 ? 'fault' : 'faults'}',
+      if (stuck.isNotEmpty) '${stuck.length} timed out',
       if (stillChecking > 0) '$stillChecking checking',
     ];
     return parts.join(' · ');
@@ -113,6 +129,7 @@ class StackLights {
       for (final (light, word) in const [
         (StackLight.answering, 'Answering'),
         (StackLight.fault, 'Faults'),
+        (StackLight.stuck, 'Timed out'),
         (StackLight.silent, 'Did not answer'),
         (StackLight.checking, 'Checking'),
       ])
@@ -136,6 +153,11 @@ StackLight stackLightOf(List<StackProbe> probes, {bool needsYou = false}) {
   if (heard.isEmpty) return StackLight.checking;
   if (heard.every((probe) => probe == StackProbe.silent)) {
     return StackLight.silent;
+  }
+  if (heard.every(
+    (probe) => probe == StackProbe.silent || probe == StackProbe.stuck,
+  )) {
+    return StackLight.stuck;
   }
   if (needsYou || heard.any((probe) => probe != StackProbe.answered)) {
     return StackLight.fault;
@@ -165,7 +187,19 @@ StackLights stackLightsOf({
         ),
       ),
   ];
-  final groups = faults.length;
+  // A server that timed out is its probe's fault too (`connectionFault`):
+  // the line says it once, as `timed out`, never again among the faults.
+  final timedOut = {
+    for (final row in rows)
+      if (row.light == StackLight.stuck) row.service,
+  };
+  final groups = faults
+      .where(
+        (fault) =>
+            fault.kind != DecisionKind.connectionFault ||
+            !timedOut.contains(fault.service),
+      )
+      .length;
   final unnamed = rows
       .where(
         (row) =>

@@ -18,21 +18,39 @@ void main() {
   group('foldServiceState', () {
     test('every connection answering is answering', () {
       expect(
-        foldServiceState(total: 2, offline: 0, faulted: 0, checking: 0),
+        foldServiceState(
+          total: 2,
+          offline: 0,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
         StackServiceState.answering,
       );
     });
 
     test('connections that disagree are degraded, not unreachable', () {
       expect(
-        foldServiceState(total: 2, offline: 1, faulted: 0, checking: 0),
+        foldServiceState(
+          total: 2,
+          offline: 1,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
         StackServiceState.degraded,
       );
     });
 
     test('every connection dark is unreachable', () {
       expect(
-        foldServiceState(total: 2, offline: 2, faulted: 0, checking: 0),
+        foldServiceState(
+          total: 2,
+          offline: 2,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
         StackServiceState.unreachable,
       );
     });
@@ -41,25 +59,89 @@ void main() {
       // Degraded means *disagreement*, and one opinion cannot disagree with
       // itself. A single connection only ever answers or does not.
       expect(
-        foldServiceState(total: 1, offline: 0, faulted: 0, checking: 0),
+        foldServiceState(
+          total: 1,
+          offline: 0,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
         StackServiceState.answering,
       );
       expect(
-        foldServiceState(total: 1, offline: 1, faulted: 0, checking: 0),
+        foldServiceState(
+          total: 1,
+          offline: 1,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
         StackServiceState.unreachable,
       );
     });
 
     test('a probe still out is checking, and is not a fault', () {
       expect(
-        foldServiceState(total: 1, offline: 0, faulted: 0, checking: 1),
+        foldServiceState(
+          total: 1,
+          offline: 0,
+          faulted: 0,
+          stuck: 0,
+          checking: 1,
+        ),
         StackServiceState.checking,
       );
       // Half answered: the service answers, so it is not "checking" as a whole,
       // but nothing has failed either.
       expect(
-        foldServiceState(total: 2, offline: 0, faulted: 0, checking: 1),
+        foldServiceState(
+          total: 2,
+          offline: 0,
+          faulted: 0,
+          stuck: 0,
+          checking: 1,
+        ),
         StackServiceState.answering,
+      );
+    });
+  });
+
+  group('a server reached that never replied', () {
+    test('is stuck, alone or beside one dark', () {
+      expect(
+        foldServiceState(total: 1, offline: 0, stuck: 1, checking: 0),
+        StackServiceState.stuck,
+      );
+      expect(
+        foldServiceState(total: 2, offline: 1, stuck: 1, checking: 0),
+        StackServiceState.stuck,
+      );
+      // Beside one that answered: it answers, partly.
+      expect(
+        foldServiceState(total: 2, offline: 0, stuck: 1, checking: 0),
+        StackServiceState.degraded,
+      );
+    });
+
+    test('is neither answering nor dark in the header, and the sum closes', () {
+      final health = stackHealthFrom(
+        states: const [
+          StackServiceState.answering,
+          StackServiceState.stuck,
+          StackServiceState.stuck,
+          StackServiceState.unreachable,
+        ],
+        registrySize: 4,
+      );
+
+      expect(
+        health.answering + health.stuck + health.unreachable,
+        health.configured,
+      );
+      expect(health.allClear, isFalse);
+      expect(
+        health.sentence,
+        '1 of 4 answering · 2 timed out · 1 did not answer',
       );
     });
   });
@@ -206,7 +288,7 @@ void main() {
           foldedServiceHealthProvider.overrideWith(
             (ref, service) =>
                 folds[service] ??
-                (total: 0, offline: 0, faulted: 0, checking: 0),
+                (total: 0, offline: 0, faulted: 0, stuck: 0, checking: 0),
           ),
         ],
       );
@@ -216,8 +298,20 @@ void main() {
 
     test('an unreachable service is both counted and named', () {
       final container = containerWith({
-        ServiceKey.radarr: (total: 1, offline: 0, faulted: 0, checking: 0),
-        ServiceKey.lidarr: (total: 2, offline: 2, faulted: 0, checking: 0),
+        ServiceKey.radarr: (
+          total: 1,
+          offline: 0,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
+        ServiceKey.lidarr: (
+          total: 2,
+          offline: 2,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
       });
 
       final health = container.read(stackHealthProvider);
@@ -228,12 +322,46 @@ void main() {
       expect(named.length, health.unreachable);
     });
 
+    test('a service that timed out is counted apart, and never named as '
+        'silent', () {
+      final container = containerWith({
+        ServiceKey.radarr: (
+          total: 1,
+          offline: 0,
+          faulted: 0,
+          stuck: 1,
+          checking: 0,
+        ),
+        ServiceKey.sonarr: (
+          total: 1,
+          offline: 0,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
+      });
+
+      final health = container.read(stackHealthProvider);
+
+      expect(health.answering, 1);
+      expect(health.stuck, 1);
+      expect(health.headline, '1 of 2 answering');
+      expect(health.qualifiers.first, '1 timed out');
+      expect(container.read(unreachableServicesProvider), isEmpty);
+    });
+
     test('a degraded service is counted as answering and never named', () {
       // Two Radarr, one dark. The header says `degraded`; the band has nothing
       // to say, because "Radarr did not answer" is false about a Radarr that
       // did.
       final container = containerWith({
-        ServiceKey.radarr: (total: 2, offline: 1, faulted: 0, checking: 0),
+        ServiceKey.radarr: (
+          total: 2,
+          offline: 1,
+          faulted: 0,
+          stuck: 0,
+          checking: 0,
+        ),
       });
 
       final health = container.read(stackHealthProvider);
@@ -246,7 +374,13 @@ void main() {
 
     test('a probe still out names nobody', () {
       final container = containerWith({
-        ServiceKey.radarr: (total: 1, offline: 0, faulted: 0, checking: 1),
+        ServiceKey.radarr: (
+          total: 1,
+          offline: 0,
+          faulted: 0,
+          stuck: 0,
+          checking: 1,
+        ),
       });
 
       expect(container.read(stackHealthProvider).checking, 1);

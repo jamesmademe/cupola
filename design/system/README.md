@@ -32,6 +32,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 |---|---|---|
 | `Answering` | green | The service replied to the last check. |
 | `Did not answer` | red | Nothing replied at its address. **The only red words**, never contracted; say who and since when: `Radarr did not answer since 20:41`. |
+| `Timed out` · `Radarr was reached but did not reply in time` | amber | Something took the connection at its address and never replied: the host is there and the server is stuck. Not red (the network is not the cause) and not answering: the header says `2 timed out` beside `12 of 14 answering`. Equal ones are one sentence: `Radarr, Sonarr and 6 others were reached but did not reply in time.` |
 | `Not set up` · `Set up Plex` | — | No address or key yet. The control stays tappable and names the service. |
 | `Retry` | — | Send the same request again. Offered only where the same request can still succeed: never after a refused key, and never beside an `http://` address nothing was sent to. After a refused sign-in it stays, because a ban runs out. `Run again` is a different action: it re-runs a scheduled task. |
 | `Radarr answered but refused the key` | amber | An answer that says no. A fault, with its remedy (`Paste the key again`). A service that takes a sign-in or a token says so: `qBittorrent answered but refused the sign-in` (`Sign in again`), `Plex answered but refused the token` (`Paste the token again`). |

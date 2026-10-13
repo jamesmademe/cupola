@@ -80,6 +80,7 @@ void main() {
       total: 0,
       offline: 0,
       faulted: 0,
+      stuck: 0,
       checking: 0,
     ));
   });

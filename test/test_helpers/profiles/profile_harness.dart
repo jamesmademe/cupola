@@ -38,7 +38,10 @@ class ProfileHarness {
     ConnectionAccessRegistry.update(profile.settings.accessHeadersByAddress);
     addTearDown(ConnectionAccessRegistry.reset);
     return ProfileHarness._(profile, network, [
-      ...await settingsScopeOverrides(customize: (_) => profile.settings),
+      ...await settingsScopeOverrides(
+        customize: (_) => profile.settings,
+        hostReach: network.reach,
+      ),
       initialActiveInstancesProvider.overrideWithValue(profile.lens),
       // The Home's thirty-second poll, off: a profile is read once, and the
       // poll's timer would outlive a container disposed at teardown. The

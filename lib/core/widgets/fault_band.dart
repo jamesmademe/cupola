@@ -29,6 +29,7 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 ///
 ///  * [FaultBand.unreachable]: the service did not answer at all. Identity,
 ///    tabs and every readout below stay at full ink; the band names the age.
+///  * [FaultBand.timedOut]: services reached that never replied. Amber.
 ///  * [FaultBand.section]: the service answered, one source inside it did not.
 ///    Only that section falls back, and a figure that source owns reads `—`,
 ///    never `0`.
@@ -217,6 +218,23 @@ class FaultBand extends StatelessWidget {
        secondaryAction = onOpenSettings == null
            ? null
            : FaultBandAction('Settings', onOpenSettings);
+
+  /// Level 1 for services reached that never replied: they took the
+  /// connection and said nothing in time (`Radarr, Sonarr and 6 others were
+  /// reached but did not reply in time.`). The sentence is the caller's, which
+  /// names them as the silence does.
+  ///
+  /// Amber, never red: the host is there, so `did not answer` would send the
+  /// person to the network when the server is what is stuck. Asking again is
+  /// the remedy: the amber fill.
+  FaultBand.timedOut({
+    super.key,
+    required this.message,
+    required VoidCallback onRetry,
+  }) : tone = failureTone(ServiceFailureReason.timeout),
+       icon = failureIcon(ServiceFailureReason.timeout),
+       primaryAction = FaultBandAction.remedy('Retry', onRetry),
+       secondaryAction = null;
 
   /// Level 2, when the service answered **part** of a read: the first pages
   /// of a paged list came back and a later one did not, or one of several
