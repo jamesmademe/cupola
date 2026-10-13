@@ -31,12 +31,17 @@ import '../../../test_helpers/settings_scope.dart';
 /// defect in the flows this replaced, and the scenarios that still exist are
 /// kept; what answers a test (a service that says yes) lives in
 /// `onboarding_flow_test.dart`, where the network is faked.
+/// The Welcome's claim: drawn on two lines, spoken as one sentence.
+final _claim = find.byWidgetPredicate(
+  (w) => w is Semantics && w.properties.label == OnePunchline.claim,
+);
+
 void main() {
   group('the Welcome', () {
     testWidgets('makes its claim and has one door', (tester) async {
       await _pumpOnboarding(tester);
 
-      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(_claim, findsOneWidget);
       expect(_button('Set up a service'), findsOneWidget);
       // What the door leads with, said under it so the button stays a verb.
       expect(find.text(SetupDoors.setUpHint), findsOneWidget);
@@ -190,7 +195,7 @@ void main() {
 
       await _tap(tester, 'Back');
 
-      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(_claim, findsOneWidget);
       expect(_button('Set up a service'), findsOneWidget);
       expect(find.text('Test connection'), findsNothing);
     });
@@ -203,7 +208,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(findLine('Set up Seerr'), findsOneWidget);
       // Past the claim: the door that opened it already made it.
-      expect(find.text(OnePunchline.claim), findsNothing);
+      expect(_claim, findsNothing);
 
       await _tap(tester, 'Back');
 
@@ -224,7 +229,7 @@ void main() {
       await _tap(tester, 'Back');
 
       expect(way.router.state.uri.path, ServiceRoutes.welcome);
-      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(_claim, findsOneWidget);
     });
 
     testWidgets('the step says what it wants before anything is pressed', (
@@ -268,7 +273,7 @@ void main() {
       // Nothing is saved for a service that did not answer, and there is no way
       // to go on without one.
       expect(_button('Test connection'), findsOneWidget);
-      expect(_button('Go to Home'), findsNothing);
+      expect(_button('Continue'), findsNothing);
       expect(_skips(), findsNothing);
       expect(way.container.read(settingsProvider).sonarrUrl, isEmpty);
       expect(way.container.read(onboardingCompletedProvider), isFalse);
@@ -512,7 +517,7 @@ void main() {
       await _tap(tester, 'Back');
 
       expect(way.container.read(settingsProvider).sonarrUrl, isEmpty);
-      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(_claim, findsOneWidget);
     });
   });
 
@@ -1013,7 +1018,7 @@ void main() {
       // left stayed mounted and focused: the next beat arrived with the
       // keyboard still covering half of it, and keystrokes went into a field
       // that was no longer on screen.
-      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(_claim, findsOneWidget);
       expect(tester.testTextInput.isVisible, isFalse);
       expect(
         find

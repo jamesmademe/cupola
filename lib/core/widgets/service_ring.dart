@@ -206,8 +206,7 @@ class _ServiceRingState extends State<ServiceRing>
     // What has answered, never what was picked: the way in sets services up
     // one at a time, so there is no choice among the seventeen to report.
     final parts = <String>[
-      if (connected > 0)
-        '$connected of ${ServiceKey.values.length} answering',
+      if (connected > 0) '$connected of ${ServiceKey.values.length} answering',
       if (silent > 0) '$silent ${StateWord.didNotAnswer.inline}',
     ];
     if (parts.isEmpty || picked == 0) {
@@ -630,38 +629,58 @@ class _ServiceRingPainter extends CustomPainter {
       old.entrance != entrance || old.sweep != sweep || old.frame != frame;
 }
 
-/// The claim the Welcome makes: what Cupola is, in one line.
+/// Cupola's two lines, each set as a lockup beside the ring: the claim on the
+/// Welcome, what Cupola is, and the promise on the close, what it is for once
+/// everything answers. They are the brand's own words and live here once;
+/// anything else that says who Cupola is quotes [claim] and [promise].
 ///
-/// Kept beside the ring rather than inlined in the Welcome because the two are
-/// one composition, drawn together in the catalog: the instrument, then the
-/// sentence that says what it is for.
+/// Kept beside the ring rather than inlined in the beats because each is one
+/// composition with it, drawn together in the catalog: the instrument, then the
+/// sentence that says what it is for. The ring is dark on the Welcome and lit
+/// with what answered on the close, which is what the promise says.
 ///
 /// **One ink.** The room is monochrome (principle 3 of the brand book: colour
-/// is information), so the display face carries the claim, in the primary ink.
+/// is information), so the display face carries the words, in the primary ink.
 class OnePunchline extends StatelessWidget {
-  const OnePunchline({super.key, this.style});
+  /// The claim, on the Welcome.
+  const OnePunchline({super.key}) : _spoken = claim, _lines = _claimLines;
 
-  /// Defaults to `displayMedium`, the ramp's own step between a heading and a
-  /// hero line. Pass a smaller role where the claim is a caption, not the door.
-  ///
-  /// The weight comes from the role and is not forced here, so the door reads
-  /// at the display role's weight and a caption keeps its own.
-  final TextStyle? style;
+  /// The promise, on the close: said only once everything the visit tried
+  /// has joined.
+  const OnePunchline.closing({super.key})
+    : _spoken = promise,
+      _lines = _promiseLines;
 
-  static const claim = 'Your server, like a streaming service.';
+  static const claim = 'A Cupola over your server.';
+  static const promise = 'Nothing left in the dark.';
+
+  // The breaks carry the words: the dome, then what it stands over; what is
+  // promised, then where it no longer is.
+  static const _claimLines = ['A Cupola over', 'your server.'];
+  static const _promiseLines = ['Nothing left', 'in the dark.'];
+
+  final String _spoken;
+  final List<String> _lines;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    // 1.10 is the display leading floor; two lines of heavy type tighter than
+    // that start to touch.
+    final style = theme.textTheme.displayMedium!.copyWith(
+      color: theme.colorScheme.onSurface,
+      height: 1.10,
+    );
+    // The screen's heading, spoken once as one sentence rather than as the two
+    // lines it is drawn on.
     return Semantics(
       header: true,
-      child: Text(
-        claim,
-        style: (style ?? theme.textTheme.displayMedium!).copyWith(
-          color: scheme.onSurface,
-          height: 1.10,
-        ),
+      label: _spoken,
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [for (final line in _lines) Text(line, style: style)],
       ),
     );
   }

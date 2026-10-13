@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/reel_command_button.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/core/widgets/setup_doors.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
@@ -21,6 +22,11 @@ Widget _host(Widget child, {double width = 560}) => MaterialApp(
   ),
 );
 
+/// The Welcome's claim: drawn on two lines, spoken as one sentence.
+final _claim = find.byWidgetPredicate(
+  (w) => w is Semantics && w.properties.label == OnePunchline.claim,
+);
+
 void main() {
   group('OnboardingWelcome', () {
     testWidgets('offers the one door and nothing to skip', (tester) async {
@@ -29,7 +35,7 @@ void main() {
         _host(OnboardingWelcome(onSetUp: () => opened++)),
       );
 
-      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(_claim, findsOneWidget);
       expect(find.byType(FilledButton), findsOneWidget);
       expect(find.text(SetupDoors.setUpHint), findsOneWidget);
       expect(find.text('Back'), findsNothing);
@@ -51,6 +57,21 @@ void main() {
       expect(back, 1);
     });
 
+    testWidgets('says the claim once as the heading, and keeps the promise '
+        'for the close', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(_host(OnboardingWelcome(onSetUp: () {})));
+
+      expect(
+        find.semantics.byLabel(OnePunchline.claim),
+        containsSemantics(isHeader: true),
+      );
+      // Drawn on two lines, never spoken as two.
+      expect(find.semantics.byLabel('A Cupola over'), findsNothing);
+      expect(find.semantics.byLabel(OnePunchline.promise), findsNothing);
+      handle.dispose();
+    });
+
     testWidgets('the door speaks its hint on the button', (tester) async {
       // A hint wrapped around a button is dropped; it has to sit on the
       // label the button merges.
@@ -66,6 +87,122 @@ void main() {
         ),
       );
       handle.dispose();
+    });
+  });
+
+  group('OnboardingClose', () {
+    Future<List<int>> pumpClose(
+      WidgetTester tester, {
+      required List<String> answering,
+      List<String> notJoined = const [],
+      Set<ServiceKey> setUp = const {},
+    }) async {
+      final entered = <int>[];
+      await tester.pumpWidget(
+        _host(
+          OnboardingClose(
+            answering: answering,
+            notJoined: notJoined,
+            setUp: setUp,
+            onEnter: () async => entered.add(1),
+          ),
+        ),
+      );
+      return entered;
+    }
+
+    testWidgets('makes the promise when everything tried has joined', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final entered = await pumpClose(
+        tester,
+        answering: ['Seerr', 'Radarr', 'Sonarr'],
+        setUp: {ServiceKey.seerr, ServiceKey.radarr, ServiceKey.sonarr},
+      );
+
+      expect(
+        find.semantics.byLabel(OnePunchline.promise),
+        containsSemantics(isHeader: true),
+      );
+      expect(
+        find.text(
+          'Seerr, Radarr and Sonarr are answering. Lidarr and the rest can be '
+          'added any time from Connections in Settings.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Skip'), findsNothing);
+
+      expect(
+        find.semantics.byLabel('Enter Cupola'),
+        containsSemantics(isButton: true),
+      );
+      await tester.tap(find.byType(ReelCommandButton));
+      await tester.pump();
+      expect(entered, [1]);
+      handle.dispose();
+    });
+
+    testWidgets('counts instead of promising when something did not join', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpClose(
+        tester,
+        answering: ['Seerr', 'Radarr', 'Radarr 4K'],
+        notJoined: ['Sonarr'],
+        setUp: {ServiceKey.seerr, ServiceKey.radarr},
+      );
+
+      expect(find.semantics.byLabel(OnePunchline.promise), findsNothing);
+      expect(find.text('3 of 4 answering.'), findsOneWidget);
+      expect(
+        find.text(
+          'Seerr, Radarr and Radarr 4K are answering. Sonarr is not added '
+          'yet: add it any time from Connections in Settings.',
+        ),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('never offers to add what is there, nor Readarr', (
+      tester,
+    ) async {
+      await pumpClose(
+        tester,
+        answering: ['Lidarr'],
+        setUp: {ServiceKey.lidarr},
+      );
+      expect(
+        find.textContaining('Lidarr and the rest can be added'),
+        findsNothing,
+      );
+      expect(find.textContaining('Readarr'), findsNothing);
+      expect(
+        find.textContaining('${ServiceKey.values.first.title} and the rest'),
+        findsOneWidget,
+      );
+    });
+
+    test('says names the way a sentence does', () {
+      expect(OnboardingClose.sayNames(['Seerr']), 'Seerr');
+      expect(OnboardingClose.sayNames(['Seerr', 'Radarr']), 'Seerr and Radarr');
+      expect(
+        OnboardingClose.sayNames(['Seerr', 'Radarr', 'Sonarr']),
+        'Seerr, Radarr and Sonarr',
+      );
+      expect(
+        OnboardingClose.sayNames([
+          'Seerr',
+          'Radarr',
+          'Sonarr',
+          'Lidarr',
+          'Bazarr',
+        ]),
+        'Seerr, Radarr and 3 more',
+      );
     });
   });
 

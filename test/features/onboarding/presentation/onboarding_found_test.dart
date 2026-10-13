@@ -144,12 +144,16 @@ class _Rig {
     required this.wentHome,
     required this.wentBack,
     required this.container,
+    this.notJoined = const [],
   });
 
   final WidgetTester tester;
   final _Diagnose diagnose;
   final List<List<FoundConnection>> added;
   final List<bool> wentHome;
+
+  /// What each exit said did not join, in order.
+  final List<List<String>> notJoined;
   final List<bool> wentBack;
   final ProviderContainer container;
 }
@@ -177,6 +181,7 @@ Future<_Rig> _pump(
   final added = <List<FoundConnection>>[];
   final wentHome = <bool>[];
   final wentBack = <bool>[];
+  final notJoined = <List<String>>[];
   late ProviderContainer container;
   await tester.pumpWidget(
     ProviderScope(
@@ -200,8 +205,10 @@ Future<_Rig> _pump(
                   diagnose: fake.call,
                   certificateProber: (url, {pinnedFingerprint = ''}) async =>
                       null,
-                  onAdd: (found) async => added.add(found),
-                  onGoHome: () => wentHome.add(true),
+                  onDone: (found, missing) async {
+                    notJoined.add(missing);
+                    found.isEmpty ? wentHome.add(true) : added.add(found);
+                  },
                   onBack: () => wentBack.add(true),
                 ),
               ),
@@ -221,6 +228,7 @@ Future<_Rig> _pump(
     wentHome: wentHome,
     wentBack: wentBack,
     container: container,
+    notJoined: notJoined,
   );
 }
 
@@ -311,8 +319,7 @@ void main() {
               body: OnboardingFound(
                 source: _sourceInstance(_seerr),
                 diagnose: _Diagnose().call,
-                onAdd: (_) async {},
-                onGoHome: () {},
+                onDone: (_, _) async {},
                 onBack: () {},
               ),
             ),
@@ -322,7 +329,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Asking Seerr'), findsOneWidget);
-      expect(findLine('Go to Home'), findsOneWidget);
+      expect(findLine('Continue'), findsOneWidget);
 
       completer.complete();
       await _settle(tester);
@@ -349,7 +356,7 @@ void main() {
       expect(find.text('nas.home.arpa:8989'), findsOneWidget);
       expect(find.text('key included'), findsNWidgets(2));
       // Nothing has answered, so there is nothing to add yet.
-      expect(findLine('Go to Home'), findsOneWidget);
+      expect(findLine('Continue'), findsOneWidget);
       expect(find.byType(Switch), findsNothing);
     });
 
@@ -371,7 +378,7 @@ void main() {
         ..on('http://nas.home.arpa:7878', (_) => radarr.future)
         ..on('http://nas.home.arpa:8989', (_) => sonarr.future);
       await _pump(tester, known: [_radarr(), _sonarr()], diagnose: diagnose);
-      expect(findLine('Go to Home'), findsOneWidget);
+      expect(findLine('Continue'), findsOneWidget);
 
       radarr.complete(const ServiceDiagnosis.connected());
       await _settle(tester);
@@ -404,7 +411,7 @@ void main() {
       expect(findLine('Add 1 service'), findsOneWidget);
       await tester.tap(find.byType(Switch).last);
       await _settle(tester);
-      expect(findLine('Go to Home'), findsOneWidget);
+      expect(findLine('Continue'), findsOneWidget);
     });
   });
 
@@ -479,7 +486,7 @@ void main() {
       expect(rig.container.read(currentSettingsProvider), same(before));
     });
 
-    testWidgets('with nothing that answered, the exit is Go to Home and adds '
+    testWidgets('with nothing that answered, the exit is Continue and adds '
         'nothing', (tester) async {
       final diagnose = _Diagnose()..fallback = _silent();
       final rig = await _pump(
@@ -527,6 +534,9 @@ void main() {
         [for (final c in rig.added.single) c.instance.service],
         [ServiceKey.radarr],
       );
+      // Handed over by name, for the close to say rather than promise.
+      expect(rig.added.single.single.name, 'Radarr');
+      expect(rig.notJoined.single, ['Sonarr']);
     });
 
     testWidgets('red wears a ghost Retry, in ink, and asking again can '
@@ -578,7 +588,7 @@ void main() {
       expect(find.text('Retry'), findsNothing);
       // Nothing in the row but its sentence: the one button is the exit's.
       expect(find.byType(FilledButton), findsOneWidget);
-      expect(findLine('Go to Home'), findsOneWidget);
+      expect(findLine('Continue'), findsOneWidget);
     });
   });
 
@@ -617,7 +627,7 @@ void main() {
       );
       // The same key can only be refused again: no Retry beside the remedy.
       expect(find.text('Retry'), findsNothing);
-      expect(findLine('Go to Home'), findsOneWidget);
+      expect(findLine('Continue'), findsOneWidget);
     });
 
     testWidgets('Type its address opens a field in the row, and what is typed '
@@ -831,7 +841,7 @@ void main() {
         find.text('Radarr 4K has a certificate Cupola does not trust'),
         findsOneWidget,
       );
-      expect(findLine('Go to Home'), findsOneWidget);
+      expect(findLine('Continue'), findsOneWidget);
 
       await tester.tap(find.text('Check the certificate'));
       await _settle(tester);
@@ -899,7 +909,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Trying from this device'), findsNothing);
-      expect(findLine('Go to Home'), findsOneWidget);
+      expect(findLine('Continue'), findsOneWidget);
     });
 
     testWidgets('Paste puts the key in and tries it', (tester) async {
@@ -1077,7 +1087,7 @@ void main() {
   });
 
   group('a source that knows nothing', () {
-    testWidgets('says so, and the exit is Go to Home', (tester) async {
+    testWidgets('says so, and the exit is Continue', (tester) async {
       final rig = await _pump(
         tester,
         known: const [],
@@ -1117,7 +1127,7 @@ void main() {
 
   group('a source that did not answer', () {
     testWidgets('is said in the source\'s own words, with a ghost Retry, and '
-        'Go to Home is still the way out', (tester) async {
+        'Continue is still the way out', (tester) async {
       final rig = await _pump(
         tester,
         known: const [],
@@ -1317,8 +1327,9 @@ void main() {
                     source: harness.profile.connection(WorldIds.seerr).instance,
                     certificateProber: (url, {pinnedFingerprint = ''}) async =>
                         null,
-                    onAdd: (found) async => added.add(found),
-                    onGoHome: () => wentHome.add(true),
+                    onDone: (found, _) async {
+                      found.isEmpty ? wentHome.add(true) : added.add(found);
+                    },
                     onBack: () {},
                   ),
                 ),

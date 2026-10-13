@@ -72,6 +72,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   static const _startPage = 1;
   static const _connectPage = 2;
   static const _foundPage = 3;
+  static const _closePage = 4;
 
   late final _pageController = PageController(initialPage: _page);
 
@@ -81,6 +82,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// The connection Found reads what it knows from, once Seerr or Prowlarr
   /// answered and was saved.
   ServiceInstance? _foundSource;
+
+  /// What the close says: the names that answered in this visit, the ones
+  /// known and not added, and the services the ring lights for them.
+  List<String> _answering = const [];
+  List<String> _notJoined = const [];
+  Set<ServiceKey> _lit = const {};
 
   /// The ring's entrance. One authored moment on the door, then stillness.
   late final AnimationController _entrance = AnimationController(
@@ -257,15 +264,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     return _apiKeyCtrl[k]!.text.trim().isNotEmpty;
   }
 
-  /// The ring's state, derived rather than stored: one map, four beats.
-  Map<ServiceKey, ServiceRingState> get _ringStates => {
-    for (final k in _picked)
-      k: switch (_verdictOf(k)) {
-        ServiceConnectionStatus.connected => ServiceRingState.connected,
-        null => ServiceRingState.picked,
-        _ => _isReady(k) ? ServiceRingState.silent : ServiceRingState.picked,
-      },
-  };
+  /// The ring's state, derived rather than stored: one map, every beat. On
+  /// the close it is what answered, lit.
+  Map<ServiceKey, ServiceRingState> get _ringStates => _page == _closePage
+      ? {for (final k in _lit) k: ServiceRingState.connected}
+      : {
+          for (final k in _picked)
+            k: switch (_verdictOf(k)) {
+              ServiceConnectionStatus.connected => ServiceRingState.connected,
+              null => ServiceRingState.picked,
+              _ =>
+                _isReady(k) ? ServiceRingState.silent : ServiceRingState.picked,
+            },
+        };
 
   /// The fingerprint [k]'s *currently typed* address is trusted under, or null.
   ///
@@ -642,7 +653,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// Seerr and Prowlarr lead somewhere: they know the others.
   bool get _targetKnowsOthers => _target.knowsOthers != null;
 
-  /// The service answered: saved, then on to what it knows, or home.
+  /// The service answered: saved, then on to what it knows, or the close.
   Future<void> _advance() async {
     final saved = await _save();
     if (!saved || !mounted) return;
@@ -654,12 +665,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         return;
       }
     }
-    await _finish();
+    _close(answering: [_target.title], lit: {_target});
   }
 
-  /// Found's services that answered, written in one save with the
-  /// certificates trusted for them, then home.
-  Future<void> _addFound(List<FoundConnection> found) async {
+  /// Found's way on: what answered written in one save with the certificates
+  /// trusted for it, then the close.
+  Future<void> _foundDone(
+    List<FoundConnection> found,
+    List<String> notJoined,
+  ) async {
+    final source = _foundSource!;
+    if (found.isNotEmpty && !await _saveFound(found)) return;
+    if (!mounted) return;
+    _close(
+      answering: [source.service.title, for (final c in found) c.name],
+      notJoined: notJoined,
+      lit: {source.service, for (final c in found) c.instance.service},
+    );
+  }
+
+  Future<bool> _saveFound(List<FoundConnection> found) async {
     var updated = ref.read(currentSettingsProvider);
     for (final connection in found) {
       updated = updated.copyWithInstance(connection.instance);
@@ -672,16 +697,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     }
     try {
       await ref.read(settingsProvider.notifier).updateSettings(updated);
+      return true;
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) return false;
       SnackBarHelper.error(
         context,
         "Could not save your services. Retry, and restart Cupola if it "
         'keeps failing.',
       );
-      return;
+      return false;
     }
-    await _finish();
+  }
+
+  /// The close: what answered, and the way into the app.
+  void _close({
+    required List<String> answering,
+    List<String> notJoined = const [],
+    required Set<ServiceKey> lit,
+  }) {
+    setState(() {
+      _answering = answering;
+      _notJoined = notJoined;
+      _lit = lit;
+    });
+    _goTo(_closePage);
   }
 
   /// Out of Connect: to the Welcome on a first run, back where the visit came
@@ -720,7 +759,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// the screen empty with no ring in it, and a tall phone with the software
   /// keyboard up has room for a reduced one.
   double _fullRingDiameter(BuildContext context, double available) {
-    final preferred = _page == _welcomePage ? 300.0 : 190.0;
+    // The Welcome and the close are about the whole stack, so the instrument
+    // is the subject there.
+    final preferred = _page == _welcomePage || _page == _closePage
+        ? 300.0
+        : 190.0;
     final wanted = serviceRingDiameter(context, preferred: preferred);
     if (!available.isFinite) return wanted;
 
@@ -831,7 +874,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     certificateProbe: _pendingCert[service],
     trustedFingerprint: _pinFor(service),
     affectedServices: _servicesSharingOrigin(service),
-    advanceLabel: service.knowsOthers != null ? 'Continue' : 'Go to Home',
     onTest: () => _test(service),
     onTrustCertificate: () => _trustCertificate(service),
     onSuggestPort: () => _suggestPort(service),
@@ -852,7 +894,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     // The room the walk happens in: lit by the neutral lamp throughout. Null on
-    // the door, the pick and the close, where `AmbientBackground`'s own default
+    // the Welcome, Start and the close, where `AmbientBackground`'s own default
     // is the lamp; per service in between, where the service's accent is the
     // lamp too, so the light holds steady while the page and the ring move,
     // and the service being set up is named by its mark and its form, never by
@@ -996,11 +1038,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                     OnboardingFound(
                                       key: ValueKey(source.id),
                                       source: source,
-                                      onAdd: _addFound,
-                                      onGoHome: _finish,
+                                      onDone: _foundDone,
                                       onBack: () => _goTo(_connectPage),
                                       certificateProber:
                                           widget.certificateProber,
+                                    )
+                                  else
+                                    const SizedBox.shrink(),
+                                  if (_answering.isNotEmpty)
+                                    OnboardingClose(
+                                      answering: _answering,
+                                      notJoined: _notJoined,
+                                      setUp: {
+                                        for (final s in ServiceKey.values)
+                                          if (ref
+                                              .watch(currentSettingsProvider)
+                                              .hasServiceConnection(s))
+                                            s,
+                                      },
+                                      onEnter: _finish,
                                     )
                                   else
                                     const SizedBox.shrink(),

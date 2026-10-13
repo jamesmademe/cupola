@@ -39,14 +39,20 @@ import 'package:cupola/features/settings/presentation/widgets/cert_trust_content
 /// address away from home when the source's External URL accepted the key.
 /// [certFingerprint] is the certificate trusted in this beat for the address'
 /// origin, to be pinned with `SettingsModel.copyWithTrustedCertificate`, or
-/// null when nothing was trusted here (a pin already saved covers it).
+/// null when nothing was trusted here (a pin already saved covers it). [name]
+/// is what the source calls it ("Radarr 4K"), for the close to say.
 ///
 /// The key is a secret: [toString] never prints it.
 @immutable
 class FoundConnection {
-  const FoundConnection({required this.instance, this.certFingerprint});
+  const FoundConnection({
+    required this.instance,
+    required this.name,
+    this.certFingerprint,
+  });
 
   final ServiceInstance instance;
+  final String name;
   final String? certFingerprint;
 
   @override
@@ -98,10 +104,10 @@ typedef FoundDiagnose =
 /// - what does not answer says so in its own row and never holds another.
 ///
 /// The exit counts only what answered and is on (`Add 2 services`), and is
-/// `Go to Home` when there is nothing to add. [onBack] is the other way out;
-/// there is no skip.
+/// `Continue` when there is nothing to add; both lead to the close. [onBack] is
+/// the other way out; there is no skip.
 ///
-/// **Saves nothing.** [onAdd] gets the connections to save, with ids minted
+/// **Saves nothing.** [onDone] gets the connections to save, with ids minted
 /// against the saved ones, and the screen that owns the flow writes them.
 /// The key is tried from this device and sent nowhere else; an address that
 /// would carry it in the clear off the local network is never tried.
@@ -112,8 +118,7 @@ class OnboardingFound extends ConsumerStatefulWidget {
   const OnboardingFound({
     super.key,
     required this.source,
-    required this.onAdd,
-    required this.onGoHome,
+    required this.onDone,
     required this.onBack,
     this.nothingKnownBody,
     this.diagnose = diagnoseInstanceWithCertProbe,
@@ -123,11 +128,16 @@ class OnboardingFound extends ConsumerStatefulWidget {
   /// The connection just set up, a Seerr or a Prowlarr, already saved.
   final ServiceInstance source;
 
-  /// Saves what answered and is on. Not called with an empty list: that is
-  /// [onGoHome].
-  final Future<void> Function(List<FoundConnection> found) onAdd;
+  /// The way on: what answered and is on, to save (empty when there is
+  /// nothing to add), and by name what the source knew that did not join (it
+  /// did not answer, or its key never came). A row switched off is the
+  /// person's choice and is in neither.
+  final Future<void> Function(
+    List<FoundConnection> found,
+    List<String> notJoined,
+  )
+  onDone;
 
-  final VoidCallback onGoHome;
   final VoidCallback onBack;
 
   final Widget? nothingKnownBody;
@@ -243,6 +253,9 @@ class _FoundRow {
               reason == ServiceFailureReason.unauthorized));
 
   bool get answeredAndOn => stage == _Stage.answered && on;
+
+  /// Known to the source and not in: it did not answer, or was never tried.
+  bool get notJoined => stage != _Stage.answered;
 
   /// The failure as one sentence, its cause stated once.
   String get failureSentence {
@@ -573,6 +586,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
       final origin = UrlUtils.certOrigin(url);
       found.add(
         FoundConnection(
+          name: row.name,
           instance: ServiceInstance(
             id: id,
             service: row.service,
@@ -587,8 +601,13 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
         ),
       );
     }
-    await widget.onAdd(found);
+    await widget.onDone(found, _notJoined);
   }
+
+  List<String> get _notJoined => [
+    for (final row in _rows ?? const <_FoundRow>[])
+      if (row.notJoined) row.name,
+  ];
 
   // ── Drawing ───────────────────────────────────────────────────────────────
 
@@ -656,11 +675,13 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
       besideRing: MainAxisAlignment.start,
       actions: OnboardingFooter(
         primary: ReelCommandButton(
-          label: chosen == 0 ? _goHome : _addLabel(chosen),
-          // Going home navigates and does not wait; adding does.
+          label: chosen == 0 ? _continue : _addLabel(chosen),
+          // Continuing only turns the page; adding saves, and waits.
           busyLabel: chosen == 0 ? null : 'Adding',
-          slotLabels: [_goHome, _addLabel(1), _addLabel(rows?.length ?? 2)],
-          onPressed: chosen == 0 ? () async => widget.onGoHome() : _add,
+          slotLabels: [_continue, _addLabel(1), _addLabel(rows?.length ?? 2)],
+          onPressed: chosen == 0
+              ? () => widget.onDone(const [], _notJoined)
+              : _add,
         ),
       ),
       children: [
@@ -715,7 +736,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
   }
 }
 
-const _goHome = 'Go to Home';
+const _continue = 'Continue';
 
 String _addLabel(int count) =>
     'Add $count ${count == 1 ? 'service' : 'services'}';

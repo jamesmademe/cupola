@@ -209,7 +209,8 @@ void main() {
       findsOneWidget,
     );
 
-    await _tap(tester, harness, 'Go to Home');
+    await _tap(tester, harness, 'Continue');
+    await _tap(tester, harness, 'Enter Cupola');
     final radarr = container
         .read(settingsProvider)
         .instanceById(WorldIds.radarr);
@@ -267,7 +268,8 @@ void main() {
       WorldHosts.radarr,
     );
 
-    await _tap(tester, harness, 'Go to Home');
+    await _tap(tester, harness, 'Continue');
+    await _tap(tester, harness, 'Enter Cupola');
     final radarr = container
         .read(settingsProvider)
         .instanceById(WorldIds.radarr);

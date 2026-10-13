@@ -266,7 +266,6 @@ class OnboardingWalk extends StatefulWidget {
     required this.certificateProbe,
     required this.trustedFingerprint,
     this.affectedServices = const [],
-    required this.advanceLabel,
     required this.onTest,
     required this.onTrustCertificate,
     required this.onSuggestPort,
@@ -328,10 +327,6 @@ class OnboardingWalk extends StatefulWidget {
   /// Other services in this walk whose typed address shares this one's TLS
   /// origin: trusting or forgetting the certificate here covers them too.
   final List<ServiceKey> affectedServices;
-
-  /// What the primary says once the service has answered: `Continue` where
-  /// Found follows, `Go to Home` where it does not.
-  final String advanceLabel;
 
   final Future<void> Function() onTest;
   final VoidCallback onTrustCertificate;
@@ -448,7 +443,6 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
             primary: _TestOrAdvance(
               status: widget.status,
               verifying: widget.verifying,
-              advanceLabel: widget.advanceLabel,
               onTest: widget.onTest,
               onAdvance: widget.onAdvance,
             ),
@@ -661,14 +655,15 @@ class _TestOrAdvance extends StatelessWidget {
   const _TestOrAdvance({
     required this.status,
     required this.verifying,
-    required this.advanceLabel,
     required this.onTest,
     required this.onAdvance,
   });
 
   final ServiceConnectionStatus? status;
   final bool verifying;
-  final String advanceLabel;
+
+  /// Once the service answers, the way on: to Found or to the close.
+  static const _advance = 'Continue';
   final Future<void> Function() onTest;
   final VoidCallback onAdvance;
 
@@ -677,7 +672,7 @@ class _TestOrAdvance extends StatelessWidget {
     final connected = status == ServiceConnectionStatus.connected;
 
     return ReelCommandButton(
-      label: connected ? advanceLabel : 'Test connection',
+      label: connected ? _advance : 'Test connection',
       // Absent on the advance arm: that press navigates, it does not wait, and a
       // waiting label would flash for one frame on the way out.
       busyLabel: connected ? null : 'Testing',
@@ -687,7 +682,7 @@ class _TestOrAdvance extends StatelessWidget {
       failureLabel: connected ? null : 'Test again',
       // Both arms measured now, so the one transition this reservation exists
       // for: the answer moves a word and not the button's width.
-      slotLabels: ['Test connection', 'Test again', advanceLabel],
+      slotLabels: const ['Test connection', 'Test again', _advance],
       onPressed: verifying
           ? null
           : connected

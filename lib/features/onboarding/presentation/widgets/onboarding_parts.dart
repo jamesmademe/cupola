@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/reel_command_button.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/core/widgets/setup_doors.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -549,6 +550,119 @@ class OnboardingWelcome extends StatelessWidget {
           'account, no cloud in between.',
           style: theme.textTheme.bodyLarge!.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── The close ───────────────────────────────────────────────────────────────
+
+/// The end of the way in: what answered, under the ring lit with it, and the
+/// one way on, into the app.
+///
+/// The headline is Cupola's promise, [OnePunchline.closing], and it is earned:
+/// it is said only when everything this visit tried has joined. When something
+/// did not (a found service that did not answer, or whose key never came), the
+/// headline counts instead and the body names what is missing: a promise said
+/// over a gap is the sort of claim that teaches someone not to read the next
+/// one.
+class OnboardingClose extends StatelessWidget {
+  const OnboardingClose({
+    super.key,
+    required this.answering,
+    this.notJoined = const [],
+    required this.setUp,
+    required this.onEnter,
+  });
+
+  /// What this visit set up and heard back from, by name, in the order set up.
+  final List<String> answering;
+
+  /// What the visit tried, or was told about, and could not add, by name.
+  final List<String> notJoined;
+
+  /// Every service with a connection now, so the example of what to add next
+  /// is never one already there.
+  final Set<ServiceKey> setUp;
+
+  final Future<void> Function() onEnter;
+
+  /// Names as a sentence says them: "Seerr", "Seerr and Radarr", "Seerr,
+  /// Radarr and Sonarr", and past three the first two "and 3 more".
+  static String sayNames(List<String> names) => switch (names) {
+    [final one] => one,
+    [final a, final b] => '$a and $b',
+    [final a, final b, final c] => '$a, $b and $c',
+    [final a, final b, ...final rest] => '$a, $b and ${rest.length} more',
+    _ => '',
+  };
+
+  /// The service offered as the example of what can still be added: Lidarr by
+  /// preference, and never Readarr, which is retired upstream, so naming it as
+  /// the thing to add next is advice with a dead end. Null when everything
+  /// else is already there.
+  ServiceKey? get _exampleToAdd {
+    final missing = [
+      for (final s in ServiceKey.values)
+        if (s != ServiceKey.readarr && !setUp.contains(s)) s,
+    ];
+    if (missing.isEmpty) return null;
+    return missing.contains(ServiceKey.lidarr)
+        ? ServiceKey.lidarr
+        : missing.first;
+  }
+
+  String get _body {
+    final heard =
+        '${sayNames(answering)} ${answering.length == 1 ? 'is' : 'are'} '
+        'answering.';
+    if (notJoined.isNotEmpty) {
+      final one = notJoined.length == 1;
+      return '$heard ${sayNames(notJoined)} ${one ? 'is' : 'are'} not added '
+          'yet: add ${one ? 'it' : 'them'} any time from Connections in '
+          'Settings.';
+    }
+    final example = _exampleToAdd;
+    if (example == null) return heard;
+    return '$heard ${example.title} and the rest can be added any time from '
+        'Connections in Settings.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final tried = answering.length + notJoined.length;
+    return OnboardingBeat(
+      alignment: MainAxisAlignment.end,
+      actions: OnboardingFooter(
+        primary: ReelCommandButton(
+          label: 'Enter Cupola',
+          busyLabel: 'Opening',
+          onPressed: onEnter,
+        ),
+      ),
+      children: [
+        if (notJoined.isEmpty)
+          const OnePunchline.closing()
+        else
+          Semantics(
+            header: true,
+            child: Text(
+              '${answering.length} of $tried answering.',
+              style: theme.textTheme.displayMedium!.copyWith(
+                color: scheme.onSurface,
+                height: 1.10,
+              ),
+            ),
+          ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          _body,
+          style: theme.textTheme.bodyLarge!.copyWith(
+            color: scheme.onSurfaceVariant,
           ),
         ),
       ],

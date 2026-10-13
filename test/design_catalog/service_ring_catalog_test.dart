@@ -124,9 +124,16 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'OnePunchline · displayMedium at w600, 1.10 leading; one ink: the '
-        'display face carries the claim, not a hue',
+        'OnePunchline · the claim, on the Welcome: two lines in displayMedium '
+        'at 1.10 leading, one ink; the display face carries the words, not a '
+        'hue',
         (_) => const OnePunchline(),
+        width: 390,
+      ),
+      CatalogScene(
+        'OnePunchline.closing · the promise, on the close once everything '
+        'tried has joined: the same lockup',
+        (_) => const OnePunchline.closing(),
         width: 390,
       ),
       CatalogScene(

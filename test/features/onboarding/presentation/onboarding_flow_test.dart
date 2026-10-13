@@ -18,6 +18,7 @@ import 'package:cupola/core/network/host_reach.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
@@ -50,7 +51,8 @@ void main() {
       expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
       expect(flow.container.read(onboardingCompletedProvider), isFalse);
 
-      await _tap(tester, flow, 'Go to Home');
+      await _tap(tester, flow, 'Continue');
+      await _tap(tester, flow, 'Enter Cupola');
 
       // Saved, flagged, and out: the router never sends anyone away from the
       // way in, so leaving it is the screen's to do.
@@ -91,8 +93,8 @@ void main() {
   });
 
   group('the primary action', () {
-    testWidgets('reads Continue for Seerr and Go to Home for Radarr, once '
-        'they answer', (tester) async {
+    testWidgets('reads Continue once the service answers, for Seerr and '
+        'for Radarr alike', (tester) async {
       final flow = await _pumpFlow(tester, Profiles.p3);
 
       // Seerr, which the door opens on, knows others: something follows it.
@@ -102,17 +104,15 @@ void main() {
       await _tap(tester, flow, 'Test connection');
       expect(find.text('Seerr answered.'), findsOneWidget);
       expect(_primary('Continue'), findsOneWidget);
-      expect(_primary('Go to Home'), findsNothing);
 
-      // Radarr does not: the way in ends with it.
+      // Radarr does not know others; it still goes on, to the close.
       await _tap(tester, flow, 'Start with another service');
       await _tap(tester, flow, 'Set up Radarr');
       expect(_primary('Test connection'), findsOneWidget);
       await _fill(tester, flow, WorldHosts.radarr, WorldIds.radarr);
       await _tap(tester, flow, 'Test connection');
       expect(find.text('Radarr answered.'), findsOneWidget);
-      expect(_primary('Go to Home'), findsOneWidget);
-      expect(_primary('Continue'), findsNothing);
+      expect(_primary('Continue'), findsOneWidget);
 
       await flow.harness.unmount(tester);
     });
@@ -130,7 +130,7 @@ void main() {
         await _fill(tester, flow, WorldHosts.radarr, WorldIds.radarr);
         await _tap(tester, flow, 'Test connection');
         expect(find.text('Radarr answered.'), findsOneWidget);
-        expect(_primary('Go to Home'), findsOneWidget);
+        expect(_primary('Continue'), findsOneWidget);
 
         final input = find.byType(TextField).at(field);
         final typed = tester.widget<TextField>(input).controller!.text;
@@ -139,14 +139,14 @@ void main() {
 
         expect(find.text('Radarr answered.'), findsNothing);
         expect(_primary('Test connection'), findsOneWidget);
-        expect(_primary('Go to Home'), findsNothing);
+        expect(_primary('Continue'), findsNothing);
         // Nothing was saved on the way, and nothing is for the asking.
         expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
 
         // Put back as it was tested, the answer holds again.
         await tester.enterText(input, typed);
         await flow.harness.settle(tester);
-        expect(_primary('Go to Home'), findsOneWidget);
+        expect(_primary('Continue'), findsOneWidget);
 
         await flow.harness.unmount(tester);
       });
@@ -168,7 +168,7 @@ void main() {
       await flow.harness.settle(tester);
       await _tap(tester, flow, 'Test connection');
 
-      expect(_primary('Go to Home'), findsNothing);
+      expect(_primary('Continue'), findsNothing);
       expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
       expect(flow.container.read(onboardingCompletedProvider), isFalse);
 
@@ -196,6 +196,17 @@ void main() {
       await tester.tap(findLine('Add 2 services'));
       await flow.harness.settle(tester);
 
+      // The close: everything Seerr knew joined, so the promise is made, and
+      // the way in is over only once the person enters.
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.label == OnePunchline.promise,
+        ),
+        findsOneWidget,
+      );
+      expect(flow.container.read(onboardingCompletedProvider), isFalse);
+      await _tap(tester, flow, 'Enter Cupola');
+
       expect(flow.router.state.uri.path, ServiceRoutes.home);
       expect(flow.container.read(onboardingCompletedProvider), isTrue);
       final saved = flow.container.read(settingsProvider);
@@ -222,7 +233,8 @@ void main() {
       expect(findLine('Set up Radarr'), findsOneWidget);
       await _fill(tester, flow, WorldHosts.radarr, WorldIds.radarr);
       await _tap(tester, flow, 'Test connection');
-      await _tap(tester, flow, 'Go to Home');
+      await _tap(tester, flow, 'Continue');
+      await _tap(tester, flow, 'Enter Cupola');
 
       final saved = flow.container.read(settingsProvider);
       expect(saved.radarrUrl, WorldHosts.radarr);
@@ -251,7 +263,7 @@ void main() {
 
       // No way forward from a service that did not answer, and nothing saved.
       expect(find.text('Radarr answered.'), findsNothing);
-      expect(_primary('Go to Home'), findsNothing);
+      expect(_primary('Continue'), findsNothing);
       expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
       expect(flow.container.read(onboardingCompletedProvider), isFalse);
 
@@ -259,7 +271,8 @@ void main() {
       flow.harness.network.behave(WorldIds.radarr, ConnectionBehaviour.answers);
       await _tap(tester, flow, 'Test connection');
       expect(find.text('Radarr answered.'), findsOneWidget);
-      await _tap(tester, flow, 'Go to Home');
+      await _tap(tester, flow, 'Continue');
+      await _tap(tester, flow, 'Enter Cupola');
 
       expect(
         flow.container.read(settingsProvider).radarrUrl,
@@ -290,7 +303,8 @@ void main() {
       await _openService(tester, flow, 'Radarr');
       await _fill(tester, flow, WorldHosts.radarr, WorldIds.radarr);
       await _tap(tester, flow, 'Test connection');
-      await _tap(tester, flow, 'Go to Home');
+      await _tap(tester, flow, 'Continue');
+      await _tap(tester, flow, 'Enter Cupola');
 
       final saved = flow.container.read(settingsProvider);
       expect(saved.radarrUrl, WorldHosts.radarr);
@@ -332,7 +346,8 @@ void main() {
       await tester.enterText(find.byType(TextField).first, WorldHosts.sonarr);
       await flow.harness.settle(tester);
       await _tap(tester, flow, 'Test connection');
-      await _tap(tester, flow, 'Go to Home');
+      await _tap(tester, flow, 'Continue');
+      await _tap(tester, flow, 'Enter Cupola');
 
       final saved = flow.container.read(settingsProvider);
       expect(saved.sonarrUrl, WorldHosts.sonarr);
