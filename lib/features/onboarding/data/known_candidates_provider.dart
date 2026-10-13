@@ -56,7 +56,7 @@ final _knownByConnectionProvider = FutureProvider.autoDispose
       }
       switch (source.service) {
         case ServiceKey.seerr:
-          return _fromSeerr(ref, source);
+          return withoutRepeats(await _fromSeerr(ref, source));
         case ServiceKey.prowlarr:
           return _fromProwlarr(ref, source);
         default:
@@ -93,6 +93,24 @@ Future<List<ConnectionCandidate>> _fromProwlarr(
       .knownApplications();
   return [
     for (final application in applications) ?application.toCandidate(source),
+  ];
+}
+
+/// [candidates] with a server listed once.
+///
+/// A Seerr household often adds one Radarr twice, as its default server and as
+/// its 4K one, with different quality profiles and the same address and key.
+/// That is one server for Cupola to connect to: the first listing is kept. A
+/// candidate with no key (Prowlarr gives none) is never taken for a repeat:
+/// nothing but a key says two listings are one server.
+List<ConnectionCandidate> withoutRepeats(List<ConnectionCandidate> candidates) {
+  final seen = <(ServiceKey, String)>{};
+  return [
+    for (final candidate in candidates)
+      if (candidate.apiKey == null ||
+          candidate.apiKey!.isEmpty ||
+          seen.add((candidate.service, candidate.apiKey!)))
+        candidate,
   ];
 }
 
@@ -137,6 +155,14 @@ bool _isConnected(ConnectionCandidate candidate, SettingsModel settings) {
     }
   }
   return false;
+}
+
+/// Whether [a] and [b] are one address: the same scheme, host, port and path,
+/// whatever the case of the first two, a default port written out or left
+/// off, and a trailing slash. False when either names no host.
+bool isSameAddress(String? a, String? b) {
+  final first = _addressKey(a);
+  return first != null && first == _addressKey(b);
 }
 
 /// [raw] as one comparable string: scheme, host, explicit port and path, with

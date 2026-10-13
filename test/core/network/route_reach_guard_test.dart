@@ -274,6 +274,14 @@ const _exceptions = <String, ({int count, String reason})>{
     count: 1,
     reason: 'The certificate trusted for the address in the walk\'s field.',
   ),
+  'lib/features/onboarding/presentation/widgets/onboarding_found.dart  pinForUrl(':
+      (
+        count: 1,
+        reason:
+            'The certificate already trusted for the address a found service '
+            'is tried at, shown beside the one it presents now: an address '
+            'that is no connection yet.',
+      ),
   'lib/features/settings/data/service_verification.dart  .url': (
     count: 2,
     reason:

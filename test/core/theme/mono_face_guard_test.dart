@@ -288,6 +288,13 @@ const _monoUses = <({String file, int uses, String prints})>[
         'character by character',
   ),
   (
+    file: 'lib/features/onboarding/presentation/widgets/onboarding_found.dart',
+    uses: 1,
+    prints:
+        'the SHA-256 fingerprint of a certificate a found service presents: a '
+        'hash, compared character by character',
+  ),
+  (
     file:
         'lib/features/release_search/presentation/widgets/release_search_job_card.dart',
     uses: 1,

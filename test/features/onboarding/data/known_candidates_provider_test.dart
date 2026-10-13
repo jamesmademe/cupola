@@ -162,6 +162,41 @@ void main() {
     });
   });
 
+  group('one server listed twice', () {
+    ConnectionCandidate radarr(String name, {String? key}) =>
+        ConnectionCandidate(
+          service: ServiceKey.radarr,
+          name: name,
+          reportedUrl: WorldHosts.radarr,
+          source: const CandidateSource(
+            service: ServiceKey.seerr,
+            connectionId: WorldIds.seerr,
+            url: WorldHosts.seerr,
+          ),
+          apiKey: key,
+        );
+
+    test('is one candidate: Seerr\'s default and its 4K server on one '
+        'Radarr', () {
+      final candidates = withoutRepeats([
+        radarr('Radarr', key: 'same-key'),
+        radarr('Radarr 4K', key: 'same-key'),
+        radarr('Radarr Anime', key: 'another-key'),
+      ]);
+
+      expect([for (final c in candidates) c.name], ['Radarr', 'Radarr Anime']);
+    });
+
+    test('is never told by a missing key', () {
+      final candidates = withoutRepeats([
+        radarr('Radarr'),
+        radarr('Radarr 4K'),
+      ]);
+
+      expect(candidates, hasLength(2));
+    });
+  });
+
   group('a service that knows nothing of the others', () {
     test('is not asked', () async {
       final (harness, container) = await start(Profiles.p1);
