@@ -16,6 +16,7 @@ import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/onboarding/presentation/widgets/onboarding_found.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_walk.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
@@ -23,6 +24,7 @@ import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_access_rules.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
@@ -70,11 +72,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   static const _welcomePage = 0;
   static const _startPage = 1;
   static const _connectPage = 2;
+  static const _foundPage = 3;
 
   late final _pageController = PageController(initialPage: _page);
 
   /// The service Connect is setting up: Seerr unless the person chose another.
   ServiceKey _target = ServiceKey.seerr;
+
+  /// The connection Found reads what it knows from, once Seerr or Prowlarr
+  /// answered and was saved.
+  ServiceInstance? _foundSource;
 
   /// The ring's entrance. One authored moment on the door, then stillness.
   late final AnimationController _entrance = AnimationController(
@@ -720,6 +727,41 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   Future<void> _advance() async {
     final saved = await _save();
     if (!saved || !mounted) return;
+    if (_targetKnowsOthers) {
+      final source = ref.read(currentSettingsProvider).primaryOf(_target);
+      if (source != null) {
+        setState(() => _foundSource = source);
+        _goTo(_foundPage);
+        return;
+      }
+    }
+    await _finish();
+  }
+
+  /// Found's services that answered, written in one save with the
+  /// certificates trusted for them, then home.
+  Future<void> _addFound(List<FoundConnection> found) async {
+    var updated = ref.read(currentSettingsProvider);
+    for (final connection in found) {
+      updated = updated.copyWithInstance(connection.instance);
+      if (connection.certFingerprint case final pin?) {
+        updated = updated.copyWithTrustedCertificate(
+          url: connection.instance.url,
+          fingerprint: pin,
+        );
+      }
+    }
+    try {
+      await ref.read(settingsProvider.notifier).updateSettings(updated);
+    } catch (_) {
+      if (!mounted) return;
+      SnackBarHelper.error(
+        context,
+        "Could not save your services. Retry, and restart Cupola if it "
+        'keeps failing.',
+      );
+      return;
+    }
     await _finish();
   }
 
@@ -1032,6 +1074,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                     onBack: () => _goTo(_connectPage),
                                   ),
                                   _connectStep(_target),
+                                  if (_foundSource case final source?)
+                                    OnboardingFound(
+                                      key: ValueKey(source.id),
+                                      source: source,
+                                      onAdd: _addFound,
+                                      onGoHome: _finish,
+                                      onBack: () => _goTo(_connectPage),
+                                      certificateProber:
+                                          widget.certificateProber,
+                                    )
+                                  else
+                                    const SizedBox.shrink(),
                                 ],
                               ),
                             ),

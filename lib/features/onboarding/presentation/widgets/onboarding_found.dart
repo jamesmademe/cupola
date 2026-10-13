@@ -56,6 +56,20 @@ class FoundConnection {
       '${certFingerprint == null ? '' : ', certificate trusted'})';
 }
 
+/// What a found connection is called beside its service, as a label typed in
+/// Connections would be: Seerr's "Radarr 4K" is "4K" next to Radarr, and a
+/// name that is only the service's own says nothing to add.
+String foundLabel(ServiceKey service, String name) {
+  final trimmed = name.trim();
+  final title = service.title.toLowerCase();
+  final lower = trimmed.toLowerCase();
+  if (lower == title) return '';
+  if (lower.startsWith('$title ')) {
+    return trimmed.substring(title.length).trim();
+  }
+  return trimmed;
+}
+
 /// Tries one connection from this device: the shape of
 /// [diagnoseInstanceWithCertProbe], so a widget test can answer for it and
 /// stay off the network.
@@ -562,7 +576,7 @@ class _OnboardingFoundState extends ConsumerState<OnboardingFound> {
           instance: ServiceInstance(
             id: id,
             service: row.service,
-            label: row.name == row.service.title ? '' : row.name,
+            label: foundLabel(row.service, row.name),
             url: url,
             credential: row.key,
             away: row.awayUrl == null
