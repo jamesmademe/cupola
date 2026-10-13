@@ -747,6 +747,50 @@ String failureHeadline(
   ServiceFailureReason.unknown => 'The request to $subject did not complete',
 };
 
+/// What happened to several connections that failed the same way, as one
+/// title: `Radarr, Sonarr and 6 others were reached but did not reply in
+/// time`. [subjects] is them already named, more than one.
+///
+/// Equal faults are grouped (the brand book's fourth rule): eight services
+/// behind one stuck host used to read as eight sentences, the same one eight
+/// times. Null where the sentence for one cannot be said of many (a gateway's
+/// answer, a secret this device would not read, Seerr's token): each of those
+/// still says its own.
+String? failureGroupHeadline(
+  ServiceFailureReason reason, {
+  required String subjects,
+  String credential = kRefusedCredential,
+}) => switch (reason) {
+  ServiceFailureReason.unreachable => '$subjects did not answer',
+  ServiceFailureReason.unauthorized =>
+    credential == kRefusedSignIn
+        ? '$subjects answered but refused the sign-in'
+        : '$subjects answered but refused their ${_pluralCredential(credential)}',
+  ServiceFailureReason.sessionEnded => 'Signed out of $subjects',
+  ServiceFailureReason.timeout =>
+    '$subjects were reached but did not reply in time',
+  ServiceFailureReason.tls =>
+    '$subjects have certificates Cupola does not trust',
+  ServiceFailureReason.notFound => '$subjects are not at their addresses',
+  ServiceFailureReason.redirected =>
+    '$subjects answered with redirects Cupola will not follow',
+  ServiceFailureReason.serverError => '$subjects answered with an error',
+  ServiceFailureReason.invalidResponse =>
+    '$subjects answered with something Cupola cannot read',
+  ServiceFailureReason.insecureTransport => '$subjects need https:// addresses',
+  // Said of the device, not of any of them: once is enough.
+  ServiceFailureReason.localNetworkBlocked =>
+    'This device is keeping Cupola off the local network',
+  ServiceFailureReason.unknown => 'The requests to $subjects did not complete',
+  ServiceFailureReason.secretUnread ||
+  ServiceFailureReason.csrfRefused ||
+  ServiceFailureReason.accessGateway => null,
+};
+
+/// A refused [credential] said of many connections: `keys`, `tokens` (Plex).
+String _pluralCredential(String credential) =>
+    credential == 'token' ? 'tokens' : 'keys';
+
 /// The verb that fixes this fault, when the fix is somewhere other than asking
 /// again: `Paste the key again`, `Check the address`. Null when `Retry` is the
 /// remedy: nothing answered, or the service answered with a failure of its

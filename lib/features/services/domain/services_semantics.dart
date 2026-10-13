@@ -204,21 +204,27 @@ String servicesDidNotAnswer(
   // unreachable leaf says, and this is the sentence the alert band, the section
   // empty states and the screen reader all share.
   const verb = 'did not answer';
-
-  final String subject;
-  if (titles.length <= maxNamed) {
-    subject = titles.length == 1
-        ? titles.single
-        : '${titles.take(titles.length - 1).join(', ')} and ${titles.last}';
-  } else {
-    final hidden = titles.length - maxNamed;
-    final others = hidden == 1 ? '1 other' : '$hidden others';
-    subject = '${titles.take(maxNamed).join(', ')} and $others';
-  }
+  final subject = servicesNamed(titles, maxNamed: maxNamed);
 
   return at == null
       ? '$subject $verb'
       : '$subject $verb at ${formatClockTime(at)}';
+}
+
+/// [titles] as the subject of one sentence: `Radarr`, `Radarr and Sonarr`,
+/// `Radarr, Sonarr and Lidarr`, and past [maxNamed] the rest counted:
+/// `Radarr, Sonarr and 6 others`. The band's and a module's failure sentences
+/// name their services this way, silent or failing alike.
+String servicesNamed(List<String> titles, {int maxNamed = 3}) {
+  if (titles.isEmpty) return '';
+  if (titles.length <= maxNamed) {
+    return titles.length == 1
+        ? titles.single
+        : '${titles.take(titles.length - 1).join(', ')} and ${titles.last}';
+  }
+  final hidden = titles.length - maxNamed;
+  final others = hidden == 1 ? '1 other' : '$hidden others';
+  return '${titles.take(maxNamed).join(', ')} and $others';
 }
 
 /// The alert band's second sentence, on a surface wide enough to carry it.

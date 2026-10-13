@@ -309,26 +309,56 @@ const _namesPerKind = 2;
 /// answered but refused the sign-in.`
 ///
 /// The sources that did not answer share the alert band's sentence so the two
-/// never disagree about the same fact.
+/// never disagree about the same fact. The sources that failed the same way
+/// share one sentence too, named as the silent ones are: `Radarr, Sonarr and
+/// 6 others were reached but did not reply in time.`, never that sentence
+/// once for each of them.
 String coverageFailureSentence(SourceCoverage coverage) {
   final silent = <String>[];
-  final faults = <String>[];
+  // In the order the first of each kind failed; keyed on what the sentence
+  // says: the credential only where it is named, so two refused keys group
+  // and a key and a sign-in refused do not, while a slow Plex and a slow
+  // Jellyfin are one sentence.
+  final faults = <(ServiceFailureReason, String), List<CoverageSource>>{};
   for (final source in coverage.failedInOrder) {
     final reason = coverage.failed[source]!;
     if (failureDidNotAnswer(reason)) {
       silent.add(source.title);
     } else {
-      final headline = describeFailure(
-        source.service,
-        reason,
-        subject: source.title,
-        gateway: coverage.gateways[source],
-      ).headline;
-      faults.add('$headline.');
+      final credential = reason == ServiceFailureReason.unauthorized
+          ? refusedCredentialOf(source.service)
+          : kRefusedCredential;
+      (faults[(reason, credential)] ??= []).add(source);
     }
   }
   return [
     if (silent.isNotEmpty) servicesSectionOfflineMessage(silent),
-    ...faults,
+    for (final MapEntry(key: (reason, credential), value: sources)
+        in faults.entries)
+      ..._faultSentences(coverage, reason, credential, sources),
   ].join(' ');
+}
+
+/// One sentence for [sources] that failed for [reason] alike, or one each
+/// where that sentence cannot be said of many.
+List<String> _faultSentences(
+  SourceCoverage coverage,
+  ServiceFailureReason reason,
+  String credential,
+  List<CoverageSource> sources,
+) {
+  if (sources.length > 1) {
+    final grouped = failureGroupHeadline(
+      reason,
+      subjects: servicesNamed([
+        for (final source in sources) source.title,
+      ], maxNamed: _namesPerKind),
+      credential: credential,
+    );
+    if (grouped != null) return ['$grouped.'];
+  }
+  return [
+    for (final source in sources)
+      '${describeFailure(source.service, reason, subject: source.title, gateway: coverage.gateways[source]).headline}.',
+  ];
 }

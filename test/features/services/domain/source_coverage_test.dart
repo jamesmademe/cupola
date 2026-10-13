@@ -212,4 +212,81 @@ void main() {
       'the sign-in.',
     );
   });
+
+  group('equal faults are grouped', () {
+    const slow = ClassifiedFailure(ServiceFailureReason.timeout);
+
+    test('in one sentence, named as the silent ones are', () {
+      // Eight services behind one stuck host: the lab paused, 13/10.
+      final coverage = SourceCoverage.merge([
+        for (final service in const [
+          ServiceKey.radarr,
+          ServiceKey.sonarr,
+          ServiceKey.lidarr,
+          ServiceKey.readarr,
+          ServiceKey.qbittorrent,
+          ServiceKey.transmission,
+          ServiceKey.sabnzbd,
+          ServiceKey.nzbget,
+        ])
+          SourceCoverage.failure(service, slow),
+      ]);
+      expect(
+        coverageFailureSentence(coverage),
+        'Radarr, Sonarr and 6 others were reached but did not reply in time.',
+      );
+    });
+
+    test('two of a kind are both named', () {
+      final coverage = SourceCoverage.merge([
+        SourceCoverage.failure(ServiceKey.jellyfin, slow),
+        SourceCoverage.failure(ServiceKey.plex, slow),
+      ]);
+      expect(
+        coverageFailureSentence(coverage),
+        'Jellyfin and Plex were reached but did not reply in time.',
+      );
+    });
+
+    test('silence first, then each kind of fault once', () {
+      final coverage = SourceCoverage.merge([
+        SourceCoverage.failure(ServiceKey.radarr, refused),
+        SourceCoverage.failure(ServiceKey.sonarr, slow),
+        SourceCoverage.failure(ServiceKey.lidarr, refused),
+        SourceCoverage.failure(ServiceKey.readarr, silent),
+        SourceCoverage.failure(ServiceKey.prowlarr, slow),
+      ]);
+      expect(
+        coverageFailureSentence(coverage),
+        'Readarr did not answer. Radarr and Lidarr answered but refused their '
+        'keys. Sonarr and Prowlarr were reached but did not reply in time.',
+      );
+    });
+
+    test('a key and a sign-in refused are two sentences', () {
+      final coverage = SourceCoverage.merge([
+        SourceCoverage.failure(ServiceKey.radarr, refused),
+        SourceCoverage.failure(ServiceKey.qbittorrent, refused),
+        SourceCoverage.failure(ServiceKey.transmission, refused),
+      ]);
+      expect(
+        coverageFailureSentence(coverage),
+        'Radarr answered but refused the key. qBittorrent and Transmission '
+        'answered but refused the sign-in.',
+      );
+    });
+
+    test('a fault that cannot be said of many says each', () {
+      const gateway = ClassifiedFailure(ServiceFailureReason.accessGateway);
+      final coverage = SourceCoverage.merge([
+        SourceCoverage.failure(ServiceKey.radarr, gateway),
+        SourceCoverage.failure(ServiceKey.sonarr, gateway),
+      ]);
+      expect(
+        coverageFailureSentence(coverage),
+        'Something in front of Radarr answered instead of it. Something in '
+        'front of Sonarr answered instead of it.',
+      );
+    });
+  });
 }
