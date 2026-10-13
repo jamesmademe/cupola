@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -119,6 +120,7 @@ class SettingsService {
   /// re-probes every service, which is a connection storm for what is really a
   /// tab change.
   static const _kActiveInstances = 'active_instances';
+  static const _kConnectionRoutes = 'connection_routes';
 
   /// Where TrueNAS's and Dockge's fingerprints lived under ADR-5, kept only
   /// so [_loadTrustedCertificates] can migrate an existing install once.
@@ -323,6 +325,40 @@ class SettingsService {
     );
   }
 
+  /// The connections last reached at their address away from home, by id.
+  ///
+  /// Synchronous, as [loadActiveInstances] is: a cold start away from home
+  /// goes straight to the address that answered last, before any probe. Only
+  /// [ConnectionRoute.away] is stored; every other connection is at home. An
+  /// id that names no connection any more is harmless: a route is only read
+  /// for a connection that has an address away.
+  Map<String, ConnectionRoute> loadConnectionRoutes() {
+    final raw = _prefs.getString(_kConnectionRoutes);
+    if (raw == null || raw.isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const {};
+      return {
+        for (final id in decoded)
+          if (id is String && id.isNotEmpty) id: ConnectionRoute.away,
+      };
+    } on FormatException {
+      return const {};
+    }
+  }
+
+  Future<void> saveConnectionRoutes(Map<String, ConnectionRoute> routes) async {
+    final away = [
+      for (final MapEntry(:key, :value) in routes.entries)
+        if (value == ConnectionRoute.away) key,
+    ]..sort();
+    if (away.isEmpty) {
+      await _prefs.remove(_kConnectionRoutes);
+    } else {
+      await _prefs.setString(_kConnectionRoutes, jsonEncode(away));
+    }
+  }
+
   Future<bool> loadOnboardingComplete() async {
     return _prefs.getBool(_kOnboardingComplete) ?? false;
   }
@@ -349,8 +385,9 @@ class SettingsService {
     }
     await _prefs.remove(_kInstanceRoster);
     await _prefs.remove(_kActiveInstances);
+    await _prefs.remove(_kConnectionRoutes);
 
-    // A primary's access and Seerr account, for the install whose roster
+    // A primary's access, address away and Seerr account, for the install whose roster
     // lost a write: the roster is what the loop above walked.
     for (final service in ServiceKey.values) {
       final primary = ServiceInstance(
@@ -358,6 +395,8 @@ class SettingsService {
         service: service,
       );
       await _prefs.remove(primary.accessStorageKey);
+      await _prefs.remove(primary.awayUrlStorageKey);
+      await _prefs.remove(primary.awayAccessStorageKey);
       await _prefs.remove(primary.accountStorageKey);
     }
 
@@ -460,7 +499,10 @@ class SettingsService {
     final instances = [
       for (final instance in ordered)
         await _withAccount(
-          instance.copyWith(access: await _loadAccess(instance)),
+          instance.copyWith(
+            access: await _loadAccess(instance),
+            away: await _loadAway(instance),
+          ),
         ),
     ];
 
@@ -516,8 +558,13 @@ class SettingsService {
         (legacy != null && _unreadKeys.contains(legacy))) {
       return instance.withUnreadSecret(UnreadSecret.credential);
     }
-    final accessPrefix = 'secure_${instance.id}_access';
-    if (_unreadKeys.any((key) => key.startsWith(accessPrefix))) {
+    final accessPrefixes = [
+      'secure_${instance.id}_access',
+      'secure_${instance.id}_away_access',
+    ];
+    if (_unreadKeys.any(
+      (key) => accessPrefixes.any((prefix) => key.startsWith(prefix)),
+    )) {
       return instance.withUnreadSecret(UnreadSecret.access);
     }
     return instance;
@@ -921,8 +968,16 @@ class SettingsService {
       }
       await _writeOrRemove(instance.usernameStorageKey, instance.username);
       await _writeOrRemove(instance.viewerIdStorageKey, instance.viewerId);
+      await _writeOrRemove(
+        instance.awayUrlStorageKey,
+        instance.away?.url ?? '',
+      );
       if (instance.unreadSecret != UnreadSecret.access) {
         await _saveAccess(instance);
+        await _saveAccessAt(
+          _awayAccessKeys(instance),
+          instance.away?.access ?? const NoAccess(),
+        );
       }
       await _saveAccount(instance);
     }
@@ -994,6 +1049,8 @@ class SettingsService {
     await _prefs.remove(instance.viewerIdStorageKey);
     await _secureStore.delete(key: instance.credentialStorageKey);
     await _saveAccess(instance.copyWith(access: const NoAccess()));
+    await _prefs.remove(instance.awayUrlStorageKey);
+    await _saveAccessAt(_awayAccessKeys(instance), const NoAccess());
     // A refused sign-in is kept as a mark derived from the password: it goes
     // with the connection like the password itself.
     if (instance.service == ServiceKey.qbittorrent) {
@@ -1092,12 +1149,16 @@ class SettingsService {
   // install that predates access has no `<id>_access` key and reads NoAccess,
   // so there is no migration.
 
-  /// Writes [instance]'s access, removing whatever its previous access left
-  /// behind: a secret the new kind does not use, a header the list no longer
-  /// has.
-  Future<void> _saveAccess(ServiceInstance instance) async {
-    final previousHeaders = _storedAccessHeaderNames(instance).length;
-    final access = instance.access;
+  /// Writes [instance]'s access at home, removing whatever its previous
+  /// access left behind: a secret the new kind does not use, a header the
+  /// list no longer has.
+  Future<void> _saveAccess(ServiceInstance instance) =>
+      _saveAccessAt(_homeAccessKeys(instance), instance.access);
+
+  /// Writes [access] under [keys], removing whatever the access stored there
+  /// before left behind.
+  Future<void> _saveAccessAt(_AccessKeys keys, ConnectionAccess access) async {
+    final previousHeaders = _storedAccessHeaderNames(keys).length;
 
     final Map<String, Object> public;
     String? secret;
@@ -1120,20 +1181,17 @@ class SettingsService {
     }
 
     if (public.isEmpty) {
-      await _prefs.remove(instance.accessStorageKey);
+      await _prefs.remove(keys.public);
     } else {
-      await _prefs.setString(instance.accessStorageKey, jsonEncode(public));
+      await _prefs.setString(keys.public, jsonEncode(public));
     }
     if (secret == null || secret.isEmpty) {
-      await _secureStore.delete(key: instance.accessSecretStorageKey);
+      await _secureStore.delete(key: keys.secret);
     } else {
-      await _secureStore.write(
-        key: instance.accessSecretStorageKey,
-        value: secret,
-      );
+      await _secureStore.write(key: keys.secret, value: secret);
     }
     for (final (index, value) in headerValues.indexed) {
-      final key = instance.accessHeaderStorageKey(index);
+      final key = keys.header(index);
       if (value.isEmpty) {
         await _secureStore.delete(key: key);
       } else {
@@ -1141,15 +1199,29 @@ class SettingsService {
       }
     }
     for (var index = headerValues.length; index < previousHeaders; index++) {
-      await _secureStore.delete(key: instance.accessHeaderStorageKey(index));
+      await _secureStore.delete(key: keys.header(index));
     }
   }
 
-  /// [instance]'s access as stored, [NoAccess] when there is none or it does
-  /// not parse: a value a later build wrote, or one edited by hand, costs the
-  /// access and never the connection.
-  Future<ConnectionAccess> _loadAccess(ServiceInstance instance) async {
-    final public = _storedAccess(instance);
+  /// [instance]'s access at home as stored, [NoAccess] when there is none or
+  /// it does not parse: a value a later build wrote, or one edited by hand,
+  /// costs the access and never the connection.
+  Future<ConnectionAccess> _loadAccess(ServiceInstance instance) =>
+      _loadAccessAt(_homeAccessKeys(instance));
+
+  /// [instance]'s address away from home, or null when it has none. Its
+  /// access reads as the one at home does.
+  Future<ConnectionAddress?> _loadAway(ServiceInstance instance) async {
+    final url = _loadString(instance.awayUrlStorageKey).trim();
+    if (url.isEmpty) return null;
+    return ConnectionAddress(
+      url: url,
+      access: await _loadAccessAt(_awayAccessKeys(instance)),
+    );
+  }
+
+  Future<ConnectionAccess> _loadAccessAt(_AccessKeys keys) async {
+    final public = _storedAccess(keys);
     if (public == null) return const NoAccess();
     String text(Object? value) => value is String ? value : '';
 
@@ -1157,21 +1229,18 @@ class SettingsService {
       case AccessKind.cloudflare:
         return CloudflareServiceToken(
           clientId: text(public['clientId']),
-          clientSecret: await _loadApiKey(instance.accessSecretStorageKey),
+          clientSecret: await _loadApiKey(keys.secret),
         );
       case AccessKind.password:
         return ProxyPassword(
           username: text(public['username']),
-          password: await _loadApiKey(instance.accessSecretStorageKey),
+          password: await _loadApiKey(keys.secret),
         );
       case AccessKind.custom:
-        final names = _storedAccessHeaderNames(instance);
+        final names = _storedAccessHeaderNames(keys);
         return CustomHeaders([
           for (final (index, name) in names.indexed)
-            (
-              name: name,
-              value: await _loadApiKey(instance.accessHeaderStorageKey(index)),
-            ),
+            (name: name, value: await _loadApiKey(keys.header(index))),
         ]);
       case AccessKind.none:
       case null:
@@ -1179,8 +1248,8 @@ class SettingsService {
     }
   }
 
-  Map<String, Object?>? _storedAccess(ServiceInstance instance) {
-    final raw = _prefs.getString(instance.accessStorageKey);
+  Map<String, Object?>? _storedAccess(_AccessKeys keys) {
+    final raw = _prefs.getString(keys.public);
     if (raw == null || raw.isEmpty) return null;
     try {
       final decoded = jsonDecode(raw);
@@ -1190,13 +1259,25 @@ class SettingsService {
     }
   }
 
-  /// The custom header names stored for [instance], which is also how many
-  /// header values secure storage holds for it.
-  List<String> _storedAccessHeaderNames(ServiceInstance instance) {
-    final names = _storedAccess(instance)?['names'];
+  /// The custom header names stored under [keys], which is also how many
+  /// header values secure storage holds there.
+  List<String> _storedAccessHeaderNames(_AccessKeys keys) {
+    final names = _storedAccess(keys)?['names'];
     if (names is! List) return const [];
     return [for (final name in names) name is String ? name : ''];
   }
+
+  _AccessKeys _homeAccessKeys(ServiceInstance instance) => (
+    public: instance.accessStorageKey,
+    secret: instance.accessSecretStorageKey,
+    header: instance.accessHeaderStorageKey,
+  );
+
+  _AccessKeys _awayAccessKeys(ServiceInstance instance) => (
+    public: instance.awayAccessStorageKey,
+    secret: instance.awayAccessSecretStorageKey,
+    header: instance.awayAccessHeaderStorageKey,
+  );
 
   Future<void> _writeRoster(List<ServiceInstance> instances) async {
     if (instances.isEmpty) {
@@ -1300,3 +1381,11 @@ class _ServiceStorageKeys {
     this.clientId,
   });
 }
+
+/// Where one address's access lives: its non-secret half in
+/// `SharedPreferences`, its secret and its header values in secure storage.
+typedef _AccessKeys = ({
+  String public,
+  String secret,
+  String Function(int index) header,
+});

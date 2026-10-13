@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/last_known/last_known_store.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
+import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_not_configured.dart';
@@ -142,6 +145,11 @@ class ActiveInstancesNotifier extends Notifier<Map<ServiceKey, String>> {
 /// about a different one is how a background job started against the seedbox
 /// finishes against the box at home. The lens is not consulted at all in that
 /// case, so this does not rebuild when the lens moves.
+///
+/// The address, the access and the pin are the route's ([reachOf]): for a
+/// connection with an address away from home, the one the route probe last
+/// found answering. Its route is watched only for such a connection, so a
+/// connection with one address never rebuilds when another one moves.
 ServiceTransport watchTransport(
   Ref ref,
   ServiceKey service, {
@@ -152,7 +160,7 @@ ServiceTransport watchTransport(
       ? instanceId
       : ref.watch(activeInstancesProvider.select((lenses) => lenses[service]));
 
-  return ref.watch(
+  final resolved = ref.watch(
     currentSettingsProvider.select((s) {
       final instances = s.instancesOf(service);
       final named = instances
@@ -162,29 +170,54 @@ ServiceTransport watchTransport(
           ? named
           : named ?? (instances.isEmpty ? null : instances.first);
 
-      if (instance == null) {
-        return (
-          configured: false,
-          url: '',
-          apiKey: '',
-          username: '',
-          pin: null,
-          access: const NoAccess(),
-          session: '',
-          instanceId: '',
-        );
-      }
+      if (instance == null) return null;
       return (
         configured: instance.isConfigured,
-        url: instance.url,
         apiKey: instance.credential,
         username: instance.username,
-        pin: s.pinForUrl(instance.url),
-        access: instance.access,
         session: instance.account?.session ?? '',
         instanceId: instance.id,
+        home: reachOf(s, instance, ConnectionRoute.home),
+        away: instance.away == null
+            ? null
+            : reachOf(s, instance, ConnectionRoute.away),
       );
     }),
+  );
+
+  if (resolved == null) {
+    return (
+      configured: false,
+      url: '',
+      apiKey: '',
+      username: '',
+      pin: null,
+      access: const NoAccess(),
+      session: '',
+      instanceId: '',
+    );
+  }
+  // Both addresses are selected above and the route is watched here, only
+  // for a connection that has an address away: moving one connection's
+  // route rebuilds that connection's clients and no other.
+  final away = resolved.away;
+  final route = watchConnectionRoute(
+    ref,
+    resolved.instanceId,
+    hasAway: away != null,
+  );
+  final reach = route == ConnectionRoute.away && away != null
+      ? away
+      : resolved.home;
+  return (
+    configured: resolved.configured,
+    url: reach.url,
+    apiKey: resolved.apiKey,
+    username: resolved.username,
+    pin: reach.pin,
+    access: reach.access,
+    session: resolved.session,
+    instanceId: resolved.instanceId,
   );
 }
 

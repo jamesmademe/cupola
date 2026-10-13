@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One configured connection to one server.
@@ -90,6 +91,17 @@ class ServiceInstance {
   /// everything but the session is kept, so signing in again is one step.
   final SeerrAccountSignIn? account;
 
+  /// The address that reaches this server away from home, with what its
+  /// gateway asks for, or null for a connection reached at [url] only.
+  ///
+  /// [url] stays the address the connection is saved and known by: the one
+  /// a trusted certificate, a kept drawing (`LastKnownStore`) and a link name
+  /// it by. Which of the two a request goes to is the route's business
+  /// (`reachOf`), never this field's reader's. Stored beside the address at
+  /// home ([awayUrlStorageKey], [awayAccessStorageKey]), its secrets in
+  /// secure storage under keys derived from [id].
+  final ConnectionAddress? away;
+
   /// The secret of this connection that secure storage would not hand over
   /// when the settings were read, or null when every one of them came back.
   ///
@@ -111,6 +123,7 @@ class ServiceInstance {
     this.viewerId = '',
     this.access = const NoAccess(),
     this.account,
+    this.away,
     this.unreadSecret,
   }) : assert(
          account == null || service == ServiceKey.seerr,
@@ -183,6 +196,24 @@ class ServiceInstance {
   String accessHeaderStorageKey(int index) =>
       'secure_${id}_access_header_$index';
 
+  /// Where [away]'s address lives in `SharedPreferences`.
+  String get awayUrlStorageKey => '${id}_away_url';
+
+  /// Where the non-secret half of [away]'s access lives, as [accessStorageKey]
+  /// holds the one at home.
+  String get awayAccessStorageKey => '${id}_away_access';
+
+  /// Where the secret of [away]'s access lives in secure storage.
+  String get awayAccessSecretStorageKey => 'secure_${id}_away_access_secret';
+
+  /// Where the value of [away]'s custom header [index] lives in secure
+  /// storage.
+  String awayAccessHeaderStorageKey(int index) =>
+      'secure_${id}_away_access_header_$index';
+
+  /// The address at home, as an address: [url] and [access].
+  ConnectionAddress get home => ConnectionAddress(url: url, access: access);
+
   /// Where the non-secret half of [account] lives in `SharedPreferences`, as
   /// JSON. Absent for a connection that signs in with its key, which is also
   /// what every install before accounts reads: nothing to migrate.
@@ -253,6 +284,8 @@ class ServiceInstance {
     ConnectionAccess? access,
     SeerrAccountSignIn? account,
     bool clearAccount = false,
+    ConnectionAddress? away,
+    bool clearAway = false,
   }) {
     return ServiceInstance(
       id: id,
@@ -264,13 +297,16 @@ class ServiceInstance {
       viewerId: viewerId ?? this.viewerId,
       access: access ?? this.access,
       account: clearAccount ? null : account ?? this.account,
+      away: clearAway ? null : away ?? this.away,
       // Only a new value of the secret that could not be read replaces it.
       // An edit that carries the empty one along (the address changed, the
       // key field untouched) keeps the mark, and with it the stored secret,
       // which a keychain that was only locked hands over next time.
       unreadSecret: switch (unreadSecret) {
         UnreadSecret.credential when credential?.isNotEmpty ?? false => null,
-        UnreadSecret.access when access != null && access != this.access =>
+        UnreadSecret.access
+            when (access != null && access != this.access) ||
+                (away != null && away.access != this.away?.access) =>
           null,
         final kept => kept,
       },
@@ -289,6 +325,7 @@ class ServiceInstance {
     viewerId: viewerId,
     access: access,
     account: account,
+    away: away,
     unreadSecret: secret,
   );
 
@@ -304,6 +341,7 @@ class ServiceInstance {
         other.viewerId == viewerId &&
         other.access == access &&
         other.account == account &&
+        other.away == away &&
         other.unreadSecret == unreadSecret;
   }
 
@@ -318,6 +356,7 @@ class ServiceInstance {
     viewerId,
     access,
     account,
+    away,
     unreadSecret,
   );
 
@@ -328,6 +367,7 @@ class ServiceInstance {
       'ServiceInstance($id, ${service.name}, label: "$label", url: "$url", '
       'access: ${access.kind.name}'
       '${account == null ? '' : ', account: $account'}'
+      '${away == null ? '' : ', away: $away'}'
       '${unreadSecret == null ? '' : ', unread: ${unreadSecret!.name}'})';
 }
 
@@ -337,6 +377,6 @@ enum UnreadSecret {
   credential,
 
   /// What a gateway in front of the service asks for: a Cloudflare service
-  /// token, a proxy password, a custom header's value.
+  /// token, a proxy password, a custom header's value; at home or away.
   access,
 }
