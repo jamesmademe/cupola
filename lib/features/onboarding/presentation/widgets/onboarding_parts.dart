@@ -358,10 +358,25 @@ class OnboardingBeat extends StatelessWidget {
     this.actions,
     this.alignment = MainAxisAlignment.start,
     this.besideRing = MainAxisAlignment.center,
+    this.controller,
+    this.subjectAbove = false,
   });
 
   final List<Widget> children;
   final Widget? actions;
+
+  /// The content's scroll, for the one beat whose owner puts it back at the
+  /// top: Connect, which Found's Back returns to as it was left.
+  final ScrollController? controller;
+
+  /// Whether a subject is hoisted right above the beat, as Connect's is.
+  ///
+  /// The subject keeps its own gap under it, so the top gutter would double it:
+  /// 40pt between "Start with another service" and the form's first label, and
+  /// a two-field form 30pt taller than a 6.3" phone has for it at rest, so the
+  /// first field scrolled out of view as soon as the second took the cursor
+  /// (13/10).
+  final bool subjectAbove;
 
   /// Where the content sits in the space the ring leaves it.
   ///
@@ -394,13 +409,14 @@ class OnboardingBeat extends StatelessWidget {
               top: AppSpacing.md,
               bottom: AppSpacing.sm,
             )
-          : onboardingPadding,
+          : onboardingPadding.copyWith(top: subjectAbove ? 0 : null),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
+                controller: controller,
                 // Dragging the form puts the keyboard away, the platform gesture
                 // for exactly that.
                 keyboardDismissBehavior:
@@ -449,6 +465,7 @@ class OnboardingBeat extends StatelessWidget {
         children: [
           Flexible(
             child: SingleChildScrollView(
+              controller: controller,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: children,
@@ -909,37 +926,49 @@ class _OnboardingFieldState extends State<OnboardingField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          // Baselines, not boxes: the breadcrumb is smaller than the label and
-          // the two have to sit on one line of type rather than on one box.
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            // Flexible, so a label that names a connection (`Radarr 4K's API
-            // key`) wraps at a large reading size instead of overflowing.
-            Flexible(
-              child: Text(
-                widget.label,
-                style: theme.textTheme.labelMedium!
-                    .weight(FontWeight.w600)
-                    .copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ),
-            if (widget.breadcrumb case final breadcrumb?) ...[
-              const SizedBox(width: AppSpacing.md),
-              // Flexible and wrapping rather than elided: the path is the whole
-              // value of the line, and `Settings → General → API…` sends the
-              // user looking for a menu that does not exist.
-              Flexible(
+        LayoutBuilder(
+          builder: (context, row) => Row(
+            // Baselines, not boxes: the breadcrumb is smaller than the label
+            // and the two have to sit on one line of type rather than on one
+            // box.
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              // The label takes what it needs, up to half the row beside a
+              // breadcrumb: a label that names a connection (`Radarr 4K's API
+              // key`) wraps there at a large reading size instead of
+              // overflowing. Two Flexibles split the row in halves instead,
+              // and Seerr's path broke onto a second line beside a label a
+              // third its width (13/10).
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: widget.breadcrumb == null
+                      ? row.maxWidth
+                      : row.maxWidth / 2,
+                ),
                 child: Text(
-                  breadcrumb,
-                  style: theme.textTheme.bodySmall!.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  widget.label,
+                  style: theme.textTheme.labelMedium!
+                      .weight(FontWeight.w600)
+                      .copyWith(color: scheme.onSurfaceVariant),
                 ),
               ),
+              if (widget.breadcrumb case final breadcrumb?) ...[
+                const SizedBox(width: AppSpacing.md),
+                // Wrapping rather than elided: the path is the whole value of
+                // the line, and `Settings → General → API…` sends the user
+                // looking for a menu that does not exist.
+                Expanded(
+                  child: Text(
+                    breadcrumb,
+                    style: theme.textTheme.bodySmall!.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Container(

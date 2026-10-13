@@ -515,21 +515,31 @@ void main() {
         'https://nas.home.arpa',
         'nas.tail1234.ts.net',
         'http://seerr.example.com',
-        'https://192.168.1.20:5055',
-        'nas:8989',
+        'https://192.168.1.20:8989',
+        'nas:7878',
       ]) {
-        expect(UrlUtils.offersDefaultPort(raw), isTrue, reason: raw);
+        expect(
+          UrlUtils.offersDefaultPort(raw, port: 5055),
+          isTrue,
+          reason: raw,
+        );
       }
     });
 
-    test('no where a path follows or a proxy answers', () {
+    test('no where a path follows, a proxy answers or the port is there', () {
       for (final raw in [
         'https://nas.local/sonarr',
         'https://seerr.example.com',
         'seerr.example.com',
         'https://example.com/seerr/',
+        'http://192.168.1.20:5055',
+        'nas:5055',
       ]) {
-        expect(UrlUtils.offersDefaultPort(raw), isFalse, reason: raw);
+        expect(
+          UrlUtils.offersDefaultPort(raw, port: 5055),
+          isFalse,
+          reason: raw,
+        );
       }
     });
   });

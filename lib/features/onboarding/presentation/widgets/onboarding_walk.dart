@@ -272,6 +272,7 @@ class OnboardingWalk extends StatefulWidget {
     required this.onAdvance,
     required this.onBack,
     this.onStartElsewhere,
+    this.formScroll,
   });
 
   final ServiceKey service;
@@ -342,6 +343,10 @@ class OnboardingWalk extends StatefulWidget {
   /// with it: without this, another service would be out of reach exactly
   /// where the person has the least room to look for it.
   final VoidCallback? onStartElsewhere;
+
+  /// The form's scroll, held by the screen so that every arrival at the step
+  /// opens on its first field, whatever the visit before left it at.
+  final ScrollController? formScroll;
 
   @override
   State<OnboardingWalk> createState() => _OnboardingWalkState();
@@ -430,6 +435,10 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   Widget build(BuildContext context) {
     return OnboardingBeat(
       besideRing: MainAxisAlignment.start,
+      controller: widget.formScroll,
+      // Folded away in the short screen's register, where the link to
+      // another service comes down to the form instead.
+      subjectAbove: widget.onStartElsewhere == null,
       actions: Column(
         // Beside the ring the footer keeps its own width, so Back lines up
         // under it at the column's edge rather than floating in the middle.
@@ -492,7 +501,10 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           // the port on, and a chip that does nothing is a broken promise.
           builder: (context, value, _) =>
               value.text.trim().isNotEmpty &&
-                  UrlUtils.offersDefaultPort(value.text)
+                  UrlUtils.offersDefaultPort(
+                    value.text,
+                    port: service.defaultPort,
+                  )
               ? _PortChip(
                   port: service.defaultPort,
                   onTap: widget.onSuggestPort,

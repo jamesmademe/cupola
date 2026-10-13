@@ -342,6 +342,8 @@ void main() {
 
       final field = tester.widget<TextField>(find.byType(TextField).first);
       expect(field.controller!.text, 'https://nas.local:8989');
+      // The port is there now: a chip that would put it there again goes.
+      expect(_semantics('Use port 8989'), findsNothing);
     });
 
     testWidgets('no port is offered beside a name a reverse proxy answers', (
@@ -790,6 +792,63 @@ void main() {
   /// on this viewport it was left roughly 60pt, which clipped the address field
   /// mid-glyph and hid the validation line that explains why the step will not
   /// advance. The ring now gives its slot back instead.
+
+  group('the form at rest', () {
+    // The simulator's iPhone 17 Pro: the phone the defect was seen on.
+    const phone = Size(402, 874);
+
+    ScrollPosition formScroll(WidgetTester tester) => tester
+        .state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(OnboardingWalk),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        )
+        .position;
+
+    testWidgets(
+      'a two-field form fits, so its first field never scrolls away',
+      (tester) async {
+        await _pumpOnboarding(tester, viewport: phone);
+        await _tap(tester, 'Set up a service');
+
+        // Seerr: the longest subject and a breadcrumb beside the key's label.
+        expect(formScroll(tester).maxScrollExtent, 0);
+        final label = tester.getRect(find.text('API key'));
+        final path = tester.getRect(
+          find.text('Seerr → Settings → General → API Key'),
+        );
+        // Beside a label a third its width, the path takes the rest of the
+        // row rather than half of it, and keeps to one line where it fits.
+        expect(path.width, greaterThan((path.right - label.left) / 2));
+      },
+    );
+
+    testWidgets('every arrival opens the form at its first field', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await _tap(tester, 'Set up a service');
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+      await tester.pumpAndSettle();
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+      expect(formScroll(tester).pixels, greaterThan(0));
+
+      await _reachAndTapStartElsewhere(tester);
+      tester.view.viewInsets = FakeViewPadding.zero;
+      await tester.pumpAndSettle();
+      await _tap(tester, 'Back');
+
+      expect(find.text('Set up Seerr'), findsOneWidget);
+      expect(formScroll(tester).pixels, 0);
+    });
+  });
+
   group('with the keyboard up', () {
     const phone = Size(393, 852);
     const keyboard = 336.0;

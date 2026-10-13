@@ -76,6 +76,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   late final _pageController = PageController(initialPage: _page);
 
+  /// Connect's form scroll, put back at the top on every arrival: a test's
+  /// outcome scrolls the form to its foot, and Found's Back returned to it
+  /// there, with the address out of view above (13/10).
+  final _formScroll = ScrollController();
+
   /// The service Connect is setting up: Seerr unless the person chose another.
   ServiceKey _target = ServiceKey.seerr;
 
@@ -236,6 +241,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // Before the controllers go: a disposed notifier cannot be listened to.
     _edits.removeListener(_onEdited);
     _pageController.dispose();
+    _formScroll.dispose();
     _entrance.dispose();
     for (final c in _urlCtrl.values) {
       c.dispose();
@@ -619,6 +625,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // the point: every way out of a step, forward, back, skip or fix, comes
     // through this method.
     FocusManager.instance.primaryFocus?.unfocus();
+    if (page == _connectPage && _formScroll.hasClients) _formScroll.jumpTo(0);
     setState(() => _page = page);
     // Reduce Motion removes the slide rather than shortening it, the same way
     // the ring's entrance is removed: the beat is simply the next one. This is
@@ -880,6 +887,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     onAdvance: _advance,
     onBack: _backFromConnect,
     onStartElsewhere: compact ? () => _goTo(_startPage) : null,
+    formScroll: _formScroll,
   );
 
   @override
