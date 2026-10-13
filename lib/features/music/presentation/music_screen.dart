@@ -13,6 +13,7 @@ import 'package:cupola/features/music/presentation/music_provider.dart';
 import 'package:cupola/features/music/presentation/music_search_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -82,6 +83,9 @@ class MusicScreen extends ConsumerWidget {
       ref.watch(lidarrQueueSnapshotsProvider),
     ).byArtist;
     final lens = ref.watch(activeInstanceProvider(ServiceKey.lidarr))?.id ?? '';
+    // Which of its addresses the lens's connection is reached at: the
+    // posters go where the library is read from.
+    final route = ref.watch(connectionRouteProvider(lens));
 
     return MediaBrowseScaffold<LidarrArtist>(
       title: 'Music',
@@ -118,7 +122,7 @@ class MusicScreen extends ConsumerWidget {
         ref.invalidate(lidarrKpiLibraryProvider);
       },
       // The lens's connection, never the first one's: see `movies_screen.dart`.
-      settingsSelector: (settings) => settings.artworkKeyOf(lens),
+      settingsSelector: (settings) => settings.artworkKeyOf(lens, route),
       onItemTap: (context, artist, heroTag) {
         context.push(
           ServiceRoutes.lidarrArtist(artist.id, heroTag: heroTag),

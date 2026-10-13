@@ -16,6 +16,7 @@ import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/series/presentation/series_search_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -51,6 +52,9 @@ class SeriesScreen extends ConsumerWidget {
     // No badge until the queue answers: see `movies_screen.dart`.
     final queue = queueSnapshotOf(ref.watch(sonarrQueueSnapshotProvider));
     final lens = ref.watch(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
+    // Which of its addresses the lens's connection is reached at: the
+    // posters go where the library is read from.
+    final route = ref.watch(connectionRouteProvider(lens));
 
     return MediaBrowseScaffold<SonarrSeries>(
       title: 'TV series',
@@ -88,7 +92,7 @@ class SeriesScreen extends ConsumerWidget {
         ref.invalidate(sonarrKpiLibraryProvider);
       },
       // The lens's connection, never the first one's: see `movies_screen.dart`.
-      settingsSelector: (settings) => settings.artworkKeyOf(lens),
+      settingsSelector: (settings) => settings.artworkKeyOf(lens, route),
       onItemTap: (context, series, heroTag) {
         // The series' own page, under this tab, opened on this Sonarr's copy;
         // with no TMDB id, the way through its id here, where a Seerr can

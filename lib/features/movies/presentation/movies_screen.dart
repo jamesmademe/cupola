@@ -13,6 +13,7 @@ import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/movies/presentation/movies_search_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
@@ -56,6 +57,9 @@ class MoviesScreen extends ConsumerWidget {
     // and `Unknown` only once the read failed (`badgeOverQueue`).
     final queue = queueSnapshotOf(ref.watch(radarrQueueSnapshotProvider));
     final lens = ref.watch(activeInstanceProvider(ServiceKey.radarr))?.id ?? '';
+    // Which of its addresses the lens's connection is reached at: the
+    // posters go where the library is read from.
+    final route = ref.watch(connectionRouteProvider(lens));
 
     return MediaBrowseScaffold<RadarrMovie>(
       title: 'Movies',
@@ -100,7 +104,7 @@ class MoviesScreen extends ConsumerWidget {
       // keyed on the first Radarr drew its movies' artwork from the other
       // server, under that server's ids. Editing the lens's connection re-keys
       // the grid, and editing another does not.
-      settingsSelector: (settings) => settings.artworkKeyOf(lens),
+      settingsSelector: (settings) => settings.artworkKeyOf(lens, route),
       onItemTap: (context, movie, heroTag) {
         // The film's own page, under this tab, opened on this Radarr's copy.
         if (movie.tmdbId <= 0) {

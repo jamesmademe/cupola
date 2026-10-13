@@ -5,6 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/trusted_certificates_screen.dart';
 
@@ -42,6 +45,33 @@ void main() {
       expect(find.text('Used by Radarr, Sonarr.'), findsOneWidget);
       // Uppercased and colon-grouped, matching the trust prompt's own format.
       expect(find.textContaining('AB:12:CD:34'), findsOneWidget);
+    });
+
+    testWidgets('an origin a connection is reached at away from home names '
+        'that connection, never an orphan', (tester) async {
+      // The NAS at home, a tunnel away: the tunnel's certificate is
+      // Radarr's, though no connection is saved at its address.
+      await _pumpScreen(
+        tester,
+        settings: SettingsModel(
+          instances: const [
+            ServiceInstance(
+              id: 'radarr',
+              service: ServiceKey.radarr,
+              url: 'http://192.168.1.20:7878',
+              credential: 'radarr-key',
+              away: ConnectionAddress(url: 'https://radarr.example.com'),
+            ),
+          ],
+          trustedCertificates: {'https://radarr.example.com:443': _fingerprint},
+        ),
+      );
+
+      expect(find.text('Used by Radarr.'), findsOneWidget);
+      expect(
+        find.text('No configured service currently uses this address.'),
+        findsNothing,
+      );
     });
 
     testWidgets(

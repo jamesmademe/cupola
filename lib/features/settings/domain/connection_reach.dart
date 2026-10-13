@@ -23,11 +23,7 @@ ConnectionReach reachOf(
   ServiceInstance instance,
   ConnectionRoute route,
 ) {
-  final away = instance.away;
-  final address =
-      route == ConnectionRoute.away && away != null && away.url.isNotEmpty
-      ? away
-      : instance.home;
+  final address = instance.addressOn(route);
   return (
     url: address.url,
     access: address.access,

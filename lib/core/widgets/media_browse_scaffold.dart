@@ -32,9 +32,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_not_configured.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-/// What the grid keys its artwork on: the connection's address, its
-/// credential and its access ([SettingsModel.artworkKeyOf]). The access is in
-/// the key so a changed token rebuilds the posters with it at once.
+/// What the grid keys its artwork on: the address the connection is reached
+/// at, its credential and that address's access
+/// ([SettingsModel.artworkKeyOf]). The access is in the key so a changed
+/// token rebuilds the posters with it at once, and the address so the route
+/// moving does.
 typedef SettingsSelector =
     (String, String, ConnectionAccess) Function(SettingsModel settings);
 typedef MediaBrowseItemTap<T> =

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -391,32 +392,43 @@ class SettingsModel {
     return '${instance.service.title} $place';
   }
 
-  /// The address, the credential and the access of the connection [id], or
-  /// two empty strings and no access when it names none.
+  /// The address on [route], the credential and that address's access of the
+  /// connection [id], or two empty strings and no access when it names none.
   ///
   /// What a screen showing one connection's library keys its artwork on: it
-  /// is that server's, at that server's address under that server's key, and
-  /// across the gateway in front of it with that connection's access, so a
-  /// pasted token re-keys the posters at once rather than at the next read.
-  /// As a record, so a `select` over it settles: editing another connection
-  /// changes nothing here.
-  (String, String, ConnectionAccess) artworkKeyOf(String id) {
+  /// is that server's, at the address that reaches it now under that server's
+  /// key, and across the gateway in front of that address with its access, so
+  /// a pasted token re-keys the posters at once rather than at the next read,
+  /// and so does the route moving. [route] is the connection's
+  /// (`connectionRouteProvider`): a selector cannot watch it, so the screen
+  /// does and closes over it. As a record, so a `select` over it settles:
+  /// editing another connection changes nothing here.
+  (String, String, ConnectionAccess) artworkKeyOf(
+    String id,
+    ConnectionRoute route,
+  ) {
     final instance = instanceById(id);
+    final address = instance?.addressOn(route);
     return (
-      instance?.url ?? '',
+      address?.url ?? '',
       instance?.credential ?? '',
-      instance?.access ?? const NoAccess(),
+      address?.access ?? const NoAccess(),
     );
   }
 
-  /// Each connection that has access to send, with its address and the
-  /// headers it sends: what `ConnectionAccessRegistry` holds for the artwork
-  /// built from an address and a key.
+  /// Each address that has access to send, with the headers its gateway asks
+  /// for: what `ConnectionAccessRegistry` holds for the artwork built from an
+  /// address and a key.
+  ///
+  /// Both addresses of a connection, each with its own access: a poster built
+  /// from the address away crosses the gateway in front of it, and one built
+  /// at home sends nothing a gateway away asks for.
   List<({String url, Map<String, String> headers})>
   get accessHeadersByAddress => [
     for (final instance in instances)
-      if (!instance.access.isEmpty)
-        (url: instance.url, headers: instance.access.headers()),
+      for (final address in [instance.home, ?instance.away])
+        if (address.url.isNotEmpty && !address.access.isEmpty)
+          (url: address.url, headers: address.access.headers()),
   ];
 
   /// Whether any instance of [service] is set up enough to talk to.
@@ -558,16 +570,34 @@ class SettingsModel {
     return copyWithTrustedCertificate(url: priorUrl, fingerprint: '');
   }
 
-  /// Every configured instance whose saved URL resolves to the same TLS origin
-  /// as [rawUrl]: the set one trust decision on that origin actually covers.
+  /// [copyWithoutUnusedCertificate] for every address [prior] was reached
+  /// at: a connection removed, or moved, stops using its address away as much
+  /// as its address at home, and each of the two is its own origin.
+  SettingsModel copyWithoutUnusedCertificatesOf(ServiceInstance? prior) {
+    var updated = this;
+    for (final address in prior?.addresses ?? const <String>[]) {
+      updated = updated.copyWithoutUnusedCertificate(address);
+    }
+    return updated;
+  }
+
+  /// Every instance reached at the same TLS origin as [rawUrl], at home or
+  /// away from home: the set one trust decision on that origin actually
+  /// covers.
+  ///
+  /// Both addresses count, because each is an origin a request goes to: a
+  /// certificate trusted for the tunnel a connection is reached through away
+  /// from home is that connection's as much as the one at home, and forgetting
+  /// it because the address at home moved would leave the next request away
+  /// refusing a certificate the person had trusted.
   List<ServiceInstance> instancesSharingOriginOf(String rawUrl) {
     final origin = UrlUtils.certOrigin(rawUrl);
     if (origin == null) return const [];
     return instances
         .where(
-          (instance) =>
-              instance.url.isNotEmpty &&
-              UrlUtils.certOrigin(instance.url) == origin,
+          (instance) => instance.addresses.any(
+            (address) => UrlUtils.certOrigin(address) == origin,
+          ),
         )
         .toList(growable: false);
   }

@@ -51,6 +51,22 @@ ConnectionRoute watchConnectionRoute(
   );
 }
 
+/// The route connection [id] is on ([watchConnectionRoute]), for a reader
+/// that holds the connection by its id and is not a provider of its own: a
+/// screen keying its pictures, a selector closing over it.
+///
+/// Watches the routes only for a connection that has an address away, so a
+/// container that stands up no preferences (most tests) never reads them.
+final connectionRouteProvider = Provider.family<ConnectionRoute, String>((
+  ref,
+  id,
+) {
+  final hasAway = ref.watch(
+    currentSettingsProvider.select((s) => s.instanceById(id)?.away != null),
+  );
+  return watchConnectionRoute(ref, id, hasAway: hasAway);
+});
+
 /// Where a request to connection [id] goes now ([reachOf]), or null when no
 /// connection has that id.
 ///
@@ -58,14 +74,14 @@ ConnectionRoute watchConnectionRoute(
 /// a link, a client built for one named connection. Narrow on purpose: it
 /// changes when this connection's address, access or pin does, or when its
 /// route moves, and for nothing else.
+///
+/// Read rather than watched where a request is sent once (a link opened, a
+/// sign-out): the address that answers now is the one to send it to.
 final connectionReachProvider = Provider.family<ConnectionReach?, String>((
   ref,
   id,
 ) {
-  final hasAway = ref.watch(
-    currentSettingsProvider.select((s) => s.instanceById(id)?.away != null),
-  );
-  final route = watchConnectionRoute(ref, id, hasAway: hasAway);
+  final route = ref.watch(connectionRouteProvider(id));
   return ref.watch(
     currentSettingsProvider.select((s) {
       final instance = s.instanceById(id);

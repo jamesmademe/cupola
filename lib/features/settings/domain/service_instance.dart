@@ -214,6 +214,24 @@ class ServiceInstance {
   /// The address at home, as an address: [url] and [access].
   ConnectionAddress get home => ConnectionAddress(url: url, access: access);
 
+  /// The address [route] goes to: [away] when the route says so and there is
+  /// one to go to, [home] otherwise. The choice `reachOf` makes, kept here so
+  /// a reader that needs the address without its pin makes the same one.
+  ConnectionAddress addressOn(ConnectionRoute route) {
+    final away = this.away;
+    return route == ConnectionRoute.away && away != null && away.url.isNotEmpty
+        ? away
+        : home;
+  }
+
+  /// Every address this connection is reached at: [url], then [away]'s when
+  /// it has one. What a trusted certificate, an access header and a kept
+  /// picture are matched against, since either may be the one in use.
+  List<String> get addresses => [
+    for (final address in [url, ?away?.url])
+      if (address.isNotEmpty) address,
+  ];
+
   /// Where the non-secret half of [account] lives in `SharedPreferences`, as
   /// JSON. Absent for a connection that signs in with its key, which is also
   /// what every install before accounts reads: nothing to migrate.
