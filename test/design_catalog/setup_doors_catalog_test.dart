@@ -22,20 +22,13 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'SetupDoors · at 200% the hint wraps under the door, which keeps its '
-        'height',
-        (_) => Builder(
-          builder: (context) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(2)),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: SetupDoors(onSetUp: () {}),
-            ),
-          ),
+        'SetupDoors · at 200% the hint wraps under the door',
+        (_) => Padding(
+          padding: const EdgeInsets.all(24),
+          child: SetupDoors(onSetUp: () {}),
         ),
         width: 390,
+        textScale: catalogTextScale,
       ),
     ],
   );
