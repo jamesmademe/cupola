@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/last_known/last_known_store.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/title_light.dart';
@@ -244,4 +247,92 @@ void main() {
       expect(room.read(), isNull);
     },
   );
+
+  group('a cold start is lit from its first frame', () {
+    const light = TitleLight(
+      light: Color(0xFF50B1D2),
+      actionFill: Color(0xFF8ED6F2),
+      actionInk: Color(0xFF0C222A),
+      dayPrimary: Color(0xFF00677F),
+    );
+
+    /// A start that read the light of [url] off its drawn picture, on
+    /// [store]: what the next start finds kept.
+    Future<void> litBefore(
+      LastKnownStore store,
+      TitleLight? read, {
+      String? url,
+    }) async {
+      final container = await containerWith(
+        extra: [
+          lastKnownStoreProvider.overrideWithValue(store),
+          titleLightProvider.overrideWith((ref, url) async => read),
+        ],
+      );
+      final art = url ?? (await slidesOf(container))[0].art.url;
+      final lit = container.listen(featuredLightProvider(art), (_, _) {});
+      container.read(featuredViewProvider.notifier).drawn(art);
+      await container.read(titleLightProvider(art).future);
+      expect(lit.read(), read);
+      lit.close();
+    }
+
+    /// The next start, whose pictures are not drawn yet.
+    Future<ProviderContainer> nextStart(LastKnownStore store) => containerWith(
+      extra: [
+        lastKnownStoreProvider.overrideWithValue(store),
+        titleLightProvider.overrideWith(
+          (ref, url) => Completer<TitleLight?>().future,
+        ),
+      ],
+    );
+
+    test('by the light the slide in front lit the room with last time, '
+        'before its picture is drawn', () async {
+      final store = LastKnownStore.memory();
+      await litBefore(store, light);
+
+      final next = await nextStart(store);
+      final slides = await slidesOf(next);
+      final room = next.listen(featuredRoomLightProvider, (_, _) {});
+      addTearDown(room.close);
+      expect(room.read(), light.light);
+      expect(next.read(featuredLightProvider(slides[0].art.url)), light);
+      // A slide whose light was never read: the lamp.
+      expect(next.read(featuredLightProvider(slides[1].art.url)), isNull);
+    });
+
+    test('not when the picture was lit by the lamp since', () async {
+      final store = LastKnownStore.memory();
+      await litBefore(store, light);
+      await litBefore(store, null);
+
+      final next = await nextStart(store);
+      await slidesOf(next);
+      final room = next.listen(featuredRoomLightProvider, (_, _) {});
+      addTearDown(room.close);
+      expect(room.read(), isNull);
+    });
+
+    test('never by an address that carries a credential', () async {
+      const url = 'https://plex.test/photo?X-Plex-Token=secret';
+      final store = LastKnownStore.memory();
+      await litBefore(store, light, url: url);
+
+      final next = await nextStart(store);
+      expect(next.read(featuredLightProvider(url)), isNull);
+    });
+
+    test('only for the connections the titles came from', () async {
+      final store = LastKnownStore.memory();
+      await litBefore(store, light);
+
+      final next = await containerWith(
+        configured: const [ServiceKey.jellyfin, ServiceKey.sonarr],
+        extra: [lastKnownStoreProvider.overrideWithValue(store)],
+      );
+      final slides = await slidesOf(next);
+      expect(next.read(featuredLightProvider(slides[0].art.url)), isNull);
+    });
+  });
 }

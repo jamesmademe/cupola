@@ -33,7 +33,7 @@ The requester's Ready to watch is the same pager with one slide (`HomeReadyToWat
   the slide's page.
 - **The copy**: the title in `feature` (two lines, three at a large reading size), the line in `body` and `inkSecondary`,
   then the lit button (`mediaLeadStyle`: the slide's tinted fill in the dark room, its tinted primary under white, the
-  ink before the light is read) and the quiet outlined one, 104 wide at least. At a large reading size the two buttons
+  ink while no light is known) and the quiet outlined one, 104 wide at least. At a large reading size the two buttons
   go one under the other.
 - **The control**, beside the title (in a row of its own under the art at a large reading size), one 44pt button: the pause glyph and a pill per slide, the one in front 24 wide
   and filling with the slide's light as its time runs, the others 6pt dots.
@@ -72,5 +72,8 @@ arrival with Play; out today with Queue; one slide no server holds; screen reade
 
 - Do take the light from the picture the slide has drawn: it is read from the same cache, so a server that wants its
   credential for artwork still lights the room.
+- Do light a cold start from its first frame: until the picture is drawn and read again, the slide is lit by the light
+  the same picture lit the room with last time (`keptTitleLight`, kept beside the Home's drawings, never for an address
+  that carries a credential). Read half a second in, the button turned from ink to the title's colour under the eye.
 - Don't draw a failure here: Featured features what answered.
 - Don't let a slide move under a finger, or a button act on a slide the person did not see.

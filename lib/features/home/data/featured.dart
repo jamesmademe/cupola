@@ -14,6 +14,7 @@ import 'package:cupola/features/discover/presentation/library_calendar_provider.
 import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/last_known/featured_last_known.dart';
+import 'package:cupola/features/home/data/last_known/lights_last_known.dart';
 import 'package:cupola/features/home/data/last_known/my_requests_last_known.dart';
 import 'package:cupola/features/home/data/resume.dart';
 import 'package:cupola/features/home/domain/featured.dart';
@@ -203,8 +204,13 @@ class FeaturedViewNotifier extends Notifier<FeaturedView> {
   }
 }
 
-/// The light of the artwork at [url], once a slide has drawn it; null for
-/// the lamp.
+/// The light of the artwork at [url], once a slide has drawn it; until then
+/// the light it lit the room with last time (`keptTitleLight`); null for the
+/// lamp.
+///
+/// The light read is kept for the next cold start, so the room and the
+/// slide's lead action are lit from the first frame instead of turning from
+/// ink to the title's colour half a second in.
 final featuredLightProvider = Provider.autoDispose.family<TitleLight?, String>((
   ref,
   url,
@@ -212,7 +218,13 @@ final featuredLightProvider = Provider.autoDispose.family<TitleLight?, String>((
   final drawn = ref.watch(
     featuredViewProvider.select((view) => view.drawn.contains(url)),
   );
-  return drawn ? ref.watch(titleLightProvider(url)).value : null;
+  if (drawn) {
+    if (ref.watch(titleLightProvider(url)) case AsyncData(:final value)) {
+      keepTitleLight(ref, url, value);
+      return value;
+    }
+  }
+  return keptTitleLight(ref, url);
 });
 
 /// The light a Home is lit by: on the operator's, the slide of Featured in
