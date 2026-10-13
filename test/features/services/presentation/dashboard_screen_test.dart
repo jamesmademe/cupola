@@ -31,6 +31,8 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/core/widgets/setup_doors.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
@@ -166,19 +168,19 @@ void main() {
 
   for (final page in _Page.values) {
     group('with nothing set up, the ${page.name}', () {
-      // The front door after "Skip for now", on the first tab and on the
-      // Stack alike. Its button used to borrow the pick step's title while
-      // opening Connections, which sets up one service at a time, and its
-      // headline used the word for a service that stayed silent.
-      testWidgets('says nothing is set up and opens Connections', (
-        tester,
-      ) async {
+      // The front door until something answers, on the first tab and on the
+      // Stack alike: the same door the Welcome has, in the same words. It
+      // opens Connect directly, since the claim was made on the way in and
+      // this page is already past it. Its headline used to use the word for a
+      // service that stayed silent, and its door borrowed the old pick step's
+      // title while opening Connections.
+      testWidgets('says nothing is set up and opens Connect', (tester) async {
         String? opened;
         final router = GoRouter(
           routes: [
             GoRoute(path: '/', builder: (context, state) => _screen(page)),
             GoRoute(
-              path: ServiceRoutes.settingsConnections,
+              path: ServiceRoutes.welcomeConnect,
               builder: (context, state) {
                 opened = state.uri.path;
                 return const SizedBox.shrink();
@@ -198,13 +200,45 @@ void main() {
         expect(find.text('Nothing is set up yet.'), findsOneWidget);
         expect(find.text('Nothing answers yet.'), findsNothing);
         expect(find.text('Pick your services'), findsNothing);
+        // One door, with what it leads with said under it, and no count of
+        // services "waiting" for an address.
+        expect(find.text('Set up a service'), findsOneWidget);
+        expect(find.text(SetupDoors.setUpHint), findsOneWidget);
+        expect(find.textContaining('waiting for an address'), findsNothing);
+        expect(find.byType(FilledButton), findsOneWidget);
 
         await tester.tap(find.text('Set up a service'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
-        expect(opened, ServiceRoutes.settingsConnections);
+        expect(opened, ServiceRoutes.welcomeConnect);
       });
+
+      testWidgets('keeps the ring still: nothing is set up, nothing moves', (
+        tester,
+      ) async {
+        await _pumpPage(tester, page, settings: const SettingsModel());
+
+        // Settled: a ring that spun would keep scheduling frames for ever.
+        await tester.pumpAndSettle();
+        expect(find.byType(ServiceRing), findsOneWidget);
+        expect(tester.binding.hasScheduledFrame, isFalse);
+      });
+
+      // The date is the Home's, whatever is set up; the Stack never had one.
+      testWidgets(
+        page == _Page.home
+            ? 'keeps the Home\'s date above the ring'
+            : 'has no date above the ring',
+        (tester) async {
+          await _pumpPage(tester, page, settings: const SettingsModel());
+
+          expect(
+            find.byType(HomeHeader),
+            page == _Page.home ? findsOneWidget : findsNothing,
+          );
+        },
+      );
     });
   }
 

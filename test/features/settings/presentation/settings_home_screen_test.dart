@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
@@ -374,6 +375,121 @@ void main() {
         'https://radarr.local:7878',
       );
       expect(container.read(onboardingCompletedProvider), isTrue);
+    });
+
+    group('Revisit onboarding', () {
+      Future<(ProviderContainer, GoRouter, SettingsService)> pumpRevisit(
+        WidgetTester tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final secureStore = FakeSecureSettingsStore();
+        final service = SettingsService(prefs, secureStore);
+        await service.saveSettings(
+          settingsWith(
+            radarrUrl: 'https://radarr.local:7878',
+            radarrApiKey: 'radarr-key',
+          ),
+        );
+        await service.saveOnboardingComplete();
+        final initialSettings = await service.loadSettings();
+
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWith((ref) => prefs),
+            secureSettingsStoreProvider.overrideWith((ref) => secureStore),
+            initialSettingsProvider.overrideWith((ref) => initialSettings),
+            initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = GoRouter(
+          initialLocation: '/settings',
+          routes: [
+            GoRoute(
+              path: '/settings',
+              builder: (_, _) => const SettingsHomeScreen(),
+            ),
+            GoRoute(
+              path: ServiceRoutes.welcome,
+              builder: (_, _) => const Scaffold(body: Text('WelcomePage')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.text('Revisit onboarding'), 300);
+        await tester.pumpAndSettle();
+        return (container, router, service);
+      }
+
+      testWidgets('asks first, and says what it opens and what it leaves', (
+        tester,
+      ) async {
+        await pumpRevisit(tester);
+
+        await tester.tap(find.text('Revisit onboarding'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Revisit onboarding?'), findsOneWidget);
+        expect(
+          find.text(
+            "You'll see the Welcome again. Nothing about your services or "
+            'settings is changed or removed.',
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('opens the Welcome on top, and leaves the flag and every '
+          'connection alone', (tester) async {
+        final (container, router, service) = await pumpRevisit(tester);
+
+        await tester.tap(find.text('Revisit onboarding'));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Revisit onboarding'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.path, ServiceRoutes.welcome);
+        expect(find.text('WelcomePage'), findsOneWidget);
+        // The flag is what keeps the app on its tabs: it stays on, in memory
+        // and on disk, so nothing sends the person anywhere but back.
+        expect(container.read(onboardingCompletedProvider), isTrue);
+        expect(await service.loadOnboardingComplete(), isTrue);
+        expect(
+          container.read(settingsProvider).radarrUrl,
+          'https://radarr.local:7878',
+        );
+        expect(container.read(settingsProvider).radarrApiKey, 'radarr-key');
+
+        // Pushed, not replaced: Back returns to Settings.
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(router.state.uri.path, '/settings');
+      });
+
+      testWidgets('cancelling opens nothing', (tester) async {
+        final (container, router, _) = await pumpRevisit(tester);
+
+        await tester.tap(find.text('Revisit onboarding'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.path, '/settings');
+        expect(find.text('WelcomePage'), findsNothing);
+        expect(container.read(onboardingCompletedProvider), isTrue);
+      });
     });
   });
 }

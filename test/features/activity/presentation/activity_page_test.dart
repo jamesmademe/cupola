@@ -9,12 +9,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/page_tabs.dart';
+import 'package:cupola/core/widgets/setup_doors.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
@@ -1559,20 +1562,45 @@ void main() {
     ) async {
       await tester.binding.setSurfaceSize(const Size(430, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
+      String? opened;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const ActivityPage(tab: ActivityTab.all),
+          ),
+          GoRoute(
+            path: ServiceRoutes.welcomeConnect,
+            builder: (_, state) {
+              opened = state.uri.path;
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
       await tester.pumpWidget(
         ProviderScope(
           overrides: await settingsScopeOverrides(),
-          child: MaterialApp(
+          child: MaterialApp.router(
             theme: AppTheme.darkTheme(),
-            home: const ActivityPage(tab: ActivityTab.all),
+            routerConfig: router,
           ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Nothing is set up yet.'), findsOneWidget);
+      // The door the Welcome and the Home have, with what it leads with.
       expect(find.text('Set up a service'), findsOneWidget);
+      expect(find.text(SetupDoors.setUpHint), findsOneWidget);
       expect(find.byType(PageTabs<ActivityTab>), findsNothing);
+
+      // It opens Connect directly: the claim was made on the way in.
+      await tester.tap(find.text('Set up a service'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(opened, ServiceRoutes.welcomeConnect);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
