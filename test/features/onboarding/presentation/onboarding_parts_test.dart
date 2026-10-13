@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/features/onboarding/presentation/widgets/onboarding_glyph_row.dart';
+import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/core/widgets/setup_doors.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The beats' own rules, tested on the widgets rather than through the whole
-/// flow: what the close is allowed to promise, how far the result row is allowed
-/// to wrap, and which of a field's two lines a validation message may replace.
+/// flow: what the Welcome offers and when it can go back, what the list of
+/// services hands the screen when a row is chosen, and which of a field's two
+/// lines a validation message may replace.
 Widget _host(Widget child, {double width = 560}) => MaterialApp(
   theme: AppTheme.darkTheme(),
   home: Scaffold(
@@ -19,129 +22,121 @@ Widget _host(Widget child, {double width = 560}) => MaterialApp(
 );
 
 void main() {
-  group('OnboardingGlyphRow', () {
-    testWidgets('draws one tile per service while they fit two rows', (
+  group('OnboardingWelcome', () {
+    testWidgets('offers the one door and nothing to skip', (tester) async {
+      var opened = 0;
+      await tester.pumpWidget(
+        _host(OnboardingWelcome(onSetUp: () => opened++)),
+      );
+
+      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
+      expect(find.text(SetupDoors.setUpHint), findsOneWidget);
+      expect(find.text('Back'), findsNothing);
+      expect(find.textContaining('Skip'), findsNothing);
+
+      await tester.tap(find.text('Set up a service'));
+      expect(opened, 1);
+    });
+
+    testWidgets('shows Back only when there is somewhere to go back to', (
       tester,
     ) async {
-      final services = ServiceKey.values.take(8).toList();
-      await tester.pumpWidget(_host(OnboardingGlyphRow(services: services)));
+      var back = 0;
+      await tester.pumpWidget(
+        _host(OnboardingWelcome(onSetUp: () {}, onBack: () => back++)),
+      );
 
-      expect(find.byType(Icon), findsNWidgets(8));
-      expect(find.textContaining('+'), findsNothing);
+      await tester.tap(find.text('Back'));
+      expect(back, 1);
     });
 
-    testWidgets('stops at twelve and counts the rest', (tester) async {
-      // The maximum case, which is what the narrowest frame is drawn at: every
-      // registry service picked and answering. A third row of glyphs stops
-      // being a result and becomes an inventory.
-      await tester.pumpWidget(
-        _host(
-          const OnboardingGlyphRow(services: ServiceKey.values),
-          width: 344,
-        ),
-      );
+    testWidgets('the door speaks its hint on the button', (tester) async {
+      // A hint wrapped around a button is dropped; it has to sit on the
+      // label the button merges.
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(_host(OnboardingWelcome(onSetUp: () {})));
 
-      expect(find.byType(Icon), findsNWidgets(OnboardingGlyphRow.maxTiles));
       expect(
-        find.text('+${ServiceKey.values.length - OnboardingGlyphRow.maxTiles}'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('says what it drew and how much it did not', (tester) async {
-      // The row is one stop for a screen reader rather than seventeen, and the
-      // count is the part the drawing cannot say at all.
-      await tester.pumpWidget(
-        _host(
-          const OnboardingGlyphRow(services: ServiceKey.values),
-          width: 344,
+        find.semantics.byLabel('Set up a service'),
+        containsSemantics(
+          isButton: true,
+          hasTapAction: true,
+          hint: SetupDoors.setUpHint,
         ),
       );
-
-      final spoken = tester
-          .widgetList<Semantics>(find.byType(Semantics))
-          .map((s) => s.properties.label)
-          .whereType<String>()
-          .firstWhere((label) => label.contains(ServiceKey.values.first.title));
-      expect(spoken, contains(ServiceKey.values.first.title));
-      expect(
-        spoken,
-        contains(
-          'and ${ServiceKey.values.length - OnboardingGlyphRow.maxTiles} more',
-        ),
-      );
+      handle.dispose();
     });
   });
 
-  group('OnboardingClose', () {
-    Widget close({
-      required List<ServiceKey> connected,
-      List<ServiceKey> silent = const [],
-    }) => _host(
-      OnboardingClose(
-        connected: connected,
-        silent: silent,
-        onFix: (_) {},
-        onFinish: () async {},
-        onReview: () {},
-      ),
-    );
+  group('OnboardingStart', () {
+    Future<void> pumpStart(
+      WidgetTester tester, {
+      required ValueChanged<ServiceKey> onPick,
+      VoidCallback? onBack,
+    }) async {
+      // Tall, so every row is on screen and a tap never has to scroll.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 3200);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _host(OnboardingStart(onPick: onPick, onBack: onBack ?? () {})),
+      );
+    }
 
-    testWidgets('counts what answered instead of claiming the whole stack', (
+    testWidgets('hands the screen the service whose row was tapped', (
       tester,
     ) async {
-      // The body used to open with "Your whole stack is in one place" whatever
-      // fraction of it had actually been set up: a claim that teaches someone
-      // not to read the next one.
-      await tester.pumpWidget(
-        close(connected: [ServiceKey.radarr, ServiceKey.sonarr]),
-      );
+      final picked = <ServiceKey>[];
+      await pumpStart(tester, onPick: picked.add);
+
+      await tester.tap(find.text('Seerr'));
+      await tester.tap(find.text('Prowlarr'));
+      await tester.tap(find.text('Set up Lidarr'));
+
+      expect(picked, [
+        ServiceKey.seerr,
+        ServiceKey.prowlarr,
+        ServiceKey.lidarr,
+      ]);
+    });
+
+    testWidgets('puts the two that know the others first, and says what they '
+        'know', (tester) async {
+      await pumpStart(tester, onPick: (_) {});
+
+      final rows = tester
+          .widgetList<SettingsCard>(find.byType(SettingsCard))
+          .map((row) => row.title)
+          .toList();
+      expect(rows.take(2), ['Seerr', 'Prowlarr']);
+      expect(find.text(ServiceKey.seerr.knowsOthers!), findsOneWidget);
+      expect(find.text(ServiceKey.prowlarr.knowsOthers!), findsOneWidget);
+      // Every other row says what the service is for.
+      expect(find.text(ServiceKey.radarr.role), findsOneWidget);
+    });
+
+    testWidgets('a service is listed once, however the registry groups it', (
+      tester,
+    ) async {
+      await pumpStart(tester, onPick: (_) {});
 
       expect(
-        find.textContaining('2/${ServiceKey.values.length} services answered'),
-        findsOneWidget,
+        find.byType(SettingsCard),
+        findsNWidgets(ServiceKey.values.length),
       );
-      expect(
-        find.textContaining('Everything you set up is ready to use'),
-        findsOneWidget,
-      );
+      // Seerr and Prowlarr are named in the first group and not again under
+      // their domain.
+      expect(find.text('Set up Seerr'), findsNothing);
+      expect(find.text('Set up Prowlarr'), findsNothing);
     });
 
-    testWidgets('offers a service that still exists, never Readarr', (
-      tester,
-    ) async {
-      // Readarr is retired upstream, so naming it as the thing to add later is
-      // advice with a dead end: the whole reason the example is pinned.
-      await tester.pumpWidget(close(connected: [ServiceKey.radarr]));
+    testWidgets('Back is its own action', (tester) async {
+      var back = 0;
+      await pumpStart(tester, onPick: (_) {}, onBack: () => back++);
 
-      expect(find.textContaining('Lidarr and the rest'), findsOneWidget);
-      expect(find.textContaining('Readarr'), findsNothing);
-      // And the home the sentence points at is the Dashboard, which is what
-      // that screen is called now.
-      expect(find.textContaining('on the Dashboard'), findsOneWidget);
-    });
-
-    testWidgets('does not offer a service the user just connected', (
-      tester,
-    ) async {
-      // Same defect in different clothes: the example has to be something that
-      // is actually still missing.
-      await tester.pumpWidget(
-        close(connected: [ServiceKey.lidarr, ServiceKey.radarr]),
-      );
-
-      expect(find.textContaining('Lidarr and the rest'), findsNothing);
-      expect(find.textContaining('and the rest can be added'), findsOneWidget);
-    });
-
-    testWidgets('the empty outcome points at the Dashboard, not Services', (
-      tester,
-    ) async {
-      await tester.pumpWidget(close(connected: const []));
-
-      expect(find.textContaining('Cupola will stay empty'), findsOneWidget);
-      expect(find.textContaining('on the Dashboard'), findsOneWidget);
-      expect(find.textContaining('on Services'), findsNothing);
+      await tester.tap(find.text('Back'));
+      expect(back, 1);
     });
   });
 

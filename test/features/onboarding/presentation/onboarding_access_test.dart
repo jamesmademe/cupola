@@ -1,4 +1,4 @@
-/// The first run behind a gateway: the walk's test meets Cloudflare Access, a
+/// The first run behind a gateway: Connect's test meets Cloudflare Access, a
 /// password prompt or a sign-in page before any connection is saved, and the
 /// remedy is answered in the step, with the connection form's own Access row.
 /// It never opens a form for a connection that does not exist yet.
@@ -12,9 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
-import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
@@ -22,16 +20,17 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
+import '../../../test_helpers/onboarding_router.dart';
 import '../../../test_helpers/profiles/profiles.dart';
+import '../../../test_helpers/reel_finders.dart';
 
-/// A first run (nothing saved) on [profile]'s network, walked to Radarr's
-/// step with its address and key typed.
+/// A first run (nothing saved) on [profile]'s network, on Connect for Radarr
+/// with its address and key typed.
 Future<(ProfileHarness, ProviderContainer)> _firstRunAtRadarr(
   WidgetTester tester,
   ConfigProfile profile, {
   String address = WorldHosts.radarr,
   Size viewport = const Size(800, 2400),
-  List<String> alsoPick = const [],
 }) async {
   final harness = await ProfileHarness.start(profile);
   tester.view.devicePixelRatio = 1;
@@ -48,15 +47,13 @@ Future<(ProfileHarness, ProviderContainer)> _firstRunAtRadarr(
     ],
   );
   addTearDown(container.dispose);
+  final router = onboardingRouter();
+  addTearDown(router.dispose);
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp(
-        home: OnboardingScreen(
-          certificateProber: (_, {pinnedFingerprint = ''}) async => null,
-          localNetworkProbe: (_, {timeout = Duration.zero}) async =>
-              LocalNetworkAccess.unrestricted,
-        ),
+      child: MaterialApp.router(
+        routerConfig: router,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(disableAnimations: true),
           child: child!,
@@ -65,13 +62,21 @@ Future<(ProfileHarness, ProviderContainer)> _firstRunAtRadarr(
     ),
   );
   await harness.settle(tester);
-  await _tap(tester, harness, 'Set up my stack');
-  await tester.tap(find.text('Radarr').first);
-  for (final other in alsoPick) {
-    await tester.tap(find.text(other).first);
-  }
-  await harness.settle(tester);
-  await _tap(tester, harness, 'Continue with ${1 + alsoPick.length}');
+  await _tap(tester, harness, 'Set up a service');
+  await _tap(tester, harness, 'Start with another service');
+  // The list is longer than a phone's window: scrolled by its own scrollable,
+  // so the pager is never asked to move.
+  await tester.scrollUntilVisible(
+    find.text('Set up Radarr'),
+    100,
+    scrollable: find
+        .descendant(
+          of: find.byType(OnboardingStart),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await _tap(tester, harness, 'Set up Radarr');
   final fields = find.byType(TextField);
   await tester.enterText(fields.at(0), address);
   await tester.enterText(fields.at(1), worldKey(WorldIds.radarr));
@@ -107,80 +112,6 @@ bool _selected(WidgetTester tester, String choice) =>
     Tristate.isTrue;
 
 void main() {
-  testWidgets('a token that passed Radarr is offered to Sonarr behind the same '
-      'Access team, and Sonarr answers with it', (tester) async {
-    // One team, one token: Sonarr's application admits Radarr's token too.
-    final profile = Profiles.p8.withBehaviour(
-      WorldIds.sonarr,
-      const ConnectionBehaviour.behindCloudflareAccess(
-        serviceToken: WorldTokens.radarr,
-      ),
-    );
-    final (harness, _) = await _firstRunAtRadarr(
-      tester,
-      profile,
-      alsoPick: const ['Sonarr'],
-    );
-
-    // Radarr: stopped by Access, then the token, which passes.
-    await _tap(tester, harness, 'Test connection');
-    await _tap(tester, harness, 'Add a service token');
-    await tester.enterText(_field('Client ID'), WorldTokens.radarr.id);
-    await tester.enterText(_field('Client secret'), WorldTokens.radarr.secret);
-    await _tap(tester, harness, 'Test connection');
-    expect(
-      find.text('Access let the token through and Radarr answered.'),
-      findsOneWidget,
-    );
-    await _tap(tester, harness, 'Next service');
-
-    // Sonarr: stopped by the same team, with no token sent. The remedy is the
-    // token that already passed, not an empty row.
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), WorldHosts.sonarr);
-    await tester.enterText(fields.at(1), worldKey(WorldIds.sonarr));
-    await _tap(tester, harness, 'Test connection');
-    expect(find.text("Use Radarr's token"), findsOneWidget);
-    expect(find.text('Add a service token'), findsNothing);
-
-    await _tap(tester, harness, "Use Radarr's token");
-    // The row shows what was sent, and the step tested again with it.
-    expect(_selected(tester, 'Cloudflare Access'), isTrue);
-    expect(
-      find.text('Access let the token through and Sonarr answered.'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('a token is not offered to a step stopped by another Access '
-      'team', (tester) async {
-    final profile = Profiles.p8.withBehaviour(
-      WorldIds.sonarr,
-      const ConnectionBehaviour.behindCloudflareAccess(
-        team: 'someone-else',
-        serviceToken: WorldTokens.radarr,
-      ),
-    );
-    final (harness, _) = await _firstRunAtRadarr(
-      tester,
-      profile,
-      alsoPick: const ['Sonarr'],
-    );
-    await _tap(tester, harness, 'Test connection');
-    await _tap(tester, harness, 'Add a service token');
-    await tester.enterText(_field('Client ID'), WorldTokens.radarr.id);
-    await tester.enterText(_field('Client secret'), WorldTokens.radarr.secret);
-    await _tap(tester, harness, 'Test connection');
-    await _tap(tester, harness, 'Next service');
-
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), WorldHosts.sonarr);
-    await tester.enterText(fields.at(1), worldKey(WorldIds.sonarr));
-    await _tap(tester, harness, 'Test connection');
-    expect(find.text("Use Radarr's token"), findsNothing);
-    expect(find.text('Add a service token'), findsOneWidget);
-  });
-
   testWidgets('on a phone, a test meeting Cloudflare Access brings its verdict '
       'and its remedy into view above the pinned actions', (tester) async {
     // An iPhone 17 Pro, 402 by 874: the hero and the fields fill the screen,
@@ -250,7 +181,7 @@ void main() {
     await _tap(tester, harness, 'Add a service token');
     // Answered here: still the walk's step, no connection form.
     expect(find.byType(ServiceSettingsScreen), findsNothing);
-    expect(find.text('Where does Radarr live?'), findsWidgets);
+    expect(findLine('Set up Radarr'), findsOneWidget);
     expect(_selected(tester, 'Cloudflare Access'), isTrue);
     // In the step's own style, as its address and key are, never the
     // connection form's outlined field with a floating label.
@@ -278,7 +209,7 @@ void main() {
       findsOneWidget,
     );
 
-    await _tap(tester, harness, 'Finish');
+    await _tap(tester, harness, 'Go to Home');
     final radarr = container
         .read(settingsProvider)
         .instanceById(WorldIds.radarr);
@@ -336,7 +267,7 @@ void main() {
       WorldHosts.radarr,
     );
 
-    await _tap(tester, harness, 'Finish');
+    await _tap(tester, harness, 'Go to Home');
     final radarr = container
         .read(settingsProvider)
         .instanceById(WorldIds.radarr);

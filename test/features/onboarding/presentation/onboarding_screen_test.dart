@@ -1,209 +1,284 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/core/widgets/setup_doors.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
-import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
+import 'package:cupola/features/onboarding/presentation/widgets/onboarding_walk.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
+import '../../../test_helpers/onboarding_router.dart';
 import '../../../test_helpers/reel_finders.dart';
-
 import '../../../test_helpers/settings_scope.dart';
 
-/// The flow is door → pick → one page per chosen service → close, so its length
-/// belongs to the user. Every case here was a real defect in the flow this
-/// replaced; the scenarios are preserved even though the screens are not.
+/// The way in is the Welcome, then Connect for one service, so its length does
+/// not depend on the user: one door, one form. Every case here was a real
+/// defect in the flows this replaced, and the scenarios that still exist are
+/// kept; what answers a test (a service that says yes) lives in
+/// `onboarding_flow_test.dart`, where the network is faked.
 void main() {
-  group('OnboardingScreen', () {
-    // Mirrors the original report behind issue #4: "I tried not entering
-    // anything, entering everything, and entering just the Sonarr details and
-    // the Continue button never allowed me to move forward".
-    testWidgets('picking nothing still reaches the close', (tester) async {
+  group('the Welcome', () {
+    testWidgets('makes its claim and has one door', (tester) async {
       await _pumpOnboarding(tester);
 
-      expect(_semantics('A Cupola over your lab.'), findsOneWidget);
-      await _tap(tester, 'Set up my stack');
-      // Was the accented "Bring your stack into view.". The pick beat's
-      // headline is plain type now: this beat already carries seventeen
-      // accents, one per chip and one per lit node, and a headline in an
-      // eighteenth taught the eye to read colour as decoration. The accented
-      // headline stays where it means something: the door and the close.
-      expect(find.text('Pick your services'), findsOneWidget);
-
-      await _tap(tester, 'Continue');
-
-      // Congratulating someone on connecting nothing reads as a bug; the empty
-      // case is legitimate and gets copy that says what actually happened.
-      expect(find.text('Nothing set up yet.'), findsOneWidget);
-      expect(find.textContaining('Cupola will stay empty'), findsOneWidget);
-      expect(_button('Enter Cupola'), findsOneWidget);
+      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(_button('Set up a service'), findsOneWidget);
+      // What the door leads with, said under it so the button stays a verb.
+      expect(find.text(SetupDoors.setUpHint), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
     });
 
-    testWidgets('service choices expose their tap action to accessibility', (
+    testWidgets('a first run has nothing to go back to', (tester) async {
+      await _pumpOnboarding(tester);
+
+      expect(find.text('Back'), findsNothing);
+    });
+
+    testWidgets('has no Skip, and neither does Connect', (tester) async {
+      // A way in that can be skipped is a way in that opens an empty app: with
+      // nothing set up there is nothing for the shell to show.
+      await _pumpOnboarding(tester);
+      expect(_skips(), findsNothing);
+
+      await _tap(tester, 'Set up a service');
+      expect(_skips(), findsNothing);
+
+      await _tap(tester, 'Start with another service');
+      expect(_skips(), findsNothing);
+
+      await _tap(tester, 'Set up Sonarr');
+      expect(_skips(), findsNothing);
+    });
+
+    testWidgets('the door opens Connect on Seerr', (tester) async {
+      await _pumpOnboarding(tester);
+      await _tap(tester, 'Set up a service');
+
+      // The headline names the service, the eyebrow says there is a second
+      // step after it, and the lead says why to start here.
+      expect(findLine('Set up Seerr'), findsOneWidget);
+      expect(findLine('Step 1 of 2'), findsOneWidget);
+      expect(
+        find.text(connectLead(ServiceKey.seerr)),
+        findsOneWidget,
+        reason: 'the reason to start with Seerr is on the step itself',
+      );
+      expect(find.text('Start with another service'), findsOneWidget);
+      expect(find.text('Test connection'), findsOneWidget);
+    });
+
+    testWidgets('a Welcome opened from inside the app can go back', (
+      tester,
+    ) async {
+      final way = await _pumpOnboarding(tester, initialLocation: '/home');
+      unawaited(way.router.push<void>(ServiceRoutes.welcome));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(onboardingHomeStandIn), findsNothing);
+      expect(find.text('Back'), findsOneWidget);
+
+      await _tap(tester, 'Back');
+      expect(way.router.state.uri.path, ServiceRoutes.home);
+      expect(find.byKey(onboardingHomeStandIn), findsOneWidget);
+    });
+  });
+
+  group('Start with another service', () {
+    testWidgets('lists every service exactly once, by what it is for', (
       tester,
     ) async {
       await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
+      await _tap(tester, 'Set up a service');
+      await _tap(tester, 'Start with another service');
+
+      // The two that know the others lead, under their own label, by name.
+      expect(find.text('They know the others'), findsOneWidget);
+      for (final service in ServiceKey.values) {
+        final named =
+            service == ServiceKey.seerr || service == ServiceKey.prowlarr;
+        final title = named ? service.title : 'Set up ${service.title}';
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is SettingsCard &&
+                w.title == title &&
+                w.subtitle == (service.knowsOthers ?? service.role),
+          ),
+          findsOneWidget,
+          reason: '$title, once, under the words that say what it is for',
+        );
+      }
+      expect(
+        find.byType(SettingsCard),
+        findsNWidgets(ServiceKey.values.length),
+      );
+      for (final domain in ServiceDomain.values) {
+        expect(find.text(domain.label), findsOneWidget, reason: domain.label);
+      }
+    });
+
+    testWidgets('a row speaks one sentence and exposes its tap action', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester);
+      await _tap(tester, 'Set up a service');
+      await _tap(tester, 'Start with another service');
 
       final handle = tester.ensureSemantics();
       expect(
-        find.semantics.byLabel('Radarr'),
-        containsSemantics(
-          isButton: true,
-          isSelected: false,
-          hasTapAction: true,
-        ),
+        find.semantics.byLabel('Set up Radarr. Movies'),
+        containsSemantics(isButton: true, hasTapAction: true),
       );
       expect(
         tester
-            .getSemantics(_semantics('Radarr'))
+            .getSemantics(_semantics('Set up Radarr. Movies'))
             .getSemanticsData()
             .hasAction(SemanticsAction.tap),
         isTrue,
       );
       handle.dispose();
+    });
 
-      await tester.tap(find.text('Radarr'));
+    testWidgets('choosing one rolls Connect to it, and Seerr leaves the '
+        'headline', (tester) async {
+      await _pumpOnboarding(tester);
+      await _tap(tester, 'Set up a service');
+      expect(findLine('Set up Seerr'), findsOneWidget);
+
+      await _tap(tester, 'Start with another service');
+      await _tap(tester, 'Set up Radarr');
+
+      expect(findLine('Set up Radarr'), findsOneWidget);
+      expect(findLine('Set up Seerr'), findsNothing);
+      // The step counter is for the two services that lead somewhere.
+      expect(findLine('Step 1 of 2'), findsNothing);
+      expect(find.text(connectLead(ServiceKey.radarr)), findsOneWidget);
+    });
+
+    testWidgets('Back returns to Connect, on the service it was opened from', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester);
+      await _tap(tester, 'Set up a service');
+      await _tap(tester, 'Start with another service');
+      await _tap(tester, 'Back');
+
+      expect(findLine('Set up Seerr'), findsOneWidget);
+      expect(find.text('Test connection'), findsOneWidget);
+    });
+  });
+
+  group('Connect', () {
+    testWidgets('Back returns to the Welcome', (tester) async {
+      await _pumpOnboarding(tester);
+      await _openService(tester, 'Sonarr');
+
+      await _tap(tester, 'Back');
+
+      expect(find.text(OnePunchline.claim), findsOneWidget);
+      expect(_button('Set up a service'), findsOneWidget);
+      expect(find.text('Test connection'), findsNothing);
+    });
+
+    testWidgets('opened on its own, Back pops to where it came from', (
+      tester,
+    ) async {
+      final way = await _pumpOnboarding(tester, initialLocation: '/home');
+      unawaited(way.router.push<void>(ServiceRoutes.welcomeConnect));
       await tester.pumpAndSettle();
-      expect(_button('Continue with 1'), findsOneWidget);
+      expect(findLine('Set up Seerr'), findsOneWidget);
+      // Past the claim: the door that opened it already made it.
+      expect(find.text(OnePunchline.claim), findsNothing);
+
+      await _tap(tester, 'Back');
+
+      expect(way.router.state.uri.path, ServiceRoutes.home);
     });
 
-    testWidgets('picking every service walks all of them in registry order', (
+    testWidgets('opened by its address, Back goes to the Welcome beneath it', (
+      tester,
+    ) async {
+      // A deep link to Connect builds the Welcome under it, so Back pops to
+      // the claim and the way in stays whole.
+      final way = await _pumpOnboarding(
+        tester,
+        initialLocation: ServiceRoutes.welcomeConnect,
+      );
+      expect(findLine('Set up Seerr'), findsOneWidget);
+
+      await _tap(tester, 'Back');
+
+      expect(way.router.state.uri.path, ServiceRoutes.welcome);
+      expect(find.text(OnePunchline.claim), findsOneWidget);
+    });
+
+    testWidgets('the step says what it wants before anything is pressed', (
+      tester,
+    ) async {
+      // The instruction used to exist only as the outcome of pressing Test on
+      // an empty form: the answer to a question the user had already had to
+      // guess. It is the step's standing lead.
+      await _pumpOnboarding(tester);
+      await _openService(tester, 'Sonarr');
+
+      expect(
+        find.text('Enter the address and the API key, then test.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Seerr and Prowlarr say what they already know instead', (
       tester,
     ) async {
       await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
+      await _openService(tester, 'Prowlarr');
 
-      for (final service in ServiceKey.values) {
-        await _pick(tester, service.title);
-      }
-      expect(
-        _button('Continue with ${ServiceKey.values.length}'),
-        findsOneWidget,
-      );
-
-      await _tap(tester, 'Continue with ${ServiceKey.values.length}');
-
-      // The walk starts at the first service in ring order. The eyebrow used to
-      // read "RADARR · 1 OF 17" and now reads the compound form decision 47
-      // leaves as the flow's only counter: the beat *and* the service, because
-      // the ring already says how far in and cannot say which one. The service
-      // name moved to the glyph tile beside it, and to the spoken label, since
-      // in the compact register neither the tile nor the headline is on screen.
-      final first = ServiceRing.order.first;
-      expect(
-        findLine('Step 3 of 4 · service 1 of ${ServiceKey.values.length}'),
-        findsOneWidget,
-      );
-      expect(
-        _spokenLine(
-          '${first.title}, step 3 of 4, service 1 of ${ServiceKey.values.length}',
-        ),
-        findsOneWidget,
-      );
-      expect(findLine('Where does ${first.title} live?'), findsOneWidget);
+      expect(findLine('Set up Prowlarr'), findsOneWidget);
+      expect(findLine('Step 1 of 2'), findsOneWidget);
+      expect(find.text(connectLead(ServiceKey.prowlarr)), findsOneWidget);
     });
 
-    testWidgets('compact desktop keeps long-form actions reachable', (
-      tester,
-    ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      try {
-        final settings = const SettingsModel().copyWithService(
-          ServiceKey.readarr,
-          url: 'http://127.0.0.1:8787',
-          apiKey: 'test-key',
-        );
-        await _pumpOnboarding(
-          tester,
-          settings: settings,
-          viewport: const Size(720, 450),
-        );
-        await _tap(tester, 'Set up my stack');
-        await _tap(tester, 'Continue with 1');
+    testWidgets('one service: fill it in and test it', (tester) async {
+      final way = await _pumpOnboarding(tester);
+      await _openService(tester, 'Sonarr');
 
-        // Notes on the long-form services used to push the footer below the
-        // compact desktop window. The form may scroll, but the decision cannot
-        // require a user to discover an invisible primary action first.
-        expect(
-          find.textContaining('Readarr development has stopped'),
-          findsOneWidget,
-        );
-        final testButton = tester.getRect(_button('Test connection').first);
-        expect(testButton.bottom, lessThanOrEqualTo(450));
-        expect(
-          tester
-              .getRect(find.widgetWithText(OutlinedButton, 'Skip Readarr'))
-              .bottom,
-          lessThanOrEqualTo(450),
-        );
-      } finally {
-        // Cleared before the test binding checks its foundation invariants.
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
-
-    testWidgets('one service: fill it in, test, and finish', (tester) async {
-      await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
-
-      expect(findLine('Step 3 of 4 · service 1 of 1'), findsOneWidget);
       await _fill(tester, url: 'sonarr.lan:8989', key: 'abcdef1234567890');
 
-      // Test, not Next: the primary action only becomes an advance once the
+      // Test, not a way forward: the primary action only becomes one once the
       // service has actually answered.
       await _tap(tester, 'Test connection');
 
       // Under test the transport refuses every request, so the outcome is a
       // failure, reported as a sentence rather than a badge saying UNREACHABLE.
+      // Nothing is saved for a service that did not answer, and there is no way
+      // to go on without one.
       expect(_button('Test connection'), findsOneWidget);
-      expect(find.text('Skip Sonarr'), findsOneWidget);
-    });
-
-    testWidgets('skipping a service moves on without configuring it', (
-      tester,
-    ) async {
-      await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _pick(tester, 'Radarr');
-      await _tap(tester, 'Continue with 2');
-
-      // Radarr comes first in ring order, so it is the one on screen. Asserted
-      // through the step's own question rather than the eyebrow: since decision
-      // 47 the eyebrow counts beats and services and names neither, so it can
-      // no longer tell these two steps apart.
-      expect(findLine('Where does Radarr live?'), findsOneWidget);
-      expect(findLine('Step 3 of 4 · service 1 of 2'), findsOneWidget);
-      await _tap(tester, 'Skip Radarr');
-      expect(findLine('Where does Sonarr live?'), findsOneWidget);
-      expect(findLine('Step 3 of 4 · service 2 of 2'), findsOneWidget);
-
-      await _tap(tester, 'Skip Sonarr');
-      // Both skipped, so the close has nothing to report.
-      expect(find.text('Nothing set up yet.'), findsOneWidget);
+      expect(_button('Go to Home'), findsNothing);
+      expect(_skips(), findsNothing);
+      expect(way.container.read(settingsProvider).sonarrUrl, isEmpty);
+      expect(way.container.read(onboardingCompletedProvider), isFalse);
     });
 
     testWidgets(
       'an unfilled form reports what is missing, not a network fault',
       (tester) async {
         await _pumpOnboarding(tester);
-        await _tap(tester, 'Set up my stack');
-        await _pick(tester, 'Sonarr');
-        await _tap(tester, 'Continue with 1');
+        await _openService(tester, 'Sonarr');
 
         await _tap(tester, 'Test connection');
 
@@ -214,7 +289,7 @@ void main() {
           findsOneWidget,
         );
         // The outcome says what the press found; the instruction stays the
-        // subtitle above and is not said twice.
+        // lead above and is not said twice.
         expect(find.text('Nothing to send yet.'), findsOneWidget);
       },
     );
@@ -223,9 +298,7 @@ void main() {
       tester,
     ) async {
       await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
+      await _openService(tester, 'Sonarr');
 
       await _fill(tester, url: 'sonarr.lan:8989', key: 'abcdef1234567890');
       await _tap(tester, 'Test connection');
@@ -239,148 +312,23 @@ void main() {
       );
     });
 
-    testWidgets('the close checks services nobody tested by hand', (
+    testWidgets('the credential breadcrumb names where the key lives', (
       tester,
     ) async {
       await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
-      await _fill(tester, url: 'sonarr.lan:8989', key: 'abcdef1234567890');
+      await _openService(tester, 'Jellyfin');
 
-      // Straight past the walk. Test was never pressed. Pumped in stages so the
-      // automatic checks finish while the page transition is still in flight,
-      // which is the window where a reveal that walks up into the pager used to
-      // drag it back and pin setup mid-flow.
-      await _tap(tester, 'Skip Sonarr', settle: false);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 60));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('Nothing set up'), findsOneWidget);
-      // And it never blocks the way out.
-      expect(_button('Enter Cupola'), findsOneWidget);
-    });
-
-    testWidgets('the close names the service that did not answer', (
-      tester,
-    ) async {
-      await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
-      await _fill(tester, url: 'sonarr.lan:8989', key: 'abcdef1234567890');
-      await _tap(tester, 'Test connection');
-      await _tap(tester, 'Skip Sonarr', settle: false);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 60));
-      await tester.pumpAndSettle();
-
-      // Skipping after filling it in clears it, so this is the honest outcome:
-      // the summary reports what is actually saved, never what was typed.
-      expect(find.text('Nothing set up yet.'), findsOneWidget);
-    });
-
-    testWidgets('a configured service survives to the close and is named', (
-      tester,
-    ) async {
-      await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
-      await _fill(tester, url: 'sonarr.lan:8989', key: 'abcdef1234567890');
-
-      // The last service's advance goes to the close and saves on the way.
-      await _tap(tester, 'Test connection');
-      await _tap(tester, 'Skip Sonarr', settle: false);
-      await tester.pumpAndSettle();
-
-      expect(_button('Enter Cupola'), findsOneWidget);
-    });
-
-    testWidgets('no beat overflows a short phone at an accessibility size', (
-      tester,
-    ) async {
-      await _pumpOnboarding(
-        tester,
-        textScale: 2.0,
-        // The viewport where a display headline, a paragraph and two buttons
-        // stopped fitting first.
-        viewport: const Size(375, 667),
-      );
-
-      // Each beat is a scrollable whose content is centred while it fits, so
-      // nothing overflows and the actions stay pinned and reachable.
-      expect(tester.takeException(), isNull);
-      expect(_button('Set up my stack'), findsOneWidget);
-
-      await _tap(tester, 'Set up my stack');
-      expect(tester.takeException(), isNull);
-      expect(_button('Continue'), findsOneWidget);
-
-      await _tap(tester, 'Continue');
-      expect(tester.takeException(), isNull);
-      expect(_button('Enter Cupola'), findsOneWidget);
-    });
-
-    testWidgets('the walk stacks its actions at an accessibility size', (
-      tester,
-    ) async {
-      await _pumpOnboarding(tester, textScale: 2.0);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
-
-      // Side by side the two labels overlap rather than elide past roughly 1.4x,
-      // so the footer stacks and both actions survive.
-      expect(_button('Test connection'), findsOneWidget);
-      expect(find.text('Skip Sonarr'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('a full configuration fits a phone at the close', (
-      tester,
-    ) async {
-      await _pumpOnboarding(
-        tester,
-        settings: _fullConfiguration(),
-        viewport: const Size(390, 844),
-      );
-      // Resumed: every saved service is already picked, so the door leads
-      // straight into a fifteen-page walk.
-      await _tap(tester, 'Set up my stack');
       expect(
-        _button('Continue with ${ServiceKey.values.length}'),
+        find.text('Jellyfin → Dashboard → Advanced → API Keys'),
         findsOneWidget,
       );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('a second run resumes the saved configuration', (tester) async {
-      await _pumpOnboarding(
-        tester,
-        settings: settingsWith(
-          sonarrUrl: 'https://sonarr.lan:8989',
-          sonarrApiKey: 'abcdef1234567890',
-        ),
-      );
-      await _tap(tester, 'Set up my stack');
-
-      // Sonarr arrives already picked: finishing a second time must not blank a
-      // real configuration.
-      expect(_button('Continue with 1'), findsOneWidget);
-      await _tap(tester, 'Continue with 1');
-      final field = tester.widget<TextField>(find.byType(TextField).first);
-      expect(field.controller!.text, 'https://sonarr.lan:8989');
     });
 
     testWidgets('the port chip puts this service default on the typed host', (
       tester,
     ) async {
       await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
+      await _openService(tester, 'Sonarr');
 
       await tester.enterText(find.byType(TextField).first, 'nas.local:1234');
       await tester.pumpAndSettle();
@@ -395,9 +343,7 @@ void main() {
       tester,
     ) async {
       await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
+      await _openService(tester, 'Sonarr');
       expect(_semantics('Use port 8989'), findsOneWidget);
 
       await tester.enterText(
@@ -408,141 +354,124 @@ void main() {
       expect(_semantics('Use port 8989'), findsNothing);
     });
 
-    testWidgets('the next service starts with an empty address', (
-      tester,
-    ) async {
+    testWidgets('another service starts with an empty address', (tester) async {
       await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Radarr');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 2');
-
+      await _openService(tester, 'Radarr');
       await _fill(tester, url: 'http://nas.local:7878', key: 'abcdef1234');
-      await _tap(tester, 'Skip Radarr');
+
+      await _tap(tester, 'Start with another service');
+      await _tap(tester, 'Set up Sonarr');
 
       // Nothing is guessed on arrival. Carrying Radarr's host over on Sonarr's
       // default port was wrong for every reverse-proxied lab, where each
       // service has its own subdomain on 443, and cost a delete before the real
-      // address could be typed. The guess survives as the port chip, a tap the
-      // user chooses to make.
-      expect(findLine('Where does Sonarr live?'), findsOneWidget);
+      // address could be typed.
+      expect(findLine('Set up Sonarr'), findsOneWidget);
       final field = tester.widget<TextField>(find.byType(TextField).first);
       expect(field.controller!.text, isEmpty);
 
-      await tester.tap(find.text(':8989'));
-      await tester.pumpAndSettle();
-      expect(field.controller!.text, 'http://nas.local:8989');
+      // And what was typed for Radarr waits for it, rather than going with
+      // the person to the next service.
+      await _tap(tester, 'Start with another service');
+      await _tap(tester, 'Set up Radarr');
+      final back = tester.widget<TextField>(find.byType(TextField).first);
+      expect(back.controller!.text, 'http://nas.local:7878');
     });
 
-    testWidgets('the credential breadcrumb names where the key lives', (
-      tester,
-    ) async {
-      await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Jellyfin');
-      await _tap(tester, 'Continue with 1');
-
-      expect(
-        find.text('Jellyfin → Dashboard → Advanced → API Keys'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('Skip for now on the door reaches the close', (tester) async {
-      await _pumpOnboarding(tester);
-      await _tap(tester, 'Skip for now');
-      expect(find.text('Nothing set up yet.'), findsOneWidget);
-      expect(_button('Enter Cupola'), findsOneWidget);
-    });
-
-    testWidgets('the ring is one instrument that survives the walk', (
-      tester,
-    ) async {
-      await _pumpOnboarding(tester, reduceMotion: false);
-
-      // Exactly one ring for the whole flow, mounted above the pager, so it is
-      // never rebuilt from scratch when a beat changes.
-      expect(find.byType(ServiceRing), findsOneWidget);
-      final ringElement = tester.element(find.byType(ServiceRing));
-
-      await tester.tap(find.text('Set up my stack'));
-      await _advanceFrames(tester);
-      await _pick(tester, 'Sonarr', settle: false);
-      await _advanceFrames(tester);
-      await tester.tap(findLine('Continue with 1'));
-      await _advanceFrames(tester);
-
-      expect(find.byType(ServiceRing), findsOneWidget);
-      expect(
-        tester.element(find.byType(ServiceRing)),
-        same(ringElement),
-        reason: 'the same element, so its animation state is continuous',
-      );
-      expect(findLine('Step 3 of 4 · service 1 of 1'), findsOneWidget);
-
-      // Bounded pumps only: the sweep repeats forever by design, so settling is
-      // not something this screen ever does with motion on.
-      await tester.pump(const Duration(seconds: 1));
-      expect(tester.takeException(), isNull);
-    });
-
-    // ── Walking past a service is not deleting it ─────────────────────────
-    //
-    // The old save wrote *every* not-ready service back blank, which deleted the
-    // saved address and the secure credential of a service that was working. Two
-    // ordinary routes reached it: "Revisit onboarding" in settings, which
-    // promises in as many words that nothing about your services is changed or
-    // removed, and "Skip for now" on the very first beat.
-
-    testWidgets('skipping a saved service leaves it configured', (
-      tester,
-    ) async {
-      final container = await _pumpOnboarding(
+    testWidgets('a saved service resumes in its fields', (tester) async {
+      // Saving happens once a service answers, so an earlier run leaves
+      // settings on disk that this screen must show: otherwise finishing a
+      // second time writes empty fields over a real configuration.
+      await _pumpOnboarding(
         tester,
         settings: settingsWith(
           sonarrUrl: 'https://sonarr.lan:8989',
           sonarrApiKey: 'abcdef1234567890',
         ),
       );
-      await _tap(tester, 'Set up my stack');
-      await _tap(tester, 'Continue with 1');
+      await _openService(tester, 'Sonarr');
 
-      await _tap(tester, 'Skip Sonarr', settle: false);
-      await tester.pumpAndSettle();
+      final fields = find.byType(TextField);
+      expect(
+        tester.widget<TextField>(fields.at(0)).controller!.text,
+        'https://sonarr.lan:8989',
+      );
+      expect(
+        tester.widget<TextField>(fields.at(1)).controller!.text,
+        'abcdef1234567890',
+      );
+    });
 
-      final saved = container.read(settingsProvider);
+    testWidgets('a saved Seerr resumes on the step the door opens', (
+      tester,
+    ) async {
+      await _pumpOnboarding(
+        tester,
+        settings: settingsWith(
+          seerrUrl: 'https://seerr.lan:5055',
+          seerrApiKey: 'abcdef1234567890',
+        ),
+      );
+      await _tap(tester, 'Set up a service');
+
+      final field = tester.widget<TextField>(find.byType(TextField).first);
+      expect(field.controller!.text, 'https://seerr.lan:5055');
+    });
+  });
+
+  group('leaving without an answer', () {
+    // The old save wrote every service that was not ready back blank, which
+    // deleted the saved address and the secure credential of a service that
+    // was working. The ways out that reached it are gone (Skip, unticking a
+    // chip), and the ones that remain must not write at all: a service is
+    // saved once it answers, and nothing before.
+
+    testWidgets('opening a saved service and going back keeps it configured', (
+      tester,
+    ) async {
+      final way = await _pumpOnboarding(
+        tester,
+        settings: settingsWith(
+          sonarrUrl: 'https://sonarr.lan:8989',
+          sonarrApiKey: 'abcdef1234567890',
+        ),
+      );
+      await _openService(tester, 'Sonarr');
+
+      await _tap(tester, 'Back');
+
+      final saved = way.container.read(settingsProvider);
       expect(saved.sonarrUrl, 'https://sonarr.lan:8989');
       expect(saved.sonarrApiKey, 'abcdef1234567890');
     });
 
-    testWidgets('deselecting a saved service does not remove it', (
+    testWidgets('choosing another service leaves a saved one configured', (
       tester,
     ) async {
-      final container = await _pumpOnboarding(
+      final way = await _pumpOnboarding(
         tester,
         settings: settingsWith(
           sonarrUrl: 'https://sonarr.lan:8989',
           sonarrApiKey: 'abcdef1234567890',
         ),
       );
-      await _tap(tester, 'Set up my stack');
+      await _openService(tester, 'Sonarr');
 
-      // Resumed already picked; untick it and walk out through the close.
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue');
-      expect(find.text('Nothing set up yet.'), findsOneWidget);
+      await _tap(tester, 'Start with another service');
+      await _tap(tester, 'Set up Radarr');
 
       // Removing a connection is a confirmed action that lives in the settings
-      // screen. Unticking a chip here means "not now".
-      final saved = container.read(settingsProvider);
+      // screen. Setting another one up here means "not this one now".
+      final saved = way.container.read(settingsProvider);
       expect(saved.sonarrUrl, 'https://sonarr.lan:8989');
       expect(saved.sonarrApiKey, 'abcdef1234567890');
+      expect(saved.radarrUrl, isEmpty);
     });
 
-    testWidgets('Skip for now on the door keeps every saved service', (
+    testWidgets('a revisit keeps every saved service, credentials included', (
       tester,
     ) async {
-      final container = await _pumpOnboarding(
+      final way = await _pumpOnboarding(
         tester,
         settings: settingsWith(
           sonarrUrl: 'https://sonarr.lan:8989',
@@ -553,9 +482,10 @@ void main() {
         ),
       );
 
-      await _tap(tester, 'Skip for now');
+      await _tap(tester, 'Set up a service');
+      await _tap(tester, 'Back');
 
-      final saved = container.read(settingsProvider);
+      final saved = way.container.read(settingsProvider);
       expect(saved.sonarrUrl, 'https://sonarr.lan:8989');
       expect(saved.sonarrApiKey, 'abcdef1234567890');
       // The credential half too. It lives in secure storage, so losing it is
@@ -565,113 +495,90 @@ void main() {
       expect(saved.qbittorrentPassword, 'hunter2');
     });
 
-    testWidgets('a first run skips without inventing anything to save', (
+    testWidgets('a first run that types and goes back invents nothing to save', (
       tester,
     ) async {
       // The other half of the invariant: with nothing on disk there is nothing
-      // to preserve, and skipping must not write half-typed values either.
-      final container = await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
+      // to preserve, and leaving must not write half-typed values either.
+      final way = await _pumpOnboarding(tester);
+      await _openService(tester, 'Sonarr');
       await _fill(tester, url: 'sonarr.lan:8989', key: '');
 
-      await _tap(tester, 'Skip Sonarr', settle: false);
-      await tester.pumpAndSettle();
+      await _tap(tester, 'Back');
 
-      expect(container.read(settingsProvider).sonarrUrl, isEmpty);
-      expect(find.text('Nothing set up yet.'), findsOneWidget);
+      expect(way.container.read(settingsProvider).sonarrUrl, isEmpty);
+      expect(find.text(OnePunchline.claim), findsOneWidget);
     });
+  });
 
-    // ── A trust decision belongs to the host it was made against ──────────
-    //
-    // The pin is seeded from the *saved* URL on resume and `_save` writes every
-    // ready service, not just the one on screen. Without tying the fingerprint
-    // to the origin it was accepted for, editing an address carried the old
-    // host's certificate onto the new one, and because a pin is keyed by
-    // origin alone, that bogus entry then failed closed for every service later
-    // pointed at that host, with no trust prompt to explain it.
-    testWidgets('editing an address does not move its certificate pin', (
+  group('the room and the instrument', () {
+    testWidgets('the ring is one instrument that survives every beat', (
       tester,
     ) async {
-      final container = await _pumpOnboarding(
-        tester,
-        settings: settingsWith(
-          radarrUrl: 'https://radarr.lan:7878',
-          radarrApiKey: 'abcdef1234567890',
-          sonarrUrl: 'https://nas.lan:8989',
-          sonarrApiKey: 'abcdef1234567890',
-          trustedCertificates: {'https://nas.lan:8989': 'AA:BB'},
-        ),
+      await _pumpOnboarding(tester, reduceMotion: false);
+
+      // Exactly one ring for the whole flow, mounted above the pager, so it is
+      // never rebuilt from scratch when a beat changes.
+      expect(find.byType(ServiceRing), findsOneWidget);
+      final ringElement = tester.element(find.byType(ServiceRing));
+
+      await tester.tap(find.text('Set up a service'));
+      await _advanceFrames(tester);
+      await tester.tap(find.text('Start with another service'));
+      await _advanceFrames(tester);
+      await tester.tap(find.text('Set up Radarr'));
+      await _advanceFrames(tester);
+
+      expect(find.byType(ServiceRing), findsOneWidget);
+      expect(
+        tester.element(find.byType(ServiceRing)),
+        same(ringElement),
+        reason: 'the same element, so its animation state is continuous',
       );
+      expect(findLine('Set up Radarr'), findsOneWidget);
 
-      await _tap(tester, 'Set up my stack');
-      await _tap(tester, 'Continue with 2');
-
-      // Radarr is first in ring order; walking past it saves and lands on
-      // Sonarr, which is the service holding the pin.
-      await _tap(tester, 'Skip Radarr', settle: false);
-      await tester.pumpAndSettle();
-      await _fill(
-        tester,
-        url: 'https://other.lan:8989',
-        key: 'abcdef1234567890',
-      );
-
-      // Back to Radarr and past it again: Sonarr is never tested, but it is
-      // still `_isReady`, so this save writes its new address.
-      await _tap(tester, 'Back');
-      await _tap(tester, 'Skip Radarr', settle: false);
-      await tester.pumpAndSettle();
-
-      final saved = container.read(settingsProvider);
-      expect(saved.sonarrUrl, 'https://other.lan:8989');
-      // The new host never presented a certificate here, so it has no pin;
-      // and the abandoned one is forgotten rather than relocated.
-      expect(saved.pinForUrl('https://other.lan:8989'), isNull);
-      expect(saved.trustedCertificates, isEmpty);
+      // Bounded pumps only: the sweep repeats forever by design, so settling is
+      // not something this screen ever does with motion on.
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.takeException(), isNull);
     });
 
-    // ── Reduce Motion: the animator is removed, not shortened ─────────────
-    //
-    // onb5's rule for this flow is that the whole of it must be completable
-    // without one tween. The page slide was the biggest hole in it: every
-    // Continue, Skip, Back and Next went through `animateToPage`.
     testWidgets('a beat arrives rather than sliding in', (tester) async {
+      // The whole flow must be completable without one tween. The page slide
+      // was the biggest hole in it: every way between two beats went through
+      // `animateToPage`.
       await _pumpOnboarding(tester);
 
-      await tester.tap(find.text('Set up my stack'));
+      await tester.tap(find.text('Set up a service'));
       // One frame, deliberately not a settle: with the animator gone the pager
-      // is already on the next beat by the time the frame is built.
+      // is already on Connect by the time the frame is built.
       await tester.pump();
 
       final pager = tester.widget<PageView>(find.byType(PageView));
+      expect(pager.controller!.page, 2);
+      expect(findLine('Set up Seerr'), findsOneWidget);
+
+      await tester.tap(find.text('Start with another service'));
+      await tester.pump();
       expect(pager.controller!.page, 1);
-      expect(find.text('Pick your services'), findsOneWidget);
+      expect(find.text('They know the others'), findsOneWidget);
     });
 
-    // ── The room is the third instrument ──────────────────────────────────
-    //
-    // `AmbientBackground` was built with no accent at all, so the glow stayed
-    // brand indigo for the whole flow while the artboards tint it per service.
-    // The tween that carries it between two services is removed under Reduce
-    // Motion, which is why this case can read the settled value.
     testWidgets('the room is lit by the lamp on every beat, the walk too', (
       tester,
     ) async {
-      // The brand book: a room with no artwork is lit by the neutral lamp, and a service's
-      // room is no exception: the service being set up is named by its mark
-      // and its form, never by a colour. The room used to take the service's
-      // accent during the walk and the brand primary either side of it (the
-      // primary is the ink now, which would have lit the room white).
+      // The brand book: a room with no artwork is lit by the neutral lamp, and a
+      // service's room is no exception: the service being set up is named by its
+      // mark and its form, never by a colour. The room used to take the
+      // service's accent during the walk and the brand primary either side of it
+      // (the primary is the ink now, which would have lit the room white).
       await _pumpOnboarding(tester);
       const brand = AppColors.lamp;
 
       // Read off the gradient the room actually paints, not off the argument it
       // was handed. `AmbientBackground` resolves its own fallback and tweens the
-      // accent now; the drift used to live in a private `_AmbientRoom` wrapper
-      // here, so the constructor argument is null on the beats that want the
-      // brand glow, and asserting on it would be asserting on the plumbing
+      // accent now, so the constructor argument is null on the beats that want
+      // the brand glow, and asserting on it would be asserting on the plumbing
       // rather than on the rule.
       Color roomAccent() {
         final decorated = tester
@@ -690,35 +597,16 @@ void main() {
         return gradient.colors.first.withValues(alpha: 1.0);
       }
 
-      // The beats either side of the walk are the lamp.
+      // The Welcome is the lamp.
       expect(roomAccent(), brand);
 
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
-      // And so is the walk: Sonarr's room is the same light.
+      await _openService(tester, 'Sonarr');
+      // And so is Connect: Sonarr's room is the same light.
       expect(roomAccent(), brand);
       expect(roomAccent(), isNot(ServiceKey.sonarr.brandAccent));
 
-      await _tap(tester, 'Skip Sonarr');
+      await _tap(tester, 'Back');
       expect(roomAccent(), brand);
-    });
-
-    testWidgets('the step says what it wants before anything is pressed', (
-      tester,
-    ) async {
-      // The instruction used to exist only as the *outcome* of pressing Test on
-      // an empty form: the answer to a question the user had already had to
-      // guess. It is the step's standing subtitle now.
-      await _pumpOnboarding(tester);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
-
-      expect(
-        find.text('Enter the address and the API key, then test.'),
-        findsOneWidget,
-      );
     });
 
     testWidgets('the ring speaks its state rather than only drawing it', (
@@ -730,11 +618,120 @@ void main() {
         findsWidgets,
       );
 
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
+      await _tap(tester, 'Set up a service');
       expect(
         _semantics('1 of ${ServiceKey.values.length} chosen'),
         findsWidgets,
+      );
+    });
+  });
+
+  group('sizes', () {
+    testWidgets('compact desktop keeps long-form actions reachable', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        final settings = const SettingsModel().copyWithService(
+          ServiceKey.readarr,
+          url: 'http://127.0.0.1:8787',
+          apiKey: 'test-key',
+        );
+        await _pumpOnboarding(
+          tester,
+          settings: settings,
+          viewport: const Size(720, 450),
+        );
+        await _tap(tester, 'Set up a service');
+        await _tap(tester, 'Start with another service');
+        // A short window scrolls the list, and the pager must not move.
+        await tester.scrollUntilVisible(
+          find.text('Set up Readarr'),
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byType(OnboardingStart),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.tap(find.text('Set up Readarr'));
+        await tester.pumpAndSettle();
+
+        // Notes on the long-form services used to push the footer below the
+        // compact desktop window. The form may scroll, but the decision cannot
+        // require a user to discover an invisible primary action first.
+        expect(
+          find.textContaining('Readarr development has stopped'),
+          findsOneWidget,
+        );
+        final testButton = tester.getRect(_button('Test connection').first);
+        expect(testButton.bottom, lessThanOrEqualTo(450));
+        expect(
+          tester.getRect(find.widgetWithText(TextButton, 'Back')).bottom,
+          lessThanOrEqualTo(450),
+        );
+      } finally {
+        // Cleared before the test binding checks its foundation invariants.
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('no beat overflows a short phone at an accessibility size', (
+      tester,
+    ) async {
+      await _pumpOnboarding(
+        tester,
+        textScale: 2.0,
+        // The viewport where a display headline, a paragraph and two buttons
+        // stopped fitting first.
+        viewport: const Size(375, 667),
+      );
+
+      // Each beat is a scrollable whose content is centred while it fits, so
+      // nothing overflows and the actions stay pinned and reachable.
+      expect(tester.takeException(), isNull);
+      expect(_button('Set up a service'), findsOneWidget);
+
+      await _tap(tester, 'Set up a service');
+      expect(tester.takeException(), isNull);
+      expect(_button('Test connection'), findsOneWidget);
+
+      await _tap(tester, 'Back');
+      expect(tester.takeException(), isNull);
+      expect(_button('Set up a service'), findsOneWidget);
+    });
+
+    testWidgets('Connect keeps its action and Back at an accessibility size', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, textScale: 2.0);
+      await _openService(tester, 'Sonarr');
+
+      // The only two actions Connect has, and both survive the reading size.
+      expect(_button('Test connection'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Back'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a full configuration fits a phone on every beat', (
+      tester,
+    ) async {
+      await _pumpOnboarding(
+        tester,
+        settings: _fullConfiguration(),
+        viewport: const Size(390, 844),
+      );
+      // Resumed: Seerr opens on its saved address and key, and the list of
+      // every service is the longest page the flow has.
+      expect(tester.takeException(), isNull);
+      await _tap(tester, 'Set up a service');
+      expect(tester.takeException(), isNull);
+      await _tap(tester, 'Start with another service');
+      expect(tester.takeException(), isNull);
+      expect(
+        find.byType(SettingsCard),
+        findsNWidgets(ServiceKey.values.length),
       );
     });
   });
@@ -751,16 +748,13 @@ void main() {
     const phone = Size(393, 852);
     const keyboard = 336.0;
 
-    Future<void> reachTheForm(WidgetTester tester) async {
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _tap(tester, 'Continue with 1');
-    }
+    Future<void> reachTheForm(WidgetTester tester) =>
+        _openService(tester, 'Sonarr');
 
     /// Raises the keyboard the way the platform does, after the field has
     /// focus, by shrinking the view, rather than pumping a screen that was
     /// already short. Pumping it up front would test a state the user never
-    /// reaches, since the beats before the walk have nothing to type into.
+    /// reaches, since the beats before Connect have nothing to type into.
     Future<void> raiseKeyboard(WidgetTester tester) async {
       tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
       await tester.pumpAndSettle();
@@ -819,27 +813,22 @@ void main() {
       );
     });
 
-    testWidgets('the eyebrow moves beside the ring and the question goes', (
+    testWidgets('the eyebrow moves beside the ring and the lead goes', (
       tester,
     ) async {
       await _pumpOnboarding(tester, viewport: phone);
       await reachTheForm(tester);
-      expect(findLine('Where does Sonarr live?'), findsOneWidget);
+      expect(findLine('Set up Sonarr'), findsOneWidget);
+      expect(find.text(connectLead(ServiceKey.sonarr)), findsOneWidget);
 
       await raiseKeyboard(tester);
 
-      // The orientation survives the register change: which service, how far in
-      // and says it exactly once, because a duplicated eyebrow is two steps to
-      // a screen reader. It is the compound counter now (decision 47), so the
-      // *spoken* form is what still carries the service: in this register the
-      // glyph tile and the headline are both gone, and a counter alone would
-      // leave a screen-reader user without the subject.
-      expect(findLine('Step 3 of 4 · service 1 of 1'), findsOneWidget);
-      expect(
-        _spokenLine('Sonarr, step 3 of 4, service 1 of 1'),
-        findsOneWidget,
-      );
-      final label = tester.getRect(findLine('Step 3 of 4 · service 1 of 1'));
+      // The orientation survives the register change: which service, said
+      // exactly once, because a duplicated eyebrow is two steps to a screen
+      // reader. In this register the glyph tile and the headline are both
+      // gone, and the eyebrow is what still names the subject.
+      expect(findLine('Set up Sonarr'), findsOneWidget);
+      final label = tester.getRect(findLine('Set up Sonarr'));
       final ring = tester.getRect(find.byType(ServiceRing));
       expect(
         label.left,
@@ -847,9 +836,24 @@ void main() {
         reason:
             'the compact register puts the label beside the ring, not under',
       );
-      // The question is what pays for the row: while the keyboard is up the user
-      // is already answering it, into a field labelled Address.
-      expect(findLine('Where does Sonarr live?'), findsNothing);
+      // The lead is what pays for the row: while the keyboard is up the user is
+      // already answering it, into a field labelled Address.
+      expect(find.text(connectLead(ServiceKey.sonarr)), findsNothing);
+    });
+
+    testWidgets('the eyebrow of a service with a second step says so', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await _tap(tester, 'Set up a service');
+      expect(findLine('Step 1 of 2'), findsOneWidget);
+
+      await raiseKeyboard(tester);
+
+      // The step counter folds into the eyebrow with the service, so the
+      // compact register still says how far in the person is.
+      expect(findLine('Set up Seerr · step 1 of 2'), findsOneWidget);
+      expect(findLine('Step 1 of 2'), findsNothing);
     });
 
     testWidgets('the return key walks the form and then tests', (tester) async {
@@ -877,10 +881,7 @@ void main() {
       // comes back rather than a verdict answered behind the keys.
       expect(tester.widget<TextField>(apiKey).focusNode?.hasFocus, isFalse);
       expect(tester.testTextInput.isVisible, isFalse);
-      expect(
-        find.textContaining('Enter the address and the API key'),
-        findsOneWidget,
-      );
+      expect(find.text('Nothing to send yet.'), findsOneWidget);
     });
 
     testWidgets('the address field stays clear of the keyboard', (
@@ -932,20 +933,20 @@ void main() {
       expect(field.bottom, lessThanOrEqualTo(phone.height - 90));
     });
 
-    testWidgets('leaving the walk takes the keyboard with it', (tester) async {
+    testWidgets('leaving Connect takes the keyboard with it', (tester) async {
       await _pumpOnboarding(tester, viewport: phone);
       await reachTheForm(tester);
       await tester.tap(find.byType(TextField).first);
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isTrue);
 
-      await _tap(tester, 'Skip Sonarr');
+      await _tap(tester, 'Back');
 
       // A focused `EditableText` registers a keep-alive, so the step the user
-      // left stayed mounted and focused: the close arrived with the keyboard
-      // still covering half of it, and keystrokes went into a field that was no
-      // longer on screen.
-      expect(find.text('Nothing set up yet.'), findsOneWidget);
+      // left stayed mounted and focused: the next beat arrived with the
+      // keyboard still covering half of it, and keystrokes went into a field
+      // that was no longer on screen.
+      expect(find.text(OnePunchline.claim), findsOneWidget);
       expect(tester.testTextInput.isVisible, isFalse);
       expect(
         find
@@ -956,23 +957,19 @@ void main() {
       );
     });
 
-    testWidgets('paging to the next service takes the keyboard with it', (
+    testWidgets('choosing another service takes the keyboard with it', (
       tester,
     ) async {
       await _pumpOnboarding(tester, viewport: phone);
-      await _tap(tester, 'Set up my stack');
-      await _pick(tester, 'Sonarr');
-      await _pick(tester, 'Radarr');
-      await _tap(tester, 'Continue with 2');
+      await reachTheForm(tester);
 
       await tester.tap(find.byType(TextField).first);
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isTrue);
 
-      // Radarr comes first in ring order.
-      await _tap(tester, 'Skip Radarr');
+      await _tap(tester, 'Start with another service');
 
-      expect(findLine('Step 3 of 4 · service 2 of 2'), findsOneWidget);
+      expect(find.text('They know the others'), findsOneWidget);
       expect(tester.testTextInput.isVisible, isFalse);
     });
 
@@ -1020,16 +1017,13 @@ void main() {
 
 Finder _button(String label) => find.widgetWithText(FilledButton, label);
 
-/// Matches a line by its *spoken* value rather than its painted one.
-///
-/// A rolled line carries the two separately (an eyebrow is uppercased for the
-/// eye and expanded for the ear), and where it settles depends on the renderer:
-/// `ReelText.semanticsLabel` while it rolls, `Text.semanticsLabel` once Reduce
-/// Motion has replaced the roll with plain text. `findLine` reads the first and
-/// this reads the second, which is the one every test in this file that pumps
-/// with motion off actually gets.
-Finder _spokenLine(String label) => find.byWidgetPredicate(
-  (widget) => widget is Text && widget.semanticsLabel == label,
+/// Anything on screen that offers a way past a service: the word, in a label
+/// or a button, in any case.
+Finder _skips() => find.byWidgetPredicate(
+  (widget) =>
+      (widget is Text && (widget.data ?? '').toLowerCase().contains('skip')) ||
+      (widget is Semantics &&
+          (widget.properties.label ?? '').toLowerCase().contains('skip')),
 );
 
 /// Matches a [Semantics] widget by its declared label.
@@ -1062,6 +1056,31 @@ Future<void> _tap(
   }
 }
 
+/// Connect for [title]: the door, then the list, then the row.
+///
+/// Seerr and Prowlarr are rows by name ("They know the others"); every other
+/// service is `Set up <name>`.
+Future<void> _openService(WidgetTester tester, String title) async {
+  await _tap(tester, 'Set up a service');
+  await _tap(tester, 'Start with another service');
+  final named = title == 'Seerr' || title == 'Prowlarr';
+  final row = find.text(named ? title : 'Set up $title');
+  // The list is long, and a phone's window shows a part of it: scrolled to by
+  // the list's own scrollable, so the pager is never asked to move.
+  await tester.scrollUntilVisible(
+    row,
+    100,
+    scrollable: find
+        .descendant(
+          of: find.byType(OnboardingStart),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.tap(row);
+  await tester.pumpAndSettle();
+}
+
 /// Pumps a handful of real frames.
 ///
 /// With the sweep running there is no settled state, so motion-on cases advance
@@ -1070,20 +1089,6 @@ Future<void> _tap(
 Future<void> _advanceFrames(WidgetTester tester) async {
   for (var i = 0; i < 8; i++) {
     await tester.pump(const Duration(milliseconds: 80));
-  }
-}
-
-/// Toggles a service on the pick step by its chip.
-Future<void> _pick(
-  WidgetTester tester,
-  String title, {
-  bool settle = true,
-}) async {
-  await tester.tap(find.text(title).first);
-  if (settle) {
-    await tester.pumpAndSettle();
-  } else {
-    await tester.pump();
   }
 }
 
@@ -1101,9 +1106,9 @@ Future<void> _fill(
 /// Every service configured, built from the registry rather than written out.
 ///
 /// The hand-written literal this replaces silently stopped covering the whole
-/// ring the moment a service was added, and the case it feeds is precisely "does
-/// the longest possible walk still fit a phone", so it has to grow with the
-/// registry or it stops testing what it claims to.
+/// list the moment a service was added, and the case it feeds is precisely "does
+/// the longest possible configuration still fit a phone", so it has to grow
+/// with the registry or it stops testing what it claims to.
 SettingsModel _fullConfiguration() {
   var settings = const SettingsModel();
   for (final service in ServiceKey.values) {
@@ -1120,12 +1125,17 @@ SettingsModel _fullConfiguration() {
   return settings;
 }
 
-Future<ProviderContainer> _pumpOnboarding(
+/// What a case reads back: the container, for what the way in saved, and the
+/// router, for where it left for.
+typedef _Way = ({ProviderContainer container, GoRouter router});
+
+Future<_Way> _pumpOnboarding(
   WidgetTester tester, {
   SettingsModel settings = const SettingsModel(),
   double textScale = 1.0,
   Size? viewport,
   bool reduceMotion = true,
+  String initialLocation = ServiceRoutes.welcome,
 }) async {
   // Tall enough that no beat needs scrolling, so a tap never has to reach past
   // the fold. See [_tap] for why scrolling is the thing to avoid here. Width is
@@ -1138,8 +1148,8 @@ Future<ProviderContainer> _pumpOnboarding(
   final prefs = await SharedPreferences.getInstance();
   final secureStore = FakeSecureSettingsStore();
 
-  // An explicit container, so a case can read back what the walk actually saved
-  // (the difference between "walked past" and "deleted" is invisible on screen).
+  // An explicit container, so a case can read back what the way in actually
+  // saved (the difference between "left" and "deleted" is invisible on screen).
   final container = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
@@ -1150,6 +1160,9 @@ Future<ProviderContainer> _pumpOnboarding(
   );
   addTearDown(container.dispose);
 
+  final router = onboardingRouter(initialLocation: initialLocation);
+  addTearDown(router.dispose);
+
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
@@ -1159,13 +1172,10 @@ Future<ProviderContainer> _pumpOnboarding(
       //
       // Reduce Motion is the default here, and not only for speed: the ring's
       // ambient sweep repeats forever, so with motion on `pumpAndSettle` waits
-      // for a frame that never stops coming. Motion has its own case below,
+      // for a frame that never stops coming. Motion has its own case above,
       // pumped in bounded steps.
-      child: MaterialApp(
-        home: const OnboardingScreen(
-          certificateProber: _neverFindsACertificate,
-          localNetworkProbe: _nothingGatesTheNetwork,
-        ),
+      child: MaterialApp.router(
+        routerConfig: router,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.linear(textScale),
@@ -1182,28 +1192,5 @@ Future<ProviderContainer> _pumpOnboarding(
     // With the sweep running there is no settled state to wait for.
     await tester.pump(const Duration(milliseconds: 600));
   }
-  return container;
+  return (container: container, router: router);
 }
-
-/// The default certificate prober for every test in this file.
-///
-/// Under ADR-6 the real [probeUntrustedCertificate] opens a live
-/// [SecureSocket] for *any* disconnected, probe-worthy failure, no longer
-/// just the rare TrueNAS/Dockge case ADR-5 confined it to, and none of
-/// these tests point at a real TLS host, so a `.lan`/scheme-less address
-/// that fails at the fake `ApiClient` layer would otherwise reach a real
-/// socket `flutter_test` cannot intercept or fake, hanging the test on a
-/// pending timer. None of these tests exercise the trust flow itself, so
-/// "no certificate found" is the correct fake, not just a convenient one.
-/// Stands in for the host OS. A widget test must not depend on whether the
-/// machine running it gates the local network, and the real probe would spend a
-/// whole deadline of simulated time waiting on a channel with nothing listening.
-Future<LocalNetworkAccess> _nothingGatesTheNetwork(
-  String rawUrl, {
-  Duration timeout = Duration.zero,
-}) async => LocalNetworkAccess.unrestricted;
-
-Future<UntrustedCertificateProbe?> _neverFindsACertificate(
-  String rawUrl, {
-  String pinnedFingerprint = '',
-}) async => null;
