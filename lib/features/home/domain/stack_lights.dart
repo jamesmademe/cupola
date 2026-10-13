@@ -4,14 +4,21 @@
 /// The marks stay monochrome, since a service is known by its shape; only the
 /// light takes a tone, by the five-arm rule: green answering, amber a fault
 /// or a server reached that never replied, red did not answer, and a hollow
-/// light while a service has not answered yet. Faults are counted in groups, as Needs you counts them: eighteen
-/// blocked imports are one fault, a refused key another.
+/// light while a service has not answered yet. Faults are counted as the
+/// slab shows them, one per amber light, so the count, the lights and the
+/// names under them are one figure: Needs you is where the faults themselves
+/// are counted.
 library;
 
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// How many services the line under the marks names before it counts the
+/// rest: as many as the slab's width holds on the phone.
+const _faultNames = 5;
 
 /// What one connection's probe said.
 enum StackProbe {
@@ -58,13 +65,17 @@ typedef StackLightRow = ({ServiceKey service, StackLight light});
 /// The slab: its marks in the Stack's order and what its line says.
 @immutable
 class StackLights {
-  const StackLights({required this.rows, required this.faults});
+  const StackLights({required this.rows});
 
   /// One per configured service, in the Stack's order.
   final List<StackLightRow> rows;
 
-  /// The faults, counted in groups.
-  final int faults;
+  /// The services amber for a fault: the count the line says, and the names
+  /// under the marks. Counted in groups, as Needs you counts them, it read
+  /// `3 faults` above five names: one health check failing on three \*arrs
+  /// is one fault and three amber lights, and the reader is left to work out
+  /// which figure the lights are.
+  int get faults => faulted.length;
 
   /// The services asked.
   int get configured => rows.length;
@@ -137,10 +148,13 @@ class StackLights {
     ].join(' ');
   }
 
-  /// `Faults: Sonarr, qBittorrent, TrueNAS`, or null when no light is amber.
+  /// `Faults: Sonarr, qBittorrent and TrueNAS`, or null when no light is
+  /// amber for a fault. Past [_faultNames] names, the rest counted: `Faults:
+  /// Seerr, Radarr, Sonarr, Lidarr, Prowlarr and 2 others`, still the line's
+  /// figure.
   String? get faultLine => faulted.isEmpty
       ? null
-      : 'Faults: ${[for (final service in faulted) service.title].join(', ')}';
+      : 'Faults: ${servicesNamed([for (final service in faulted) service.title], maxNamed: _faultNames)}';
 }
 
 /// The light of one service, from what each of its connections said and
@@ -166,11 +180,8 @@ StackLight stackLightOf(List<StackProbe> probes, {bool needsYou = false}) {
 }
 
 /// The slab, given each configured service's probes in the Stack's order and
-/// the stack's faults ([DashboardDecision.isFault]).
-///
-/// A fault group counts once; a service amber for its answer alone (a refused
-/// key, a connection that did not answer beside one that did) counts once
-/// more, since no group stands for it.
+/// the stack's faults ([DashboardDecision.isFault]), which light the services
+/// they belong to.
 StackLights stackLightsOf({
   required List<({ServiceKey service, List<StackProbe> probes})> services,
   required List<DashboardDecision> faults,
@@ -187,24 +198,5 @@ StackLights stackLightsOf({
         ),
       ),
   ];
-  // A server that timed out is its probe's fault too (`connectionFault`):
-  // the line says it once, as `timed out`, never again among the faults.
-  final timedOut = {
-    for (final row in rows)
-      if (row.light == StackLight.stuck) row.service,
-  };
-  final groups = faults
-      .where(
-        (fault) =>
-            fault.kind != DecisionKind.connectionFault ||
-            !timedOut.contains(fault.service),
-      )
-      .length;
-  final unnamed = rows
-      .where(
-        (row) =>
-            row.light == StackLight.fault && !withFaults.contains(row.service),
-      )
-      .length;
-  return StackLights(rows: rows, faults: groups + unnamed);
+  return StackLights(rows: rows);
 }

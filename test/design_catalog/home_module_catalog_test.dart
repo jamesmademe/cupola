@@ -345,7 +345,6 @@ class _Rows extends StatelessWidget {
 /// [lights] says otherwise.
 StackLights _lights(
   Map<ServiceKey, StackLight> lights, {
-  int faults = 0,
   StackLight every = StackLight.answering,
 }) => StackLights(
   rows: [
@@ -365,7 +364,6 @@ StackLights _lights(
     ])
       (service: service, light: lights[service] ?? every),
   ],
-  faults: faults,
 );
 
 const _tib = 1024 * 1024 * 1024 * 1024;
@@ -921,7 +919,7 @@ void main() {
       ),
       CatalogScene(
         'Stack health · every service its mark and its light; the faults, '
-        'counted in groups, named in amber; one target to Stack',
+        'one per amber light, named in amber; one target to Stack',
         (_) => const HomeStackHealthModule(),
         width: 390,
         overrides: [
@@ -930,7 +928,7 @@ void main() {
               ServiceKey.sonarr: StackLight.fault,
               ServiceKey.qbittorrent: StackLight.fault,
               ServiceKey.truenas: StackLight.fault,
-            }, faults: 3),
+            }),
           ),
         ],
       ),
@@ -944,7 +942,7 @@ void main() {
             _lights({
               ServiceKey.radarr: StackLight.silent,
               ServiceKey.sonarr: StackLight.fault,
-            }, faults: 1),
+            }),
           ),
         ],
       ),
@@ -1039,7 +1037,7 @@ void main() {
             (ref) => settingsWithServices(const [ServiceKey.truenas]),
           ),
           stackLightsProvider.overrideWithValue(
-            _lights({ServiceKey.truenas: StackLight.fault}, faults: 1),
+            _lights({ServiceKey.truenas: StackLight.fault}),
           ),
           homeStorageProvider.overrideWith(
             (ref) async => (

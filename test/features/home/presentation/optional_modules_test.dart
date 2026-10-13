@@ -76,14 +76,11 @@ void main() {
   }
 
   group('Stack health', () {
-    StackLights lights(List<(ServiceKey, StackLight)> rows, {int faults = 0}) =>
-        StackLights(
-          rows: [
-            for (final (service, light) in rows)
-              (service: service, light: light),
-          ],
-          faults: faults,
-        );
+    StackLights lights(List<(ServiceKey, StackLight)> rows) => StackLights(
+      rows: [
+        for (final (service, light) in rows) (service: service, light: light),
+      ],
+    );
 
     testWidgets('every service its mark, the faults named in amber, one '
         'target to Stack', (tester) async {
@@ -97,13 +94,13 @@ void main() {
               (ServiceKey.radarr, StackLight.answering),
               (ServiceKey.sonarr, StackLight.fault),
               (ServiceKey.qbittorrent, StackLight.fault),
-            ], faults: 2),
+            ]),
           ),
         ],
       );
       expect(find.text('Stack'), findsOne);
       expect(find.text('3 of 3 answering · 2 faults'), findsOne);
-      expect(find.text('Faults: Sonarr, qBittorrent'), findsOne);
+      expect(find.text('Faults: Sonarr and qBittorrent'), findsOne);
       expect(find.byType(StackLightMark), findsNWidgets(3));
       await tester.tap(
         find.bySemanticsLabel(
@@ -126,7 +123,7 @@ void main() {
             lights([
               (ServiceKey.radarr, StackLight.silent),
               (ServiceKey.sonarr, StackLight.fault),
-            ], faults: 1),
+            ]),
           ),
         ],
       );
@@ -147,7 +144,7 @@ void main() {
               (ServiceKey.radarr, StackLight.stuck),
               (ServiceKey.sonarr, StackLight.stuck),
               (ServiceKey.lidarr, StackLight.fault),
-            ], faults: 1),
+            ]),
           ),
         ],
       );

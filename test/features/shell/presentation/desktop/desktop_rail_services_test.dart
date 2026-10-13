@@ -17,9 +17,7 @@ void main() {
   }) {
     final container = ProviderContainer(
       overrides: [
-        stackLightsProvider.overrideWithValue(
-          StackLights(rows: rows, faults: 0),
-        ),
+        stackLightsProvider.overrideWithValue(StackLights(rows: rows)),
         pendingRequestCountProvider.overrideWith((ref) async => waiting),
       ],
     );
@@ -53,7 +51,6 @@ void main() {
         stackLightsProvider.overrideWithValue(
           const StackLights(
             rows: [(service: ServiceKey.seerr, light: StackLight.answering)],
-            faults: 0,
           ),
         ),
         pendingRequestCountProvider.overrideWith(

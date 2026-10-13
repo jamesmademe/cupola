@@ -176,10 +176,11 @@ lives a tab away. Each sits after Now playing.
   connection silent beside one that answered, or a fault Needs you holds for it), amber too when every connection was
   reached and none replied in time (`timed out`, never among the answering), red when every connection did not answer,
   a hollow ring while it is asked. A light eases on once (`motion.standard`) and keeps its colour while the
-  probe is read again. Faults are counted in groups, as Needs you counts them; the line says `1 of 4 answering · 2 timed
-  out`. Under the marks: a service that did not answer, red, with Retry; otherwise the ones that timed out in one amber
-  sentence with Retry (`Radarr and Sonarr were reached but did not reply in time.`); otherwise `Faults: Sonarr,
-  qBittorrent, TrueNAS` in amber; while nothing has answered,
+  probe is read again. Faults are counted one per amber light, so the figure, the lights and the names under them agree
+  (Needs you is where the faults themselves are counted); the line says `1 of 4 answering · 2 timed out`. Under the
+  marks: a service that did not answer, red, with Retry; otherwise the ones that timed out in one amber sentence with
+  Retry (`Radarr and Sonarr were reached but did not reply in time.`); otherwise `Faults: Sonarr, qBittorrent and
+  TrueNAS` in amber, five names and then `and 2 others`; while nothing has answered,
   `Asking each service`. The marks are one target, to Stack. Switched on, it never steps aside.
 - **Storage**: `Storage`, the line `TrueNAS` (the servers it read), then each pool, up to four: its name and share in
   `row` (`tank` · `72%`), a 6pt bar in ink on `fillStrong` (usage is not a state), `31.2 of 43.6 TB` and its state

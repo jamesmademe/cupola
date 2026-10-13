@@ -14,7 +14,7 @@ DashboardDecision _fault(ServiceKey service, DecisionKind kind) =>
       occurredAt: null,
     );
 
-/// Stack health: one light per service, faults counted in groups.
+/// Stack health: one light per service, faults counted as the lights show them.
 void main() {
   group('a service\'s light', () {
     test('hollow until a connection answers', () {
@@ -81,7 +81,7 @@ void main() {
         faults: const [],
       );
       expect(lights.line, '1 of 3 answering · 2 timed out');
-      // Its probe's fault is the same fact: counted once, as timed out.
+      // Its probe's fault is the same fact: said once, as timed out.
       expect(
         stackLightsOf(
           services: [
@@ -99,7 +99,7 @@ void main() {
   });
 
   group('the slab', () {
-    test('counts faults in groups, and names the amber services', () {
+    test('counts the amber lights, and names them', () {
       final lights = stackLightsOf(
         services: [
           (service: ServiceKey.radarr, probes: [StackProbe.answered]),
@@ -113,11 +113,12 @@ void main() {
         ],
       );
       expect(lights.line, '4 of 4 answering · 3 faults');
-      expect(lights.faultLine, 'Faults: Sonarr, qBittorrent, TrueNAS');
+      expect(lights.faultLine, 'Faults: Sonarr, qBittorrent and TrueNAS');
       expect(lights.silent, isEmpty);
     });
 
-    test('a health check folded across arrs is one fault, amber on each', () {
+    test('a health check folded across arrs is amber on each, and counted '
+        'on each: the figure is the names under it', () {
       final lights = stackLightsOf(
         services: [
           for (final service in [
@@ -146,8 +147,48 @@ void main() {
           ),
         ],
       );
-      expect(lights.line, '3 of 3 answering · 1 fault');
-      expect(lights.faultLine, 'Faults: Radarr, Sonarr, Lidarr');
+      expect(lights.line, '3 of 3 answering · 3 faults');
+      expect(lights.faultLine, 'Faults: Radarr, Sonarr and Lidarr');
+    });
+
+    test('many faults on one service are one light, one count', () {
+      final lights = stackLightsOf(
+        services: [
+          (service: ServiceKey.sonarr, probes: [StackProbe.answered]),
+          (service: ServiceKey.radarr, probes: [StackProbe.answered]),
+        ],
+        faults: [
+          _fault(ServiceKey.sonarr, DecisionKind.importBlocked),
+          _fault(ServiceKey.sonarr, DecisionKind.failedImport),
+          _fault(ServiceKey.sonarr, DecisionKind.serviceHealth),
+        ],
+      );
+      expect(lights.line, '2 of 2 answering · 1 fault');
+      expect(lights.faultLine, 'Faults: Sonarr');
+    });
+
+    test('past five names, the rest are counted, and still add up', () {
+      final amber = [
+        ServiceKey.radarr,
+        ServiceKey.sonarr,
+        ServiceKey.lidarr,
+        ServiceKey.prowlarr,
+        ServiceKey.bazarr,
+        ServiceKey.qbittorrent,
+        ServiceKey.plex,
+      ];
+      final lights = stackLightsOf(
+        services: [
+          for (final service in amber)
+            (service: service, probes: [StackProbe.fault]),
+        ],
+        faults: const [],
+      );
+      expect(lights.line, '7 of 7 answering · 7 faults');
+      expect(
+        lights.faultLine,
+        'Faults: Radarr, Sonarr, Lidarr, Prowlarr, Bazarr and 2 others',
+      );
     });
 
     test('a service that did not answer is out of the count, and named', () {
