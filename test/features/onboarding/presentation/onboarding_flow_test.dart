@@ -117,6 +117,64 @@ void main() {
       await flow.harness.unmount(tester);
     });
 
+    // A verdict is about what was typed when it was given. Editing after
+    // "answered" and still being offered the way forward would save an
+    // address or a key nobody tested, which is the one thing the way in
+    // promises not to do.
+    for (final (field, what) in [(0, 'address'), (1, 'key')]) {
+      testWidgets('editing the $what after it answered asks for a new test', (
+        tester,
+      ) async {
+        final flow = await _pumpFlow(tester, Profiles.p3);
+        await _openService(tester, flow, 'Radarr');
+        await _fill(tester, flow, WorldHosts.radarr, WorldIds.radarr);
+        await _tap(tester, flow, 'Test connection');
+        expect(find.text('Radarr answered.'), findsOneWidget);
+        expect(_primary('Go to Home'), findsOneWidget);
+
+        final input = find.byType(TextField).at(field);
+        final typed = tester.widget<TextField>(input).controller!.text;
+        await tester.enterText(input, '${typed}x');
+        await flow.harness.settle(tester);
+
+        expect(find.text('Radarr answered.'), findsNothing);
+        expect(_primary('Test connection'), findsOneWidget);
+        expect(_primary('Go to Home'), findsNothing);
+        // Nothing was saved on the way, and nothing is for the asking.
+        expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
+
+        // Put back as it was tested, the answer holds again.
+        await tester.enterText(input, typed);
+        await flow.harness.settle(tester);
+        expect(_primary('Go to Home'), findsOneWidget);
+
+        await flow.harness.unmount(tester);
+      });
+    }
+
+    testWidgets('an edited address is saved only once it has answered', (
+      tester,
+    ) async {
+      final flow = await _pumpFlow(tester, Profiles.p3);
+      await _openService(tester, flow, 'Radarr');
+      await _fill(tester, flow, WorldHosts.radarr, WorldIds.radarr);
+      await _tap(tester, flow, 'Test connection');
+
+      // Moved to an address nothing answers at.
+      await tester.enterText(
+        find.byType(TextField).first,
+        'http://elsewhere.home.arpa:7878',
+      );
+      await flow.harness.settle(tester);
+      await _tap(tester, flow, 'Test connection');
+
+      expect(_primary('Go to Home'), findsNothing);
+      expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
+      expect(flow.container.read(onboardingCompletedProvider), isFalse);
+
+      await flow.harness.unmount(tester);
+    });
+
     testWidgets('Continue on Seerr saves it and leaves for the Home', (
       tester,
     ) async {

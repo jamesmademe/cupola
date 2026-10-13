@@ -219,6 +219,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _page = _connectPage;
       _picked.add(_target);
     }
+    _edits.addListener(_onEdited);
     // Reduce Motion removes the animator rather than shortening it: the ring
     // simply starts seated.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -233,6 +234,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   @override
   void dispose() {
+    // Before the controllers go: a disposed notifier cannot be listened to.
+    _edits.removeListener(_onEdited);
     _pageController.dispose();
     _entrance.dispose();
     for (final c in _urlCtrl.values) {
@@ -269,7 +272,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// The ring's state, derived rather than stored: one map, four beats.
   Map<ServiceKey, ServiceRingState> get _ringStates => {
     for (final k in _picked)
-      k: switch (_status[k]) {
+      k: switch (_verdictOf(k)) {
         ServiceConnectionStatus.connected => ServiceRingState.connected,
         null => ServiceRingState.picked,
         _ => _isReady(k) ? ServiceRingState.silent : ServiceRingState.picked,
@@ -298,6 +301,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // By its hash, so the fingerprint never holds a secret.
     '${_accessCtrl[k]!.access.hashCode}',
   ].join(' ');
+
+  /// What [service]'s last test found, for as long as it still holds.
+  ///
+  /// A verdict is about the address, key and access it was given. Edit any of
+  /// them after "answered" and it says nothing about what is on screen, so the
+  /// step asks for a test again instead of saving a connection nobody tested:
+  /// the primary stops being the way forward, and the ring takes the node
+  /// back. A failure is left standing, since its outcome and its remedy are
+  /// what the person is editing against.
+  ServiceConnectionStatus? _verdictOf(ServiceKey service) {
+    final status = _status[service];
+    if (status != ServiceConnectionStatus.connected) return status;
+    return _verifiedAgainst[service] == _fingerprintOf(service) ? status : null;
+  }
+
+  /// Every field an edit can retire a verdict through.
+  late final Listenable _edits = Listenable.merge([
+    ..._urlCtrl.values,
+    ..._apiKeyCtrl.values,
+    ..._usernameCtrl.values,
+    ..._passwordCtrl.values,
+    ..._accessCtrl.values,
+  ]);
+
+  void _onEdited() {
+    // Only an answer that is on screen has anything to lose: the rest of the
+    // typing is the form's own business, and rebuilding the screen for every
+    // key of it would cost more than it says.
+    if (!mounted || _status[_target] != ServiceConnectionStatus.connected) {
+      return;
+    }
+    setState(() {});
+  }
 
   /// Every service in this walk whose typed address shares [service]'s TLS
   /// origin: the set a trust decision on it actually covers, computed from
@@ -899,7 +935,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     showAccess: _accessShown.contains(service),
     testedAccess: _testedAccess[service],
     onShowAccess: (kind) => _showAccess(service, kind),
-    status: _status[service],
+    status: _verdictOf(service),
     reason: _reason[service],
     gateway: _gateway[service],
     sharedTokenFrom: _sharedTokenFor(service)?.from,
