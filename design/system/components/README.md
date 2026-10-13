@@ -83,6 +83,7 @@ cards live in [`../motion/`](../motion/).
 | Service surfaces | [DomainSectionHeader](DomainSectionHeader/README.md) | `lib/core/widgets/domain_section.dart`, `lib/features/settings/domain/service_key.dart` |
 | Service surfaces | [ServiceOverview](ServiceOverview/README.md) | `lib/core/widgets/service_overview.dart`, `lib/features/movies/presentation/radarr_overview_screen.dart` |
 | Service surfaces | [ServiceRing](ServiceRing/README.md) | `lib/core/widgets/service_ring.dart` |
+| Onboarding | [SetupDoors](SetupDoors/README.md) | `lib/core/widgets/setup_doors.dart` |
 | Desktop shell | [CommandDeck](CommandDeck/README.md) | `lib/features/shell/presentation/desktop/command_deck.dart`, `lib/features/shell/domain/command_deck_entry.dart` |
 | Desktop shell | [DesktopNavRail](DesktopNavRail/README.md) | `lib/features/shell/presentation/desktop/desktop_nav_rail.dart`, `lib/features/shell/presentation/desktop/desktop_rail_services.dart`, `lib/features/settings/domain/nav_tab.dart` |
 | Desktop shell | [DesktopShell](DesktopShell/README.md) | `lib/features/shell/presentation/desktop/desktop_shell.dart` |
