@@ -232,12 +232,19 @@ typedef AccessFieldBuilder =
 /// [onMoveToCredential] receives the value of a custom header that duplicates
 /// the service's own credential header, for the host to put in the
 /// credential field.
+///
+/// [foldWhenNone] draws a row with no access as one line (`Access · None ·
+/// Change`) until Change opens the choices: the connection form has an
+/// Access row under each of its two addresses, and most addresses at home
+/// have nothing in front of them.
 class ConnectionAccessFields extends StatefulWidget {
   const ConnectionAccessFields({
     super.key,
     required this.controller,
     required this.onMoveToCredential,
     this.fieldBuilder,
+    this.foldWhenNone = false,
+    this.changeLabel = 'Change access',
   });
 
   final ConnectionAccessController controller;
@@ -247,6 +254,13 @@ class ConnectionAccessFields extends StatefulWidget {
   /// outlined field.
   final AccessFieldBuilder? fieldBuilder;
 
+  /// Whether a row with no access is drawn folded; see the class comment.
+  final bool foldWhenNone;
+
+  /// What a screen reader hears for the folded row's Change, which names the
+  /// address when the form has two (`Change access away`).
+  final String changeLabel;
+
   @override
   State<ConnectionAccessFields> createState() => _ConnectionAccessFieldsState();
 }
@@ -255,35 +269,69 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
   ConnectionAccessController get _access => widget.controller;
   ServiceKey get _service => _access.service;
 
+  /// Whether Change opened a folded row. Once open it stays open, None chosen
+  /// again included: the row does not close under the finger that chose.
+  bool _opened = false;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _access,
-      builder: (context, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SettingsSectionLabel('Access'),
-          const SizedBox(height: AppSpacing.sm),
-          // Wrapped, never scrolled: a choice cut off at the edge of a phone
-          // is a choice the user cannot see.
-          SelectionPills<AccessKind>.wrap(
-            values: accessKindsFor(_service),
-            selected: _access.kind,
-            labelBuilder: (kind) => kind.label,
-            onSelected: _access.select,
-          ),
-          if (_service.proxyPasswordUnavailable case final why?)
-            _note(context, why),
-          ...switch (_access.kind) {
-            AccessKind.none => const <Widget>[],
-            AccessKind.cloudflare => _cloudflareFields(context),
-            AccessKind.password => _proxyPasswordFields(context),
-            AccessKind.custom => _customHeaderFields(context),
-          },
-        ],
-      ),
+      builder: (context, _) =>
+          widget.foldWhenNone && !_opened && _access.kind == AccessKind.none
+          ? _folded(context)
+          : _open(context),
     );
   }
+
+  /// The row with no access, in one line.
+  Widget _folded(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        const SettingsSectionLabel('Access'),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            AccessKind.none.label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: () => setState(() => _opened = true),
+          icon: const Icon(Icons.expand_more_rounded),
+          iconAlignment: IconAlignment.end,
+          label: Text('Change', semanticsLabel: widget.changeLabel),
+        ),
+      ],
+    );
+  }
+
+  Widget _open(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const SettingsSectionLabel('Access'),
+      const SizedBox(height: AppSpacing.sm),
+      // Wrapped, never scrolled: a choice cut off at the edge of a phone
+      // is a choice the user cannot see.
+      SelectionPills<AccessKind>.wrap(
+        values: accessKindsFor(_service),
+        selected: _access.kind,
+        labelBuilder: (kind) => kind.label,
+        onSelected: _access.select,
+      ),
+      if (_service.proxyPasswordUnavailable case final why?)
+        _note(context, why),
+      ...switch (_access.kind) {
+        AccessKind.none => const <Widget>[],
+        AccessKind.cloudflare => _cloudflareFields(context),
+        AccessKind.password => _proxyPasswordFields(context),
+        AccessKind.custom => _customHeaderFields(context),
+      },
+    ],
+  );
 
   /// A line of explanation under the row, in the page's quiet voice.
   Widget _note(BuildContext context, String text) {

@@ -1,4 +1,4 @@
-import 'dart:io' show InternetAddress;
+import 'dart:io' show InternetAddress, InternetAddressType;
 
 import 'package:cupola/core/network/local_network_target.dart';
 
@@ -300,24 +300,46 @@ class UrlUtils {
         null) {
       return true;
     }
-    if (_isPrivateHost(host) || host.endsWith('.ts.net')) return true;
+    if (_isPrivateHost(host) || isTailnetHost(host)) return true;
     return uri.scheme != 'https';
+  }
+
+  /// Whether [host] is reached through a Tailscale tunnel: an address in its
+  /// range (100.64.0.0/10, carrier NAT, which no server on the internet
+  /// answers from) or a MagicDNS name (`*.ts.net`).
+  ///
+  /// WireGuard encrypts the whole way, so `http://` there sends nothing in the
+  /// clear: no warning and no refusal. Not a local host for the local-network
+  /// permission, though: the traffic leaves through the tunnel, not the Wi-Fi.
+  static bool isTailnetHost(String host) {
+    final bare = host.replaceAll('[', '').replaceAll(']', '').toLowerCase();
+    if (bare.endsWith('.ts.net')) return true;
+    final address = InternetAddress.tryParse(bare);
+    if (address == null || address.type != InternetAddressType.IPv4) {
+      return false;
+    }
+    final bytes = address.rawAddress;
+    return bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127;
   }
 
   /// Warns when [rawUrl] would send credentials in cleartext to a host outside
   /// the local network, and null when there is nothing to warn about.
   ///
-  /// A plain `http://` LAN address is a supported setup, so it is not flagged.
-  /// A public hostname over `http://` is: an on-path attacker there can read the
-  /// API key or password and, before [SameOriginRedirectInterceptor], could also
-  /// have redirected the request elsewhere.
+  /// A plain `http://` LAN address is a supported setup, so it is not flagged,
+  /// and neither is one on a tailnet ([isTailnetHost]), which travels
+  /// encrypted. A public hostname over `http://` is: an on-path attacker there
+  /// can read the API key or password and, before
+  /// [SameOriginRedirectInterceptor], could also have redirected the request
+  /// elsewhere.
   static String? cleartextWarning(String? rawUrl) {
     final value = rawUrl?.trim() ?? '';
     if (value.isEmpty) return null;
     if (!value.toLowerCase().startsWith('http://')) return null;
 
     final host = Uri.tryParse(value)?.host ?? '';
-    if (host.isEmpty || _isPrivateHost(host)) return null;
+    if (host.isEmpty || _isPrivateHost(host) || isTailnetHost(host)) {
+      return null;
+    }
 
     // The one wording, for the connection form and the first-run walk alike,
     // and it names the three routes this audience uses rather than only

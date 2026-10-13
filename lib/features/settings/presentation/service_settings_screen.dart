@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
@@ -20,6 +21,7 @@ import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -29,6 +31,7 @@ import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/data/stream_player_provider.dart';
 import 'package:cupola/features/stream/presentation/play_with.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -118,19 +121,32 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   late final TextEditingController _passwordController;
   late final TextEditingController _labelController;
 
+  /// The address away from home, empty when the connection has none.
+  late final TextEditingController _awayController;
+
   /// The Access row: what this connection presents to a gateway in front of
   /// the service. The same controller and row the first-run walk uses.
   late final ConnectionAccessController _access;
   late ConnectionAccess _initialAccess;
 
+  /// The Access row of the address away: the gateway in front of it is
+  /// usually not the one at home (a tunnel, a proxy with a password).
+  late final ConnectionAccessController _awayAccess;
+  late ConnectionAccess _initialAwayAccess;
+
   /// Seerr only: how this connection signs in, the key or an account.
   late SeerrSignInWith _signInWith;
   late SeerrSignInWith _initialSignInWith;
   final _urlFocus = FocusNode();
+  final _awayFocus = FocusNode();
+  final _urlFieldKey = GlobalKey<FormFieldState<String>>();
+  final _awayFieldKey = GlobalKey<FormFieldState<String>>();
   final _accessKey = GlobalKey();
+  final _awayAccessKey = GlobalKey();
 
   /// The access the last test sent, which decides how its outcome is said.
   ConnectionAccess _testedAccess = const NoAccess();
+  ConnectionAccess _testedAwayAccess = const NoAccess();
 
   /// The connections a token that just passed its test could also reach:
   /// their last failure was the same Access team. Empty when there is no
@@ -151,6 +167,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// Result of the last "Test connection", or null when it has not been run
   /// since the fields last changed.
   ServiceDiagnosis? _testResult;
+
+  /// The same test's answer at the address away, or null when the form has
+  /// none.
+  ServiceDiagnosis? _awayTestResult;
 
   /// The server this form was opened to add, once the connection that knows
   /// it has said so; see [ServiceSettingsScreen.foundFrom].
@@ -200,20 +220,33 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       text: usesCredentials ? _target.credential : '',
     );
     _labelController = TextEditingController(text: _target.label);
+    _awayController = TextEditingController(text: _target.away?.url ?? '');
 
     _initialAccess = _target.access;
+    _initialAwayAccess = _target.away?.access ?? const NoAccess();
     _signInWith = _initialSignInWith = _target.account == null
         ? SeerrSignInWith.apiKey
         : SeerrSignInWith.account;
+    // A gateway's remedy is for the address the connection was reached at
+    // when the gateway stopped it: away, its own Access row.
+    final remedyAway =
+        widget.initialAccess != null &&
+        _target.away != null &&
+        ref.read(connectionRouteProvider(_target.id)) == ConnectionRoute.away;
     _access = ConnectionAccessController(
       service,
       initial: _target.access,
-      preselect: widget.initialAccess,
+      preselect: remedyAway ? null : widget.initialAccess,
+    )..addListener(_onFieldChanged);
+    _awayAccess = ConnectionAccessController(
+      service,
+      initial: _initialAwayAccess,
+      preselect: remedyAway ? widget.initialAccess : null,
     )..addListener(_onFieldChanged);
     if (widget.initialAccess != null) {
       // Opened by a gateway's remedy: the fix is on the Access row.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final row = _accessKey.currentContext;
+        final row = (remedyAway ? _awayAccessKey : _accessKey).currentContext;
         if (row != null && row.mounted) Scrollable.ensureVisible(row);
       });
     }
@@ -268,6 +301,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     'username': _usernameController,
     'password': _passwordController,
     'label': _labelController,
+    'away': _awayController,
   };
 
   /// Whether any field differs from what was loaded, the Access row's
@@ -275,6 +309,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// form opened on Cloudflare Access by a remedy and left alone is not dirty.
   bool get _isDirty =>
       _access.access != _initialAccess ||
+      _awayAccess.access != _initialAwayAccess ||
       _signInWith != _initialSignInWith ||
       _controllers.entries.any(
         (entry) => entry.value.text != _initialValues[entry.key],
@@ -289,12 +324,26 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   ServiceInstance _formConnection() {
     final live =
         ref.read(currentSettingsProvider).instanceById(_target.id) ?? _target;
+    final away = _formAway;
     return live.copyWith(
       url: UrlUtils.normalizeBaseUrl(_urlController.text),
       access: _access.access,
+      away: away,
+      clearAway: away == null,
       label: _labelController.text.trim(),
     );
   }
+
+  /// The address away as the form stands, with its access; null when its
+  /// field is empty, which saves a connection reached only at home.
+  ConnectionAddress? get _formAway {
+    final url = UrlUtils.normalizeBaseUrl(_awayController.text);
+    if (url.isEmpty) return null;
+    return ConnectionAddress(url: url, access: _awayAccess.access);
+  }
+
+  /// Whether the field of the address away holds anything.
+  bool get _hasAway => _awayController.text.trim().isNotEmpty;
 
   /// An account signed in from this form saved the address, the access and
   /// the name with it: they are no longer unsaved changes.
@@ -302,7 +351,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     _initialValues['url'] = _urlController.text;
     _initialValues['label'] = _labelController.text;
     _initialValues['apiKey'] = _apiKeyController.text;
+    _initialValues['away'] = _awayController.text;
     _initialAccess = _access.access;
+    _initialAwayAccess = _awayAccess.access;
     _initialSignInWith = SeerrSignInWith.account;
   }
 
@@ -344,8 +395,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // has to rebuild either way.
     setState(() {
       _testResult = null;
+      _awayTestResult = null;
       _shareCandidates = const [];
     });
+    // An address refused by the last save or test is asked again as it
+    // changes, `Use https` included: its words leave once they are no longer
+    // true, rather than at the next tap of Save.
+    for (final field in [_urlFieldKey, _awayFieldKey]) {
+      if (field.currentState?.hasError ?? false) field.currentState!.validate();
+    }
   }
 
   @override
@@ -355,14 +413,18 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       controller.removeListener(_onFieldChanged);
     }
     _urlFocus.dispose();
+    _awayFocus.dispose();
     _urlController.dispose();
+    _awayController.dispose();
     _apiKeyController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     _labelController.dispose();
-    _access
-      ..removeListener(_onFieldChanged)
-      ..dispose();
+    for (final access in [_access, _awayAccess]) {
+      access
+        ..removeListener(_onFieldChanged)
+        ..dispose();
+    }
     super.dispose();
   }
 
@@ -373,7 +435,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// service list go offline.
   Future<void> _testConnection() async {
     if (_testing || _saving) return;
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _revealRefusal();
+      return;
+    }
     _liftCredentialsFromAddress();
 
     // The answer to a test is rendered under the fields, and behind a reverse
@@ -390,82 +455,49 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     setState(() {
       _testing = true;
       _testResult = null;
+      _awayTestResult = null;
       _shareCandidates = const [];
     });
     try {
       final candidate = _updateServiceSettings(
         ref.read(currentSettingsProvider),
       );
-      _testedAccess =
-          candidate.instanceById(_target.id)?.access ?? const NoAccess();
-      // Through the local-network gate: a LAN address that fails because the OS
-      // has not been allowed onto the network reports the permission, and one
-      // the user allows while the alert is up is simply tested again. The
-      // retest that used to be theirs to work out.
       final candidateInstance = candidate.instanceById(_target.id) ?? _target;
-      // At home, every time: the test is of the address in the field, never
-      // of the one the connection's route happens to be on.
-      var result = await diagnoseThroughLocalNetworkGate(
-        () => diagnoseInstance(
-          candidateInstance,
-          candidate,
-          route: ConnectionRoute.home,
+      _testedAccess = candidateInstance.access;
+      _testedAwayAccess = candidateInstance.away?.access ?? const NoAccess();
+      // Both addresses at once, each as typed: the test is of the fields,
+      // never of the address the connection's route happens to be on.
+      // Through the local-network gate at home: a LAN address that fails
+      // because the OS has not been allowed onto the network reports the
+      // permission, and one the user allows while the alert is up is simply
+      // tested again. The retest that used to be theirs to work out.
+      final asked = await Future.wait([
+        diagnoseThroughLocalNetworkGate(
+          () => diagnoseInstance(
+            candidateInstance,
+            candidate,
+            route: ConnectionRoute.home,
+          ),
+          url: candidateInstance.url,
+          probe: widget.localNetworkProbe,
         ),
-        url: candidateInstance.url,
-        probe: widget.localNetworkProbe,
-      );
+        if (candidateInstance.away != null)
+          diagnoseInstance(
+            candidateInstance,
+            candidate,
+            route: ConnectionRoute.away,
+          ),
+      ]);
+      var result = asked.first;
+      var away = asked.length > 1 ? asked[1] : null;
 
-      // TLS exception flow: when the failure could be explained by a
-      // certificate, offer to trust it and test again. Every service can
-      // reach this since ADR-6. Skipped once the server has answered:
-      // probing for a certificate after a rejected API key is a round trip
-      // that can only come back null.
-      if (mounted &&
-          result.isDisconnected &&
-          certProbeWorthwhile(result.reason)) {
-        final url = candidateInstance.url;
-        final previousPin = candidate.pinForUrl(url);
-        final probe = await widget.certificateProber(
-          url,
-          pinnedFingerprint: previousPin ?? '',
-        );
-        if (probe != null && mounted) {
-          final trust = await showCertTrustDialog(
-            context,
-            origin: UrlUtils.certOrigin(url) ?? url,
-            probe: probe,
-            previousFingerprint: previousPin,
-            sharedWith: candidate
-                .servicesSharingOriginOf(url)
-                .where((s) => s != service)
-                .toList(),
-          );
-          if (trust && mounted) {
-            await ref
-                .read(settingsProvider.notifier)
-                .updateSettings(
-                  ref
-                      .read(currentSettingsProvider)
-                      .copyWithTrustedCertificate(
-                        url: url,
-                        fingerprint: probe.certificate.fingerprint,
-                      ),
-                );
-            if (!mounted) return;
-            // The retest goes to the same connection the first test did.
-            // `diagnoseService` folds every connection of the service, so it
-            // could answer about a sibling that was never part of this trust
-            // decision.
-            final retried = _updateServiceSettings(
-              ref.read(currentSettingsProvider),
-            );
-            result = await diagnoseInstance(
-              retried.instanceById(_target.id) ?? candidateInstance,
-              retried,
-              route: ConnectionRoute.home,
-            );
-          }
-        }
+      // TLS exception flow, one address after the other: when a failure could
+      // be explained by a certificate, offer to trust it and test that address
+      // again. Every service can reach this since ADR-6.
+      if (!mounted) return;
+      result = await _trustAndRetest(result, ConnectionRoute.home) ?? result;
+      if (away != null && mounted) {
+        away = await _trustAndRetest(away, ConnectionRoute.away) ?? away;
       }
 
       // A token that passes on a connection that never failed here names no
@@ -488,7 +520,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       if (!mounted) return;
       // A pass with the saved sign-in is the person asking at this
       // connection: its client sends the login once more on the next read.
-      if (result.isConnected) {
+      if (result.isConnected || (away?.isConnected ?? false)) {
         liftQbittorrentRefusalAfterPassingTest(ref, candidateInstance);
       }
       HapticFeedback.lightImpact();
@@ -497,6 +529,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           : const <ServiceInstance>[];
       setState(() {
         _testResult = result;
+        _awayTestResult = away;
         _shareCandidates = shareable;
       });
     } catch (e) {
@@ -507,13 +540,87 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     }
   }
 
-  /// Takes an address's `user:password@` off it and puts it where it
+  /// When [result] failed in a way a certificate could explain, offers to
+  /// trust the certificate of [route]'s address as typed, and tests that
+  /// address again. Null when nothing was offered, or nothing trusted.
+  ///
+  /// Skipped once the server has answered (a rejected key rules the
+  /// certificate out), and for an address away that did not answer at all:
+  /// the probe would wait on the silent address a second time.
+  Future<ServiceDiagnosis?> _trustAndRetest(
+    ServiceDiagnosis result,
+    ConnectionRoute route,
+  ) async {
+    if (!result.isDisconnected || !certProbeWorthwhile(result.reason)) {
+      return null;
+    }
+    if (route == ConnectionRoute.away && _isSilent(result)) return null;
+    final settings = _updateServiceSettings(ref.read(currentSettingsProvider));
+    final tested = settings.instanceById(_target.id) ?? _target;
+    final url = route == ConnectionRoute.away
+        ? tested.away?.url ?? ''
+        : tested.url;
+    if (url.isEmpty) return null;
+    final previousPin = settings.pinForUrl(url);
+    final probe = await widget.certificateProber(
+      url,
+      pinnedFingerprint: previousPin ?? '',
+    );
+    if (probe == null || !mounted) return null;
+    final trust = await showCertTrustDialog(
+      context,
+      origin: UrlUtils.certOrigin(url) ?? url,
+      probe: probe,
+      previousFingerprint: previousPin,
+      sharedWith: settings
+          .servicesSharingOriginOf(url)
+          .where((s) => s != service)
+          .toList(),
+    );
+    if (!trust || !mounted) return null;
+    await ref
+        .read(settingsProvider.notifier)
+        .updateSettings(
+          ref
+              .read(currentSettingsProvider)
+              .copyWithTrustedCertificate(
+                url: url,
+                fingerprint: probe.certificate.fingerprint,
+              ),
+        );
+    if (!mounted) return null;
+    // The retest goes to the same connection and the same address the first
+    // test did: `diagnoseService` folds every connection of the service, so
+    // it could answer about a sibling never part of this trust decision.
+    final retried = _updateServiceSettings(ref.read(currentSettingsProvider));
+    return diagnoseInstance(
+      retried.instanceById(_target.id) ?? tested,
+      retried,
+      route: route,
+    );
+  }
+
+  /// Whether [result] is an address that did not answer at all, which the
+  /// form says differently when the other address answered (Q2: a router
+  /// that cannot reach its own public address is common).
+  static bool _isSilent(ServiceDiagnosis result) =>
+      result.reason == ServiceFailureReason.unreachable ||
+      result.reason == ServiceFailureReason.timeout;
+
+  /// Takes each address's `user:password@` off it and puts it where it
   /// belongs: see [ConnectionAccessController.liftCredentialsFrom].
-  void _liftCredentialsFromAddress() => _access.liftCredentialsFrom(
-    _urlController,
-    username: _usernameController,
-    password: _passwordController,
-  );
+  void _liftCredentialsFromAddress() {
+    _access.liftCredentialsFrom(
+      _urlController,
+      username: _usernameController,
+      password: _passwordController,
+    );
+    _awayAccess.liftCredentialsFrom(
+      _awayController,
+      username: _usernameController,
+      password: _passwordController,
+    );
+  }
 
   /// Confirms before dropping unsaved edits.
   Future<bool> _confirmDiscard() async {
@@ -531,19 +638,23 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   Future<void> _saveSettings() async {
     if (_saving) return;
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _revealRefusal();
+      return;
+    }
     _liftCredentialsFromAddress();
 
     final current = ref.read(currentSettingsProvider);
-    // Captured before the write: an edited URL moves this service off an origin
-    // whose certificate may have been pinned, and `_maybePromptCertTrust` below
-    // can only ever *add* a pin. Left behind, the entry outlives the address:
-    // and because `pinForUrl` is keyed purely by origin, any service later
-    // pointed back at it would silently reuse the stale trust with no prompt.
-    final priorUrl = current.instanceById(_target.id)?.url ?? '';
+    // Captured before the write: an edited address moves this service off an
+    // origin whose certificate may have been pinned, at home or away, and
+    // `_maybePromptCertTrust` below can only ever *add* a pin. Left behind,
+    // the entry outlives the address: and because `pinForUrl` is keyed purely
+    // by origin, any service later pointed back at it would silently reuse
+    // the stale trust with no prompt.
+    final prior = current.instanceById(_target.id);
     var updated = _updateServiceSettings(
       current,
-    ).copyWithoutUnusedCertificate(priorUrl);
+    ).copyWithoutUnusedCertificatesOf(prior);
 
     final notifier = ref.read(settingsProvider.notifier);
     await notifier.updateSettings(updated);
@@ -650,18 +761,27 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // chosen viewer, say, may have moved while this form was open and the
     // captured copy would put it back.
     final live = current.instanceById(_target.id) ?? _target;
+    final away = _formAway;
     if (service == ServiceKey.seerr) {
       // A Seerr connection is the key or an account, never both. Choosing the
       // key forgets the account; choosing an account keeps whatever is saved
       // until an account signs in and takes the key's place.
       return current.copyWithInstance(
         _signsInWithAccount
-            ? live.copyWith(url: url, label: label, access: _access.access)
+            ? live.copyWith(
+                url: url,
+                label: label,
+                access: _access.access,
+                away: away,
+                clearAway: away == null,
+              )
             : live.copyWith(
                 url: url,
                 credential: apiKey,
                 label: label,
                 access: _access.access,
+                away: away,
+                clearAway: away == null,
                 clearAccount: true,
               ),
       );
@@ -673,9 +793,38 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         username: usesCredentials ? username : '',
         label: label,
         access: _access.access,
+        away: away,
+        clearAway: away == null,
       ),
     );
   }
+
+  /// After a test or a save the form refused: an address refused for
+  /// `http://` is the one the person may not see, under the keyboard or above
+  /// the fold. Brought into view with the caret in it, so its words are read
+  /// out where the fix is.
+  void _revealRefusal() {
+    final (key, focus) = cleartextRefusal(service, _urlController.text) != null
+        ? (_urlFieldKey, _urlFocus)
+        : cleartextRefusal(service, _awayController.text, optional: true) !=
+              null
+        ? (_awayFieldKey, _awayFocus)
+        : (null, null);
+    final field = key?.currentContext;
+    if (field == null || !field.mounted) return;
+    Scrollable.ensureVisible(
+      field,
+      alignment: 0.3,
+      duration: AppAnimation.durationMd,
+      curve: AppAnimation.standardCurve,
+    );
+    focus!.requestFocus();
+  }
+
+  /// Whether either address is refused for `http://` as it stands.
+  bool get _refused =>
+      cleartextRefusal(service, _urlController.text) != null ||
+      cleartextRefusal(service, _awayController.text, optional: true) != null;
 
   Future<void> _removeConnection() async {
     final result = await showAppConfirmDialog(
@@ -825,23 +974,22 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               _buildLabelField(settings),
               const SizedBox(height: AppSpacing.lg),
             ],
-            _buildUrlField(),
+            _buildAddressField(away: false),
             _buildTrustedCertificateIndicator(settings),
             // Under the address, above who you are: a gateway answers before
             // the service does, so its token is part of reaching the address.
             // Below the credentials it sat under a Seerr account's Continue,
             // which signs in through that gateway and failed before the
-            // token field was in view.
-            const SizedBox(height: AppSpacing.lg),
-            KeyedSubtree(
-              key: _accessKey,
-              child: ConnectionAccessFields(
-                controller: _access,
-                onMoveToCredential: (value) {
-                  if (value.isNotEmpty) _apiKeyController.text = value;
-                },
-              ),
-            ),
+            // token field was in view. One under each address: the gateway in
+            // front of the address away is rarely the one at home.
+            const SizedBox(height: AppSpacing.sm),
+            _buildAccessRow(away: false),
+            const SizedBox(height: AppSpacing.xl),
+            _buildAddressField(away: true),
+            if (_hasAway) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _buildAccessRow(away: true),
+            ],
             const SizedBox(height: AppSpacing.xl),
             if (service == ServiceKey.seerr) ...[
               _buildSignInWithChoice(),
@@ -871,7 +1019,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               _buildTestConnectionRow(context),
             if (_testResult != null) ...[
               const SizedBox(height: AppSpacing.md),
-              _buildTestResult(context, _testResult!),
+              _buildTestResults(context, settings),
             ],
             if (_shareCandidates.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
@@ -1152,9 +1300,110 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
   }
 
-  Widget _buildTestResult(BuildContext context, ServiceDiagnosis result) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+  /// The answers of the last test: one panel, as always, for a connection
+  /// with one address; one for each address when it has two, said
+  /// together when neither answered.
+  Widget _buildTestResults(BuildContext context, SettingsModel settings) {
+    final home = _testResult!;
+    final away = _awayTestResult;
+    if (away == null) return _buildTestResult(context, home);
+    final inUse = _routeInUse(settings);
+    final homeSilent = _isSilent(home);
+    final awaySilent = _isSilent(away);
+    // Neither answered: no address is in use, whatever the route last said.
+    if (homeSilent && awaySilent) return _buildBothSilent(context);
+    Widget one(ServiceDiagnosis result, ConnectionRoute route, bool silent) =>
+        // An address that did not answer while the other did is not a fault
+        // of the fields: from here it could not be reached, which is what an
+        // address away looks like from home, and the reverse.
+        silent
+        ? _buildNotChecked(context, route, inUse)
+        : _buildTestResult(
+            context,
+            result,
+            route: route,
+            address: _addressLine(route, inUse),
+          );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        one(home, ConnectionRoute.home, homeSilent),
+        const SizedBox(height: AppSpacing.sm),
+        one(away, ConnectionRoute.away, awaySilent),
+      ],
+    );
+  }
+
+  /// The address the saved connection is reached at now, while the form
+  /// still shows what is saved; null once an edit makes the fields another
+  /// connection, or when there is only one address to be at.
+  ConnectionRoute? _routeInUse(SettingsModel settings) {
+    if (_isDirty || settings.instanceById(_target.id)?.away == null) {
+      return null;
+    }
+    return ref.watch(connectionRouteProvider(_target.id));
+  }
+
+  /// `At home · nas.home.arpa:7878 · in use`: where an answer came from.
+  String _addressLine(ConnectionRoute route, ConnectionRoute? inUse) {
+    final raw = route == ConnectionRoute.away
+        ? _awayController.text
+        : _urlController.text;
+    final host =
+        service.extractHost(UrlUtils.normalizeBaseUrl(raw)) ?? raw.trim();
+    final where = route == ConnectionRoute.away ? 'Away' : 'At home';
+    return [where, host, if (route == inUse) 'in use'].join(' · ');
+  }
+
+  /// Blue: [route]'s address did not answer from where this device is, and
+  /// the other one did. Saved anyway (Q2): it is tried for real when it is
+  /// the one the route needs.
+  Widget _buildNotChecked(
+    BuildContext context,
+    ConnectionRoute route,
+    ConnectionRoute? inUse,
+  ) {
+    final sentence = route == ConnectionRoute.away
+        ? "Cupola tries it when the home address doesn't answer."
+        : 'Cupola tries it first, and uses it whenever it answers.';
+    return _ResultPanel(
+      tone: StatusTone.info,
+      icon: Icons.info_outline_rounded,
+      title: 'Not checked from here',
+      lines: [sentence],
+      addresses: [_addressLine(route, inUse)],
+    );
+  }
+
+  /// Red, naming both addresses: neither answered.
+  Widget _buildBothSilent(BuildContext context) {
+    final presentation = describeConnection(
+      service,
+      status: ServiceConnectionStatus.disconnected,
+      reason: ServiceFailureReason.unreachable,
+    );
+    return _ResultPanel(
+      tone: presentation.tone,
+      icon: presentation.icon,
+      title: presentation.label,
+      outcome: 'Connection test failed.',
+      lines: ['${service.title} did not answer at home or away.'],
+      addresses: [
+        _addressLine(ConnectionRoute.home, null),
+        _addressLine(ConnectionRoute.away, null),
+      ],
+    );
+  }
+
+  /// One address's answer. [route] and [address] only when the form has two
+  /// addresses: [route] picks the access the test sent there, [address]
+  /// closes the panel with where the answer came from.
+  Widget _buildTestResult(
+    BuildContext context,
+    ServiceDiagnosis result, {
+    ConnectionRoute route = ConnectionRoute.home,
+    String? address,
+  }) {
     final presentation = describeConnection(
       service,
       status: result.status,
@@ -1162,18 +1411,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       gateway: result.gateway,
     );
     final tone = result.isConnected ? StatusTone.success : presentation.tone;
-    // The wash keeps the tone's byte; the glyph and the verdict are walked
-    // against that 10% wash over the page, which is what they land on.
-    final fill = statusToneFill(colorScheme, tone);
-    final color = statusToneColor(
-      colorScheme,
-      tone,
-      surface: colorScheme.surface,
-      tintAlpha: 0.10,
-    );
     final outcome = result.isConnected
-        ? 'Connection test succeeded'
-        : 'Connection test failed';
+        ? 'Connection test succeeded.'
+        : 'Connection test failed.';
     final message = switch (result.status) {
       ServiceConnectionStatus.connected =>
         '${service.title} answered as expected.',
@@ -1187,7 +1427,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       ServiceConnectionStatus.checking => result.messageFor(service),
     };
     // A Cloudflare service token's test says what Access did with it.
-    final tokenOutcome = _testedAccess is CloudflareServiceToken
+    final tested = route == ConnectionRoute.away
+        ? _testedAwayAccess
+        : _testedAccess;
+    final tokenOutcome = tested is CloudflareServiceToken
         ? cloudflareTokenTestOutcome(
             service,
             answered: result.isConnected,
@@ -1202,80 +1445,17 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // server on an unsupported release is a qualified pass, not a plain one.
     final versionNote = describeServerVersion(service, result.serverVersion);
 
-    // A live region rather than an announcement: this panel appears below the
-    // button while focus stays on it, so the verdict (the whole point of the
-    // action) would otherwise have to be hunted for. `liveRegion` is the
-    // mechanism both platforms honour; a programmatic announcement is dropped on
-    // Android. The outcome is spelled out because the glyph and the tint are the
-    // only things carrying it (the "Fill in the address" message, for one, never
-    // says it failed).
-    final banner = Semantics(
-      container: true,
-      liveRegion: true,
-      excludeSemantics: true,
-      label: [
-        '$outcome.',
-        said,
-        // Read out with the verdict rather than after it: a caveat the eye
-        // catches from its amber has nothing carrying it to a screen reader.
-        ?versionNote?.message,
-      ].join(' '),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: fill.withValues(alpha: 0.10),
-          borderRadius: AppRadius.borderRadiusMd,
-          border: Border.all(color: fill.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              result.isConnected
-                  ? Icons.check_circle_outline_rounded
-                  : presentation.icon,
-              size: 18,
-              color: color,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    result.isConnected ? 'Answering' : presentation.label,
-                    style: theme.textTheme.labelLarge?.copyWith(color: color),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    said,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (versionNote case final note?) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      note.message,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: note.isWarning
-                            ? statusToneColor(
-                                colorScheme,
-                                StatusTone.warning,
-                                surface: colorScheme.surface,
-                                tintAlpha: 0.10,
-                              )
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    final banner = _ResultPanel(
+      tone: tone,
+      icon: result.isConnected
+          ? Icons.check_circle_outline_rounded
+          : presentation.icon,
+      title: result.isConnected ? 'Answering' : presentation.label,
+      outcome: outcome,
+      lines: [said],
+      note: versionNote?.message,
+      noteIsWarning: versionNote?.isWarning ?? false,
+      addresses: [?address],
     );
 
     if (result.reason != ServiceFailureReason.localNetworkBlocked) {
@@ -1519,8 +1699,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         ),
       );
     }
+    // Dimmed, never disabled, while an address is refused: the tap brings
+    // the refused field into view with its words, which a disabled Save
+    // would leave the person to find.
     return TextButton.icon(
       onPressed: _saveSettings,
+      style: _refused
+          ? TextButton.styleFrom(
+              foregroundColor: CupolaThemeColors.of(context).dimText,
+            )
+          : null,
       icon: const Icon(Icons.check_rounded),
       label: const Text('Save'),
     );
@@ -1569,35 +1757,47 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
   }
 
-  Widget _buildUrlField() {
-    // Rebuilds on every keystroke so the cleartext warning tracks the field.
+  /// One of the connection's two addresses: [away] false is the address at
+  /// home, the one the connection is saved by; true the optional one away
+  /// from home, tried when the one at home does not answer.
+  Widget _buildAddressField({required bool away}) {
+    final controller = away ? _awayController : _urlController;
+    final label = away ? 'Address away · optional' : 'Address at home';
+    // Rebuilds on every keystroke so the refusal and the warning track the
+    // field.
     return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: _urlController,
+      valueListenable: controller,
       builder: (context, value, _) {
-        // The service's own reason first (TrueNAS refuses http:// outright),
-        // then the general one.
-        final warning =
-            transportWarningFor(service, value.text) ??
-            UrlUtils.cleartextWarning(value.text);
-        return Semantics(
-          label: 'Server URL',
-          hint: 'Enter the ${service.title} server address',
+        // `http://` across the internet first: refused, on every platform.
+        // Then the service's own reason (TrueNAS refuses http:// outright).
+        final refusal = cleartextRefusal(service, value.text, optional: away);
+        final warning = refusal ?? transportWarningFor(service, value.text);
+        final help = away
+            ? "Used when the home address doesn't answer. Leave it empty to "
+                  'reach ${service.title} only at home.'
+            // The default port comes from the registry, so this screen and
+            // onboarding cannot disagree about it.
+            : "Used on your home Wi-Fi. ${service.title}'s default port is "
+                  '${service.defaultPort}.';
+        final field = Semantics(
+          label: label,
+          hint: away
+              ? 'Enter the ${service.title} address you reach from outside'
+              : 'Enter the ${service.title} address on your home network',
           child: TextFormField(
-            controller: _urlController,
-            focusNode: _urlFocus,
+            key: away ? _awayFieldKey : _urlFieldKey,
+            controller: controller,
+            focusNode: away ? _awayFocus : _urlFocus,
             decoration: InputDecoration(
-              labelText: 'Server URL',
-              hintText: 'https://your-server:${service.defaultPort}',
-              // The default port comes from the registry, so this screen and
-              // onboarding cannot disagree about it. The cleartext warning wins
-              // the helper slot when it fires: a live problem outranks a hint.
-              helperText:
-                  warning ??
-                  "${service.title}'s default port is "
-                      '${service.defaultPort}.',
-              // The cleartext warning names three routes, which takes four
-              // lines on a narrow phone; cut at three it lost its remedy.
+              labelText: label,
+              hintText: away
+                  ? 'https://${service.routeParam}.example.com'
+                  : 'https://your-server:${service.defaultPort}',
+              // A live problem outranks the hint in the helper slot, in the
+              // fault tone the field's refusal is drawn in after a save.
+              helperText: warning ?? help,
               helperMaxLines: 5,
+              errorMaxLines: 5,
               helperStyle: warning == null
                   ? null
                   : Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1618,13 +1818,63 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             // address typed during setup was rejected when reopened here.
             // An address that carries `user:password@` is accepted here and
             // cleaned on test or save: see [_liftCredentialsFromAddress].
-            validator: (value) =>
-                UrlUtils.validateServiceHost(value, allowCredentials: true),
+            validator: (value) => _addressProblem(value ?? '', away: away),
           ),
+        );
+        if (refusal == null) return field;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            field,
+            const SizedBox(height: AppSpacing.sm),
+            // The one remedy, in the one amber fill: the same address over
+            // https, which the next test checks.
+            FilledButton(
+              onPressed: () => _useHttpsIn(controller),
+              style: remedyFillStyle(context, compact: true),
+              child: const Text('Use https'),
+            ),
+          ],
         );
       },
     );
   }
+
+  /// What is wrong with [raw] as the address at home or ([away]) away, or
+  /// null when it can be tested and saved.
+  String? _addressProblem(String raw, {required bool away}) {
+    if (raw.trim().isEmpty) return away ? null : 'Add the address at home';
+    final malformed = UrlUtils.validateServiceHost(raw, allowCredentials: true);
+    if (malformed != null) return malformed;
+    if (cleartextRefusal(service, raw, optional: away) case final refused?) {
+      return refused;
+    }
+    if (away &&
+        isSameAddress(
+          UrlUtils.normalizeBaseUrl(UrlUtils.withoutCredentials(raw)),
+          UrlUtils.normalizeBaseUrl(
+            UrlUtils.withoutCredentials(_urlController.text),
+          ),
+        )) {
+      return 'This is the address at home. Use the one you reach from '
+          'outside, or leave this empty.';
+    }
+    return null;
+  }
+
+  /// The Access row of one address: folded while it has nothing to send, as
+  /// most addresses at home have.
+  Widget _buildAccessRow({required bool away}) => KeyedSubtree(
+    key: away ? _awayAccessKey : _accessKey,
+    child: ConnectionAccessFields(
+      controller: away ? _awayAccess : _access,
+      foldWhenNone: true,
+      changeLabel: away ? 'Change access away' : 'Change access at home',
+      onMoveToCredential: (value) {
+        if (value.isNotEmpty) _apiKeyController.text = value;
+      },
+    ),
+  );
 
   /// A standing confirmation that this address's origin has a trusted
   /// self-signed certificate, with a way to revoke it.
@@ -1798,8 +2048,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// The same address over https, for an `http://` one off the local
   /// network: a password is about to go.
-  void _useHttps() {
-    _urlController.text = _urlController.text.trim().replaceFirst(
+  void _useHttps() => _useHttpsIn(_urlController);
+
+  void _useHttpsIn(TextEditingController address) {
+    address.text = address.text.trim().replaceFirst(
       RegExp('^http://', caseSensitive: false),
       'https://',
     );
@@ -1819,10 +2071,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           // registry fact onboarding shows under the same field, so someone who
           // set this up once recognises the breadcrumb when they come back to fix
           // it.
-          helperText: credentialPath == null
+          // With an address away, the key it is asked for there is the same:
+          // one server behind two doors.
+          helperText: credentialPath == null && !_hasAway
               ? null
-              : '${service.title} → $credentialPath',
-          helperMaxLines: 2,
+              : [
+                  if (credentialPath != null)
+                    '${service.title} → $credentialPath',
+                  if (_hasAway) 'The same key at both addresses.',
+                ].join('\n'),
+          helperMaxLines: 3,
           suffixIcon: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1984,6 +2242,135 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final current = await Clipboard.getData(Clipboard.kTextPlain);
     if (current != null && current.text != secret) return;
     await Clipboard.setData(const ClipboardData(text: ''));
+  }
+}
+
+/// One answer of a connection test, under the button: the tone's 10% wash,
+/// a glyph and a title in the tone, the sentences in the page's quiet voice,
+/// and, when the form has two addresses, where the answer came from.
+///
+/// A live region rather than an announcement: the panel appears below the
+/// button while focus stays on it, so the verdict (the whole point of the
+/// action) would otherwise have to be hunted for. `liveRegion` is the
+/// mechanism both platforms honour; a programmatic announcement is dropped on
+/// Android. The outcome is spelled out because the glyph and the tint are the
+/// only things carrying it (the "Fill in the address" message, for one, never
+/// says it failed).
+class _ResultPanel extends StatelessWidget {
+  const _ResultPanel({
+    required this.tone,
+    required this.icon,
+    required this.title,
+    required this.lines,
+    this.outcome,
+    this.note,
+    this.noteIsWarning = false,
+    this.addresses = const [],
+  });
+
+  final StatusTone tone;
+  final IconData icon;
+  final String title;
+  final List<String> lines;
+
+  /// What a screen reader hears first; the title, when null.
+  final String? outcome;
+
+  /// The server's version, amber when [noteIsWarning].
+  final String? note;
+  final bool noteIsWarning;
+
+  /// Where the answer came from (`At home · nas.home.arpa:7878`), one line
+  /// each, when the form has two addresses.
+  final List<String> addresses;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    // The wash keeps the tone's byte; the glyph and the verdict are walked
+    // against that 10% wash over the page, which is what they land on.
+    final fill = statusToneFill(colorScheme, tone);
+    final color = statusToneColor(
+      colorScheme,
+      tone,
+      surface: colorScheme.surface,
+      tintAlpha: 0.10,
+    );
+    final quiet = theme.textTheme.bodySmall?.copyWith(
+      color: colorScheme.onSurfaceVariant,
+    );
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      excludeSemantics: true,
+      label: [
+        outcome ?? '$title.',
+        ...lines,
+        // Read out with the verdict rather than after it: a caveat the eye
+        // catches from its amber has nothing carrying it to a screen reader.
+        ?note,
+        ...addresses,
+      ].join(' '),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: fill.withValues(alpha: 0.10),
+          borderRadius: AppRadius.borderRadiusMd,
+          border: Border.all(color: fill.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.labelLarge?.copyWith(color: color),
+                  ),
+                  for (final line in lines) ...[
+                    const SizedBox(height: 2),
+                    Text(line, style: quiet),
+                  ],
+                  if (note case final note?) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      note,
+                      style: noteIsWarning
+                          ? theme.textTheme.bodySmall?.copyWith(
+                              color: statusToneColor(
+                                colorScheme,
+                                StatusTone.warning,
+                                surface: colorScheme.surface,
+                                tintAlpha: 0.10,
+                              ),
+                            )
+                          : quiet,
+                    ),
+                  ],
+                  if (addresses.isNotEmpty) const SizedBox(height: 2),
+                  for (final address in addresses)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        address,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: CupolaThemeColors.of(context).dimText,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

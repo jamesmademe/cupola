@@ -19,7 +19,7 @@ void main() {
         'TextFormField · rest, filled, a 1px room.edge border',
         (_) => const TextField(
           decoration: InputDecoration(
-            labelText: 'Server URL',
+            labelText: 'Address at home',
             hintText: 'https://your-server:7878',
           ),
         ),
@@ -32,7 +32,7 @@ void main() {
           (controller) => TextField(
             controller: controller,
             autofocus: true,
-            decoration: const InputDecoration(labelText: 'Server URL'),
+            decoration: const InputDecoration(labelText: 'Address at home'),
           ),
         ),
         width: 360,
@@ -45,7 +45,7 @@ void main() {
           (controller) => TextField(
             controller: controller,
             decoration: const InputDecoration(
-              labelText: 'Server URL',
+              labelText: 'Address at home',
               errorText: 'Include http:// or https://',
             ),
           ),
@@ -93,7 +93,7 @@ void main() {
           (controller) => TextField(
             controller: controller,
             enabled: false,
-            decoration: const InputDecoration(labelText: 'Server URL'),
+            decoration: const InputDecoration(labelText: 'Address at home'),
           ),
         ),
         width: 360,
@@ -106,7 +106,7 @@ void main() {
           (controller) => TextField(
             controller: controller,
             decoration: const InputDecoration(
-              labelText: 'Server URL including the port and any base path',
+              labelText: 'Address at home, with the port and any base path',
               helperText:
                   'Radarr → Settings → General → Host: the address you open '
                   'in a browser, without a trailing slash',
@@ -124,7 +124,7 @@ void main() {
           children: [
             const TextField(
               decoration: InputDecoration(
-                labelText: 'Server URL',
+                labelText: 'Address at home',
                 hintText: 'https://your-server:7878',
               ),
             ),
@@ -134,7 +134,7 @@ void main() {
               (controller) => TextField(
                 controller: controller,
                 decoration: const InputDecoration(
-                  labelText: 'Server URL',
+                  labelText: 'Address at home',
                   errorText: 'Include http:// or https://',
                 ),
               ),
@@ -153,7 +153,7 @@ void main() {
             controller: controller,
             autofocus: true,
             decoration: const InputDecoration(
-              labelText: 'Server URL',
+              labelText: 'Address at home',
               errorText: 'Include http:// or https://',
             ),
           ),

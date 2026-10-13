@@ -30,10 +30,6 @@ void main() {
     ('[fd12:3456::1]', true),
     ('[fc00::1]', true),
     ('[fe80::1]', true),
-    // Carrier NAT, Tailscale's range: its traffic leaves through a tunnel, and
-    // neither the permission nor the warning calls it local.
-    ('100.64.1.2', false),
-    ('100.127.255.1', false),
     ('172.32.0.1', false),
     ('203.0.113.7', false),
     ('[2001:db8::1]', false),
@@ -74,6 +70,24 @@ void main() {
       expect(UrlUtils.cleartextWarning(url), isNull, reason: url);
       expect(passwordTravelsInClear(url), isFalse, reason: url);
     }
+  });
+
+  // Carrier NAT, Tailscale's range, and its MagicDNS names: the traffic
+  // leaves through the tunnel, so the permission does not call it local, and
+  // WireGuard encrypts it, so nothing warns about http:// (P-tailscale-clear).
+  test('a tailnet is not the local network, and nothing warns', () {
+    for (final host in const [
+      '100.64.1.2',
+      '100.127.255.1',
+      'nas.tail1234.ts.net',
+    ]) {
+      expect(localNetworkHostVerdict(host) == true, isFalse, reason: host);
+      expect(UrlUtils.cleartextWarning('http://$host'), isNull, reason: host);
+      expect(passwordTravelsInClear('http://$host'), isFalse, reason: host);
+    }
+    // Just outside the range, the internet again.
+    expect(UrlUtils.cleartextWarning('http://100.128.0.1'), isNotNull);
+    expect(UrlUtils.cleartextWarning('http://100.63.255.1'), isNotNull);
   });
 
   test('https never warns, wherever it goes', () {

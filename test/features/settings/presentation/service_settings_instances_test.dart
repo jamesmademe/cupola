@@ -85,6 +85,9 @@ Future<void> _removeThisConnection(WidgetTester tester) async {
     300,
     scrollable: find.byType(Scrollable).first,
   );
+  // Built is not on screen: the last row can stop under the bottom edge.
+  await tester.ensureVisible(find.text('Remove Radarr'));
+  await tester.pumpAndSettle();
   await tester.tap(find.text('Remove Radarr'));
   await tester.pumpAndSettle();
   await tester.tap(find.widgetWithText(FilledButton, 'Remove Radarr'));
@@ -168,6 +171,8 @@ void main() {
         300,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.ensureVisible(find.text('Ada'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Ada'));
       await tester.pumpAndSettle();
 
@@ -296,7 +301,7 @@ void main() {
     );
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Server URL'),
+      find.widgetWithText(TextFormField, 'Address at home'),
       'https://nas.lan:7879',
     );
     await tester.enterText(find.widgetWithText(TextFormField, 'API key'), 'k2');
@@ -333,7 +338,7 @@ void main() {
     );
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Server URL'),
+      find.widgetWithText(TextFormField, 'Address at home'),
       'https://nas.lan/radarr4k',
     );
     await tester.enterText(find.widgetWithText(TextFormField, 'API key'), 'k2');
@@ -367,7 +372,7 @@ void main() {
     );
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Server URL'),
+      find.widgetWithText(TextFormField, 'Address at home'),
       'https://nas.lan:7879',
     );
     await tester.enterText(find.widgetWithText(TextFormField, 'API key'), 'k2');

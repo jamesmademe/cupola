@@ -79,7 +79,17 @@ Finder _field(String label) => find.byWidgetPredicate(
   (widget) => widget is TextField && widget.decoration?.labelText == label,
 );
 
+/// Opens the Access row at home, folded while it has no access.
+Future<void> _openAccess(WidgetTester tester) async {
+  final change = find.bySemanticsLabel('Change access at home');
+  if (change.evaluate().isEmpty) return;
+  await tester.ensureVisible(change);
+  await tester.tap(change);
+  await tester.pump();
+}
+
 Future<void> _choose(WidgetTester tester, String choice) async {
+  await _openAccess(tester);
   // The pills scroll sideways on a phone.
   await tester.ensureVisible(find.bySemanticsLabel(choice));
   await tester.pumpAndSettle();
@@ -169,7 +179,10 @@ void main() {
         WorldIds.radarr,
       );
 
+      // Folded while there is nothing in front of the address.
       expect(find.text('Access'), findsOneWidget);
+      expect(find.bySemanticsLabel('Cloudflare Access'), findsNothing);
+      await _openAccess(tester);
       for (final choice in [
         'None',
         'Cloudflare Access',
@@ -194,6 +207,7 @@ void main() {
           surface: Size(width, 2600),
         );
 
+        await _openAccess(tester);
         _expectChoicesWhole(tester, width);
 
         await harness.unmount(tester);
@@ -208,6 +222,7 @@ void main() {
         WorldConnections.nzbget.id,
       );
 
+      await _openAccess(tester);
       expect(find.bySemanticsLabel('Password'), findsNothing);
       expect(
         find.text(
@@ -387,7 +402,7 @@ void main() {
       );
 
       await tester.enterText(
-        _field('Server URL'),
+        _field('Address at home'),
         'https://matt:p%40ss@radarr.example.com',
       );
       await _save(tester, harness);
@@ -413,7 +428,7 @@ void main() {
       );
 
       await tester.enterText(
-        _field('Server URL'),
+        _field('Address at home'),
         'http://nzbget:tegbzn6789@tower.home.arpa:6789',
       );
       await _save(tester, harness);

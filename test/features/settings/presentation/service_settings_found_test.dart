@@ -82,6 +82,9 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    // Tall enough that every field is built: the list builds lazily.
+    await tester.binding.setSurfaceSize(const Size(430, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,

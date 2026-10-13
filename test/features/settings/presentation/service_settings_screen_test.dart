@@ -69,9 +69,10 @@ void main() {
       expect(find.text('Radarr Settings'), findsNothing);
       expect(find.text('Radarr'), findsNWidgets(2));
       expect(find.text('Save'), findsOneWidget);
-      expect(find.text('Server URL'), findsOneWidget);
+      expect(find.text('Address at home'), findsOneWidget);
+      expect(find.text('Address away · optional'), findsOneWidget);
       expect(find.text('API key'), findsOneWidget);
-      expect(find.byType(TextFormField), findsNWidgets(2));
+      expect(find.byType(TextFormField), findsNWidgets(3));
     });
 
     testWidgets('pre-populates the URL and API key fields', (tester) async {
@@ -84,7 +85,9 @@ void main() {
         ),
       );
 
-      final urlField = tester.widget<TextField>(_fieldByLabel('Server URL'));
+      final urlField = tester.widget<TextField>(
+        _fieldByLabel('Address at home'),
+      );
       final apiKeyField = tester.widget<TextField>(_fieldByLabel('API key'));
 
       expect(urlField.controller?.text, 'https://radarr.local');
@@ -103,14 +106,14 @@ void main() {
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Server URL is required'), findsOneWidget);
+      expect(find.text('Add the address at home'), findsOneWidget);
     });
 
     testWidgets('validates that the API key is required', (tester) async {
       await _pumpServiceSettings(tester, service: ServiceKey.radarr);
 
       await tester.enterText(
-        _fieldByLabel('Server URL'),
+        _fieldByLabel('Address at home'),
         'https://radarr.local',
       );
       await tester.tap(find.text('Save'));
@@ -308,7 +311,7 @@ void main() {
       );
 
       await tester.enterText(
-        _fieldByLabel('Server URL'),
+        _fieldByLabel('Address at home'),
         'https://new-nas.local:8989',
       );
       await tester.tap(find.text('Save'));
@@ -337,7 +340,7 @@ void main() {
       );
 
       await tester.enterText(
-        _fieldByLabel('Server URL'),
+        _fieldByLabel('Address at home'),
         'https://direct.local:8989',
       );
       await tester.tap(find.text('Save'));
@@ -362,7 +365,7 @@ void main() {
       );
 
       await tester.enterText(
-        _fieldByLabel('Server URL'),
+        _fieldByLabel('Address at home'),
         'https://sonarr.local',
       );
       await tester.enterText(_fieldByLabel('API key'), 'sonarr-key');
@@ -394,6 +397,7 @@ void main() {
         ),
       );
 
+      await tester.ensureVisible(find.text('Test connection'));
       await tester.tap(find.text('Test connection'));
       await tester.pumpAndSettle();
 
@@ -422,6 +426,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isTrue);
 
+      await tester.ensureVisible(find.text('Test connection'));
       await tester.tap(find.text('Test connection'));
       await tester.pumpAndSettle();
 
@@ -492,6 +497,7 @@ void main() {
         localNetworkProbe: _theOsIsBlockingUs,
       );
 
+      await tester.ensureVisible(find.text('Test connection'));
       await tester.tap(find.text('Test connection'));
       await tester.pumpAndSettle();
 

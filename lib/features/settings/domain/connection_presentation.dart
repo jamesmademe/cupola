@@ -301,6 +301,29 @@ String? transportWarningFor(ServiceKey service, String rawUrl) {
   return null;
 }
 
+/// What an address field refuses, on every platform, when [rawUrl] would send
+/// [service]'s credential across the internet in plain `http://`: a host off
+/// the local network and off a tailnet ([UrlUtils.cleartextWarning]). Null when
+/// there is nothing to refuse.
+///
+/// Cupola's own rule, not the system's: the clients speak through Dart's
+/// sockets, which App Transport Security does not see, so an iPhone would
+/// send it. Nothing is tested or saved while it stands, and the field's one
+/// remedy is `Use https`. [optional] is the address away, which can also be
+/// left empty.
+String? cleartextRefusal(
+  ServiceKey service,
+  String rawUrl, {
+  bool optional = false,
+}) {
+  if (UrlUtils.cleartextWarning(rawUrl) == null) return null;
+  final credential = !service.usesApiKey
+      ? 'password'
+      : (service == ServiceKey.plex ? 'token' : 'key');
+  return "Cupola doesn't send your $credential over plain http across the "
+      'internet. ${optional ? 'Use its https address, or leave this empty.' : 'Use its https address.'}';
+}
+
 /// The glyph beside a failure's words. Its colour is the failure's tone.
 IconData failureIcon(ServiceFailureReason reason) => switch (reason) {
   ServiceFailureReason.unreachable => Icons.cloud_off_rounded,

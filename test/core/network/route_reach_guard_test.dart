@@ -341,16 +341,11 @@ const _exceptions = <String, ({int count, String reason})>{
         'labels it derives for siblings and the hosts it lists them by.',
   ),
   'lib/features/settings/presentation/service_settings_screen.dart  .access': (
-    count: 2,
-    reason: 'The form\'s Access row, filled from the access saved at home.',
+    count: 3,
+    reason:
+        'The form\'s Access row, filled from the access saved at home, and '
+        'the access its test just sent there.',
   ),
-  'lib/features/settings/presentation/service_settings_screen.dart  lookup.url':
-      (
-        count: 2,
-        reason:
-            'The access just tested, and the address an edit moves away from '
-            '(its certificate forgotten when nothing else uses it).',
-      ),
   'lib/features/settings/presentation/service_settings_screen.dart  pinForUrl(':
       (
         count: 3,

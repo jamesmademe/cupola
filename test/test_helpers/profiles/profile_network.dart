@@ -443,6 +443,24 @@ class ProfileNetwork {
     );
   }
 
+  /// Connection [id]'s server answers at [url] too: its address away from
+  /// home, a second origin in front of the same server (a tunnel, a reverse
+  /// proxy), with the same behaviour and the same data. [server] and
+  /// [behave] keep to the address the connection was saved with.
+  void serveAlsoAt(String id, String url) {
+    final at = server(id);
+    final also = ProfileServer(
+      id: at.id,
+      service: at.service,
+      url: url,
+      label: at.label,
+      behaviour: at.behaviour,
+      configuredInCupola: at.configuredInCupola,
+      latency: at.latency,
+    );
+    _servers[also.origin] = also;
+  }
+
   /// The requests that reached connection [id].
   List<NetworkRequest> requestsTo(String id) =>
       requests.where((r) => r.server?.id == id).toList(growable: false);
