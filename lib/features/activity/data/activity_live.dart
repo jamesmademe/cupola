@@ -56,15 +56,14 @@ final activityLivePollProvider = Provider.autoDispose.family<void, ActivityTab>(
       ref.gatedPoll(
         id: 'activity.live',
         interval: activityLiveInterval,
+        // As the Home's: a queue still being read is left to answer.
         onTick: () {
-          for (final source in homeDownloadsSources) {
-            ref.invalidate(source);
-          }
-          ref.invalidate(dashboardDecisionSourceProvider(DecisionSource.queue));
+          ref.readAgainUnlessInFlight([
+            ...homeDownloadsSources,
+            dashboardDecisionSourceProvider(DecisionSource.queue),
+          ]);
           if (tab == ActivityTab.all) {
-            for (final source in homeSessionsSources) {
-              ref.invalidate(source);
-            }
+            ref.readAgainUnlessInFlight(homeSessionsSources);
           }
         },
       );

@@ -280,6 +280,34 @@ void main() {
       expect(rig['requests'], 0);
     });
 
+    testWidgets('a slow queue is left to answer, and who is watching is '
+        'still read', (tester) async {
+      // Servers that take the connection and say nothing: the queue's read
+      // outlasts the tick, and every tick used to throw it away (13/10).
+      final gate = Completer<void>();
+      final rig = await _start(tester, queueGate: gate);
+      final poll = rig.container.listen(
+        activityLivePollProvider(ActivityTab.all),
+        (_, _) {},
+      );
+      await tester.pump(activityLiveInterval * 3);
+      await _flush(tester);
+      expect(rig['queue'], 0);
+      expect(rig['decisions.queue'], 0);
+      expect(rig['sessions'], 3);
+
+      // It answers, and the next tick reads it again.
+      gate.complete();
+      await _flush(tester);
+      await tester.pump(activityLiveInterval);
+      await _flush(tester);
+      expect(rig['queue'], 1);
+      expect(rig['decisions.queue'], 1);
+
+      poll.close();
+      await tester.pump(const Duration(milliseconds: 1));
+    });
+
     testWidgets('a slow Seerr is asked once, never a second time on top of '
         'the first', (tester) async {
       final rig = await _start(tester, holdRequests: true);

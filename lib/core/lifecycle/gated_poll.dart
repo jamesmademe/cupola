@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderBase, ProviderOrFamily;
 
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/lifecycle/poll_clock.dart';
@@ -71,6 +72,38 @@ extension GatedPoll on Ref {
       timer?.cancel();
       PollProbe.instance.noteStop(id);
     });
+  }
+}
+
+/// What a poll's tick reads again.
+extension ReadAgainUnlessInFlight on Ref {
+  /// Invalidates [sources] as one, unless any of them is still being read:
+  /// then none is, and the tick after the read answers reads them again.
+  ///
+  /// A tick that invalidates a read in flight throws it away before it can
+  /// answer or fail. Against servers that take the connection and then say
+  /// nothing (a NAS asleep behind a port forward, a VPN half up), the Home's
+  /// queue read is two receive deadlines long, as long as its tick: every
+  /// tick restarted it, Downloads never left loading and its fault never
+  /// landed (13/10). The group is skipped whole because its parts read one
+  /// another: the queue reads the clients' lists, and invalidating an idle
+  /// list restarts the queue that is reading it.
+  ///
+  /// Only a provider that already exists is inspected, so a tick never
+  /// creates one just to ask about it. A family cannot be asked and is read
+  /// again with its group. Returns whether the group was read again.
+  bool readAgainUnlessInFlight(Iterable<ProviderOrFamily> sources) {
+    final inFlight = sources.any(
+      (source) =>
+          source is ProviderBase<AsyncValue<Object?>> &&
+          exists(source) &&
+          read(source).isLoading,
+    );
+    if (inFlight) return false;
+    for (final source in sources) {
+      invalidate(source);
+    }
+    return true;
   }
 }
 

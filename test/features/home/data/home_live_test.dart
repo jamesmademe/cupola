@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,6 +13,7 @@ import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 
 import '../../../test_helpers/settings_scope.dart';
 
@@ -85,6 +88,57 @@ void main() {
     expect(reads(), 1);
     poll.close();
     // Riverpod disposes on its own scheduler, a moment behind the close.
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('a queue read longer than the tick is left to answer, and who '
+      'is watching is still read', (tester) async {
+    // Servers that take the connection and say nothing: a read is two
+    // receive deadlines long, as long as the tick, and every tick used to
+    // throw it away, so Downloads never left loading (13/10).
+    final gate = Completer<void>();
+    var queueReads = 0;
+    var sessionReads = 0;
+    final container = ProviderContainer(
+      overrides: [
+        ...await settingsScopeOverrides(
+          configured: const [ServiceKey.radarr, ServiceKey.jellyfin],
+        ),
+        servicesQueueProvider.overrideWith((ref) async {
+          queueReads++;
+          await gate.future;
+          return (
+            items: const <ServiceQueueItem>[],
+            coverage: SourceCoverage.none,
+          );
+        }),
+        streamActivityProvider.overrideWith((ref) async {
+          sessionReads++;
+          return const <StreamActivityRow>[];
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    container
+      ..listen(servicesQueueProvider, (_, _) {})
+      ..listen(streamActivityProvider, (_, _) {});
+    final poll = container.listen(homeLivePollProvider, (_, _) {});
+
+    await tester.pump(homeLiveInterval * 2);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(queueReads, 1);
+    expect(sessionReads, 3);
+    expect(container.read(servicesQueueProvider).value, isNull);
+
+    // It answers, and stands; the next tick reads it again.
+    gate.complete();
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(container.read(servicesQueueProvider).value, isNotNull);
+    await tester.pump(homeLiveInterval);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(queueReads, 2);
+
+    poll.close();
     await tester.pump(const Duration(milliseconds: 1));
   });
 

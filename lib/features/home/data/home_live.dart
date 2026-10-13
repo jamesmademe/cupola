@@ -75,18 +75,17 @@ final homeLivePollProvider = Provider.autoDispose<void>((ref) {
       onTick: () => ref.invalidate(homeStorageProvider),
     );
   }
-  final sources = [
-    if (live(HomeModule.downloads)) ...homeDownloadsSources,
-    if (live(HomeModule.nowPlaying)) ...homeSessionsSources,
-  ];
-  if (sources.isEmpty) return;
+  final downloads = live(HomeModule.downloads);
+  final sessions = live(HomeModule.nowPlaying);
+  if (!downloads && !sessions) return;
   ref.gatedPoll(
     id: 'home.live',
     interval: homeLiveInterval,
+    // Each group read again only once its last read has answered: a slow
+    // queue must not hold back who is watching, nor be thrown away.
     onTick: () {
-      for (final source in sources) {
-        ref.invalidate(source);
-      }
+      if (downloads) ref.readAgainUnlessInFlight(homeDownloadsSources);
+      if (sessions) ref.readAgainUnlessInFlight(homeSessionsSources);
     },
   );
 });
