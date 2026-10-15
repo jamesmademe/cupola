@@ -231,11 +231,25 @@ final instanceSummaryProvider =
           failure: const ClassifiedFailure(ServiceFailureReason.onlyAtHome),
         );
       }
-      return _loadServiceSummary(ref, instance, settings, (
+      // Neither address answered the route probe's last knock: a silence
+      // here is said of both. Watched only for a connection with an address
+      // away, and before the probe's first await.
+      final unanswered = instance.away == null
+          ? null
+          : ref.watch(unansweredConnectionProvider(key.instanceId));
+      final summary = await _loadServiceSummary(ref, instance, settings, (
         url: reached.url,
         access: reached.access,
         pin: reached.certFingerprint,
       ));
+      return unanswered != null &&
+              summary.failureReason == ServiceFailureReason.unreachable
+          ? ServiceSummary.failed(
+              key.service,
+              host: summary.host,
+              error: unanswered,
+            )
+          : summary;
     });
 
 /// The health of the connection [service] is currently seen through.

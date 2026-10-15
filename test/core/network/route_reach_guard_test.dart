@@ -233,6 +233,13 @@ const _exceptions = <String, ({int count, String reason})>{
         'The agent lens goes back to the hub when the connection is pointed '
         'elsewhere; the route moving reaches the same hub and keeps it.',
   ),
+  'lib/features/settings/data/connection_reach_provider.dart  .url': (
+    count: 3,
+    reason:
+        'The two saved addresses nothing answered at: named by the red, and '
+        'handed to the clients\' snapshot so a request to either says so. '
+        'Nothing is sent to them from here.',
+  ),
   'lib/features/settings/data/route_probe.dart  .url': (
     count: 1,
     reason:

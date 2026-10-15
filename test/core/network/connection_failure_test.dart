@@ -370,12 +370,19 @@ void main() {
 
   group('failureIsFault', () {
     test('red is silence and nothing else; everything else is amber', () {
-      expect(failureIsFault(ServiceFailureReason.unreachable), isFalse);
-      expect(failureDidNotAnswer(ServiceFailureReason.unreachable), isTrue);
-      expect(failureTone(ServiceFailureReason.unreachable), StatusTone.error);
+      // Silence at the address in use, or at both of a connection's.
+      for (final silent in [
+        ServiceFailureReason.unreachable,
+        ServiceFailureReason.unreachableAtBoth,
+      ]) {
+        expect(failureIsFault(silent), isFalse, reason: silent.name);
+        expect(failureDidNotAnswer(silent), isTrue, reason: silent.name);
+        expect(failureTone(silent), StatusTone.error, reason: silent.name);
+      }
       for (final reason in ServiceFailureReason.values.where(
         (r) =>
             r != ServiceFailureReason.unreachable &&
+            r != ServiceFailureReason.unreachableAtBoth &&
             r != ServiceFailureReason.sessionEnded &&
             r != ServiceFailureReason.onlyAtHome,
       )) {

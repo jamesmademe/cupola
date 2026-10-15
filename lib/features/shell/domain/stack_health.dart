@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -338,6 +340,70 @@ final unreachableServicesProvider = Provider<List<ServiceKey>>((ref) {
       })
       .toList(growable: false);
 });
+
+/// How the silence of [unreachableServicesProvider] is said: which silent
+/// services went unanswered at both addresses of every connection they have
+/// (`unansweredConnectionProvider`), and whether no configured service
+/// answered at all.
+final stackSilenceProvider = Provider<StackSilence>((ref) {
+  final silent = ref.watch(unreachableServicesProvider);
+  if (silent.isEmpty) return const StackSilence();
+  final settings = ref.watch(currentSettingsProvider);
+  final atBoth = <ServiceKey>{};
+  for (final service in silent) {
+    final ids = [
+      for (final instance in settings.instancesOf(service))
+        if (instance.isConfigured) instance.id,
+    ];
+    if (ids.isNotEmpty &&
+        ids.every(
+          (id) => ref.watch(unansweredConnectionProvider(id)) != null,
+        )) {
+      atBoth.add(service);
+    }
+  }
+  final configured = ServiceKey.values
+      .where(settings.isServiceConfigured)
+      .length;
+  return StackSilence(
+    silent: silent.length,
+    atBoth: atBoth,
+    everyService: silent.length == configured,
+  );
+});
+
+/// The silence's words, given which services it names ([scopeOf]).
+@immutable
+class StackSilence {
+  const StackSilence({
+    this.silent = 0,
+    this.atBoth = const {},
+    this.everyService = false,
+  });
+
+  /// How many services are silent.
+  final int silent;
+
+  /// The silent services every connection of which went unanswered at home
+  /// and away.
+  final Set<ServiceKey> atBoth;
+
+  /// Whether every configured service is silent.
+  final bool everyService;
+
+  /// Where [named] were asked, for the sentence that names them: every
+  /// service, when [named] is all of them and one was asked at both
+  /// addresses; at both, when each of [named] was; else where asked.
+  SilenceScope scopeOf(List<ServiceKey> named) {
+    if (named.isEmpty) return SilenceScope.asked;
+    if (everyService && named.length == silent && named.any(atBoth.contains)) {
+      return SilenceScope.nothingAnywhere;
+    }
+    return named.every(atBoth.contains)
+        ? SilenceScope.atBoth
+        : SilenceScope.asked;
+  }
+}
 
 /// The live aggregate. Rebuilds when any *connection's* reachability moves.
 ///

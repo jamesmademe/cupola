@@ -154,7 +154,7 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.radarr),
-          ...sectionsOrOnlyAtHome(ref, ServiceKey.radarr, [
+          ...sectionsOrOneLine(ref, ServiceKey.radarr, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.radarr)),
               accent: ServiceKey.radarr.accent,

@@ -246,7 +246,8 @@ class GlobalSearchServiceResults {
       leg: leg,
       state: switch (reason) {
         ServiceFailureReason.timeout => SearchLaneState.timedOut,
-        ServiceFailureReason.unreachable => SearchLaneState.unreachable,
+        ServiceFailureReason.unreachable ||
+        ServiceFailureReason.unreachableAtBoth => SearchLaneState.unreachable,
         _ => SearchLaneState.failed,
       },
       reason: reason,

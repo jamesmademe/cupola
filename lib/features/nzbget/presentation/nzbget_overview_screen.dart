@@ -113,7 +113,7 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.nzbget),
-          ...sectionsOrOnlyAtHome(ref, ServiceKey.nzbget, [
+          ...sectionsOrOneLine(ref, ServiceKey.nzbget, [
             // The shared rail, not a private one: Speed, Queue, Remaining and
             // Status are the same four figures the stack matrix shows for this
             // service, and a second copy computed here would be free to drift.

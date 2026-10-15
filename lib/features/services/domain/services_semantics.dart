@@ -151,8 +151,11 @@ String decisionRowSpokenValue({
 /// dismiss, and "Dismiss" alone leaves a screen-reader user to guess which of
 /// the two they are on: where one re-checks the connection and the other
 /// hides the notice.
-String servicesDismissAlertLabel(List<String> offlineServiceTitles) =>
-    'Dismiss: ${servicesAlertBandMessage(offlineServiceTitles)}';
+String servicesDismissAlertLabel(
+  List<String> offlineServiceTitles, {
+  SilenceScope scope = SilenceScope.asked,
+}) =>
+    'Dismiss: ${servicesAlertBandMessage(offlineServiceTitles, scope: scope)}';
 
 /// What a folded domain band announces, after its name.
 ///
@@ -184,18 +187,44 @@ String serviceDomainBandValue({required int serviceCount}) {
 String servicesAlertBandMessage(
   List<String> offlineServiceTitles, {
   int maxNamed = 3,
+  SilenceScope scope = SilenceScope.asked,
 }) {
-  final clause = servicesDidNotAnswer(offlineServiceTitles, maxNamed: maxNamed);
+  final clause = servicesDidNotAnswer(
+    offlineServiceTitles,
+    maxNamed: maxNamed,
+    scope: scope,
+  );
   return clause.isEmpty ? '' : '$clause.';
+}
+
+/// Where the silent services were asked, which the silence's sentence says.
+enum SilenceScope {
+  /// At the address in use: `Radarr and Sonarr did not answer`.
+  asked,
+
+  /// Every one of them at both of its addresses, at home and away:
+  /// `Radarr did not answer at home or away`.
+  atBoth,
+
+  /// Every service is silent, and at least one was asked at both of its
+  /// addresses: the phone is offline, or the server is down. `No service
+  /// answered, at home or away`.
+  nothingAnywhere,
 }
 
 /// The band's sentence as a clause, without its full stop: `Radarr and
 /// Sonarr did not answer`, and ` at 20:53` when the probe that found them
 /// silent is [at]. The Home's Needs you leads with it.
+///
+/// [scope] says where they were asked: at both of their addresses, `Radarr
+/// did not answer at home or away`, or every service at all, `No service
+/// answered, at home or away`. Neither takes the time, which `at home or
+/// away` would run into.
 String servicesDidNotAnswer(
   List<String> offlineServiceTitles, {
   int maxNamed = 3,
   DateTime? at,
+  SilenceScope scope = SilenceScope.asked,
 }) {
   final titles = offlineServiceTitles
       .where((t) => t.trim().isNotEmpty)
@@ -210,6 +239,14 @@ String servicesDidNotAnswer(
   const verb = 'did not answer';
   final subject = servicesNamed(titles, maxNamed: maxNamed);
 
+  switch (scope) {
+    case SilenceScope.nothingAnywhere:
+      return 'No service answered, at home or away';
+    case SilenceScope.atBoth:
+      return '$subject $verb at home or away';
+    case SilenceScope.asked:
+      break;
+  }
   return at == null
       ? '$subject $verb'
       : '$subject $verb at ${formatClockTime(at)}';

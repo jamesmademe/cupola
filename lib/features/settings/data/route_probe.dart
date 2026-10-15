@@ -37,8 +37,9 @@ const awayRecheckInterval = Duration(minutes: 5);
 /// answered, away when only away did, null when neither did.
 ///
 /// Null keeps the route as it is. A connection that answers at neither
-/// address is down or out of reach, and its failure says so where it is
-/// read; moving it would only change which address the failure names.
+/// address is down or out of reach: moving it would only change which
+/// address the failure names, so the probe marks it instead
+/// (`unansweredConnectionsProvider`) and its failure names both.
 Future<ConnectionRoute?> decideRoute({
   required Future<bool> home,
   required Future<bool> away,
@@ -134,7 +135,11 @@ class RouteProbe {
       ),
     );
     if (_disposed) return;
-    if (route != null) {
+    final unanswered = _ref.read(unansweredConnectionsProvider.notifier);
+    if (route == null) {
+      unanswered.mark(id);
+    } else {
+      unanswered.clear(id);
       await _ref.read(connectionRoutesProvider.notifier).set(id, route);
     }
     _syncRecheck();

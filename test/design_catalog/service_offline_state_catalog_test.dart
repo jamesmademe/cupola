@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_unanswered.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../test_helpers/settings_scope.dart';
@@ -63,6 +64,20 @@ void main() {
           error: DioException.connectionError(
             requestOptions: RequestOptions(path: '/status/sessions'),
             reason: 'Connection refused',
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
+        'ServiceOfflineState.failure · neither address answered: red, the '
+        'title said of home and away, both addresses in the body and no lens '
+        'host above them, Retry and Settings',
+        (_) => ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: const ConnectionUnanswered(
+            home: 'nas.home.arpa:7878',
+            away: 'radarr.example.net',
           ),
           onRetry: () {},
         ),

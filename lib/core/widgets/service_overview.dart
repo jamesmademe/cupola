@@ -13,7 +13,9 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -495,31 +497,91 @@ class _LensChip extends StatelessWidget {
   }
 }
 
-/// An Overview's [sections], or the one line that stands for all of them:
-/// away from home, for a lens connection with no address away.
+/// An Overview's [sections], or the one line that stands for all of them,
+/// when every section is bound to fail for one reason the page can name
+/// before asking:
 ///
-/// Every section of such a page fails for the same reason, its request
-/// refused before it was sent ([ServiceOnlyAtHome]), and said it in the same
-/// sentence with the same remedy: three times in Seerr's first screen, under
-/// a figure peek of dashes. Said once instead, under the identity line that
-/// already reads `Only at home`, with `Add an address away` as its one
-/// action. A spread rather than a wrapper, so the page's list keeps building
-/// its sections lazily; called from the page's build with its [ref].
-List<Widget> sectionsOrOnlyAtHome(
+///  * away from home, for a lens connection with no address away: every
+///    request is refused before it is sent ([ServiceOnlyAtHome]), and each
+///    section said so in the same sentence with the same remedy, three times
+///    in Seerr's first screen under a figure peek of dashes. Said once
+///    instead, under the identity line that already reads `Only at home`,
+///    with `Add an address away` as its one action;
+///  * for a lens connection neither of whose addresses answered the route
+///    probe ([ServiceFailureReason.unreachableAtBoth]): the red names both
+///    addresses once, and its Retry knocks at both.
+///
+/// A spread rather than a wrapper, so the page's list keeps building its
+/// sections lazily; called from the page's build with its [ref].
+List<Widget> sectionsOrOneLine(
   WidgetRef ref,
   ServiceKey service,
   List<Widget> sections,
 ) {
-  final onlyAtHome = ref.watch(
+  final reason = ref.watch(
     serviceSummaryProvider(
       service,
-    ).select((summary) => summary.asData?.value.isOnlyAtHome ?? false),
+    ).select((summary) => summary.asData?.value.failureReason),
   );
-  return onlyAtHome ? [ServiceOverviewOnlyAtHome(service: service)] : sections;
+  return switch (reason) {
+    ServiceFailureReason.onlyAtHome => [
+      ServiceOverviewOnlyAtHome(service: service),
+    ],
+    ServiceFailureReason.unreachableAtBoth => [
+      ServiceOverviewUnanswered(service: service),
+    ],
+    _ => sections,
+  };
+}
+
+/// The one line of an Overview whose lens connection answered at neither of
+/// its addresses: `Radarr did not answer at home or away`, then where, one
+/// address a line. Red, and its Retry (a ghost in ink) asks both again
+/// (`retryDashboardServices`). See [sectionsOrOneLine].
+class ServiceOverviewUnanswered extends ConsumerWidget {
+  const ServiceOverviewUnanswered({super.key, required this.service});
+
+  final ServiceKey service;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final instance = ref.watch(activeInstanceProvider(service));
+    final name =
+        (ref.watch(hasMultipleInstancesProvider(service)) && instance != null
+            ? ref.watch(connectionNameProvider(instance.id))
+            : null) ??
+        service.title;
+    final unanswered = instance == null
+        ? null
+        : ref.watch(unansweredConnectionProvider(instance.id));
+    final headline = failureHeadline(
+      ServiceFailureReason.unreachableAtBoth,
+      subject: name,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: InlineErrorRetry.flush(
+        message: unanswered == null
+            ? '$headline.'
+            : '$headline.\n${unanswered.failureDetail}',
+        error:
+            unanswered ??
+            const ClassifiedFailure(ServiceFailureReason.unreachableAtBoth),
+        service: service,
+        instanceId: instance?.id,
+        onRetry: () => retryDashboardServices(ref, [service]),
+      ),
+    );
+  }
 }
 
 /// The one line of an Overview whose connection is reached only at home,
-/// read away from home: see [sectionsOrOnlyAtHome].
+/// read away from home: see [sectionsOrOneLine].
 class ServiceOverviewOnlyAtHome extends ConsumerWidget {
   const ServiceOverviewOnlyAtHome({super.key, required this.service});
 

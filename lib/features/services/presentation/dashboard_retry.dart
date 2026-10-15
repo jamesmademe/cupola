@@ -12,6 +12,8 @@
 /// One function, so the band, the regions and the refresh drop the same set.
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
@@ -31,6 +33,8 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
+import 'package:cupola/features/settings/data/route_probe.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 
@@ -87,6 +91,13 @@ void retryDashboardServices(WidgetRef ref, Iterable<ServiceKey> services) {
     // connection's client is holding as refused is sent once more. Only here,
     // beside the failure: a pull that re-reads the page never lifts it.
     if (service == ServiceKey.qbittorrent) liftQbittorrentRefusals(ref, ids);
+    // A connection neither of whose addresses answered is knocked at both
+    // again: the moment one answers, its route moves there and the silence
+    // said of both goes with it.
+    final unanswered = ref.read(unansweredConnectionsProvider);
+    for (final id in ids.where(unanswered.contains)) {
+      unawaited(ref.read(routeProbeProvider).probe(id));
+    }
     // The probe itself, one entry per connection. `serviceSummaryProvider`
     // only delegates to these, so invalidating it alone rebuilt a wrapper that
     // awaited the same cached answer.

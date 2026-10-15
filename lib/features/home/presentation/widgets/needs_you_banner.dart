@@ -42,6 +42,7 @@ class NeedsYouBanner extends ConsumerWidget {
       decisions: read.decisions,
       now: now,
       silentAt: checkedAt,
+      silenceScope: ref.watch(stackSilenceProvider).scopeOf(silent),
       // Only the queues' walk: every group is folded from it, and a history
       // page read whole or not says nothing about how many imports are
       // blocked.

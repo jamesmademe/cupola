@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/last_known/last_known_store.dart';
 
 import 'package:cupola/core/network/connection_access_registry.dart';
+import 'package:cupola/core/network/unanswered_addresses.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/router.dart';
@@ -23,6 +24,7 @@ import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
 import 'package:cupola/features/release_search/data/release_search_bootstrap.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/route_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
@@ -233,6 +235,14 @@ class CupolaApp extends ConsumerWidget {
     ref.listen(
       currentSettingsProvider.select((s) => s.accessHeadersByAddress),
       (previous, next) => ConnectionAccessRegistry.update(next),
+    );
+    // And for the connections neither of whose addresses answered the route
+    // probe, so a client's next request names both: see
+    // `UnansweredAddresses`.
+    UnansweredAddresses.update(ref.read(unansweredAddressesProvider));
+    ref.listen(
+      unansweredAddressesProvider,
+      (previous, next) => UnansweredAddresses.update(next),
     );
 
     // No DynamicColorBuilder: the palette is fixed on purpose so per-service

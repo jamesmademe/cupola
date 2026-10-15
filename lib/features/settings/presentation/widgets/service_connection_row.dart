@@ -94,15 +94,22 @@ class ServiceConnectionRow extends ConsumerWidget {
         ) ??
         host;
     final onlyAtHome = diagnosis.reason == ServiceFailureReason.onlyAtHome;
+    // Neither address answered: the state says the setup and both places,
+    // and no address is in use to name.
+    final atBoth = diagnosis.reason == ServiceFailureReason.unreachableAtBoth;
     final setup = onlyAtHome || !settings.instances.any((i) => i.away != null)
         ? null
         : first.away != null
         ? Lexicon.homeAndAway
         : Lexicon.homeOnly;
-    final where = [?setup, inUse].join(' · ');
-    final hostLine = settings.hasMultipleInstances(service)
-        ? '$where · $connections connections'
-        : where;
+    final where = atBoth ? null : [?setup, inUse].join(' · ');
+    final hostLine = [
+      ?where,
+      if (settings.hasMultipleInstances(service)) '$connections connections',
+    ].join(' · ');
+    final state = atBoth
+        ? '${presentation.label} at home or away'
+        : presentation.label;
 
     return SettingsCard.grouped(
       leading: Icon(service.icon),
@@ -110,7 +117,7 @@ class ServiceConnectionRow extends ConsumerWidget {
       // Connected: the host is the useful line and the glyph says the rest.
       // Broken: the cause comes first, with the host still there to check.
       subtitle: presentation.needsAttention
-          ? '${presentation.label} · $hostLine'
+          ? [state, if (hostLine.isNotEmpty) hostLine].join(' · ')
           : hostLine,
       subtitleLeading: _StatusGlyph(
         presentation: presentation,
@@ -119,10 +126,12 @@ class ServiceConnectionRow extends ConsumerWidget {
       ),
       subtitleColor: presentation.needsAttention ? toneColor : null,
       accentColor: service.accent,
-      semanticLabel: settings.hasMultipleInstances(service)
-          ? '${service.title}, ${presentation.label}, ${[?setup, inUse].join(', ')}, '
-                '$connections connections'
-          : '${service.title}, ${presentation.label}, ${[?setup, inUse].join(', ')}',
+      semanticLabel: [
+        service.title,
+        state,
+        if (!atBoth) ...[?setup, inUse],
+        if (settings.hasMultipleInstances(service)) '$connections connections',
+      ].join(', '),
       // "Connection settings", not "settings": the service's own settings are
       // a different page, and the hint is the only thing a screen reader has
       // to tell the two apart.

@@ -155,7 +155,7 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.nginxProxyManager),
-          ...sectionsOrOnlyAtHome(ref, ServiceKey.nginxProxyManager, [
+          ...sectionsOrOneLine(ref, ServiceKey.nginxProxyManager, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
               accent: ServiceKey.nginxProxyManager.accent,

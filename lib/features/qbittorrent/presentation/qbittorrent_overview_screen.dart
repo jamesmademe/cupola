@@ -135,7 +135,7 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.qbittorrent),
-          ...sectionsOrOnlyAtHome(ref, ServiceKey.qbittorrent, [
+          ...sectionsOrOneLine(ref, ServiceKey.qbittorrent, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.qbittorrent)),
               accent: ServiceKey.qbittorrent.accent,

@@ -90,7 +90,7 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.bazarr),
-          ...sectionsOrOnlyAtHome(ref, ServiceKey.bazarr, [
+          ...sectionsOrOneLine(ref, ServiceKey.bazarr, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.bazarr)),
               accent: ServiceKey.bazarr.accent,

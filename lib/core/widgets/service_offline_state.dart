@@ -227,7 +227,13 @@ class ServiceOfflineState extends StatelessWidget {
           // What happened, naming who: `Radarr did not answer`, `Radarr
           // answered but refused the key`.
           title: presentation.headline,
-          address: host == null || host.isEmpty ? null : host,
+          // A silence at both addresses names them both in its body.
+          address:
+              host == null ||
+                  host.isEmpty ||
+                  reason == ServiceFailureReason.unreachableAtBoth
+              ? null
+              : host,
           body: [
             if (silent && span != null) 'It has not answered for $span.',
             message,

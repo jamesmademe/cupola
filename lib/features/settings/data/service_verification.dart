@@ -24,6 +24,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/connection_reach.dart';
+import 'package:cupola/features/settings/domain/connection_unanswered.dart';
 import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -181,6 +182,19 @@ class ServiceDiagnosis {
   bool get isDisconnected => status == ServiceConnectionStatus.disconnected;
 
   bool get isConfigured => status != ServiceConnectionStatus.notConfigured;
+
+  /// This diagnosis of a connection neither of whose addresses answered the
+  /// route probe ([unanswered] says where): a silence is said of both
+  /// ([ServiceFailureReason.unreachableAtBoth]), naming the two addresses;
+  /// any other outcome is its own.
+  ServiceDiagnosis saidOfBoth(ConnectionUnanswered unanswered) =>
+      reason == ServiceFailureReason.unreachable
+      ? ServiceDiagnosis._all(
+          status: status,
+          reason: ServiceFailureReason.unreachableAtBoth,
+          detail: unanswered.failureDetail,
+        )
+      : this;
 
   ServiceDiagnosis withCertificateProbe(UntrustedCertificateProbe? probe) =>
       ServiceDiagnosis._all(
@@ -783,16 +797,26 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
     instance.id,
     hasAway: instance.away != null,
   );
+  // Neither address answered the route probe's last knock: a silence here is
+  // said of both. Watched only for a connection with an address away.
+  final unanswered = instance.away == null
+      ? null
+      : ref.watch(unansweredConnectionProvider(instance.id));
+  final Future<ServiceDiagnosis> diagnosis;
   if (instance.service == ServiceKey.qbittorrent && instance.isConfigured) {
     final client = ref.watch(qbittorrentClientForProvider(instance.id));
     // Two round trips (login + version) on a cold client.
-    return _probe(
+    diagnosis = _probe(
       client.getVersion,
       timeout: const Duration(seconds: 8),
       close: () {},
     );
+  } else {
+    diagnosis = diagnoseInstance(instance, settings, route: route);
   }
-  return diagnoseInstance(instance, settings, route: route);
+  return unanswered == null
+      ? diagnosis
+      : diagnosis.then((result) => result.saidOfBoth(unanswered));
 }
 
 /// Whether a blocked local network could still explain this failure.
@@ -961,6 +985,9 @@ String connectionFailureMessage(
       return 'Nothing answered at this address. Check the address and port, '
           'and that ${service.title} is running and reachable from this '
           'device.';
+    case ServiceFailureReason.unreachableAtBoth:
+      return 'Nothing answered at either saved address: ${service.title} may '
+          'be down, or this device may have no network.';
     case ServiceFailureReason.timeout:
       return 'The server was reached, then did not answer in time. Retry, or '
           'look at ${service.title} if it is still starting up.';

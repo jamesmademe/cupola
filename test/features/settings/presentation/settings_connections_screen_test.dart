@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -89,6 +90,24 @@ void main() {
         expect(find.text('Home and away · radarr.example.net'), findsOneWidget);
         expect(find.text('Only at home · nas.home.arpa:8080'), findsOneWidget);
         expect(find.textContaining('Did not answer'), findsNothing);
+      });
+
+      testWidgets('neither address answering, the row says it of both and '
+          'names no address in use', (tester) async {
+        await _pumpConnectionsScreen(
+          tester,
+          settings: const SettingsModel(instances: [radarr, sabnzbd]),
+          diagnosis: const ServiceDiagnosis.connected(),
+          diagnoses: const {
+            ServiceKey.radarr: ServiceDiagnosis(
+              ServiceConnectionStatus.disconnected,
+              ServiceFailureReason.unreachableAtBoth,
+            ),
+          },
+          routes: const {},
+        );
+        expect(find.text('Did not answer at home or away'), findsOneWidget);
+        expect(find.text('Home only · nas.home.arpa:8080'), findsOneWidget);
       });
 
       testWidgets('without any address away, the rows say what they said', (

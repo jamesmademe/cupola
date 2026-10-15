@@ -48,9 +48,11 @@ class HomeStackHealthModule extends ConsumerWidget {
         stackHealthProvider.select((health) => health.checkedAt),
       );
       under = FaultBand.section(
-        message: servicesDidNotAnswer([
-          for (final service in silent) service.title,
-        ], at: checkedAt),
+        message: servicesDidNotAnswer(
+          [for (final service in silent) service.title],
+          at: checkedAt,
+          scope: ref.watch(stackSilenceProvider).scopeOf(silent),
+        ),
         onRetry: () => retryDashboardServices(ref, silent),
       );
     } else if (stuck.isNotEmpty) {

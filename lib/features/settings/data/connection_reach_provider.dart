@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/connection_reach.dart';
+import 'package:cupola/features/settings/domain/connection_unanswered.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Which address each connection is reached at, by id: [ConnectionRoute.away]
 /// for the ones whose address at home did not answer, absent for the rest.
@@ -33,6 +36,89 @@ class ConnectionRoutesNotifier extends Notifier<Map<String, ConnectionRoute>> {
     state = updated;
     await ref.read(settingsServiceProvider).saveConnectionRoutes(updated);
   }
+}
+
+/// The connections with an address away at which neither address answered
+/// the route probe's last knock, by id: the phone is offline, or the server
+/// is down.
+///
+/// Kept by the route probe alone: a connection joins when both knocks go
+/// unanswered and leaves as soon as either address answers one. Not
+/// remembered across launches: the probe knocks again at start. What makes
+/// a connection that did not answer say so of both addresses
+/// ([ServiceFailureReason.unreachableAtBoth]): its readouts
+/// (`diagnoseSavedInstance`) and every request of its clients
+/// (`UnansweredMark`). Read through [unansweredConnectionProvider], which
+/// crosses it with the connections that still have an address away.
+final unansweredConnectionsProvider =
+    NotifierProvider<UnansweredConnectionsNotifier, Set<String>>(
+      UnansweredConnectionsNotifier.new,
+    );
+
+class UnansweredConnectionsNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  /// Neither of connection [id]'s addresses answered.
+  void mark(String id) {
+    if (state.contains(id)) return;
+    state = {...state, id};
+  }
+
+  /// One of connection [id]'s addresses answered.
+  void clear(String id) {
+    if (!state.contains(id)) return;
+    state = {...state}..remove(id);
+  }
+}
+
+/// Where nothing answered for connection [id], as its red names it, or null
+/// while it is not unanswered at both addresses (or no longer has an address
+/// away).
+final unansweredConnectionProvider =
+    Provider.family<ConnectionUnanswered?, String>((ref, id) {
+      final unanswered = ref.watch(
+        unansweredConnectionsProvider.select((ids) => ids.contains(id)),
+      );
+      if (!unanswered) return null;
+      return ref.watch(
+        currentSettingsProvider.select((s) {
+          final instance = s.instanceById(id);
+          return instance == null ? null : connectionUnansweredOf(instance);
+        }),
+      );
+    });
+
+/// Every unanswered connection's two addresses and what its red names: what
+/// `CupolaApp` hands `UnansweredAddresses`, for the clients.
+final unansweredAddressesProvider =
+    Provider<List<({List<String> urls, ConnectionUnanswered unanswered})>>((
+      ref,
+    ) {
+      final ids = ref.watch(unansweredConnectionsProvider);
+      if (ids.isEmpty) return const [];
+      final settings = ref.watch(currentSettingsProvider);
+      return [
+        for (final id in ids)
+          if (settings.instanceById(id) case final instance?)
+            if (connectionUnansweredOf(instance) case final unanswered?)
+              (
+                urls: [instance.url, instance.away!.url],
+                unanswered: unanswered,
+              ),
+      ];
+    });
+
+/// What [instance]'s red names when neither of its addresses answers: its two
+/// addresses as a row shows them, or null when it has no address away.
+ConnectionUnanswered? connectionUnansweredOf(ServiceInstance instance) {
+  final away = instance.away?.url ?? '';
+  if (away.trim().isEmpty) return null;
+  final service = instance.service;
+  return ConnectionUnanswered(
+    home: service.extractHost(instance.url) ?? instance.url,
+    away: service.extractHost(away) ?? away,
+  );
 }
 
 /// Whether the app is away from home: at least one connection moved to its

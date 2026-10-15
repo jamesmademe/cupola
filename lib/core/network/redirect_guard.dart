@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:cupola/core/network/answer_guard.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/unanswered_addresses.dart';
 import 'package:cupola/core/network/unreached_origins.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_only_at_home.dart';
@@ -336,7 +337,11 @@ Dio guardedDio({
     ..addAll(interceptors?.call(dio) ?? const [])
     ..add(SameOriginRedirectInterceptor(dio, nativeBasicAuth: nativeBasicAuth))
     ..add(AnswerGuardInterceptor(nativeBasicAuth: nativeBasicAuth));
-  if (reportUnreached) dio.interceptors.add(const UnreachedReporter());
+  if (reportUnreached) {
+    dio.interceptors
+      ..add(const UnreachedReporter())
+      ..add(const UnansweredMark());
+  }
   final adapter = pinnedHttpClientAdapterFor(
     baseUrl,
     pinnedFingerprint: certFingerprint,
@@ -365,6 +370,38 @@ class OnlyAtHomeRefusal extends Interceptor {
         error: ServiceOnlyAtHome(service),
         message: '${service.title} only at home',
       ),
+    );
+  }
+}
+
+/// Says of a request that opened no connection, or none in time, that
+/// neither of its connection's addresses answers, when the route probe found
+/// that a moment ago ([UnansweredAddresses]): the failure goes on with the
+/// same type, carrying [ConnectionUnanswered], so every reader names both
+/// addresses (`Radarr did not answer at home or away`).
+///
+/// After [UnreachedReporter], which still tells the origin, so the probe
+/// knocks again and the connection leaves the moment an address answers.
+/// Off for the route probe's own knocks, like the reporter: a knock's
+/// silence is the probe's answer, not a reader's.
+class UnansweredMark extends Interceptor {
+  const UnansweredMark();
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    final silent =
+        err.type == DioExceptionType.connectionTimeout ||
+        err.type == DioExceptionType.connectionError;
+    final unanswered = silent
+        ? UnansweredAddresses.at(err.requestOptions.uri)
+        : null;
+    handler.next(
+      unanswered == null
+          ? err
+          : err.copyWith(
+              error: unanswered,
+              message: 'Did not answer at home or away',
+            ),
     );
   }
 }

@@ -22,6 +22,7 @@ import 'package:cupola/features/services/presentation/service_tab_scaffold.dart'
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -32,6 +33,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../test_helpers/fake_secure_settings_store.dart';
 import '../test_helpers/fake_services.dart';
 import 'catalog.dart';
+
+/// Radarr with an address away: at home on the home network's name, away
+/// on a public one.
+const _radarrHomeAndAway = SettingsModel(
+  instances: [
+    ServiceInstance(
+      id: 'radarr',
+      service: ServiceKey.radarr,
+      label: '',
+      url: 'http://nas.home.arpa:7878',
+      credential: 'k',
+      away: ConnectionAddress(url: 'https://radarr.example.net'),
+    ),
+  ],
+);
+
+/// The route probe's verdict, given: neither address answered.
+class _Unanswered extends UnansweredConnectionsNotifier {
+  @override
+  Set<String> build() => const {'radarr'};
+}
 
 const _oneRadarr = SettingsModel(
   instances: [
@@ -316,10 +338,13 @@ Widget _radarr(
   String? version = '5.14.0',
   SettingsModel settings = _oneRadarr,
   bool away = false,
+  bool unanswered = false,
 }) => _Isolated([
   // Away from home: a connection with no address away is reached only at
   // home, and asked nothing.
   if (away) awayFromHomeProvider.overrideWithValue(true),
+  // Neither of the connection's addresses answered the route probe.
+  if (unanswered) unansweredConnectionsProvider.overrideWith(_Unanswered.new),
   sharedPreferencesProvider.overrideWithValue(_prefs),
   secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
   initialSettingsProvider.overrideWithValue(settings),
@@ -404,6 +429,22 @@ void main() {
         ),
         width: 390,
         height: 260,
+      ),
+      CatalogScene(
+        'RadarrOverviewScreen · neither address answered · Did not answer on '
+        'the identity line, then one red for the whole page naming both '
+        'addresses, with Retry a ghost in ink that knocks at both',
+        (_) => _radarr(
+          _ScriptedRadarr(
+            libraryFailure: const SocketException('Connection refused'),
+          ),
+          const RadarrOverviewScreen(topPadding: 0),
+          version: '',
+          settings: _radarrHomeAndAway,
+          unanswered: true,
+        ),
+        width: 390,
+        height: 300,
       ),
       CatalogScene(
         'RadarrOverviewScreen · loading · Checking, row skeletons and a — '

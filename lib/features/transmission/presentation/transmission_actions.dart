@@ -121,6 +121,7 @@ class TransmissionAddReport {
       }
       return switch (error.reason) {
         ServiceFailureReason.unreachable ||
+        ServiceFailureReason.unreachableAtBoth ||
         ServiceFailureReason.tls ||
         ServiceFailureReason.localNetworkBlocked ||
         ServiceFailureReason.unauthorized ||

@@ -177,6 +177,7 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
     if (error is! HasFailureReason) return null;
     return switch (error.reason) {
       ServiceFailureReason.unreachable ||
+      ServiceFailureReason.unreachableAtBoth ||
       ServiceFailureReason.timeout ||
       ServiceFailureReason.tls ||
       ServiceFailureReason.localNetworkBlocked => _TrueNasWell.offline,

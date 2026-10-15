@@ -115,7 +115,7 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.sabnzbd),
-          ...sectionsOrOnlyAtHome(ref, ServiceKey.sabnzbd, [
+          ...sectionsOrOneLine(ref, ServiceKey.sabnzbd, [
             ServiceKpiPeek(
               // Built from the queue this page already watches, so the rail and
               // the rows below it are the same poll. `whenData` keeps the

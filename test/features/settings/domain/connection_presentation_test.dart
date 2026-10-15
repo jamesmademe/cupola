@@ -184,7 +184,10 @@ void main() {
       // "no route to host". A failure nobody can attribute is amber too: it is
       // no evidence that the host is silent. A Seerr session that ended is
       // neither: blue, the person's own step.
-      const red = {ServiceFailureReason.unreachable};
+      const red = {
+        ServiceFailureReason.unreachable,
+        ServiceFailureReason.unreachableAtBoth,
+      };
       const blue = {ServiceFailureReason.sessionEnded};
       // Not asked, away from home: a setup, neutral.
       const neutral = {ServiceFailureReason.onlyAtHome};

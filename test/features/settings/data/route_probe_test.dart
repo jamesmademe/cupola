@@ -180,6 +180,48 @@ void main() {
     expect(routeOf(c, 'radarr'), ConnectionRoute.away);
   });
 
+  group('neither address answering', () {
+    test('marks the connection, and one answering clears it', () async {
+      final c = await container();
+      final probe = await started(c);
+
+      expect(c.read(unansweredConnectionsProvider), {'radarr'});
+      final unanswered = c.read(unansweredConnectionProvider('radarr'));
+      expect(
+        unanswered?.failureDetail,
+        'At home · 192.168.1.20:7878\nAway · radarr.example.com',
+      );
+      expect(c.read(unansweredAddressesProvider).single.urls, [
+        'http://192.168.1.20:7878',
+        'https://radarr.example.com',
+      ]);
+
+      knocks.answering.add('https://radarr.example.com');
+      probe.onResume();
+      await pumpEventQueue();
+
+      expect(c.read(unansweredConnectionsProvider), isEmpty);
+      expect(c.read(unansweredConnectionProvider('radarr')), isNull);
+      expect(routeOf(c, 'radarr'), ConnectionRoute.away);
+    });
+
+    test('is not said of a connection whose address away is gone', () async {
+      final c = await container();
+      await started(c);
+
+      c
+          .read(_settings.notifier)
+          .set(
+            SettingsModel(
+              instances: [_radarr.copyWith(clearAway: true), _sonarr],
+            ),
+          );
+
+      expect(c.read(unansweredConnectionProvider('radarr')), isNull);
+      expect(c.read(unansweredAddressesProvider), isEmpty);
+    });
+  });
+
   group('an address that stops answering', () {
     test('is probed again at once, then not before 30 seconds', () async {
       final c = await container();

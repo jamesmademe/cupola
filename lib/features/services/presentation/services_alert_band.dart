@@ -113,6 +113,7 @@ class ServicesAlertBand extends ConsumerWidget {
 
     return _AlertBandBody(
       services: unacknowledged,
+      scope: ref.watch(stackSilenceProvider).scopeOf(unacknowledged),
       // Only the offenders, and everything on the page that reads them: the
       // probe alone came back answering while every region kept the failure
       // its sources were still holding.
@@ -127,12 +128,16 @@ class ServicesAlertBand extends ConsumerWidget {
 class _AlertBandBody extends StatelessWidget {
   const _AlertBandBody({
     required this.services,
+    required this.scope,
     required this.onRetry,
     required this.onDismiss,
     required this.onOpenSettings,
   });
 
   final List<ServiceKey> services;
+
+  /// Where they were asked, which the sentence says.
+  final SilenceScope scope;
   final VoidCallback onRetry;
   final VoidCallback onDismiss;
   final VoidCallback onOpenSettings;
@@ -142,7 +147,7 @@ class _AlertBandBody extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final titles = services.map((s) => s.title).toList(growable: false);
-    final message = servicesAlertBandMessage(titles);
+    final message = servicesAlertBandMessage(titles, scope: scope);
     // The second sentence is the consequence, and it is what a wide surface has
     // room for: a dark SABnzbd does not merely fail to answer, it takes its
     // share of every figure on this page with it. The phone prints the first
@@ -239,7 +244,7 @@ class _AlertBandBody extends StatelessWidget {
               onPressed: onDismiss,
               icon: const Icon(Icons.close_rounded, size: 16),
               color: colorScheme.onSurfaceVariant,
-              tooltip: servicesDismissAlertLabel(titles),
+              tooltip: servicesDismissAlertLabel(titles, scope: scope),
               constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               padding: EdgeInsets.zero,
               style: IconButton.styleFrom(

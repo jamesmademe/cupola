@@ -19,7 +19,8 @@ import 'package:cupola/core/status/media_status.dart';
 ///
 /// ## Red is one reason
 ///
-/// [unreachable] is the only reason nothing replied, and the only one painted
+/// [unreachable] is the reason nothing replied, and with [unreachableAtBoth],
+/// the same silence at both of a connection's addresses, the only one painted
 /// red ([failureTone]). Every other reason is something that *answered*: a
 /// refusal, a 5xx, a reply nobody can read, a timeout after the connection was
 /// made, or a request the device itself would not send, and each of those is
@@ -35,6 +36,16 @@ enum ServiceFailureReason {
   /// route, a connection that never completed (Dio's connect timeout), or a
   /// deadline that passed with no reply and no proof the host was ever reached.
   unreachable,
+
+  /// Nothing replied at either of the connection's two addresses: the route
+  /// probe knocked at home and away together and neither answered
+  /// (`unansweredConnectionsProvider`), and a request to the address in use
+  /// went unanswered too ([ConnectionUnanswered] says where).
+  ///
+  /// [unreachable] said of both addresses, and red like it: the phone is
+  /// offline, or the server is down. Never [onlyAtHome], which is a
+  /// connection with one address, not asked.
+  unreachableAtBoth,
 
   /// Reached the host, then it did not answer within the timeout. Only a
   /// timeout that proves the connection was made lands here: Dio's send and
@@ -613,12 +624,14 @@ ServiceFailureReason _fromDio(
   }
 }
 
-/// Whether [reason] means nothing replied at all: the one reason painted red.
+/// Whether [reason] means nothing replied at all, at one address or at both:
+/// the one state painted red.
 ///
 /// The brand book's fourth rule as a function: red means `Did not answer` and
 /// nothing else. A refusal, or a failure that did answer, is amber.
 bool failureDidNotAnswer(ServiceFailureReason reason) =>
-    reason == ServiceFailureReason.unreachable;
+    reason == ServiceFailureReason.unreachable ||
+    reason == ServiceFailureReason.unreachableAtBoth;
 
 /// Whether [reason] is a **fault**: something answered, or the device
 /// refused to dial, so there is one concrete thing to go and fix, rather than
@@ -685,7 +698,8 @@ String failureLabel(
   String credential = kRefusedCredential,
   AccessGatewayAnswer? gateway,
 }) => switch (reason) {
-  ServiceFailureReason.unreachable => StateWord.didNotAnswer.label,
+  ServiceFailureReason.unreachable ||
+  ServiceFailureReason.unreachableAtBoth => StateWord.didNotAnswer.label,
   ServiceFailureReason.unauthorized => 'Refused the $credential',
   ServiceFailureReason.sessionEnded => StateWord.signedOut.label,
   ServiceFailureReason.onlyAtHome => StateWord.onlyAtHome.label,
@@ -731,6 +745,8 @@ String failureHeadline(
   AccessGatewayAnswer? gateway,
 }) => switch (reason) {
   ServiceFailureReason.unreachable => '$subject did not answer',
+  ServiceFailureReason.unreachableAtBoth =>
+    '$subject did not answer at home or away',
   ServiceFailureReason.unauthorized =>
     '$subject answered but refused the $credential',
   ServiceFailureReason.sessionEnded => 'Signed out of $subject',
@@ -784,6 +800,8 @@ String? failureGroupHeadline(
   String credential = kRefusedCredential,
 }) => switch (reason) {
   ServiceFailureReason.unreachable => '$subjects did not answer',
+  ServiceFailureReason.unreachableAtBoth =>
+    '$subjects did not answer at home or away',
   ServiceFailureReason.unauthorized =>
     credential == kRefusedSignIn
         ? '$subjects answered but refused the sign-in'
@@ -846,6 +864,7 @@ String? failureRemedy(
   ServiceFailureReason.tls => 'Check the certificate',
   ServiceFailureReason.insecureTransport => 'Change the address',
   ServiceFailureReason.unreachable ||
+  ServiceFailureReason.unreachableAtBoth ||
   ServiceFailureReason.timeout ||
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.serverError ||
@@ -880,6 +899,8 @@ bool failureRetryHelps(
   ServiceFailureReason.onlyAtHome => false,
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.unreachable ||
+  // Retry knocks at both addresses again (`retryDashboardServices`).
+  ServiceFailureReason.unreachableAtBoth ||
   ServiceFailureReason.timeout ||
   ServiceFailureReason.tls ||
   ServiceFailureReason.notFound ||
@@ -1007,6 +1028,9 @@ String connectionFailureSentence(
     ServiceFailureReason.unreachable =>
       'Nothing answered at the saved address. Check that the server is '
           'running and reachable from this device.',
+    ServiceFailureReason.unreachableAtBoth =>
+      'Nothing answered at either saved address: the server may be down, '
+          'or this device may have no network.',
     // Said after a headline that already names the failure, so each adds what
     // to do rather than restating it.
     ServiceFailureReason.timeout => 'It may be busy. Retry in a moment.',
