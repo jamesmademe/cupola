@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/pairing/data/pair_server.dart';
+import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
@@ -18,6 +20,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/invite_sheet.dart';
 
 import '../test_helpers/fake_secure_settings_store.dart';
+import '../test_helpers/pair_fixtures.dart';
 import 'catalog.dart';
 
 late SharedPreferences _prefs;
@@ -50,7 +53,21 @@ List<Override> _world(
   ServiceInstance connection, {
   Map<String, String> pins = const {},
   required Future<SeerrServerFacts> Function() facts,
+  PairOfferState Function()? offer,
 }) => [
+  // The code shown in person, standing still: two minutes on the clock.
+  inviteOfferProvider.overrideWith(
+    () => FixedPairOffer(
+      (offer ??
+          () => PairOfferOpen(
+            link: pairFixtureLink(invite: true),
+            package: pairFixtureInvitePackage(),
+          ))(),
+    ),
+  ),
+  pairNetworkProvider.overrideWithValue(
+    PairNetwork(now: () => DateTime.utc(2030, 1, 1, 12, 0, 8)),
+  ),
   sharedPreferencesProvider.overrideWith((ref) => _prefs),
   secureSettingsStoreProvider.overrideWith((ref) => FakeSecureSettingsStore()),
   initialSettingsProvider.overrideWith(
@@ -123,7 +140,7 @@ void main() {
     _seerr(url: 'http://192.168.1.10:5055', away: null),
     facts: () => _named(null),
   );
-  final awayGated = _world(
+  List<Override> gated({PairOfferState Function()? offer}) => _world(
     _seerr(
       away: const ConnectionAddress(
         url: _away,
@@ -135,7 +152,9 @@ void main() {
     ),
     pins: const {'https://nas.home.arpa:5055': _homePin},
     facts: () => _named('Rossi Movies'),
+    offer: offer,
   );
+  final awayGated = gated();
   final homeGated = _world(
     _seerr(
       url: 'http://192.168.1.10:5055',
@@ -164,15 +183,35 @@ void main() {
         height: 700,
       ),
       _scene(
-        'InviteSheet · the address away behind a gateway that asks for a '
-        'token: left out of the invite, and said',
+        'InviteSheet · in person: the address away asks for a token a link '
+        'never carries, so the sheet opens on a code that brings it, two '
+        'minutes on the clock; the link is one tap away',
         awayGated,
+        height: 800,
       ),
       _scene(
-        'InviteSheet · the address at home behind a gateway, and no address '
-        'away: two lines, in the order the domain gives them',
+        'InviteSheet · in person, the address at home asking: what the code '
+        'brings, and why the link does less',
         homeGated,
+        height: 800,
+      ),
+      _scene(
+        'InviteSheet · in person, taken by their phone: the code is closed, '
+        'Done',
+        gated(offer: () => PairOfferSent(pairFixtureInvitePackage())),
         height: 760,
+      ),
+      _scene(
+        'InviteSheet · in person, the code closed unused: why, and Make a new '
+        'code',
+        gated(offer: () => const PairOfferClosed(PairServerEnd.expired)),
+        height: 800,
+      ),
+      _scene(
+        'InviteSheet · in person, off the Wi-Fi: blue, Retry, the link still '
+        'a tap away',
+        gated(offer: () => const PairOfferNoNetwork()),
+        height: 520,
       ),
       _scene(
         'InviteSheet · on a desktop window: the modal sheet caps at 640pt '
@@ -183,9 +222,9 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       _scene(
-        'Text at 200% · the whole sheet at twice the reading size, on a tall '
-        'screen; on a phone it scrolls inside its 92% cap · the code keeps '
-        'its side',
+        'Text at 200% · the code shown in person at twice the reading size, '
+        'on a tall screen; on a phone it scrolls inside its 92% cap · the code '
+        'keeps its side',
         awayGated,
         height: 1400,
         textScale: catalogTextScale,

@@ -1,5 +1,7 @@
 /// The operator's invite sheet: the QR and the link of one Seerr connection,
-/// what the invite cannot do said under it, and nothing secret in either.
+/// what the invite cannot do said under it, and nothing secret in either;
+/// and, when an address asks for a token, the code shown in person it opens
+/// on instead.
 library;
 
 import 'dart:async';
@@ -14,6 +16,8 @@ import 'package:cupola/core/widgets/qr_code_view.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
+import 'package:cupola/features/pairing/data/pair_server.dart';
+import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
@@ -22,6 +26,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/invite_sheet.dart';
 
+import '../../../../test_helpers/pair_fixtures.dart';
 import '../../../../test_helpers/semantics_announcements.dart';
 import '../../../../test_helpers/settings_scope.dart';
 
@@ -30,11 +35,38 @@ const _home = 'https://nas.home.arpa:5055';
 const _away = 'https://seerr.example.net';
 
 const _homeGate =
-    'The address at home asks for a token, and an invite never carries one.';
+    'The address at home asks for a token, and a link never carries one.';
 const _homeOnly = 'It works at home: Seerr has no address away from home.';
 const _awayGate =
-    'It works at home: the address away asks for a token, and an invite never '
+    'It works at home: the address away asks for a token, and a link never '
     'carries one.';
+
+const _inPerson =
+    'On your Wi-Fi, they scan this with their phone\'s camera and sign in to '
+    'Seerr with their own account.';
+
+const _awayToken = ConnectionAddress(
+  url: _away,
+  access: CloudflareServiceToken(
+    clientId: 'sentinel-id',
+    clientSecret: 'sentinel-secret',
+  ),
+);
+
+const _homeToken = ProxyPassword(
+  username: 'sentinel-user',
+  password: 'sentinel-password',
+);
+
+/// The code shown in person, up.
+PairOfferState _up() => PairOfferOpen(
+  link: pairFixtureLink(invite: true),
+  package: pairFixtureInvitePackage(),
+);
+
+/// The notifiers the sheet's code was made with, in order: one each time the
+/// sheet turned to the code.
+final _offers = <FixedPairOffer>[];
 
 ServiceInstance _seerr({
   ConnectionAccess access = const NoAccess(),
@@ -77,14 +109,19 @@ void _mockClipboard(WidgetTester tester) {
 
 /// The sheet open over a page, on a phone, for [connection], whose server
 /// answers with what [facts] says.
+///
+/// The code shown in person stands in [offer] (up, by default): the protocol
+/// itself is tested on loopback in `pair_session_test`.
 Future<ProviderContainer> _open(
   WidgetTester tester,
   ServiceInstance connection, {
   Future<SeerrServerFacts> Function()? facts,
+  PairOfferState Function()? offer,
 }) async {
   final overrides = await settingsScopeOverrides(
     customize: (_) => SettingsModel(instances: [connection]),
   );
+  _offers.clear();
   tester.view.physicalSize = const Size(390, 1000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -94,6 +131,14 @@ Future<ProviderContainer> _open(
         ...overrides,
         seerrServerFactsProvider.overrideWith(
           (ref, id) => (facts ?? () async => _facts())(),
+        ),
+        inviteOfferProvider.overrideWith(() {
+          final fixed = FixedPairOffer((offer ?? _up)());
+          _offers.add(fixed);
+          return fixed;
+        }),
+        pairNetworkProvider.overrideWithValue(
+          PairNetwork(now: () => DateTime.utc(2030, 1, 1, 12)),
         ),
       ],
       child: MaterialApp(
@@ -118,6 +163,12 @@ Future<ProviderContainer> _open(
 
 String _qrData(WidgetTester tester) =>
     tester.widget<QrCodeView>(find.byType(QrCodeView)).data;
+
+/// Turns the sheet to the link.
+Future<void> _toLink(WidgetTester tester) async {
+  await tester.tap(find.text('Send a link instead'));
+  await tester.pump();
+}
 
 void main() {
   testWidgets('shows the invite as a QR, with the server\'s name and host', (
@@ -303,21 +354,10 @@ void main() {
       );
     });
 
-    testWidgets('the address away behind a gateway is left out, and said', (
-      tester,
-    ) async {
-      await _open(
-        tester,
-        _seerr(
-          away: const ConnectionAddress(
-            url: _away,
-            access: CloudflareServiceToken(
-              clientId: 'sentinel-id',
-              clientSecret: 'sentinel-secret',
-            ),
-          ),
-        ),
-      );
+    testWidgets('on the link, the address away behind a gateway is left out, '
+        'and said', (tester) async {
+      await _open(tester, _seerr(away: _awayToken));
+      await _toLink(tester);
 
       expect(find.text(_awayGate), findsOneWidget);
       expect(lines(), findsOneWidget);
@@ -327,18 +367,10 @@ void main() {
       );
     });
 
-    testWidgets('the address at home behind a gateway: asked for a token', (
-      tester,
-    ) async {
-      await _open(
-        tester,
-        _seerr(
-          access: const ProxyPassword(
-            username: 'sentinel-user',
-            password: 'sentinel-password',
-          ),
-        ),
-      );
+    testWidgets('on the link, the address at home behind a gateway: asked '
+        'for a token', (tester) async {
+      await _open(tester, _seerr(access: _homeToken));
+      await _toLink(tester);
 
       expect(find.text(_homeGate), findsOneWidget);
       expect(lines(), findsOneWidget);
@@ -346,16 +378,8 @@ void main() {
 
     testWidgets('two limits read in the order the domain gives them, above '
         'the button', (tester) async {
-      await _open(
-        tester,
-        _seerr(
-          access: const ProxyPassword(
-            username: 'sentinel-user',
-            password: 'sentinel-password',
-          ),
-          away: null,
-        ),
-      );
+      await _open(tester, _seerr(access: _homeToken, away: null));
+      await _toLink(tester);
 
       expect(lines(), findsNWidgets(2));
       final gate = tester.getTopLeft(find.text(_homeGate)).dy;
@@ -401,6 +425,7 @@ void main() {
         ),
       ),
     );
+    await _toLink(tester);
     await tester.tap(find.text('Copy link'));
     await tester.pump();
 
@@ -459,5 +484,180 @@ void main() {
       ),
     );
     handle.dispose();
+  });
+
+  group('with a token a link never carries, the code shown in person', () {
+    testWidgets('the sheet opens on it: a code for this Seerr, the server\'s '
+        'name, the time left, and what it brings', (tester) async {
+      await _open(tester, _seerr(away: _awayToken));
+
+      expect(find.text(_inPerson), findsOneWidget);
+      expect(_offers.single.invitedTo, [_id]);
+      final code = Uri.parse(_qrData(tester));
+      expect(code.host, 'pair');
+      expect(code.queryParameters['t'], 'invite');
+      expect(tester.getSize(find.byType(QrCodeView)), const Size.square(232));
+      expect(find.text('Rossi Movies · nas.home.arpa:5055'), findsOneWidget);
+      expect(find.text('Closes in 2:00'), findsOneWidget);
+      expect(
+        find.text(
+          "It brings the token the address away asks for. Seerr's key stays "
+          'here.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Send a link instead'), findsOneWidget);
+      expect(
+        find.text('A link works only at home: it never carries a token.'),
+        findsOneWidget,
+      );
+      // No second link beside the one it offers instead.
+      expect(find.text('Copy link'), findsNothing);
+    });
+
+    testWidgets('what it brings names the address that asks', (tester) async {
+      await _open(tester, _seerr(access: _homeToken, away: null));
+
+      expect(
+        find.text(
+          "It brings the token the address at home asks for. Seerr's key "
+          'stays here.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('A link never carries a token: they would be asked for it.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('both addresses asking, it brings both', (tester) async {
+      await _open(tester, _seerr(access: _homeToken, away: _awayToken));
+
+      expect(
+        find.text(
+          "It brings the tokens both addresses ask for. Seerr's key stays "
+          'here.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Send a link instead turns to the link and lets the code go; '
+        'Invite in person instead makes a new one', (tester) async {
+      final announcements = SemanticsAnnouncementRecorder.install(tester);
+      await _open(tester, _seerr(away: _awayToken));
+      final first = _offers.single;
+
+      await _toLink(tester);
+      expect(find.text(_inPerson), findsNothing);
+      expect(Uri.parse(_qrData(tester)).host, 'invite');
+      expect(find.text('Copy link'), findsOneWidget);
+      expect(find.text('Invite in person instead'), findsOneWidget);
+      // Nothing watches the code now: its provider goes, and the server with
+      // it.
+      await tester.pump();
+      expect(first.alive, isFalse);
+
+      await tester.tap(find.text('Invite in person instead'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(_inPerson), findsOneWidget);
+      expect(_offers, hasLength(2));
+      expect(_offers.last.invitedTo, [_id]);
+      expect(announcements.messages, [
+        'The invite is a link',
+        'The invite is a code to scan here',
+      ]);
+    });
+
+    testWidgets('with no token to bring, there is no code in person', (
+      tester,
+    ) async {
+      await _open(tester, _seerr());
+
+      expect(find.text(_inPerson), findsNothing);
+      expect(find.text('Invite in person instead'), findsNothing);
+      expect(find.text('Send a link instead'), findsNothing);
+      expect(_offers, isEmpty);
+    });
+
+    testWidgets('taken by their phone: said, and Done closes the sheet', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        _seerr(away: _awayToken),
+        offer: () => PairOfferSent(pairFixtureInvitePackage()),
+      );
+
+      expect(find.text('They have the invite'), findsOneWidget);
+      expect(
+        find.text(
+          'They sign in to Seerr on their phone now. The code is '
+          'closed.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Send a link instead'), findsNothing);
+      await tester.tap(find.text('Done'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(InviteSheet), findsNothing);
+    });
+
+    testWidgets('closed: why, and Make a new code', (tester) async {
+      await _open(
+        tester,
+        _seerr(away: _awayToken),
+        offer: () => const PairOfferClosed(PairServerEnd.expired),
+      );
+
+      expect(find.text('The code closed'), findsOneWidget);
+      expect(find.text('Its two minutes are up.'), findsOneWidget);
+      await tester.tap(find.text('Make a new code'));
+      await tester.pump();
+      expect(_offers.single.invitedTo, [_id, _id]);
+    });
+
+    testWidgets('off the Wi-Fi: blue, with Retry, the link still a tap away', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        _seerr(away: _awayToken),
+        offer: () => const PairOfferNoNetwork(),
+      );
+
+      expect(find.text('Join your Wi-Fi to invite in person'), findsOneWidget);
+      expect(
+        find.text('Their phone fetches the invite over your home network.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      expect(_offers.single.invitedTo, [_id, _id]);
+      expect(find.text('Send a link instead'), findsOneWidget);
+    });
+
+    testWidgets('the code would not open: amber, and Make a new code', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        _seerr(away: _awayToken),
+        offer: () => const PairOfferFailed(),
+      );
+
+      expect(find.text('Cupola could not open the code'), findsOneWidget);
+      expect(find.text('Make a new code'), findsOneWidget);
+    });
+
+    testWidgets('no secret reaches the screen', (tester) async {
+      await _open(tester, _seerr(access: _homeToken, away: _awayToken));
+
+      expect(find.textContaining('sentinel'), findsNothing);
+      expect(_qrData(tester), isNot(contains('sentinel')));
+    });
   });
 }
