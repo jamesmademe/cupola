@@ -89,6 +89,9 @@ dependencies:
   flutter_local_notifications: ^22.2.0
   # SHA-256 fingerprints for trust-on-first-use TLS certificate pinning.
   crypto: ^3.0.0
+  # The package another device copies its connections from: encrypted with
+  # AES-256-GCM under an HKDF key, the pure Dart part only (no `cryptography_flutter`).
+  cryptography: ^2.9.0
   # Grapheme-slot text rolling, used only where a *changing* value is the
   # information: live figures, state words, command labels. Pure Dart, no
   # platform channels, no transitive dependencies; see `lib/core/reel_motion.dart`

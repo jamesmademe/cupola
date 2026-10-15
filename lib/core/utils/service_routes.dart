@@ -28,6 +28,11 @@ class ServiceRoutes {
   /// account".
   static const welcomeSignIn = '$welcome/sign-in';
 
+  /// Copying another device: how to get its code, then what it holds. Where
+  /// a `cupola://pair` link lands once the router has taken it off the
+  /// location, and the Welcome's and Connections' "Copy from another device".
+  static const welcomePair = '$welcome/pair';
+
   /// Where the way in lived before the Welcome. Rewrites onto [welcome].
   static const legacyOnboarding = '/onboarding';
 
@@ -714,6 +719,10 @@ class ServiceRoutes {
   /// by silently 404ing in the one state nobody screenshots.
   static const settings = '/settings';
   static const settingsConnections = '$settings/connections';
+
+  /// The code another device copies this one's connections from: Settings'
+  /// "Set up another device".
+  static const settingsAnotherDevice = '$settings/another-device';
 
   /// The requester's account: who she is signed in as on a Seerr, signing
   /// out and back in, and removing the server. [instanceId] picks the
