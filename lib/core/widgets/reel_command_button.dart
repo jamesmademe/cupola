@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:reel_text/reel_text.dart';
 
 import 'package:cupola/core/reel_motion.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A primary button whose label rolls instead of being replaced by a spinner.
 ///
@@ -40,6 +41,7 @@ class ReelCommandButton extends StatefulWidget {
     this.busyLabel,
     this.failureLabel,
     this.slotLabels = const <String>[],
+    this.dimmed = false,
   });
 
   /// What the button says at rest. Change it to roll to a new resting label.
@@ -71,6 +73,11 @@ class ReelCommandButton extends StatefulWidget {
   /// connection`, otherwise the width changes on the one transition the
   /// reservation exists to absorb.
   final List<String> slotLabels;
+
+  /// Drawn dim and still pressed: what is on screen cannot go yet (a field
+  /// refuses its value), and the press brings the reason into view, which a
+  /// disabled button would leave the person to find.
+  final bool dimmed;
 
   @override
   State<ReelCommandButton> createState() => _ReelCommandButtonState();
@@ -223,6 +230,12 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
     final style =
         theme.filledButtonTheme.style?.textStyle?.resolve(<WidgetState>{}) ??
         theme.textTheme.labelLarge!;
+    final buttonStyle = widget.dimmed
+        ? FilledButton.styleFrom(
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            foregroundColor: CupolaThemeColors.of(context).dimText,
+          )
+        : null;
 
     // Reduce Motion drops the slot renderer entirely rather than asking it to
     // stand still, same rule as [ReelLine]. The reservation stays, because the
@@ -231,6 +244,7 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
     if (MediaQuery.disableAnimationsOf(context)) {
       return FilledButton(
         onPressed: widget.onPressed == null || _busy ? null : _run,
+        style: buttonStyle,
         child: SizedBox(
           width: _slotWidth(context, style),
           // Read off this widget's own state rather than the controller: a
@@ -249,6 +263,7 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
 
     return FilledButton(
       onPressed: widget.onPressed == null || _busy ? null : _run,
+      style: buttonStyle,
       child: SizedBox(
         width: _slotWidth(context, style),
         // Clipped like every other roll (see [ReelLine]). A button is the

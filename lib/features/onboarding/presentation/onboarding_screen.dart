@@ -23,6 +23,7 @@ import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
@@ -183,6 +184,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// instance that is no longer the one configured.
   final Map<ServiceKey, String> _verifiedAgainst = {};
 
+  // ── The address away ──────────────────────────────────────────────────────
+
+  /// Each service's address away, the connection form's second address:
+  /// offered in the step behind `Add an address away`.
+  final Map<ServiceKey, TextEditingController> _awayCtrl = {
+    for (final k in ServiceKey.values) k: TextEditingController(),
+  };
+
+  /// Its Access row, under it, and the form that row validates in.
+  final Map<ServiceKey, ConnectionAccessController> _awayAccessCtrl = {};
+  final Map<ServiceKey, GlobalKey<FormState>> _awayAccessForm = {
+    for (final k in ServiceKey.values) k: GlobalKey<FormState>(),
+  };
+
+  /// The services whose step shows the field: one with an address away
+  /// saved, or whose link was taken.
+  final Set<ServiceKey> _awayShown = {};
+
+  /// The services whose address away shows its Access row.
+  final Set<ServiceKey> _awayAccessShown = {};
+
+  /// What each address away answered on the last test, and the access that
+  /// test sent there. Absent when it was not asked.
+  final Map<ServiceKey, ServiceDiagnosis> _awayResult = {};
+  final Map<ServiceKey, ConnectionAccess> _testedAwayAccess = {};
+
+  /// The address away's own certificate, trusted on its own: a certificate
+  /// belongs to its host. Same bookkeeping as [_certFingerprint].
+  final Map<ServiceKey, String> _awayCertFingerprint = {};
+  final Map<ServiceKey, String> _awayCertOriginOf = {};
+  final Map<ServiceKey, UntrustedCertificateProbe> _pendingAwayCert = {};
+
   /// Services left behind by choosing another one in Connect. They keep their
   /// place in the ring but are not written to settings.
   final Set<ServiceKey> _skipped = {};
@@ -199,6 +232,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       final saved = settings.primaryOf(k)?.access ?? const NoAccess();
       _accessCtrl[k] = ConnectionAccessController(k, initial: saved);
       if (!saved.isEmpty) _accessShown.add(k);
+      final away = settings.primaryOf(k)?.away;
+      _awayAccessCtrl[k] = ConnectionAccessController(
+        k,
+        initial: away?.access ?? const NoAccess(),
+      );
+      if (away == null) continue;
+      _awayCtrl[k]!.text = away.url;
+      _awayShown.add(k);
+      if (!away.access.isEmpty) _awayAccessShown.add(k);
+      final pin = settings.pinForUrl(away.url);
+      final origin = UrlUtils.certOrigin(away.url);
+      if (pin != null && origin != null) {
+        _awayCertFingerprint[k] = pin;
+        _awayCertOriginOf[k] = origin;
+      }
     }
     for (final k in ServiceKey.values) {
       final url = settings.urlFor(k);
@@ -258,6 +306,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     for (final c in _accessCtrl.values) {
       c.dispose();
     }
+    for (final c in _awayCtrl.values) {
+      c.dispose();
+    }
+    for (final c in _awayAccessCtrl.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -297,6 +351,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     return origin != null && origin == _certOriginOf[k] ? pin : null;
   }
 
+  /// [_pinFor] for the address away.
+  String? _awayPinFor(ServiceKey k) {
+    final pin = _awayCertFingerprint[k];
+    if (pin == null) return null;
+    final origin = UrlUtils.certOrigin(_awayCtrl[k]!.text);
+    return origin != null && origin == _awayCertOriginOf[k] ? pin : null;
+  }
+
+  /// The address away as the step stands, or empty when its field is not
+  /// shown: a link taken and the field left empty is no address away.
+  String _awayUrlOf(ServiceKey k) =>
+      _awayShown.contains(k) ? _awayCtrl[k]!.text.trim() : '';
+
   String _fingerprintOf(ServiceKey k) => [
     _urlCtrl[k]!.text.trim(),
     _apiKeyCtrl[k]!.text.trim(),
@@ -305,6 +372,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     _pinFor(k) ?? '',
     // By its hash, so the fingerprint never holds a secret.
     '${_accessCtrl[k]!.access.hashCode}',
+    _awayUrlOf(k),
+    '${_awayAccessCtrl[k]!.access.hashCode}',
+    _awayPinFor(k) ?? '',
   ].join(' ');
 
   /// What [service]'s last test found, for as long as it still holds.
@@ -315,8 +385,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// the primary stops being the way forward, and the ring takes the node
   /// back. A failure is left standing, since its outcome and its remedy are
   /// what the person is editing against.
+  ///
+  /// Either address answering is an answer (Q2): an address that cannot be
+  /// reached from where the device is, home from away or the reverse, is
+  /// saved all the same.
   ServiceConnectionStatus? _verdictOf(ServiceKey service) {
-    final status = _status[service];
+    final status = (_awayResult[service]?.isConnected ?? false)
+        ? ServiceConnectionStatus.connected
+        : _status[service];
     if (status != ServiceConnectionStatus.connected) return status;
     return _verifiedAgainst[service] == _fingerprintOf(service) ? status : null;
   }
@@ -328,6 +404,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     ..._usernameCtrl.values,
     ..._passwordCtrl.values,
     ..._accessCtrl.values,
+    ..._awayCtrl.values,
+    ..._awayAccessCtrl.values,
   ]);
 
   void _onEdited() {
@@ -385,6 +463,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     if (lifted && access.kind == AccessKind.password) {
       _accessShown.add(service);
     }
+    if (!_awayShown.contains(service)) return;
+    final away = _awayAccessCtrl[service]!;
+    final liftedAway = away.liftCredentialsFrom(
+      _awayCtrl[service]!,
+      username: _usernameCtrl[service]!,
+      password: _passwordCtrl[service]!,
+    );
+    if (liftedAway && away.kind == AccessKind.password) {
+      _awayAccessShown.add(service);
+    }
+  }
+
+  /// Shows [service]'s address away, empty, for the step to focus.
+  void _showAway(ServiceKey service) {
+    setState(() => _awayShown.add(service));
+  }
+
+  /// Shows the Access row of [service]'s address away with [kind] chosen:
+  /// its gateway's remedy, answered in the step.
+  void _showAwayAccess(ServiceKey service, AccessKind kind) {
+    setState(() {
+      _awayAccessShown.add(service);
+      _awayAccessCtrl[service]!.select(kind);
+    });
   }
 
   /// Shows [service]'s Access row with [kind] chosen: a gateway's remedy,
@@ -400,6 +502,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // An Access row with half a token says so under its field, and nothing is
     // sent until it is whole.
     if (_accessForm[service]!.currentState?.validate() == false) return;
+    if (_awayAccessForm[service]!.currentState?.validate() == false) return;
     setState(() => _liftCredentials(service));
     // The test's outcome is a sentence under the form, and the button rolls to
     // `Next service` when it succeeds, both of them behind the keyboard while
@@ -409,6 +512,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     setState(() {
       _verifying[service] = true;
       _pendingCert.remove(service);
+      _pendingAwayCert.remove(service);
     });
     try {
       await _runTest(service);
@@ -429,23 +533,40 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // test simply runs again, deny it and the step says so instead of blaming
     // the address the user just typed.
     final access = _accessCtrl[service]!.access;
-    final result = await diagnoseThroughLocalNetworkGate(
-      () => diagnoseCredentials(
-        service,
-        access: access,
-        url: _urlCtrl[service]!.text,
-        apiKey: _apiKeyCtrl[service]!.text,
-        username: _usernameCtrl[service]!.text,
-        password: _passwordCtrl[service]!.text,
-        certFingerprint: _pinFor(service) ?? '',
-        // Plex's persisted per-install identity. Minted once by
-        // `SettingsService` and read rather than generated here, because a fresh
-        // value registers another "device" row on the user's server.
-        clientIdentifier: ref.read(currentSettingsProvider).plexClientId,
-      ),
-      url: _urlCtrl[service]!.text,
-      probe: widget.localNetworkProbe,
+    final awayUrl = _awayUrlOf(service);
+    final awayAccess = _awayAccessCtrl[service]!.access;
+    Future<ServiceDiagnosis> ask(
+      String url, {
+      required ConnectionAccess access,
+      required String? pin,
+    }) => diagnoseCredentials(
+      service,
+      access: access,
+      url: url,
+      apiKey: _apiKeyCtrl[service]!.text,
+      username: _usernameCtrl[service]!.text,
+      password: _passwordCtrl[service]!.text,
+      certFingerprint: pin ?? '',
+      // Plex's persisted per-install identity. Minted once by
+      // `SettingsService` and read rather than generated here, because a
+      // fresh value registers another "device" row on the user's server.
+      clientIdentifier: ref.read(currentSettingsProvider).plexClientId,
     );
+    // Both addresses at once, each as typed, the way the connection form
+    // tests them. Only the one at home goes through the local-network gate:
+    // the address away is not on it.
+    final asked = await Future.wait([
+      diagnoseThroughLocalNetworkGate(
+        () =>
+            ask(_urlCtrl[service]!.text, access: access, pin: _pinFor(service)),
+        url: _urlCtrl[service]!.text,
+        probe: widget.localNetworkProbe,
+      ),
+      if (awayUrl.isNotEmpty)
+        ask(awayUrl, access: awayAccess, pin: _awayPinFor(service)),
+    ]);
+    final result = asked.first;
+    final away = asked.length > 1 ? asked[1] : null;
 
     // A TLS failure resolves *in the step*: probe for the certificate and let
     // the card offer to trust it. Probing after the server rejected a key is
@@ -459,9 +580,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         pinnedFingerprint: _pinFor(service) ?? '',
       );
     }
+    // The address away's own, unless it did not answer at all: the probe
+    // would wait on the silent address a second time.
+    UntrustedCertificateProbe? awayCertProbe;
+    if (away != null &&
+        away.isDisconnected &&
+        away.reason != ServiceFailureReason.unreachable &&
+        away.reason != ServiceFailureReason.timeout &&
+        certProbeWorthwhile(away.reason)) {
+      awayCertProbe = await widget.certificateProber(
+        awayUrl,
+        pinnedFingerprint: _awayPinFor(service) ?? '',
+      );
+    }
 
     if (!mounted) return;
-    if (result.status == ServiceConnectionStatus.connected) {
+    if (result.status == ServiceConnectionStatus.connected ||
+        (away?.isConnected ?? false)) {
       HapticFeedback.mediumImpact();
     } else {
       HapticFeedback.lightImpact();
@@ -477,9 +612,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           : result.detail;
       _serverVersion[service] = result.serverVersion;
       _testedAccess[service] = access;
+      if (away == null) {
+        _awayResult.remove(service);
+      } else {
+        _awayResult[service] = away;
+        _testedAwayAccess[service] = awayAccess;
+      }
       _verifiedAgainst[service] = _fingerprintOf(service);
       if (certProbe != null) _pendingCert[service] = certProbe;
+      if (awayCertProbe != null) _pendingAwayCert[service] = awayCertProbe;
     });
+  }
+
+  /// [_trustCertificate] for the address away.
+  Future<void> _trustAwayCertificate(ServiceKey service) async {
+    final probe = _pendingAwayCert[service];
+    if (probe == null) return;
+    final origin = UrlUtils.certOrigin(_awayCtrl[service]!.text);
+    if (origin == null) return;
+    setState(() {
+      _awayCertFingerprint[service] = probe.certificate.fingerprint;
+      _awayCertOriginOf[service] = origin;
+      _pendingAwayCert.remove(service);
+    });
+    await _test(service);
   }
 
   Future<void> _trustCertificate(ServiceKey service) async {
@@ -544,11 +700,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               password: _passwordCtrl[k]!.text,
             );
       // The access goes with the connection the walk just wrote, as the
-      // connection form saves it.
+      // connection form saves it, and the address away with its own.
       final written = updated.primaryOf(k);
       if (written != null) {
+        final awayUrl = UrlUtils.normalizeBaseUrl(_awayUrlOf(k));
+        final priorAway = written.away?.url;
+        if (priorAway != null && priorAway != awayUrl) {
+          abandonedUrls.add(priorAway);
+        }
         updated = updated.copyWithInstance(
-          written.copyWith(access: _accessCtrl[k]!.access),
+          awayUrl.isEmpty
+              ? written.copyWith(
+                  access: _accessCtrl[k]!.access,
+                  clearAway: true,
+                )
+              : written.copyWith(
+                  access: _accessCtrl[k]!.access,
+                  away: ConnectionAddress(
+                    url: awayUrl,
+                    access: _awayAccessCtrl[k]!.access,
+                  ),
+                ),
         );
       }
     }
@@ -564,11 +736,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       // just the one on screen, so an address edited after a trust decision
       // would otherwise file the old host's fingerprint under the new one.
       final pin = _pinFor(k);
-      if (pin == null) continue;
-      updated = updated.copyWithTrustedCertificate(
-        url: updated.urlFor(k),
-        fingerprint: pin,
-      );
+      if (pin != null) {
+        updated = updated.copyWithTrustedCertificate(
+          url: updated.urlFor(k),
+          fingerprint: pin,
+        );
+      }
+      final awayPin = _awayPinFor(k);
+      final away = updated.primaryOf(k)?.away;
+      if (awayPin != null && away != null) {
+        updated = updated.copyWithTrustedCertificate(
+          url: away.url,
+          fingerprint: awayPin,
+        );
+      }
     }
     for (final priorUrl in abandonedUrls) {
       updated = updated.copyWithoutUnusedCertificate(priorUrl);
@@ -873,6 +1054,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     testedAccess: _testedAccess[service],
     onShowAccess: (kind) => _showAccess(service, kind),
     status: _verdictOf(service),
+    homeStatus: _status[service],
     reason: _reason[service],
     gateway: _gateway[service],
     failureDetail: _failureDetail[service],
@@ -888,6 +1070,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     onBack: _backFromConnect,
     onStartElsewhere: compact ? () => _goTo(_startPage) : null,
     formScroll: _formScroll,
+    away: OnboardingAway(
+      controller: _awayCtrl[service]!,
+      shown: _awayShown.contains(service),
+      onShow: () => _showAway(service),
+      accessController: _awayAccessCtrl[service]!,
+      accessFormKey: _awayAccessForm[service]!,
+      showAccess: _awayAccessShown.contains(service),
+      onShowAccess: (kind) => _showAwayAccess(service, kind),
+      result: _awayResult[service],
+      testedAccess: _testedAwayAccess[service],
+      certificateProbe: _pendingAwayCert[service],
+      onTrustCertificate: () => _trustAwayCertificate(service),
+    ),
   );
 
   @override

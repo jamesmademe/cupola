@@ -320,8 +320,10 @@ const _exceptions = <String, ({int count, String reason})>{
         'The first-run walk shows, saves and forgets the addresses it edits.',
   ),
   'lib/features/onboarding/presentation/onboarding_screen.dart  pinForUrl(': (
-    count: 1,
-    reason: 'The certificate trusted for the address in the walk\'s field.',
+    count: 2,
+    reason:
+        'The certificates trusted for the addresses in the walk\'s two '
+        'fields.',
   ),
   'lib/features/onboarding/presentation/widgets/onboarding_found.dart  pinForUrl(':
       (

@@ -799,6 +799,7 @@ class OnboardingField extends StatefulWidget {
     this.action,
     this.onSubmitted,
     this.validator,
+    this.problem,
   });
 
   final String label;
@@ -847,6 +848,11 @@ class OnboardingField extends StatefulWidget {
   /// message takes the note slot under the field, in the error tone, as an
   /// address that cannot be sent does.
   final FormFieldValidator<String>? validator;
+
+  /// What a press found wrong with the field, said in the error tone until
+  /// the caller clears it on the next edit: an empty address, or one the
+  /// press refused. Before what the field finds as it is typed.
+  final String? problem;
 
   @override
   State<OnboardingField> createState() => _OnboardingFieldState();
@@ -912,10 +918,11 @@ class _OnboardingFieldState extends State<OnboardingField> {
   @override
   Widget build(BuildContext context) {
     final validator = widget.validator;
-    if (validator == null) return _build(context, _error);
+    if (validator == null) return _build(context, widget.problem ?? _error);
     return FormField<String>(
       validator: (_) => validator(widget.controller.text),
-      builder: (field) => _build(context, field.errorText ?? _error),
+      builder: (field) =>
+          _build(context, field.errorText ?? widget.problem ?? _error),
     );
   }
 
@@ -1018,7 +1025,7 @@ class _OnboardingFieldState extends State<OnboardingField> {
                       // host to TLS, and an http:// placeholder taught the
                       // opposite.
                       hintText: widget.isUrl
-                          ? 'https://your-server:port'
+                          ? widget.hint ?? 'https://your-server:port'
                           : widget.hint,
                       hintStyle: theme.textTheme.bodyMedium!.copyWith(
                         color: scheme.onSurfaceVariant,

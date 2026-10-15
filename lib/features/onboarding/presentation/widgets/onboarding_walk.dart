@@ -16,6 +16,7 @@ import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/reel_command_button.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
@@ -242,6 +243,49 @@ class _ServiceGlyph extends StatelessWidget {
 /// its own: the port chip and, on a secret, the reveal toggle. Both stay in the
 /// traversal order for keyboard and screen-reader users; they are simply not
 /// where the return key goes.
+/// The step's address away: the connection form's second address, offered
+/// behind `Add an address away` under the address at home, with its own
+/// Access row and its own certificate.
+class OnboardingAway {
+  const OnboardingAway({
+    required this.controller,
+    required this.shown,
+    required this.onShow,
+    required this.accessController,
+    required this.accessFormKey,
+    this.showAccess = false,
+    required this.onShowAccess,
+    this.result,
+    this.testedAccess,
+    this.certificateProbe,
+    required this.onTrustCertificate,
+  });
+
+  final TextEditingController controller;
+
+  /// Whether the field is on screen: once its link was taken, or when the
+  /// connection already has an address away.
+  final bool shown;
+  final VoidCallback onShow;
+
+  /// Its Access row, under the field: shown once access is set or a
+  /// gateway's remedy was taken ([onShowAccess]), as the one at home is.
+  final ConnectionAccessController accessController;
+  final GlobalKey<FormState> accessFormKey;
+  final bool showAccess;
+  final ValueChanged<AccessKind> onShowAccess;
+
+  /// What it answered on the last test; null when it was not asked.
+  final ServiceDiagnosis? result;
+
+  /// The access that test sent there.
+  final ConnectionAccess? testedAccess;
+
+  /// A certificate it presented, waiting to be trusted.
+  final UntrustedCertificateProbe? certificateProbe;
+  final VoidCallback onTrustCertificate;
+}
+
 class OnboardingWalk extends StatefulWidget {
   const OnboardingWalk({
     super.key,
@@ -258,6 +302,7 @@ class OnboardingWalk extends StatefulWidget {
     this.sharedTokenFrom,
     this.onUseSharedToken,
     required this.status,
+    this.homeStatus,
     required this.reason,
     this.gateway,
     required this.failureDetail,
@@ -273,6 +318,7 @@ class OnboardingWalk extends StatefulWidget {
     required this.onBack,
     this.onStartElsewhere,
     this.formScroll,
+    required this.away,
   });
 
   final ServiceKey service;
@@ -302,7 +348,14 @@ class OnboardingWalk extends StatefulWidget {
   final ServiceKey? sharedTokenFrom;
   final VoidCallback? onUseSharedToken;
 
+  /// The step's verdict: connected when either address answered and the
+  /// fields are still the ones tested. It turns the primary into the way on.
   final ServiceConnectionStatus? status;
+
+  /// What the address at home itself answered, when the address away was
+  /// asked too; null reads [status]. [reason], [gateway], [failureDetail] and
+  /// [serverVersion] are the home's.
+  final ServiceConnectionStatus? homeStatus;
   final ServiceFailureReason? reason;
 
   /// What answered in the service's place, when the test met a gateway: the
@@ -348,6 +401,9 @@ class OnboardingWalk extends StatefulWidget {
   /// opens on its first field, whatever the visit before left it at.
   final ScrollController? formScroll;
 
+  /// The address away, its field, its access and its answer.
+  final OnboardingAway away;
+
   @override
   State<OnboardingWalk> createState() => _OnboardingWalkState();
 }
@@ -359,9 +415,21 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   final _address = FocusNode(debugLabel: 'onboarding address');
   final _credential = FocusNode(debugLabel: 'onboarding credential');
   final _password = FocusNode(debugLabel: 'onboarding password');
+  final _awayAddress = FocusNode(debugLabel: 'onboarding address away');
+
+  /// What a press of Test found wrong with each address, said in the error
+  /// tone under its field until its text changes: by the text, since the
+  /// caret the press puts there notifies the controller too.
+  String? _homeProblem;
+  String? _awayProblem;
+  String _homeProblemOf = '';
+  String _awayProblemOf = '';
 
   /// Where the Access row sits, so a remedy can bring it into view.
   final _accessRow = GlobalKey();
+
+  /// Where the address away's Access row sits, for the same reason.
+  final _awayAccessRow = GlobalKey();
 
   /// Where a test's outcome sits. A test is answered under the fields, and on
   /// a phone the fields and the hero above them can leave it below the pinned
@@ -370,8 +438,35 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   final _outcome = GlobalKey();
 
   @override
+  void initState() {
+    super.initState();
+    widget.urlController.addListener(_clearHomeProblem);
+    widget.away.controller.addListener(_clearAwayProblem);
+  }
+
+  void _clearHomeProblem() {
+    if (_homeProblem == null) return;
+    if (widget.urlController.text == _homeProblemOf) return;
+    setState(() => _homeProblem = null);
+  }
+
+  void _clearAwayProblem() {
+    if (_awayProblem == null) return;
+    if (widget.away.controller.text == _awayProblemOf) return;
+    setState(() => _awayProblem = null);
+  }
+
+  @override
   void didUpdateWidget(OnboardingWalk oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.urlController != widget.urlController) {
+      oldWidget.urlController.removeListener(_clearHomeProblem);
+      widget.urlController.addListener(_clearHomeProblem);
+    }
+    if (oldWidget.away.controller != widget.away.controller) {
+      oldWidget.away.controller.removeListener(_clearAwayProblem);
+      widget.away.controller.addListener(_clearAwayProblem);
+    }
     final arrived =
         widget.status != null &&
         !widget.verifying &&
@@ -405,10 +500,101 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
 
   @override
   void dispose() {
+    widget.urlController.removeListener(_clearHomeProblem);
+    widget.away.controller.removeListener(_clearAwayProblem);
     _address.dispose();
     _credential.dispose();
     _password.dispose();
+    _awayAddress.dispose();
     super.dispose();
+  }
+
+  /// `Add an address away`: the field, with the keyboard on it.
+  void _showAway() {
+    widget.away.onShow();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _awayAddress.requestFocus();
+      // Only as far as it takes, from below: the address at home stays in
+      // view above it.
+      final field = _awayAddress.context;
+      if (field != null && field.mounted) {
+        Scrollable.ensureVisible(
+          field,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        );
+      }
+    });
+  }
+
+  /// What is wrong with [raw] as the address at home or ([away]) away, or
+  /// null when it can be tested: the connection form's rules, so an address
+  /// the step takes is one the form takes when it is reopened.
+  String? _addressProblem(String raw, {required bool away}) {
+    final service = widget.service;
+    if (raw.trim().isEmpty) return away ? null : 'Add the address at home';
+    final malformed = UrlUtils.validateServiceHost(raw, allowCredentials: true);
+    if (malformed != null) return malformed;
+    if (cleartextRefusal(service, raw, optional: away) case final refused?) {
+      return refused;
+    }
+    if (away &&
+        isSameAddress(
+          UrlUtils.normalizeBaseUrl(UrlUtils.withoutCredentials(raw)),
+          UrlUtils.normalizeBaseUrl(
+            UrlUtils.withoutCredentials(widget.urlController.text),
+          ),
+        )) {
+      return 'This is the address at home. Use the one you reach from '
+          'outside, or leave this empty.';
+    }
+    return null;
+  }
+
+  /// Whether either address is refused for `http://` as it stands: the
+  /// primary is drawn dim, and still pressed.
+  bool get _refused =>
+      cleartextRefusal(widget.service, widget.urlController.text) != null ||
+      (widget.away.shown &&
+          cleartextRefusal(
+                widget.service,
+                widget.away.controller.text,
+                optional: true,
+              ) !=
+              null);
+
+  /// Test, once both addresses can be sent; otherwise the first one that
+  /// cannot comes into view with its words, the keyboard on it.
+  Future<void> _test() async {
+    final home = _addressProblem(widget.urlController.text, away: false);
+    final away = widget.away.shown
+        ? _addressProblem(widget.away.controller.text, away: true)
+        : null;
+    if (home != null || away != null) {
+      setState(() {
+        _homeProblem = home;
+        _awayProblem = away;
+        _homeProblemOf = widget.urlController.text;
+        _awayProblemOf = widget.away.controller.text;
+      });
+      final focus = home != null ? _address : _awayAddress;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final field = focus.context;
+        if (!mounted || field == null || !field.mounted) return;
+        Scrollable.ensureVisible(field, alignment: 0.3);
+        focus.requestFocus();
+      });
+      return;
+    }
+    await widget.onTest();
+  }
+
+  /// `Use https`: the same address over https, which the next test checks.
+  static void _useHttpsIn(TextEditingController address) {
+    address.text = address.text.trim().replaceFirst(
+      RegExp('^http://', caseSensitive: false),
+      'https://',
+    );
   }
 
   /// Hands the keyboard to [next], keeping it up. Requesting focus rather than
@@ -428,7 +614,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
       FocusManager.instance.primaryFocus?.unfocus();
       return;
     }
-    widget.onTest();
+    _test();
   }
 
   @override
@@ -449,11 +635,18 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           // No Skip: a service is saved only once it answers, and Back is the
           // other way out.
           OnboardingFooter(
-            primary: _TestOrAdvance(
-              status: widget.status,
-              verifying: widget.verifying,
-              onTest: widget.onTest,
-              onAdvance: widget.onAdvance,
+            primary: ListenableBuilder(
+              listenable: Listenable.merge([
+                widget.urlController,
+                widget.away.controller,
+              ]),
+              builder: (context, _) => _TestOrAdvance(
+                status: widget.status,
+                verifying: widget.verifying,
+                dimmed: _refused,
+                onTest: _test,
+                onAdvance: widget.onAdvance,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -479,22 +672,148 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
     );
   }
 
+  /// An Access row in the step's own fields, as its address and key are
+  /// drawn: the label above, a filled well, the reveal toggle on a secret.
+  Widget _accessFields(ConnectionAccessController controller) =>
+      ConnectionAccessFields(
+        controller: controller,
+        onMoveToCredential: (value) {
+          if (value.isNotEmpty) widget.apiKeyController.text = value;
+        },
+        fieldBuilder: (context, field) => OnboardingField(
+          label: field.label,
+          controller: field.controller,
+          isSecret: field.secret,
+          action: TextInputAction.next,
+          validator: field.validator,
+          trailing: field.onPaste == null
+              ? null
+              : _PasteButton(onPaste: field.onPaste!),
+        ),
+      );
+
+  /// A gateway's remedy at the address away: its Access row, under its
+  /// field, scrolled into view.
+  void _addAwayAccess(AccessKind kind) {
+    widget.away.onShowAccess(kind);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final row = _awayAccessRow.currentContext;
+      if (row != null && row.mounted) Scrollable.ensureVisible(row);
+    });
+  }
+
+  /// `At home · nas.home.arpa:7878`: where an answer came from.
+  String _addressLine({required bool away}) {
+    final raw = away ? widget.away.controller.text : widget.urlController.text;
+    final host =
+        widget.service.extractHost(UrlUtils.normalizeBaseUrl(raw)) ??
+        raw.trim();
+    return '${away ? 'Away' : 'At home'} · $host';
+  }
+
+  /// Whether an answer is an address that did not answer at all, which is
+  /// said differently when the other address answered: from home, an
+  /// address away often cannot be reached (a router that cannot reach its
+  /// own public address), and the reverse.
+  static bool _silent(
+    ServiceConnectionStatus status,
+    ServiceFailureReason? r,
+  ) =>
+      status == ServiceConnectionStatus.disconnected &&
+      (r == ServiceFailureReason.unreachable ||
+          r == ServiceFailureReason.timeout);
+
+  /// The test's answer: one card for one address, as always; one for each
+  /// when the address away was asked too, said together in red when
+  /// neither answered.
+  Widget _outcomes(ServiceConnectionStatus status) {
+    final service = widget.service;
+    final home = _Outcome(
+      service: service,
+      status: widget.homeStatus ?? status,
+      reason: widget.reason,
+      gateway: widget.gateway,
+      failureDetail: widget.failureDetail,
+      serverVersion: widget.serverVersion,
+      testedAccess: widget.testedAccess,
+      // Until the row is on screen, the remedy is the way to it.
+      onAddAccess: widget.showAccess ? null : _addAccess,
+      sharedTokenFrom: widget.sharedTokenFrom,
+      onUseSharedToken: widget.onUseSharedToken,
+      address: widget.away.result == null ? null : _addressLine(away: false),
+    );
+    final away = widget.away.result;
+    if (away == null) return KeyedSubtree(key: _outcome, child: home);
+    final homeSilent = _silent(widget.homeStatus ?? status, widget.reason);
+    final awaySilent = _silent(away.status, away.reason);
+    if (homeSilent && awaySilent) {
+      return _OutcomeCard(
+        key: _outcome,
+        tone: StatusTone.error,
+        sentence: failureHeadline(
+          ServiceFailureReason.unreachableAtBoth,
+          subject: service.title,
+        ),
+        lines: [_addressLine(away: false), _addressLine(away: true)],
+      );
+    }
+    _OutcomeCard notChecked({required bool away}) => _OutcomeCard(
+      tone: StatusTone.info,
+      sentence: 'Not checked from here.',
+      lines: [
+        away
+            ? "Cupola tries it when the home address doesn't answer."
+            : 'Cupola tries it first, and uses it whenever it answers.',
+        _addressLine(away: away),
+      ],
+    );
+    return Column(
+      key: _outcome,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        homeSilent ? notChecked(away: false) : home,
+        const SizedBox(height: AppSpacing.sm),
+        awaySilent
+            ? notChecked(away: true)
+            : _Outcome(
+                service: service,
+                status: away.status,
+                reason: away.reason,
+                gateway: away.gateway,
+                failureDetail: away.isDisconnected
+                    ? away.messageFor(service)
+                    : away.detail,
+                serverVersion: away.serverVersion,
+                testedAccess: widget.away.testedAccess,
+                onAddAccess: widget.away.showAccess ? null : _addAwayAccess,
+                address: _addressLine(away: true),
+              ),
+      ],
+    );
+  }
+
   List<Widget> _form(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final service = widget.service;
     return [
+      // Each field keyed: the address away comes and goes above the
+      // credential, and an unkeyed field would take over the state of the
+      // one that stood in its place, listening to the other's controller.
       OnboardingField(
-        label: 'Address',
+        key: const ValueKey('address'),
+        label: 'Address at home',
         controller: widget.urlController,
         isUrl: true,
-        warningFor: (raw) => transportWarningFor(service, raw),
+        // `http://` across the internet first: refused, on every platform.
+        // Then the service's own reason (TrueNAS refuses http:// outright).
+        warningFor: (raw) =>
+            cleartextRefusal(service, raw) ?? transportWarningFor(service, raw),
+        problem: _homeProblem,
         focusNode: _address,
         action: TextInputAction.next,
-        onSubmitted: (_) => _pass(_credential),
-        help:
-            "${service.title}'s default port is ${service.defaultPort}. "
-            'Behind a reverse proxy, use the address you reach it on.',
+        onSubmitted: (_) =>
+            _pass(widget.away.shown ? _awayAddress : _credential),
         trailing: ValueListenableBuilder<TextEditingValue>(
           valueListenable: widget.urlController,
           // Only beside a host: with nothing typed there is no host to put
@@ -512,9 +831,78 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
               : const SizedBox.shrink(),
         ),
       ),
-      if (service.usesApiKey) ...[
+      _UseHttps(controller: widget.urlController, service: service),
+      // The field's help, and after it, under the address it adds to, the
+      // link to an address away: on the help's line rather than a line of its
+      // own, which pushed the key below the fold of a 6.3" phone. It wraps
+      // under the help when the two do not fit side by side.
+      Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.xs),
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.md,
+          children: [
+            Text(
+              "${service.title}'s default port is ${service.defaultPort}.",
+              style: theme.textTheme.bodySmall!.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            if (!widget.away.shown)
+              TextButton(
+                onPressed: _showAway,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 44),
+                  visualDensity: VisualDensity.standard,
+                  // In ink: the one thing a first run may want here that the
+                  // form does not show.
+                  foregroundColor: scheme.onSurface,
+                ),
+                child: const Text('Add an address away'),
+              ),
+          ],
+        ),
+      ),
+      if (widget.away.shown) ...[
         const SizedBox(height: AppSpacing.lg),
         OnboardingField(
+          key: const ValueKey('address away'),
+          label: 'Address away · optional',
+          controller: widget.away.controller,
+          isUrl: true,
+          hint: 'https://${service.routeParam}.example.com',
+          warningFor: (raw) =>
+              cleartextRefusal(service, raw, optional: true) ??
+              transportWarningFor(service, raw),
+          problem: _awayProblem,
+          focusNode: _awayAddress,
+          action: TextInputAction.next,
+          onSubmitted: (_) => _pass(_credential),
+          help:
+              "Used when the home address doesn't answer. Leave it empty to "
+              'reach ${service.title} only at home.',
+        ),
+        _UseHttps(
+          controller: widget.away.controller,
+          service: service,
+          optional: true,
+        ),
+        if (widget.away.showAccess) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Form(
+            key: widget.away.accessFormKey,
+            child: KeyedSubtree(
+              key: _awayAccessRow,
+              child: _accessFields(widget.away.accessController),
+            ),
+          ),
+        ],
+      ],
+      if (service.usesApiKey) ...[
+        SizedBox(height: widget.away.shown ? AppSpacing.lg : AppSpacing.xs),
+        OnboardingField(
+          key: const ValueKey('credential'),
           label: service.credentialLabel,
           controller: widget.apiKeyController,
           isSecret: true,
@@ -532,8 +920,9 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           warningFor: service == ServiceKey.plex ? _plexTokenWarning : null,
         ),
       ] else ...[
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: widget.away.shown ? AppSpacing.lg : AppSpacing.xs),
         OnboardingField(
+          key: const ValueKey('username'),
           label: service.usernameLabel,
           controller: widget.usernameController,
           focusNode: _credential,
@@ -545,6 +934,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
         ),
         const SizedBox(height: AppSpacing.lg),
         OnboardingField(
+          key: const ValueKey('password'),
           label: 'Password',
           controller: widget.passwordController,
           isSecret: true,
@@ -563,24 +953,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           key: widget.accessFormKey,
           child: KeyedSubtree(
             key: _accessRow,
-            child: ConnectionAccessFields(
-              controller: widget.accessController,
-              onMoveToCredential: (value) {
-                if (value.isNotEmpty) widget.apiKeyController.text = value;
-              },
-              // The step's own field, as its address and key are drawn: the
-              // label above, a filled well, the reveal toggle on a secret.
-              fieldBuilder: (context, field) => OnboardingField(
-                label: field.label,
-                controller: field.controller,
-                isSecret: field.secret,
-                action: TextInputAction.next,
-                validator: field.validator,
-                trailing: field.onPaste == null
-                    ? null
-                    : _PasteButton(onPaste: field.onPaste!),
-              ),
-            ),
+            child: _accessFields(widget.accessController),
           ),
         ),
       ],
@@ -611,22 +984,20 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           onTrust: widget.onTrustCertificate,
         ),
       ],
+      if (widget.away.certificateProbe case final probe?) ...[
+        const SizedBox(height: AppSpacing.xl),
+        _CertificateCard(
+          service: service,
+          origin:
+              UrlUtils.certOrigin(widget.away.controller.text) ??
+              widget.away.controller.text.trim(),
+          probe: probe,
+          onTrust: widget.away.onTrustCertificate,
+        ),
+      ],
       if (widget.status case final status? when !widget.verifying) ...[
         const SizedBox(height: AppSpacing.xl),
-        _Outcome(
-          key: _outcome,
-          service: service,
-          status: status,
-          reason: widget.reason,
-          gateway: widget.gateway,
-          failureDetail: widget.failureDetail,
-          serverVersion: widget.serverVersion,
-          testedAccess: widget.testedAccess,
-          // Until the row is on screen, the remedy is the way to it.
-          onAddAccess: widget.showAccess ? null : _addAccess,
-          sharedTokenFrom: widget.sharedTokenFrom,
-          onUseSharedToken: widget.onUseSharedToken,
-        ),
+        _outcomes(status),
       ],
       if (widget.trustedFingerprint != null &&
           widget.certificateProbe == null) ...[
@@ -667,12 +1038,17 @@ class _TestOrAdvance extends StatelessWidget {
   const _TestOrAdvance({
     required this.status,
     required this.verifying,
+    this.dimmed = false,
     required this.onTest,
     required this.onAdvance,
   });
 
   final ServiceConnectionStatus? status;
   final bool verifying;
+
+  /// An address is refused as typed: the test cannot run, and the press
+  /// brings the field into view.
+  final bool dimmed;
 
   /// Once the service answers, the way on: to Found or to the close.
   static const _advance = 'Continue';
@@ -695,6 +1071,7 @@ class _TestOrAdvance extends StatelessWidget {
       // Both arms measured now, so the one transition this reservation exists
       // for: the answer moves a word and not the button's width.
       slotLabels: const ['Test connection', 'Test again', _advance],
+      dimmed: dimmed && !connected,
       onPressed: verifying
           ? null
           : connected
@@ -708,7 +1085,6 @@ class _TestOrAdvance extends StatelessWidget {
 /// the user can act on; the resolved failure message names the cause.
 class _Outcome extends StatelessWidget {
   const _Outcome({
-    super.key,
     required this.service,
     required this.status,
     required this.reason,
@@ -719,6 +1095,7 @@ class _Outcome extends StatelessWidget {
     this.onAddAccess,
     this.sharedTokenFrom,
     this.onUseSharedToken,
+    this.address,
   });
 
   final ServiceKey service;
@@ -740,6 +1117,9 @@ class _Outcome extends StatelessWidget {
   /// remedy in place of an empty row: `Use Radarr's token`.
   final ServiceKey? sharedTokenFrom;
   final VoidCallback? onUseSharedToken;
+
+  /// `At home · host`, closing the card, when the step asked two addresses.
+  final String? address;
 
   @override
   Widget build(BuildContext context) {
@@ -882,6 +1262,15 @@ class _Outcome extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (address case final address?) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    address,
+                    style: theme.textTheme.bodySmall!.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -889,6 +1278,117 @@ class _Outcome extends StatelessWidget {
       ),
     );
   }
+}
+
+/// An answer that is said in a sentence and its lines, with no remedy of
+/// its own: `Not checked from here` beside an address that answered, and
+/// the one red when neither did. Drawn as [_Outcome] is.
+class _OutcomeCard extends StatelessWidget {
+  const _OutcomeCard({
+    super.key,
+    required this.tone,
+    required this.sentence,
+    this.lines = const [],
+  });
+
+  final StatusTone tone;
+  final String sentence;
+
+  /// Under the sentence, one a line: what it means, then where.
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: AppRadius.borderRadiusMd,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: statusToneColor(scheme, tone),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  sentence,
+                  style: theme.textTheme.bodyMedium!.copyWith(
+                    color: scheme.onSurface,
+                  ),
+                ),
+                for (final line in lines) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    line,
+                    style: theme.textTheme.bodySmall!.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// `Use https`, under an address refused for `http://` across the internet:
+/// the one remedy, in the one amber fill, which puts the same address over
+/// https for the next test to check. Nothing while the address is not
+/// refused.
+class _UseHttps extends StatelessWidget {
+  const _UseHttps({
+    required this.controller,
+    required this.service,
+    this.optional = false,
+  });
+
+  final TextEditingController controller;
+  final ServiceKey service;
+
+  /// The address away, which may also be left empty.
+  final bool optional;
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (context, value, _) =>
+            cleartextRefusal(service, value.text, optional: optional) == null
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: FilledButton(
+                    onPressed: () =>
+                        _OnboardingWalkState._useHttpsIn(controller),
+                    style: remedyFillStyle(context, compact: true),
+                    child: const Text('Use https'),
+                  ),
+                ),
+              ),
+      );
 }
 
 /// The self-signed certificate moment, resolved inside the step.

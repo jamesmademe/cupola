@@ -48,14 +48,18 @@ class _PressedState extends State<_Pressed> {
   Widget build(BuildContext context) => widget.child;
 }
 
-Widget _test({String label = 'Test connection', bool enabled = true}) =>
-    ReelCommandButton(
-      label: label,
-      busyLabel: 'Testing',
-      failureLabel: 'Test again',
-      slotLabels: _slot,
-      onPressed: enabled ? _forever : null,
-    );
+Widget _test({
+  String label = 'Test connection',
+  bool enabled = true,
+  bool dimmed = false,
+}) => ReelCommandButton(
+  label: label,
+  busyLabel: 'Testing',
+  failureLabel: 'Test again',
+  slotLabels: _slot,
+  dimmed: dimmed,
+  onPressed: enabled ? _forever : null,
+);
 
 Widget _reduced(Widget child) => Builder(
   builder: (context) => MediaQuery(
@@ -91,6 +95,12 @@ List<CatalogScene> _scenes(CatalogPlatform platform) => [
   CatalogScene(
     'onPressed: null · Material disabled, the reservation kept',
     (_) => _test(enabled: false),
+    platform: platform,
+  ),
+  CatalogScene(
+    'Dimmed · an address refused as typed: drawn dim and still pressed, the '
+    'press brings the refused field into view',
+    (_) => _test(dimmed: true),
     platform: platform,
   ),
 ];

@@ -280,7 +280,7 @@ void main() {
     });
 
     testWidgets(
-      'an unfilled form reports what is missing, not a network fault',
+      'an unfilled form says what is missing at its field, not a network fault',
       (tester) async {
         await _pumpOnboarding(tester);
         await _openService(tester, 'Sonarr');
@@ -293,9 +293,10 @@ void main() {
           find.textContaining('Enter the address and the API key'),
           findsOneWidget,
         );
-        // The outcome says what the press found; the instruction stays the
-        // lead above and is not said twice.
-        expect(find.text('Nothing to send yet.'), findsOneWidget);
+        // Said under the field it is about, in the connection form's words,
+        // and nothing was sent.
+        expect(find.text('Add the address at home'), findsOneWidget);
+        expect(find.textContaining('did not answer'), findsNothing);
       },
     );
 
@@ -955,7 +956,7 @@ void main() {
       final under = tester.getRect(find.text('Start with another service'));
       expect(
         under.bottom,
-        lessThan(tester.getRect(find.text('Address')).top),
+        lessThan(tester.getRect(find.text('Address at home')).top),
         reason: 'under the headline, above the form',
       );
 
@@ -996,6 +997,7 @@ void main() {
       await tester.tap(address);
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(address).focusNode?.hasFocus, isTrue);
+      await tester.enterText(address, 'http://192.168.1.10:8989');
 
       await tester.testTextInput.receiveAction(TextInputAction.next);
       await tester.pumpAndSettle();
