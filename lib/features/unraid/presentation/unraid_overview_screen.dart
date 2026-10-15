@@ -129,16 +129,18 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.unraid),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.unraid)),
-            accent: ServiceKey.unraid.accent,
-          ),
-          // The order the mobile board keeps once the regions with no read
-          // layer fall away: the array, then the containers. System comes last
-          // because it is the only region nobody opens the app to check.
-          const _ArraySection(),
-          const _DockerSection(),
-          const _SystemSection(),
+          ...sectionsOrOnlyAtHome(ref, ServiceKey.unraid, [
+            ServiceKpiPeek(
+              kpis: ref.watch(serviceKpiProvider(ServiceKey.unraid)),
+              accent: ServiceKey.unraid.accent,
+            ),
+            // The order the mobile board keeps once the regions with no read
+            // layer fall away: the array, then the containers. System comes
+            // last because it is the only region nobody opens the app to check.
+            const _ArraySection(),
+            const _DockerSection(),
+            const _SystemSection(),
+          ]),
         ],
       ),
     );

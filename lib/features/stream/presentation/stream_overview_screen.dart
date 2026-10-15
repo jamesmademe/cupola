@@ -175,28 +175,30 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           ServiceOverviewIdentity(service: service),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(service)),
-            accent: service.accent,
-          ),
-          if (serverDark)
-            ServiceOfflineState.failure(
-              service: service,
-              error: sessions.error!,
-              onRetry: refresh,
-            )
-          else ...[
-            // Who is watching, first and on both servers: it is the one fact
-            // only a media server holds, and the only region on this page that
-            // is about people rather than about files.
-            StreamNowPlayingSection(service: service, sessions: sessions),
-            if (!_isPlex && ref.watch(jellyfinLacksAdministratorProvider))
-              const JellyfinOwnPlaybackNote(),
-            const SizedBox(height: AppSpacing.lg),
-            if (_isPlex) const _OnDeckSection(),
-            _LibrariesSection(service: service),
-            if (_isPlex) const _ServerSection(),
-          ],
+          ...sectionsOrOnlyAtHome(ref, service, [
+            ServiceKpiPeek(
+              kpis: ref.watch(serviceKpiProvider(service)),
+              accent: service.accent,
+            ),
+            if (serverDark)
+              ServiceOfflineState.failure(
+                service: service,
+                error: sessions.error!,
+                onRetry: refresh,
+              )
+            else ...[
+              // Who is watching, first and on both servers: it is the one fact
+              // only a media server holds, and the only region on this page
+              // that is about people rather than about files.
+              StreamNowPlayingSection(service: service, sessions: sessions),
+              if (!_isPlex && ref.watch(jellyfinLacksAdministratorProvider))
+                const JellyfinOwnPlaybackNote(),
+              const SizedBox(height: AppSpacing.lg),
+              if (_isPlex) const _OnDeckSection(),
+              _LibrariesSection(service: service),
+              if (_isPlex) const _ServerSection(),
+            ],
+          ]),
         ],
       ),
     );

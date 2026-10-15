@@ -135,14 +135,16 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.qbittorrent),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.qbittorrent)),
-            accent: ServiceKey.qbittorrent.accent,
-          ),
-          const _NeedsAttentionSection(),
-          const _QueueSection(),
-          const _CategoriesSection(),
-          const _SessionSection(),
+          ...sectionsOrOnlyAtHome(ref, ServiceKey.qbittorrent, [
+            ServiceKpiPeek(
+              kpis: ref.watch(serviceKpiProvider(ServiceKey.qbittorrent)),
+              accent: ServiceKey.qbittorrent.accent,
+            ),
+            const _NeedsAttentionSection(),
+            const _QueueSection(),
+            const _CategoriesSection(),
+            const _SessionSection(),
+          ]),
         ],
       ),
     );

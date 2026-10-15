@@ -115,18 +115,20 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.sabnzbd),
-          ServiceKpiPeek(
-            // Built from the queue this page already watches, so the rail and
-            // the rows below it are the same poll. `whenData` keeps the loading
-            // and error arms intact: the rail shimmers and then collapses,
-            // which is what it does everywhere else.
-            kpis: ref
-                .watch(sabnzbdQueueProvider)
-                .whenData(sabnzbdOverviewReadouts),
-            accent: ServiceKey.sabnzbd.accent,
-          ),
-          const _QueueSection(),
-          const _HistoryTodaySection(),
+          ...sectionsOrOnlyAtHome(ref, ServiceKey.sabnzbd, [
+            ServiceKpiPeek(
+              // Built from the queue this page already watches, so the rail and
+              // the rows below it are the same poll. `whenData` keeps the
+              // loading and error arms intact: the rail shimmers and then
+              // collapses, which is what it does everywhere else.
+              kpis: ref
+                  .watch(sabnzbdQueueProvider)
+                  .whenData(sabnzbdOverviewReadouts),
+              accent: ServiceKey.sabnzbd.accent,
+            ),
+            const _QueueSection(),
+            const _HistoryTodaySection(),
+          ]),
         ],
       ),
     );

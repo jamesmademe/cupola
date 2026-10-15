@@ -5,10 +5,16 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
@@ -26,10 +32,17 @@ Future<(ProfileHarness, ProviderContainer)> _pumpForm(
   WidgetTester tester, {
   ConfigProfile? profile,
   void Function(ProfileHarness harness)? network,
+  List<Override> overrides = const [],
+  bool focusAway = false,
+  Future<void> Function(ProviderContainer container)? before,
 }) async {
-  final harness = await ProfileHarness.start(profile ?? Profiles.p3);
+  final harness = await ProfileHarness.start(
+    profile ?? Profiles.p3,
+    overrides: overrides,
+  );
   network?.call(harness);
   final container = harness.container();
+  await before?.call(container);
   await tester.binding.setSurfaceSize(const Size(430, 2600));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
@@ -44,6 +57,7 @@ Future<(ProfileHarness, ProviderContainer)> _pumpForm(
                 builder: (_) => ServiceSettingsScreen(
                   service: ServiceKey.radarr,
                   instanceId: WorldIds.radarr,
+                  focusAway: focusAway,
                   certificateProber: (_, {pinnedFingerprint = ''}) async =>
                       null,
                   localNetworkProbe: (_, {timeout = Duration.zero}) async =>
@@ -80,6 +94,19 @@ Future<void> _tap(WidgetTester tester, Finder finder, ProfileHarness h) async {
 
 ServiceInstance? _saved(ProviderContainer container) =>
     container.read(settingsProvider).instanceById(WorldIds.radarr);
+
+/// P3 with Radarr's address away, [away].
+ConfigProfile _withAway(String away) => Profiles.p3.withConnection(
+  ProfileConnection(
+    WorldConnections.radarr.instance.copyWith(
+      away: ConnectionAddress(url: away),
+    ),
+  ),
+);
+
+const _onlyAtHomeNote =
+    'Radarr has no address away, so Cupola reaches it only on your home '
+    'Wi-Fi.';
 
 const _refusedHome =
     "Cupola doesn't send your key over plain http across the internet. "
@@ -306,6 +333,25 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('in use is the address that answered, never a silent one', (
+      tester,
+    ) async {
+      final (harness, _) = await _pumpForm(
+        tester,
+        profile: _withAway('https://silent.example.net'),
+      );
+
+      await _tap(tester, find.text('Test connection'), harness);
+
+      expect(
+        find.text('At home · nas.home.arpa:7878 · in use'),
+        findsOneWidget,
+      );
+      expect(find.text('Away · silent.example.net'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('neither answers: one red panel naming both', (tester) async {
       final (harness, _) = await _pumpForm(
         tester,
@@ -338,6 +384,226 @@ void main() {
 
       expect(find.text('Radarr answered as expected.'), findsOneWidget);
       expect(find.textContaining('At home ·'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+  });
+  group('the rest of the page', () {
+    testWidgets('a certificate trusted for the address away has its line '
+        'under that address, and is forgotten there', (tester) async {
+      final (harness, container) = await _pumpForm(
+        tester,
+        profile: _withAway('https://radarr.example.net'),
+        before: (container) => container
+            .read(settingsProvider.notifier)
+            .updateSettings(
+              container
+                  .read(settingsProvider)
+                  .copyWithTrustedCertificate(
+                    url: 'https://radarr.example.net',
+                    fingerprint: 'ab' * 32,
+                  ),
+            ),
+      );
+
+      final line = find.text(
+        'Trusted self-signed certificate for radarr.example.net:443.',
+      );
+      expect(line, findsOneWidget);
+      expect(
+        tester.getTopLeft(line).dy,
+        greaterThan(tester.getTopLeft(_field(_away)).dy),
+        reason: 'under the address it belongs to',
+      );
+
+      await _tap(tester, find.text('Forget'), harness);
+      await _tap(tester, find.text('Forget certificate'), harness);
+      expect(
+        container
+            .read(settingsProvider)
+            .pinForUrl('https://radarr.example.net'),
+        isNull,
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('Remove says both addresses go, when there are two', (
+      tester,
+    ) async {
+      final (harness, _) = await _pumpForm(
+        tester,
+        profile: _withAway('https://radarr.example.net'),
+      );
+
+      expect(
+        find.text('Deletes both addresses and credentials'),
+        findsOneWidget,
+      );
+      await _tap(tester, find.text('Remove Radarr'), harness);
+      expect(
+        find.textContaining('This deletes both saved addresses, their access'),
+        findsOneWidget,
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('with one address, Remove says what it always said', (
+      tester,
+    ) async {
+      final (harness, _) = await _pumpForm(tester);
+
+      expect(
+        find.text('Deletes the saved address and credentials'),
+        findsOneWidget,
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('away from home, a connection only at home says so above '
+        'the field that changes it', (tester) async {
+      final (harness, _) = await _pumpForm(
+        tester,
+        overrides: [awayFromHomeProvider.overrideWithValue(true)],
+      );
+
+      expect(find.text(_onlyAtHomeNote), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text(_onlyAtHomeNote)).dy,
+        lessThan(tester.getTopLeft(_field(_away)).dy),
+      );
+
+      final field = tester.getTopLeft(_field(_away)).dy;
+      await _type(tester, _away, 'https://radarr.example.net');
+      expect(
+        tester.getTopLeft(_field(_away)).dy,
+        field,
+        reason: 'the field stays under the caret while it is typed in',
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('at home nothing is said about it', (tester) async {
+      final (harness, _) = await _pumpForm(tester);
+
+      expect(find.text(_onlyAtHomeNote), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('Add an address away opens the form on that field, focused', (
+      tester,
+    ) async {
+      final (harness, _) = await _pumpForm(tester, focusAway: true);
+
+      expect(
+        tester.widget<TextField>(_field(_away)).focusNode!.hasFocus,
+        isTrue,
+      );
+
+      await harness.unmount(tester);
+    });
+    testWidgets('the other connections say their setup and their address', (
+      tester,
+    ) async {
+      final (harness, _) = await _pumpForm(
+        tester,
+        profile: _withAway(
+          'https://radarr.example.net',
+        ).withConnection(WorldConnections.radarr4k),
+      );
+
+      expect(find.text('Home only · nas.home.arpa:7879'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('with no address away anywhere, they say the address alone', (
+      tester,
+    ) async {
+      final (harness, _) = await _pumpForm(
+        tester,
+        profile: Profiles.p3.withConnection(WorldConnections.radarr4k),
+      );
+
+      expect(find.text('nas.home.arpa:7879'), findsOneWidget);
+      expect(find.textContaining('Home only'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('the remedy of a connection only at home opens its form on '
+        'the address away', (tester) async {
+      final harness = await ProfileHarness.start(Profiles.p3);
+      final container = harness.container();
+      Uri? opened;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(
+              body: TextButton(
+                onPressed: () => FailureRemedy.forReason(
+                  ServiceKey.radarr,
+                  ServiceFailureReason.onlyAtHome,
+                  instanceId: WorldIds.radarr,
+                )!.open(context),
+                child: const Text('Add an address away'),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/settings/service/:service',
+            builder: (context, state) {
+              opened = state.uri;
+              return const SizedBox();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.tap(find.text('Add an address away'));
+      await tester.pumpAndSettle();
+
+      expect(
+        opened.toString(),
+        ServiceRoutes.settingsForConnection(
+          ServiceKey.radarr,
+          WorldIds.radarr,
+          away: true,
+        ),
+      );
+      expect(opened!.queryParameters['away'], '1');
+    });
+    testWidgets('a test stopped by a field out of view brings it into view, '
+        'focused', (tester) async {
+      final (harness, _) = await _pumpForm(
+        tester,
+        profile: Profiles.p3.withConnection(WorldConnections.radarr4k),
+      );
+      // A second Radarr asks the first for a name, at the top of the form.
+      final name = _field('Name');
+      expect(tester.widget<TextField>(name).controller!.text, isEmpty);
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -1200),
+      );
+      await tester.pumpAndSettle();
+
+      await _tap(tester, find.text('Test connection'), harness);
+
+      expect(find.text('Give this one a name'), findsOneWidget);
+      expect(tester.widget<TextField>(name).focusNode!.hasFocus, isTrue);
+      expect(tester.getTopLeft(name).dy, greaterThanOrEqualTo(0));
 
       await harness.unmount(tester);
     });

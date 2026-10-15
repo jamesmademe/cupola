@@ -3033,6 +3033,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
             initialAccess: AccessKind.byName(
               state.uri.queryParameters['access'],
             ),
+            focusAway: state.uri.queryParameters['away'] == '1',
             foundFrom: state.uri.queryParameters['from'],
             foundName: state.uri.queryParameters['known'],
           );

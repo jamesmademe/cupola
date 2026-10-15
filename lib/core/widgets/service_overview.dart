@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
@@ -17,6 +18,7 @@ import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/service_only_at_home.dart';
 
 /// The furniture every service Overview is built out of: the identity line, the
 /// section frame, the row, the empty note and the skeleton.
@@ -488,6 +490,69 @@ class _LensChip extends StatelessWidget {
           weight: FontWeight.w600,
           color: serviceOverviewInk(service, colorScheme),
         ),
+      ),
+    );
+  }
+}
+
+/// An Overview's [sections], or the one line that stands for all of them:
+/// away from home, for a lens connection with no address away.
+///
+/// Every section of such a page fails for the same reason, its request
+/// refused before it was sent ([ServiceOnlyAtHome]), and said it in the same
+/// sentence with the same remedy: three times in Seerr's first screen, under
+/// a figure peek of dashes. Said once instead, under the identity line that
+/// already reads `Only at home`, with `Add an address away` as its one
+/// action. A spread rather than a wrapper, so the page's list keeps building
+/// its sections lazily; called from the page's build with its [ref].
+List<Widget> sectionsOrOnlyAtHome(
+  WidgetRef ref,
+  ServiceKey service,
+  List<Widget> sections,
+) {
+  final onlyAtHome = ref.watch(
+    serviceSummaryProvider(
+      service,
+    ).select((summary) => summary.asData?.value.isOnlyAtHome ?? false),
+  );
+  return onlyAtHome ? [ServiceOverviewOnlyAtHome(service: service)] : sections;
+}
+
+/// The one line of an Overview whose connection is reached only at home,
+/// read away from home: see [sectionsOrOnlyAtHome].
+class ServiceOverviewOnlyAtHome extends ConsumerWidget {
+  const ServiceOverviewOnlyAtHome({super.key, required this.service});
+
+  final ServiceKey service;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final instance = ref.watch(activeInstanceProvider(service));
+    // The connection by its name when there are two: the other Radarr may
+    // well have an address away.
+    final name =
+        (ref.watch(hasMultipleInstancesProvider(service)) && instance != null
+            ? ref.watch(connectionNameProvider(instance.id))
+            : null) ??
+        service.title;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      // On the page column, its glyph under the identity line's first fact.
+      child: InlineErrorRetry.flush(
+        message:
+            '$name has no address away, so Cupola reaches it only on your '
+            'home Wi-Fi.',
+        error: ServiceOnlyAtHome(service),
+        service: service,
+        instanceId: instance?.id,
+        // Never offered: the same request is refused again until the app is
+        // home, or the connection has an address away.
+        onRetry: () {},
       ),
     );
   }

@@ -155,20 +155,22 @@ class _OverviewBody extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.nginxProxyManager),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
-            accent: ServiceKey.nginxProxyManager.accent,
-          ),
-          // Above every section, in this order: a box that still answers to
-          // `changeme` outranks anything a section could say, and the band that
-          // explains an attenuated control has to be readable before the
-          // control is reached.
-          const NpmDefaultAdminWarning(),
-          const NpmCapabilityBannerSlot(),
-          const SizedBox(height: AppSpacing.sm),
-          const _NeedsAttentionSection(),
-          const _ProxyHostsSection(),
-          const _CertificatesSection(),
+          ...sectionsOrOnlyAtHome(ref, ServiceKey.nginxProxyManager, [
+            ServiceKpiPeek(
+              kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
+              accent: ServiceKey.nginxProxyManager.accent,
+            ),
+            // Above every section, in this order: a box that still answers to
+            // `changeme` outranks anything a section could say, and the band
+            // that explains an attenuated control has to be readable before the
+            // control is reached.
+            const NpmDefaultAdminWarning(),
+            const NpmCapabilityBannerSlot(),
+            const SizedBox(height: AppSpacing.sm),
+            const _NeedsAttentionSection(),
+            const _ProxyHostsSection(),
+            const _CertificatesSection(),
+          ]),
         ],
       ),
     );

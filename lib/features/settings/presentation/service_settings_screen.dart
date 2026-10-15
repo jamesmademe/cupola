@@ -89,6 +89,10 @@ class ServiceSettingsScreen extends ConsumerStatefulWidget {
   /// its Access row, with this choice made when the connection has none yet.
   final AccessKind? initialAccess;
 
+  /// Opens on the address away, focused: the remedy of a connection only at
+  /// home (`Add an address away`), whose fix is that field.
+  final bool focusAway;
+
   /// A server another connection knows, to add: the connection that knows it
   /// ([foundFrom], a Seerr or a Prowlarr) and the name it gives it
   /// ([foundName]). The form asks that connection again and fills in what it
@@ -104,6 +108,7 @@ class ServiceSettingsScreen extends ConsumerStatefulWidget {
     this.certificateProber = probeUntrustedCertificate,
     this.localNetworkProbe = probeLocalNetworkAccess,
     this.initialAccess,
+    this.focusAway = false,
     this.foundFrom,
     this.foundName,
   });
@@ -139,8 +144,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   late SeerrSignInWith _initialSignInWith;
   final _urlFocus = FocusNode();
   final _awayFocus = FocusNode();
+  final _labelFocus = FocusNode();
+  final _usernameFocus = FocusNode();
+  final _credentialFocus = FocusNode();
+  final _passwordFocus = FocusNode();
   final _urlFieldKey = GlobalKey<FormFieldState<String>>();
   final _awayFieldKey = GlobalKey<FormFieldState<String>>();
+  final _labelFieldKey = GlobalKey<FormFieldState<String>>();
+  final _usernameFieldKey = GlobalKey<FormFieldState<String>>();
+  final _credentialFieldKey = GlobalKey<FormFieldState<String>>();
+  final _passwordFieldKey = GlobalKey<FormFieldState<String>>();
   final _accessKey = GlobalKey();
   final _awayAccessKey = GlobalKey();
 
@@ -243,7 +256,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       initial: _initialAwayAccess,
       preselect: remedyAway ? widget.initialAccess : null,
     )..addListener(_onFieldChanged);
-    if (widget.initialAccess != null) {
+    if (widget.focusAway) {
+      // Opened by `Add an address away`: the fix is the empty field.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final field = _awayFieldKey.currentContext;
+        if (field == null || !field.mounted) return;
+        Scrollable.ensureVisible(field, alignment: 0.3);
+        _awayFocus.requestFocus();
+      });
+    } else if (widget.initialAccess != null) {
       // Opened by a gateway's remedy: the fix is on the Access row.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final row = (remedyAway ? _awayAccessKey : _accessKey).currentContext;
@@ -414,6 +435,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     }
     _urlFocus.dispose();
     _awayFocus.dispose();
+    _labelFocus.dispose();
+    _usernameFocus.dispose();
+    _credentialFocus.dispose();
+    _passwordFocus.dispose();
     _urlController.dispose();
     _awayController.dispose();
     _apiKeyController.dispose();
@@ -436,7 +461,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   Future<void> _testConnection() async {
     if (_testing || _saving) return;
     if (!_formKey.currentState!.validate()) {
-      _revealRefusal();
+      _revealFirstProblem();
       return;
     }
     _liftCredentialsFromAddress();
@@ -639,7 +664,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   Future<void> _saveSettings() async {
     if (_saving) return;
     if (!_formKey.currentState!.validate()) {
-      _revealRefusal();
+      _revealFirstProblem();
       return;
     }
     _liftCredentialsFromAddress();
@@ -799,26 +824,32 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
   }
 
-  /// After a test or a save the form refused: an address refused for
-  /// `http://` is the one the person may not see, under the keyboard or above
-  /// the fold. Brought into view with the caret in it, so its words are read
-  /// out where the fix is.
-  void _revealRefusal() {
-    final (key, focus) = cleartextRefusal(service, _urlController.text) != null
-        ? (_urlFieldKey, _urlFocus)
-        : cleartextRefusal(service, _awayController.text, optional: true) !=
-              null
-        ? (_awayFieldKey, _awayFocus)
-        : (null, null);
-    final field = key?.currentContext;
-    if (field == null || !field.mounted) return;
-    Scrollable.ensureVisible(
-      field,
-      alignment: 0.3,
-      duration: AppAnimation.durationMd,
-      curve: AppAnimation.standardCurve,
-    );
-    focus!.requestFocus();
+  /// Brings the first field the last validation refused into view, focused,
+  /// in the order the form draws them. A Test or a Save that stopped on a
+  /// field off screen did nothing anyone could see: a second Radarr's empty
+  /// Name sat above the fold while Test connection looked dead, and an
+  /// address refused for `http://` sat above a Save that only dimmed.
+  void _revealFirstProblem() {
+    for (final (key, focus) in [
+      (_labelFieldKey, _labelFocus),
+      (_urlFieldKey, _urlFocus),
+      (_awayFieldKey, _awayFocus),
+      (_usernameFieldKey, _usernameFocus),
+      (_credentialFieldKey, _credentialFocus),
+      (_passwordFieldKey, _passwordFocus),
+    ]) {
+      final field = key.currentContext;
+      if (!(key.currentState?.hasError ?? false)) continue;
+      if (field == null || !field.mounted) continue;
+      Scrollable.ensureVisible(
+        field,
+        alignment: 0.3,
+        duration: AppAnimation.durationMd,
+        curve: AppAnimation.standardCurve,
+      );
+      focus.requestFocus();
+      return;
+    }
   }
 
   /// Whether either address is refused for `http://` as it stands.
@@ -827,13 +858,17 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       cleartextRefusal(service, _awayController.text, optional: true) != null;
 
   Future<void> _removeConnection() async {
+    final saved = ref.read(currentSettingsProvider).instanceById(_target.id);
+    final what = saved?.away == null
+        ? 'the saved address and credentials'
+        : 'both saved addresses, their access and the credentials';
     final result = await showAppConfirmDialog(
       context: context,
       icon: Icons.link_off_rounded,
       title: 'Remove ${service.title}?',
       message:
-          'This deletes the saved address and credentials for ${service.title}. '
-          'Nothing on the server itself is touched. This cannot be undone.',
+          'This deletes $what for ${service.title}. Nothing on the server '
+          'itself is touched. This cannot be undone.',
       confirmLabel: 'Remove ${service.title}',
     );
     if (!result.confirmed || !mounted) return;
@@ -941,132 +976,151 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
+        // Every field built, never lazily: a Form validates only the fields
+        // that exist, and a list builds only what is near the screen, so a
+        // second Radarr's empty Name above the fold was skipped and saved.
+        child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
             AppSpacing.sm,
             AppSpacing.lg,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
-          children: [
-            _buildHeader(
-              context,
-              isConfigured: isConfigured,
-              isSignedOut: isSignedOut,
-              unreadSecret: unreadSecret,
-            ),
-            // Setup guidance is registry data, alongside the default port and
-            // the credential breadcrumb this screen already reads from there.
-            if (_found case final found?) ...[
-              const SizedBox(height: AppSpacing.md),
-              _buildInfoNote(context, _foundNote(found)),
-            ],
-            if (service.setupNote case final note?) ...[
-              const SizedBox(height: AppSpacing.md),
-              _buildInfoNote(context, note),
-            ],
-            const SizedBox(height: AppSpacing.xl),
-            // Before the address on purpose: name the thing, then say where it
-            // lives. By the time someone is here for a second connection they
-            // are already thinking "these two are different"; that is the
-            // moment the name costs nothing to give.
-            if (_needsLabel(settings)) ...[
-              _buildLabelField(settings),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            _buildAddressField(away: false),
-            _buildTrustedCertificateIndicator(settings),
-            // Under the address, above who you are: a gateway answers before
-            // the service does, so its token is part of reaching the address.
-            // Below the credentials it sat under a Seerr account's Continue,
-            // which signs in through that gateway and failed before the
-            // token field was in view. One under each address: the gateway in
-            // front of the address away is rarely the one at home.
-            const SizedBox(height: AppSpacing.sm),
-            _buildAccessRow(away: false),
-            const SizedBox(height: AppSpacing.xl),
-            _buildAddressField(away: true),
-            if (_hasAway) ...[
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(
+                context,
+                isConfigured: isConfigured,
+                isSignedOut: isSignedOut,
+                unreadSecret: unreadSecret,
+              ),
+              // Setup guidance is registry data, alongside the default port and
+              // the credential breadcrumb this screen already reads from there.
+              if (_found case final found?) ...[
+                const SizedBox(height: AppSpacing.md),
+                _buildInfoNote(context, _foundNote(found)),
+              ],
+              if (service.setupNote case final note?) ...[
+                const SizedBox(height: AppSpacing.md),
+                _buildInfoNote(context, note),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              // Before the address on purpose: name the thing, then say where it
+              // lives. By the time someone is here for a second connection they
+              // are already thinking "these two are different"; that is the
+              // moment the name costs nothing to give.
+              if (_needsLabel(settings)) ...[
+                _buildLabelField(settings),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+              _buildAddressField(away: false),
+              _buildTrustedCertificateIndicator(settings, away: false),
+              // Under the address, above who you are: a gateway answers before
+              // the service does, so its token is part of reaching the address.
+              // Below the credentials it sat under a Seerr account's Continue,
+              // which signs in through that gateway and failed before the
+              // token field was in view. One under each address: the gateway in
+              // front of the address away is rarely the one at home.
               const SizedBox(height: AppSpacing.sm),
-              _buildAccessRow(away: true),
-            ],
-            const SizedBox(height: AppSpacing.xl),
-            if (service == ServiceKey.seerr) ...[
-              _buildSignInWithChoice(),
-              const SizedBox(height: AppSpacing.md),
-            ],
-            if (_signsInWithAccount)
-              SeerrAccountFields(
-                connection: _formConnection,
-                certificateProber: widget.certificateProber,
-                onUseApiKey: () =>
-                    setState(() => _signInWith = SeerrSignInWith.apiKey),
-                onCheckAddress: _urlFocus.requestFocus,
-                onUseHttps: _useHttps,
-              )
-            else if (usesCredentials)
-              _buildUsernameField()
-            else
-              _buildApiKeyField(),
-            if (usesCredentials) ...[
-              const SizedBox(height: AppSpacing.lg),
-              _buildPasswordField(),
-            ],
-            const SizedBox(height: AppSpacing.xl),
-            // An account not signed in yet has nothing to test: signing in
-            // is its test.
-            if (!_signsInWithAccount || (saved?.account?.isSignedIn ?? false))
-              _buildTestConnectionRow(context),
-            if (_testResult != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              _buildTestResults(context, settings),
-            ],
-            if (_shareCandidates.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
-              _buildShareOffer(context),
-            ],
-            // Directly under the connection test, because the ceiling is a
-            // property of *this instance's path*: a stack can easily have Sonarr
-            // behind a proxy and Radarr direct over Tailscale.
-            if (SearchHeadroomCard.appliesTo(widget.service)) ...[
-              const SizedBox(height: AppSpacing.lg),
-              SearchHeadroomCard(service: widget.service),
-            ],
-            // A capability check, the same shape as `appliesTo` two lines up:
-            // the picker belongs to any service whose library has to be entered
-            // through a person, not to "Jellyfin" by name. Only once a
-            // connection exists, because the viewer list comes from `/Users` on
-            // the server. Offering it before there is a server to ask would be
-            // a control that can only fail.
-            // Bound to the connection this form edits. Read and written through
-            // the service's flat projection, it listed the users of *this*
-            // server and saved the chosen one onto the FIRST connection;
-            // leaving that server pointed at a user id from a different user
-            // table, which is the exact failure `ServiceInstance.viewerId`
-            // exists to prevent.
-            if (service.needsViewerSelection && isConfigured) ...[
+              _buildAccessRow(away: false),
+              const SizedBox(height: AppSpacing.xl),
+              // Away from home, a connection with no address away is reached
+              // only on the home network: said here, above the field that
+              // changes it, and nowhere as a fault.
+              if (_onlyAtHomeNow(saved)) ...[
+                _buildInfoNote(
+                  context,
+                  '${service.title} has no address away, so Cupola reaches it '
+                  'only on your home Wi-Fi.',
+                  icon: Icons.home_rounded,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+              _buildAddressField(away: true),
+              _buildTrustedCertificateIndicator(settings, away: true),
+              if (_hasAway) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _buildAccessRow(away: true),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              if (service == ServiceKey.seerr) ...[
+                _buildSignInWithChoice(),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              if (_signsInWithAccount)
+                SeerrAccountFields(
+                  connection: _formConnection,
+                  certificateProber: widget.certificateProber,
+                  onUseApiKey: () =>
+                      setState(() => _signInWith = SeerrSignInWith.apiKey),
+                  onCheckAddress: _urlFocus.requestFocus,
+                  onUseHttps: _useHttps,
+                )
+              else if (usesCredentials)
+                _buildUsernameField()
+              else
+                _buildApiKeyField(),
+              if (usesCredentials) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _buildPasswordField(),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              // An account not signed in yet has nothing to test: signing in
+              // is its test.
+              if (!_signsInWithAccount || (saved?.account?.isSignedIn ?? false))
+                _buildTestConnectionRow(context),
+              if (_testResult != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                _buildTestResults(context, settings),
+              ],
+              if (_shareCandidates.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _buildShareOffer(context),
+              ],
+              // Directly under the connection test, because the ceiling is a
+              // property of *this instance's path*: a stack can easily have Sonarr
+              // behind a proxy and Radarr direct over Tailscale.
+              if (SearchHeadroomCard.appliesTo(widget.service)) ...[
+                const SizedBox(height: AppSpacing.lg),
+                SearchHeadroomCard(service: widget.service),
+              ],
+              // A capability check, the same shape as `appliesTo` two lines up:
+              // the picker belongs to any service whose library has to be entered
+              // through a person, not to "Jellyfin" by name. Only once a
+              // connection exists, because the viewer list comes from `/Users` on
+              // the server. Offering it before there is a server to ask would be
+              // a control that can only fail.
+              // Bound to the connection this form edits. Read and written through
+              // the service's flat projection, it listed the users of *this*
+              // server and saved the chosen one onto the FIRST connection;
+              // leaving that server pointed at a user id from a different user
+              // table, which is the exact failure `ServiceInstance.viewerId`
+              // exists to prevent.
+              if (service.needsViewerSelection && isConfigured) ...[
+                const SizedBox(height: AppSpacing.xxl),
+                JellyfinViewerPicker(instanceId: _target.id),
+              ],
+              // Phones only: the app a Jellyfin title plays in, or asked each time.
+              if (service == ServiceKey.jellyfin && playsOnPhone()) ...[
+                const SizedBox(height: AppSpacing.xxl),
+                _buildPlayWithRow(),
+              ],
+              // How the operator adds a title nobody holds: Seerr's connection
+              // only, and the operator's own (the requester adds nothing).
+              if (service == ServiceKey.seerr &&
+                  ref.watch(audienceProvider) == Audience.operator) ...[
+                const SizedBox(height: AppSpacing.xxl),
+                _buildAddingChoice(),
+              ],
               const SizedBox(height: AppSpacing.xxl),
-              JellyfinViewerPicker(instanceId: _target.id),
+              _buildConnectionsSection(context, settings),
+              if (isConfigured || isSignedOut || unreadSecret != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _buildRemoveRow(context, twoAddresses: saved?.away != null),
+              ],
             ],
-            // Phones only: the app a Jellyfin title plays in, or asked each time.
-            if (service == ServiceKey.jellyfin && playsOnPhone()) ...[
-              const SizedBox(height: AppSpacing.xxl),
-              _buildPlayWithRow(),
-            ],
-            // How the operator adds a title nobody holds: Seerr's connection
-            // only, and the operator's own (the requester adds nothing).
-            if (service == ServiceKey.seerr &&
-                ref.watch(audienceProvider) == Audience.operator) ...[
-              const SizedBox(height: AppSpacing.xxl),
-              _buildAddingChoice(),
-            ],
-            const SizedBox(height: AppSpacing.xxl),
-            _buildConnectionsSection(context, settings),
-            if (isConfigured || isSignedOut || unreadSecret != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              _buildRemoveRow(context),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -1307,11 +1361,19 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final home = _testResult!;
     final away = _awayTestResult;
     if (away == null) return _buildTestResult(context, home);
-    final inUse = _routeInUse(settings);
     final homeSilent = _isSilent(home);
     final awaySilent = _isSilent(away);
     // Neither answered: no address is in use, whatever the route last said.
     if (homeSilent && awaySilent) return _buildBothSilent(context);
+    // In use is what the test just saw, the way the route chooses: home when
+    // it answers, away when only away does. The route itself moves on its
+    // own clock, and an `in use` beside an address that did not answer here
+    // contradicted the panel it stood in.
+    final inUse = _routeInUse(settings) == null
+        ? null
+        : homeSilent
+        ? ConnectionRoute.away
+        : ConnectionRoute.home;
     Widget one(ServiceDiagnosis result, ConnectionRoute route, bool silent) =>
         // An address that did not answer while the other did is not a fault
         // of the fields: from here it could not be reached, which is what an
@@ -1336,7 +1398,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// The address the saved connection is reached at now, while the form
   /// still shows what is saved; null once an edit makes the fields another
-  /// connection, or when there is only one address to be at.
+  /// connection, or when there is only one address to be at. After a test,
+  /// [_buildTestResults] says it from what the test saw.
   ConnectionRoute? _routeInUse(SettingsModel settings) {
     if (_isDirty || settings.instanceById(_target.id)?.away == null) {
       return null;
@@ -1586,6 +1649,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   Widget _buildLabelField(SettingsModel settings) {
     return TextFormField(
+      key: _labelFieldKey,
+      focusNode: _labelFocus,
       controller: _labelController,
       textInputAction: TextInputAction.next,
       decoration: InputDecoration(
@@ -1644,7 +1709,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                     (sibling.label.trim().isEmpty
                         ? service.title
                         : sibling.label.trim()),
-                subtitle: service.extractHost(sibling.url) ?? 'No address yet',
+                subtitle: _siblingLine(settings, sibling),
                 accentColor: service.accent,
                 semanticHint: 'edits that ${service.title} connection',
                 onTap: () => context.push(
@@ -1666,7 +1731,20 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
   }
 
-  Widget _buildRemoveRow(BuildContext context) {
+  /// A sibling's line two: its setup and the address in use
+  /// (`Home and away · radarr.example.net`), the setup said once any
+  /// connection has an address away, the same rule as Connections.
+  String _siblingLine(SettingsModel settings, ServiceInstance sibling) {
+    final inUse = service.extractHost(
+      ref.watch(connectionReachProvider(sibling.id))?.url ?? sibling.url,
+    );
+    if (inUse == null) return 'No address yet';
+    if (!settings.instances.any((i) => i.away != null)) return inUse;
+    final setup = sibling.away != null ? Lexicon.homeAndAway : Lexicon.homeOnly;
+    return '$setup · $inUse';
+  }
+
+  Widget _buildRemoveRow(BuildContext context, {required bool twoAddresses}) {
     return SettingsGroupCard(
       children: [
         // The row's default accent, like every other settings row: red means
@@ -1674,7 +1752,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         SettingsCard.grouped(
           leading: const Icon(Icons.link_off_rounded),
           title: 'Remove ${service.title}',
-          subtitle: 'Deletes the saved address and credentials',
+          subtitle: twoAddresses
+              ? 'Deletes both addresses and credentials'
+              : 'Deletes the saved address and credentials',
           onTap: _removeConnection,
         ),
       ],
@@ -1725,7 +1805,21 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               'Paste its key, test it, then save.';
   }
 
-  Widget _buildInfoNote(BuildContext context, String message) {
+  /// Whether the app is away from home and this saved connection, with no
+  /// address away, is reached only at home: `Only at home`, whose fix is the
+  /// address away. True until one is saved, so the note does not fold away
+  /// at the first letter typed and pull the field out from under the caret.
+  bool _onlyAtHomeNow(ServiceInstance? saved) =>
+      saved != null &&
+      saved.isConfigured &&
+      saved.away == null &&
+      ref.watch(awayFromHomeProvider);
+
+  Widget _buildInfoNote(
+    BuildContext context,
+    String message, {
+    IconData icon = Icons.info_outline_rounded,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return Container(
@@ -1738,11 +1832,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline_rounded,
-            size: 18,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
@@ -1877,16 +1967,21 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   );
 
   /// A standing confirmation that this address's origin has a trusted
-  /// self-signed certificate, with a way to revoke it.
+  /// self-signed certificate, with a way to revoke it: the address at home's,
+  /// or ([away]) the one away's. Each address is trusted on its own, because
+  /// a certificate belongs to its host, so each has its line under it.
   ///
-  /// Rebuilds on every keystroke of the URL field. [settings] is captured
+  /// Rebuilds on every keystroke of the address field. [settings] is captured
   /// from the enclosing build, but the origin a trust decision applies to
   /// depends on what is actually typed, which the saved value may no longer
   /// match. Renders nothing for the overwhelming majority of services, which
   /// reach a certificate the OS already trusts and have never pinned one.
-  Widget _buildTrustedCertificateIndicator(SettingsModel settings) {
+  Widget _buildTrustedCertificateIndicator(
+    SettingsModel settings, {
+    required bool away,
+  }) {
     return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: _urlController,
+      valueListenable: away ? _awayController : _urlController,
       builder: (context, value, _) {
         final rawUrl = value.text;
         final pin = settings.pinForUrl(rawUrl);
@@ -2063,6 +2158,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       label: service.credentialLabel,
       hint: isPlex ? 'Enter a Plex device token' : 'Enter the API key',
       child: TextFormField(
+        key: _credentialFieldKey,
+        focusNode: _credentialFocus,
         controller: _apiKeyController,
         decoration: InputDecoration(
           labelText: service.credentialLabel,
@@ -2123,6 +2220,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           ? 'Enter the email you sign in with'
           : 'Optional',
       child: TextFormField(
+        key: _usernameFieldKey,
+        focusNode: _usernameFocus,
         controller: _usernameController,
         decoration: InputDecoration(
           labelText: service.usernameLabel,
@@ -2147,6 +2246,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       label: 'Password',
       hint: 'Optional',
       child: TextFormField(
+        key: _passwordFieldKey,
+        focusNode: _passwordFocus,
         controller: _passwordController,
         decoration: const InputDecoration(
           labelText: 'Password',

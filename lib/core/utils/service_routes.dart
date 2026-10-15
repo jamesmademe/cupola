@@ -769,9 +769,11 @@ class ServiceRoutes {
     ServiceKey service,
     String connectionId, {
     AccessKind? access,
+    bool away = false,
   }) => _withQuery(settingsFor(service), {
     'i': connectionId,
     'access': access?.name,
+    'away': away ? '1' : null,
   });
 
   static String _withQuery(String path, Map<String, String?> queryParameters) {

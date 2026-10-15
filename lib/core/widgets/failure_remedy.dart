@@ -103,13 +103,19 @@ class FailureRemedy {
     BuildContext context,
     ServiceKey service, {
     AccessKind? access,
+    bool away = false,
   }) {
     final lens = ProviderScope.containerOf(
       context,
       listen: false,
     ).read(activeInstanceProvider(service))?.id;
     context.push(
-      ServiceRoutes.settingsForConnection(service, lens ?? '', access: access),
+      ServiceRoutes.settingsForConnection(
+        service,
+        lens ?? '',
+        access: access,
+        away: away,
+      ),
     );
   }
 
@@ -149,14 +155,21 @@ class FailureRemedy {
 
   /// Applies the remedy: opens the connection form where the fix lives, the
   /// named connection's when there is one and the lens's otherwise, on its
-  /// Access row for a gateway.
+  /// Access row for a gateway and on its empty address away for a
+  /// connection only at home.
   void open(BuildContext context) {
     final named = instanceId;
+    final away = reason == ServiceFailureReason.onlyAtHome;
     if (named == null || named.isEmpty) {
-      openConnectionForm(context, service, access: access);
+      openConnectionForm(context, service, access: access, away: away);
     } else {
       context.push(
-        ServiceRoutes.settingsForConnection(service, named, access: access),
+        ServiceRoutes.settingsForConnection(
+          service,
+          named,
+          access: access,
+          away: away,
+        ),
       );
     }
   }

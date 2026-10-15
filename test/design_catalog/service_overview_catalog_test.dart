@@ -20,6 +20,7 @@ import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -314,7 +315,11 @@ Widget _radarr(
   Widget child, {
   String? version = '5.14.0',
   SettingsModel settings = _oneRadarr,
+  bool away = false,
 }) => _Isolated([
+  // Away from home: a connection with no address away is reached only at
+  // home, and asked nothing.
+  if (away) awayFromHomeProvider.overrideWithValue(true),
   sharedPreferencesProvider.overrideWithValue(_prefs),
   secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
   initialSettingsProvider.overrideWithValue(settings),
@@ -387,6 +392,18 @@ void main() {
         ),
         width: 390,
         height: 420,
+      ),
+      CatalogScene(
+        'RadarrOverviewScreen · away from home, a connection with no address '
+        'away · Only at home on the identity line, then one line for the whole '
+        'page with Add an address away in ink, never one per section',
+        (_) => _radarr(
+          _ScriptedRadarr(),
+          const RadarrOverviewScreen(topPadding: 0),
+          away: true,
+        ),
+        width: 390,
+        height: 260,
       ),
       CatalogScene(
         'RadarrOverviewScreen · loading · Checking, row skeletons and a — '
