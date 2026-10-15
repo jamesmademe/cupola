@@ -20,6 +20,7 @@ export 'content_card.dart';
 export 'service_kpi_peek.dart';
 export 'service_overview.dart';
 export 'setup_doors.dart';
+export 'qr_code_view.dart';
 export 'service_tab_bar.dart';
 export 'service_ring.dart';
 

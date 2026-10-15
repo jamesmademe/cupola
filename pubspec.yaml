@@ -64,7 +64,7 @@ dependencies:
   # belongs (`lib/core/last_known/last_known_store.dart`).
   path_provider: ^2.1.5
   # The QR of an invite (P-t2-7-qr): encoding only, pure Dart. The code is
-  # drawn by Cupola's own painter (`lib/core/widgets/qr_code.dart`).
+  # drawn by Cupola's own painter (`lib/core/widgets/qr_code_view.dart`).
   qr: ^3.0.2
   infinite_scroll_pagination: ^5.1.1
   url_launcher: ^6.3.2

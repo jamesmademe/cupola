@@ -50,7 +50,9 @@ cards live in [`../motion/`](../motion/).
 | Loading | [Skeleton](Skeleton/README.md) | `lib/core/widgets/shimmer_placeholder.dart`, `lib/core/widgets/app_skeleton.dart`, `lib/core/widgets/list_rows_shimmer.dart` |
 | Overlays | [AppBottomSheet](AppBottomSheet/README.md) | `lib/core/widgets/app_bottom_sheet.dart`, `lib/core/utils/sheet_utils.dart` |
 | Overlays | [AppDialog](AppDialog/README.md) | `lib/core/widgets/app_dialog.dart` |
+| Overlays | [InviteSheet](InviteSheet/README.md) | `lib/features/settings/presentation/widgets/invite_sheet.dart`, `lib/features/discover/domain/seerr_invite.dart` |
 | Forms | [TextField](TextField/README.md) | `lib/core/theme.dart` |
+| Forms | [QrCodeView](QrCodeView/README.md) | `lib/core/widgets/qr_code_view.dart` |
 | Iconography | [ServiceGlyphs](ServiceGlyphs/README.md) | `lib/core/service_glyphs.dart`, `lib/features/settings/domain/service_key.dart` |
 | Home | [HomeModule](HomeModule/README.md) | `lib/features/home/presentation/widgets/home_module_frame.dart`, `lib/features/home/presentation/widgets/needs_you_banner.dart`, `lib/features/home/presentation/widgets/set_up_next_module.dart`, `lib/features/home/presentation/widgets/downloads_module.dart`, `lib/features/home/presentation/widgets/requests_module.dart`, `lib/features/home/presentation/widgets/now_playing_module.dart`, `lib/features/home/presentation/widgets/continue_watching_module.dart`, `lib/features/home/presentation/widgets/coming_up_module.dart`, `lib/features/home/presentation/widgets/arrived_module.dart` |
 | Home | [FeaturedPager](FeaturedPager/README.md) | `lib/features/home/presentation/widgets/featured_pager.dart`, `lib/features/home/presentation/widgets/featured_module.dart` |

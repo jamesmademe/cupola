@@ -10,7 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/platform/browser_opener.dart';
 import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/core/widgets/qr_code_view.dart';
 import 'package:cupola/features/media/domain/operator_adds_via.dart';
+import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
@@ -18,6 +21,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
+import 'package:cupola/features/settings/presentation/widgets/invite_sheet.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 import '../../../test_helpers/profiles/fakes/seerr_sessions.dart'
@@ -49,6 +53,8 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _pumpForm(
   WidgetTester tester,
   ConfigProfile profile, {
   String instanceId = WorldIds.seerr,
+  ServiceKey service = ServiceKey.seerr,
+  bool isNew = false,
 }) async {
   final browser = _Browser();
   final harness = await ProfileHarness.start(
@@ -65,8 +71,9 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _pumpForm(
       child: MaterialApp(
         theme: AppTheme.darkTheme(),
         home: ServiceSettingsScreen(
-          service: ServiceKey.seerr,
+          service: service,
           instanceId: instanceId,
+          isNew: isNew,
           certificateProber: (_, {pinnedFingerprint = ''}) async => null,
           localNetworkProbe: (_, {timeout = Duration.zero}) async =>
               LocalNetworkAccess.unrestricted,
@@ -132,6 +139,95 @@ void main() {
       container.read(sharedPreferencesProvider).getString('operator_adds_via'),
       'arr',
     );
+  });
+
+  group('Invite someone', () {
+    testWidgets('the operator\'s Seerr, signed in with its key, offers it, '
+        'and it opens that connection\'s invite', (tester) async {
+      final (harness, container, _) = await _pumpForm(tester, Profiles.p1);
+
+      expect(find.text('Invite someone'), findsOneWidget);
+      expect(
+        find.text('A QR or a link to sign in with their own account'),
+        findsOneWidget,
+      );
+      // After the choice of how a title is added, not before it.
+      expect(
+        tester.getTopLeft(find.text('Invite someone')).dy,
+        greaterThan(tester.getTopLeft(find.text('Adding a title')).dy),
+      );
+
+      await _tap(tester, harness, find.text('Invite someone'));
+
+      expect(find.byType(InviteSheet), findsOneWidget);
+      final qr = tester.widget<QrCodeView>(find.byType(QrCodeView));
+      expect(
+        SeerrInvite.tryParse(qr.data)?.home,
+        UrlUtils.normalizeBaseUrl(_saved(container).url),
+        reason: 'the invite of this connection, as it is saved',
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a Seerr signed in with an account has no invite to hand on', (
+      tester,
+    ) async {
+      // The operator\'s own account at a friend\'s Seerr (P9): the app is the
+      // operator\'s, the connection is an account.
+      final (harness, container, _) = await _pumpForm(
+        tester,
+        Profiles.p9,
+        instanceId: WorldIds.seerrFriend,
+      );
+
+      expect(
+        container
+            .read(currentSettingsProvider)
+            .instanceById(WorldIds.seerrFriend)!
+            .account,
+        isNotNull,
+      );
+      expect(find.text('Adding a title'), findsOneWidget);
+      expect(find.text('Invite someone'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a requester\'s app has none', (tester) async {
+      final (harness, _, _) = await _pumpForm(tester, Profiles.p2);
+
+      expect(find.text('Invite someone'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a Seerr not set up yet has none', (tester) async {
+      final (harness, _, _) = await _pumpForm(
+        tester,
+        Profiles.p1,
+        instanceId: 'seerr-new00001',
+        isNew: true,
+      );
+
+      expect(find.text('Adding a title'), findsOneWidget);
+      expect(find.text('Invite someone'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('another service has none', (tester) async {
+      final (harness, _, _) = await _pumpForm(
+        tester,
+        Profiles.p1,
+        service: ServiceKey.radarr,
+        instanceId: WorldIds.radarr,
+      );
+
+      expect(find.text('Invite someone'), findsNothing);
+
+      await harness.unmount(tester);
+    });
   });
 
   testWidgets('a requester is offered no choice of how a title is added', (

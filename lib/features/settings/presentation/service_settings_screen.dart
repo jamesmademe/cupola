@@ -51,6 +51,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_dialog.dart';
 import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
+import 'package:cupola/features/settings/presentation/widgets/invite_sheet.dart';
 import 'package:cupola/features/settings/presentation/widgets/seerr_account_fields.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -1112,6 +1113,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                   ref.watch(audienceProvider) == Audience.operator) ...[
                 const SizedBox(height: AppSpacing.xxl),
                 _buildAddingChoice(),
+                // An invite is for the one who runs the Seerr, made from a
+                // connection that signs in with the key: an account is a
+                // household member's, with nothing to hand on.
+                if (saved != null && isConfigured && saved.account == null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  _buildInviteRow(saved.id),
+                ],
               ],
               const SizedBox(height: AppSpacing.xxl),
               _buildConnectionsSection(context, settings),
@@ -2081,6 +2089,18 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       subtitle: chosen?.label ?? 'Ask every time',
       semanticHint: 'chooses the app a Jellyfin title plays in',
       onTap: () => chooseStreamPlayer(context, ref),
+    );
+  }
+
+  /// Hands a household member the way into this Seerr: a QR and a link, in a
+  /// sheet.
+  Widget _buildInviteRow(String connectionId) {
+    return SettingsCard.grouped(
+      leading: const Icon(Icons.qr_code_2_rounded),
+      title: 'Invite someone',
+      subtitle: 'A QR or a link to sign in with their own account',
+      semanticHint: 'shows an invite to this Seerr',
+      onTap: () => showInviteSheet(context, connectionId: connectionId),
     );
   }
 
