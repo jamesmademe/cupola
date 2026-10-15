@@ -154,10 +154,10 @@ void main() {
   ) async {
     // The regression this section was written against and still had: the
     // library fetch degraded to `[]`, the provider resolved *successfully*, and
-    // the header printed "0 series" over "Nothing airing this week", under an
-    // identity band that its own probe had already marked Unreachable. The
-    // confident claim was the fabricated one.
-    await _pump(tester, service: _scripted(libraryThrows: true), version: null);
+    // the header printed "0 series" over "Nothing airing this week". The
+    // confident claim was the fabricated one. The server answers its probe
+    // here: one that did not answer says it once, for the whole page.
+    await _pump(tester, service: _scripted(libraryThrows: true));
 
     expect(_subtitleOf(tester, 'Airing this week'), 'next 7 days · —');
     expect(find.text('Nothing airing this week'), findsNothing);

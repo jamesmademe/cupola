@@ -509,15 +509,20 @@ class _LensChip extends StatelessWidget {
 ///    with `Add an address away` as its one action;
 ///  * for a lens connection neither of whose addresses answered the route
 ///    probe ([ServiceFailureReason.unreachableAtBoth]): the red names both
-///    addresses once, and its Retry knocks at both.
+///    addresses once, and its Retry knocks at both;
+///  * for a lens connection that did not answer at the one address it has
+///    ([ServiceFailureReason.unreachable]): the red names it once. Not for a
+///    page that already says it once on its own ([ownSilence]: Stream's
+///    offline state, drawn when its own reads failed).
 ///
 /// A spread rather than a wrapper, so the page's list keeps building its
 /// sections lazily; called from the page's build with its [ref].
 List<Widget> sectionsOrOneLine(
   WidgetRef ref,
   ServiceKey service,
-  List<Widget> sections,
-) {
+  List<Widget> sections, {
+  bool ownSilence = false,
+}) {
   final reason = ref.watch(
     serviceSummaryProvider(
       service,
@@ -530,18 +535,31 @@ List<Widget> sectionsOrOneLine(
     ServiceFailureReason.unreachableAtBoth => [
       ServiceOverviewUnanswered(service: service),
     ],
+    ServiceFailureReason.unreachable when !ownSilence => [
+      ServiceOverviewUnanswered.atItsAddress(service: service),
+    ],
     _ => sections,
   };
 }
 
-/// The one line of an Overview whose lens connection answered at neither of
-/// its addresses: `Radarr did not answer at home or away`, then where, one
-/// address a line. Red, and its Retry (a ghost in ink) asks both again
-/// (`retryDashboardServices`). See [sectionsOrOneLine].
+/// The one line of an Overview whose lens connection did not answer. Red,
+/// and its Retry (a ghost in ink) asks again (`retryDashboardServices`). See
+/// [sectionsOrOneLine].
 class ServiceOverviewUnanswered extends ConsumerWidget {
-  const ServiceOverviewUnanswered({super.key, required this.service});
+  /// Neither address answered: `Radarr did not answer at home or away`, then
+  /// where, one address a line; its Retry asks both.
+  const ServiceOverviewUnanswered({super.key, required this.service})
+    : _atBoth = true;
+
+  /// The one address the connection has did not answer:
+  /// `Radarr did not answer at nas.home.arpa:7878.`
+  const ServiceOverviewUnanswered.atItsAddress({
+    super.key,
+    required this.service,
+  }) : _atBoth = false;
 
   final ServiceKey service;
+  final bool _atBoth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -551,13 +569,29 @@ class ServiceOverviewUnanswered extends ConsumerWidget {
             ? ref.watch(connectionNameProvider(instance.id))
             : null) ??
         service.title;
-    final unanswered = instance == null
+    final unanswered = instance == null || !_atBoth
         ? null
         : ref.watch(unansweredConnectionProvider(instance.id));
-    final headline = failureHeadline(
-      ServiceFailureReason.unreachableAtBoth,
-      subject: name,
-    );
+    final reason = _atBoth
+        ? ServiceFailureReason.unreachableAtBoth
+        : ServiceFailureReason.unreachable;
+    // Nothing answered, so nothing in front of it did either: no gateway.
+    final headline = _atBoth
+        ? failureHeadline(ServiceFailureReason.unreachableAtBoth, subject: name)
+        : failureHeadline(ServiceFailureReason.unreachable, subject: name);
+    // The address it asked: on a connection with an address away, the one
+    // its route is on.
+    final host = _atBoth || instance == null
+        ? null
+        : service.extractHost(
+            ref.watch(connectionReachProvider(instance.id))?.url,
+          );
+    final message = switch ((unanswered, host)) {
+      (final unanswered?, _) => '$headline.\n${unanswered.failureDetail}',
+      (_, final host?) when !_atBoth && host.isNotEmpty =>
+        '$headline at $host.',
+      _ => '$headline.',
+    };
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -566,12 +600,8 @@ class ServiceOverviewUnanswered extends ConsumerWidget {
         AppSpacing.lg,
       ),
       child: InlineErrorRetry.flush(
-        message: unanswered == null
-            ? '$headline.'
-            : '$headline.\n${unanswered.failureDetail}',
-        error:
-            unanswered ??
-            const ClassifiedFailure(ServiceFailureReason.unreachableAtBoth),
+        message: message,
+        error: unanswered ?? ClassifiedFailure(reason),
         service: service,
         instanceId: instance?.id,
         onRetry: () => retryDashboardServices(ref, [service]),

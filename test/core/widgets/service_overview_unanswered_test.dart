@@ -1,5 +1,6 @@
-/// A connection neither of whose addresses answered: its Overview says so
-/// once, naming both, and the Home and the Stack say it of home and away.
+/// A connection that did not answer: its Overview says so once, naming the
+/// address it asked, or both when neither answered; the Home and the Stack
+/// say the second of home and away.
 library;
 
 import 'package:flutter/material.dart';
@@ -70,14 +71,15 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('silent at home only, the sections say it as ever', (
+  testWidgets('silent at the address it asked, it says that one once', (
     tester,
   ) async {
+    final radarr = WorldConnections.radarr.instance;
     final harness = await pumpWithProfile(
       tester,
       Profiles.p3.withConnection(
         ProfileConnection(
-          WorldConnections.radarr.instance.copyWith(away: _away),
+          radarr.copyWith(away: _away),
           behaviour: ConnectionBehaviour.didNotAnswer,
         ),
       ),
@@ -85,8 +87,11 @@ void main() {
       child: const RadarrOverviewScreen(topPadding: 0),
     );
 
+    final home = ServiceKey.radarr.extractHost(radarr.url);
     expect(find.textContaining('at home or away'), findsNothing);
-    expect(find.textContaining('is not shown'), findsWidgets);
+    expect(find.text('Radarr did not answer at $home.'), findsOneWidget);
+    expect(find.textContaining('is not shown'), findsNothing);
+    expect(find.text('Retry'), findsOneWidget);
 
     await harness.unmount(tester);
   });
