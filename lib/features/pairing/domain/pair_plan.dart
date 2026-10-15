@@ -14,6 +14,12 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 /// is, whatever the package says of it; a pin this device already holds for an
 /// origin stays, even when the package's differs. Nothing is removed. A device
 /// that copies twice gets nothing the second time.
+///
+/// The one thing it fills rather than adds to is a connection with no
+/// address: what a reinstalled app finds when the keychain kept a key and the
+/// address went with the app's preferences. That is no server, and left first
+/// it would stay the service's primary with the copied one behind it, so the
+/// copy takes its place, under its id.
 final class PairPlan {
   const PairPlan._({
     required this.from,
@@ -33,6 +39,10 @@ final class PairPlan {
     Random? random,
   }) {
     final taken = {for (final i in settings.instances) i.id};
+    final slots = [
+      for (final i in settings.instances)
+        if (i.url.isEmpty) i,
+    ];
     final toAdd = <ServiceInstance>[];
     final alreadyHere = <ServiceInstance>[];
     final sentWithout = <String, UnreadSecret>{};
@@ -42,14 +52,17 @@ final class PairPlan {
         alreadyHere.add(incoming);
         continue;
       }
-      final id = ServiceInstance.mintId(
-        incoming.service,
-        taken,
-        random: random,
-      );
+      final slot = slots
+          .where((s) => s.service == incoming.service)
+          .firstOrNull;
+      slots.remove(slot);
+      final id =
+          slot?.id ??
+          ServiceInstance.mintId(incoming.service, taken, random: random);
       taken.add(id);
       final siblings = [
-        ...settings.instancesOf(incoming.service),
+        for (final here in settings.instancesOf(incoming.service))
+          if (here.url.isNotEmpty) here,
         ...toAdd.where((added) => added.service == incoming.service),
       ];
       toAdd.add(
@@ -85,7 +98,7 @@ final class PairPlan {
   final PairDevice from;
 
   /// The connections Add writes, under this device's ids, after the ones it
-  /// has. No secret the sending device could not read is marked here: on this
+  /// has (or in the place of one with no address). No secret the sending device could not read is marked here: on this
   /// device nothing failed to read, a secret is simply missing
   /// ([sentWithout]).
   final List<ServiceInstance> toAdd;

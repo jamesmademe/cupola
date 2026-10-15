@@ -261,6 +261,39 @@ void main() {
       expect(after.instances.take(2), here.instances);
     });
 
+    test('fills a connection with no address instead of adding beside it', () {
+      // A reinstall: the keychain kept the key, the address went.
+      const here = SettingsModel(
+        instances: [
+          ServiceInstance(
+            id: 'sonarr',
+            service: ServiceKey.sonarr,
+            credential: 'left-in-the-keychain',
+          ),
+          ServiceInstance(
+            id: 'radarr',
+            service: ServiceKey.radarr,
+            credential: 'left-in-the-keychain',
+          ),
+        ],
+      );
+      final plan = PairPlan.of(_package(), here, random: random);
+      final radarr = plan.toAdd.first;
+      expect(radarr.id, 'radarr');
+      expect(radarr.label, isEmpty);
+      expect(radarr.credential, 'radarr-key');
+      final after = plan.applyTo(here);
+      expect(
+        [for (final i in after.instancesOf(ServiceKey.radarr)) i.url],
+        ['https://radarr.home.arpa'],
+      );
+      expect(after.instances.first.id, 'sonarr');
+      expect(
+        after.primaryOf(ServiceKey.sonarr)!.url,
+        'http://192.168.1.10:8989',
+      );
+    });
+
     test('labels a second connection of a service from its address', () {
       const here = SettingsModel(
         instances: [
