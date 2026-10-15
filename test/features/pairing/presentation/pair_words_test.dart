@@ -12,7 +12,6 @@ import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/pairing/domain/pair_package.dart';
 import 'package:cupola/features/pairing/domain/pair_plan.dart';
 import 'package:cupola/features/pairing/presentation/pair_words.dart';
-import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -404,51 +403,6 @@ void main() {
       expect(
         pairPlanNotes(plan).where((n) => n.startsWith('Sign in')),
         hasLength(1),
-      );
-    });
-  });
-
-  group('offering the code', () {
-    test('only with a connection to hand over', () {
-      expect(offersAnotherDevice(const SettingsModel()), isFalse);
-      expect(offersAnotherDevice(pairFixtureSender()), isTrue);
-    });
-
-    test('a signed-out Seerr account is a connection', () {
-      expect(
-        offersAnotherDevice(
-          const SettingsModel(
-            instances: [
-              ServiceInstance(
-                id: 'seerr',
-                service: ServiceKey.seerr,
-                url: 'http://192.168.1.10:5055',
-                account: SeerrAccountSignIn(
-                  kind: SeerrAccountKind.local,
-                  login: 'anna@example.com',
-                ),
-              ),
-            ],
-          ),
-        ),
-        isTrue,
-      );
-    });
-
-    test('an address with no key or account is not', () {
-      expect(
-        offersAnotherDevice(
-          const SettingsModel(
-            instances: [
-              ServiceInstance(
-                id: 'seerr',
-                service: ServiceKey.seerr,
-                url: 'http://192.168.1.10:5055',
-              ),
-            ],
-          ),
-        ),
-        isFalse,
       );
     });
   });

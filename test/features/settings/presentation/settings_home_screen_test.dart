@@ -377,6 +377,65 @@ void main() {
       expect(container.read(onboardingCompletedProvider), isTrue);
     });
 
+    group('Set up another device', () {
+      testWidgets('is not offered with nothing set up', (tester) async {
+        await _pumpSettingsHome(tester);
+
+        expect(find.text('Set up another device'), findsNothing);
+      });
+
+      testWidgets('is offered with a connection, in the group before About, '
+          'and opens the code', (tester) async {
+        await _pumpSettingsHome(
+          tester,
+          settings: settingsWith(
+            radarrUrl: 'https://radarr.local:7878',
+            radarrApiKey: 'radarr-key',
+          ),
+        );
+
+        expect(find.text('Set up another device'), findsOneWidget);
+        expect(
+          find.text('Copy your services to a new phone with a code'),
+          findsOneWidget,
+        );
+        expect(find.byIcon(Icons.qr_code_2_rounded), findsOneWidget);
+        // Under Trusted certificates in its group, and above About.
+        final row = tester.getTopLeft(find.text('Set up another device')).dy;
+        expect(
+          tester.getTopLeft(find.text('Trusted certificates')).dy,
+          lessThan(row),
+        );
+        expect(tester.getTopLeft(find.text('About')).dy, greaterThan(row));
+
+        await tester.tap(find.text('Set up another device'));
+        await tester.pumpAndSettle();
+        expect(find.text('AnotherDevicePage'), findsOneWidget);
+      });
+
+      testWidgets('is heard with what it does', (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pumpSettingsHome(
+          tester,
+          settings: settingsWith(
+            radarrUrl: 'https://radarr.local:7878',
+            radarrApiKey: 'radarr-key',
+          ),
+        );
+
+        expect(
+          find.bySemanticsLabel(
+            RegExp(
+              '^Set up another device, Copy your services to a new phone '
+              'with a code',
+            ),
+          ),
+          findsOneWidget,
+        );
+        handle.dispose();
+      });
+    });
+
     group('Revisit onboarding', () {
       Future<(ProviderContainer, GoRouter, SettingsService)> pumpRevisit(
         WidgetTester tester,
@@ -513,6 +572,10 @@ Future<void> _pumpSettingsHome(
           GoRoute(
             path: 'connections',
             builder: (_, _) => const Scaffold(body: Text('ConnectionsPage')),
+          ),
+          GoRoute(
+            path: 'another-device',
+            builder: (_, _) => const Scaffold(body: Text('AnotherDevicePage')),
           ),
           GoRoute(
             path: 'service/:service',

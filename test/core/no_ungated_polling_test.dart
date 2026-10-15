@@ -19,13 +19,19 @@ void main() {
 
   /// Repeating work that is not polling, and must not be gated.
   ///
-  /// Both are once-a-second repaints of an elapsed-time readout inside a
-  /// modal sheet. Neither touches the network, and the second accumulates a
-  /// second per tick rather than reading the clock: pausing it would save
-  /// nothing and would make the duration it displays wrong. A rule that forced
-  /// them through the polling primitive would buy a tidier scan and a bug.
+  /// The first two are once-a-second repaints of an elapsed-time readout
+  /// inside a modal sheet. Neither touches the network, and the second
+  /// accumulates a second per tick rather than reading the clock: pausing it
+  /// would save nothing and would make the duration it displays wrong. A rule
+  /// that forced them through the polling primitive would buy a tidier scan
+  /// and a bug.
+  ///
+  /// The third is the countdown of a pairing code, a once-a-second repaint of
+  /// the time left to a moment the code itself holds. It asks no server: the
+  /// code closes by its own clock, and the page says so when it does.
   const uiClocks = {
     'lib/core/widgets/interactive_search_sheet.dart',
+    'lib/features/pairing/presentation/pair_offer_screen.dart',
     'lib/features/release_search/presentation/release_search_sheet.dart',
   };
 

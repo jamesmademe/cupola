@@ -98,14 +98,20 @@ class FixedPairOffer extends PairOfferNotifier {
   FixedPairOffer(this.fixed);
 
   final PairOfferState fixed;
-  var starts = 0;
+
+  /// The device each `start` was asked to make a code as.
+  final started = <PairDevice>[];
+  int get starts => started.length;
   var closes = 0;
 
   @override
   PairOfferState build() => fixed;
 
+  /// Moves the screen to [next], as the protocol would.
+  void show(PairOfferState next) => state = next;
+
   @override
-  Future<void> start({required PairDevice from}) async => starts++;
+  Future<void> start({required PairDevice from}) async => started.add(from);
 
   @override
   Future<void> close() async => closes++;
@@ -160,3 +166,11 @@ FixedReceive fixedReceive(PairReceiveState state) {
     notifier: notifier,
   );
 }
+
+/// The same, for a scene drawn more than once (a dark sheet and a light one):
+/// each container gets a notifier of its own.
+Override fixedOfferOf(PairOfferState state) =>
+    pairOfferProvider.overrideWith(() => FixedPairOffer(state));
+
+Override fixedReceiveOf(PairReceiveState state) =>
+    pairReceiveProvider.overrideWith(() => FixedPairReceive(state));

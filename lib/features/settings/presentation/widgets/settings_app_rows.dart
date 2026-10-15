@@ -12,6 +12,8 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/settings/data/donation_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/domain/trademark_notice.dart';
 import 'package:cupola/features/settings/presentation/widgets/donation_sheet.dart';
 
@@ -85,6 +87,36 @@ List<Widget> settingsAboutRows(
       ),
     ),
   ];
+}
+
+/// The way to the code another device copies this one's services from. Built
+/// for the operator with at least one connection to hand over: the requester
+/// has none, and a device with nothing set up has nothing to copy.
+///
+/// One row for both layouts, like the rows around it: the phone's index puts
+/// it in the group before About and the window's summary in its Onboarding
+/// card, the last group before About on either.
+///
+/// [SettingsAnotherDeviceRow.offeredFor] is when to build it.
+class SettingsAnotherDeviceRow extends StatelessWidget {
+  const SettingsAnotherDeviceRow({super.key});
+
+  /// Whether [settings] has a connection to hand over: one set up, or a Seerr
+  /// account that signed out and keeps its address and login. What the
+  /// Welcome's own gate asks (`showsWelcome`).
+  static bool offeredFor(SettingsModel settings) =>
+      ServiceKey.values.any(settings.hasServiceConnection);
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingsCard.grouped(
+      leading: const Icon(Icons.qr_code_2_rounded),
+      title: 'Set up another device',
+      subtitle: 'Copy your services to a new phone with a code',
+      semanticHint: 'opens a code the other device copies from',
+      onTap: () => context.push(ServiceRoutes.settingsAnotherDevice),
+    );
+  }
 }
 
 /// Opens the Welcome again, after asking: nothing set up is touched.

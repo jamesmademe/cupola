@@ -87,7 +87,7 @@ class SettingsHomeScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.xl),
                         ..._buildGeneralSection(context, settings),
                         const SizedBox(height: AppSpacing.xl),
-                        ..._buildSecuritySection(context),
+                        ..._buildSecuritySection(context, settings),
                         const SizedBox(height: AppSpacing.xl),
                         ..._buildAboutSection(context),
                         const SizedBox(height: AppSpacing.xl),
@@ -209,7 +209,10 @@ class SettingsHomeScreen extends ConsumerWidget {
   /// the pane did not exist at all. Trust is per origin and outlives the
   /// services that created it (ADR-6), which is precisely why the door has to
   /// stand even when the room is empty.
-  List<Widget> _buildSecuritySection(BuildContext context) {
+  List<Widget> _buildSecuritySection(
+    BuildContext context,
+    SettingsModel settings,
+  ) {
     return [
       const SettingsSectionLabel('Security'),
       const SizedBox(height: AppSpacing.sm),
@@ -222,6 +225,9 @@ class SettingsHomeScreen extends ConsumerWidget {
             semanticHint: 'opens the trusted certificates list',
             onTap: () => context.push('/settings/certificates'),
           ),
+          // Keys and certificates are what it moves: the group before About.
+          if (SettingsAnotherDeviceRow.offeredFor(settings))
+            const SettingsAnotherDeviceRow(),
         ],
       ),
     ];

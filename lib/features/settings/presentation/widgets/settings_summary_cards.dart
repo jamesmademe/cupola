@@ -79,29 +79,35 @@ class SettingsSummaryPane extends ConsumerWidget {
         ],
       );
     }
+    final offersCode = SettingsAnotherDeviceRow.offeredFor(
+      ref.watch(currentSettingsProvider),
+    );
     return ListView(
       padding: padding,
-      children: const [
-        ConnectionsSummaryCard(),
-        SizedBox(height: AppSpacing.xl),
-        _TrustedCertificatesSummaryCard(),
-        SizedBox(height: AppSpacing.xl),
-        _BackgroundSearchSummaryCard(),
-        SizedBox(height: AppSpacing.xl),
-        _RegionSummaryCard(),
-        SizedBox(height: AppSpacing.xl),
-        _AppearanceSummaryCard(),
-        SizedBox(height: AppSpacing.xl),
-        _HintsSummaryCard(),
-        SizedBox(height: AppSpacing.xl),
+      children: [
+        const ConnectionsSummaryCard(),
+        const SizedBox(height: AppSpacing.xl),
+        const _TrustedCertificatesSummaryCard(),
+        const SizedBox(height: AppSpacing.xl),
+        const _BackgroundSearchSummaryCard(),
+        const SizedBox(height: AppSpacing.xl),
+        const _RegionSummaryCard(),
+        const SizedBox(height: AppSpacing.xl),
+        const _AppearanceSummaryCard(),
+        const SizedBox(height: AppSpacing.xl),
+        const _HintsSummaryCard(),
+        const SizedBox(height: AppSpacing.xl),
         _SummaryCard(
           label: 'Onboarding',
-          children: [SettingsRevisitOnboardingRow()],
+          children: [
+            const SettingsRevisitOnboardingRow(),
+            if (offersCode) const SettingsAnotherDeviceRow(),
+          ],
         ),
-        SizedBox(height: AppSpacing.xl),
-        _AboutSummaryCard(),
-        SizedBox(height: AppSpacing.xl),
-        _SummaryCard(
+        const SizedBox(height: AppSpacing.xl),
+        const _AboutSummaryCard(),
+        const SizedBox(height: AppSpacing.xl),
+        const _SummaryCard(
           label: 'Danger zone',
           children: [SettingsResetAppDataRow()],
         ),

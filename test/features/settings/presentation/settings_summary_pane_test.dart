@@ -90,6 +90,41 @@ void main() {
       });
     });
 
+    testWidgets('Set up another device is not offered with nothing set up', (
+      tester,
+    ) async {
+      await _onDesktop(() async {
+        await _pumpHome(tester, size: const Size(1440, 2400));
+        expect(find.text('Set up another device'), findsNothing);
+      });
+    });
+
+    testWidgets('Set up another device is offered with a connection, in the '
+        'Onboarding card', (tester) async {
+      await _onDesktop(() async {
+        await _pumpHome(
+          tester,
+          size: const Size(1440, 2400),
+          settings: settingsWith(
+            radarrUrl: 'https://radarr.local:7878',
+            radarrApiKey: 'radarr-key',
+          ),
+        );
+
+        expect(find.text('Set up another device'), findsOneWidget);
+        expect(
+          find.text('Copy your services to a new phone with a code'),
+          findsOneWidget,
+        );
+        final row = tester.getTopLeft(find.text('Set up another device')).dy;
+        expect(
+          tester.getTopLeft(find.text('Revisit onboarding')).dy,
+          lessThan(row),
+        );
+        expect(tester.getTopLeft(find.text('GitHub')).dy, greaterThan(row));
+      });
+    });
+
     testWidgets('a pin no service reaches any more is named here', (
       tester,
     ) async {

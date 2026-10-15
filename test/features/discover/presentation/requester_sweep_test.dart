@@ -65,6 +65,10 @@ final _never = <RegExp>[
     r'^(4K: )?(Available|Partially available|Processing|Blocklisted|Deleted|'
     r'Unknown|Queued|Stuck|Failed|Import blocked|Client unavailable)$',
   ),
+  // Copying this device's connections to another is the operator's: she has
+  // none to hand over, and no door to take any (Settings' two rows).
+  RegExp(r'\banother device\b', caseSensitive: false),
+  RegExp(r'\bnew phone\b', caseSensitive: false),
   RegExp(r'\bAll services\b'),
   RegExp(r'\bacross every service\b', caseSensitive: false),
   RegExp(r'\bconnections? asked\b'),
@@ -326,6 +330,23 @@ void main() {
         variant: TargetPlatformVariant.only(TargetPlatform.iOS),
       );
     }
+
+    testWidgets('the code another device copies from is not hers: its page '
+        'sends her to Settings', (tester) async {
+      final (harness, container) = await pumpApp(
+        tester,
+        size: const Size(430, 900),
+        location: ServiceRoutes.settingsAnotherDevice,
+      );
+
+      expect(
+        container.read(routerProvider).state.uri.toString(),
+        ServiceRoutes.settings,
+      );
+      expect(find.text('Set up another device'), findsNothing);
+      expect(find.text('Copy from another device'), findsNothing);
+      await harness.unmount(tester);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
     testWidgets('⌘K opens no deck: it reaches every room and connection by '
         'name', (tester) async {

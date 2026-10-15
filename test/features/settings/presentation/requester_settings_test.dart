@@ -34,6 +34,7 @@ void main() {
     'GitHub',
     'Hints',
     'Revisit onboarding',
+    'Set up another device',
     'Reset app data',
   ];
 

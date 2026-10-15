@@ -80,6 +80,7 @@ import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
 import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/pairing/domain/pair_link.dart';
+import 'package:cupola/features/pairing/presentation/pair_offer_screen.dart';
 import 'package:cupola/features/pairing/presentation/pair_receive_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
@@ -3009,6 +3010,9 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       _page('home', (state) => const EditHomePage()),
       _page('hints', (state) => const SettingsHintsScreen()),
       _page('connections', (state) => const SettingsConnectionsScreen()),
+      // The code another device copies this one's connections from: the
+      // operator's, since the requester has no connection to hand over.
+      _page('another-device', (state) => const PairOfferScreen()),
       // Former name of the connections screen, kept so an existing
       // deep link or a shortcut does not dead-end.
       GoRoute(
@@ -3103,7 +3107,8 @@ String? _rewriteLegacyStackPath(Uri uri) {
 
 /// Where [audience] may not be: the requester's app has no control room, so
 /// Activity, Stack and every service's room, and the import flow, send her
-/// Home, and the operator's two settings pages send her to Settings; the
+/// Home, and the operator's three settings pages (the trust store, release
+/// search and the code another device copies from) send her to Settings; the
 /// operator has no tab of the requester's own requests, so that one sends him
 /// to Seerr's, and no account page, so that one sends him to the
 /// connection's form. Null where [audience] may be.
@@ -3118,11 +3123,13 @@ String? _audienceRedirect(Uri uri, Audience audience) {
             under(ServiceRoutes.stack) ||
             under(manualImportPathPrefix) =>
       ServiceRoutes.home,
-    // Her Settings hold no trust store and no release search: both are the
-    // operator's, of servers she does not run.
+    // Her Settings hold no trust store, no release search and no code for
+    // another device: all three are the operator's, of servers she does not
+    // run.
     Audience.requester
         when under(ServiceRoutes.settingsCertificates) ||
-            under(ServiceRoutes.settingsBackgroundSearch) =>
+            under(ServiceRoutes.settingsBackgroundSearch) ||
+            under(ServiceRoutes.settingsAnotherDevice) =>
       ServiceRoutes.settings,
     Audience.operator when under(ServiceRoutes.requests) =>
       ServiceRoutes.seerrRequests,

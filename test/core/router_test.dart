@@ -37,6 +37,7 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
 import 'package:cupola/features/pairing/data/pair_session.dart';
+import 'package:cupola/features/pairing/presentation/pair_offer_screen.dart';
 import 'package:cupola/features/pairing/presentation/pair_receive_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
@@ -353,6 +354,26 @@ void main() {
         expect(router.state.uri.toString(), ServiceRoutes.welcomePair);
         await _letTheWelcomeGo(tester, container);
       });
+    });
+
+    testWidgets('the code another device copies from is a page of Settings', (
+      tester,
+    ) async {
+      final offer = fixedOffer(const PairOfferPreparing());
+      final container = await _pumpRouter(
+        tester,
+        settings: settingsWithServices([ServiceKey.radarr]),
+        overrides: [offer.override],
+      );
+      final router = container.read(routerProvider);
+
+      router.go(ServiceRoutes.settingsAnotherDevice);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(router.state.uri.toString(), ServiceRoutes.settingsAnotherDevice);
+      expect(find.byType(PairOfferScreen), findsOneWidget);
+      expect(offer.notifier.started, hasLength(1));
+      await _letTheWelcomeGo(tester, container);
     });
 
     testWidgets('the old onboarding address opens the Welcome', (tester) async {

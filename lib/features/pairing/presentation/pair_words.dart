@@ -222,9 +222,3 @@ List<String> pairPlanNotes(PairPlan plan) => [
     "${plan.unknown} services this version of Cupola doesn't know stay "
         'behind.',
 ];
-
-/// What a settings model needs for the sending screen to be offered: at least
-/// one connection, set up or signed out, which is what the Welcome's own gate
-/// asks (`showsWelcome`).
-bool offersAnotherDevice(SettingsModel settings) =>
-    ServiceKey.values.any(settings.hasServiceConnection);
