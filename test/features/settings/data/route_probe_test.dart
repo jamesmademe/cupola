@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/network/network_change.dart';
 import 'package:cupola/core/network/unreached_origins.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
     show calendarClockProvider;
@@ -254,6 +255,54 @@ void main() {
 
       expect(knocks.asked, isEmpty);
     });
+  });
+
+  group('a change of network', () {
+    test('knocks on every connection with an address away', () async {
+      final c = await container();
+      await started(c);
+      knocks.asked.clear();
+
+      c.read(networkChangesProvider.notifier).changed();
+      await pumpEventQueue();
+
+      expect(knocks.asked, [
+        'http://192.168.1.20:7878',
+        'https://radarr.example.com',
+      ]);
+    });
+
+    test('starts the wait after a failed request over', () async {
+      final c = await container();
+      await started(c);
+      UnreachedOrigins.report(Uri.parse('http://192.168.1.20:7878/api'));
+      await pumpEventQueue();
+
+      c.read(networkChangesProvider.notifier).changed();
+      await pumpEventQueue();
+      knocks.asked.clear();
+
+      UnreachedOrigins.report(Uri.parse('http://192.168.1.20:7878/api'));
+      await pumpEventQueue();
+      expect(knocks.asked, hasLength(2));
+    });
+  });
+
+  test('a connection that answers at neither address is knocked on again '
+      'while on screen, until one answers', () async {
+    final c = await container();
+    final probe = await started(c);
+    expect(c.read(unansweredConnectionsProvider), {'radarr'});
+    expect(probe.unansweredRecheckArmed, isTrue);
+
+    probe.onHide();
+    expect(probe.unansweredRecheckArmed, isFalse);
+
+    knocks.answering.add('https://radarr.example.com');
+    probe.onResume();
+    await pumpEventQueue();
+    expect(c.read(unansweredConnectionsProvider), isEmpty);
+    expect(probe.unansweredRecheckArmed, isFalse);
   });
 
   test('a connection given an address away is probed at once', () async {

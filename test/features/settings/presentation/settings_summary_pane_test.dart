@@ -1,11 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/settings/data/route_knock.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_summary_cards.dart';
@@ -207,6 +212,48 @@ void main() {
 
       expect(probes, 4, reason: 'and both are asked again');
     });
+
+    testWidgets('knocks at both addresses of a connection that has an '
+        'address away', (tester) async {
+      // Its readout waits on the knock: a connection that answered at
+      // neither address a moment ago stays red until one answers one.
+      final knocked = <String>[];
+      await _pumpHome(
+        tester,
+        size: const Size(1000, 2400),
+        settings: const SettingsModel(
+          instances: [
+            ServiceInstance(
+              id: 'seerr',
+              service: ServiceKey.seerr,
+              url: 'http://192.168.1.10:30042',
+              credential: 'seerr-key',
+              away: ConnectionAddress(url: 'https://seerr.example.net'),
+            ),
+          ],
+        ),
+        overrides: [
+          routeKnockProvider.overrideWithValue((
+            service,
+            reach, {
+            required timeout,
+          }) async {
+            knocked.add(reach.url);
+            return false;
+          }),
+        ],
+      );
+
+      for (var press = 1; press <= 2; press++) {
+        await tester.tap(find.text('Test all'));
+        await tester.pumpAndSettle();
+        expect(knocked, hasLength(2 * press));
+      }
+      expect(knocked.toSet(), {
+        'http://192.168.1.10:30042',
+        'https://seerr.example.net',
+      });
+    });
   });
 }
 
@@ -227,6 +274,7 @@ Future<void> _pumpHome(
   required Size size,
   SettingsModel settings = const SettingsModel(),
   VoidCallback? onDiagnose,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -262,6 +310,7 @@ Future<void> _pumpHome(
           onDiagnose?.call();
           return const ServiceDiagnosis.connected();
         }),
+        ...overrides,
       ],
       child: MaterialApp.router(routerConfig: router),
     ),

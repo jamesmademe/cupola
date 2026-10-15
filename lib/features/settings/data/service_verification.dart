@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/network_change.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -1121,6 +1122,9 @@ _DiagnosisInputs _diagnosisInputs(SettingsModel settings, String instanceId) {
 /// below, and for the same reason.
 final instanceDiagnosisProvider =
     FutureProvider.family<ServiceDiagnosis, String>((ref, instanceId) async {
+      // Asked again when the phone's network changes: what answered on Wi-Fi
+      // may not on the mobile network, and the reverse.
+      ref.watch(networkChangesProvider);
       // Watch the connection's own inputs; read the whole model for the work.
       ref.watch(
         currentSettingsProvider.select((s) => _diagnosisInputs(s, instanceId)),
@@ -1135,6 +1139,8 @@ final instanceDiagnosisProvider =
 /// has, so the answer is never better than its worst one. See [diagnoseService].
 final serviceDiagnosisProvider =
     FutureProvider.family<ServiceDiagnosis, ServiceKey>((ref, service) async {
+      // Asked again when the phone's network changes, as above.
+      ref.watch(networkChangesProvider);
       // Which connections, joined into a string because a fresh list never
       // compares equal; then each one's own inputs.
       // A Seerr account that signed out is among them: it reads signed out.

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/core/lifecycle/poll_clock.dart';
+import 'package:cupola/core/network/network_change.dart';
 import 'package:cupola/core/network/unreached_origins.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
@@ -33,6 +34,12 @@ const unreachedProbeInterval = Duration(seconds: 30);
 /// home too and nothing would fail to say so.
 const awayRecheckInterval = Duration(minutes: 5);
 
+/// How often a connection that answered at neither address is knocked on
+/// again while the app is on screen: a knock that fell in a switch between
+/// networks, before a VPN came back, would otherwise leave it red until a
+/// request of its own failed.
+const unansweredRecheckInterval = Duration(seconds: 15);
+
 /// Which address answers, from two knocks started together: home when it
 /// answered, away when only away did, null when neither did.
 ///
@@ -52,10 +59,12 @@ Future<ConnectionRoute?> decideRoute({
 /// Moves each connection that has an address away from home to the address
 /// that answers (`connectionRoutesProvider`).
 ///
-/// Asked at start, when the app comes back to the foreground, when a request
-/// to a connection's current address opens no connection
-/// ([UnreachedOrigins]), and every [awayRecheckInterval] while a connection
-/// is away and the app is on screen. No Wi-Fi name and no location: the knocks themselves say where
+/// Asked at start, when the app comes back to the foreground, when the
+/// phone's network changes ([networkChangesProvider]), when a request to a
+/// connection's current address opens no connection ([UnreachedOrigins]),
+/// every [awayRecheckInterval] while a connection is away and every
+/// [unansweredRecheckInterval] while one answers at neither, with the app on
+/// screen. No Wi-Fi name and no location: the knocks themselves say where
 /// the phone is. A move is not a fault and is not said: the connection's
 /// clients rebuild on the new address, and the screens keep what they last
 /// drew while they read again.
@@ -69,6 +78,7 @@ class RouteProbe {
   final _lastUnreachedProbe = <String, DateTime>{};
   StreamSubscription<String>? _unreached;
   late final GatedPollTimer _recheck;
+  late final GatedPollTimer _unansweredRecheck;
   var _foreground = true;
   var _disposed = false;
 
@@ -79,7 +89,19 @@ class RouteProbe {
       onTick: () => unawaited(probeAll()),
       clock: _ref.read(pollClockProvider),
     );
+    _unansweredRecheck = GatedPollTimer(
+      id: 'route.unanswered',
+      interval: unansweredRecheckInterval,
+      onTick: () => unawaited(_probeUnanswered()),
+      clock: _ref.read(pollClockProvider),
+    );
     _unreached = UnreachedOrigins.stream.listen(_onUnreached);
+    // A new network: every connection with an address away is asked again,
+    // and the wait between probes on a failed request starts over.
+    _ref.listen(networkChangesProvider, (previous, next) {
+      _lastUnreachedProbe.clear();
+      unawaited(probeAll());
+    });
     _ref.listen(currentSettingsProvider.select(_awaySignature), (
       previous,
       next,
@@ -109,6 +131,7 @@ class RouteProbe {
   void onHide() {
     _foreground = false;
     _recheck.setLive(false);
+    _unansweredRecheck.setLive(false);
   }
 
   /// Knocks on connection [id]'s two addresses and moves it to the one that
@@ -176,8 +199,16 @@ class RouteProbe {
     }
   }
 
-  /// Rechecks every [awayRecheckInterval] while a connection is away and
-  /// the app is on screen, and not at all otherwise.
+  Future<void> _probeUnanswered() async {
+    if (_disposed) return;
+    await Future.wait([
+      for (final id in _ref.read(unansweredConnectionsProvider)) probe(id),
+    ]);
+  }
+
+  /// Rechecks every [awayRecheckInterval] while a connection is away, and
+  /// every [unansweredRecheckInterval] while one answers at neither address,
+  /// with the app on screen; not at all otherwise.
   void _syncRecheck() {
     final settings = _ref.read(currentSettingsProvider);
     final routes = _ref.read(connectionRoutesProvider);
@@ -186,15 +217,22 @@ class RouteProbe {
           instance.away != null && routes[instance.id] == ConnectionRoute.away,
     );
     _recheck.setLive(anyAway && _foreground);
+    _unansweredRecheck.setLive(
+      _foreground && _ref.read(unansweredConnectionsProvider).isNotEmpty,
+    );
   }
 
   /// Whether the periodic recheck is armed: for a test.
   bool get recheckArmed => _recheck.isLive;
 
+  /// Whether the recheck of the unanswered connections is armed: for a test.
+  bool get unansweredRecheckArmed => _unansweredRecheck.isLive;
+
   void dispose() {
     _disposed = true;
     unawaited(_unreached?.cancel());
     _recheck.dispose();
+    _unansweredRecheck.dispose();
   }
 }
 

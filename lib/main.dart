@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/last_known/last_known_store.dart';
 
+import 'package:cupola/core/network/network_change.dart';
 import 'package:cupola/core/network/connection_access_registry.dart';
 import 'package:cupola/core/network/unanswered_addresses.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
@@ -214,6 +215,9 @@ class CupolaApp extends ConsumerWidget {
     // Moves each connection with an address away from home to the address
     // that answers: at start, on resume, when one stops answering.
     ref.watch(routeProbeProvider);
+    // Says when the phone's network changes with the app open, so the route
+    // and the connections' readouts are asked again.
+    ref.watch(networkChangeWatchProvider);
 
     // Keeps `CertTrustRegistry` in sync for the leaf image widgets that
     // cannot watch a provider themselves; see its doc for why. The `read`

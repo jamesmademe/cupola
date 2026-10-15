@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
+import 'package:cupola/features/settings/data/route_probe.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
@@ -36,6 +39,10 @@ int testAllConnections(WidgetRef ref) {
   // on a refresh. Without this the rows would re-read the held refusal and
   // "Test all" could never show a password fixed at the server.
   liftQbittorrentRefusals(ref, connections.map((instance) => instance.id));
+  // A connection with an address away is knocked at both again: the readout
+  // of one that answered at neither waits on the knock, and the moment an
+  // address answers its route moves there and the red goes with it.
+  unawaited(ref.read(routeProbeProvider).probeAll());
   ref.invalidate(serviceDiagnosisProvider);
   for (final instance in connections) {
     ref.invalidate(instanceDiagnosisProvider(instance.id));
