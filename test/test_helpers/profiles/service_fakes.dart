@@ -99,6 +99,7 @@ abstract class ServiceFake {
       case PlainBehaviour.answers:
       case PlainBehaviour.didNotAnswer:
       case PlainBehaviour.timesOut:
+      case PlainBehaviour.untrustedTls:
         return null;
     }
   }

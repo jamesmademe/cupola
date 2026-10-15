@@ -59,6 +59,18 @@ enum SeerrSignInStage {
   quickConnect,
 }
 
+/// What asking about a server's certificate came to.
+enum _Trust {
+  /// It is trusted now: read the server again.
+  trusted,
+
+  /// The person was shown it and did not trust it.
+  declined,
+
+  /// There was no certificate to ask about.
+  none,
+}
+
 /// Whether the certificate [shown] at an address is trusted on an invite's
 /// word: it is the one the invite vouched for ([invited]), as the person who
 /// sent it trusts it, and this device trusted none there ([trusted]). Never
@@ -270,13 +282,13 @@ class SeerrSignInFlow extends ChangeNotifier {
       facts = await auth.readServer();
     } catch (error) {
       if (_disposed) return;
-      if (await _trustedCertificateFor(error)) {
-        if (!_disposed) return readServer(again: again);
-        return;
-      }
+      final trust = await _trustedCertificateFor(error);
       if (_disposed) return;
+      if (trust == _Trust.trusted) return readServer(again: again);
       return _stop(
-        SeerrSignInNotice.ofServerRead(error, url: _connection.url),
+        trust == _Trust.declined
+            ? SeerrSignInNotice.certificateDeclined
+            : SeerrSignInNotice.ofServerRead(error, url: _connection.url),
         retry: () => readServer(again: again),
       );
     }
@@ -311,9 +323,13 @@ class SeerrSignInFlow extends ChangeNotifier {
   void acceptCleartext() => _set(() => _cleartextAccepted = true);
 
   /// When the server's certificate is one nothing trusts, asks the person to
-  /// trust it before anything secret is sent. True when it is now trusted.
-  Future<bool> _trustedCertificateFor(Object error) async {
-    if (!certProbeWorthwhile(classifyConnectionFailure(error))) return false;
+  /// trust it before anything secret is sent: [_Trust.trusted] when it now
+  /// is, [_Trust.declined] when they were asked and said no, [_Trust.none]
+  /// when there was nothing to ask about.
+  Future<_Trust> _trustedCertificateFor(Object error) async {
+    if (!certProbeWorthwhile(classifyConnectionFailure(error))) {
+      return _Trust.none;
+    }
     final settings = _ref.read(currentSettingsProvider);
     // The address the request that failed went to: away from home, the
     // certificate in question is the one in front of the address away.
@@ -323,7 +339,7 @@ class SeerrSignInFlow extends ChangeNotifier {
       url,
       pinnedFingerprint: previous ?? '',
     );
-    if (probe == null || _disposed) return false;
+    if (probe == null || _disposed) return _Trust.none;
     final invited = _invitedPin?.call(url);
     final trust =
         trustedOnInvite(
@@ -337,7 +353,8 @@ class SeerrSignInFlow extends ChangeNotifier {
           previousFingerprint: previous,
           invitedFingerprint: invited,
         );
-    if (!trust || _disposed) return false;
+    if (_disposed) return _Trust.none;
+    if (!trust) return _Trust.declined;
     await _ref
         .read(settingsProvider.notifier)
         .updateSettings(
@@ -348,7 +365,7 @@ class SeerrSignInFlow extends ChangeNotifier {
                 fingerprint: probe.certificate.fingerprint,
               ),
         );
-    return true;
+    return _Trust.trusted;
   }
 
   /// The ways in the server offers, less one found off on the way.

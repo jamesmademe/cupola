@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/platform/browser_opener.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/domain/seerr_invite.dart';
@@ -18,6 +19,7 @@ import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -49,6 +51,7 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _atSignIn(
   WidgetTester tester,
   ConfigProfile profile, {
   SeerrInvite? invite,
+  CertificateProber certificateProber = neverFindsACertificate,
 }) async {
   final browser = _Browser();
   final harness = await ProfileHarness.start(profile);
@@ -84,6 +87,7 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _atSignIn(
   );
   addTearDown(container.dispose);
   final router = onboardingRouter(
+    certificateProber: certificateProber,
     initialLocation: invite == null
         ? ServiceRoutes.welcome
         : Uri(
@@ -120,6 +124,17 @@ Future<void> _tap(
   await tester.pump();
   await tester.tap(finder.first);
   await harness.settle(tester);
+}
+
+/// Taps [finder] and waits for the trust prompt it leads to. Not settled:
+/// the sign-in's busy line turns behind the prompt until it is answered.
+Future<void> _toTrustPrompt(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder.first);
+  await tester.pump();
+  await tester.tap(finder.first);
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 300));
+  }
 }
 
 Finder _address() => find.descendant(
@@ -414,6 +429,70 @@ void main() {
         findsNothing,
         reason: 'home did not answer a knock, and away did',
       );
+
+      await harness.unmount(tester);
+    });
+  });
+
+  group('a certificate nothing trusts', () {
+    const probe = (
+      certificate: ServerCertificate(
+        fingerprint:
+            'ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12',
+        subject: 'CN=nas.home.arpa',
+        issuer: 'CN=nas.home.arpa',
+      ),
+      rotated: false,
+    );
+
+    testWidgets('declined, is a choice: said in blue, with the certificate '
+        'to look at again, and no settings to go to', (tester) async {
+      final (harness, _, _) = await _atSignIn(
+        tester,
+        Profiles.p2,
+        certificateProber: (url, {pinnedFingerprint = ''}) async => probe,
+      );
+      harness.network.behave(WorldIds.seerr, ConnectionBehaviour.untrustedTls);
+
+      await tester.enterText(_address(), WorldHosts.seerr);
+      await _toTrustPrompt(tester, find.text('Continue'));
+      expect(find.text('Self-signed certificate'), findsOneWidget);
+      await _tap(tester, harness, find.text('Cancel'));
+
+      expect(find.text("You didn't trust Seerr's certificate"), findsOneWidget);
+      expect(find.textContaining('settings'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
+
+      await _toTrustPrompt(tester, find.text('Show the certificate'));
+      expect(find.text('Self-signed certificate'), findsOneWidget);
+      harness.network.behave(WorldIds.seerr, ConnectionBehaviour.answers);
+      await _tap(tester, harness, find.text('Trust this certificate'));
+
+      expect(find.text('Sign in with email'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('with none to show, the secure connection did not open: '
+        'amber, and the address to check', (tester) async {
+      final (harness, _, _) = await _atSignIn(tester, Profiles.p2);
+      harness.network.behave(WorldIds.seerr, ConnectionBehaviour.untrustedTls);
+
+      await tester.enterText(_address(), WorldHosts.seerr);
+      await _tap(tester, harness, find.text('Continue'));
+
+      expect(
+        find.text("Seerr didn't open a secure connection"),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Check the address: Seerr may answer at http:// instead.'),
+        findsOneWidget,
+      );
+      expect(find.text('Retry'), findsNothing);
+
+      await _tap(tester, harness, find.text('Check the address'));
+      expect(tester.widget<TextField>(_address()).focusNode?.hasFocus, isTrue);
 
       await harness.unmount(tester);
     });

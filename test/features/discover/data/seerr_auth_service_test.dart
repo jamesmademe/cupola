@@ -150,6 +150,26 @@ void main() {
       );
       expect(notice.retryHelps, isTrue);
     });
+
+    test('a secure connection that does not open is amber, names no '
+        'settings, and offers no retry', () async {
+      final profile = Profiles.p2.withBehaviour(
+        WorldIds.seerr,
+        ConnectionBehaviour.untrustedTls,
+      );
+      final (_, service) = await _start(profile);
+
+      final notice = SeerrSignInNotice.ofServerRead(
+        await _failure(service.readServer),
+        url: WorldHosts.seerr,
+      );
+
+      expect(notice.kind, SeerrSignInNoticeKind.noSecureConnection);
+      expect(notice.tone, StatusTone.warning);
+      expect(notice.title, "Seerr didn't open a secure connection");
+      expect(notice.sentence, isNot(contains('settings')));
+      expect(notice.retryHelps, isFalse);
+    });
   });
 
   group('with an email and a password', () {

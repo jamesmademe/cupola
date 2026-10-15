@@ -23,6 +23,15 @@ enum SeerrSignInNoticeKind {
   /// Something answered, and it is not Seerr.
   notSeerr,
 
+  /// The person was shown Seerr's certificate and did not trust it: a
+  /// choice, not a fault. Blue, with the certificate to look at again.
+  certificateDeclined,
+
+  /// A secure connection to the address did not open, and there was no
+  /// certificate to show: most often `https://` typed for a Seerr that
+  /// answers at `http://`. Amber, with the address to check.
+  noSecureConnection,
+
   /// The server is still in its first setup: never signed in to.
   notSetUp,
 
@@ -90,6 +99,9 @@ class SeerrSignInNotice {
         retryHelps: true,
       );
     }
+    // No certificate to show (the flow asks about one before this): the
+    // classification's words would send to settings a first run has none of.
+    if (reason == ServiceFailureReason.tls) return noSecureConnection;
     if (_answeredAsSomethingElse(error)) {
       return SeerrSignInNotice._(
         SeerrSignInNoticeKind.notSeerr,
@@ -210,6 +222,19 @@ class SeerrSignInNotice {
     sentence:
         'Whoever runs it can turn on sign-in with Plex, Jellyfin or an email '
         "account. If it's your server, set it up with its API key.",
+  );
+
+  static const certificateDeclined = SeerrSignInNotice._(
+    SeerrSignInNoticeKind.certificateDeclined,
+    tone: StatusTone.info,
+    title: "You didn't trust Seerr's certificate",
+  );
+
+  static const noSecureConnection = SeerrSignInNotice._(
+    SeerrSignInNoticeKind.noSecureConnection,
+    tone: StatusTone.warning,
+    title: "Seerr didn't open a secure connection",
+    sentence: 'Check the address: Seerr may answer at http:// instead.',
   );
 
   static const notEncrypted = SeerrSignInNotice._(

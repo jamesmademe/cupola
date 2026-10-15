@@ -506,7 +506,7 @@ class ProfileNetwork {
 
   // === Dialling ============================================================
 
-  SocketException? _dialFailure(String method, Uri uri) {
+  IOException? _dialFailure(String method, Uri uri) {
     final server = serverAt(uri);
     final failure = _dialVerdict(server, uri);
     if (failure != null) {
@@ -531,10 +531,10 @@ class ProfileNetwork {
   /// never completes the handshake is not, nor is an address nobody serves.
   Future<bool> reach(Uri uri) async {
     final server = serverAt(uri);
-    return server != null && _dialVerdict(server, uri) == null;
+    return server != null && _dialVerdict(server, uri) is! SocketException;
   }
 
-  SocketException? _dialVerdict(ProfileServer? server, Uri uri) {
+  IOException? _dialVerdict(ProfileServer? server, Uri uri) {
     if (server == null && uri.host == plexTvHost) return null;
     if (server == null) {
       return SocketException(
@@ -552,6 +552,9 @@ class ProfileNetwork {
         'Connection timed out',
         osError: const OSError('Operation timed out', 60),
         port: uri.port,
+      ),
+      ConnectionBehaviour.untrustedTls => const HandshakeException(
+        'CERTIFICATE_VERIFY_FAILED: self signed certificate',
       ),
       _ => null,
     };

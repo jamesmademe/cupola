@@ -117,14 +117,24 @@ class SeerrSignInSteps extends ConsumerWidget {
           fill: notice.tone,
         ),
       if (notice.kind == SeerrSignInNoticeKind.notSeerr ||
+          notice.kind == SeerrSignInNoticeKind.noSecureConnection ||
           notice.kind == SeerrSignInNoticeKind.didNotAnswer)
         seerrSignInAction(
           context,
           'Check the address',
           onCheckAddress,
-          fill: notice.kind == SeerrSignInNoticeKind.notSeerr
-              ? notice.tone
-              : null,
+          fill: notice.kind == SeerrSignInNoticeKind.didNotAnswer
+              ? null
+              : notice.tone,
+        ),
+      // Declined is a choice: the certificate again, to look at and trust.
+      if (notice.kind == SeerrSignInNoticeKind.certificateDeclined &&
+          flow.retry != null)
+        seerrSignInAction(
+          context,
+          'Show the certificate',
+          flow.retry!,
+          fill: notice.tone,
         ),
       if (notice.kind == SeerrSignInNoticeKind.plexTimedOut)
         seerrSignInAction(
