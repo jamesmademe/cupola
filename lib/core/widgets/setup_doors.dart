@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 
 /// The ways in, in the order they save work: the Welcome's and the Home at
 /// zero's, so the two say the same thing in the same words.
 ///
 /// "Set up a service" starts with Seerr, because Seerr already knows the
-/// user's Radarr and Sonarr with their keys. "Copy from another device" is
-/// the shortest way when another device has everything: a code on its
-/// screen, and nothing to type. "I have a Seerr account" is the household
-/// member's: their own account on someone else's Seerr.
+/// user's Radarr and Sonarr with their keys. "I have a Seerr account" is the
+/// household member's: their own account on someone else's Seerr. "Copy from
+/// another device" comes last and quietest, a link in ink under the two
+/// buttons: whoever copies already has Cupola somewhere, and the camera
+/// pointed at the other device's code opens the copy without passing here, so
+/// this door is mostly the way of a computer, which pastes the link.
 class SetupDoors extends StatelessWidget {
   const SetupDoors({
     super.key,
@@ -79,23 +82,6 @@ class SetupDoors extends StatelessWidget {
           const _Hint(setUpHint),
         ],
         SizedBox(height: lines ? AppSpacing.lg : AppSpacing.sm),
-        TextButton.icon(
-          onPressed: onCopy,
-          style: TextButton.styleFrom(
-            visualDensity: VisualDensity.standard,
-            minimumSize: const Size(64, 44),
-          ),
-          icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
-          label: Semantics(
-            hint: copyHint,
-            child: const Text('Copy from another device'),
-          ),
-        ),
-        if (lines) ...[
-          const SizedBox(height: AppSpacing.xs),
-          const _Hint(copyHint),
-        ],
-        SizedBox(height: lines ? AppSpacing.lg : AppSpacing.sm),
         OutlinedButton(
           onPressed: onSignIn,
           style: OutlinedButton.styleFrom(
@@ -111,6 +97,21 @@ class SetupDoors extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           const _Hint(signInHint),
         ],
+        SizedBox(height: lines ? AppSpacing.md : AppSpacing.sm),
+        Center(
+          child: TextButton(
+            onPressed: onCopy,
+            style: retryInkStyle(Theme.of(context).colorScheme),
+            child: Semantics(
+              hint: copyHint,
+              child: const Text('Copy from another device'),
+            ),
+          ),
+        ),
+        if (lines) ...[
+          const SizedBox(height: AppSpacing.xs),
+          const _Hint(copyHint, align: TextAlign.center),
+        ],
       ],
     );
   }
@@ -118,14 +119,19 @@ class SetupDoors extends StatelessWidget {
 
 /// A door's line under it, silent: the door already says it as its hint.
 class _Hint extends StatelessWidget {
-  const _Hint(this.text);
+  const _Hint(this.text, {this.align});
 
   final String text;
+
+  /// Centred under the copy link, which is centred; flush with the buttons'
+  /// edge under the two buttons.
+  final TextAlign? align;
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: Text(
       text,
+      textAlign: align,
       style: Theme.of(context).textTheme.bodySmall!.copyWith(
         color: CupolaThemeColors.of(context).dimText,
       ),

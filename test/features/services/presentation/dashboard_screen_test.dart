@@ -214,8 +214,8 @@ void main() {
         expect(opened, ServiceRoutes.welcomeConnect);
       });
 
-      testWidgets('offers copying from another device between the other '
-          'two doors, and opens the screen that copies', (tester) async {
+      testWidgets('offers copying from another device under the other two '
+          'doors, and opens the screen that copies', (tester) async {
         String? opened;
         final router = GoRouter(
           routes: [
@@ -240,19 +240,21 @@ void main() {
 
         expect(find.text('Copy from another device'), findsOneWidget);
         expect(find.text(SetupDoors.copyHint), findsOneWidget);
-        expect(find.byIcon(Icons.qr_code_scanner_rounded), findsOneWidget);
-        // A text door, not a second fill.
+        // A link in ink under the two buttons, not a third fill.
         expect(find.byType(FilledButton), findsOneWidget);
         final doors = [
           for (final label in [
             'Set up a service',
-            'Copy from another device',
             'I have a Seerr account',
+            'Copy from another device',
           ])
             tester.getTopLeft(find.text(label)).dy,
         ];
         expect(doors, [...doors]..sort());
 
+        // The last door: under the fold of the test's surface.
+        await tester.ensureVisible(find.text('Copy from another device'));
+        await tester.pump();
         await tester.tap(find.text('Copy from another device'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));

@@ -38,24 +38,23 @@ Finder _door(String label) => find.ancestor(
 );
 
 void main() {
-  testWidgets('the copy door sits between the other two, and says what it '
-      'is for', (tester) async {
+  testWidgets('the copy door comes last, a link under the two buttons, and '
+      'says what it is for', (tester) async {
     await tester.pumpWidget(_host());
 
     final setUp = tester.getTopLeft(find.text('Set up a service')).dy;
-    final copy = tester.getTopLeft(find.text('Copy from another device')).dy;
     final signIn = tester.getTopLeft(find.text('I have a Seerr account')).dy;
-    expect(setUp, lessThan(copy));
-    expect(copy, lessThan(signIn));
-    expect(find.byIcon(Icons.qr_code_scanner_rounded), findsOneWidget);
+    final copy = tester.getTopLeft(find.text('Copy from another device')).dy;
+    expect(setUp, lessThan(signIn));
+    expect(signIn, lessThan(copy));
+    expect(find.byIcon(Icons.qr_code_scanner_rounded), findsNothing);
     expect(
       find.text('Point the camera at the code on your other device'),
       findsOneWidget,
     );
-    // The hint is the door's, under it: between the copy door and the next.
+    // The hint is the door's, under it.
     final hint = tester.getTopLeft(find.text(SetupDoors.copyHint)).dy;
     expect(hint, greaterThan(copy));
-    expect(hint, lessThan(signIn));
   });
 
   testWidgets('each door opens its own way', (tester) async {
