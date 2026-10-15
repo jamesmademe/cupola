@@ -2095,12 +2095,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// Hands a household member the way into this Seerr: a QR and a link, in a
   /// sheet.
   Widget _buildInviteRow(String connectionId) {
-    return SettingsCard.grouped(
-      leading: const Icon(Icons.qr_code_2_rounded),
-      title: 'Invite someone',
-      subtitle: 'A QR or a link to sign in with their own account',
-      semanticHint: 'shows an invite to this Seerr',
-      onTap: () => showInviteSheet(context, connectionId: connectionId),
+    return SettingsGroupCard(
+      children: [
+        SettingsCard.grouped(
+          leading: const Icon(Icons.qr_code_2_rounded),
+          title: 'Invite someone',
+          subtitle: 'A QR or a link for their own account',
+          semanticHint: 'shows an invite to this Seerr',
+          onTap: () => showInviteSheet(context, connectionId: connectionId),
+        ),
+      ],
     );
   }
 

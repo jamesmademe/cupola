@@ -147,10 +147,7 @@ void main() {
       final (harness, container, _) = await _pumpForm(tester, Profiles.p1);
 
       expect(find.text('Invite someone'), findsOneWidget);
-      expect(
-        find.text('A QR or a link to sign in with their own account'),
-        findsOneWidget,
-      );
+      expect(find.text('A QR or a link for their own account'), findsOneWidget);
       // After the choice of how a title is added, not before it.
       expect(
         tester.getTopLeft(find.text('Invite someone')).dy,
