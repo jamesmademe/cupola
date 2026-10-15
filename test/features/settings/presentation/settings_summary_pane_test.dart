@@ -112,10 +112,7 @@ void main() {
         );
 
         expect(find.text('Set up another device'), findsOneWidget);
-        expect(
-          find.text('Copy your services to a new phone with a code'),
-          findsOneWidget,
-        );
+        expect(find.text('Copy everything to a new phone'), findsOneWidget);
         final row = tester.getTopLeft(find.text('Set up another device')).dy;
         expect(
           tester.getTopLeft(find.text('Revisit onboarding')).dy,

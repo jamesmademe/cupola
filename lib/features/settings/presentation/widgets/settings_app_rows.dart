@@ -112,7 +112,7 @@ class SettingsAnotherDeviceRow extends StatelessWidget {
     return SettingsCard.grouped(
       leading: const Icon(Icons.qr_code_2_rounded),
       title: 'Set up another device',
-      subtitle: 'Copy your services to a new phone with a code',
+      subtitle: 'Copy everything to a new phone',
       semanticHint: 'opens a code the other device copies from',
       onTap: () => context.push(ServiceRoutes.settingsAnotherDevice),
     );

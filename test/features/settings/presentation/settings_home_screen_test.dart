@@ -395,10 +395,7 @@ void main() {
         );
 
         expect(find.text('Set up another device'), findsOneWidget);
-        expect(
-          find.text('Copy your services to a new phone with a code'),
-          findsOneWidget,
-        );
+        expect(find.text('Copy everything to a new phone'), findsOneWidget);
         expect(find.byIcon(Icons.qr_code_2_rounded), findsOneWidget);
         // Under Trusted certificates in its group, and above About.
         final row = tester.getTopLeft(find.text('Set up another device')).dy;
@@ -425,10 +422,7 @@ void main() {
 
         expect(
           find.bySemanticsLabel(
-            RegExp(
-              '^Set up another device, Copy your services to a new phone '
-              'with a code',
-            ),
+            RegExp('^Set up another device, Copy everything to a new phone'),
           ),
           findsOneWidget,
         );
