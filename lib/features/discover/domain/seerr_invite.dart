@@ -5,8 +5,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// What the person who runs a Seerr hands a household member, so their
-/// Cupola finds it: where it is at home and away, the certificate each
-/// address shows, and the name the server goes by.
+/// Cupola finds it: where it is at home and away, and the certificate each
+/// address shows. The server's name is not in it: the receiving app reads the
+/// server on arrival and names it from the server itself.
 ///
 /// **Never a secret.** No key, no session, no gateway access: an invite
 /// travels as a link, in a chat or a QR on a screen, and anyone who sees it
@@ -23,17 +24,11 @@ final class SeerrInvite {
     this.away,
     this.homePin,
     this.awayPin,
-    this.title,
   });
 
   /// The invite for [connection], as the operator's app has it: its
-  /// addresses, the pin [settings] keeps for each, and [title], the name the
-  /// server gave itself.
-  factory SeerrInvite.of(
-    ServiceInstance connection,
-    SettingsModel settings, {
-    String? title,
-  }) {
+  /// addresses and the pin [settings] keeps for each.
+  factory SeerrInvite.of(ServiceInstance connection, SettingsModel settings) {
     final home = UrlUtils.normalizeBaseUrl(connection.url);
     final awayAddress = connection.away;
     final away = awayAddress == null || !awayAddress.access.isEmpty
@@ -44,7 +39,6 @@ final class SeerrInvite {
       away: away,
       homePin: _httpsPin(home, settings),
       awayPin: away == null ? null : _httpsPin(away, settings),
-      title: _cleanTitle(title),
     );
   }
 
@@ -55,9 +49,6 @@ final class SeerrInvite {
   /// The version this build writes and reads. A link of another version is
   /// not read: what it carries may mean something else.
   static const version = '1';
-
-  /// The longest name an invite carries; a longer one is cut.
-  static const titleLength = 64;
 
   /// The address at home, as [UrlUtils.normalizeBaseUrl] writes it.
   final String home;
@@ -72,9 +63,6 @@ final class SeerrInvite {
 
   /// The same for [away].
   final String? awayPin;
-
-  /// The name the operator gave the server (`applicationTitle`).
-  final String? title;
 
   /// The connection an invite draws up under [id]: its two addresses, no
   /// key, no account, no access.
@@ -124,7 +112,6 @@ final class SeerrInvite {
       'away': ?away,
       'homePin': ?homePin,
       'awayPin': ?awayPin,
-      'title': ?title,
     },
   );
 
@@ -143,7 +130,8 @@ final class SeerrInvite {
   ///
   /// Strict on what it vouches for: an address that is not one, or a pin
   /// that is not a fingerprint, refuses the whole invite rather than
-  /// trusting part of it.
+  /// trusting part of it. A parameter it does not know (a `title`, from a
+  /// link an earlier build wrote) is ignored.
   static SeerrInvite? fromQuery(Map<String, String> query) {
     if (query['v'] != version) return null;
     final home = _address(query['home']);
@@ -160,7 +148,6 @@ final class SeerrInvite {
       away: away,
       homePin: _isHttps(home) ? homePin : null,
       awayPin: away != null && _isHttps(away) ? awayPin : null,
-      title: _cleanTitle(query['title']),
     );
   }
 
@@ -197,26 +184,16 @@ final class SeerrInvite {
   static String? _httpsPin(String url, SettingsModel settings) =>
       _isHttps(url) ? settings.pinForUrl(url) : null;
 
-  static String? _cleanTitle(String? raw) {
-    if (raw == null) return null;
-    final clean = raw.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), ' ').trim();
-    if (clean.isEmpty) return null;
-    return clean.length <= titleLength
-        ? clean
-        : clean.substring(0, titleLength).trimRight();
-  }
-
   @override
   bool operator ==(Object other) =>
       other is SeerrInvite &&
       other.home == home &&
       other.away == away &&
       other.homePin == homePin &&
-      other.awayPin == awayPin &&
-      other.title == title;
+      other.awayPin == awayPin;
 
   @override
-  int get hashCode => Object.hash(home, away, homePin, awayPin, title);
+  int get hashCode => Object.hash(home, away, homePin, awayPin);
 
   @override
   String toString() => 'SeerrInvite(home: $home, away: $away)';

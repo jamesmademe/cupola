@@ -11,7 +11,6 @@ import 'package:cupola/core/utils/sheet_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/qr_code_view.dart';
-import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -34,10 +33,10 @@ Future<void> showInviteSheet(
 /// a link to send, what it cannot do said under it, and nothing secret in
 /// either (`SeerrInvite`).
 ///
-/// The invite is made once the server has told its name, since the name is part
-/// of it: until then a placeholder holds the QR's place at its exact size, so
-/// the sheet does not move, and the code never changes under a camera. A server
-/// that does not answer leaves the name out and the invite is made without it.
+/// The invite is made at once from the saved connection: it carries no name,
+/// so nothing holds the code back. The line under the code names the server
+/// once the server has answered (`<name> · <host>`) and is the host alone
+/// before that, or when it never does; the code and the link do not change.
 class InviteSheet extends ConsumerStatefulWidget {
   const InviteSheet({super.key, required this.connectionId});
 
@@ -93,10 +92,12 @@ class _InviteSheetState extends ConsumerState<InviteSheet> {
       return const SizedBox.shrink();
     }
 
-    final facts = ref.watch(seerrServerFactsProvider(widget.connectionId));
-    final loading = !facts.hasValue && !facts.hasError;
-    final title = facts.hasValue ? facts.requireValue.applicationTitle : null;
-    final invite = SeerrInvite.of(connection, settings, title: title);
+    final invite = SeerrInvite.of(connection, settings);
+    // Only the line under the code: the invite never waits for it.
+    final title = ref
+        .watch(seerrServerFactsProvider(widget.connectionId))
+        .value
+        ?.applicationTitle;
     final limits = inviteLimitsOf(connection);
 
     final theme = Theme.of(context);
@@ -106,7 +107,7 @@ class _InviteSheetState extends ConsumerState<InviteSheet> {
     final host = UrlUtils.hostInProse(
       ServiceKey.seerr.extractHost(invite.home) ?? invite.home,
     );
-    final named = invite.title == null ? host : '${invite.title} · $host';
+    final named = title == null ? host : '$title · $host';
 
     return AppBottomSheet(
       child: Column(
@@ -128,19 +129,11 @@ class _InviteSheetState extends ConsumerState<InviteSheet> {
           ),
           const SizedBox(height: AppSpacing.xl),
           Center(
-            child: loading
-                ? Semantics(
-                    label: 'Preparing the invite',
-                    child: ShimmerPlaceholder.card(
-                      width: InviteSheet.qrSide,
-                      height: InviteSheet.qrSide,
-                    ),
-                  )
-                : QrCodeView(
-                    data: invite.toLink(),
-                    size: InviteSheet.qrSide,
-                    semanticLabel: 'QR code of the invite',
-                  ),
+            child: QrCodeView(
+              data: invite.toLink(),
+              size: InviteSheet.qrSide,
+              semanticLabel: 'QR code of the invite',
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(named, textAlign: TextAlign.center, style: dim),
@@ -154,9 +147,7 @@ class _InviteSheetState extends ConsumerState<InviteSheet> {
           ],
           const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
-            // Not before the invite is made: a link copied now would lack the
-            // name the QR is about to carry.
-            onPressed: loading ? null : () => _copy(invite),
+            onPressed: () => _copy(invite),
             icon: Icon(
               _copied ? Icons.check_rounded : Icons.link_rounded,
               size: 18,

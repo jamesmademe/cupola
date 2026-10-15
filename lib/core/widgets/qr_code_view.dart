@@ -13,9 +13,11 @@ import 'package:cupola/core/app_radius.dart';
 ///
 /// The tile is [size] on a side, its corners [AppRadius.md], and holds the code
 /// with the four-module quiet zone the QR standard asks for. The module is
-/// snapped down to a whole logical pixel (so no module straddles a pixel and
-/// blurs into its neighbour), the code is centred in the tile, and all the dark
-/// modules are one path, so no hairline shows between two that touch.
+/// snapped down to a whole **device** pixel (so no module straddles a pixel and
+/// blurs into its neighbour, and a dense code still uses the tile it is on:
+/// snapping to a logical pixel would waste up to a third of it on a phone's
+/// 3x screen), the code is centred in the tile, and all the dark modules are
+/// one path, so no hairline shows between two that touch.
 ///
 /// Error correction is level M. The code is built once per [data], not per
 /// frame.
@@ -66,7 +68,10 @@ class _QrCodeViewState extends State<QrCodeView> {
       child: RepaintBoundary(
         child: CustomPaint(
           size: Size.square(widget.size),
-          painter: _QrPainter(_image),
+          painter: _QrPainter(
+            _image,
+            devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+          ),
         ),
       ),
     );
@@ -74,9 +79,10 @@ class _QrCodeViewState extends State<QrCodeView> {
 }
 
 class _QrPainter extends CustomPainter {
-  _QrPainter(this.image);
+  _QrPainter(this.image, {required this.devicePixelRatio});
 
   final QrImage image;
+  final double devicePixelRatio;
 
   // The code's own colours, not the room's: a scanner needs dark on light in
   // either theme (see [QrCodeView]).
@@ -91,16 +97,18 @@ class _QrPainter extends CustomPainter {
     );
     canvas.drawRRect(tile, Paint()..color = _tile);
 
+    // The code is laid out in device pixels, so every module edge is a whole
+    // one: whole pixels per module, the code on a whole pixel of the tile.
+    final scale = devicePixelRatio;
     final span = image.moduleCount + 2 * QrCodeView.quietZoneModules;
-    final side = size.shortestSide;
-    // A whole logical pixel per module; a tile too small for that at this
-    // code's density falls back to the fraction that fits, rather than
-    // drawing past its edge.
-    final whole = (side / span).floorToDouble();
-    final module = whole >= 1 ? whole : side / span;
+    final sideDevice = size.shortestSide * scale;
+    // A tile too small for a whole pixel per module at this code's density
+    // falls back to the fraction that fits, rather than drawing past its edge.
+    final whole = (sideDevice / span).floorToDouble();
+    final module = whole >= 1 ? whole : sideDevice / span;
     final origin = Offset(
-      ((size.width - module * image.moduleCount) / 2).floorToDouble(),
-      ((size.height - module * image.moduleCount) / 2).floorToDouble(),
+      ((size.width * scale - module * image.moduleCount) / 2).floorToDouble(),
+      ((size.height * scale - module * image.moduleCount) / 2).floorToDouble(),
     );
 
     final dark = Path();
@@ -117,12 +125,19 @@ class _QrPainter extends CustomPainter {
         );
       }
     }
-    canvas.drawPath(dark, Paint()..color = _module);
+    canvas
+      ..save()
+      ..scale(1 / scale)
+      ..drawPath(dark, Paint()..color = _module)
+      ..restore();
   }
 
   /// The code is built once per payload and a new payload builds a new
-  /// image, so an unchanged image is an unchanged picture. A change of size
-  /// lays the box out again, which paints it.
+  /// image, so an unchanged image is an unchanged picture; a screen of
+  /// another density snaps it differently. A change of size lays the box out
+  /// again, which paints it.
   @override
-  bool shouldRepaint(_QrPainter oldDelegate) => oldDelegate.image != image;
+  bool shouldRepaint(_QrPainter oldDelegate) =>
+      oldDelegate.image != image ||
+      oldDelegate.devicePixelRatio != devicePixelRatio;
 }

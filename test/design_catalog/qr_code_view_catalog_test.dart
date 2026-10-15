@@ -12,14 +12,13 @@ import 'catalog.dart';
 /// certificate to vouch for and no name.
 const _short = 'cupola://invite?v=1&home=http%3A%2F%2F192.168.1.10%3A5055';
 
-/// An invite with both addresses, the certificate each shows, and a name: the
-/// longest an operator's own Seerr makes, and the densest code the sheet draws.
+/// An invite with both addresses and the certificate each shows: the longest
+/// an operator's own Seerr makes, and the densest code the sheet draws.
 const _long =
     'cupola://invite?v=1&home=https%3A%2F%2Fnas.home.arpa%3A5055'
     '&away=https%3A%2F%2Fseerr.example.net'
     '&homePin=a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90'
-    '&awayPin=0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0'
-    '&title=Rossi+Movies';
+    '&awayPin=0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0';
 
 Widget _qr(String data, {double size = 232}) =>
     QrCodeView(data: data, size: size, semanticLabel: 'QR code of the invite');
@@ -30,19 +29,19 @@ void main() {
     width: 880,
     scenes: [
       CatalogScene(
-        'QrCodeView · a short payload (33 modules, 5 pixels each) at the '
-        'sheet\'s 232 · always black on white, in the dark room too',
+        'QrCodeView · a short payload (33 modules) at the sheet\'s 232 · '
+        'always black on white, in the dark room too',
         (_) => _qr(_short),
       ),
       CatalogScene(
-        'QrCodeView · a long payload (both addresses, both certificates, a '
-        'name: 65 modules, 3 pixels each) at 232 · the code centred in its '
-        'tile, the spare pixels part of the quiet zone',
+        'QrCodeView · a long payload (both addresses, both certificates: 61 '
+        'modules) at 232 · the code centred in its tile, the pixels the '
+        'whole-pixel module leaves over part of the quiet zone',
         (_) => _qr(_long),
       ),
       CatalogScene(
         'QrCodeView · size 120 · the tile is the side asked for, the module '
-        'snaps down to a whole pixel and the rest is quiet zone',
+        'snaps down to a whole device pixel and the rest is quiet zone',
         (_) => _qr(_short, size: 120),
       ),
       CatalogScene(

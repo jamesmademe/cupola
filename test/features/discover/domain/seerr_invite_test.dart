@@ -38,21 +38,19 @@ SettingsModel _trusting(List<(String, String)> pins) {
 
 void main() {
   group('an invite made from the operator\'s connection', () {
-    test('carries both addresses, the pin of each, and the title', () {
+    test('carries both addresses and the pin of each', () {
       final invite = SeerrInvite.of(
         _seerr(),
         _trusting([
           ('https://nas.home.arpa:5055', _homePin),
           ('https://seerr.example.net', _awayPin),
         ]),
-        title: 'Rossi Movies',
       );
 
       expect(invite.home, 'https://nas.home.arpa:5055');
       expect(invite.away, 'https://seerr.example.net');
       expect(invite.homePin, _homePin);
       expect(invite.awayPin, _awayPin);
-      expect(invite.title, 'Rossi Movies');
     });
 
     test('never carries a key, a session or a gateway\'s access', () {
@@ -117,17 +115,6 @@ void main() {
       expect(invite.homePin, isNull);
       expect(invite.awayPin, _awayPin);
     });
-
-    test('a long or broken title is cut and cleaned', () {
-      final invite = SeerrInvite.of(
-        _seerr(),
-        const SettingsModel(),
-        title: 'Movies\nat home ${'x' * 80}',
-      );
-
-      expect(invite.title, startsWith('Movies at home'));
-      expect(invite.title!.length, SeerrInvite.titleLength);
-    });
   });
 
   group('reading an invite', () {
@@ -136,7 +123,6 @@ void main() {
       away: 'https://seerr.example.net',
       homePin: _homePin,
       awayPin: _awayPin,
-      title: 'Rossi & Co. Movies',
     );
 
     test('reads back what was written', () {
@@ -176,6 +162,24 @@ void main() {
         isTrue,
         reason: 'a broken invite is still one, and is said so',
       );
+    });
+
+    test('a link that still carries a name is read, and the name is not '
+        'kept', () {
+      final query = {...invite.toUri().queryParameters, 'title': 'Rossi'};
+
+      expect(SeerrInvite.fromQuery(query), invite);
+      expect(
+        SeerrInvite.tryParse(
+          Uri(
+            scheme: 'cupola',
+            host: 'invite',
+            queryParameters: query,
+          ).toString(),
+        ),
+        invite,
+      );
+      expect(invite.toUri().queryParameters, isNot(contains('title')));
     });
 
     test('a pin for an http address is not kept', () {

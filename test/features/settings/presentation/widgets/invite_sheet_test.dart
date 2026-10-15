@@ -11,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/qr_code_view.dart';
-import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
@@ -145,15 +144,15 @@ void main() {
       findsOneWidget,
     );
 
-    // The QR says what the link says, made of the saved connection and the
-    // name the server gave itself.
+    // The QR says what the link says, made of the saved connection alone:
+    // the server's name is on the screen and in no link.
     final expected = SeerrInvite.of(
       _seerr(),
       SettingsModel(instances: [_seerr()]),
-      title: 'Rossi Movies',
     ).toLink();
     expect(_qrData(tester), expected);
     expect(Uri.parse(expected).queryParameters['away'], _away);
+    expect(Uri.parse(expected).queryParameters, isNot(contains('title')));
   });
 
   testWidgets('a server with no name of its own is read by its host alone', (
@@ -162,10 +161,7 @@ void main() {
     await _open(tester, _seerr(), facts: () async => _facts(title: null));
 
     expect(find.text('nas.home.arpa:5055'), findsOneWidget);
-    expect(
-      Uri.parse(_qrData(tester)).queryParameters,
-      isNot(contains('title')),
-    );
+    expect(find.byType(QrCodeView), findsOneWidget);
   });
 
   testWidgets('a server that does not answer leaves the name out, and the '
@@ -175,48 +171,46 @@ void main() {
 
     expect(find.byType(QrCodeView), findsOneWidget);
     expect(find.text('nas.home.arpa:5055'), findsOneWidget);
-    expect(
-      Uri.parse(_qrData(tester)).queryParameters,
-      isNot(contains('title')),
-    );
     await tester.tap(find.text('Copy link'));
     await tester.pump();
     expect(find.text('Link copied'), findsOneWidget);
     await tester.pump(InviteSheet.copiedFor);
   });
 
-  testWidgets('while the server is asked a placeholder holds the QR\'s place, '
-      'and nothing moves when it arrives', (tester) async {
+  testWidgets('the code and Copy link are there before the server answers, '
+      'and the link is the same after', (tester) async {
+    _mockClipboard(tester);
     final answer = Completer<SeerrServerFacts>();
     await _open(tester, _seerr(), facts: () => answer.future);
-    // A short name, since the test's font is wide: a name and host that wrap
-    // under it and not before would move the QR by a line.
 
-    expect(find.byType(QrCodeView), findsNothing);
-    final placeholder = find.byType(ShimmerPlaceholder);
-    expect(tester.getSize(placeholder), const Size.square(232));
-    final placeholderAt = tester.getTopLeft(placeholder);
-    final buttonAt = tester.getTopLeft(find.bySubtype<FilledButton>());
-    final buttonSize = tester.getSize(find.bySubtype<FilledButton>());
-    // No link is copied before the invite is whole.
-    expect(
-      tester.widget<FilledButton>(find.bySubtype<FilledButton>()).onPressed,
-      isNull,
-    );
-
-    answer.complete(_facts(title: 'Rossi'));
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byType(ShimmerPlaceholder), findsNothing);
-    expect(tester.getTopLeft(find.byType(QrCodeView)), placeholderAt);
-    expect(tester.getSize(find.byType(QrCodeView)), const Size.square(232));
-    expect(tester.getTopLeft(find.bySubtype<FilledButton>()), buttonAt);
-    expect(tester.getSize(find.bySubtype<FilledButton>()), buttonSize);
+    // Nothing waits: the code, the host alone, and a button that works.
+    expect(find.byType(QrCodeView), findsOneWidget);
+    expect(find.text('nas.home.arpa:5055'), findsOneWidget);
     expect(
       tester.widget<FilledButton>(find.bySubtype<FilledButton>()).onPressed,
       isNotNull,
     );
+    final before = _qrData(tester);
+    final codeAt = tester.getTopLeft(find.byType(QrCodeView));
+    final buttonAt = tester.getTopLeft(find.bySubtype<FilledButton>());
+    await tester.tap(find.text('Copy link'));
+    await tester.pump(InviteSheet.copiedFor);
+    expect(_clipboard, before);
+
+    // A short name, since the test's font is wide: a name and host that wrap
+    // under the code would move it by a line.
+    answer.complete(_facts(title: 'Rossi'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Rossi · nas.home.arpa:5055'), findsOneWidget);
+    expect(_qrData(tester), before, reason: 'the code does not change');
+    expect(tester.getTopLeft(find.byType(QrCodeView)), codeAt);
+    expect(tester.getTopLeft(find.bySubtype<FilledButton>()), buttonAt);
+    _clipboard = null;
+    await tester.tap(find.text('Copy link'));
+    await tester.pump(InviteSheet.copiedFor);
+    expect(_clipboard, before, reason: 'nor does the link');
   });
 
   testWidgets('Copy link puts exactly the invite\'s link on the clipboard, '
@@ -234,7 +228,6 @@ void main() {
     final link = SeerrInvite.of(
       _seerr(),
       SettingsModel(instances: [_seerr()]),
-      title: 'Rossi Movies',
     ).toLink();
     expect(_clipboard, link);
     expect(_clipboard, _qrData(tester));

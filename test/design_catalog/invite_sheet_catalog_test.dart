@@ -1,8 +1,6 @@
 @Tags(['catalog'])
 library;
 
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -149,10 +147,6 @@ void main() {
     ),
     facts: () => _named('Rossi Movies'),
   );
-  final loading = _world(
-    _seerr(),
-    facts: () => Completer<SeerrServerFacts>().future,
-  );
 
   catalogCard(
     'InviteSheet',
@@ -160,7 +154,7 @@ void main() {
     scenes: [
       _scene(
         'InviteSheet · both addresses, each with its certificate, and the '
-        'server\'s name: nothing to say under the code',
+        'server\'s name on the line under the code: nothing else to say',
         bothAddresses,
       ),
       _scene(
@@ -179,11 +173,6 @@ void main() {
         'away: two lines, in the order the domain gives them',
         homeGated,
         height: 760,
-      ),
-      _scene(
-        'InviteSheet · while the server is asked its name: a placeholder the '
-        'size of the code holds its place, and the button waits',
-        loading,
       ),
       _scene(
         'InviteSheet · on a desktop window: the modal sheet caps at 640pt '
