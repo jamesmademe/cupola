@@ -215,6 +215,22 @@ const _exceptions = <String, ({int count, String reason})>{
         'Compared with the address Seerr reports for its server: whether it '
         'is this connection, by the address it is saved with.',
   ),
+  'lib/features/discover/domain/seerr_invite.dart  .url': (
+    count: 1,
+    reason:
+        'An invite names the address at home; the household member\'s app '
+        'reaches it, never this one.',
+  ),
+  'lib/features/discover/domain/seerr_invite.dart  .access': (
+    count: 1,
+    reason:
+        'Whether the address at home asks for a token, said beside the '
+        'invite; the access itself never goes in it.',
+  ),
+  'lib/features/discover/domain/seerr_invite.dart  pinForUrl(': (
+    count: 1,
+    reason: 'The certificate an invite vouches for at each address it names.',
+  ),
   'lib/features/discover/domain/seerr_known_arr.dart  .url': (
     count: 1,
     reason:
