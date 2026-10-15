@@ -37,6 +37,14 @@ void main() {
       expect(labels('/stack/npm/audit-log').last, 'Audit log');
     });
 
+    test('a page of Settings takes the word its own bar says', () {
+      expect(labels('/settings/another-device'), [
+        'Settings',
+        'Set up another device',
+      ]);
+      expect(labels('/settings/certificates').last, 'Trusted certificates');
+    });
+
     test('a tab another service owns is not claimed by this one', () {
       // `rss` is a qBittorrent tab. Radarr has no such view, so a deep link
       // naming it is not a place on Radarr and the crumb must not say it is.

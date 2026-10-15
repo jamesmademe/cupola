@@ -63,6 +63,7 @@ abstract final class ShellBreadcrumb {
     'hints': 'Hints',
     'certificates': 'Trusted certificates',
     'background-search': 'Background search',
+    'another-device': 'Set up another device',
     'all': 'All',
     'import': 'Manual import',
     'locate': 'Locate',
