@@ -7,7 +7,7 @@ import 'package:cupola/core/platform/browser_opener.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/url_utils.dart';
-import 'package:cupola/core/widgets/failure_remedy.dart';
+import 'package:cupola/core/widgets/notice_line.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/presentation/seerr_sign_in_notice.dart';
@@ -397,35 +397,15 @@ class SeerrSignInPrimary extends StatelessWidget {
   );
 }
 
-/// A verb of the sign-in. [fill] is the tone of the notice it remedies, for
-/// the one fill a notice gets: amber for a fault, ink otherwise. Without it,
-/// text in ink.
+/// A verb of the sign-in: a [noticeAction].
 Widget seerrSignInAction(
   BuildContext context,
   String label,
   VoidCallback onPressed, {
   StatusTone? fill,
-}) => Align(
-  alignment: AlignmentDirectional.centerStart,
-  child: fill != null
-      ? FilledButton(
-          onPressed: onPressed,
-          style: remedyFillStyle(
-            context,
-            compact: true,
-            fault: fill == StatusTone.warning,
-          ),
-          child: Text(label),
-        )
-      : TextButton(
-          onPressed: onPressed,
-          style: retryInkStyle(Theme.of(context).colorScheme),
-          child: Text(label),
-        ),
-);
+}) => noticeAction(context, label, onPressed, fill: fill);
 
-/// One notice of the sign-in, the quiet way a failure line is: the glyph in
-/// its tone, the title, the sentence, and its verbs. Heard as one sentence.
+/// One notice of the sign-in, the quiet way a failure line is ([NoticeLine]).
 class SeerrSignInNoticeLine extends StatelessWidget {
   const SeerrSignInNoticeLine({
     super.key,
@@ -437,68 +417,10 @@ class SeerrSignInNoticeLine extends StatelessWidget {
   final List<Widget> actions;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final tone = statusToneColor(
-      colorScheme,
-      notice.tone,
-      surface: colorScheme.surface,
-    );
-    final glyph = switch (notice.tone) {
-      StatusTone.error => Icons.cloud_off_rounded,
-      StatusTone.info => Icons.info_outline_rounded,
-      _ => Icons.error_outline_rounded,
-    };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Semantics(
-          container: true,
-          liveRegion: true,
-          label: notice.spoken,
-          child: ExcludeSemantics(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(glyph, size: 16, color: tone),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        notice.title,
-                        style: theme.textTheme.titleSmall!
-                            .weight(FontWeight.w600)
-                            .copyWith(color: tone),
-                      ),
-                      if (notice.sentence case final sentence?)
-                        Text(
-                          sentence,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (actions.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            children: actions,
-          ),
-        ],
-      ],
-    );
-  }
+  Widget build(BuildContext context) => NoticeLine(
+    tone: notice.tone,
+    title: notice.title,
+    sentence: notice.sentence,
+    actions: actions,
+  );
 }

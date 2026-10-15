@@ -29,6 +29,7 @@ export 'app_empty_state.dart';
 export 'app_error_state.dart';
 export 'inline_error_retry.dart';
 export 'fault_note.dart';
+export 'notice_line.dart';
 export 'service_offline_state.dart';
 export 'fault_band.dart';
 export 'capability_banner.dart';

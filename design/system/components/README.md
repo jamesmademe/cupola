@@ -34,6 +34,7 @@ cards live in [`../motion/`](../motion/).
 | Metadata | [TagChip](TagChip/README.md) | `lib/core/widgets/tag_chip.dart` |
 | Metadata | [MachineName](MachineName/README.md) | `lib/core/widgets/machine_name.dart` |
 | Status | [DownloadDetail](DownloadDetail/README.md) | `lib/features/activity/presentation/download_page.dart`, `lib/features/activity/presentation/widgets/download_parts.dart` |
+| Status | [NoticeLine](NoticeLine/README.md) | `lib/core/widgets/notice_line.dart` |
 | Status | [FaultCard](FaultCard/README.md) | `lib/features/activity/presentation/widgets/fault_card.dart`, `lib/features/activity/presentation/widgets/needs_you_cards.dart` |
 | Status | [ImportReview](ImportReview/README.md) | `lib/features/import/presentation/blocked_import_review_page.dart`, `lib/features/import/presentation/blocked_import_parts.dart`, `lib/features/activity/presentation/widgets/import_done_card.dart` |
 | Status | [AppErrorState](AppErrorState/README.md) | `lib/core/widgets/app_error_state.dart`, `lib/core/widgets/inline_error_retry.dart`, `lib/core/widgets/brief_failure_line.dart` |
