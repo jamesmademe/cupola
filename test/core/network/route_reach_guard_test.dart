@@ -237,6 +237,18 @@ const _exceptions = <String, ({int count, String reason})>{
         'The Seerr a found server was read from, named in the candidate by '
         'its saved address.',
   ),
+  'lib/features/pairing/domain/pair_package.dart  .url': (
+    count: 1,
+    reason:
+        'What another device copies: each connection with an address, by '
+        'the address it is saved with. Nothing here reaches it.',
+  ),
+  'lib/features/pairing/domain/pair_package.dart  pinForUrl(': (
+    count: 1,
+    reason:
+        'The certificate each copied address is trusted with, copied beside '
+        'it.',
+  ),
   'lib/features/prowlarr/domain/prowlarr_known_application.dart  .url': (
     count: 1,
     reason:
