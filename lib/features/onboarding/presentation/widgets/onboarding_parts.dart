@@ -555,33 +555,77 @@ class OnboardingWelcome extends StatelessWidget {
   /// ("Revisit onboarding"). Null on a first run, which came from nowhere.
   final VoidCallback? onBack;
 
+  /// The claim, from the top of its headline to the end of its sentence, and
+  /// the three doors with their lines under them, at the default reading
+  /// size: 152pt and 268pt, measured with the bundled faces on phones 390 to
+  /// 440pt wide (a phone's width moves the sentence by a line at most).
+  static const _claimAndDoors = 152.0 + 268.0;
+
+  /// One more line of the sentence, so a narrower phone that wraps it once
+  /// more still has the room the rule counted.
+  static const _spare = 24.0;
+
+  /// Whether a Welcome [height] tall has the room, at rest, for the claim's
+  /// whole sentence **and** the doors' lines under them.
+  ///
+  /// The doors are pinned under the claim and the claim scrolls above them,
+  /// so a sentence that does not fit slides under the doors and shows only
+  /// after the claim is scrolled. The room is what the beat has: its height
+  /// less its own gutters ([onboardingPadding]) and the gap above the doors,
+  /// against the claim and the doors, both of which grow with the reading
+  /// size (`scale`, as the ring's own reservation does). A 402 by 874pt
+  /// phone's beat is 450pt tall at 1x, short of the 516pt this asks for, so
+  /// its doors keep their verbs and say the lines as hints; a 440 by 956pt
+  /// phone's is 532pt, and has them.
+  ///
+  /// Beside the ring in a window, where nothing is pinned, the lines are the
+  /// default's.
+  static bool roomForDoorLines(BuildContext context, double height) {
+    if (!SetupDoors.showsLines(context)) return false;
+    if (onboardingSideBySide(context) || !height.isFinite) return true;
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final needed =
+        onboardingPadding.vertical +
+        AppSpacing.lg +
+        _claimAndDoors * scale +
+        _spare;
+    return height >= needed;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return OnboardingBeat(
-      alignment: MainAxisAlignment.end,
-      actions: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SetupDoors(onSetUp: onSetUp, onCopy: onCopy, onSignIn: onSignIn),
-          if (onBack case final back?) ...[
-            const SizedBox(height: AppSpacing.sm),
-            TextButton(onPressed: back, child: const Text('Back')),
+    return LayoutBuilder(
+      builder: (context, constraints) => OnboardingBeat(
+        alignment: MainAxisAlignment.end,
+        actions: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SetupDoors(
+              onSetUp: onSetUp,
+              onCopy: onCopy,
+              onSignIn: onSignIn,
+              showLines: roomForDoorLines(context, constraints.maxHeight),
+            ),
+            if (onBack case final back?) ...[
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(onPressed: back, child: const Text('Back')),
+            ],
           ],
+        ),
+        children: [
+          const OnePunchline(),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Cupola talks straight to the services you run at home. No Cupola '
+            'account, no cloud in between.',
+            style: theme.textTheme.bodyLarge!.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
-      children: [
-        const OnePunchline(),
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          'Cupola talks straight to the services you run at home. No Cupola '
-          'account, no cloud in between.',
-          style: theme.textTheme.bodyLarge!.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
     );
   }
 }

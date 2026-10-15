@@ -10,9 +10,12 @@ Rendered from `lib/core/widgets/setup_doors.dart` by `test/design_catalog/setup_
 - Under it, `AppSpacing.sm` below, the hint in `textTheme.bodySmall` and `dimText`: *Start with Seerr: it already knows your Radarr and Sonarr, keys included.*
 - `AppSpacing.lg` below it, the way for whoever has another device that is already set up, `Copy from another device`: a `TextButton` in ink with an 18pt `qr_code_scanner_rounded` before its label, pinned to `VisualDensity.standard` and 44pt, in the middle on purpose: a text door, so the Welcome keeps its one fill. Under it, `AppSpacing.xs` below, *Point the camera at the code on your other device*, the same way.
 - `AppSpacing.lg` below that, the household member's door, `I have a Seerr account`: the theme's `OutlinedButton`, stretched to the column, pinned to `VisualDensity.standard` and 44pt; under it the same way, *Sign in to ask for movies and series.*
-- Past the reading size where two buttons stop sharing a line (`scale(14) > 20`, `OnboardingFooter`'s), and on a portrait frame shorter than 800pt (`SetupDoors.minHeightForLines`), the lines are not drawn and the doors sit `AppSpacing.sm` apart: on the Welcome they are pinned under the ring, and the three doors with their lines are 268pt tall, which a 6.3" phone (844pt) leaves room for and a 667pt one does not, nor does 200% text. Each line is still spoken, as its door's hint.
+- Past the reading size where two buttons stop sharing a line (`scale(14) > 20`, `OnboardingFooter`'s), the lines are not drawn and the doors sit `AppSpacing.sm` apart: on the Welcome they are pinned under the ring, and three doors with their lines overflowed a short phone at 200%. Each line is still spoken, as its door's hint.
+- **The Welcome decides from the room it has.** The doors are pinned under the claim and the claim scrolls above them, so a sentence that does not fit slides under the doors and shows only after scrolling. `OnboardingWelcome.roomForDoorLines` asks whether the beat, less its gutters and the gap above the doors, holds the claim (152pt, headline to the end of its sentence) and the doors with their lines (268pt), both grown with the reading size, and one more line of the sentence to spare: 516pt at the default size. A 402 by 874pt phone's beat is 450pt, so its doors keep their verbs; a 440 by 956pt phone's is 532pt, and has the lines. The doors then measure 160pt where they would measure 268pt, and the sentence ends 16pt above them. The Home at zero scrolls, and draws the lines until the reading size where two buttons stop sharing a line.
 
 ## The consumer provides
+
+`showLines`, when it knows how much room the doors have (the Welcome); left out, the lines follow the reading size alone.
 
 `onSetUp`: the Welcome opens Connect with Seerr proposed; the Home at zero pushes `/welcome/connect`, past the claim.
 
@@ -26,7 +29,7 @@ Each button speaks its label with its hint attached to it (on the label, which t
 
 ## States in the catalog
 
-The three doors at the default reading size on a tall phone, on a short one (390 by 667, no lines) and at 200%, each in the dark and the light room.
+The three doors at the default reading size with their lines, without them (`showLines: false`, as the Welcome draws them on a 402 by 874pt phone) and at 200%, each in the dark and the light room.
 
 ## Do / don't
 

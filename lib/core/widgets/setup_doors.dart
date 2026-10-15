@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 
@@ -18,6 +17,7 @@ class SetupDoors extends StatelessWidget {
     required this.onSetUp,
     required this.onCopy,
     required this.onSignIn,
+    this.showLines,
   });
 
   /// Opens Connect, with Seerr proposed.
@@ -28,6 +28,10 @@ class SetupDoors extends StatelessWidget {
 
   /// Opens the sign-in with a Seerr account.
   final VoidCallback onSignIn;
+
+  /// Whether the lines under the doors are drawn; null leaves it to
+  /// [showsLines]. A caller that knows how much room the doors have says.
+  final bool? showLines;
 
   /// What the primary door leads with. Said under it rather than in it, so
   /// the button stays a verb.
@@ -41,31 +45,22 @@ class SetupDoors extends StatelessWidget {
   /// What the account door is for, under it the same way.
   static const signInHint = 'Sign in to ask for movies and series.';
 
-  /// How tall a portrait frame has to be for the doors' lines to be drawn.
+  /// Whether the doors' lines are drawn when the caller does not say
+  /// ([SetupDoors.showLines]): not past the reading size where two buttons
+  /// stop sharing a line (`OnboardingFooter`'s), where the three doors and
+  /// their lines are taller than a short phone leaves under the ring and the
+  /// doors are pinned there (15/10). Each line is still said, as its door's
+  /// hint.
   ///
-  /// With the three doors and their lines the Welcome measures 268pt of
-  /// doors, and under the ring and the claim a 6.3" phone (844pt) has them
-  /// with 16pt to spare. A 667pt one does not: the claim's second sentence
-  /// slides under the doors at rest. Below this the doors keep their verbs
-  /// and the lines are said as hints.
-  static const minHeightForLines = 800.0;
-
-  /// Whether the doors' lines are drawn: not past the reading size where
-  /// two buttons stop sharing a line (`OnboardingFooter`'s), and not on a
-  /// portrait frame shorter than [minHeightForLines], where the three doors
-  /// and their lines are taller than a short phone leaves under the ring and
-  /// the doors are pinned there (15/10). Each line is still said, as its
-  /// door's hint.
-  static bool showsLines(BuildContext context) {
-    if (MediaQuery.textScalerOf(context).scale(14) > 20) return false;
-    final size = MediaQuery.sizeOf(context);
-    return AppBreakpoints.isLandscapeFrame(context) ||
-        size.height >= minHeightForLines;
-  }
+  /// The Welcome pins the doors under its claim and decides for itself,
+  /// from the room it has (`OnboardingWelcome.roomForDoorLines`); the Home at
+  /// zero scrolls, and takes this.
+  static bool showsLines(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(14) <= 20;
 
   @override
   Widget build(BuildContext context) {
-    final lines = showsLines(context);
+    final lines = showLines ?? showsLines(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
